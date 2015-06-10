@@ -135,6 +135,15 @@ class jsonformatter(baseformatter):
         baseformatter.end(self)
         self._ui.write("\n]\n")
 
+class templateformatter(baseformatter):
+    def __init__(self, ui, topic, opts):
+        baseformatter.__init__(self, ui, topic, opts)
+        self._topic = topic
+        self._t = gettemplater(ui, topic, opts.get('template', ''))
+    def _showitem(self):
+        g = self._t(self._topic, **self._item)
+        self._ui.write(templater.stringify(g))
+
 def lookuptemplate(ui, topic, tmpl):
     # looks like a literal template?
     if '{' in tmpl:
@@ -187,7 +196,7 @@ def formatter(ui, topic, opts):
     elif template == "debug":
         return debugformatter(ui, topic, opts)
     elif template != "":
-        raise util.Abort(_("custom templates not yet supported"))
+        return templateformatter(ui, topic, opts)
     elif ui.configbool('ui', 'formatdebug'):
         return debugformatter(ui, topic, opts)
     elif ui.configbool('ui', 'formatjson'):
