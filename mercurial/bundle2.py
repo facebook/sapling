@@ -1378,7 +1378,7 @@ def handleobsmarker(op, inpart):
 
 
 @parthandler('reply:obsmarkers', ('new', 'in-reply-to'))
-def handlepushkeyreply(op, inpart):
+def handleobsmarkerreply(op, inpart):
     """retrieve the result of a pushkey request"""
     ret = int(inpart.params['new'])
     partid = int(inpart.params['in-reply-to'])
