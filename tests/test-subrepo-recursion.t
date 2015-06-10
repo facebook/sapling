@@ -284,8 +284,8 @@ only show up in the test output, not in real usage):
   archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
                                                               \r (no-eol) (esc)
   $ find ../archive | sort
   ../archive
@@ -316,8 +316,8 @@ Test archiving to zip file (unzip output is unstable):
   archiving (foo) [====================================>] 3/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
                                                               \r (no-eol) (esc)
 
 (unzip date formating is unstable, we do not care about it and glob it out)
@@ -392,8 +392,8 @@ cloned:
   linking [      <=>                                      ] 6\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
-  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (esc)
-  archiving (foo/bar) [================================>] 1/1\r (no-eol) (esc)
+  archiving (foo/bar) [                                 ] 0/1\r (no-eol) (glob) (esc)
+  archiving (foo/bar) [================================>] 1/1\r (no-eol) (glob) (esc)
                                                               \r (no-eol) (esc)
   cloning subrepo foo from $TESTTMP/repo/foo
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
