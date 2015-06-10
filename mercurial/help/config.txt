@@ -1214,6 +1214,47 @@ profiling is done using lsprof.
     Specific to the ``ls`` instrumenting profiler.
     Default: 5.
 
+``progress``
+------------
+
+Mercurial commands can draw progress bars that are as informative as
+possible. Some progress bars only offer indeterminate information, while others
+have a definite end point.
+
+``delay``
+    Number of seconds (float) before showing the progress bar. (default: 3)
+
+``changedelay``
+    Minimum delay before showing a new topic. When set to less than 3 * refresh,
+    that value will be used instead. (default: 1)
+
+``refresh``
+    Time in seconds between refreshes of the progress bar. (default: 0.1)
+
+``format``
+    Format of the progress bar.
+
+    Valid entries for the format field are ``topic``, ``bar``, ``number``,
+    ``unit``, ``estimate``, speed, and item. item defaults to the last 20
+    characters of the item, but this can be changed by adding either ``-<num>``
+    which would take the last num characters, or ``+<num>`` for the first num
+    characters.
+
+    (default: Topic bar number estimate)
+
+``width``
+    If set, the maximum width of the progress information (that is, min(width,
+    term width) will be used)
+
+``clear-complete``
+    clear the progress bar after it's done (default to True)
+
+``disable``
+    If true, don't show a progress bar
+
+``assume-tty``
+    If true, ALWAYS show a progress bar, unless disable is given
+
 ``revsetalias``
 ---------------
 
