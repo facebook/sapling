@@ -4,11 +4,9 @@
 # defined by parameter. Checkout one by one and run perfrevset with every
 # revset in the list to benchmark its performance.
 #
-# - First argument is a revset of mercurial own repo to runs against.
-# - Second argument is the file from which the revset array will be taken
-#   If second argument is omitted read it from standard input
-#
 # You should run this from the root of your mercurial repository.
+#
+# call with --help for details
 #
 # This script also does one run of the current version of mercurial installed
 # to compare performance.
@@ -148,14 +146,12 @@ parser.add_option("-R", "--repo",
 
 (options, args) = parser.parse_args()
 
-if len(sys.argv) < 2:
+if not args:
     parser.print_help()
     sys.exit(255)
 
 # the directory where both this script and the perf.py extension live.
 contribdir = os.path.dirname(__file__)
-
-target_rev = args[0]
 
 revsetsfile = sys.stdin
 if options.file:
@@ -172,8 +168,9 @@ for idx, rset in enumerate(revsets):
 print "----------------------------"
 print
 
-
-revs = getrevs(target_rev)
+revs = []
+for a in args:
+    revs.extend(getrevs(a))
 
 results = []
 for r in revs:
