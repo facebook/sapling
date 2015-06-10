@@ -145,22 +145,30 @@ def formatfactor(factor):
             factor //= 0
         return 'x%ix%i' % (factor, order)
 
+def formattiming(value):
+    """format a value to strictly 8 char, dropping some precision if needed"""
+    if value < 10**7:
+        return ('%.6f' % value)[:8]
+    else:
+        # value is HUGE very unlikely to happen (4+ month run)
+        return '%i' % value
+
 _marker = object()
 def printresult(variants, idx, data, maxidx, verbose=False, reference=_marker):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
     out = []
     for var in variants:
-        out.append('%10.6f' % data[var]['wall'])
+        out.append(formattiming(data[var]['wall']))
         if reference is not _marker:
             factor = None
             if reference is not None:
                 factor = getfactor(reference[var], data[var], 'wall')
             out.append(formatfactor(factor))
         if verbose:
-            out.append('%10.6f' % data[var]['comb'])
-            out.append('%10.6f' % data[var]['user'])
-            out.append('%10.6f' % data[var]['sys'])
+            out.append(formattiming(data[var]['comb']))
+            out.append(formattiming(data[var]['user']))
+            out.append(formattiming(data[var]['sys']))
             out.append('%6d'    % data[var]['count'])
     print mask % (idx, ' '.join(out))
 
@@ -169,13 +177,15 @@ def printheader(variants, maxidx, verbose=False, relative=False):
     for var in variants:
         if not var:
             var = 'iter'
-        header.append('  %-8s' % var)
+        if 8 < len(var):
+            var = var[:3] + '..' + var[-3:]
+        header.append('%-8s' % var)
         if relative:
             header.append('    ')
         if verbose:
-            header.append('  %-8s' % 'comb')
-            header.append('  %-8s' % 'user')
-            header.append('  %-8s' % 'sys')
+            header.append('%-8s' % 'comb')
+            header.append('%-8s' % 'user')
+            header.append('%-8s' % 'sys')
             header.append('%6s' % 'count')
     print ' '.join(header)
 
