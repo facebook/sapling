@@ -111,12 +111,23 @@ def idxwidth(nbidx):
 def printresult(idx, data, maxidx):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
+    out = ['%10.6f' % data['wall'],
+           '%10.6f' % data['comb'],
+           '%10.6f' % data['user'],
+           '%10.6f' % data['sys'],
+           '%6d'    % data['count'],
+          ]
+    print mask % (idx, ' '.join(out))
 
-    out = ("wall %f comb %f user %f sys %f (best of %d)"
-           % (data['wall'], data['comb'], data['user'],
-              data['sys'], data['count']))
-
-    print mask % (idx, out)
+def printheader(maxidx):
+    header = [' ' * (idxwidth(maxidx) + 1),
+              '  %-8s' % 'wall',
+              '  %-8s' % 'comb',
+              '  %-8s' % 'user',
+              '  %-8s' % 'sys',
+              '%6s' % 'count',
+             ]
+    print ' '.join(header)
 
 def getrevs(spec):
     """get the list of rev matched by a revset"""
@@ -172,6 +183,7 @@ for r in revs:
     update(r)
     res = []
     results.append(res)
+    printheader(len(revsets))
     for idx, rset in enumerate(revsets):
         data = perf(rset, target=options.repo)
         res.append(data)
@@ -198,6 +210,7 @@ print
 for ridx, rset in enumerate(revsets):
 
     print "revset #%i: %s" % (ridx, rset)
+    printheader(len(results))
     for idx, data in enumerate(results):
         printresult(idx, data[ridx], len(results))
     print
