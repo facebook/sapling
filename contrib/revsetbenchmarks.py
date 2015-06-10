@@ -7,9 +7,6 @@
 # You should run this from the root of your mercurial repository.
 #
 # call with --help for details
-#
-# This script also does one run of the current version of mercurial installed
-# to compare performance.
 
 import sys
 import os
