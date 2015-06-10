@@ -531,6 +531,7 @@ def uisetup(ui):
         return orig(gitsub, commands, env, stream, cwd)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
     extensions.wrapfunction(subrepo.gitsubrepo, '_gitnodir', colorgit)
+    templatelabel.__doc__ = templater.funcs['label'].__doc__
     templater.funcs['label'] = templatelabel
 
 def extsetup(ui):
