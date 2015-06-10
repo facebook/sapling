@@ -202,7 +202,9 @@ def getrevs(spec):
 def applyvariants(revset, variant):
     if variant == 'plain':
         return revset
-    return '%s(%s)' % (variant, revset)
+    for var in variant.split('+'):
+        revset = '%s(%s)' % (var, revset)
+    return revset
 
 
 parser = OptionParser(usage="usage: %prog [options] <revs>")
