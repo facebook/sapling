@@ -66,7 +66,7 @@ Binary format is as follow
 
 :header size: int32
 
-  The total number of Bytes used by the part headers. When the header is empty
+  The total number of Bytes used by the part header. When the header is empty
   (size = 0) this is interpreted as the end of stream marker.
 
 :header:
