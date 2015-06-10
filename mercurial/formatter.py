@@ -171,6 +171,13 @@ def lookuptemplate(ui, topic, tmpl):
     # constant string?
     return tmpl, None
 
+def gettemplater(ui, topic, spec):
+    tmpl, mapfile = lookuptemplate(ui, topic, spec)
+    t = templater.templater(mapfile, {})
+    if tmpl:
+        t.cache[topic] = tmpl
+    return t
+
 def formatter(ui, topic, opts):
     template = opts.get("template", "")
     if template == "json":
