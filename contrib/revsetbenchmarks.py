@@ -16,7 +16,7 @@ from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
 # cannot use argparse, python 2.7 only
 from optparse import OptionParser
 
-DEFAULTVARIANTS = ['plain']
+DEFAULTVARIANTS = ['plain', 'min', 'max', 'first', 'last', 'reverse', 'sort']
 
 def check_output(*args, **kwargs):
     kwargs.setdefault('stderr', PIPE)
