@@ -124,3 +124,7 @@ head()
 head() - public()
 draft() and head()
 head() and author("mpm")
+
+# testing the mutable phases set
+draft()
+secret()

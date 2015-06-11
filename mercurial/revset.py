@@ -1464,9 +1464,16 @@ def parents(repo, subset, x):
 
 def _phase(repo, subset, target):
     """helper to select all rev in phase <target>"""
-    phase = repo._phasecache.phase
-    condition = lambda r: phase(repo, r) == target
-    return subset.filter(condition, cache=False)
+    repo._phasecache.loadphaserevs(repo) # ensure phase's sets are loaded
+    if repo._phasecache._phasesets:
+        s = repo._phasecache._phasesets[target] - repo.changelog.filteredrevs
+        s = baseset(s)
+        s.sort() # set are non ordered, so we enforce ascending
+        return subset & s
+    else:
+        phase = repo._phasecache.phase
+        condition = lambda r: phase(repo, r) == target
+        return subset.filter(condition, cache=False)
 
 def draft(repo, subset, x):
     """``draft()``
