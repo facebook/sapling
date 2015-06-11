@@ -58,6 +58,8 @@ def _revdescendants(repo, revs, followfirst):
 
     def iterate():
         cl = repo.changelog
+        # XXX this should be 'parentset.min()' assuming 'parentset' is a
+        # smartset (and if it is not, it should.)
         first = min(revs)
         nullrev = node.nullrev
         if first == nullrev:
@@ -85,6 +87,8 @@ def _revsbetween(repo, roots, heads):
     visit = list(heads)
     reachable = set()
     seen = {}
+    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
+    # (and if it is not, it should.)
     minroot = min(roots)
     roots = set(roots)
     # open-code the post-order traversal due to the tiny size of
@@ -614,6 +618,8 @@ def _children(repo, narrow, parentset):
     if not parentset:
         return baseset(cs)
     pr = repo.changelog.parentrevs
+    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
+    # (and if it is not, it should.)
     minrev = min(parentset)
     for r in narrow:
         if r <= minrev:
@@ -1217,6 +1223,8 @@ def branchpoint(repo, subset, x):
     cl = repo.changelog
     if not subset:
         return baseset()
+    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
+    # (and if it is not, it should.)
     baserev = min(subset)
     parentscount = [0]*(len(repo) - baserev)
     for r in cl.revs(start=baserev + 1):
