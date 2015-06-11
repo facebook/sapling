@@ -346,11 +346,18 @@ def rangeset(repo, subset, x, y):
         r = spanset(repo, m, n + 1)
     else:
         r = spanset(repo, m, n - 1)
+    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
+    # necessary to ensure we preserve the order in subset.
+    #
+    # This has performance implication, carrying the sorting over when possible
+    # would be more efficient.
     return r & subset
 
 def dagrange(repo, subset, x, y):
     r = fullreposet(repo)
     xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
+    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
+    # necessary to ensure we preserve the order in subset.
     return xs & subset
 
 def andset(repo, subset, x, y):
@@ -1092,6 +1099,8 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
+    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
+    # necessary to ensure we preserve the order in subset.
     return baseset(hs).filter(subset.__contains__)
 
 def heads(repo, subset, x):
