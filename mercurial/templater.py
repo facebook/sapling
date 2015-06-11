@@ -231,6 +231,16 @@ def evalstring(context, mapping, arg):
     func, data = arg
     return stringify(func(context, mapping, data))
 
+def evalstringliteral(context, mapping, arg):
+    """Evaluate given argument as string template, but returns symbol name
+    if it is unknown"""
+    func, data = arg
+    if func is runsymbol:
+        thing = func(context, mapping, data, default=data)
+    else:
+        thing = func(context, mapping, data)
+    return stringify(thing)
+
 def runinteger(context, mapping, data):
     return int(data)
 
@@ -245,7 +255,7 @@ def _recursivesymbolblocker(key):
 def _runrecursivesymbol(context, mapping, key):
     raise error.Abort(_("recursive reference '%s' in template") % key)
 
-def runsymbol(context, mapping, key):
+def runsymbol(context, mapping, key, default=''):
     v = mapping.get(key)
     if v is None:
         v = context._defaults.get(key)
@@ -257,7 +267,7 @@ def runsymbol(context, mapping, key):
         try:
             v = context.process(key, safemapping)
         except TemplateNotFound:
-            v = ''
+            v = default
     if callable(v):
         return v(**mapping)
     return v

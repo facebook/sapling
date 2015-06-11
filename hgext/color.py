@@ -485,10 +485,6 @@ def templatelabel(context, mapping, args):
         # i18n: "label" is a keyword
         raise error.ParseError(_("label expects two arguments"))
 
-    # add known effects to the mapping so symbols like 'red', 'bold',
-    # etc. don't need to be quoted
-    mapping.update(dict([(k, k) for k in _effects]))
-
     thing = templater.evalstring(context, mapping, args[1])
 
     # apparently, repo could be a string that is the favicon?
@@ -496,7 +492,9 @@ def templatelabel(context, mapping, args):
     if isinstance(repo, str):
         return thing
 
-    label = templater.evalstring(context, mapping, args[0])
+    # preserve unknown symbol as literal so effects like 'red', 'bold',
+    # etc. don't need to be quoted
+    label = templater.evalstringliteral(context, mapping, args[0])
 
     return repo.ui.label(thing, label)
 

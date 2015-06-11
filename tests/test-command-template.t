@@ -3178,6 +3178,11 @@ Test recursive evaluation:
   $ hg log --color=always -l 1 --template '{label("text.{rev}", "text\n")}'
   \x1b[0;32mtext\x1b[0m (esc)
 
+color effect can be specified without quoting:
+
+  $ hg log --color=always -l 1 --template '{label(red, "text\n")}'
+  \x1b[0;31mtext\x1b[0m (esc)
+
 Test branches inside if statement:
 
   $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'
