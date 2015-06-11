@@ -130,3 +130,20 @@
   |/
   o  0
   
+# Verify syncing with hg-ssh --readonly works
+  $ cd ../
+  $ cat > ssh.sh << EOF
+  > userhost="\$1"
+  > SSH_ORIGINAL_COMMAND="\$2"
+  > export SSH_ORIGINAL_COMMAND
+  > PYTHONPATH="$PYTHONPATH"
+  > export PYTHONPATH
+  > python "$(which hg-ssh)" --read-only "$TESTTMP/master"
+  > EOF
+
+  $ hg -R master --config extensions.hgsql=! strip -r tip
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/2fbb8bb2b903-cf7ff44e-backup.hg (glob)
+  $ hg -R client pull --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/master"
+  pulling from ssh://user@dummy/$TESTTMP/master
+  searching for changes
+  no changes found
