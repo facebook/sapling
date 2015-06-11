@@ -92,9 +92,22 @@ def printrevision(rev):
     check_call(['hg', 'log', '--rev', str(rev), '--template',
                '{desc|firstline}\n'])
 
+def idxwidth(nbidx):
+    """return the max width of number used for index
+
+    Yes, this is basically a log10."""
+    nbidx -= 1 # starts at 0
+    idxwidth = 0
+    while nbidx:
+        idxwidth += 1
+        nbidx //= 10
+    if not idxwidth:
+        idxwidth = 1
+    return idxwidth
+
 def printresult(idx, data, maxidx):
     """print a line of result to stdout"""
-    mask = '%i) %s'
+    mask = '%%0%ii) %%s' % idxwidth(maxidx)
 
     out = ("wall %f comb %f user %f sys %f (best of %d)"
            % (data['wall'], data['comb'], data['user'],
