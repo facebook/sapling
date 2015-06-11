@@ -3183,6 +3183,13 @@ color effect can be specified without quoting:
   $ hg log --color=always -l 1 --template '{label(red, "text\n")}'
   \x1b[0;31mtext\x1b[0m (esc)
 
+label should be no-op if color is disabled:
+
+  $ hg log --color=never -l 1 --template '{label(red, "text\n")}'
+  text
+  $ hg log --config extensions.color=! -l 1 --template '{label(red, "text\n")}'
+  text
+
 Test branches inside if statement:
 
   $ hg log -r 0 --template '{if(branches, "yes", "no")}\n'

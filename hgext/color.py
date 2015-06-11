@@ -157,7 +157,6 @@ import os
 
 from mercurial import cmdutil, commands, dispatch, extensions, subrepo, util
 from mercurial import ui as uimod
-from mercurial import templater, error
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -480,24 +479,6 @@ class colorui(uimod.ui):
                               for s in msg.split('\n')])
         return msg
 
-def templatelabel(context, mapping, args):
-    if len(args) != 2:
-        # i18n: "label" is a keyword
-        raise error.ParseError(_("label expects two arguments"))
-
-    thing = templater.evalstring(context, mapping, args[1])
-
-    # apparently, repo could be a string that is the favicon?
-    repo = mapping.get('repo', '')
-    if isinstance(repo, str):
-        return thing
-
-    # preserve unknown symbol as literal so effects like 'red', 'bold',
-    # etc. don't need to be quoted
-    label = templater.evalstringliteral(context, mapping, args[0])
-
-    return repo.ui.label(thing, label)
-
 def uisetup(ui):
     if ui.plain():
         return
@@ -519,8 +500,6 @@ def uisetup(ui):
         return orig(gitsub, commands, env, stream, cwd)
     extensions.wrapfunction(dispatch, '_runcommand', colorcmd)
     extensions.wrapfunction(subrepo.gitsubrepo, '_gitnodir', colorgit)
-    templatelabel.__doc__ = templater.funcs['label'].__doc__
-    templater.funcs['label'] = templatelabel
 
 def extsetup(ui):
     commands.globalopts.append(

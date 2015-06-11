@@ -547,8 +547,18 @@ def label(context, mapping, args):
         # i18n: "label" is a keyword
         raise error.ParseError(_("label expects two arguments"))
 
-    # ignore args[0] (the label string) since this is supposed to be a a no-op
-    yield args[1][0](context, mapping, args[1][1])
+    thing = evalstring(context, mapping, args[1])
+
+    # apparently, repo could be a string that is the favicon?
+    repo = mapping.get('repo', '')
+    if isinstance(repo, str):
+        return thing
+
+    # preserve unknown symbol as literal so effects like 'red', 'bold',
+    # etc. don't need to be quoted
+    label = evalstringliteral(context, mapping, args[0])
+
+    return repo.ui.label(thing, label)
 
 def latesttag(context, mapping, args):
     """:latesttag([pattern]): The global tags matching the given pattern on the
