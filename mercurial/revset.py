@@ -1136,8 +1136,8 @@ def keyword(repo, subset, x):
 
     def matches(r):
         c = repo[r]
-        return any(kw in encoding.lower(t) for t in c.files() + [c.user(),
-            c.description()])
+        return any(kw in encoding.lower(t)
+                   for t in c.files() + [c.user(), c.description()])
 
     return subset.filter(matches)
 
