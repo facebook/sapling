@@ -15,7 +15,7 @@ Currently we cache the full results of these functions:
     context.basectx._buildstatus (a scmutil.status object -- a tuple of lists)
 """
 
-import socket, json
+import socket, json, random, os, tempfile
 from mercurial import extensions, node, copies, context
 from mercurial.scmutil import status
 
@@ -108,7 +108,7 @@ def pathcopiesui(ui):
         if x._node is not None and y._node is not None and not match:
             key = 'cca.hg.pathcopies:%s:%s:v%s' % (
                     node.hex(x._node), node.hex(y._node), version)
-            return _mcmemoize(func, key, pathcopiesserializer, ui)
+            return _memoize(func, key, pathcopiesserializer, ui)
         return func()
     return pathcopies
 
@@ -147,28 +147,73 @@ def buildstatusui(ui):
             return func()
         key = 'cca.hg.buildstatus:%s:%s:v%s' % (
                 node.hex(self._node), node.hex(other._node), version)
-        return _mcmemoize(func, key, buildstatusserializer, ui)
+        return _memoize(func, key, buildstatusserializer, ui)
 
     return buildstatus
 
-def _mcmemoize(func, key, serializer, ui):
-    value = None
-    try:
-        mcval = mcget(key, ui)
-        if mcval is not None:
-            ui.debug('got value for key %s from memcache\n' % key)
-            value = serializer.deserialize(mcval)
-            return value
-    except Exception, inst:
-        ui.debug('error getting or deserializing key %s: %s\n' % (key, inst))
+def localpath(key, ui):
+    tempdir = ui.config('simplecache', 'cachedir')
+    if not tempdir:
+        tempdir = os.path.join(tempfile.gettempdir(), 'hgsimplecache')
+    return os.path.join(tempdir, key)
 
-    ui.debug('falling back for value %s from memcache\n' % key)
+def localget(key, ui):
+    try:
+        path = localpath(key, ui)
+        with open(path) as f:
+            return f.read()
+    except:
+        return None
+
+def localset(key, value, ui):
+    try:
+        path = localpath(key, ui)
+        dirname = os.path.dirname(path)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(path, 'w') as f:
+            f.write(value)
+
+        # If too many entries in cache, delete some.
+        tempdirpath = localpath('', ui)
+        entries = os.listdir(tempdirpath)
+        maxcachesize = ui.configint('simplecache', 'maxcachesize', 2000)
+        if len(entries) > maxcachesize:
+            random.shuffle(entries)
+            evictionpercent = ui.configint('simplecache', 'evictionpercent', 50)
+            evictionpercent /= 100.0
+            for i in xrange(0, int(len(entries) * evictionpercent)):
+                os.remove(os.path.join(tempdirpath, entries[i]))
+    except:
+        return
+
+cachefuncs = {
+    'local' : (localget, localset),
+    'memcache' : (mcget, mcset),
+}
+
+def _memoize(func, key, serializer, ui):
+    cachelist = ui.configlist('simplecache', 'caches', ['local'])
+    for name in cachelist:
+        get, set = cachefuncs[name]
+        try:
+            cacheval = get(key, ui)
+            if cacheval is not None:
+                ui.debug('got value for key %s from %s\n' % (key, name))
+                value = serializer.deserialize(cacheval)
+                return value
+        except Exception, inst:
+            ui.debug('error getting or deserializing key %s: %s\n' % (key, inst))
+
+    ui.debug('falling back for value %s\n' % (key))
     value = func()
 
-    try:
-        mcset(key, serializer.serialize(value), ui)
-        ui.debug('set value for key %s to memcache\n' % key)
-    except Exception, inst:
-        ui.debug('error setting key %s: %s\n' % (key, inst))
+    for name in cachelist:
+        get, set = cachefuncs[name]
+        try:
+            set(key, serializer.serialize(value), ui)
+            ui.debug('set value for key %s to %s\n' % (key, name))
+        except Exception, inst:
+            ui.debug('error setting key %s: %s\n' % (key, inst))
 
     return value
