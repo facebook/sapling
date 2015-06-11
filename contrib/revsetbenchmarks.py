@@ -90,6 +90,7 @@ def printrevision(rev):
     sys.stdout.write("Revision ")
     sys.stdout.flush()
     check_call(['hg', 'log', '--rev', str(rev), '--template',
+                '{if(tags, " ({tags})")} '
                 '{rev}:{node|short}: {desc|firstline}\n'])
 
 def idxwidth(nbidx):
