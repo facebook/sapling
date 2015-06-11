@@ -627,6 +627,8 @@ def _children(repo, narrow, parentset):
         for p in pr(r):
             if p in parentset:
                 cs.add(r)
+    # XXX using a set to feed the baseset is wrong. Sets are not ordered.
+    # This does not break because of other fullreposet misbehavior.
     return baseset(cs)
 
 def children(repo, subset, x):
@@ -1105,6 +1107,8 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
+    # XXX using a set to feed the baseset is wrong. Sets are not ordered.
+    # This does not break because of other fullreposet misbehavior.
     # XXX We should not be using '.filter' here, but combines subset with '&'
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
