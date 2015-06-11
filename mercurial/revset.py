@@ -91,23 +91,27 @@ def _revsbetween(repo, roots, heads):
     # (and if it is not, it should.)
     minroot = min(roots)
     roots = set(roots)
+    # prefetch all the things! (because python is slow)
+    reached = reachable.add
+    dovisit = visit.append
+    nextvisit = visit.pop
     # open-code the post-order traversal due to the tiny size of
     # sys.getrecursionlimit()
     while visit:
-        rev = visit.pop()
+        rev = nextvisit()
         if rev in roots:
-            reachable.add(rev)
+            reached(rev)
         parents = parentrevs(rev)
         seen[rev] = parents
         for parent in parents:
             if parent >= minroot and parent not in seen:
-                visit.append(parent)
+                dovisit(parent)
     if not reachable:
         return baseset()
     for rev in sorted(seen):
         for parent in seen[rev]:
             if parent in reachable:
-                reachable.add(rev)
+                reached(rev)
     return baseset(sorted(reachable))
 
 elements = {
