@@ -1353,6 +1353,8 @@ def only(repo, subset, x):
         exclude = getset(repo, fullreposet(repo), args[1])
 
     results = set(cl.findmissingrevs(common=exclude, heads=include))
+    # XXX we should turn this into a baseset instead of a set, smartset may do
+    # some optimisations from the fact this is a baseset.
     return subset & results
 
 def origin(repo, subset, x):
@@ -1382,6 +1384,8 @@ def origin(repo, subset, x):
 
     o = set([_firstsrc(r) for r in dests])
     o -= set([None])
+    # XXX we should turn this into a baseset instead of a set, smartset may do
+    # some optimisations from the fact this is a baseset.
     return subset & o
 
 def outgoing(repo, subset, x):
@@ -1424,6 +1428,8 @@ def p1(repo, subset, x):
     for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[0])
     ps -= set([node.nullrev])
+    # XXX we should turn this into a baseset instead of a set, smartset may do
+    # some optimisations from the fact this is a baseset.
     return subset & ps
 
 def p2(repo, subset, x):
@@ -1445,6 +1451,8 @@ def p2(repo, subset, x):
     for r in getset(repo, fullreposet(repo), x):
         ps.add(cl.parentrevs(r)[1])
     ps -= set([node.nullrev])
+    # XXX we should turn this into a baseset instead of a set, smartset may do
+    # some optimisations from the fact this is a baseset.
     return subset & ps
 
 def parents(repo, subset, x):
@@ -1507,6 +1515,8 @@ def _notpublic(repo, subset, x):
         s = set()
         for u in repo._phasecache._phasesets[1:]:
             s.update(u)
+        # XXX we should turn this into a baseset instead of a set, smartset may
+        # do some optimisations from the fact this is a baseset.
         return subset & s
     else:
         phase = repo._phasecache.phase
