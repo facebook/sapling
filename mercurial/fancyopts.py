@@ -103,8 +103,9 @@ def fancyopts(args, options, state, gnu=False):
     # transfer result to state
     for opt, val in opts:
         name = argmap[opt]
-        t = type(defmap[name])
-        if t is type(fancyopts):
+        obj = defmap[name]
+        t = type(obj)
+        if callable(obj):
             state[name] = defmap[name](val)
         elif t is type(1):
             try:
