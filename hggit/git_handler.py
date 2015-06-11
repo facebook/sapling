@@ -703,10 +703,14 @@ class GitHandler(object):
         else:
             self.ui.status(_("no changes found\n"))
 
+        mapsavefreq = self.ui.configint('hggit', 'mapsavefrequency', 0)
         for i, csha in enumerate(commits):
             self.ui.progress('importing', i, total=total, unit='commits')
             commit = commit_cache[csha]
             self.import_git_commit(commit)
+            if mapsavefreq and i % mapsavefreq == 0:
+                self.ui.debug(_("saving mapfile\n"))
+                self.save_map(self.map_file)
         self.ui.progress('importing', None, total=total, unit='commits')
 
         # TODO if the tags cache is used, remove any dangling tag references

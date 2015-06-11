@@ -54,6 +54,12 @@ clone a branch
      summary:     add alpha
   
 
+clone with mapsavefreq set
+  $ rm -rf hgrepo-b
+  $ hg clone -r beta gitrepo hgrepo-b --config hggit.mapsavefrequency=1 --debug | grep saving
+  saving mapfile
+  saving mapfile
+
 clone empty repo
   $ git init empty
   Initialized empty Git repository in $TESTTMP/empty/.git/
