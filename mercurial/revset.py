@@ -1518,8 +1518,8 @@ def _notpublic(repo, subset, x):
         s = set()
         for u in repo._phasecache._phasesets[1:]:
             s.update(u)
-        # XXX we should turn this into a baseset instead of a set, smartset may
-        # do some optimisations from the fact this is a baseset.
+        s = baseset(s - repo.changelog.filteredrevs)
+        s.sort()
         return subset & s
     else:
         phase = repo._phasecache.phase
