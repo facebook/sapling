@@ -3541,6 +3541,17 @@ class fullreposet(spanset):
             # object.
             other = baseset(other - self._hiddenrevs)
 
+        # XXX As fullreposet is also used as bootstrap, this is wrong.
+        #
+        # With a giveme312() revset returning [3,1,2], this makes
+        #   'hg log -r "giveme312()"' -> 1, 2, 3 (wrong)
+        # We cannot just drop it because other usage still need to sort it:
+        #   'hg log -r "all() and giveme312()"' -> 1, 2, 3 (right)
+        #
+        # There is also some faulty revset implementations that rely on it
+        # (eg: children as of its state in e8075329c5fb)
+        #
+        # When we fix the two points above we can move this into the if clause
         other.sort(reverse=self.isdescending())
         return other
 
