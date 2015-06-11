@@ -789,11 +789,11 @@ def _pushobsolete(pushop):
     """utility function to push obsolete markers to a remote"""
     if 'obsmarkers' in pushop.stepsdone:
         return
-    pushop.ui.debug('try to push obsolete markers to remote\n')
     repo = pushop.repo
     remote = pushop.remote
     pushop.stepsdone.add('obsmarkers')
     if pushop.outobsmarkers:
+        pushop.ui.debug('try to push obsolete markers to remote\n')
         rslts = []
         remotedata = obsolete._pushkeyescape(sorted(pushop.outobsmarkers))
         for key in sorted(remotedata, reverse=True):

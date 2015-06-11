@@ -132,7 +132,6 @@ Extension disabled for lack of a hook
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -198,7 +197,6 @@ Extension disabled for lack of acl.sources
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -275,7 +273,6 @@ No [acl.allow]/[acl.deny]
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -766,7 +763,6 @@ barney is allowed everywhere
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1085,7 +1081,6 @@ acl.config can set only [acl.allow]/[acl.deny]
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1172,7 +1167,6 @@ fred is always allowed
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1332,7 +1326,6 @@ OS-level groups
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 1 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 0 (undo push)
   0:6675d58eff77
   
@@ -1539,7 +1532,6 @@ No branch acls specified
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 2 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1836,7 +1828,6 @@ Branch acl allow other
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 2 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -1930,7 +1921,6 @@ push foobar into the remote
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 2 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
@@ -2092,7 +2082,6 @@ User 'astro' must not be denied
   bundle2-input-part: "reply:pushkey" (params: 0 advisory) supported
   bundle2-input-bundle: 2 parts total
   listing keys for "phases"
-  try to push obsolete markers to remote
   repository tip rolled back to revision 2 (undo push)
   2:fb35475503ef
   
