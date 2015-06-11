@@ -224,12 +224,11 @@ Test checking out a commit that does not contain the sparse profile
   $ ls
   index.html
   readme.txt
-  $ hg up tip
+  $ hg up tip --debug | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
-  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ ls
   data.py
   index.html
   readme.txt
-  $ hg sparse --disable-profile backend.sparse
+  $ hg sparse --disable-profile backend.sparse --debug | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it

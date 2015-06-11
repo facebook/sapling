@@ -342,7 +342,7 @@ def _wraprepo(ui, repo):
                     visited.add(profile)
 
                     if not profile in ctx:
-                        repo.ui.warn("warning: sparse profile '%s' not found "
+                        repo.ui.debug("warning: sparse profile '%s' not found "
                             "in rev %s - ignoring it\n" % (profile, ctx))
                         continue
                     raw = repo.filectx(profile, changeid=rev).data()
