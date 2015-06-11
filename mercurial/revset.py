@@ -1105,6 +1105,7 @@ def head(repo, subset, x):
     hs = set()
     for b, ls in repo.branchmap().iteritems():
         hs.update(repo[h].rev() for h in ls)
+    # XXX We should not be using '.filter' here, but combines subset with '&'
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
     return baseset(hs).filter(subset.__contains__)
