@@ -614,9 +614,9 @@ def checkstatus(repo, subset, pat, field):
     return subset.filter(matches)
 
 def _children(repo, narrow, parentset):
-    cs = set()
     if not parentset:
-        return baseset(cs)
+        return baseset()
+    cs = set()
     pr = repo.changelog.parentrevs
     # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
     # (and if it is not, it should.)
