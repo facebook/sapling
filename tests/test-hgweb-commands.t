@@ -997,6 +997,8 @@ Logs and changes
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
   <li><a href="/help">help</a></li>
   </ul>
   </div>
