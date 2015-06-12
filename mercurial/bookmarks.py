@@ -401,6 +401,11 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
         if scid in repo: # add remote bookmarks for changes we already have
             changed.append((b, bin(scid), status,
                             _("adding remote bookmark %s\n") % (b)))
+        elif b in explicit:
+            explicit.remove(b)
+            ui.warn(_("remote bookmark %s points to locally missing %s\n")
+                    % (b, scid[:12]))
+
     for b, scid, dcid in advsrc:
         changed.append((b, bin(scid), status,
                         _("updating bookmark %s\n") % (b)))
@@ -427,6 +432,11 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
             explicit.discard(b)
             changed.append((b, bin(scid), status,
                             _("importing bookmark %s\n") % (b)))
+    for b, scid, dcid in differ:
+        if b in explicit:
+            explicit.remove(b)
+            ui.warn(_("remote bookmark %s points to locally missing %s\n")
+                    % (b, scid[:12]))
 
     if changed:
         tr = trfunc()
