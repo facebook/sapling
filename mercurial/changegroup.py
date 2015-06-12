@@ -741,15 +741,15 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         repo.ui.status(_("adding changesets\n"))
         clstart = len(cl)
         class prog(object):
-            step = _('changesets')
-            count = 1
-            total = expectedtotal
+            def __init__(self, step, total):
+                self._step = step
+                self._total = total
+                self._count = 1
             def __call__(self):
-                repo.ui.progress(self.step, self.count, unit=_('chunks'),
-                                 total=self.total)
-                self.count += 1
-        pr = prog()
-        source.callback = pr
+                repo.ui.progress(self._step, self._count, unit=_('chunks'),
+                                 total=self._total)
+                self._count += 1
+        source.callback = prog(_('changesets'), expectedtotal)
 
         source.changelogheader()
         srccontent = cl.addgroup(source, csmap, trp)
@@ -764,9 +764,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
         # pull off the manifest group
         repo.ui.status(_("adding manifests\n"))
-        pr.step = _('manifests')
-        pr.count = 1
-        pr.total = changesets # manifests <= changesets
+        # manifests <= changesets
+        source.callback = prog(_('manifests'), changesets)
         # no need to check for empty manifest group here:
         # if the result of the merge of 1 and 2 is the same in 3 and 4,
         # no new manifest will be created and the manifest group will
@@ -787,11 +786,8 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
         # process the files
         repo.ui.status(_("adding file changes\n"))
-        pr.step = _('files')
-        pr.count = 1
-        pr.total = efiles
         source.callback = None
-
+        pr = prog(_('files'), efiles)
         newrevs, newfiles = addchangegroupfiles(repo, source, revmap, trp, pr,
                                                 needfiles)
         revisions += newrevs
