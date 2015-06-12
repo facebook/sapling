@@ -159,8 +159,13 @@ def lfconvert(ui, src, dest, *pats, **opts):
             if missing != 0:
                 raise util.Abort(_("all largefiles must be present locally"))
 
+            orig = convcmd.converter
             convcmd.converter = converter
-            convcmd.convert(ui, src, dest)
+
+            try:
+                convcmd.convert(ui, src, dest)
+            finally:
+                convcmd.converter = orig
         success = True
     finally:
         if tolfile:
