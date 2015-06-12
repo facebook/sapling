@@ -95,7 +95,10 @@ def printrevision(rev):
 def idxwidth(nbidx):
     """return the max width of number used for index
 
-    Yes, this is basically a log10."""
+    This is similar to log10(nbidx), but we use custom code here
+    because we start with zero and we'd rather not deal with all the
+    extra rounding business that log10 would imply.
+    """
     nbidx -= 1 # starts at 0
     idxwidth = 0
     while nbidx:
