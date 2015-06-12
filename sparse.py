@@ -9,6 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
+from mercurial import localrepo
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -26,6 +27,7 @@ def uisetup(ui):
 def extsetup(ui):
     _setuplog(ui)
     _setupadd(ui)
+    _setupdirstate(ui)
     # if hgwatchman is installed, tell it to use our hash function
     try:
         hgwatchman = extensions.find('hgwatchman')
@@ -39,7 +41,6 @@ def reposetup(ui, repo):
     if not util.safehasattr(repo, 'dirstate'):
         return
 
-    _setupdirstate(ui, repo)
     _wraprepo(ui, repo)
 
 def wrapfilecache(cls, propname, wrapper):
@@ -226,7 +227,7 @@ def _setupadd(ui):
 
     extensions.wrapcommand(commands.table, 'add', _add)
 
-def _setupdirstate(ui, repo):
+def _setupdirstate(ui):
     """Modify the dirstate to prevent stat'ing excluded files,
     and to prevent modifications to files outside the checkout.
     """
@@ -235,9 +236,7 @@ def _setupdirstate(ui, repo):
         dirstate = orig(repo)
         dirstate.repo = repo
         return dirstate
-    wrapfilecache(repo.__class__, 'dirstate', _dirstate)
-    if 'dirstate' in repo._filecache:
-        repo.dirstate.repo = repo
+    wrapfilecache(localrepo.localrepository, 'dirstate', _dirstate)
 
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.
@@ -498,6 +497,9 @@ def _wraprepo(ui, repo):
                 ui.status("cleaned up %d temporarily added file(s) from the sparse checkout\n" %
                     len(tempincludes))
 
+
+    if 'dirstate' in repo._filecache:
+        repo.dirstate.repo = repo
     repo.sparsecache = {}
     repo.__class__ = SparseRepo
 
