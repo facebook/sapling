@@ -1525,7 +1525,7 @@ Overviews
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/cad8025a2e87?style=gitweb">files</a> |
+  <a href="/file?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
   </div>
