@@ -743,12 +743,11 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         class prog(object):
             step = _('changesets')
             count = 1
-            ui = repo.ui
             total = expectedtotal
-            def __call__(repo):
-                repo.ui.progress(repo.step, repo.count, unit=_('chunks'),
-                                 total=repo.total)
-                repo.count += 1
+            def __call__(self):
+                repo.ui.progress(self.step, self.count, unit=_('chunks'),
+                                 total=self.total)
+                self.count += 1
         pr = prog()
         source.callback = pr
 
