@@ -46,8 +46,9 @@ def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
     if not roots:
         roots = [nullid]
     # TODO: remove call to nodesbetween.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
-    discbases = []
+    csets, roots, stripped_heads = cl.nodesbetween(roots, heads)
+    unaffected_heads = set(heads) - set(stripped_heads)
+    discbases = list(unaffected_heads)
     for n in roots:
         discbases.extend([p for p in cl.parents(n) if p != nullid])
     outgoing = discovery.outgoing(cl, discbases, heads)
