@@ -20,6 +20,8 @@ from mercurial.bundlerepo import bundlerepository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
+testedwith = '3.4'
+
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
