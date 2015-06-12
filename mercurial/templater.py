@@ -174,6 +174,10 @@ def runsymbol(context, mapping, key):
         v = list(v)
     return v
 
+def runtemplate(context, mapping, template):
+    for func, data in template:
+        yield func(context, mapping, data)
+
 def buildfilter(exp, context):
     func, data = compileexp(exp[1], context, methods)
     filt = getfilter(exp[2], context)
@@ -200,10 +204,6 @@ def buildmap(exp, context):
     func, data = compileexp(exp[1], context, methods)
     ctmpl = gettemplate(exp[2], context)
     return (runmap, (func, data, ctmpl))
-
-def runtemplate(context, mapping, template):
-    for func, data in template:
-        yield func(context, mapping, data)
 
 def runmap(context, mapping, data):
     func, data, ctmpl = data
