@@ -25,7 +25,7 @@ msg = """
 |inhibit=!                                                                     |
 |                                                                              |
 |If you are no longer an evolve beta user and you don't want to see this error |
-|with evolve ue hg config --local to open your local config and add the next   |
+|with evolve use hg config --local to open your local config and add the next  |
 |two lines:                                                                    |
 |[inhibit]                                                                     |
 |bypass-warning=True                                                           |
