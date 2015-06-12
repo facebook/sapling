@@ -622,9 +622,7 @@ def _children(repo, narrow, parentset):
         return baseset()
     cs = set()
     pr = repo.changelog.parentrevs
-    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
-    # (and if it is not, it should.)
-    minrev = min(parentset)
+    minrev = parentset.min()
     for r in narrow:
         if r <= minrev:
             continue
