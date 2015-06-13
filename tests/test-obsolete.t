@@ -927,3 +927,42 @@ Test heads computation on pending index changes with obsolescence markers
   $ echo aa > a
   $ hg amendtransient
   [1, 3]
+
+Test cache consistency for the visible filter
+1) We want to make sure that the cached filtered revs are invalidated when
+bookmarks change
+  $ cd ..
+  $ cat >$TESTTMP/test_extension.py  << EOF
+  > from mercurial import cmdutil, extensions, bookmarks, repoview
+  > def _bookmarkchanged(orig, bkmstoreinst, *args, **kwargs):
+  >  repo = bkmstoreinst._repo
+  >  ret = orig(bkmstoreinst, *args, **kwargs)
+  >  hidden1 = repoview.computehidden(repo)
+  >  hidden = repoview.filterrevs(repo, 'visible')
+  >  if sorted(hidden1) != sorted(hidden):
+  >    print "cache inconsistency"
+  >  return ret
+  > def extsetup(ui):
+  >   extensions.wrapfunction(bookmarks.bmstore, 'write', _bookmarkchanged)
+  > EOF
+
+  $ hg init repo-cache-inconsistency
+  $ cd repo-issue-nativerevs-pending-changes
+  $ mkcommit a
+  a already tracked!
+  $ mkcommit b
+  $ hg id
+  13bedc178fce tip
+  $ echo "hello" > b
+  $ hg commit --amend -m "message"
+  $ hg book bookb -r 13bedc178fce --hidden
+  $ hg log -r 13bedc178fce
+  5:13bedc178fce (draft) [ bookb] add b
+  $ hg book -d bookb
+  $ hg log -r 13bedc178fce
+  abort: hidden revision '13bedc178fce'!
+  (use --hidden to access hidden revisions)
+  [255]
+
+
+

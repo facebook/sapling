@@ -80,6 +80,7 @@ class bmstore(dict):
         '''
         repo = self._repo
         self._writerepo(repo)
+        repo.invalidatevolatilesets()
 
     def _writerepo(self, repo):
         """Factored out for extensibility"""
