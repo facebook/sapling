@@ -22,7 +22,7 @@ elements = {
     ")": (0, None, None),
     "integer": (0, ("integer",), None),
     "symbol": (0, ("symbol",), None),
-    "string": (0, ("string",), None),
+    "string": (0, ("template",), None),
     "rawstring": (0, ("rawstring",), None),
     "end": (0, None, None),
 }
@@ -144,7 +144,9 @@ def getfilter(exp, context):
     return context._filters[f]
 
 def gettemplate(exp, context):
-    if exp[0] == 'string' or exp[0] == 'rawstring':
+    if exp[0] == 'template':
+        return compiletemplate(exp[1], context)
+    if exp[0] == 'rawstring':
         return compiletemplate(exp[1], context, strtoken=exp[0])
     if exp[0] == 'symbol':
         return context._load(exp[1])
@@ -173,6 +175,12 @@ def runsymbol(context, mapping, key):
     if isinstance(v, types.GeneratorType):
         v = list(v)
     return v
+
+def buildtemplate(exp, context):
+    ctmpl = compiletemplate(exp[1], context)
+    if len(ctmpl) == 1:
+        return ctmpl[0]  # fast path for string with no template fragment
+    return (runtemplate, ctmpl)
 
 def runtemplate(context, mapping, template):
     for func, data in template:
@@ -362,7 +370,7 @@ def get(context, mapping, args):
 
 def _evalifliteral(arg, context, mapping):
     # get back to token tag to reinterpret string as template
-    strtoken = {runstring: 'string', runrawstring: 'rawstring'}.get(arg[0])
+    strtoken = {runrawstring: 'rawstring'}.get(arg[0])
     if strtoken:
         yield runtemplate(context, mapping,
                           compiletemplate(arg[1], context, strtoken))
@@ -606,6 +614,7 @@ exprmethods = {
     "string": lambda e, c: (runstring, e[1]),
     "rawstring": lambda e, c: (runrawstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
+    "template": buildtemplate,
     "group": lambda e, c: compileexp(e[1], c, exprmethods),
 #    ".": buildmember,
     "|": buildfilter,

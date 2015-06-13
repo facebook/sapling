@@ -2803,6 +2803,15 @@ unless explicit symbol is expected:
   hg: parse error: expected a symbol, got 'integer'
   [255]
 
+Test string literal:
+
+  $ hg log -Ra -r0 -T '{"string with no template fragment"}\n'
+  string with no template fragment
+  $ hg log -Ra -r0 -T '{"template: {rev}"}\n'
+  template: 0
+  $ hg log -Ra -r0 -T '{r"rawstring: {rev}"}\n'
+  rawstring: {rev}
+
 Test string escaping:
 
   $ hg log -R latesttag -r 0 --template '>\n<>\\n<{if(rev, "[>\n<>\\n<]")}>\n<>\\n<\n'

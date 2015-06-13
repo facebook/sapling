@@ -47,6 +47,10 @@ Also, for any expression that returns a list, there is a list operator:
 
 - expr % "{template}"
 
+As seen in the above example, "{template}" is interpreted as a template.
+To prevent it from being interpreted, you can use an escape character "\{"
+or a raw string prefix, "r'...'".
+
 Some sample command line templates:
 
 - Format lists, e.g. files::
