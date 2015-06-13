@@ -93,23 +93,23 @@ def tokenizer(data):
         pos += 1
     yield ('end', None, pos)
 
-def compiletemplate(tmpl, context, strtoken="string"):
+def compiletemplate(tmpl, context):
     parsed = []
     pos, stop = 0, len(tmpl)
     p = parser.parser(tokenizer, elements)
     while pos < stop:
         n = tmpl.find('{', pos)
         if n < 0:
-            parsed.append((strtoken, tmpl[pos:]))
+            parsed.append(('string', tmpl[pos:]))
             break
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
-        if strtoken == 'string' and bs % 2 == 1:
-            # escaped (e.g. '\{', '\\\{', but not '\\{' nor r'\{')
-            parsed.append((strtoken, (tmpl[pos:n - 1] + "{")))
+        if bs % 2 == 1:
+            # escaped (e.g. '\{', '\\\{', but not '\\{')
+            parsed.append(('string', (tmpl[pos:n - 1] + "{")))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append((strtoken, tmpl[pos:n]))
+            parsed.append(('string', tmpl[pos:n]))
 
         pd = [tmpl, n + 1, stop]
         parseres, pos = p.parse(pd)
