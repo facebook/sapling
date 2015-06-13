@@ -869,9 +869,8 @@ class ui(object):
                                ''.join(causetb),
                                ''.join(exconly))
             else:
-                self.flush()  # flush debug or status message
-                traceback.print_exception(exc[0], exc[1], exc[2],
-                                          file=self.ferr)
+                output = traceback.format_exception(exc[0], exc[1], exc[2])
+                self.write_err(''.join(output))
         return self.tracebackflag or force
 
     def geteditor(self):
