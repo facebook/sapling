@@ -770,8 +770,11 @@ class GitHandler(object):
             else:
                 hgsubstate[path] = sha
         # in case .hgsubstate wasn't among changed files
-        # force its inclusion
-        if not hgsubstate and parentsubdata:
+        # force its inclusion if it wasn't already deleted
+        hgsubdeleted = files.get('.hgsubstate')
+        if hgsubdeleted:
+            hgsubdeleted = hgsubdeleted[0]
+        if hgsubdeleted or (not hgsubstate and parentsubdata):
             files['.hgsubstate'] = True, None, None
         elif util.serialize_hgsubstate(hgsubstate) != parentsubdata:
             files['.hgsubstate'] = False, 0100644, None

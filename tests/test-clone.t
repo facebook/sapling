@@ -60,6 +60,22 @@ clone with mapsavefreq set
   saving mapfile
   saving mapfile
 
+Make sure that a deleted .hgsubstate does not confuse hg-git
+
+  $ cd gitrepo
+  $ echo 'HASH random' > .hgsubstate
+  $ git add .hgsubstate
+  $ fn_git_commit -m 'add bogus .hgsubstate'
+  $ git rm -q .hgsubstate
+  $ fn_git_commit -m 'remove bogus .hgsubstate'
+  $ cd ..
+
+  $ hg clone -r beta gitrepo hgrepo-c
+  importing git objects into hg
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --cwd hgrepo-c status
+
 clone empty repo
   $ git init empty
   Initialized empty Git repository in $TESTTMP/empty/.git/
