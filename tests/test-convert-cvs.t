@@ -121,7 +121,7 @@ convert fresh repo with --filemap
   1 ci0
   0 import
   filtering out empty revision
-  repository tip rolled back to revision 1 (undo commit)
+  repository tip rolled back to revision 1 (undo convert)
   updating tags
   $ hgcat b/c
   c

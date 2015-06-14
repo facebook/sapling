@@ -41,6 +41,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add foo and bar
   
+  $ hg phase --public -r tip
   $ cd ..
   $ hg convert orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
   initializing destination new repository
@@ -52,6 +53,16 @@
   1 add foo/file
   0 Added tag some-tag for changeset ad681a868e44
   $ cd new
+  $ hg log -G --template '{rev} {node|short} ({phase}) "{desc}"\n'
+  o  3 593cbf6fb2b4 (public) "Added tag some-tag for changeset ad681a868e44"
+  |
+  o  2 ad681a868e44 (public) "add foo/file"
+  |
+  o  1 cbba8ecc03b7 (public) "remove foo"
+  |
+  o  0 327daa9251fa (public) "add foo and bar"
+  
+
   $ hg out ../orig
   comparing with ../orig
   searching for changes
@@ -132,7 +143,7 @@ Helper
 
   $ glog()
   > {
-  >     hg log -G --template '{rev} {node|short} "{desc}" files: {files}\n' $*
+  >     hg log -G --template '{rev} {node|short} ({phase}) "{desc}" files: {files}\n' $*
   > }
 
 Create a tricky source repo
@@ -171,20 +182,21 @@ Create a tricky source repo
   dir/c
   dir/d
   e
+  $ hg phase --public -r tip
   $ glog
-  @  6 0613c8e59a3d "6: change a" files: a
+  @  6 0613c8e59a3d (public) "6: change a" files: a
   |
-  o    5 717e9b37cdb7 "5: merge 2 and 3, copy b to dir/d" files: dir/d e
+  o    5 717e9b37cdb7 (public) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
   |\
-  | o  4 86a55cb968d5 "4: change a" files: a
+  | o  4 86a55cb968d5 (public) "4: change a" files: a
   | |
-  o |  3 0e6e235919dd "3: copy a to e, change b" files: b e
+  o |  3 0e6e235919dd (public) "3: copy a to e, change b" files: b e
   | |
-  o |  2 0394b0d5e4f7 "2: add dir/c" files: dir/c
+  o |  2 0394b0d5e4f7 (public) "2: add dir/c" files: dir/c
   |/
-  o  1 333546584845 "1: add a and dir/b" files: a dir/b
+  o  1 333546584845 (public) "1: add a and dir/b" files: a dir/b
   |
-  o  0 d1a24e2ebd23 "0: add 0" files: 0
+  o  0 d1a24e2ebd23 (public) "0: add 0" files: 0
   
   $ cd ..
 
@@ -209,15 +221,15 @@ Convert excluding rev 0 and dir/ (and thus rev2):
 Verify that conversion skipped rev 2:
 
   $ glog -R dest
-  o  4 78814e84a217 "6: change a" files: a
+  o  4 78814e84a217 (draft) "6: change a" files: a
   |
-  o    3 f7cff662c5e5 "5: merge 2 and 3, copy b to dir/d" files: e
+  o    3 f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
   |\
-  | o  2 ab40a95b0072 "4: change a" files: a
+  | o  2 ab40a95b0072 (draft) "4: change a" files: a
   | |
-  o |  1 bd51f17597bf "3: copy a to e, change b" files: b e
+  o |  1 bd51f17597bf (draft) "3: copy a to e, change b" files: b e
   |/
-  o  0 a4a1dae0fe35 "1: add a and dir/b" files: 0 a
+  o  0 a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
 
 Verify mapping correct in both directions:
@@ -347,17 +359,17 @@ More source changes
   e
 
   $ glog -r 6:
-  @  11 0c8927d1f7f4 "11: source change" files: a
+  @  11 0c8927d1f7f4 (draft) "11: source change" files: a
   |
-  o    10 9ccb7ee8d261 "10: source merge" files: a
+  o    10 9ccb7ee8d261 (draft) "10: source merge" files: a
   |\
-  | o  9 f131b1518dba "9: source second branch" files: a
+  | o  9 f131b1518dba (draft) "9: source second branch" files: a
   | |
-  o |  8 669cf0e74b50 "8: source first branch" files: a
+  o |  8 669cf0e74b50 (draft) "8: source first branch" files: a
   | |
-  | o  7 e6d364a69ff1 "change in dest" files: dest
+  | o  7 e6d364a69ff1 (draft) "change in dest" files: dest
   |/
-  o  6 0613c8e59a3d "6: change a" files: a
+  o  6 0613c8e59a3d (public) "6: change a" files: a
   |
   $ cd ..
 
@@ -371,25 +383,25 @@ More source changes
   0 11: source change
 
   $ glog -R dest
-  o  9 8432d597b263 "11: source change" files: a
+  o  9 8432d597b263 (draft) "11: source change" files: a
   |
-  o    8 632ffacdcd6f "10: source merge" files: a
+  o    8 632ffacdcd6f (draft) "10: source merge" files: a
   |\
-  | o  7 049cfee90ee6 "9: source second branch" files: a
+  | o  7 049cfee90ee6 (draft) "9: source second branch" files: a
   | |
-  o |  6 9b6845e036e5 "8: source first branch" files: a
+  o |  6 9b6845e036e5 (draft) "8: source first branch" files: a
   | |
-  | @  5 a2e0e3cc6d1d "change in dest" files: dest
+  | @  5 a2e0e3cc6d1d (draft) "change in dest" files: dest
   |/
-  o  4 78814e84a217 "6: change a" files: a
+  o  4 78814e84a217 (draft) "6: change a" files: a
   |
-  o    3 f7cff662c5e5 "5: merge 2 and 3, copy b to dir/d" files: e
+  o    3 f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
   |\
-  | o  2 ab40a95b0072 "4: change a" files: a
+  | o  2 ab40a95b0072 (draft) "4: change a" files: a
   | |
-  o |  1 bd51f17597bf "3: copy a to e, change b" files: b e
+  o |  1 bd51f17597bf (draft) "3: copy a to e, change b" files: b e
   |/
-  o  0 a4a1dae0fe35 "1: add a and dir/b" files: 0 a
+  o  0 a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
   $ cd ..
 
@@ -520,7 +532,7 @@ An additional round, demonstrating that unchanged files don't get converted
 Conversion after rollback
 
   $ hg -R a rollback -f
-  repository tip rolled back to revision 2 (undo commit)
+  repository tip rolled back to revision 2 (undo convert)
 
   $ hg convert --filemap filemap-b 0 a --config convert.hg.revs=1::
   scanning source...

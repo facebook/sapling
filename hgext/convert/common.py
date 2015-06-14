@@ -7,7 +7,7 @@
 
 import base64, errno, subprocess, os, datetime, re
 import cPickle as pickle
-from mercurial import util
+from mercurial import phases, util
 from mercurial.i18n import _
 
 propertycache = util.propertycache
@@ -44,7 +44,7 @@ SKIPREV = 'SKIP'
 
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None,
-                 extra={}, sortkey=None, saverev=True):
+                 extra={}, sortkey=None, saverev=True, phase=phases.draft):
         self.author = author or 'unknown'
         self.date = date or '0 0'
         self.desc = desc
@@ -54,6 +54,7 @@ class commit(object):
         self.extra = extra
         self.sortkey = sortkey
         self.saverev = saverev
+        self.phase = phase
 
 class converter_source(object):
     """Conversion source interface"""

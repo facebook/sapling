@@ -477,7 +477,7 @@ filemap rename undoing revision rename
   2 add
   1 rename
   filtering out empty revision
-  repository tip rolled back to revision 0 (undo commit)
+  repository tip rolled back to revision 0 (undo convert)
   0 modify
   $ glog -R renameundo2
   o  1 "modify" files: a c

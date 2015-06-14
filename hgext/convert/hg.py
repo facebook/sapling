@@ -22,6 +22,7 @@ import os, time, cStringIO
 from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, bookmarks, error, scmutil, exchange
+from mercurial import phases
 
 from common import NoRepo, commit, converter_source, converter_sink, mapfile
 
@@ -258,7 +259,29 @@ class mercurial_sink(converter_sink):
                 fileset.update(self.repo[p2])
             ctx = context.memctx(self.repo, (p1, p2), text, fileset,
                                  getfilectx, commit.author, commit.date, extra)
-            self.repo.commitctx(ctx)
+
+            # We won't know if the conversion changes the node until after the
+            # commit, so copy the source's phase for now.
+            self.repo.ui.setconfig('phases', 'new-commit',
+                                   phases.phasenames[commit.phase], 'convert')
+
+            tr = self.repo.transaction("convert")
+
+            try:
+                node = hex(self.repo.commitctx(ctx))
+
+                # If the node value has changed, but the phase is lower than
+                # draft, set it back to draft since it hasn't been exposed
+                # anywhere.
+                if commit.rev != node:
+                    ctx = self.repo[node]
+                    if ctx.phase() < phases.draft:
+                        phases.retractboundary(self.repo, tr, phases.draft,
+                                               [ctx.node()])
+                tr.close()
+            finally:
+                tr.release()
+
             text = "(octopus merge fixup)\n"
             p2 = hex(self.repo.changelog.tip())
 
@@ -479,7 +502,8 @@ class mercurial_source(converter_source):
                       date=util.datestr(ctx.date(), '%Y-%m-%d %H:%M:%S %1%2'),
                       desc=ctx.description(), rev=crev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra(),
-                      sortkey=ctx.rev(), saverev=self.saverev)
+                      sortkey=ctx.rev(), saverev=self.saverev,
+                      phase=ctx.phase())
 
     def gettags(self):
         # This will get written to .hgtags, filter non global tags out.
