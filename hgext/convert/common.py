@@ -44,7 +44,7 @@ SKIPREV = 'SKIP'
 
 class commit(object):
     def __init__(self, author, date, desc, parents, branch=None, rev=None,
-                 extra={}, sortkey=None):
+                 extra={}, sortkey=None, saverev=True):
         self.author = author or 'unknown'
         self.date = date or '0 0'
         self.desc = desc
@@ -53,6 +53,7 @@ class commit(object):
         self.rev = rev
         self.extra = extra
         self.sortkey = sortkey
+        self.saverev = saverev
 
 class converter_source(object):
     """Conversion source interface"""

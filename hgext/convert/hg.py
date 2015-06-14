@@ -243,7 +243,7 @@ class mercurial_sink(converter_sink):
 
         if self.branchnames and commit.branch:
             extra['branch'] = commit.branch
-        if commit.rev:
+        if commit.rev and commit.saverev:
             extra['convert_revision'] = commit.rev
 
         while parents:
@@ -473,15 +473,13 @@ class mercurial_source(converter_source):
     def getcommit(self, rev):
         ctx = self.changectx(rev)
         parents = [p.hex() for p in self.parents(ctx)]
-        if self.saverev:
-            crev = rev
-        else:
-            crev = None
+        crev = rev
+
         return commit(author=ctx.user(),
                       date=util.datestr(ctx.date(), '%Y-%m-%d %H:%M:%S %1%2'),
                       desc=ctx.description(), rev=crev, parents=parents,
                       branch=ctx.branch(), extra=ctx.extra(),
-                      sortkey=ctx.rev())
+                      sortkey=ctx.rev(), saverev=self.saverev)
 
     def gettags(self):
         # This will get written to .hgtags, filter non global tags out.
