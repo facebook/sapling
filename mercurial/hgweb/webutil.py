@@ -6,10 +6,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, copy
+import os, copy, urllib
 from mercurial import match, patch, error, ui, util, pathutil, context
 from mercurial.i18n import _
-from mercurial.node import hex, nullid
+from mercurial.node import hex, nullid, short
 from common import ErrorResponse, paritygen
 from common import HTTP_NOT_FOUND
 import difflib
@@ -279,6 +279,12 @@ def changelistentry(web, ctx, tmpl):
         "branches": nodebranchdict(repo, ctx)
     }
 
+def symrevorshortnode(req, ctx):
+    if 'node' in req.form:
+        return urllib.quote(req.form['node'][0])
+    else:
+        return short(ctx.node())
+
 def changesetentry(web, req, tmpl, ctx):
     '''Obtain a dictionary to be used to render the "changeset" template.'''
 
@@ -314,6 +320,7 @@ def changesetentry(web, req, tmpl, ctx):
         diff=diff,
         rev=ctx.rev(),
         node=ctx.hex(),
+        symrev=symrevorshortnode(req, ctx),
         parent=tuple(parents(ctx)),
         child=children(ctx),
         basenode=basectx.hex(),

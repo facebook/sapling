@@ -30,7 +30,7 @@ from mercurial import extensions, encoding
 # leave the attribute unspecified.
 testedwith = 'internal'
 
-def filerevision_highlight(orig, web, tmpl, fctx):
+def filerevision_highlight(orig, web, req, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
     # only pygmentize for mimetype containing 'html' so we both match
     # 'text/html' and possibly 'application/xhtml+xml' in the future
@@ -42,7 +42,7 @@ def filerevision_highlight(orig, web, tmpl, fctx):
     if 'html' in mt:
         style = web.config('web', 'pygments_style', 'colorful')
         highlight.pygmentize('fileline', fctx, style, tmpl)
-    return orig(web, tmpl, fctx)
+    return orig(web, req, tmpl, fctx)
 
 def annotate_highlight(orig, web, req, tmpl):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))

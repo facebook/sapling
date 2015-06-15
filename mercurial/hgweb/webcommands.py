@@ -100,7 +100,7 @@ def rawfile(web, req, tmpl):
     req.respond(HTTP_OK, mt, path, body=text)
     return []
 
-def _filerevision(web, tmpl, fctx):
+def _filerevision(web, req, tmpl, fctx):
     f = fctx.path()
     text = fctx.data()
     parity = paritygen(web.stripecount)
@@ -121,6 +121,7 @@ def _filerevision(web, tmpl, fctx):
                 path=webutil.up(f),
                 text=lines(),
                 rev=fctx.rev(),
+                symrev=webutil.symrevorshortnode(req, fctx),
                 node=fctx.hex(),
                 author=fctx.user(),
                 date=fctx.date(),
@@ -158,7 +159,7 @@ def file(web, req, tmpl):
     if not path:
         return manifest(web, req, tmpl)
     try:
-        return _filerevision(web, tmpl, webutil.filectx(web.repo, req))
+        return _filerevision(web, req, tmpl, webutil.filectx(web.repo, req))
     except error.LookupError, inst:
         try:
             return manifest(web, req, tmpl)
@@ -316,7 +317,7 @@ def _search(web, req, tmpl):
     tip = web.repo['tip']
     parity = paritygen(web.stripecount)
 
-    return tmpl('search', query=query, node=tip.hex(),
+    return tmpl('search', query=query, node=tip.hex(), symrev='tip',
                 entries=changelist, archives=web.archivelist("tip"),
                 morevars=morevars, lessvars=lessvars,
                 modedesc=searchfunc[1],
@@ -351,10 +352,12 @@ def changelog(web, req, tmpl, shortlog=False):
     query = ''
     if 'node' in req.form:
         ctx = webutil.changectx(web.repo, req)
+        symrev = webutil.symrevorshortnode(req, ctx)
     elif 'rev' in req.form:
         return _search(web, req, tmpl)
     else:
         ctx = web.repo['tip']
+        symrev = 'tip'
 
     def changelist():
         revs = []
@@ -403,7 +406,7 @@ def changelog(web, req, tmpl, shortlog=False):
         nextentry = []
 
     return tmpl(shortlog and 'shortlog' or 'changelog', changenav=changenav,
-                node=ctx.hex(), rev=pos, changesets=count,
+                node=ctx.hex(), rev=pos, symrev=symrev, changesets=count,
                 entries=entries,
                 latestentry=latestentry, nextentry=nextentry,
                 archives=web.archivelist("tip"), revcount=revcount,
@@ -470,7 +473,12 @@ def manifest(web, req, tmpl):
 
     The ``manifest`` template will be rendered for this handler.
     """
-    ctx = webutil.changectx(web.repo, req)
+    if 'node' in req.form:
+        ctx = webutil.changectx(web.repo, req)
+        symrev = webutil.symrevorshortnode(req, ctx)
+    else:
+        ctx = web.repo['tip']
+        symrev = 'tip'
     path = webutil.cleanpath(web.repo, req.form.get('file', [''])[0])
     mf = ctx.manifest()
     node = ctx.node()
@@ -539,6 +547,7 @@ def manifest(web, req, tmpl):
 
     return tmpl("manifest",
                 rev=ctx.rev(),
+                symrev=symrev,
                 node=hex(node),
                 path=abspath,
                 up=webutil.up(abspath),
@@ -755,6 +764,7 @@ def summary(web, req, tmpl):
                 branches=branches,
                 shortlog=changelist,
                 node=tip.hex(),
+                symrev='tip',
                 archives=web.archivelist("tip"))
 
 @webcommand('filediff')
@@ -803,6 +813,7 @@ def filediff(web, req, tmpl):
                 file=path,
                 node=hex(n),
                 rev=ctx.rev(),
+                symrev=webutil.symrevorshortnode(req, ctx),
                 date=ctx.date(),
                 desc=ctx.description(),
                 extra=ctx.extra(),
@@ -877,6 +888,7 @@ def comparison(web, req, tmpl):
                 file=path,
                 node=hex(ctx.node()),
                 rev=ctx.rev(),
+                symrev=webutil.symrevorshortnode(req, ctx),
                 date=ctx.date(),
                 desc=ctx.description(),
                 extra=ctx.extra(),
@@ -944,6 +956,7 @@ def annotate(web, req, tmpl):
                 annotate=annotate,
                 path=webutil.up(f),
                 rev=fctx.rev(),
+                symrev=webutil.symrevorshortnode(req, fctx),
                 node=fctx.hex(),
                 author=fctx.user(),
                 date=fctx.date(),
@@ -1043,6 +1056,7 @@ def filelog(web, req, tmpl):
     revnav = webutil.filerevnav(web.repo, fctx.path())
     nav = revnav.gen(end - 1, revcount, count)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
+                symrev=webutil.symrevorshortnode(req, fctx),
                 entries=entries,
                 latestentry=latestentry,
                 revcount=revcount, morevars=morevars, lessvars=lessvars)
@@ -1149,7 +1163,12 @@ def graph(web, req, tmpl):
     This handler will render the ``graph`` template.
     """
 
-    ctx = webutil.changectx(web.repo, req)
+    if 'node' in req.form:
+        ctx = webutil.changectx(web.repo, req)
+        symrev = webutil.symrevorshortnode(req, ctx)
+    else:
+        ctx = web.repo['tip']
+        symrev = 'tip'
     rev = ctx.rev()
 
     bg_height = 39
@@ -1252,7 +1271,8 @@ def graph(web, req, tmpl):
     rows = len(tree)
     canvasheight = (rows + 1) * bg_height - 27
 
-    return tmpl('graph', rev=rev, revcount=revcount, uprev=uprev,
+    return tmpl('graph', rev=rev, symrev=symrev, revcount=revcount,
+                uprev=uprev,
                 lessvars=lessvars, morevars=morevars, downrev=downrev,
                 cols=cols, rows=rows,
                 canvaswidth=(cols + 1) * bg_height,
