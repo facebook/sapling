@@ -492,10 +492,12 @@ The graft case
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-Test that template correctly expands more than one 'extra' (issue4362)
-  $ hg -R ../converted log -r 7 --template "{extras % ' Extra: {extra}\n'}"
+Test that template correctly expands more than one 'extra' (issue4362), and that
+'intermediate-source' is converted.
+  $ hg -R ../converted log -r 13 --template "{extras % ' Extra: {extra}\n'}"
    Extra: branch=default
-   Extra: convert_revision=ef0ef43d49e79e81ddafdc7997401ba0041efc82
+   Extra: convert_revision=7a4785234d87ec1aa420ed6b11afe40fa73e12a9
+   Extra: intermediate-source=7ae846e9111fc8f57745634250c7b9ac0a60689b
    Extra: source=e0213322b2c1a5d5d236c74e79666441bee67a7d
 
 The transplant case

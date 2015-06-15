@@ -225,7 +225,8 @@ class mercurial_sink(converter_sink):
 
         extra = commit.extra.copy()
 
-        for label in ('source', 'transplant_source', 'rebase_source'):
+        for label in ('source', 'transplant_source', 'rebase_source',
+                      'intermediate-source'):
             node = extra.get(label)
 
             if node is None:
