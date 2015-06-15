@@ -1334,6 +1334,9 @@ class workingctx(committablectx):
     def __contains__(self, key):
         return self._repo.dirstate[key] not in "?r"
 
+    def hex(self):
+        return "ff" * 20
+
     @propertycache
     def _parents(self):
         p = self._repo.dirstate.parents()
