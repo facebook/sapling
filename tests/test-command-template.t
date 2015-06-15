@@ -2541,6 +2541,16 @@ Behind the scenes, this will throw ValueError
   abort: template filter 'datefilter' is not compatible with keyword 'author'
   [255]
 
+Error in nested template:
+
+  $ hg log -T '{"date'
+  hg: parse error at 2: unterminated string
+  [255]
+
+  $ hg log -T '{"foo{date|=}"}'
+  hg: parse error at 11: syntax error
+  [255]
+
 Thrown an error if a template function doesn't exist
 
   $ hg tip --template '{foo()}\n'
@@ -2952,7 +2962,7 @@ escaped single quotes and errors:
   $ hg log -r 2 -T "{if(rev, '{if(rev, r\'foo\')}')}"'\n'
   foo
   $ hg log -r 2 -T '{if(rev, "{if(rev, \")}")}\n'
-  hg: parse error at 11: unterminated string
+  hg: parse error at 21: unterminated string
   [255]
   $ hg log -r 2 -T '{if(rev, \"\\"")}\n'
   hg: parse error at 11: syntax error
@@ -3068,6 +3078,14 @@ Test string escaping in nested expression:
   $ hg log -R a -r 3:4 --template '{rev}:{sub(if("1", "\x6e"), ifeq(branch, "foo", r"\x5c\x786e", "\x5c\x786e"), desc)}\n'
   3:\x6eo user, \x6eo domai\x6e
   4:\x5c\x786eew bra\x5c\x786ech
+
+Test quotes in nested expression are evaluated just like a $(command)
+substitution in POSIX shells:
+
+  $ hg log -R a -r 8 -T '{"{"{rev}:{node|short}"}"}\n'
+  8:95c24699272e
+  $ hg log -R a -r 8 -T '{"{"\{{rev}} \"{node|short}\""}"}\n'
+  {8} "95c24699272e"
 
 Test recursive evaluation:
 

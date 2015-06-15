@@ -24,6 +24,7 @@ elements = {
     "symbol": (0, ("symbol",), None),
     "string": (0, ("template",), None),
     "rawstring": (0, ("rawstring",), None),
+    "template": (0, ("template",), None),
     "end": (0, None, None),
 }
 
@@ -35,6 +36,11 @@ def tokenize(program, start, end):
             pass
         elif c in "(,)%|": # handle simple operators
             yield (c, None, pos)
+        elif c in '"\'': # handle quoted templates
+            s = pos + 1
+            data, pos = _parsetemplate(program, s, end, c)
+            yield ('template', data, s)
+            pos -= 1
         elif (c in '"\'' or c == 'r' and
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
             if c == 'r':
@@ -89,7 +95,7 @@ def tokenize(program, start, end):
                 pos += 1
                 token = 'rawstring'
             else:
-                token = 'string'
+                token = 'template'
             quote = program[pos:pos + 2]
             s = pos = pos + 2
             while pos < end: # find closing escaped quote
@@ -102,6 +108,8 @@ def tokenize(program, start, end):
                         data = program[s:pos].decode('string-escape')
                     except ValueError: # unbalanced escapes
                         raise error.ParseError(_("syntax error"), s)
+                    if token == 'template':
+                        data = _parsetemplate(data, 0, len(data))[0]
                     yield (token, data, s)
                     pos += 1
                     break
@@ -127,27 +135,47 @@ def tokenize(program, start, end):
         pos += 1
     raise error.ParseError(_("unterminated template expansion"), start)
 
-def _parsetemplate(tmpl, start, stop):
+def _parsetemplate(tmpl, start, stop, quote=''):
+    r"""
+    >>> _parsetemplate('foo{bar}"baz', 0, 12)
+    ([('string', 'foo'), ('symbol', 'bar'), ('string', '"baz')], 12)
+    >>> _parsetemplate('foo{bar}"baz', 0, 12, quote='"')
+    ([('string', 'foo'), ('symbol', 'bar')], 9)
+    >>> _parsetemplate('foo"{bar}', 0, 9, quote='"')
+    ([('string', 'foo')], 4)
+    >>> _parsetemplate(r'foo\"bar"baz', 0, 12, quote='"')
+    ([('string', 'foo"'), ('string', 'bar')], 9)
+    >>> _parsetemplate(r'foo\\"bar', 0, 10, quote='"')
+    ([('string', 'foo\\\\')], 6)
+    """
     parsed = []
+    sepchars = '{' + quote
     pos = start
     p = parser.parser(elements)
     while pos < stop:
-        n = tmpl.find('{', pos, stop)
+        n = min((tmpl.find(c, pos, stop) for c in sepchars),
+                key=lambda n: (n < 0, n))
         if n < 0:
             parsed.append(('string', tmpl[pos:stop]))
             pos = stop
             break
+        c = tmpl[n]
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
         if bs % 2 == 1:
             # escaped (e.g. '\{', '\\\{', but not '\\{')
-            parsed.append(('string', (tmpl[pos:n - 1] + "{")))
+            parsed.append(('string', (tmpl[pos:n - 1] + c)))
             pos = n + 1
             continue
         if n > pos:
             parsed.append(('string', tmpl[pos:n]))
+        if c == quote:
+            return parsed, n + 1
 
         parseres, pos = p.parse(tokenize(tmpl, n + 1, stop))
         parsed.append(parseres)
+
+    if quote:
+        raise error.ParseError(_("unterminated string"), start)
     return parsed, pos
 
 def compiletemplate(tmpl, context):
@@ -182,7 +210,7 @@ def getfilter(exp, context):
 
 def gettemplate(exp, context):
     if exp[0] == 'template':
-        return compiletemplate(exp[1], context)
+        return [compileexp(e, context, methods) for e in exp[1]]
     if exp[0] == 'symbol':
         # unlike runsymbol(), here 'symbol' is always taken as template name
         # even if it exists in mapping. this allows us to override mapping
@@ -215,7 +243,7 @@ def runsymbol(context, mapping, key):
     return v
 
 def buildtemplate(exp, context):
-    ctmpl = compiletemplate(exp[1], context)
+    ctmpl = [compileexp(e, context, methods) for e in exp[1]]
     if len(ctmpl) == 1:
         return ctmpl[0]  # fast path for string with no template fragment
     return (runtemplate, ctmpl)
