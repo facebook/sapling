@@ -290,18 +290,7 @@ def extsetup(ui):
     extensions.wrapfunction(hg, 'updaterepo', exupdate)
     extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
 
-    entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
-    entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
-    entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
-
     if _tracking(ui):
-        entry[1].append(('t', 'track', '',
-                         'track this bookmark or remote name',
-                         'BOOKMARK'))
-        entry[1].append(('u', 'untrack', None,
-                         'remove tracking for this bookmark',
-                         'BOOKMARK'))
-
         try:
             rebase = extensions.find('rebase')
 
@@ -313,6 +302,18 @@ def extsetup(ui):
         except KeyError:
             # rebase isn't on, that's fine
             pass
+
+    entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
+    entry[1].append(('a', 'all', None, 'show both remote and local bookmarks'))
+    entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
+
+    if _tracking(ui):
+        entry[1].append(('t', 'track', '',
+                         'track this bookmark or remote name',
+                         'BOOKMARK'))
+        entry[1].append(('u', 'untrack', None,
+                         'remove tracking for this bookmark',
+                         'BOOKMARK'))
 
     entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
     entry[1].append(('a', 'all', None, 'show both remote and local branches'))
