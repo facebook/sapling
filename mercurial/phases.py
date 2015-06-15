@@ -167,6 +167,7 @@ class phasecache(object):
         ph.dirty = self.dirty
         ph.opener = self.opener
         ph._phaserevs = self._phaserevs
+        ph._phasesets = self._phasesets
         return ph
 
     def replace(self, phcache):
