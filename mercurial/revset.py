@@ -1513,6 +1513,7 @@ def present(repo, subset, x):
 # for internal use
 def _notpublic(repo, subset, x):
     getargs(x, 0, 0, "_notpublic takes no arguments")
+    repo._phasecache.loadphaserevs(repo) # ensure phase's sets are loaded
     if repo._phasecache._phasesets:
         s = set()
         for u in repo._phasecache._phasesets[1:]:
