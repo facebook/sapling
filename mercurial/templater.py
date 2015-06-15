@@ -127,9 +127,9 @@ def tokenize(program, start, end):
         pos += 1
     yield ('end', None, pos)
 
-def compiletemplate(tmpl, context):
+def _parsetemplate(tmpl, start, stop):
     parsed = []
-    pos, stop = 0, len(tmpl)
+    pos = start
     p = parser.parser(elements)
     while pos < stop:
         n = tmpl.find('{', pos, stop)
@@ -148,7 +148,10 @@ def compiletemplate(tmpl, context):
 
         parseres, pos = p.parse(tokenize(tmpl, n + 1, stop))
         parsed.append(parseres)
+    return parsed, pos
 
+def compiletemplate(tmpl, context):
+    parsed, pos = _parsetemplate(tmpl, 0, len(tmpl))
     return [compileexp(e, context, methods) for e in parsed]
 
 def compileexp(exp, context, curmethods):
