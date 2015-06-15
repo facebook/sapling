@@ -1480,41 +1480,34 @@ static int index_find_node(indexObject *self,
 	return -2;
 }
 
-static PyObject *raise_revlog_error(void)
+static void raise_revlog_error(void)
 {
-	static PyObject *errclass;
-	PyObject *mod = NULL, *errobj;
+	PyObject *mod = NULL, *dict = NULL, *errclass = NULL;
 
-	if (errclass == NULL) {
-		PyObject *dict;
-
-		mod = PyImport_ImportModule("mercurial.error");
-		if (mod == NULL)
-			goto classfail;
-
-		dict = PyModule_GetDict(mod);
-		if (dict == NULL)
-			goto classfail;
-
-		errclass = PyDict_GetItemString(dict, "RevlogError");
-		if (errclass == NULL) {
-			PyErr_SetString(PyExc_SystemError,
-					"could not find RevlogError");
-			goto classfail;
-		}
-		Py_INCREF(errclass);
-		Py_DECREF(mod);
+	mod = PyImport_ImportModule("mercurial.error");
+	if (mod == NULL) {
+		goto cleanup;
 	}
 
-	errobj = PyObject_CallFunction(errclass, NULL);
-	if (errobj == NULL)
-		return NULL;
-	PyErr_SetObject(errclass, errobj);
-	return errobj;
+	dict = PyModule_GetDict(mod);
+	if (dict == NULL) {
+		goto cleanup;
+	}
+	Py_INCREF(dict);
 
-classfail:
+	errclass = PyDict_GetItemString(dict, "RevlogError");
+	if (errclass == NULL) {
+		PyErr_SetString(PyExc_SystemError,
+				"could not find RevlogError");
+		goto cleanup;
+	}
+
+	/* value of exception is ignored by callers */
+	PyErr_SetString(errclass, "RevlogError");
+
+cleanup:
+	Py_XDECREF(dict);
 	Py_XDECREF(mod);
-	return NULL;
 }
 
 static PyObject *index_getitem(indexObject *self, PyObject *value)

@@ -266,7 +266,7 @@ def diff(context, mapping, args):
 
     def getpatterns(i):
         if i < len(args):
-            s = args[i][1].strip()
+            s = stringify(args[i][0](context, mapping, args[i][1])).strip()
             if s:
                 return [s]
         return []

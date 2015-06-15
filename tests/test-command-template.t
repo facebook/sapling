@@ -2571,6 +2571,13 @@ Test diff function:
   @@ -0,0 +1,1 @@
   +third
 
+  $ hg log -r 8 -T "{diff('FOURTH'|lower)}"
+  diff -r 29114dbae42b -r 95c24699272e fourth
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
+  @@ -0,0 +1,1 @@
+  +second
+
   $ cd ..
 
 
