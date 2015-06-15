@@ -171,6 +171,7 @@ class phasecache(object):
         return ph
 
     def replace(self, phcache):
+        """replace all values in 'self' with content of phcache"""
         for a in 'phaseroots dirty opener _phaserevs _phasesets'.split():
             setattr(self, a, getattr(phcache, a))
 
