@@ -194,7 +194,8 @@ class phasecache(object):
                 for rev in repo.changelog.descendants(roots):
                     revs[rev] = phase
 
-    def getphaserevs(self, repo):
+    def loadphaserevs(self, repo):
+        """ensure phase information is loaded in the object"""
         if self._phaserevs is None:
             try:
                 if repo.ui.configbool('experimental',
@@ -205,7 +206,6 @@ class phasecache(object):
                     self._phaserevs, self._phasesets = res
             except AttributeError:
                 self._computephaserevspure(repo)
-        return self._phaserevs
 
     def invalidate(self):
         self._phaserevs = None
@@ -233,7 +233,7 @@ class phasecache(object):
             raise ValueError(_('cannot lookup negative revision'))
         if self._phaserevs is None or rev >= len(self._phaserevs):
             self.invalidate()
-            self._phaserevs = self.getphaserevs(repo)
+            self.loadphaserevs(repo)
         return self._phaserevs[rev]
 
     def write(self):
