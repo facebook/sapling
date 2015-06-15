@@ -662,6 +662,15 @@ class hgsubrepo(abstractsubrepo):
         finally:
             lock.release()
 
+    def _getctx(self):
+        '''fetch the context for this subrepo revision, possibly a workingctx
+        '''
+        if self._ctx.rev() is None:
+            return self._repo[None]  # workingctx if parent is workingctx
+        else:
+            rev = self._state[1]
+            return self._repo[rev]
+
     @annotatesubrepoerror
     def _initrepo(self, parentrepo, source, create):
         self._repo._subparent = parentrepo
