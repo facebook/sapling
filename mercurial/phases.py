@@ -209,6 +209,7 @@ class phasecache(object):
 
     def invalidate(self):
         self._phaserevs = None
+        self._phasesets = None
 
     def _populatephaseroots(self, repo):
         """Fills the _phaserevs cache with phases for the roots.
