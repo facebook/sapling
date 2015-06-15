@@ -132,9 +132,10 @@ def compiletemplate(tmpl, context):
     pos, stop = 0, len(tmpl)
     p = parser.parser(elements)
     while pos < stop:
-        n = tmpl.find('{', pos)
+        n = tmpl.find('{', pos, stop)
         if n < 0:
-            parsed.append(('string', tmpl[pos:]))
+            parsed.append(('string', tmpl[pos:stop]))
+            pos = stop
             break
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
         if bs % 2 == 1:
