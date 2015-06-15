@@ -120,12 +120,12 @@ def tokenize(program, start, end):
             yield ('symbol', sym, s)
             pos -= 1
         elif c == '}':
-            pos += 1
-            break
+            yield ('end', None, pos + 1)
+            return
         else:
             raise error.ParseError(_("syntax error"), pos)
         pos += 1
-    yield ('end', None, pos)
+    raise error.ParseError(_("unterminated template expansion"), start)
 
 def _parsetemplate(tmpl, start, stop):
     parsed = []

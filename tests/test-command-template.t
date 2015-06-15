@@ -2513,6 +2513,10 @@ Error on syntax:
   abort: t:3: unmatched quotes
   [255]
 
+  $ hg log -T '{date'
+  hg: parse error at 1: unterminated template expansion
+  [255]
+
 Behind the scenes, this will throw TypeError
 
   $ hg log -l 3 --template '{date|obfuscate}\n'
