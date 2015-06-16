@@ -173,6 +173,18 @@ static PyObject *asciiupper(PyObject *self, PyObject *args)
 	return _asciitransform(str_obj, uppertable, NULL);
 }
 
+static inline PyObject *_dict_new_presized(Py_ssize_t expected_size)
+{
+	/* _PyDict_NewPresized expects a minused parameter, but it actually
+	   creates a dictionary that's the nearest power of two bigger than the
+	   parameter. For example, with the initial minused = 1000, the
+	   dictionary created has size 1024. Of course in a lot of cases that
+	   can be greater than the maximum load factor Python's dict object
+	   expects (= 2/3), so as soon as we cross the threshold we'll resize
+	   anyway. So create a dictionary that's at least 3/2 the size. */
+	return _PyDict_NewPresized(((1 + expected_size) / 2) * 3);
+}
+
 static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 {
 	PyObject *dmap, *spec_obj, *normcase_fallback;
@@ -205,15 +217,9 @@ static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 		goto quit;
 	}
 
-	/* _PyDict_NewPresized expects a minused parameter, but it actually
-	   creates a dictionary that's the nearest power of two bigger than the
-	   parameter. For example, with the initial minused = 1000, the
-	   dictionary created has size 1024. Of course in a lot of cases that
-	   can be greater than the maximum load factor Python's dict object
-	   expects (= 2/3), so as soon as we cross the threshold we'll resize
-	   anyway. So create a dictionary that's 3/2 the size. Also add some
-	   more to deal with additions outside this function. */
-	file_foldmap = _PyDict_NewPresized((PyDict_Size(dmap) / 5) * 8);
+	/* Add some more entries to deal with additions outside this
+	   function. */
+	file_foldmap = _dict_new_presized((PyDict_Size(dmap) / 10) * 11);
 	if (file_foldmap == NULL)
 		goto quit;
 
