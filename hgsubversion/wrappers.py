@@ -515,7 +515,8 @@ def pull(repo, source, heads=[], force=False, meta=None):
     else:
         ui.status("pulled %d revisions\n" % revisions)
 
-def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
+def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(),
+                 opargs=None):
     capable = getattr(remote, 'capable', lambda x: False)
     if capable('subversion'):
         # transaction manager is present in Mercurial >= 3.3
@@ -536,7 +537,13 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
             else:
                 pullop.releasetransaction()
     else:
-        return orig(repo, remote, heads, force, bookmarks=bookmarks)
+        if opargs is not None:
+            # hg 3.5
+            return orig(
+                repo, remote, heads, force, bookmarks=bookmarks, opargs=opargs)
+        else:
+            # hg 3.4
+            return orig(repo, remote, heads, force, bookmarks=bookmarks)
 
 def rebase(orig, ui, repo, **opts):
     """rebase current unpushed revisions onto the Subversion head
