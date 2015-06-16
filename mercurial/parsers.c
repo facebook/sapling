@@ -185,6 +185,16 @@ static inline PyObject *_dict_new_presized(Py_ssize_t expected_size)
 	return _PyDict_NewPresized(((1 + expected_size) / 2) * 3);
 }
 
+static PyObject *dict_new_presized(PyObject *self, PyObject *args)
+{
+	Py_ssize_t expected_size;
+
+	if (!PyArg_ParseTuple(args, "n:make_presized_dict", &expected_size))
+		return NULL;
+
+	return _dict_new_presized(expected_size);
+}
+
 static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 {
 	PyObject *dmap, *spec_obj, *normcase_fallback;
@@ -2524,6 +2534,8 @@ static PyMethodDef methods[] = {
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
 	{"asciilower", asciilower, METH_VARARGS, "lowercase an ASCII string\n"},
 	{"asciiupper", asciiupper, METH_VARARGS, "uppercase an ASCII string\n"},
+	{"dict_new_presized", dict_new_presized, METH_VARARGS,
+	 "construct a dict with an expected size\n"},
 	{"make_file_foldmap", make_file_foldmap, METH_VARARGS,
 	 "make file foldmap\n"},
 	{"encodedir", encodedir, METH_VARARGS, "encodedir a path\n"},
