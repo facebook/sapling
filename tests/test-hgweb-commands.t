@@ -710,14 +710,14 @@ Logs and changes
   </div>
   <ul>
   <li class="active">log</li>
-  <li><a href="/graph/cad8025a2e87">graph</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/cad8025a2e87">changeset</a></li>
-  <li><a href="/file/cad8025a2e87">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
   </ul>
   <ul>
   
@@ -744,8 +744,8 @@ Logs and changes
   </form>
   
   <div class="navigate">
-  <a href="/shortlog/3?revcount=30">less</a>
-  <a href="/shortlog/3?revcount=120">more</a>
+  <a href="/shortlog/tip?revcount=30">less</a>
+  <a href="/shortlog/tip?revcount=120">more</a>
   | rev 3: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
   </div>
   
@@ -795,8 +795,8 @@ Logs and changes
   </table>
   
   <div class="navigate">
-  <a href="/shortlog/3?revcount=30">less</a>
-  <a href="/shortlog/3?revcount=120">more</a>
+  <a href="/shortlog/tip?revcount=30">less</a>
+  <a href="/shortlog/tip?revcount=120">more</a>
   | rev 3: <a href="/shortlog/2ef0ac749a14">(0)</a> <a href="/shortlog/tip">tip</a> 
   </div>
   
@@ -845,16 +845,16 @@ Logs and changes
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-   <li><a href="/shortlog/2ef0ac749a14">log</a></li>
-   <li><a href="/graph/2ef0ac749a14">graph</a></li>
+   <li><a href="/shortlog/0">log</a></li>
+   <li><a href="/graph/0">graph</a></li>
    <li><a href="/tags">tags</a></li>
    <li><a href="/bookmarks">bookmarks</a></li>
    <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
    <li class="active">changeset</li>
-   <li><a href="/raw-rev/2ef0ac749a14">raw</a></li>
-   <li><a href="/file/2ef0ac749a14">browse</a></li>
+   <li><a href="/raw-rev/0">raw</a></li>
+   <li><a href="/file/0">browse</a></li>
   </ul>
   <ul>
    
@@ -1270,24 +1270,24 @@ File-related
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/a4f92ed23982">log</a></li>
-  <li><a href="/graph/a4f92ed23982">graph</a></li>
+  <li><a href="/shortlog/1">log</a></li>
+  <li><a href="/graph/1">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/a4f92ed23982">changeset</a></li>
-  <li><a href="/file/a4f92ed23982/">browse</a></li>
+  <li><a href="/rev/1">changeset</a></li>
+  <li><a href="/file/1/">browse</a></li>
   </ul>
   <ul>
   <li class="active">file</li>
   <li><a href="/file/tip/foo">latest</a></li>
-  <li><a href="/diff/a4f92ed23982/foo">diff</a></li>
-  <li><a href="/comparison/a4f92ed23982/foo">comparison</a></li>
-  <li><a href="/annotate/a4f92ed23982/foo">annotate</a></li>
-  <li><a href="/log/a4f92ed23982/foo">file log</a></li>
-  <li><a href="/raw-file/a4f92ed23982/foo">raw</a></li>
+  <li><a href="/diff/1/foo">diff</a></li>
+  <li><a href="/comparison/1/foo">comparison</a></li>
+  <li><a href="/annotate/1/foo">annotate</a></li>
+  <li><a href="/log/1/foo">file log</a></li>
+  <li><a href="/raw-file/1/foo">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -1394,24 +1394,24 @@ File-related
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/1d22e65f027e">log</a></li>
-  <li><a href="/graph/1d22e65f027e">graph</a></li>
+  <li><a href="/shortlog/2">log</a></li>
+  <li><a href="/graph/2">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/1d22e65f027e">changeset</a></li>
-  <li><a href="/file/1d22e65f027e/">browse</a></li>
+  <li><a href="/rev/2">changeset</a></li>
+  <li><a href="/file/2/">browse</a></li>
   </ul>
   <ul>
   <li class="active">file</li>
   <li><a href="/file/tip/foo">latest</a></li>
-  <li><a href="/diff/1d22e65f027e/foo">diff</a></li>
-  <li><a href="/comparison/1d22e65f027e/foo">comparison</a></li>
-  <li><a href="/annotate/1d22e65f027e/foo">annotate</a></li>
-  <li><a href="/log/1d22e65f027e/foo">file log</a></li>
-  <li><a href="/raw-file/1d22e65f027e/foo">raw</a></li>
+  <li><a href="/diff/2/foo">diff</a></li>
+  <li><a href="/comparison/2/foo">comparison</a></li>
+  <li><a href="/annotate/2/foo">annotate</a></li>
+  <li><a href="/log/2/foo">file log</a></li>
+  <li><a href="/raw-file/2/foo">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>

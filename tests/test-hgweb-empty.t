@@ -33,14 +33,14 @@ Some tests for hgweb in an empty repository
   </div>
   <ul>
   <li class="active">log</li>
-  <li><a href="/graph/000000000000">graph</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/000000000000">changeset</a></li>
-  <li><a href="/file/000000000000">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
   </ul>
   <ul>
   
@@ -67,8 +67,8 @@ Some tests for hgweb in an empty repository
   </form>
   
   <div class="navigate">
-  <a href="/shortlog/-1?revcount=30">less</a>
-  <a href="/shortlog/-1?revcount=120">more</a>
+  <a href="/shortlog/tip?revcount=30">less</a>
+  <a href="/shortlog/tip?revcount=120">more</a>
   | rev -1: 
   </div>
   
@@ -86,8 +86,8 @@ Some tests for hgweb in an empty repository
   </table>
   
   <div class="navigate">
-  <a href="/shortlog/-1?revcount=30">less</a>
-  <a href="/shortlog/-1?revcount=120">more</a>
+  <a href="/shortlog/tip?revcount=30">less</a>
+  <a href="/shortlog/tip?revcount=120">more</a>
   | rev -1: 
   </div>
   
@@ -144,14 +144,14 @@ Some tests for hgweb in an empty repository
   </div>
   <ul>
   <li class="active">log</li>
-  <li><a href="/graph/000000000000">graph</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/000000000000">changeset</a></li>
-  <li><a href="/file/000000000000">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
   </ul>
   <ul>
   
@@ -178,8 +178,8 @@ Some tests for hgweb in an empty repository
   </form>
   
   <div class="navigate">
-  <a href="/shortlog/-1?revcount=5">less</a>
-  <a href="/shortlog/-1?revcount=20">more</a>
+  <a href="/shortlog/tip?revcount=5">less</a>
+  <a href="/shortlog/tip?revcount=20">more</a>
   | rev -1: 
   </div>
   
@@ -197,8 +197,8 @@ Some tests for hgweb in an empty repository
   </table>
   
   <div class="navigate">
-  <a href="/shortlog/-1?revcount=5">less</a>
-  <a href="/shortlog/-1?revcount=20">more</a>
+  <a href="/shortlog/tip?revcount=5">less</a>
+  <a href="/shortlog/tip?revcount=20">more</a>
   | rev -1: 
   </div>
   
@@ -253,15 +253,15 @@ Some tests for hgweb in an empty repository
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/000000000000">log</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
   <li class="active">graph</li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/000000000000">changeset</a></li>
-  <li><a href="/file/000000000000">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
   </ul>
   <ul>
    <li><a href="/help">help</a></li>
@@ -285,8 +285,8 @@ Some tests for hgweb in an empty repository
   </form>
   
   <div class="navigate">
-  <a href="/graph/-1?revcount=30">less</a>
-  <a href="/graph/-1?revcount=120">more</a>
+  <a href="/graph/tip?revcount=30">less</a>
+  <a href="/graph/tip?revcount=120">more</a>
   | rev -1: 
   </div>
   
@@ -355,8 +355,8 @@ Some tests for hgweb in an empty repository
   </script>
   
   <div class="navigate">
-  <a href="/graph/-1?revcount=30">less</a>
-  <a href="/graph/-1?revcount=120">more</a>
+  <a href="/graph/tip?revcount=30">less</a>
+  <a href="/graph/tip?revcount=120">more</a>
   | rev -1: 
   </div>
   
@@ -402,14 +402,14 @@ Some tests for hgweb in an empty repository
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/000000000000">log</a></li>
-  <li><a href="/graph/000000000000">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/000000000000">changeset</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
   <li class="active">browse</li>
   </ul>
   <ul>
@@ -441,7 +441,7 @@ Some tests for hgweb in an empty repository
   </thead>
   <tbody class="stripes2">
   <tr class="fileline">
-    <td class="name"><a href="/file/000000000000/">[up]</a></td>
+    <td class="name"><a href="/file/tip/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>

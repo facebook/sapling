@@ -79,24 +79,24 @@ hgweb filerevision, html
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/853dcd4de2a6">log</a></li>
-  <li><a href="/graph/853dcd4de2a6">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/853dcd4de2a6">changeset</a></li>
-  <li><a href="/file/853dcd4de2a6/">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip/">browse</a></li>
   </ul>
   <ul>
   <li class="active">file</li>
   <li><a href="/file/tip/primes.py">latest</a></li>
-  <li><a href="/diff/853dcd4de2a6/primes.py">diff</a></li>
-  <li><a href="/comparison/853dcd4de2a6/primes.py">comparison</a></li>
-  <li><a href="/annotate/853dcd4de2a6/primes.py">annotate</a></li>
-  <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
-  <li><a href="/raw-file/853dcd4de2a6/primes.py">raw</a></li>
+  <li><a href="/diff/tip/primes.py">diff</a></li>
+  <li><a href="/comparison/tip/primes.py">comparison</a></li>
+  <li><a href="/annotate/tip/primes.py">annotate</a></li>
+  <li><a href="/log/tip/primes.py">file log</a></li>
+  <li><a href="/raw-file/tip/primes.py">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -209,25 +209,25 @@ hgweb fileannotate, html
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/853dcd4de2a6">log</a></li>
-  <li><a href="/graph/853dcd4de2a6">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   
   <ul>
-  <li><a href="/rev/853dcd4de2a6">changeset</a></li>
-  <li><a href="/file/853dcd4de2a6/">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip/">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/853dcd4de2a6/primes.py">file</a></li>
+  <li><a href="/file/tip/primes.py">file</a></li>
   <li><a href="/file/tip/primes.py">latest</a></li>
-  <li><a href="/diff/853dcd4de2a6/primes.py">diff</a></li>
-  <li><a href="/comparison/853dcd4de2a6/primes.py">comparison</a></li>
+  <li><a href="/diff/tip/primes.py">diff</a></li>
+  <li><a href="/comparison/tip/primes.py">comparison</a></li>
   <li class="active">annotate</li>
-  <li><a href="/log/853dcd4de2a6/primes.py">file log</a></li>
-  <li><a href="/raw-annotate/853dcd4de2a6/primes.py">raw</a></li>
+  <li><a href="/log/tip/primes.py">file log</a></li>
+  <li><a href="/raw-annotate/tip/primes.py">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>

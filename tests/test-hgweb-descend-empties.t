@@ -51,14 +51,14 @@ manifest with descending (paper)
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/c9f45f7a1659">log</a></li>
-  <li><a href="/graph/c9f45f7a1659">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/c9f45f7a1659">changeset</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
   <li class="active">browse</li>
   </ul>
   <ul>
@@ -90,17 +90,17 @@ manifest with descending (paper)
   </thead>
   <tbody class="stripes2">
   <tr class="fileline">
-    <td class="name"><a href="/file/c9f45f7a1659/">[up]</a></td>
+    <td class="name"><a href="/file/tip/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
   <tr class="fileline">
   <td class="name">
-  <a href="/file/c9f45f7a1659/a1">
+  <a href="/file/tip/a1">
   <img src="/static/coal-folder.png" alt="dir."/> a1/
   </a>
-  <a href="/file/c9f45f7a1659/a1/a2/a3/a4">
+  <a href="/file/tip/a1/a2/a3/a4">
   a2/a3/a4
   </a>
   </td>
@@ -109,10 +109,10 @@ manifest with descending (paper)
   </tr>
   <tr class="fileline">
   <td class="name">
-  <a href="/file/c9f45f7a1659/b1">
+  <a href="/file/tip/b1">
   <img src="/static/coal-folder.png" alt="dir."/> b1/
   </a>
-  <a href="/file/c9f45f7a1659/b1/b2/b3">
+  <a href="/file/tip/b1/b2/b3">
   b2/b3
   </a>
   </td>
@@ -121,10 +121,10 @@ manifest with descending (paper)
   </tr>
   <tr class="fileline">
   <td class="name">
-  <a href="/file/c9f45f7a1659/d1">
+  <a href="/file/tip/d1">
   <img src="/static/coal-folder.png" alt="dir."/> d1/
   </a>
-  <a href="/file/c9f45f7a1659/d1/d2">
+  <a href="/file/tip/d1/d2">
   d2
   </a>
   </td>
@@ -167,14 +167,14 @@ manifest with descending (coal)
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/c9f45f7a1659?style=coal">log</a></li>
-  <li><a href="/graph/c9f45f7a1659?style=coal">graph</a></li>
+  <li><a href="/shortlog/tip?style=coal">log</a></li>
+  <li><a href="/graph/tip?style=coal">graph</a></li>
   <li><a href="/tags?style=coal">tags</a></li>
   <li><a href="/bookmarks?style=coal">bookmarks</a></li>
   <li><a href="/branches?style=coal">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/c9f45f7a1659?style=coal">changeset</a></li>
+  <li><a href="/rev/tip?style=coal">changeset</a></li>
   <li class="active">browse</li>
   </ul>
   <ul>
@@ -206,17 +206,17 @@ manifest with descending (coal)
   </thead>
   <tbody class="stripes2">
   <tr class="fileline">
-    <td class="name"><a href="/file/c9f45f7a1659/?style=coal">[up]</a></td>
+    <td class="name"><a href="/file/tip/?style=coal">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
   <tr class="fileline parity1">
   <td class="name">
-  <a href="/file/c9f45f7a1659/a1?style=coal">
+  <a href="/file/tip/a1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> a1/
   </a>
-  <a href="/file/c9f45f7a1659/a1/a2/a3/a4?style=coal">
+  <a href="/file/tip/a1/a2/a3/a4?style=coal">
   a2/a3/a4
   </a>
   </td>
@@ -225,10 +225,10 @@ manifest with descending (coal)
   </tr>
   <tr class="fileline parity0">
   <td class="name">
-  <a href="/file/c9f45f7a1659/b1?style=coal">
+  <a href="/file/tip/b1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> b1/
   </a>
-  <a href="/file/c9f45f7a1659/b1/b2/b3?style=coal">
+  <a href="/file/tip/b1/b2/b3?style=coal">
   b2/b3
   </a>
   </td>
@@ -237,10 +237,10 @@ manifest with descending (coal)
   </tr>
   <tr class="fileline parity1">
   <td class="name">
-  <a href="/file/c9f45f7a1659/d1?style=coal">
+  <a href="/file/tip/d1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> d1/
   </a>
-  <a href="/file/c9f45f7a1659/d1/d2?style=coal">
+  <a href="/file/tip/d1/d2?style=coal">
   d2
   </a>
   </td>

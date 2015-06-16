@@ -15,14 +15,14 @@
 </div>
 <ul>
 <li class="active">log</li>
-<li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+<li><a href="{url|urlescape}graph/{symrev}{sessionvars%urlparameter}">graph</a></li>
 <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
 <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
 <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
-<li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
-<li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+<li><a href="{url|urlescape}rev/{symrev}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
 </ul>
 <ul>
 {archives%archiveentry}
@@ -48,8 +48,8 @@
 </form>
 
 <div class="navigate">
-<a href="{url|urlescape}shortlog/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url|urlescape}shortlog/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}shortlog/{symrev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}shortlog/{symrev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navshort}
 </div>
 
@@ -67,8 +67,8 @@
 </table>
 
 <div class="navigate">
-<a href="{url|urlescape}shortlog/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url|urlescape}shortlog/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}shortlog/{symrev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}shortlog/{symrev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navshort}
 </div>
 

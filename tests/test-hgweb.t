@@ -242,14 +242,14 @@ try bad style
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/2ef0ac749a14">log</a></li>
-  <li><a href="/graph/2ef0ac749a14">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/2ef0ac749a14">changeset</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
   <li class="active">browse</li>
   </ul>
   <ul>
@@ -281,17 +281,17 @@ try bad style
   </thead>
   <tbody class="stripes2">
   <tr class="fileline">
-    <td class="name"><a href="/file/2ef0ac749a14/">[up]</a></td>
+    <td class="name"><a href="/file/tip/">[up]</a></td>
     <td class="size"></td>
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
   <tr class="fileline">
   <td class="name">
-  <a href="/file/2ef0ac749a14/da">
+  <a href="/file/tip/da">
   <img src="/static/coal-folder.png" alt="dir."/> da/
   </a>
-  <a href="/file/2ef0ac749a14/da/">
+  <a href="/file/tip/da/">
   
   </a>
   </td>
@@ -301,7 +301,7 @@ try bad style
   
   <tr class="fileline">
   <td class="filename">
-  <a href="/file/2ef0ac749a14/foo">
+  <a href="/file/tip/foo">
   <img src="/static/coal-file.png" alt="file"/> foo
   </a>
   </td>

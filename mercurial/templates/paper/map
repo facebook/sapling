@@ -44,10 +44,10 @@ filenav = '{before%filenaventry}{after%filenaventry}'
 direntry = '
   <tr class="fileline">
     <td class="name">
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-folder.png" alt="dir."/> {basename|escape}/
       </a>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
         {emptydirs|escape}
       </a>
     </td>
@@ -58,7 +58,7 @@ direntry = '
 fileentry = '
   <tr class="fileline">
     <td class="filename">
-      <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-file.png" alt="file"/> {basename|escape}
       </a>
     </td>
@@ -240,7 +240,7 @@ indexarchiveentry = '<a href="{url|urlescape}archive/{node|short}{extension|urle
 index = index.tmpl
 archiveentry = '
   <li>
-    <a href="{url|urlescape}archive/{node|short}{extension|urlescape}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a>
+    <a href="{url|urlescape}archive/{symrev}{extension|urlescape}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a>
   </li>'
 notfound = notfound.tmpl
 error = error.tmpl

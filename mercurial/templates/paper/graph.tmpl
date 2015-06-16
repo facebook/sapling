@@ -15,15 +15,15 @@
 <img src="{staticurl|urlescape}{logoimg}" alt="mercurial" /></a>
 </div>
 <ul>
-<li><a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">log</a></li>
+<li><a href="{url|urlescape}shortlog/{symrev}{sessionvars%urlparameter}">log</a></li>
 <li class="active">graph</li>
 <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
 <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
 <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
 </ul>
 <ul>
-<li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
-<li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
+<li><a href="{url|urlescape}rev/{symrev}{sessionvars%urlparameter}">changeset</a></li>
+<li><a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">browse</a></li>
 </ul>
 <ul>
  <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
@@ -46,8 +46,8 @@
 </form>
 
 <div class="navigate">
-<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{symrev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{symrev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navgraph}
 </div>
 
@@ -116,8 +116,8 @@ graph.render(data);
 </script>
 
 <div class="navigate">
-<a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
-<a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
+<a href="{url|urlescape}graph/{symrev}{lessvars%urlparameter}">less</a>
+<a href="{url|urlescape}graph/{symrev}{morevars%urlparameter}">more</a>
 | rev {rev}: {changenav%navgraph}
 </div>
 

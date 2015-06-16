@@ -157,23 +157,23 @@ tip - two revisions
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/3f41bc784e7e">log</a></li>
-  <li><a href="/graph/3f41bc784e7e">graph</a></li>
+  <li><a href="/shortlog/tip">log</a></li>
+  <li><a href="/graph/tip">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/3f41bc784e7e">changeset</a></li>
-  <li><a href="/file/3f41bc784e7e">browse</a></li>
+  <li><a href="/rev/tip">changeset</a></li>
+  <li><a href="/file/tip">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/3f41bc784e7e/a">file</a></li>
-  <li><a href="/diff/3f41bc784e7e/a">diff</a></li>
-  <li><a href="/comparison/3f41bc784e7e/a">comparison</a></li>
-  <li><a href="/annotate/3f41bc784e7e/a">annotate</a></li>
+  <li><a href="/file/tip/a">file</a></li>
+  <li><a href="/diff/tip/a">diff</a></li>
+  <li><a href="/comparison/tip/a">comparison</a></li>
+  <li><a href="/annotate/tip/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/3f41bc784e7e/a">raw</a></li>
+  <li><a href="/raw-file/tip/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -197,8 +197,8 @@ tip - two revisions
   </form>
   
   <div class="navigate">
-  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
-  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
+  <a href="/log/tip/a?revcount=30">less</a>
+  <a href="/log/tip/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -231,8 +231,8 @@ tip - two revisions
   </table>
   
   <div class="navigate">
-  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
-  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
+  <a href="/log/tip/a?revcount=30">less</a>
+  <a href="/log/tip/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
@@ -274,23 +274,23 @@ second version - two revisions
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/3f41bc784e7e">log</a></li>
-  <li><a href="/graph/3f41bc784e7e">graph</a></li>
+  <li><a href="/shortlog/4">log</a></li>
+  <li><a href="/graph/4">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/3f41bc784e7e">changeset</a></li>
-  <li><a href="/file/3f41bc784e7e">browse</a></li>
+  <li><a href="/rev/4">changeset</a></li>
+  <li><a href="/file/4">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/3f41bc784e7e/a">file</a></li>
-  <li><a href="/diff/3f41bc784e7e/a">diff</a></li>
-  <li><a href="/comparison/3f41bc784e7e/a">comparison</a></li>
-  <li><a href="/annotate/3f41bc784e7e/a">annotate</a></li>
+  <li><a href="/file/4/a">file</a></li>
+  <li><a href="/diff/4/a">diff</a></li>
+  <li><a href="/comparison/4/a">comparison</a></li>
+  <li><a href="/annotate/4/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/3f41bc784e7e/a">raw</a></li>
+  <li><a href="/raw-file/4/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -314,8 +314,8 @@ second version - two revisions
   </form>
   
   <div class="navigate">
-  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
-  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
+  <a href="/log/4/a?revcount=30">less</a>
+  <a href="/log/4/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -348,8 +348,8 @@ second version - two revisions
   </table>
   
   <div class="navigate">
-  <a href="/log/3f41bc784e7e/a?revcount=30">less</a>
-  <a href="/log/3f41bc784e7e/a?revcount=120">more</a>
+  <a href="/log/4/a?revcount=30">less</a>
+  <a href="/log/4/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
@@ -391,23 +391,23 @@ first deleted - one revision
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/5ed941583260">log</a></li>
-  <li><a href="/graph/5ed941583260">graph</a></li>
+  <li><a href="/shortlog/3">log</a></li>
+  <li><a href="/graph/3">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/5ed941583260">changeset</a></li>
-  <li><a href="/file/5ed941583260">browse</a></li>
+  <li><a href="/rev/3">changeset</a></li>
+  <li><a href="/file/3">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/5ed941583260/a">file</a></li>
-  <li><a href="/diff/5ed941583260/a">diff</a></li>
-  <li><a href="/comparison/5ed941583260/a">comparison</a></li>
-  <li><a href="/annotate/5ed941583260/a">annotate</a></li>
+  <li><a href="/file/3/a">file</a></li>
+  <li><a href="/diff/3/a">diff</a></li>
+  <li><a href="/comparison/3/a">comparison</a></li>
+  <li><a href="/annotate/3/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/5ed941583260/a">raw</a></li>
+  <li><a href="/raw-file/3/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -431,8 +431,8 @@ first deleted - one revision
   </form>
   
   <div class="navigate">
-  <a href="/log/5ed941583260/a?revcount=30">less</a>
-  <a href="/log/5ed941583260/a?revcount=120">more</a>
+  <a href="/log/3/a?revcount=30">less</a>
+  <a href="/log/3/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -457,8 +457,8 @@ first deleted - one revision
   </table>
   
   <div class="navigate">
-  <a href="/log/5ed941583260/a?revcount=30">less</a>
-  <a href="/log/5ed941583260/a?revcount=120">more</a>
+  <a href="/log/3/a?revcount=30">less</a>
+  <a href="/log/3/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
@@ -500,23 +500,23 @@ first version - one revision
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
-  <li><a href="/shortlog/5ed941583260">log</a></li>
-  <li><a href="/graph/5ed941583260">graph</a></li>
+  <li><a href="/shortlog/1">log</a></li>
+  <li><a href="/graph/1">graph</a></li>
   <li><a href="/tags">tags</a></li>
   <li><a href="/bookmarks">bookmarks</a></li>
   <li><a href="/branches">branches</a></li>
   </ul>
   <ul>
-  <li><a href="/rev/5ed941583260">changeset</a></li>
-  <li><a href="/file/5ed941583260">browse</a></li>
+  <li><a href="/rev/1">changeset</a></li>
+  <li><a href="/file/1">browse</a></li>
   </ul>
   <ul>
-  <li><a href="/file/5ed941583260/a">file</a></li>
-  <li><a href="/diff/5ed941583260/a">diff</a></li>
-  <li><a href="/comparison/5ed941583260/a">comparison</a></li>
-  <li><a href="/annotate/5ed941583260/a">annotate</a></li>
+  <li><a href="/file/1/a">file</a></li>
+  <li><a href="/diff/1/a">diff</a></li>
+  <li><a href="/comparison/1/a">comparison</a></li>
+  <li><a href="/annotate/1/a">annotate</a></li>
   <li class="active">file log</li>
-  <li><a href="/raw-file/5ed941583260/a">raw</a></li>
+  <li><a href="/raw-file/1/a">raw</a></li>
   </ul>
   <ul>
   <li><a href="/help">help</a></li>
@@ -540,8 +540,8 @@ first version - one revision
   </form>
   
   <div class="navigate">
-  <a href="/log/5ed941583260/a?revcount=30">less</a>
-  <a href="/log/5ed941583260/a?revcount=120">more</a>
+  <a href="/log/1/a?revcount=30">less</a>
+  <a href="/log/1/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> </div>
   
   <table class="bigtable">
@@ -566,8 +566,8 @@ first version - one revision
   </table>
   
   <div class="navigate">
-  <a href="/log/5ed941583260/a?revcount=30">less</a>
-  <a href="/log/5ed941583260/a?revcount=120">more</a>
+  <a href="/log/1/a?revcount=30">less</a>
+  <a href="/log/1/a?revcount=120">more</a>
   | <a href="/log/5ed941583260/a">(0)</a> <a href="/log/tip/a">tip</a> 
   </div>
   
