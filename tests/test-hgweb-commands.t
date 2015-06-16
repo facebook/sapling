@@ -1723,16 +1723,16 @@ Overviews
   <div class="page_nav">
   <a href="/summary?style=gitweb">summary</a> |
   <a href="/shortlog?style=gitweb">shortlog</a> |
-  <a href="/log/3?style=gitweb">changelog</a> |
+  <a href="/log/tip?style=gitweb">changelog</a> |
   graph |
   <a href="/tags?style=gitweb">tags</a> |
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
-  <a href="/file/cad8025a2e87?style=gitweb">files</a> |
+  <a href="/file/tip?style=gitweb">files</a> |
   <a href="/help?style=gitweb">help</a>
   <br/>
-  <a href="/graph/3?revcount=30&style=gitweb">less</a>
-  <a href="/graph/3?revcount=120&style=gitweb">more</a>
+  <a href="/graph/tip?revcount=30&style=gitweb">less</a>
+  <a href="/graph/tip?revcount=120&style=gitweb">more</a>
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> <br/>
   </div>
   
@@ -1804,8 +1804,8 @@ Overviews
   </script>
   
   <div class="page_nav">
-  <a href="/graph/3?revcount=30&style=gitweb">less</a>
-  <a href="/graph/3?revcount=120&style=gitweb">more</a>
+  <a href="/graph/tip?revcount=30&style=gitweb">less</a>
+  <a href="/graph/tip?revcount=120&style=gitweb">more</a>
   | <a href="/graph/2ef0ac749a14?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
   </div>
   

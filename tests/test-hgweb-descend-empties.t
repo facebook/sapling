@@ -414,7 +414,7 @@ manifest with descending (gitweb)
   <a href="/bookmarks?style=gitweb">bookmarks</a> |
   <a href="/branches?style=gitweb">branches</a> |
   files |
-  <a href="/rev/c9f45f7a1659?style=gitweb">changeset</a>  |
+  <a href="/rev/tip?style=gitweb">changeset</a>  |
   <a href="/help?style=gitweb">help</a>
   <br/>
   </div>
@@ -425,7 +425,7 @@ manifest with descending (gitweb)
   <td style="font-family:monospace">drwxr-xr-x</td>
   <td style="font-family:monospace"></td>
   <td style="font-family:monospace"></td>
-  <td><a href="/file/c9f45f7a1659/?style=gitweb">[up]</a></td>
+  <td><a href="/file/tip/?style=gitweb">[up]</a></td>
   <td class="link">&nbsp;</td>
   </tr>
   
@@ -434,11 +434,11 @@ manifest with descending (gitweb)
   <td style="font-family:monospace"></td>
   <td style="font-family:monospace"></td>
   <td>
-  <a href="/file/c9f45f7a1659/a1?style=gitweb">a1</a>
-  <a href="/file/c9f45f7a1659/a1/a2/a3/a4?style=gitweb">a2/a3/a4</a>
+  <a href="/file/tip/a1?style=gitweb">a1</a>
+  <a href="/file/tip/a1/a2/a3/a4?style=gitweb">a2/a3/a4</a>
   </td>
   <td class="link">
-  <a href="/file/c9f45f7a1659/a1?style=gitweb">files</a>
+  <a href="/file/tip/a1?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity0">
@@ -446,11 +446,11 @@ manifest with descending (gitweb)
   <td style="font-family:monospace"></td>
   <td style="font-family:monospace"></td>
   <td>
-  <a href="/file/c9f45f7a1659/b1?style=gitweb">b1</a>
-  <a href="/file/c9f45f7a1659/b1/b2/b3?style=gitweb">b2/b3</a>
+  <a href="/file/tip/b1?style=gitweb">b1</a>
+  <a href="/file/tip/b1/b2/b3?style=gitweb">b2/b3</a>
   </td>
   <td class="link">
-  <a href="/file/c9f45f7a1659/b1?style=gitweb">files</a>
+  <a href="/file/tip/b1?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="parity1">
@@ -458,11 +458,11 @@ manifest with descending (gitweb)
   <td style="font-family:monospace"></td>
   <td style="font-family:monospace"></td>
   <td>
-  <a href="/file/c9f45f7a1659/d1?style=gitweb">d1</a>
-  <a href="/file/c9f45f7a1659/d1/d2?style=gitweb">d2</a>
+  <a href="/file/tip/d1?style=gitweb">d1</a>
+  <a href="/file/tip/d1/d2?style=gitweb">d2</a>
   </td>
   <td class="link">
-  <a href="/file/c9f45f7a1659/d1?style=gitweb">files</a>
+  <a href="/file/tip/d1?style=gitweb">files</a>
   </td>
   </tr>
   

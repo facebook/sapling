@@ -21,7 +21,7 @@
 <a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
 <a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
 files |
-<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a> {archives%archiveentry} |
+<a href="{url|urlescape}rev/{symrev}{sessionvars%urlparameter}">changeset</a> {archives%archiveentry} |
 <a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>
 <br/>
 </div>
@@ -32,7 +32,7 @@ files |
 <td style="font-family:monospace">drwxr-xr-x</td>
 <td style="font-family:monospace"></td>
 <td style="font-family:monospace"></td>
-<td><a href="{url|urlescape}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
+<td><a href="{url|urlescape}file/{symrev}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
 <td class="link">&nbsp;</td>
 </tr>
 {dentries%direntry}

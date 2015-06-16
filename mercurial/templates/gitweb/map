@@ -66,11 +66,11 @@ direntry = '
     <td style="font-family:monospace"></td>
     <td style="font-family:monospace"></td>
     <td>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a>
     </td>
     <td class="link">
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">files</a>
     </td>
   </tr>'
 fileentry = '
@@ -79,12 +79,12 @@ fileentry = '
     <td style="font-family:monospace" align=right>{date|isodate}</td>
     <td style="font-family:monospace" align=right>{size}</td>
     <td class="list">
-      <a class="list" href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
+      <a class="list" href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
     </td>
     <td class="link">
-      <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
-      <a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
+      <a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
+      <a href="{url|urlescape}log/{symrev}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
+      <a href="{url|urlescape}annotate/{symrev}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
     </td>
   </tr>'
 filerevision = filerevision.tmpl
@@ -303,7 +303,7 @@ filelogentry = '
       {rename%filelogrename}
     </td>
   </tr>'
-archiveentry = ' | <a href="{url|urlescape}archive/{node|short}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a> '
+archiveentry = ' | <a href="{url|urlescape}archive/{symrev}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a> '
 indexentry = '
   <tr class="parity{parity}">
     <td>
