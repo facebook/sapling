@@ -806,8 +806,8 @@ Set up the repo
 (De)referencing symbolic revisions (spartan)
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog?style=spartan' | egrep $REVLINKS
-  <a href="/log/2?style=spartan">changelog</a>
-  <a href="/file/9d8c40cba617/?style=spartan">files</a>
+  <a href="/log/tip?style=spartan">changelog</a>
+  <a href="/file/tip/?style=spartan">files</a>
   <a href="/archive/tip.zip">zip</a> 
   navigate: <small class="navigate"><a href="/shortlog/43c799df6e75?style=spartan">(0)</a> <a href="/shortlog/tip?style=spartan">tip</a> </small>
     <td class="node"><a href="/rev/9d8c40cba617?style=spartan">third</a></td>
@@ -816,8 +816,8 @@ Set up the repo
   navigate: <small class="navigate"><a href="/shortlog/43c799df6e75?style=spartan">(0)</a> <a href="/shortlog/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log?style=spartan' | egrep $REVLINKS
-  <a href="/shortlog/2?style=spartan">shortlog</a>
-  <a href="/file/9d8c40cba617?style=spartan">files</a>
+  <a href="/shortlog/tip?style=spartan">shortlog</a>
+  <a href="/file/tip?style=spartan">files</a>
   <a href="/archive/tip.zip">zip</a> 
   navigate: <small class="navigate"><a href="/log/43c799df6e75?style=spartan">(0)</a>  <a href="/log/tip?style=spartan">tip</a> </small>
     <td class="node"><a href="/rev/9d8c40cba617?style=spartan">9d8c40cba617</a></td>
@@ -832,7 +832,7 @@ Set up the repo
   navigate: <small class="navigate"><a href="/log/43c799df6e75?style=spartan">(0)</a>  <a href="/log/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph?style=spartan' | egrep $REVLINKS
-  <a href="/file/9d8c40cba617/?style=spartan">files</a>
+  <a href="/file/tip/?style=spartan">files</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
 
@@ -843,15 +843,15 @@ Set up the repo
   <a href="/shortlog/9d8c40cba617?style=spartan" class="open">default</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file?style=spartan' | egrep $REVLINKS
-  <a href="/log/2?style=spartan">changelog</a>
-  <a href="/shortlog/2?style=spartan">shortlog</a>
-  <a href="/rev/9d8c40cba617?style=spartan">changeset</a>
-  <a href="/archive/9d8c40cba617.zip">zip</a> 
+  <a href="/log/tip?style=spartan">changelog</a>
+  <a href="/shortlog/tip?style=spartan">shortlog</a>
+  <a href="/rev/tip?style=spartan">changeset</a>
+  <a href="/archive/tip.zip">zip</a> 
   <h2><a href="/">Mercurial</a>  / files for changeset <a href="/rev/9d8c40cba617">9d8c40cba617</a>: /</h2>
-    <td><a href="/file/9d8c40cba617/?style=spartan">[up]</a>
-  <a href="/file/9d8c40cba617/dir?style=spartan">dir/</a>
-  <a href="/file/9d8c40cba617/dir/?style=spartan">
-  <td><a href="/file/9d8c40cba617/foo?style=spartan">foo</a>
+    <td><a href="/file/tip/?style=spartan">[up]</a>
+  <a href="/file/tip/dir?style=spartan">dir/</a>
+  <a href="/file/tip/dir/?style=spartan">
+  <td><a href="/file/tip/foo?style=spartan">foo</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog?style=spartan&rev=all()' | egrep $REVLINKS
   <a href="/archive/tip.zip">zip</a> 
@@ -870,29 +870,29 @@ Set up the repo
     <td class="files"><a href="/diff/43c799df6e75/dir/bar?style=spartan">dir/bar</a> <a href="/diff/43c799df6e75/foo?style=spartan">foo</a> </td>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'rev/xyzzy?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/file/a7c1559b7bba?style=spartan">files</a>
-  <a href="/raw-rev/a7c1559b7bba">raw</a>
-  <a href="/archive/a7c1559b7bba.zip">zip</a> 
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/file/xyzzy?style=spartan">files</a>
+  <a href="/raw-rev/xyzzy">raw</a>
+  <a href="/archive/xyzzy.zip">zip</a> 
    <td class="changeset"><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <td class="parent"><a href="/rev/43c799df6e75?style=spartan">43c799df6e75</a></td>
   <td class="child"><a href="/rev/9d8c40cba617?style=spartan">9d8c40cba617</a></td>
    <td class="files"><a href="/file/a7c1559b7bba/foo?style=spartan">foo</a> </td>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog/xyzzy?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/file/a7c1559b7bba/?style=spartan">files</a>
-  <a href="/archive/tip.zip">zip</a> 
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/file/xyzzy/?style=spartan">files</a>
+  <a href="/archive/xyzzy.zip">zip</a> 
   navigate: <small class="navigate"><a href="/shortlog/43c799df6e75?style=spartan">(0)</a> <a href="/shortlog/tip?style=spartan">tip</a> </small>
     <td class="node"><a href="/rev/a7c1559b7bba?style=spartan">second</a></td>
     <td class="node"><a href="/rev/43c799df6e75?style=spartan">first</a></td>
   navigate: <small class="navigate"><a href="/shortlog/43c799df6e75?style=spartan">(0)</a> <a href="/shortlog/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/xyzzy?style=spartan' | egrep $REVLINKS
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/file/a7c1559b7bba?style=spartan">files</a>
-  <a href="/archive/tip.zip">zip</a> 
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/file/xyzzy?style=spartan">files</a>
+  <a href="/archive/xyzzy.zip">zip</a> 
   navigate: <small class="navigate"><a href="/log/43c799df6e75?style=spartan">(0)</a>  <a href="/log/tip?style=spartan">tip</a> </small>
     <td class="node"><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
     <th class="files"><a href="/file/a7c1559b7bba?style=spartan">files</a>:</th>
@@ -903,29 +903,29 @@ Set up the repo
   navigate: <small class="navigate"><a href="/log/43c799df6e75?style=spartan">(0)</a>  <a href="/log/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'graph/xyzzy?style=spartan' | egrep $REVLINKS
-  <a href="/file/a7c1559b7bba/?style=spartan">files</a>
+  <a href="/file/xyzzy/?style=spartan">files</a>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
   navigate: <small class="navigate"><a href="/graph/43c799df6e75?style=spartan">(0)</a> <a href="/graph/tip?style=spartan">tip</a> </small>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/xyzzy?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/rev/a7c1559b7bba?style=spartan">changeset</a>
-  <a href="/archive/a7c1559b7bba.zip">zip</a> 
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/rev/xyzzy?style=spartan">changeset</a>
+  <a href="/archive/xyzzy.zip">zip</a> 
   <h2><a href="/">Mercurial</a>  / files for changeset <a href="/rev/a7c1559b7bba">a7c1559b7bba</a>: /</h2>
-    <td><a href="/file/a7c1559b7bba/?style=spartan">[up]</a>
-  <a href="/file/a7c1559b7bba/dir?style=spartan">dir/</a>
-  <a href="/file/a7c1559b7bba/dir/?style=spartan">
-  <td><a href="/file/a7c1559b7bba/foo?style=spartan">foo</a>
+    <td><a href="/file/xyzzy/?style=spartan">[up]</a>
+  <a href="/file/xyzzy/dir?style=spartan">dir/</a>
+  <a href="/file/xyzzy/dir/?style=spartan">
+  <td><a href="/file/xyzzy/foo?style=spartan">foo</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/xyzzy/foo?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/rev/a7c1559b7bba?style=spartan">changeset</a>
-  <a href="/file/a7c1559b7bba/?style=spartan">files</a>
-  <a href="/log/a7c1559b7bba/foo?style=spartan">revisions</a>
-  <a href="/annotate/a7c1559b7bba/foo?style=spartan">annotate</a>
-  <a href="/raw-file/a7c1559b7bba/foo">raw</a>
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/rev/xyzzy?style=spartan">changeset</a>
+  <a href="/file/xyzzy/?style=spartan">files</a>
+  <a href="/log/xyzzy/foo?style=spartan">revisions</a>
+  <a href="/annotate/xyzzy/foo?style=spartan">annotate</a>
+  <a href="/raw-file/xyzzy/foo">raw</a>
    <td><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <a href="/file/43c799df6e75/foo?style=spartan">
   <td><a href="/file/9d8c40cba617/foo?style=spartan">9d8c40cba617</a></td>
@@ -933,8 +933,8 @@ Set up the repo
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'log/xyzzy/foo?style=spartan' | egrep $REVLINKS
      href="/atom-log/tip/foo" title="Atom feed for test:foo">
      href="/rss-log/tip/foo" title="RSS feed for test:foo">
-  <a href="/file/a7c1559b7bba/foo?style=spartan">file</a>
-  <a href="/annotate/a7c1559b7bba/foo?style=spartan">annotate</a>
+  <a href="/file/xyzzy/foo?style=spartan">file</a>
+  <a href="/annotate/xyzzy/foo?style=spartan">annotate</a>
   <a type="application/rss+xml" href="/rss-log/tip/foo">rss</a>
   <a type="application/atom+xml" href="/atom-log/tip/foo" title="Atom feed for test:foo">atom</a>
   <p>navigate: <small class="navigate"><a href="/log/43c799df6e75/foo?style=spartan">(0)</a> <a href="/log/tip/foo?style=spartan">tip</a> </small></p>
@@ -948,13 +948,13 @@ Set up the repo
      <a href="/annotate/43c799df6e75/foo?style=spartan">(annotate)</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'annotate/xyzzy/foo?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/rev/a7c1559b7bba?style=spartan">changeset</a>
-  <a href="/file/a7c1559b7bba/?style=spartan">files</a>
-  <a href="/file/a7c1559b7bba/foo?style=spartan">file</a>
-  <a href="/log/a7c1559b7bba/foo?style=spartan">revisions</a>
-  <a href="/raw-annotate/a7c1559b7bba/foo">raw</a>
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/rev/xyzzy?style=spartan">changeset</a>
+  <a href="/file/xyzzy/?style=spartan">files</a>
+  <a href="/file/xyzzy/foo?style=spartan">file</a>
+  <a href="/log/xyzzy/foo?style=spartan">revisions</a>
+  <a href="/raw-annotate/xyzzy/foo">raw</a>
    <td><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <a href="/annotate/43c799df6e75/foo?style=spartan">
   <td><a href="/annotate/9d8c40cba617/foo?style=spartan">9d8c40cba617</a></td>
@@ -962,13 +962,13 @@ Set up the repo
   <a href="/annotate/a7c1559b7bba/foo?style=spartan#l2"
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=spartan' | egrep $REVLINKS
-  <a href="/log/1?style=spartan">changelog</a>
-  <a href="/shortlog/1?style=spartan">shortlog</a>
-  <a href="/rev/a7c1559b7bba?style=spartan">changeset</a>
-  <a href="/file/a7c1559b7bba/foo?style=spartan">file</a>
-  <a href="/log/a7c1559b7bba/foo?style=spartan">revisions</a>
-  <a href="/annotate/a7c1559b7bba/foo?style=spartan">annotate</a>
-  <a href="/raw-diff/a7c1559b7bba/foo">raw</a>
+  <a href="/log/xyzzy?style=spartan">changelog</a>
+  <a href="/shortlog/xyzzy?style=spartan">shortlog</a>
+  <a href="/rev/xyzzy?style=spartan">changeset</a>
+  <a href="/file/xyzzy/foo?style=spartan">file</a>
+  <a href="/log/xyzzy/foo?style=spartan">revisions</a>
+  <a href="/annotate/xyzzy/foo?style=spartan">annotate</a>
+  <a href="/raw-diff/xyzzy/foo">raw</a>
    <td class="revision"><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <td class="parent"><a href="/rev/43c799df6e75?style=spartan">43c799df6e75</a></td>
   <td class="child"><a href="/rev/9d8c40cba617?style=spartan">9d8c40cba617</a></td>

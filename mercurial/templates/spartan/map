@@ -31,8 +31,8 @@ direntry = '
     <td>&nbsp;
     <td>&nbsp;
     <td>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}/</a>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}/</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
         {emptydirs|urlescape}
       </a>'
 
@@ -41,7 +41,7 @@ fileentry = '
     <td><tt>{permissions|permissions}</tt>&nbsp;
     <td align=right><tt class="date">{date|isodate}</tt>&nbsp;
     <td align=right><tt>{size}</tt>&nbsp;
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>'
+    <td><a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>'
 
 filerevision = filerevision.tmpl
 fileannotate = fileannotate.tmpl
@@ -183,7 +183,7 @@ indexentry = '
     </td>
   </tr>'
 index = index.tmpl
-archiveentry = '<a href="{url|urlescape}archive/{node|short}{extension|urlescape}">{type|escape}</a> '
+archiveentry = '<a href="{url|urlescape}archive/{symrev}{extension|urlescape}">{type|escape}</a> '
 notfound = notfound.tmpl
 error = error.tmpl
 urlparameter = '{separator}{name}={value|urlescape}'

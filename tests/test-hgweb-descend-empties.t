@@ -500,12 +500,12 @@ manifest with descending (spartan)
   <body>
   
   <div class="buttons">
-  <a href="/log/0?style=spartan">changelog</a>
-  <a href="/shortlog/0?style=spartan">shortlog</a>
+  <a href="/log/tip?style=spartan">changelog</a>
+  <a href="/shortlog/tip?style=spartan">shortlog</a>
   <a href="/graph?style=spartan">graph</a>
   <a href="/tags?style=spartan">tags</a>
   <a href="/branches?style=spartan">branches</a>
-  <a href="/rev/c9f45f7a1659?style=spartan">changeset</a>
+  <a href="/rev/tip?style=spartan">changeset</a>
   
   <a href="/help?style=spartan">help</a>
   </div>
@@ -517,7 +517,7 @@ manifest with descending (spartan)
     <td><tt>drwxr-xr-x</tt>&nbsp;
     <td>&nbsp;
     <td>&nbsp;
-    <td><a href="/file/c9f45f7a1659/?style=spartan">[up]</a>
+    <td><a href="/file/tip/?style=spartan">[up]</a>
   </tr>
   
   <tr class="parity1">
@@ -525,8 +525,8 @@ manifest with descending (spartan)
   <td>&nbsp;
   <td>&nbsp;
   <td>
-  <a href="/file/c9f45f7a1659/a1?style=spartan">a1/</a>
-  <a href="/file/c9f45f7a1659/a1/a2/a3/a4?style=spartan">
+  <a href="/file/tip/a1?style=spartan">a1/</a>
+  <a href="/file/tip/a1/a2/a3/a4?style=spartan">
   a2/a3/a4
   </a>
   <tr class="parity0">
@@ -534,8 +534,8 @@ manifest with descending (spartan)
   <td>&nbsp;
   <td>&nbsp;
   <td>
-  <a href="/file/c9f45f7a1659/b1?style=spartan">b1/</a>
-  <a href="/file/c9f45f7a1659/b1/b2/b3?style=spartan">
+  <a href="/file/tip/b1?style=spartan">b1/</a>
+  <a href="/file/tip/b1/b2/b3?style=spartan">
   b2/b3
   </a>
   <tr class="parity1">
@@ -543,8 +543,8 @@ manifest with descending (spartan)
   <td>&nbsp;
   <td>&nbsp;
   <td>
-  <a href="/file/c9f45f7a1659/d1?style=spartan">d1/</a>
-  <a href="/file/c9f45f7a1659/d1/d2?style=spartan">
+  <a href="/file/tip/d1?style=spartan">d1/</a>
+  <a href="/file/tip/d1/d2?style=spartan">
   d2
   </a>
   

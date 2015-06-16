@@ -674,8 +674,8 @@ should show base link, use spartan because it shows it
   <a href="/graph?style=spartan">graph</a>
   <a href="/tags?style=spartan">tags</a>
   <a href="/branches?style=spartan">branches</a>
-  <a href="/file/46c1a66bd8fc/c?style=spartan">file</a>
-  <a href="/annotate/46c1a66bd8fc/c?style=spartan">annotate</a>
+  <a href="/file/tip/c?style=spartan">file</a>
+  <a href="/annotate/tip/c?style=spartan">annotate</a>
   <a href="/help?style=spartan">help</a>
   <a type="application/rss+xml" href="/rss-log/tip/c">rss</a>
   <a type="application/atom+xml" href="/atom-log/tip/c" title="Atom feed for test:c">atom</a>
