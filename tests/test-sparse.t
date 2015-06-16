@@ -243,34 +243,6 @@ Test status on a file in a subdir
   $ hg status
   ? dir1/dir2/file
 
-Test hgwatchman integration (if available)
-
-  $ $PYTHON -c 'import hgwatchman' || exit 80
-  $ echo "ignoredir1/" >> .hgignore
-  $ hg add .hgignore
-  $ hg commit -m ignoredir1
-  $ echo "ignoredir2/" >> .hgignore
-  $ hg commit -m ignoredir2
-
-  $ hg sparse -I ignoredir1 -I ignoredir2
-
-  $ mkdir ignoredir1 ignoredir2
-  $ touch ignoredir1/file ignoredir2/file
-
-Run status twice to compensate for a condition in hgwatchman where it will check
-ignored files the second time it runs, regardless of previous state (ask @sid0)
-  $ hg status --config extensions.hgwatchman=
-  ? dir1/dir2/file
-  $ hg status --config extensions.hgwatchman=
-  ? dir1/dir2/file
-
-Test that hgwatchmans ignore hash check updates when .hgignore changes
-
-  $ hg up -q .^
-  $ hg status --config extensions.hgwatchman=
-  ? dir1/dir2/file
-  ? ignoredir2/file
-
 Test that add -s adds dirs to sparse profile
 
   $ hg sparse --reset
