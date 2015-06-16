@@ -226,7 +226,7 @@ saverev property is enough to alter the hashes of the subrepo.
   b
   $ oldnode=`hg log -r tip -T "{node}\n"`
   $ newnode=`hg log -R ../converted -r tip -T "{node}\n"`
-  $ [[ "$oldnode" != "$newnode" ]] || echo "nothing changed"
+  $ [ "$oldnode" != "$newnode" ] || echo "nothing changed"
 
 Test with a revision
 
