@@ -66,21 +66,21 @@ direntry = '
     <td></td>
     <td></td>
     <td>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
-      <a href="{url|urlescape}file/{node|short}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">{basename|escape}</a>
+      <a href="{url|urlescape}file/{symrev}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">{emptydirs|escape}</a>
     </td>
-    <td><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></td>
+    <td><a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">files</a></td>
   </tr>'
 fileentry = '
   <tr class="parity{parity}">
     <td>{permissions|permissions}</td>
     <td>{date|isodate}</td>
     <td>{size}</td>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a></td>
+    <td><a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">{basename|escape}</a></td>
     <td>
-      <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
-      <a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
+      <a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">file</a> |
+      <a href="{url|urlescape}log/{symrev}/{file|urlescape}{sessionvars%urlparameter}">revisions</a> |
+      <a href="{url|urlescape}annotate/{symrev}/{file|urlescape}{sessionvars%urlparameter}">annotate</a>
     </td>
   </tr>'
 filerevision = filerevision.tmpl
@@ -258,7 +258,7 @@ filelogentry = '
       {rename%filelogrename}
     </td>
   </tr>'
-archiveentry = '<li><a href="{url|urlescape}archive/{node|short}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a></li>'
+archiveentry = '<li><a href="{url|urlescape}archive/{symrev}{extension}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a></li>'
 indexentry = '
   <tr class="parity{parity}">
     <td><a href="{url|urlescape}{sessionvars%urlparameter}">{name|escape}</a></td>

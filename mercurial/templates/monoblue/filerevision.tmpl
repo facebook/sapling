@@ -21,22 +21,22 @@
             <li><a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a></li>
             <li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a></li>
             <li><a href="{url|urlescape}changelog{sessionvars%urlparameter}">changelog</a></li>
-            <li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+            <li><a href="{url|urlescape}graph/{symrev}{sessionvars%urlparameter}">graph</a></li>
             <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
             <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
             <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url|urlescape}file/{node|short}{path|urlescape}{sessionvars%urlparameter}">files</a></li>
+            <li><a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">files</a></li>
             <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
         </ul>
     </div>
 
     <ul class="submenu">
         <li class="current">file</li>
-        <li><a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
-        <li><a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
-        <li><a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
-        <li><a href="{url|urlescape}comparison/{node|short}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
-        <li><a href="{url|urlescape}raw-file/{node|short}/{file|urlescape}">raw</a></li>
+        <li><a href="{url|urlescape}log/{symrev}/{file|urlescape}{sessionvars%urlparameter}">revisions</a></li>
+        <li><a href="{url|urlescape}annotate/{symrev}/{file|urlescape}{sessionvars%urlparameter}">annotate</a></li>
+        <li><a href="{url|urlescape}diff/{symrev}/{file|urlescape}{sessionvars%urlparameter}">diff</a></li>
+        <li><a href="{url|urlescape}comparison/{symrev}/{file|urlescape}{sessionvars%urlparameter}">comparison</a></li>
+        <li><a href="{url|urlescape}raw-file/{symrev}/{file|urlescape}">raw</a></li>
     </ul>
 
     <h2 class="no-link no-border">{file|escape}@{node|short}</h2>

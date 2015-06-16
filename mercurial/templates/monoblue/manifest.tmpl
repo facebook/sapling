@@ -21,7 +21,7 @@
             <li><a href="{url|urlescape}summary{sessionvars%urlparameter}">summary</a></li>
             <li><a href="{url|urlescape}shortlog{sessionvars%urlparameter}">shortlog</a></li>
             <li><a href="{url|urlescape}changelog{sessionvars%urlparameter}">changelog</a></li>
-            <li><a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">graph</a></li>
+            <li><a href="{url|urlescape}graph/{symrev}{sessionvars%urlparameter}">graph</a></li>
             <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
             <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
             <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
@@ -31,7 +31,7 @@
     </div>
 
     <ul class="submenu">
-        <li><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a></li>
+        <li><a href="{url|urlescape}rev/{symrev}{sessionvars%urlparameter}">changeset</a></li>
         {archives%archiveentry}
     </ul>
 
@@ -43,7 +43,7 @@
             <td>drwxr-xr-x</td>
             <td></td>
             <td></td>
-            <td><a href="{url|urlescape}file/{node|short}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
+            <td><a href="{url|urlescape}file/{symrev}{up|urlescape}{sessionvars%urlparameter}">[up]</a></td>
             <td class="link">&nbsp;</td>
         </tr>
         {dentries%direntry}

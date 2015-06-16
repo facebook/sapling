@@ -26,7 +26,7 @@
             <li><a href="{url|urlescape}tags{sessionvars%urlparameter}">tags</a></li>
             <li><a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a></li>
             <li><a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a></li>
-            <li><a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a></li>
+            <li><a href="{url|urlescape}file/{symrev}{sessionvars%urlparameter}">files</a></li>
             <li><a href="{url|urlescape}help{sessionvars%urlparameter}">help</a></li>
         </ul>
     </div>
@@ -99,8 +99,8 @@
     </script>
 
     <div class="page-path">
-        <a href="{url|urlescape}graph/{rev}{lessvars%urlparameter}">less</a>
-        <a href="{url|urlescape}graph/{rev}{morevars%urlparameter}">more</a>
+        <a href="{url|urlescape}graph/{symrev}{lessvars%urlparameter}">less</a>
+        <a href="{url|urlescape}graph/{symrev}{morevars%urlparameter}">more</a>
         | {changenav%navgraph}
     </div>
 

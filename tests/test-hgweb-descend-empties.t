@@ -294,7 +294,7 @@ manifest with descending (monoblue)
               <li><a href="/summary?style=monoblue">summary</a></li>
               <li><a href="/shortlog?style=monoblue">shortlog</a></li>
               <li><a href="/changelog?style=monoblue">changelog</a></li>
-              <li><a href="/graph/c9f45f7a1659?style=monoblue">graph</a></li>
+              <li><a href="/graph/tip?style=monoblue">graph</a></li>
               <li><a href="/tags?style=monoblue">tags</a></li>
               <li><a href="/bookmarks?style=monoblue">bookmarks</a></li>
               <li><a href="/branches?style=monoblue">branches</a></li>
@@ -304,7 +304,7 @@ manifest with descending (monoblue)
       </div>
   
       <ul class="submenu">
-          <li><a href="/rev/c9f45f7a1659?style=monoblue">changeset</a></li>
+          <li><a href="/rev/tip?style=monoblue">changeset</a></li>
           
       </ul>
   
@@ -316,7 +316,7 @@ manifest with descending (monoblue)
               <td>drwxr-xr-x</td>
               <td></td>
               <td></td>
-              <td><a href="/file/c9f45f7a1659/?style=monoblue">[up]</a></td>
+              <td><a href="/file/tip/?style=monoblue">[up]</a></td>
               <td class="link">&nbsp;</td>
           </tr>
           
@@ -325,30 +325,30 @@ manifest with descending (monoblue)
   <td></td>
   <td></td>
   <td>
-  <a href="/file/c9f45f7a1659/a1?style=monoblue">a1</a>
-  <a href="/file/c9f45f7a1659/a1/a2/a3/a4?style=monoblue">a2/a3/a4</a>
+  <a href="/file/tip/a1?style=monoblue">a1</a>
+  <a href="/file/tip/a1/a2/a3/a4?style=monoblue">a2/a3/a4</a>
   </td>
-  <td><a href="/file/c9f45f7a1659/a1?style=monoblue">files</a></td>
+  <td><a href="/file/tip/a1?style=monoblue">files</a></td>
   </tr>
   <tr class="parity0">
   <td>drwxr-xr-x</td>
   <td></td>
   <td></td>
   <td>
-  <a href="/file/c9f45f7a1659/b1?style=monoblue">b1</a>
-  <a href="/file/c9f45f7a1659/b1/b2/b3?style=monoblue">b2/b3</a>
+  <a href="/file/tip/b1?style=monoblue">b1</a>
+  <a href="/file/tip/b1/b2/b3?style=monoblue">b2/b3</a>
   </td>
-  <td><a href="/file/c9f45f7a1659/b1?style=monoblue">files</a></td>
+  <td><a href="/file/tip/b1?style=monoblue">files</a></td>
   </tr>
   <tr class="parity1">
   <td>drwxr-xr-x</td>
   <td></td>
   <td></td>
   <td>
-  <a href="/file/c9f45f7a1659/d1?style=monoblue">d1</a>
-  <a href="/file/c9f45f7a1659/d1/d2?style=monoblue">d2</a>
+  <a href="/file/tip/d1?style=monoblue">d1</a>
+  <a href="/file/tip/d1/d2?style=monoblue">d2</a>
   </td>
-  <td><a href="/file/c9f45f7a1659/d1?style=monoblue">files</a></td>
+  <td><a href="/file/tip/d1?style=monoblue">files</a></td>
   </tr>
           
       </table>
