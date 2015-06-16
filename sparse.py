@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo
+from mercurial import localrepo, error
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -340,11 +340,12 @@ def _wraprepo(ui, repo):
                         continue
                     visited.add(profile)
 
-                    if not profile in ctx:
-                        repo.ui.debug("warning: sparse profile '%s' not found "
+                    try:
+                        raw = self.getrawprofile(profile, rev)
+                    except error.ManifestLookupError:
+                        self.ui.debug("warning: sparse profile '%s' not found "
                             "in rev %s - ignoring it\n" % (profile, ctx))
                         continue
-                    raw = repo.filectx(profile, changeid=rev).data()
                     pincludes, pexcludes, subprofs = \
                         self.readsparseconfig(raw)
                     includes.update(pincludes)
@@ -357,6 +358,18 @@ def _wraprepo(ui, repo):
             if includes:
                 includes.add('.hg*')
             return includes, excludes, profiles
+
+        def getrawprofile(self, profile, changeid):
+            try:
+                simplecache = extensions.find('simplecache')
+                node = self[changeid].hex()
+                def func():
+                    return self.filectx(profile, changeid=changeid).data()
+                key = 'sparseprofile:%s:%s' % (profile.replace('/', '__'), node)
+                return simplecache.memoize(func, key,
+                        simplecache.stringserializer, self.ui)
+            except KeyError:
+                return self.filectx(profile, changeid=changeid).data()
 
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs.
