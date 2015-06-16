@@ -664,7 +664,28 @@ def revert(repo, node, choose):
 
 def verify(repo):
     """verify the consistency of a repository"""
-    return verifymod.verify(repo)
+    ret = verifymod.verify(repo)
+
+    # Broken subrepo references in hidden csets don't seem worth worrying about,
+    # since they can't be pushed/pulled, and --hidden can be used if they are a
+    # concern.
+
+    # pathto() is needed for -R case
+    revs = repo.revs("filelog(%s)",
+                     util.pathto(repo.root, repo.getcwd(), '.hgsubstate'))
+
+    if revs:
+        repo.ui.status(_('checking subrepo links\n'))
+        for rev in revs:
+            ctx = repo[rev]
+            try:
+                for subpath in ctx.substate:
+                    ret = ctx.sub(subpath).verify() or ret
+            except Exception:
+                repo.ui.warn(_('.hgsubstate is corrupt in revision %s\n') %
+                             node.short(ctx.node()))
+
+    return ret
 
 def remoteui(src, opts):
     'build a remote ui from ui or repo and opts'

@@ -572,6 +572,12 @@ class abstractsubrepo(object):
     def shortid(self, revid):
         return revid
 
+    def verify(self):
+        '''verify the integrity of the repository.  Return 0 on success or
+        warning, 1 on any error.
+        '''
+        return 0
+
     @propertycache
     def wvfs(self):
         """return vfs to access the working directory of this subrepository
@@ -1010,6 +1016,24 @@ class hgsubrepo(abstractsubrepo):
 
     def shortid(self, revid):
         return revid[:12]
+
+    def verify(self):
+        try:
+            rev = self._state[1]
+            ctx = self._repo.unfiltered()[rev]
+            if ctx.hidden():
+                # Since hidden revisions aren't pushed/pulled, it seems worth an
+                # explicit warning.
+                ui = self._repo.ui
+                ui.warn(_("subrepo '%s' is hidden in revision %s\n") %
+                        (self._relpath, node.short(self._ctx.node())))
+            return 0
+        except error.RepoLookupError:
+            # A missing subrepo revision may be a case of needing to pull it, so
+            # don't treat this as an error.
+            self._repo.ui.warn(_("subrepo '%s' not found in revision %s\n") %
+                               (self._relpath, node.short(self._ctx.node())))
+            return 0
 
     @propertycache
     def wvfs(self):

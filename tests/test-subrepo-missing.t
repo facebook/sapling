@@ -106,4 +106,19 @@ check that --hidden is propagated to the subrepo
   $ hg --hidden cat subrepo/a
   foo
 
+verify will warn if locked-in subrepo revisions are hidden or missing
+
+  $ hg ci -m "amended subrepo (again)"
+  $ hg --config extensions.strip= --hidden strip -R subrepo -qr 'tip'
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 5 changesets, 5 total revisions
+  checking subrepo links
+  subrepo 'subrepo' is hidden in revision a66de08943b6
+  subrepo 'subrepo' is hidden in revision 674d05939c1e
+  subrepo 'subrepo' not found in revision a7d05d9055a4
+
   $ cd ..

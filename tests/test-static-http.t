@@ -129,6 +129,7 @@ test with "/" URI (issue747) and subrepo
   crosschecking files in changesets and manifests
   checking files
   3 files, 1 changesets, 3 total revisions
+  checking subrepo links
   $ cat a
   a
   $ hg paths
