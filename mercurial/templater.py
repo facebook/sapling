@@ -147,6 +147,9 @@ def gettemplate(exp, context):
     if exp[0] == 'template':
         return compiletemplate(exp[1], context)
     if exp[0] == 'symbol':
+        # unlike runsymbol(), here 'symbol' is always taken as template name
+        # even if it exists in mapping. this allows us to override mapping
+        # by web templates, e.g. 'changelogtag' is redefined in map file.
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
 
