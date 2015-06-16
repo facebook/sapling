@@ -41,9 +41,9 @@ Test that output remains the same with multiple invocations.
   # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   xx
   
-  falling back for value cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1
-  set value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to memcache
-  set value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to local
+  falling back for value buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1
+  set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to memcache
+  set value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 to local
   diff -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d x
   --- a/x	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
@@ -65,7 +65,7 @@ Test that output remains the same with multiple invocations.
   # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   xx
   
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
   diff -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d x
   --- a/x	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
@@ -78,8 +78,8 @@ Test that output remains the same with multiple invocations.
   +x
   +x
   $ hg --debug log -vpC -r .
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
   changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   tag:         tip
@@ -144,7 +144,7 @@ Test that localcache gets hit if memcache is off
   # Parent  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   xx
   
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from local
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from local
   diff -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d x
   --- a/x	Thu Jan 01 00:00:00 1970 +0000
   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
@@ -161,8 +161,8 @@ Test that corrupt caches are gracefully ignored, and updated
   $ echo -ne "set cca.hg.buildstatus:0632994590a85631ac9ce1a256862a1683a3ce56:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 0 0 5\r\nhello\r\n" | nc localhost 11101
   STORED\r (esc)
   $ hg --debug log -vpC -r .
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
-  got value for key cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
+  got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
   changeset:   1:a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   tag:         tip
@@ -209,17 +209,17 @@ Test strange (unicode) filenames
   # Parent  a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   unicode test
   
-  falling back for value cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1
-  set value for key cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to memcache
-  set value for key cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to local
+  falling back for value buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1
+  set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to memcache
+  set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 to local
   diff -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d -r f3a143469693894d291b7388ea8392a07492751f \xc3\x85 (esc)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
   +++ b/\xc3\x85	Thu Jan 01 00:00:00 1970 +0000 (esc)
   @@ -0,0 +1,1 @@
   +x
   $ hg --debug log -vpC -r .
-  got value for key cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from memcache
-  got value for key cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from memcache
+  got value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from memcache
+  got value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1 from memcache
   changeset:   2:f3a143469693894d291b7388ea8392a07492751f
   bookmark:    foo
   tag:         tip

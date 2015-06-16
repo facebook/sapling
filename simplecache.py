@@ -42,6 +42,7 @@ def mcget(key, ui):
     if type(key) != str:
         raise ValueError('Key must be a string')
     s = getmcsock(ui)
+    key = 'cca.hg.%s' % key
     s.sendall('get %s\r\n' % key)
     meta = []
     value = None
@@ -70,6 +71,7 @@ def mcset(key, value, ui):
     if type(value) != str:
         raise ValueError('Value must be a string')
 
+    key = 'cca.hg.%s' % key
     sz = len(value)
     tmpl = 'set %s 0 0 %d\r\n%s\r\n'
     s = getmcsock(ui)
@@ -102,13 +104,12 @@ class pathcopiesserializer(object):
                 for k, v in encoded.iteritems())
 
 def pathcopiesui(ui):
-    version = ui.config('simplecache', 'version', default='1')
     def pathcopies(orig, x, y, match=None):
         func = lambda: orig(x, y, match=match)
         if x._node is not None and y._node is not None and not match:
-            key = 'cca.hg.pathcopies:%s:%s:v%s' % (
-                    node.hex(x._node), node.hex(y._node), version)
-            return _memoize(func, key, pathcopiesserializer, ui)
+            key = 'pathcopies:%s:%s' % (
+                    node.hex(x._node), node.hex(y._node))
+            return memoize(func, key, pathcopiesserializer, ui)
         return func()
     return pathcopies
 
@@ -136,7 +137,6 @@ class buildstatusserializer(object):
         return status(*ls)
 
 def buildstatusui(ui):
-    version = ui.config('simplecache', 'version', default='1')
     def buildstatus(orig, self, other, status, match, ignored, clean, unknown):
         func = lambda: orig(self, other, status, match, ignored, clean, unknown)
         if not match.always():
@@ -145,11 +145,27 @@ def buildstatusui(ui):
             return func()
         if self._node is None or other._node is None:
             return func()
-        key = 'cca.hg.buildstatus:%s:%s:v%s' % (
-                node.hex(self._node), node.hex(other._node), version)
-        return _memoize(func, key, buildstatusserializer, ui)
+        key = 'buildstatus:%s:%s' % (
+                node.hex(self._node), node.hex(other._node))
+        return memoize(func, key, buildstatusserializer, ui)
 
     return buildstatus
+
+class stringserializer(object):
+    """Simple serializer that just checks if the input is a string and returns
+    it.
+    """
+    @staticmethod
+    def serialize(input):
+        if type(input) is not str:
+            raise TypeError("stringserializer can only be used with strings")
+        return input
+
+    @staticmethod
+    def deserialize(string):
+        if type(string) is not str:
+            raise TypeError("stringserializer can only be used with strings")
+        return string
 
 def localpath(key, ui):
     tempdir = ui.config('simplecache', 'cachedir')
@@ -192,7 +208,9 @@ cachefuncs = {
     'memcache' : (mcget, mcset),
 }
 
-def _memoize(func, key, serializer, ui):
+def memoize(func, key, serializer, ui):
+    version = ui.config('simplecache', 'version', default='1')
+    key = "%s:v%s" % (key, version)
     cachelist = ui.configlist('simplecache', 'caches', ['local'])
     for name in cachelist:
         get, set = cachefuncs[name]
