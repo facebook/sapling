@@ -205,7 +205,6 @@ static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 		goto quit;
 	}
 
-#if PY_VERSION_HEX >= 0x02060000
 	/* _PyDict_NewPresized expects a minused parameter, but it actually
 	   creates a dictionary that's the nearest power of two bigger than the
 	   parameter. For example, with the initial minused = 1000, the
@@ -215,10 +214,6 @@ static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 	   anyway. So create a dictionary that's 3/2 the size. Also add some
 	   more to deal with additions outside this function. */
 	file_foldmap = _PyDict_NewPresized((PyDict_Size(dmap) / 5) * 8);
-#else
-	file_foldmap = PyDict_New();
-#endif
-
 	if (file_foldmap == NULL)
 		goto quit;
 
