@@ -17,8 +17,8 @@ def spacejoin(*args):
     return ' '.join(s for s in args if s)
 
 def shouldprint(ui):
-    return not ui.plain() and (ui._isatty(sys.stderr) or
-                               ui.configbool('progress', 'assume-tty'))
+    return not (ui.quiet or ui.plain()) and (
+        ui._isatty(sys.stderr) or ui.configbool('progress', 'assume-tty'))
 
 def fmtremaining(seconds):
     """format a number of remaining seconds in humain readable way
@@ -249,4 +249,3 @@ class progbar(object):
                         self.show(now, topic, *self.topicstates[topic])
         finally:
             self._refreshlock.release()
-

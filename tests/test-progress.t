@@ -76,7 +76,8 @@ test with delay=0, refresh=0
   loop [===============>                                ] 1/3\r (no-eol) (esc)
   loop [===============================>                ] 2/3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-
+no progress with --quiet
+  $ hg -y loop 3 --quiet
 
 test nested short-lived topics (which shouldn't display with nestdelay):
 
