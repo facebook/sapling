@@ -33,6 +33,8 @@ msg = """
 |bypass-warning=True                                                           |
 +------------------------------------------------------------------------------+
 """
+# Wether the warning message has been displayed already
+state = {'displayed': False}
 
 def reposetup(ui, repo):
     # No need to check anything if inhibit is not enabled
@@ -51,7 +53,8 @@ def reposetup(ui, repo):
     if repo.local():
         for marker in repo.obsstore._all:
             timestamp = marker[4][0]
-            if timestamp < cutofftime:
+            if timestamp < cutofftime and not state['displayed']:
+                state['displayed'] = True
                 ui.write_err(msg)
             # Only the first marker is checked as they are ordered chronologically
             break
