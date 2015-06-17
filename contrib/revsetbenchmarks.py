@@ -209,8 +209,14 @@ def applyvariants(revset, variant):
         revset = '%s(%s)' % (var, revset)
     return revset
 
-
-parser = OptionParser(usage="usage: %prog [options] <revs>")
+helptext="""This script will run multiple variants of provided revsets using
+different revisions in your mercurial repository. After the benchmark are run
+summary output is provided. Use itto demonstrate speed improvements or pin
+point regressions. Revsets to run are specified in a file (or from stdin), one
+revsets per line. Line starting with '#' will be ignored, allowing insertion of
+comments."""
+parser = OptionParser(usage="usage: %prog [options] <revs>",
+                      description=helptext)
 parser.add_option("-f", "--file",
                   help="read revset from FILE (stdin if omitted)",
                   metavar="FILE")
