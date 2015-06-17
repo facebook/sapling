@@ -88,11 +88,11 @@ first(0 + 1 + 2 + ... + 1000)
 # Used in revision ceaf04bb14ff
 0:1000
 # Used in revision 262e6ad93885
-revset #0: not public()
-revset #1: (tip~1000::) - public()
-revset #2: not public() and branch("default")
+not public()
+(tip~1000::) - public()
+not public() and branch("default")
 # Used in revision 15412bba5a68
-revset #0: 0::tip
+0::tip
 
 ## all the revsets from this section have been taken from the former central file
 # for revset's benchmarking, they are undocumented for this reason.
