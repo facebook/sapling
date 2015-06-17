@@ -37,6 +37,8 @@ def convert(s):
         return s[7:]
     if 'HEAD' in s:
         s = s.replace('HEAD', '.')
+    # HEAD~ in git is .~1 in mercurial
+    s = re.sub('~$', '~1', s)
     return s
 
 @command('^githelp|git', [

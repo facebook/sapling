@@ -126,3 +126,11 @@ githelp for checkout with an argument that's both a file and a revision
 githelp for grep with pattern and path
   $ hg githelp -- grep shrubbery flib/intern/
   hg grep shrubbery flib/intern/
+
+githelp for reset, checking ~ in git becomes ~1 in mercurial
+  $ hg githelp -- reset HEAD~
+  hg reset .~1
+  $ hg githelp -- reset HEAD^
+  hg reset .^
+  $ hg githelp -- reset HEAD~3
+  hg reset .~3
