@@ -762,7 +762,7 @@ class hgsubrepo(abstractsubrepo):
         rev = self._state[1]
         ctx = self._repo[rev]
         for subpath in ctx.substate:
-            s = subrepo(ctx, subpath)
+            s = subrepo(ctx, subpath, True)
             submatch = matchmod.narrowmatcher(subpath, match)
             total += s.archive(archiver, prefix + self._path + '/', submatch)
         return total

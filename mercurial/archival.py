@@ -315,7 +315,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     if subrepos:
         for subpath in sorted(ctx.substate):
-            sub = ctx.sub(subpath)
+            sub = ctx.workingsub(subpath)
             submatch = matchmod.narrowmatcher(subpath, matchfn)
             total += sub.archive(archiver, prefix, submatch)
 

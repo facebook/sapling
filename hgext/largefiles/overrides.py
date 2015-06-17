@@ -882,7 +882,8 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             prefix='', mtime=None, subrepos=None):
     # No need to lock because we are only reading history and
     # largefile caches, neither of which are modified.
-    lfcommands.cachelfiles(repo.ui, repo, node)
+    if node is not None:
+        lfcommands.cachelfiles(repo.ui, repo, node)
 
     if kind not in archival.archivers:
         raise util.Abort(_("unknown archive type '%s'") % kind)
@@ -914,11 +915,16 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
         ff = ctx.flags(f)
         getdata = ctx[f].data
         if lfutil.isstandin(f):
-            path = lfutil.findfile(repo, getdata().strip())
-            if path is None:
-                raise util.Abort(
-                    _('largefile %s not found in repo store or system cache')
-                    % lfutil.splitstandin(f))
+            if node is not None:
+                path = lfutil.findfile(repo, getdata().strip())
+
+                if path is None:
+                    raise util.Abort(
+                       _('largefile %s not found in repo store or system cache')
+                       % lfutil.splitstandin(f))
+            else:
+                path = lfutil.splitstandin(f)
+
             f = lfutil.splitstandin(f)
 
             def getdatafn():
@@ -935,7 +941,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
     if subrepos:
         for subpath in sorted(ctx.substate):
-            sub = ctx.sub(subpath)
+            sub = ctx.workingsub(subpath)
             submatch = match_.narrowmatcher(subpath, matchfn)
             sub.archive(archiver, prefix, submatch)
 
@@ -946,7 +952,8 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
     rev = repo._state[1]
     ctx = repo._repo[rev]
 
-    lfcommands.cachelfiles(repo.ui, repo._repo, ctx.node())
+    if ctx.node() is not None:
+        lfcommands.cachelfiles(repo.ui, repo._repo, ctx.node())
 
     def write(name, mode, islink, getdata):
         # At this point, the standin has been replaced with the largefile name,
@@ -961,11 +968,16 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
         ff = ctx.flags(f)
         getdata = ctx[f].data
         if lfutil.isstandin(f):
-            path = lfutil.findfile(repo._repo, getdata().strip())
-            if path is None:
-                raise util.Abort(
-                    _('largefile %s not found in repo store or system cache')
-                    % lfutil.splitstandin(f))
+            if ctx.node() is not None:
+                path = lfutil.findfile(repo._repo, getdata().strip())
+
+                if path is None:
+                    raise util.Abort(
+                       _('largefile %s not found in repo store or system cache')
+                       % lfutil.splitstandin(f))
+            else:
+                path = lfutil.splitstandin(f)
+
             f = lfutil.splitstandin(f)
 
             def getdatafn():
@@ -982,7 +994,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
         write(f, 'x' in ff and 0755 or 0644, 'l' in ff, getdata)
 
     for subpath in sorted(ctx.substate):
-        sub = ctx.sub(subpath)
+        sub = ctx.workingsub(subpath)
         submatch = match_.narrowmatcher(subpath, match)
         sub.archive(archiver, prefix + repo._path + '/', submatch)
 

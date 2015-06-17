@@ -168,6 +168,41 @@ Test relative path printing + subrepos
   A foo/bar/abc
   A sub1/foo
   R sub1/sub2/test.txt
+
+Archive wdir() with subrepos
+  $ hg rm main
+  $ hg archive -S -r 'wdir()' ../wdir
+  $ diff -r . ../wdir | grep -v '\.hg$'
+  Only in ../wdir: .hg_archival.txt
+
+  $ find ../wdir -type f | sort
+  ../wdir/.hg_archival.txt
+  ../wdir/.hgsub
+  ../wdir/.hgsubstate
+  ../wdir/foo/bar/abc
+  ../wdir/sub1/.hgsub
+  ../wdir/sub1/.hgsubstate
+  ../wdir/sub1/foo
+  ../wdir/sub1/sub1
+  ../wdir/sub1/sub2/folder/test.txt
+  ../wdir/sub1/sub2/sub2
+
+Attempting to archive 'wdir()' with a missing file is handled gracefully
+  $ rm sub1/sub1
+  $ rm -r ../wdir
+  $ hg archive -v -S -r 'wdir()' ../wdir
+  $ find ../wdir -type f | sort
+  ../wdir/.hg_archival.txt
+  ../wdir/.hgsub
+  ../wdir/.hgsubstate
+  ../wdir/foo/bar/abc
+  ../wdir/sub1/.hgsub
+  ../wdir/sub1/.hgsubstate
+  ../wdir/sub1/foo
+  ../wdir/sub1/sub2/folder/test.txt
+  ../wdir/sub1/sub2/sub2
+
+Continue relative path printing + subrepos
   $ hg update -Cq
   $ touch sub1/sub2/folder/bar
   $ hg addremove sub1/sub2
@@ -469,7 +504,68 @@ largefile and a normal file.  Then a largefile that hasn't been committed yet.
   ? sub1/sub2/untracked.txt
   ? sub1/sub2/x.txt
   $ hg add sub1/sub2
+
+  $ hg archive -S -r 'wdir()' ../wdir2
+  $ diff -r . ../wdir2 | grep -v '\.hg$'
+  Only in ../wdir2: .hg_archival.txt
+  Only in .: .hglf
+  Only in .: foo
+  Only in ./sub1/sub2: large.bin
+  Only in ./sub1/sub2: test.txt
+  Only in ./sub1/sub2: untracked.txt
+  Only in ./sub1/sub2: x.txt
+  $ find ../wdir2 -type f | sort
+  ../wdir2/.hg_archival.txt
+  ../wdir2/.hgsub
+  ../wdir2/.hgsubstate
+  ../wdir2/large.bin
+  ../wdir2/main
+  ../wdir2/sub1/.hgsub
+  ../wdir2/sub1/.hgsubstate
+  ../wdir2/sub1/sub1
+  ../wdir2/sub1/sub2/folder/test.txt
+  ../wdir2/sub1/sub2/large.dat
+  ../wdir2/sub1/sub2/sub2
+  $ hg status -S -mac -n | sort
+  .hgsub
+  .hgsubstate
+  large.bin
+  main
+  sub1/.hgsub
+  sub1/.hgsubstate
+  sub1/sub1
+  sub1/sub2/folder/test.txt
+  sub1/sub2/large.dat
+  sub1/sub2/sub2
+
   $ hg ci -Sqm 'forget testing'
+
+Test 'wdir()' modified file archiving with largefiles
+  $ echo 'mod' > main
+  $ echo 'mod' > large.bin
+  $ echo 'mod' > sub1/sub2/large.dat
+  $ hg archive -S -r 'wdir()' ../wdir3
+  $ diff -r . ../wdir3 | grep -v '\.hg$'
+  Only in ../wdir3: .hg_archival.txt
+  Only in .: .hglf
+  Only in .: foo
+  Only in ./sub1/sub2: large.bin
+  Only in ./sub1/sub2: test.txt
+  Only in ./sub1/sub2: untracked.txt
+  Only in ./sub1/sub2: x.txt
+  $ find ../wdir3 -type f | sort
+  ../wdir3/.hg_archival.txt
+  ../wdir3/.hgsub
+  ../wdir3/.hgsubstate
+  ../wdir3/large.bin
+  ../wdir3/main
+  ../wdir3/sub1/.hgsub
+  ../wdir3/sub1/.hgsubstate
+  ../wdir3/sub1/sub1
+  ../wdir3/sub1/sub2/folder/test.txt
+  ../wdir3/sub1/sub2/large.dat
+  ../wdir3/sub1/sub2/sub2
+  $ hg up -Cq
 
 Test issue4330: commit a directory where only normal files have changed
   $ touch foo/bar/large.dat
