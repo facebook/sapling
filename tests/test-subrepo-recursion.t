@@ -325,18 +325,18 @@ Test archiving to zip file (unzip output is unstable):
 
   $ unzip -l ../archive.zip
   Archive:  ../archive.zip
-    Length      Date    Time    Name
-  ---------  ---------- -----   ----
-        172  ?????????? 00:00   .hg_archival.txt (glob)
-         10  ?????????? 00:00   .hgsub (glob)
-         45  ?????????? 00:00   .hgsubstate (glob)
-          3  ?????????? 00:00   x.txt (glob)
-         10  ?????????? 00:00   foo/.hgsub (glob)
-         45  ?????????? 00:00   foo/.hgsubstate (glob)
-          9  ?????????? 00:00   foo/y.txt (glob)
-          9  ?????????? 00:00   foo/bar/z.txt (glob)
-  ---------                     -------
-        303                     8 files
+    Length [ ]* Date [ ]* Time [ ]* Name (re)
+  [\- ]* (re)
+        172  [0-9:\- ]*  .hg_archival.txt (re)
+         10  [0-9:\- ]*  .hgsub (re)
+         45  [0-9:\- ]*  .hgsubstate (re)
+          3  [0-9:\- ]*  x.txt (re)
+         10  [0-9:\- ]*  foo/.hgsub (re)
+         45  [0-9:\- ]*  foo/.hgsubstate (re)
+          9  [0-9:\- ]*  foo/y.txt (re)
+          9  [0-9:\- ]*  foo/bar/z.txt (re)
+  [\- ]* (re)
+        303  [ ]*        8 files (re)
 
 Test archiving a revision that references a subrepo that is not yet
 cloned:
