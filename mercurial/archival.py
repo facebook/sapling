@@ -67,8 +67,14 @@ def _rootctx(repo):
 def buildmetadata(ctx):
     '''build content of .hg_archival.txt'''
     repo = ctx.repo()
+    hex = ctx.hex()
+    if ctx.rev() is None:
+        hex = ctx.p1().hex()
+        if ctx.dirty():
+            hex += '+'
+
     base = 'repo: %s\nnode: %s\nbranch: %s\n' % (
-        _rootctx(repo).hex(), ctx.hex(), encoding.fromlocal(ctx.branch()))
+        _rootctx(repo).hex(), hex, encoding.fromlocal(ctx.branch()))
 
     tags = ''.join('tag: %s\n' % t for t in ctx.tags()
                    if repo.tagtype(t) == 'global')

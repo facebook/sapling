@@ -187,6 +187,14 @@ Archive wdir() with subrepos
   ../wdir/sub1/sub2/folder/test.txt
   ../wdir/sub1/sub2/sub2
 
+  $ cat ../wdir/.hg_archival.txt
+  repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
+  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd+
+  branch: default
+  latesttag: null
+  latesttagdistance: 4
+  changessincelatesttag: 3
+
 Attempting to archive 'wdir()' with a missing file is handled gracefully
   $ rm sub1/sub1
   $ rm -r ../wdir
@@ -204,6 +212,16 @@ Attempting to archive 'wdir()' with a missing file is handled gracefully
 
 Continue relative path printing + subrepos
   $ hg update -Cq
+  $ rm -r ../wdir
+  $ hg archive -S -r 'wdir()' ../wdir
+  $ cat ../wdir/.hg_archival.txt
+  repo: 7f491f53a367861f47ee64a80eb997d1f341b77a
+  node: 9bb10eebee29dc0f1201dcf5977b811a540255fd
+  branch: default
+  latesttag: null
+  latesttagdistance: 4
+  changessincelatesttag: 3
+
   $ touch sub1/sub2/folder/bar
   $ hg addremove sub1/sub2
   adding sub1/sub2/folder/bar (glob)
