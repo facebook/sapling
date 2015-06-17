@@ -11,6 +11,8 @@
 # some of the tests inadequate and replace them with a new one testing the same
 # behavior.
 #
+# If you want to benchmark revsets predicate itself, check 'all-revsets.txt'.
+#
 # The current content of this file is currently likely not reaching this goal
 # entirely, feel free, to audit its content and comment on each revset to
 # highlight what internal mechanisms they test.

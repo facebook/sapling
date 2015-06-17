@@ -1,0 +1,120 @@
+# All revsets ever used with revsetbenchmarks.py script
+#
+# The goal of this file is to gather all revsets ever used for benchmarking
+# revset's performance. It should be used to gather revsets that test a
+# specific usecase or a specific implementation of revset predicates.
+# If you are working on the smartset implementation itself, check
+# 'base-revsets.txt'.
+#
+# Please update this file with any revsets you use for benchmarking a change so
+# that future contributors can easily find and retest it when doing further
+# modification. Feel free to highlight interresting variants if needed.
+
+
+## Revset from this section are all extracted from changelog when this file was
+# created. Feel free to dig and improve documentation.
+
+# Used in revision da05fe01170b
+(20000::) - (20000)
+# Used in revision 95af98616aa7
+parents(20000)
+# Used in revision 186fd06283b4
+(_intlist('20000\x0020001')) and merge()
+# Used in revision 911f5a6579d1
+p1(20000)
+p2(10000)
+# Used in revision f140d6207cca
+roots(0:tip)
+# Used in revision b6dc3b79bb25
+0::
+# Used in revision faf4f63533ff
+bookmark()
+# Used in revision 22ba2c0825da
+tip~25
+# Used in revision 0cf46b8298fe
+bisect(range)
+# Used in revision 5b65429721d5
+divergent()
+# Used in revision 6261b9c549a2
+file(COPYING)
+# Used in revision 44f471102f3a
+follow(COPYING)
+# Used in revision 8040a44aab1c
+origin(tip)
+# Used in revision bbf4f3dfd700
+rev(25)
+# Used in revision a428db9ab61d
+p1()
+# Used in revision c1546d7400ef
+min(0::)
+# Used in revision 546fa6576815
+author(lmoscovicz) or author(mpm)
+author(mpm) or author(lmoscovicz)
+# Used in revision 9bfe68357c01
+public() and id("d82e2223f132")
+# Used in revision ba89f7b542c9
+rev(25)
+# Used in revision eb763217152a
+rev(210000)
+# Used in revision 69524a05a7fa
+10:100
+parents(10):parents(100)
+# Used in revision 6f1b8b3f12fd
+100~5
+parents(100)~5
+(100~5)~5
+# Used in revision 7a42e5d4c418
+children(tip~100)
+# Used in revision 7e8737e6ab08
+100^1
+parents(100)^1
+(100^1)^1
+# Used in revision 30e0dcd7c5ff
+matching(100)
+matching(parents(100))
+# Used in revision aafeaba22826
+0|1|2|3|4|5|6|7|8|9
+# Used in revision 33c7a94d4dd0
+tip:0
+# Used in revision 7d369fae098e
+(0:100000)
+# Used in revision b333ca94403d
+0 + 1 + 2 + ... + 200
+0 + 1 + 2 + ... + 1000
+sort(0 + 1 + 2 + ... + 200)
+sort(0 + 1 + 2 + ... + 1000)
+# Used in revision 7fbef7932af9
+first(0 + 1 + 2 + ... + 1000)
+# Used in revision ceaf04bb14ff
+0:1000
+# Used in revision 262e6ad93885
+revset #0: not public()
+revset #1: (tip~1000::) - public()
+revset #2: not public() and branch("default")
+# Used in revision 15412bba5a68
+revset #0: 0::tip
+
+## all the revsets from this section have been taken from the former central file
+# for revset's benchmarking, they are undocumented for this reason.
+all()
+draft()
+::tip
+draft() and ::tip
+::tip and draft()
+roots(0::tip)
+author(lmoscovicz)
+author(mpm)
+42:68 and roots(42:tip)
+::p1(p1(tip))::
+public()
+:10000 and public()
+:10000 and draft()
+roots((0:tip)::)
+(not public() - obsolete())
+
+# The one below is used by rebase
+(children(ancestor(tip~5, tip)) and ::(tip~5))::
+
+# those two `roots(...)` inputs are close to what phase movement use.
+roots((tip~100::) - (tip~100::tip))
+roots((0::) - (0::tip))
