@@ -249,10 +249,17 @@ class basectx(object):
             return ''
 
     def sub(self, path):
+        '''return a subrepo for the stored revision of path, never wdir()'''
         return subrepo.subrepo(self, path)
 
     def nullsub(self, path, pctx):
         return subrepo.nullsubrepo(self, path, pctx)
+
+    def workingsub(self, path):
+        '''return a subrepo for the stored revision, or wdir if this is a wdir
+        context.
+        '''
+        return subrepo.subrepo(self, path, allowwdir=True)
 
     def match(self, pats=[], include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):

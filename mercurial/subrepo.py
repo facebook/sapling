@@ -324,7 +324,7 @@ def _sanitize(ui, vfs, ignore):
                           "in '%s'\n") % vfs.join(dirname))
                 vfs.unlink(vfs.reljoin(dirname, f))
 
-def subrepo(ctx, path):
+def subrepo(ctx, path, allowwdir=False):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
     # because it wants to make repo objects from deep inside the stack
@@ -338,6 +338,8 @@ def subrepo(ctx, path):
     state = ctx.substate[path]
     if state[2] not in types:
         raise util.Abort(_('unknown subrepo type %s') % state[2])
+    if allowwdir:
+        state = (state[0], ctx.subrev(path), state[2])
     return types[state[2]](ctx, path, state[:2])
 
 def nullsubrepo(ctx, path, pctx):
