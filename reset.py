@@ -70,6 +70,7 @@ def _revive(repo, rev):
     if _isahash(rev):
         # If it appears to be a hash, just read it directly.
         try:
+            rev = scmutil.revsingle(repo, rev).node()
             return repo[rev]
         except error.FilteredRepoLookupError:
             return _touch(repo, repo.unfiltered()[rev])

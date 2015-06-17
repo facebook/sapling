@@ -176,9 +176,8 @@ Reset prunes commits
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
-
-
-Reset touches commits to revive
+Reset touches commits to revive, when inhibit is not enabled it creates 
+a new hash for them
 
   $ hg reset -C 7f3a02b3e388
   $ hg log -r 7f3a02b3e388
@@ -192,13 +191,33 @@ Reset touches commits to revive
   |
   o  0
   
+Reset + Inhibit tests, with inhibit reset revives the same commit
+
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > evolve =
+  > inhibit =
+  > directaccess =
+  > rebase=
+  > EOF
+ 
+  $ hg reset -C 7f3a02b3e388
+  Warning: accessing hidden changesets 7f3a02b3e388 for write operation
+  2 changesets pruned
+  $ hg log -G -T '{node|short} {bookmarks}\n'
+  @  7f3a02b3e388 foo
+  |
+  o  66ee28d0328c
+  |
+  o  b292c1e3311f
+  
 Reset to the commit your on is a no-op
   $ hg status
   $ hg log -r . -T '{rev}\n'
-  4
+  2
   $ hg reset .
   $ hg log -r . -T '{rev}\n'
-  4
+  2
   $ hg debugdirstate
   n 644          0 * a (glob)
   n 644          0 * tobeadded (glob)
