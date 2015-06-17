@@ -1107,8 +1107,9 @@ def head(repo, subset, x):
     # i18n: "head" is a keyword
     getargs(x, 0, 0, _("head takes no arguments"))
     hs = set()
+    cl = repo.changelog
     for b, ls in repo.branchmap().iteritems():
-        hs.update(repo[h].rev() for h in ls)
+        hs.update(cl.rev(h) for h in ls)
     # XXX using a set to feed the baseset is wrong. Sets are not ordered.
     # This does not break because of other fullreposet misbehavior.
     # XXX We should not be using '.filter' here, but combines subset with '&'

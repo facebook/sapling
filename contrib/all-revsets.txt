@@ -118,3 +118,9 @@ roots((0:tip)::)
 # those two `roots(...)` inputs are close to what phase movement use.
 roots((tip~100::) - (tip~100::tip))
 roots((0::) - (0::tip))
+
+# Testing the behavior of "head()" in various situations
+head()
+head() - public()
+draft() and head()
+head() and author("mpm")
