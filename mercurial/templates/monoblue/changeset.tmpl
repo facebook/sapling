@@ -48,7 +48,7 @@
         <dd>{date|rfc822date}</dd>
         {branch%changesetbranch}
         <dt>changeset {rev}</dt>
-        <dd>{node|short}</dd>
+        <dd><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></dd>
         {ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}
         {child%changesetchild}
     </dl>

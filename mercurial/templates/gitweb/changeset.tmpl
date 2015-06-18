@@ -35,7 +35,10 @@ changeset |
 <tr><td>author</td><td>{author|obfuscate}</td></tr>
 <tr><td></td><td class="date age">{date|rfc822date}</td></tr>
 {branch%changesetbranch}
-<tr><td>changeset {rev}</td><td style="font-family:monospace">{node|short}</td></tr>
+<tr>
+ <td>changeset {rev}</td>
+ <td style="font-family:monospace"><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
+</tr>
 {ifeq(count(parent), '2', parent%changesetparentdiff, parent%changesetparent)}
 {child%changesetchild}
 </table></div>

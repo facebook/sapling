@@ -474,6 +474,7 @@ Set up the repo
   <a href="/file/xyzzy?style=gitweb">files</a> |
   <a href="/raw-rev/xyzzy">raw</a>  | <a href="/archive/xyzzy.zip">zip</a>  |
   <a class="title" href="/raw-rev/a7c1559b7bba">second <span class="logtags"><span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a>
+   <td style="font-family:monospace"><a class="list" href="/rev/a7c1559b7bba?style=gitweb">a7c1559b7bba</a></td>
   <a class="list" href="/rev/43c799df6e75?style=gitweb">43c799df6e75</a>
   <a class="list" href="/rev/9d8c40cba617?style=gitweb">9d8c40cba617</a>
   <td><a class="list" href="/diff/a7c1559b7bba/foo?style=gitweb">foo</a></td>
@@ -691,6 +692,7 @@ Set up the repo
           <li><a href="/raw-rev/xyzzy">raw</a></li>
           <li><a href="/archive/xyzzy.zip">zip</a></li>
       <h3 class="changeset"><a href="/raw-rev/a7c1559b7bba">second <span class="logtags"><span class="bookmarktag" title="xyzzy">xyzzy</span> </span></a></h3>
+          <dd><a href="/rev/a7c1559b7bba?style=monoblue">a7c1559b7bba</a></dd>
   <dd><a href="/rev/43c799df6e75?style=monoblue">43c799df6e75</a></dd>
   <dd><a href="/rev/9d8c40cba617?style=monoblue">9d8c40cba617</a></dd>
   <td><a href="/diff/a7c1559b7bba/foo?style=monoblue">foo</a></td>
