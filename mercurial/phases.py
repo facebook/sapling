@@ -360,7 +360,7 @@ def listphases(repo):
     for root in repo._phasecache.phaseroots[draft]:
         keys[hex(root)] = value
 
-    if repo.ui.configbool('phases', 'publish', True):
+    if repo.publishing():
         # Add an extra data to let remote know we are a publishing
         # repo. Publishing repo can't just pretend they are old repo.
         # When pushing to a publishing repo, the client still need to

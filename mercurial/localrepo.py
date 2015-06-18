@@ -804,7 +804,7 @@ class localrepository(object):
         # so statichttprepo's override of local() works
         if not self.local():
             return False
-        if not self.ui.configbool('phases', 'publish', True):
+        if not self.publishing():
             return True
         # if publishing we can't copy if there is filtered content
         return not self.filtered('visible').changelog.filteredrevs

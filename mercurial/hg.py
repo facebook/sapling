@@ -253,7 +253,7 @@ def copystore(ui, srcrepo, destpath):
                 closetopic[0] = topic
             else:
                 ui.progress(topic, pos + num)
-        srcpublishing = srcrepo.ui.configbool('phases', 'publish', True)
+        srcpublishing = srcrepo.publishing()
         srcvfs = scmutil.vfs(srcrepo.sharedpath)
         dstvfs = scmutil.vfs(destpath)
         for f in srcrepo.store.copylist():

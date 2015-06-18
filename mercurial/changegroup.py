@@ -820,7 +820,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
             repo.hook('pretxnchangegroup', throw=True, pending=p, **hookargs)
 
         added = [cl.node(r) for r in xrange(clstart, clend)]
-        publishing = repo.ui.configbool('phases', 'publish', True)
+        publishing = repo.publishing()
         if srctype in ('push', 'serve'):
             # Old servers can not push the boundary themselves.
             # New servers won't push the boundary if changeset already
