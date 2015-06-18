@@ -798,7 +798,9 @@ class localrepository(object):
         return self
 
     def publishing(self):
-        return self.ui.configbool('phases', 'publish', True)
+        # it's safe (and desirable) to trust the publish flag unconditionally
+        # so that we don't finalize changes shared between users via ssh or nfs
+        return self.ui.configbool('phases', 'publish', True, untrusted=True)
 
     def cancopy(self):
         # so statichttprepo's override of local() works
