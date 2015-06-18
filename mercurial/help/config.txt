@@ -1093,6 +1093,11 @@ command or with Mercurial Queues extension.
     of line, patch line endings are preserved.
     Default: strict.
 
+``fuzz``
+    The number of lines of 'fuzz' to allow when applying patches. This
+    controls how much context the patcher is allowed to ignore when
+    trying to apply a patch.
+    Default: 2
 
 ``paths``
 ---------

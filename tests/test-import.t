@@ -492,6 +492,13 @@ Test fuzziness (ambiguous patch location, fuzz=2)
   $ echo line0 >> a
   $ hg ci -m brancha
   created new head
+  $ hg import --config patch.fuzz=0 -v fuzzy-tip.patch
+  applying fuzzy-tip.patch
+  patching file a
+  Hunk #1 FAILED at 0
+  1 out of 1 hunks FAILED -- saving rejects to file a.rej
+  abort: patch failed to apply
+  [255]
   $ hg import --no-commit -v fuzzy-tip.patch
   applying fuzzy-tip.patch
   patching file a

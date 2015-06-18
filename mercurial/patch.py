@@ -773,7 +773,7 @@ class patchfile(object):
         for x, s in enumerate(self.lines):
             self.hash.setdefault(s, []).append(x)
 
-        for fuzzlen in xrange(3):
+        for fuzzlen in xrange(self.ui.configint("patch", "fuzz", 2) + 1):
             for toponly in [True, False]:
                 old, oldstart, new, newstart = h.fuzzit(fuzzlen, toponly)
                 oldstart = oldstart + self.offset + self.skew
