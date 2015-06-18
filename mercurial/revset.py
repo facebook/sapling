@@ -803,16 +803,6 @@ def divergent(repo, subset, x):
     divergent = obsmod.getrevs(repo, 'divergent')
     return subset & divergent
 
-def draft(repo, subset, x):
-    """``draft()``
-    Changeset in draft phase."""
-    # i18n: "draft" is a keyword
-    getargs(x, 0, 0, _("draft takes no arguments"))
-    phase = repo._phasecache.phase
-    target = phases.draft
-    condition = lambda r: phase(repo, r) == target
-    return subset.filter(condition, cache=False)
-
 def extinct(repo, subset, x):
     """``extinct()``
     Obsolete changesets with obsolete descendants only.
@@ -1472,6 +1462,28 @@ def parents(repo, subset, x):
     ps -= set([node.nullrev])
     return subset & ps
 
+def _phase(repo, subset, target):
+    """helper to select all rev in phase <target>"""
+    phase = repo._phasecache.phase
+    condition = lambda r: phase(repo, r) == target
+    return subset.filter(condition, cache=False)
+
+def draft(repo, subset, x):
+    """``draft()``
+    Changeset in draft phase."""
+    # i18n: "draft" is a keyword
+    getargs(x, 0, 0, _("draft takes no arguments"))
+    target = phases.draft
+    return _phase(repo, subset, target)
+
+def secret(repo, subset, x):
+    """``secret()``
+    Changeset in secret phase."""
+    # i18n: "secret" is a keyword
+    getargs(x, 0, 0, _("secret takes no arguments"))
+    target = phases.secret
+    return _phase(repo, subset, target)
+
 def parentspec(repo, subset, x, n):
     """``set^0``
     The set.
@@ -1729,16 +1741,6 @@ def roots(repo, subset, x):
     subset = subset & s# baseset([r for r in s if r in subset])
     cs = _children(repo, subset, s)
     return subset - cs
-
-def secret(repo, subset, x):
-    """``secret()``
-    Changeset in secret phase."""
-    # i18n: "secret" is a keyword
-    getargs(x, 0, 0, _("secret takes no arguments"))
-    phase = repo._phasecache.phase
-    target = phases.secret
-    condition = lambda r: phase(repo, r) == target
-    return subset.filter(condition, cache=False)
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``
