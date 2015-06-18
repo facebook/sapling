@@ -241,7 +241,8 @@ def peer(orig, uiorrepo, *args, **opts):
 extensions.wrapfunction(hg, 'peer', peer)
 
 @util.transform_notgit
-def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
+def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(),
+                 **kwargs):
     if isinstance(remote, gitrepo.gitrepo):
         # transaction manager is present in Mercurial >= 3.3
         try:
@@ -269,7 +270,7 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=()):
             lock.release()
             wlock.release()
     else:
-        return orig(repo, remote, heads, force, bookmarks=bookmarks)
+        return orig(repo, remote, heads, force, bookmarks=bookmarks, **kwargs)
 if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
     # Mercurial >= 3.2
     extensions.wrapfunction(exchange, 'pull', exchangepull)
