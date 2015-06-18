@@ -16,7 +16,7 @@ lfile_adds  = '{file_adds % "{ifcontains(file, file_copies_switch,
                                          '{lfile_add}')}"}'
 lfile_add = '{label("status.added", "A {file}\n")}'
 
-lfile_copies_switch = '{file_copies_switch % "{lfile_copy_orig}{lfile_copy_dest}"'
+lfile_copies_switch = '{file_copies_switch % "{lfile_copy_orig}{lfile_copy_dest}"}'
 lfile_copy_orig = '{label("status.added", "A {name}\n")}'
 lfile_copy_dest = '{label("status.copied", "  {source}\n")}'
 
