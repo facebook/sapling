@@ -134,3 +134,11 @@ githelp for reset, checking ~ in git becomes ~1 in mercurial
   hg reset .^
   $ hg githelp -- reset HEAD~3
   hg reset .~3
+
+githelp for git show --name-status
+  $ hg githelp -- git show --name-status
+  hg log --style status -r tip
+
+githelp for git show --pretty=format: --name-status
+  $ hg githelp -- git show --pretty=format: --name-status
+  hg stat --change tip

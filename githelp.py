@@ -802,11 +802,22 @@ def rm(ui, repo, *args, **kwargs):
 
 def show(ui, repo, *args, **kwargs):
     cmdoptions = [
+        ('', 'name-status', None, ''),
+        ('', 'pretty', '', ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command('export')
-    cmd.extend([convert(v) for v in args])
+    if opts.get('name_status'):
+        if opts.get('pretty') == 'format:':
+            cmd = Command('stat')
+            cmd['--change'] = 'tip'
+        else:
+            cmd = Command('log')
+            cmd.append('--style status')
+            cmd.append('-r tip')
+    else:
+        cmd = Command('export')
+        cmd.extend([convert(v) for v in args])
 
     ui.status(cmd, "\n")
 
