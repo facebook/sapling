@@ -797,6 +797,9 @@ class localrepository(object):
     def local(self):
         return self
 
+    def publishing(self):
+        return self.ui.configbool('phases', 'publish', True)
+
     def cancopy(self):
         # so statichttprepo's override of local() works
         if not self.local():
