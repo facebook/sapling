@@ -422,7 +422,10 @@ Some tests for hgweb in an empty repository
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>directory / @ -1:000000000000 <span class="tag">tip</span> </h3>
+  <h3>
+   directory / @ -1:<a href="/rev/000000000000">000000000000</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   

@@ -71,7 +71,10 @@ manifest with descending (paper)
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>directory / @ 0:c9f45f7a1659 <span class="tag">tip</span> </h3>
+  <h3>
+   directory / @ 0:<a href="/rev/c9f45f7a1659">c9f45f7a1659</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -187,7 +190,10 @@ manifest with descending (coal)
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>directory / @ 0:c9f45f7a1659 <span class="tag">tip</span> </h3>
+  <h3>
+   directory / @ 0:<a href="/rev/c9f45f7a1659?style=coal">c9f45f7a1659</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <input type="hidden" name="style" value="coal" />

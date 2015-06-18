@@ -31,7 +31,10 @@
 <div class="main">
 
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
-<h3>changeset {rev}:{node|short} {changesetbranch%changelogbranchname} {changesettag} {changesetbookmark}</h3>
+<h3>
+ changeset {rev}:<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
+ {changesetbranch%changelogbranchname}{changesettag}{changesetbookmark}
+</h3>
 
 <form class="search" action="{url|urlescape}log">
 {sessionvars%hiddenformentry}

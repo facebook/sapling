@@ -36,7 +36,10 @@
 
 <div class="main">
 <h2 class="breadcrumb"><a href="/">Mercurial</a> {pathdef%breadcrumb}</h2>
-<h3>diff {file|escape} @ {rev}:{node|short} {branch%changelogbranchname}{tags%changelogtag}{bookmarks%changelogtag}</h3>
+<h3>
+ diff {file|escape} @ {rev}:<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
+ {branch%changelogbranchname}{tags%changelogtag}{bookmarks%changelogtag}
+</h3>
 
 <form class="search" action="{url|urlescape}log">
 <p>{sessionvars%hiddenformentry}</p>

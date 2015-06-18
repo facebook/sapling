@@ -105,7 +105,10 @@ hgweb filerevision, html
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>view primes.py @ 0:853dcd4de2a6 <span class="tag">tip</span> </h3>
+  <h3>
+   view primes.py @ 0:<a href="/rev/853dcd4de2a6">853dcd4de2a6</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -236,7 +239,10 @@ hgweb fileannotate, html
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>annotate primes.py @ 0:853dcd4de2a6 <span class="tag">tip</span> </h3>
+  <h3>
+   annotate primes.py @ 0:<a href="/rev/853dcd4de2a6">853dcd4de2a6</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   

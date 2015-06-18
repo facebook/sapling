@@ -867,7 +867,10 @@ Logs and changes
   <div class="main">
   
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>changeset 0:2ef0ac749a14  <span class="tag">1.0</span>  <span class="tag">anotherthing</span> </h3>
+  <h3>
+   changeset 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
+   <span class="tag">1.0</span> <span class="tag">anotherthing</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -1296,7 +1299,10 @@ File-related
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>view foo @ 1:a4f92ed23982 </h3>
+  <h3>
+   view foo @ 1:<a href="/rev/a4f92ed23982">a4f92ed23982</a>
+   
+  </h3>
   
   <form class="search" action="/log">
   
@@ -1420,7 +1426,10 @@ File-related
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>view foo @ 2:1d22e65f027e <span class="branchname">stable</span> </h3>
+  <h3>
+   view foo @ 2:<a href="/rev/1d22e65f027e">1d22e65f027e</a>
+   <span class="branchname">stable</span> 
+  </h3>
   
   <form class="search" action="/log">
   

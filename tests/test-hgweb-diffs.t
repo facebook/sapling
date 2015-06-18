@@ -79,7 +79,10 @@ revision
   <div class="main">
   
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>changeset 0:0cd96de13884   </h3>
+  <h3>
+   changeset 0:<a href="/rev/0cd96de13884">0cd96de13884</a>
+   
+  </h3>
   
   <form class="search" action="/log">
   
@@ -249,7 +252,10 @@ diff removed file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>diff b @ 1:559edbd9ed20 <span class="tag">tip</span> </h3>
+  <h3>
+   diff b @ 1:<a href="/rev/559edbd9ed20">559edbd9ed20</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -351,7 +357,10 @@ revision
   <div class="main">
   
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>changeset 0:0cd96de13884   </h3>
+  <h3>
+   changeset 0:<a href="/rev/0cd96de13884">0cd96de13884</a>
+   
+  </h3>
   
   <form class="search" action="/log">
   
@@ -525,7 +534,10 @@ diff modified file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>diff a @ 1:559edbd9ed20 <span class="tag">tip</span> </h3>
+  <h3>
+   diff a @ 1:<a href="/rev/559edbd9ed20">559edbd9ed20</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -628,7 +640,10 @@ comparison new file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 0:0cd96de13884 </h3>
+  <h3>
+   comparison a @ 0:<a href="/rev/0cd96de13884">0cd96de13884</a>
+   
+  </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -755,7 +770,10 @@ comparison existing file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 2:d73db4d812ff <span class="tag">tip</span> </h3>
+  <h3>
+   comparison a @ 2:<a href="/rev/d73db4d812ff">d73db4d812ff</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -884,7 +902,10 @@ comparison removed file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison a @ 3:20e80271eb7a <span class="tag">tip</span> </h3>
+  <h3>
+   comparison a @ 3:<a href="/rev/20e80271eb7a">20e80271eb7a</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <p></p>
@@ -1019,7 +1040,10 @@ comparison not-modified file
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>comparison e @ 5:41d9fc4a6ae1 <span class="tag">tip</span> </h3>
+  <h3>
+   comparison e @ 5:<a href="/rev/41d9fc4a6ae1">41d9fc4a6ae1</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   <p></p>

@@ -262,7 +262,10 @@ try bad style
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>directory / @ 0:2ef0ac749a14 <span class="tag">tip</span> </h3>
+  <h3>
+   directory / @ 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
+   <span class="tag">tip</span> 
+  </h3>
   
   <form class="search" action="/log">
   

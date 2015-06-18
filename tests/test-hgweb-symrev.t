@@ -68,6 +68,7 @@ Set up the repo
   <li><a href="/graph/tip?style=paper">graph</a></li>
   <li><a href="/rev/tip?style=paper">changeset</a></li>
   <a href="/archive/tip.zip">zip</a>
+   directory / @ 2:<a href="/rev/9d8c40cba617?style=paper">9d8c40cba617</a>
     <td class="name"><a href="/file/tip/?style=paper">[up]</a></td>
   <a href="/file/tip/dir?style=paper">
   <a href="/file/tip/dir/?style=paper">
@@ -84,6 +85,7 @@ Set up the repo
    <li><a href="/raw-rev/xyzzy?style=paper">raw</a></li>
    <li><a href="/file/xyzzy?style=paper">browse</a></li>
   <a href="/archive/xyzzy.zip">zip</a>
+   changeset 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td class="author"><a href="/rev/43c799df6e75?style=paper">43c799df6e75</a> </td>
    <td class="author"> <a href="/rev/9d8c40cba617?style=paper">9d8c40cba617</a></td>
    <td class="files"><a href="/file/a7c1559b7bba/foo?style=paper">foo</a> </td>
@@ -118,6 +120,7 @@ Set up the repo
   <li><a href="/graph/xyzzy?style=paper">graph</a></li>
   <li><a href="/rev/xyzzy?style=paper">changeset</a></li>
   <a href="/archive/xyzzy.zip">zip</a>
+   directory / @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
     <td class="name"><a href="/file/xyzzy/?style=paper">[up]</a></td>
   <a href="/file/xyzzy/dir?style=paper">
   <a href="/file/xyzzy/dir/?style=paper">
@@ -134,6 +137,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=paper">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=paper">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   view foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
 
@@ -170,6 +174,7 @@ Set up the repo
   <li><a href="/comparison/xyzzy/foo?style=paper">comparison</a></li>
   <li><a href="/log/xyzzy/foo?style=paper">file log</a></li>
   <li><a href="/raw-annotate/xyzzy/foo">raw</a></li>
+   annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
   <a href="/annotate/43c799df6e75/foo?style=paper#l1"
@@ -186,6 +191,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=paper">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=paper">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   diff foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
 
@@ -200,6 +206,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=paper">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=paper">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   comparison foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
 
@@ -236,6 +243,7 @@ Set up the repo
   <li><a href="/graph/tip?style=coal">graph</a></li>
   <li><a href="/rev/tip?style=coal">changeset</a></li>
   <a href="/archive/tip.zip">zip</a>
+   directory / @ 2:<a href="/rev/9d8c40cba617?style=coal">9d8c40cba617</a>
     <td class="name"><a href="/file/tip/?style=coal">[up]</a></td>
   <a href="/file/tip/dir?style=coal">
   <a href="/file/tip/dir/?style=coal">
@@ -252,6 +260,7 @@ Set up the repo
    <li><a href="/raw-rev/xyzzy?style=coal">raw</a></li>
    <li><a href="/file/xyzzy?style=coal">browse</a></li>
   <a href="/archive/xyzzy.zip">zip</a>
+   changeset 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/rev/43c799df6e75?style=coal">43c799df6e75</a> </td>
    <td class="author"> <a href="/rev/9d8c40cba617?style=coal">9d8c40cba617</a></td>
    <td class="files"><a href="/file/a7c1559b7bba/foo?style=coal">foo</a> </td>
@@ -286,6 +295,7 @@ Set up the repo
   <li><a href="/graph/xyzzy?style=coal">graph</a></li>
   <li><a href="/rev/xyzzy?style=coal">changeset</a></li>
   <a href="/archive/xyzzy.zip">zip</a>
+   directory / @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
     <td class="name"><a href="/file/xyzzy/?style=coal">[up]</a></td>
   <a href="/file/xyzzy/dir?style=coal">
   <a href="/file/xyzzy/dir/?style=coal">
@@ -302,6 +312,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=coal">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=coal">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   view foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
 
@@ -338,6 +349,7 @@ Set up the repo
   <li><a href="/comparison/xyzzy/foo?style=coal">comparison</a></li>
   <li><a href="/log/xyzzy/foo?style=coal">file log</a></li>
   <li><a href="/raw-annotate/xyzzy/foo">raw</a></li>
+   annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
   <a href="/annotate/43c799df6e75/foo?style=coal#1"
@@ -354,6 +366,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=coal">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=coal">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   diff foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
 
@@ -368,6 +381,7 @@ Set up the repo
   <li><a href="/annotate/xyzzy/foo?style=coal">annotate</a></li>
   <li><a href="/log/xyzzy/foo?style=coal">file log</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
+   comparison foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
 
