@@ -66,7 +66,6 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg branch default
   marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
   $ mkcommit e
   $ hg merge stable
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

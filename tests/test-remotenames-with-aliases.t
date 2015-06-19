@@ -67,7 +67,6 @@
 
   $ hg branch default
   marked working directory as branch default
-  (branches are permanent and global, did you want a bookmark?)
 
   $ mkcommit 4
   $ hg merge stable

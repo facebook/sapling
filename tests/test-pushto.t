@@ -292,6 +292,5 @@ Test that pushing over obsoleted changesets doesn't require force
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  pushing 2 obsolescence markers (* bytes) (glob)
-  2 obsolescence markers added
+  2 new obsolescence markers
   updating bookmark @
