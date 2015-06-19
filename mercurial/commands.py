@@ -4985,6 +4985,8 @@ def phase(ui, repo, *revs, **opts):
 
     Returns 0 on success, 1 if no phases were changed or some could not
     be changed.
+
+    (For more information about the phases concept, see :hg:`help phases`.)
     """
     # search for a unique phase argument
     targetphase = None
