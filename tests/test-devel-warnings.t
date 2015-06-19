@@ -3,7 +3,7 @@
   > """A small extension that acquire locks in the wrong order
   > """
   > 
-  > from mercurial import cmdutil, repair
+  > from mercurial import cmdutil, repair, revset
   > 
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -47,6 +47,11 @@
   >         repair.strip(repo.ui, repo, [repo['.'].node()])
   >     finally:
   >         lo.release()
+  > 
+  > def oldstylerevset(repo, subset, x):
+  >     return list(subset)
+  > 
+  > revset.symbols['oldstyle'] = oldstylerevset
   > EOF
 
   $ cat << EOF >> $HGRCPATH
@@ -105,5 +110,9 @@
   abort: programming error: cannot strip from inside a transaction
   (contact your extension maintainer)
   [255]
+
+  $ hg log -r "oldstyle()" -T '{rev}\n'
+  devel-warn: revset "oldstyle" use list instead of smartset, (upgrade your code) at: */mercurial/revset.py:* (mfunc) (glob)
+  0
 
   $ cd ..

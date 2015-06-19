@@ -321,6 +321,13 @@ def getset(repo, subset, x):
     s = methods[x[0]](repo, subset, *x[1:])
     if util.safehasattr(s, 'isascending'):
         return s
+    if (repo.ui.configbool('devel', 'all-warnings')
+            or repo.ui.configbool('devel', 'old-revset')):
+        # else case should not happen, because all non-func are internal,
+        # ignoring for now.
+        if x[0] == 'func' and x[1][0] == 'symbol' and x[1][1] in symbols:
+            repo.ui.develwarn('revset "%s" use list instead of smartset, '
+                              '(upgrade your code)' % x[1][1])
     return baseset(s)
 
 def _getrevsource(repo, r):
