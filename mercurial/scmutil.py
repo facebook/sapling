@@ -10,7 +10,7 @@ from mercurial.node import nullrev
 import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
-import os, errno, re, glob, tempfile, shutil, stat, inspect
+import os, errno, re, glob, tempfile, shutil, stat
 
 if os.name == 'nt':
     import scmwindows as scmplatform
@@ -186,16 +186,6 @@ class casecollisionauditor(object):
             self._ui.warn(_("warning: %s\n") % msg)
         self._loweredfiles.add(fl)
         self._newfiles.add(f)
-
-def develwarn(tui, msg):
-    """issue a developer warning message"""
-    msg = 'devel-warn: ' + msg
-    if tui.tracebackflag:
-        util.debugstacktrace(msg, 2)
-    else:
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        tui.write_err('%s at: %s:%s (%s)\n' % ((msg,) + calframe[2][1:4]))
 
 def filteredhash(repo, maxrev):
     """build hash of filtered revisions in the current repoview.

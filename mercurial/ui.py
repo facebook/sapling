@@ -5,6 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import inspect
 from i18n import _
 import errno, getpass, os, socket, sys, tempfile, traceback
 import config, scmutil, util, error, formatter, progress
@@ -957,6 +958,16 @@ class ui(object):
         ui.write(ui.label(s, 'label')).
         '''
         return msg
+
+    def develwarn(self, msg):
+        """issue a developer warning message"""
+        msg = 'devel-warn: ' + msg
+        if self.tracebackflag:
+            util.debugstacktrace(msg, 2)
+        else:
+            curframe = inspect.currentframe()
+            calframe = inspect.getouterframes(curframe, 2)
+            self.write_err('%s at: %s:%s (%s)\n' % ((msg,) + calframe[2][1:4]))
 
 class paths(dict):
     """Represents a collection of paths and their configs.
