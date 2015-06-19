@@ -65,9 +65,6 @@ Pulling from a full bundle
   $ hg pull -r 66ee28d0328c ../fullbundle.hg
   pulling from ../fullbundle.hg
   searching for changes
-  adding changesets
-  transaction abort!
-  rollback completed
   abort: cannot pull from full bundles
   (use `hg unbundle` instead)
   [255]
