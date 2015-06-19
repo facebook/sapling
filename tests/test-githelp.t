@@ -119,7 +119,7 @@ githelp for checkout when not in repo root
   
   hg revert file
 
-githelp for checkout with an argument that's both a file and a revision
+githelp for checkout with an argument that is both a file and a revision
   $ hg githelp -- checkout both
   hg update both
 
@@ -142,3 +142,19 @@ githelp for git show --name-status
 githelp for git show --pretty=format: --name-status
   $ hg githelp -- git show --pretty=format: --name-status
   hg stat --change tip
+
+githelp for show with no arguments
+  $ hg githelp -- show
+  hg show
+
+githelp for show with a path
+  $ hg githelp -- show file
+  hg diff -r .^ file
+
+githelp for show with not a path:
+  $ hg githelp -- show rev
+  hg show rev
+
+githelp for show with too many arguments
+  $ hg githelp -- show argone argtwo
+  hg show argone

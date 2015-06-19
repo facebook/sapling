@@ -807,6 +807,7 @@ def show(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
+    cmd = Command('show')
     if opts.get('name_status'):
         if opts.get('pretty') == 'format:':
             cmd = Command('stat')
@@ -815,9 +816,12 @@ def show(ui, repo, *args, **kwargs):
             cmd = Command('log')
             cmd.append('--style status')
             cmd.append('-r tip')
-    else:
-        cmd = Command('export')
-        cmd.extend([convert(v) for v in args])
+    elif len(args) > 0:
+        showarg = args[0]
+        if ispath(repo, showarg):
+            cmd = Command('diff')
+            cmd['-r'] = '.^'
+        cmd.append(showarg)
 
     ui.status(cmd, "\n")
 
