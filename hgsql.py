@@ -341,10 +341,17 @@ def wraprepo(repo):
                 ui.debug("skipping sync for current operation\n")
                 return
 
-            # The hg-ssh wrapper installs a hook to block all writes. We need to
-            # circumvent this when we sync from the server.
-            hgsshbackup = self.ui.backupconfig("hooks", "pretxnopen.hg-ssh")
+            configbackups = []
             try:
+                # Disable all pretxnclose hooks, since these revisions are
+                # technically already commited.
+                for name, value in ui.configitems("hooks"):
+                    if name.startswith("pretxnclose"):
+                        configbackups.append(ui.backupconfig("hooks", name))
+                        ui.setconfig("hooks", name, None)
+                # The hg-ssh wrapper installs a hook to block all writes. We need to
+                # circumvent this when we sync from the server.
+                configbackups.append(ui.backupconfig("hooks", "pretxnopen.hg-ssh"))
                 self.ui.setconfig("hooks", "pretxnopen.hg-ssh", None)
                 # Someone else may have synced us while we were waiting.
                 # Restart the transaction so we have access to the latest rows.
@@ -410,7 +417,8 @@ def wraprepo(repo):
                 if bm != sqlbookmarks:
                     raise CorruptionException("bookmarks don't match after sync")
             finally:
-                self.ui.restoreconfig(hgsshbackup)
+                for backup in configbackups:
+                    ui.restoreconfig(backup)
                 lock.release()
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):

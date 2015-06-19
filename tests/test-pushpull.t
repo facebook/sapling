@@ -147,3 +147,35 @@
   pulling from ssh://user@dummy/$TESTTMP/master
   searching for changes
   no changes found
+
+# Verify syncing with pretxnclose hooks works
+  $ initserver master2 masterrepo
+  $ cd master
+  $ touch testpretxnclose
+  $ hg commit -Aqm "test pretxnclose"
+  $ cd ../master2
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxnclose.abort=exit 1
+  > EOF
+  $ hg log -r tip -T '{rev}\n'
+  5
+  $ hg strip -q -r tip --config extensions.hgsql=! --config hooks.pretxnclose.abort=
+
+# Verify hooks still run, even after sync disabled them temporarily
+  $ cd ../client
+  $ hg pull -q ../master
+  $ hg up -q tip
+  $ echo x >> testpretxnclose
+  $ hg commit -qm "test pretxnclose 2"
+  $ hg push ../master2
+  pushing to ../master2
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  transaction abort!
+  rollback completed
+  abort: pretxnclose.abort hook exited with status 1
+  [255]
