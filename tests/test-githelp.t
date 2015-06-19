@@ -118,6 +118,7 @@ githelp for checkout when not in repo root
   note: use --no-backup to avoid creating .orig files
   
   hg revert file
+  $ cd ..
 
 githelp for checkout with an argument that is both a file and a revision
   $ hg githelp -- checkout both
@@ -148,8 +149,8 @@ githelp for show with no arguments
   hg show
 
 githelp for show with a path
-  $ hg githelp -- show file
-  hg diff -r .^ file
+  $ hg githelp -- show test_file
+  hg diff -r .^ test_file
 
 githelp for show with not a path:
   $ hg githelp -- show rev
