@@ -244,7 +244,7 @@ def _verify(repo):
             try:
                 storefiles.remove(ff)
             except KeyError:
-                err(lr, _("missing revlog!"), ff)
+                warn(_(" warning: revlog '%s' not in fncache!") % ff)
 
         checklog(fl, f, lr)
         seen = {}

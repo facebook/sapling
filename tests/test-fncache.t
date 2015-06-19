@@ -48,13 +48,11 @@ Testing verify:
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-   data/a.i@0: missing revlog!
-   data/a.i.hg/c.i@2: missing revlog!
-   data/a.i/b.i@1: missing revlog!
+   warning: revlog 'data/a.i' not in fncache!
+   warning: revlog 'data/a.i.hg/c.i' not in fncache!
+   warning: revlog 'data/a.i/b.i' not in fncache!
   3 files, 3 changesets, 3 total revisions
-  3 integrity errors encountered!
-  (first damaged changeset appears to be 0)
-  [1]
+  3 warnings encountered!
   $ cd ..
 
 Non store repo:
