@@ -22,7 +22,7 @@ elements = {
     ")": (0, None, None),
     "integer": (0, ("integer",), None),
     "symbol": (0, ("symbol",), None),
-    "rawstring": (0, ("rawstring",), None),
+    "string": (0, ("string",), None),
     "template": (0, ("template",), None),
     "end": (0, None, None),
 }
@@ -50,7 +50,7 @@ def tokenize(program, start, end):
                     pos += 2
                     continue
                 if d == c:
-                    yield ('rawstring', program[s:pos], s)
+                    yield ('string', program[s:pos], s)
                     break
                 pos += 1
             else:
@@ -83,7 +83,7 @@ def tokenize(program, start, end):
             #             escaped quoted string
             if c == 'r':
                 pos += 1
-                token = 'rawstring'
+                token = 'string'
             else:
                 token = 'template'
             quote = program[pos:pos + 2]
@@ -136,7 +136,7 @@ def _parsetemplate(tmpl, start, stop, quote=''):
     >>> _parsetemplate(r'foo\"bar"baz', 0, 12, quote='"')
     ([('string', 'foo"'), ('string', 'bar')], 9)
     >>> _parsetemplate(r'foo\\"bar', 0, 10, quote='"')
-    ([('string', 'foo\\\\')], 6)
+    ([('string', 'foo\\')], 6)
     """
     parsed = []
     sepchars = '{' + quote
@@ -146,18 +146,19 @@ def _parsetemplate(tmpl, start, stop, quote=''):
         n = min((tmpl.find(c, pos, stop) for c in sepchars),
                 key=lambda n: (n < 0, n))
         if n < 0:
-            parsed.append(('string', tmpl[pos:stop]))
+            parsed.append(('string', tmpl[pos:stop].decode('string-escape')))
             pos = stop
             break
         c = tmpl[n]
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
         if bs % 2 == 1:
             # escaped (e.g. '\{', '\\\{', but not '\\{')
-            parsed.append(('string', (tmpl[pos:n - 1] + c)))
+            parsed.append(('string',
+                           tmpl[pos:n - 1].decode('string-escape') + c))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append(('string', tmpl[pos:n]))
+            parsed.append(('string', tmpl[pos:n].decode('string-escape')))
         if c == quote:
             return parsed, n + 1
 
@@ -212,9 +213,6 @@ def runinteger(context, mapping, data):
     return int(data)
 
 def runstring(context, mapping, data):
-    return data.decode("string-escape")
-
-def runrawstring(context, mapping, data):
     return data
 
 def runsymbol(context, mapping, key):
@@ -659,7 +657,6 @@ def word(context, mapping, args):
 exprmethods = {
     "integer": lambda e, c: (runinteger, e[1]),
     "string": lambda e, c: (runstring, e[1]),
-    "rawstring": lambda e, c: (runrawstring, e[1]),
     "symbol": lambda e, c: (runsymbol, e[1]),
     "template": buildtemplate,
     "group": lambda e, c: compileexp(e[1], c, exprmethods),
