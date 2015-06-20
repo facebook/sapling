@@ -19,8 +19,7 @@ import error
 from i18n import _
 
 class parser(object):
-    def __init__(self, tokenizer, elements, methods=None):
-        self._tokenizer = tokenizer
+    def __init__(self, elements, methods=None):
         self._elements = elements
         self._methods = methods
         self.current = None
@@ -72,12 +71,9 @@ class parser(object):
                     if len(infix) == 3:
                         self._match(infix[2], pos)
         return expr
-    def parse(self, message, lookup=None):
-        'generate a parse tree from a message'
-        if lookup:
-            self._iter = self._tokenizer(message, lookup)
-        else:
-            self._iter = self._tokenizer(message)
+    def parse(self, tokeniter):
+        'generate a parse tree from tokens'
+        self._iter = tokeniter
         self._advance()
         res = self._parse()
         token, value, pos = self.current
@@ -87,9 +83,9 @@ class parser(object):
         if not isinstance(tree, tuple):
             return tree
         return self._methods[tree[0]](*[self.eval(t) for t in tree[1:]])
-    def __call__(self, message):
-        'parse a message into a parse tree and evaluate if methods given'
-        t = self.parse(message)
+    def __call__(self, tokeniter):
+        'parse tokens into a parse tree and evaluate if methods given'
+        t = self.parse(tokeniter)
         if self._methods:
             return self.eval(t)
         return t

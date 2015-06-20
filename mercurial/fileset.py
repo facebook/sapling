@@ -80,8 +80,8 @@ def tokenize(program):
     yield ('end', None, pos)
 
 def parse(expr):
-    p = parser.parser(tokenize, elements)
-    tree, pos = p.parse(expr)
+    p = parser.parser(elements)
+    tree, pos = p.parse(tokenize(expr))
     if pos != len(expr):
         raise error.ParseError(_("invalid token"), pos)
     return tree

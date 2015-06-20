@@ -2387,9 +2387,9 @@ def _parsealiasdecl(decl):
     >>> _parsealiasdecl('foo($1, $2, $1)')
     ('foo', None, None, 'argument names collide with each other')
     """
-    p = parser.parser(_tokenizealias, elements)
+    p = parser.parser(elements)
     try:
-        tree, pos = p.parse(decl)
+        tree, pos = p.parse(_tokenizealias(decl))
         if (pos != len(decl)):
             raise error.ParseError(_('invalid token'), pos)
 
@@ -2478,8 +2478,8 @@ def _parsealiasdefn(defn, args):
                                            pos)
             yield (t, value, pos)
 
-    p = parser.parser(tokenizedefn, elements)
-    tree, pos = p.parse(defn)
+    p = parser.parser(elements)
+    tree, pos = p.parse(tokenizedefn(defn))
     if pos != len(defn):
         raise error.ParseError(_('invalid token'), pos)
     return parser.simplifyinfixops(tree, ('or',))
@@ -2609,8 +2609,8 @@ def foldconcat(tree):
         return tuple(foldconcat(t) for t in tree)
 
 def parse(spec, lookup=None):
-    p = parser.parser(tokenize, elements)
-    tree, pos = p.parse(spec, lookup=lookup)
+    p = parser.parser(elements)
+    tree, pos = p.parse(tokenize(spec, lookup=lookup))
     if pos != len(spec):
         raise error.ParseError(_("invalid token"), pos)
     return parser.simplifyinfixops(tree, ('or',))

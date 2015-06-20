@@ -27,8 +27,7 @@ elements = {
     "end": (0, None, None),
 }
 
-def tokenizer(data):
-    program, start, end = data
+def tokenize(program, start, end):
     pos = start
     while pos < end:
         c = program[pos]
@@ -96,7 +95,7 @@ def tokenizer(data):
 def compiletemplate(tmpl, context):
     parsed = []
     pos, stop = 0, len(tmpl)
-    p = parser.parser(tokenizer, elements)
+    p = parser.parser(elements)
     while pos < stop:
         n = tmpl.find('{', pos)
         if n < 0:
@@ -111,8 +110,7 @@ def compiletemplate(tmpl, context):
         if n > pos:
             parsed.append(('string', tmpl[pos:n]))
 
-        pd = [tmpl, n + 1, stop]
-        parseres, pos = p.parse(pd)
+        parseres, pos = p.parse(tokenize(tmpl, n + 1, stop))
         parsed.append(parseres)
 
     return [compileexp(e, context, methods) for e in parsed]
