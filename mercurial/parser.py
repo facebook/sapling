@@ -10,8 +10,9 @@
 # for background
 
 # takes a tokenizer and elements
-# tokenizer is an iterator that returns type, value pairs
-# elements is a mapping of types to binding strength, prefix and infix actions
+# tokenizer is an iterator that returns (type, value, pos) tuples
+# elements is a mapping of types to binding strength, prefix, infix and
+# optional suffix actions
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
