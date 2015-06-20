@@ -391,7 +391,11 @@ def listset(repo, subset, a, b):
 def func(repo, subset, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](repo, subset, b)
-    raise error.UnknownIdentifier(a[1], symbols.keys())
+
+    keep = lambda fn: getattr(fn, '__doc__', None) is not None
+
+    syms = [s for (s, fn) in symbols.items() if keep(fn)]
+    raise error.UnknownIdentifier(a[1], syms)
 
 # functions
 

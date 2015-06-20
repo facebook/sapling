@@ -1334,6 +1334,17 @@ Bogus function gets suggestions
   hg: parse error: unknown identifier: babar
   [255]
 
+Bogus function with a similar internal name doesn't suggest the internal name
+  $ log 'matches()'
+  hg: parse error: unknown identifier: matches
+  (did you mean 'matching'?)
+  [255]
+
+Undocumented functions aren't suggested as similar either
+  $ log 'wdir2()'
+  hg: parse error: unknown identifier: wdir2
+  [255]
+
 multiple revspecs
 
   $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{rev}\n'
