@@ -189,7 +189,11 @@ def clean(mctx, x):
 def func(mctx, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
         return symbols[a[1]](mctx, b)
-    raise error.UnknownIdentifier(a[1], symbols.keys())
+
+    keep = lambda fn: getattr(fn, '__doc__', None) is not None
+
+    syms = [s for (s, fn) in symbols.items() if keep(fn)]
+    raise error.UnknownIdentifier(a[1], syms)
 
 def getlist(x):
     if not x:
