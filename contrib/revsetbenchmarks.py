@@ -246,6 +246,7 @@ if options.file:
     revsetsfile = open(options.file)
 
 revsets = [l.strip() for l in revsetsfile if not l.startswith('#')]
+revsets = [l for l in revsets if l]
 
 print "Revsets to benchmark"
 print "----------------------------"
