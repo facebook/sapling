@@ -2527,6 +2527,9 @@ Test revset function
   Rev: 0
   Ancestor: 0
   
+  $ hg log --template '{revset("TIP"|lower)}\n' -l1
+  2
+
 Test current bookmark templating
 
   $ hg book foo

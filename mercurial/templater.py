@@ -417,7 +417,7 @@ def revset(context, mapping, args):
         # i18n: "revset" is a keyword
         raise error.ParseError(_("revset expects one or more arguments"))
 
-    raw = args[0][1]
+    raw = stringify(args[0][0](context, mapping, args[0][1]))
     ctx = mapping['ctx']
     repo = ctx.repo()
 
