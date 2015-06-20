@@ -62,7 +62,7 @@ def perf(revset, target=None):
             print >> sys.stderr, '(no ouput)'
         else:
             print >> sys.stderr, exc.output
-        sys.exit(exc.returncode)
+        return None
 
 outputre = re.compile(r'! wall (\d+.\d+) comb (\d+.\d+) user (\d+.\d+) '
                       'sys (\d+.\d+) \(best of (\d+)\)')
@@ -160,8 +160,13 @@ _marker = object()
 def printresult(variants, idx, data, maxidx, verbose=False, reference=_marker):
     """print a line of result to stdout"""
     mask = '%%0%ii) %%s' % idxwidth(maxidx)
+
     out = []
     for var in variants:
+        if data[var] is None:
+            out.append('error   ')
+            out.append(' ' * 4)
+            continue
         out.append(formattiming(data[var]['wall']))
         if reference is not _marker:
             factor = None
