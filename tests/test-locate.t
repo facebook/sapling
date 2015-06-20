@@ -106,6 +106,19 @@ Issue294: hg remove --after dir fails when dir.* also exists
   $ mkdir otherdir
   $ cd otherdir
 
+  $ hg files path:
+  ../b (glob)
+  ../dir.h/foo (glob)
+  ../t.h (glob)
+  ../t/e.h (glob)
+  ../t/x (glob)
+  $ hg files path:.
+  ../b (glob)
+  ../dir.h/foo (glob)
+  ../t.h (glob)
+  ../t/e.h (glob)
+  ../t/x (glob)
+
   $ hg locate b
   ../b (glob)
   ../t/b (glob)
