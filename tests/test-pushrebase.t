@@ -104,19 +104,19 @@ Stack of non-conflicting commits should be accepted
   searching for changes
   preoutgoing hook: HG_SOURCE=push
   outgoing hook: HG_NODE=7585d2e4bf9ab3b58237c20d51ad5ef8778934d0 HG_SOURCE=push
-  prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 1 changes to 2 files (+1 heads)
-  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  adding changesets
   remote: outgoing hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=rebase:reply
+  adding manifests
+  adding file changes
+  added 3 changesets with 1 changes to 2 files (+1 heads)
+  pretxnchangegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   changegroup hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   incoming hook: HG_NODE=add0c792bfce89610d277fd5b1e32f5287994d1d HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   incoming hook: HG_NODE=fe66d1686ec2a43093fb79e196ab9c4ae7cd835a HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
@@ -300,20 +300,20 @@ With evolution enabled, should set obsolescence markers
   searching for changes
   preoutgoing hook: HG_SOURCE=push
   outgoing hook: HG_NODE=6e1d0b2f81801d1de2645ac4295781ff2ee08fb4 HG_SOURCE=push
-  prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 1 changes to 2 files (+1 heads)
-  pretxnchangegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  2 new obsolescence markers
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
   remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=b423e42e554804d21e786126e84a27565a786628 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  adding changesets
   remote: outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=rebase:reply
+  adding manifests
+  adding file changes
+  added 3 changesets with 1 changes to 2 files (+1 heads)
+  pretxnchangegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  2 new obsolescence markers
   changegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   incoming hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   incoming hook: HG_NODE=5402bb2493c730b659b638d6a2f67f9d6dd57f84 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
