@@ -87,9 +87,10 @@ def _revdescendants(repo, revs, followfirst):
 
     return generatorset(iterate(), iterasc=True)
 
-def revsbetween(repo, roots, heads):
-    """Return all paths between roots and heads, inclusive of both endpoint
-    sets."""
+def reachableroots(repo, roots, heads, includepath=False):
+    """return (heads(::<roots> and ::<heads>))
+
+    If includepath is True, return (<roots>::<heads>)."""
     if not roots:
         return baseset()
     parentrevs = repo.changelog.parentrevs
@@ -110,6 +111,8 @@ def revsbetween(repo, roots, heads):
         rev = nextvisit()
         if rev in roots:
             reached(rev)
+            if not includepath:
+                continue
         parents = parentrevs(rev)
         seen[rev] = parents
         for parent in parents:
@@ -117,6 +120,8 @@ def revsbetween(repo, roots, heads):
                 dovisit(parent)
     if not reachable:
         return baseset()
+    if not includepath:
+        return reachable
     for rev in sorted(seen):
         for parent in seen[rev]:
             if parent in reachable:
@@ -406,7 +411,8 @@ def rangeset(repo, subset, x, y):
 
 def dagrange(repo, subset, x, y):
     r = fullreposet(repo)
-    xs = revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
+    xs = reachableroots(repo, getset(repo, r, x), getset(repo, r, y),
+                         includepath=True)
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
     return xs & subset
