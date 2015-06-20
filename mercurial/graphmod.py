@@ -22,7 +22,10 @@ from __future__ import absolute_import
 import heapq
 
 from .node import nullrev
-from . import util
+from . import (
+    revset,
+    util,
+)
 
 CHANGESET = 'C'
 
@@ -235,8 +238,6 @@ def dagwalker(repo, revs):
     if not revs:
         return
 
-    cl = repo.changelog
-    lowestrev = revs.min()
     gpcache = {}
 
     if repo.ui.configbool('experimental', 'graph-group-branches', False):
@@ -258,7 +259,7 @@ def dagwalker(repo, revs):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                gp = gpcache[mpar] = grandparent(cl, lowestrev, revs, mpar)
+                gp = gpcache[mpar] = revset.reachableroots(repo, revs, [mpar])
             if not gp:
                 parents.append(mpar)
             else:
@@ -355,24 +356,6 @@ def colored(dag, repo):
         # Yield and move on
         yield (cur, type, data, (col, color), edges)
         seen = next
-
-def grandparent(cl, lowestrev, roots, head):
-    """Return all ancestors of head in roots which revision is
-    greater or equal to lowestrev.
-    """
-    pending = set([head])
-    seen = set()
-    kept = set()
-    llowestrev = max(nullrev, lowestrev)
-    while pending:
-        r = pending.pop()
-        if r >= llowestrev and r not in seen:
-            if r in roots:
-                kept.add(r)
-            else:
-                pending.update([p for p in cl.parentrevs(r)])
-            seen.add(r)
-    return sorted(kept)
 
 def asciiedges(type, char, lines, seen, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
