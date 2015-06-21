@@ -55,6 +55,7 @@ introduce some bugs in repo
    bar.txt@0: 256559129457 in manifests not found
   3 files, 1 changesets, 0 total revisions
   3 warnings encountered!
+  hint: run "hg debugrebuildfncache" to recover from corrupt fncache
   6 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]

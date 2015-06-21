@@ -219,6 +219,7 @@ def _verify(repo):
         elif size > 0 or not revlogv1:
             storefiles.add(_normpath(f))
 
+    fncachewarned = False
     files = sorted(set(filenodes) | set(filelinkrevs))
     total = len(files)
     for i, f in enumerate(files):
@@ -245,6 +246,7 @@ def _verify(repo):
                 storefiles.remove(ff)
             except KeyError:
                 warn(_(" warning: revlog '%s' not in fncache!") % ff)
+                fncachewarned = True
 
         checklog(fl, f, lr)
         seen = {}
@@ -313,6 +315,9 @@ def _verify(repo):
                    (len(files), len(cl), revisions))
     if warnings[0]:
         ui.warn(_("%d warnings encountered!\n") % warnings[0])
+    if fncachewarned:
+        ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
+                  'corrupt fncache\n'))
     if errors[0]:
         ui.warn(_("%d integrity errors encountered!\n") % errors[0])
         if badrevs:
