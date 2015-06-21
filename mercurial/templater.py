@@ -22,7 +22,6 @@ elements = {
     ")": (0, None, None),
     "integer": (0, ("integer",), None),
     "symbol": (0, ("symbol",), None),
-    "string": (0, ("template",), None),
     "rawstring": (0, ("rawstring",), None),
     "template": (0, ("template",), None),
     "end": (0, None, None),
@@ -41,26 +40,17 @@ def tokenize(program, start, end):
             data, pos = _parsetemplate(program, s, end, c)
             yield ('template', data, s)
             pos -= 1
-        elif (c in '"\'' or c == 'r' and
-              program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
-            if c == 'r':
-                pos += 1
-                c = program[pos]
-                decode = False
-            else:
-                decode = True
-            pos += 1
-            s = pos
+        elif c == 'r' and program[pos:pos + 2] in ("r'", 'r"'):
+            # handle quoted strings
+            c = program[pos + 1]
+            s = pos = pos + 2
             while pos < end: # find closing quote
                 d = program[pos]
                 if d == '\\': # skip over escaped characters
                     pos += 2
                     continue
                 if d == c:
-                    if not decode:
-                        yield ('rawstring', program[s:pos], s)
-                        break
-                    yield ('string', program[s:pos], s)
+                    yield ('rawstring', program[s:pos], s)
                     break
                 pos += 1
             else:
