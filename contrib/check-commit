@@ -29,6 +29,7 @@ errors = [
     (r"^# .*\n.*\.\s+$", "don't add trailing period on summary line"),
     (r"^# .*\n.{78,}", "summary line too long (limit is 78)"),
     (r"^\+\n \n", "adds double empty line"),
+    (r"^ \n\+\n", "adds double empty line"),
     (r"^\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
 ]
 
