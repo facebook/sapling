@@ -1401,7 +1401,7 @@ def handlehgtagsfnodes(op, inpart):
         node = inpart.read(20)
         fnode = inpart.read(20)
         if len(node) < 20 or len(fnode) < 20:
-            op.ui.debug('received incomplete .hgtags fnodes data, ignoring\n')
+            op.ui.debug('ignoring incomplete received .hgtags fnodes data\n')
             break
         cache.setfnode(node, fnode)
         count += 1
