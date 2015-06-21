@@ -2280,6 +2280,17 @@ Test string escaping:
   <>\n<]>
   <>\n<
 
+Test string escaping of quotes:
+
+  $ hg log -Ra -r0 -T '{"\""}\n'
+  "
+  $ hg log -Ra -r0 -T '{"\\\""}\n'
+  \"
+  $ hg log -Ra -r0 -T '{r"\""}\n'
+  \"
+  $ hg log -Ra -r0 -T '{r"\\\""}\n'
+  \\\"
+
 Test leading backslashes:
 
   $ cd latesttag

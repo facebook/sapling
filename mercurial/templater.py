@@ -47,7 +47,7 @@ def tokenizer(data):
             s = pos
             while pos < end: # find closing quote
                 d = program[pos]
-                if decode and d == '\\': # skip over escaped characters
+                if d == '\\': # skip over escaped characters
                     pos += 2
                     continue
                 if d == c:
