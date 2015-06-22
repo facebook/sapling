@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import nullid, nullrev, short, hex, bin
+from node import nullid, nullrev, wdirid, short, hex, bin
 from i18n import _
 import mdiff, error, util, scmutil, subrepo, patch, encoding, phases
 import match as matchmod
@@ -1339,7 +1339,7 @@ class workingctx(committablectx):
         return self._repo.dirstate[key] not in "?r"
 
     def hex(self):
-        return "ff" * 20
+        return hex(wdirid)
 
     @propertycache
     def _parents(self):
