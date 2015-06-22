@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import atexit
 import difflib
@@ -970,9 +970,9 @@ def flameprofile(ui, func, fp):
     finally:
         thread.stop()
         thread.join()
-        print 'Collected %d stack frames (%d unique) in %2.2f seconds.' % (
+        print('Collected %d stack frames (%d unique) in %2.2f seconds.' % (
             time.clock() - start_time, thread.num_frames(),
-            thread.num_frames(unique=True))
+            thread.num_frames(unique=True)))
 
 
 def statprofile(ui, func, fp):

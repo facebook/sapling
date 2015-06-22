@@ -100,7 +100,6 @@
   i18n/polib.py not using absolute_import
   mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
-  mercurial/dispatch.py requires print_function
   mercurial/keepalive.py requires print_function
   mercurial/lsprof.py requires print_function
   mercurial/lsprofcalltree.py requires print_function
