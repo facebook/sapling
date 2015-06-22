@@ -1755,9 +1755,13 @@ def roots(repo, subset, x):
     Changesets in set with no parent changeset in set.
     """
     s = getset(repo, fullreposet(repo), x)
-    subset = subset & s# baseset([r for r in s if r in subset])
-    cs = _children(repo, subset, s)
-    return subset - cs
+    parents = repo.changelog.parentrevs
+    def filter(r):
+        for p in parents(r):
+            if 0 <= p and p in s:
+                return False
+        return True
+    return subset & s.filter(filter)
 
 def sort(repo, subset, x):
     """``sort(set[, [-]key...])``

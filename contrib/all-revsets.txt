@@ -23,8 +23,6 @@ parents(20000)
 # Used in revision 911f5a6579d1
 p1(20000)
 p2(10000)
-# Used in revision f140d6207cca
-roots(0:tip)
 # Used in revision b6dc3b79bb25
 0::
 # Used in revision faf4f63533ff
@@ -101,15 +99,12 @@ draft()
 ::tip
 draft() and ::tip
 ::tip and draft()
-roots(0::tip)
 author(lmoscovicz)
 author(mpm)
-42:68 and roots(42:tip)
 ::p1(p1(tip))::
 public()
 :10000 and public()
 :10000 and draft()
-roots((0:tip)::)
 (not public() - obsolete())
 
 # The one below is used by rebase
@@ -118,6 +113,18 @@ roots((0:tip)::)
 # those two `roots(...)` inputs are close to what phase movement use.
 roots((tip~100::) - (tip~100::tip))
 roots((0::) - (0::tip))
+
+# more roots testing
+roots(tip~100:)
+roots(:42)
+roots(not public())
+roots((0:tip)::)
+roots(0::tip)
+42:68 and roots(42:tip)
+# Used in revision f140d6207cca
+roots(0:tip)
+# test disjoint set with multiple roots
+roots((:42) + (tip~42:))
 
 # Testing the behavior of "head()" in various situations
 head()
