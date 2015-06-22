@@ -796,6 +796,8 @@ Test list of internal help commands
    debugrebuilddirstate
                  rebuild the dirstate as it would look like for the given
                  revision
+   debugrebuildfncache
+                 rebuild the fncache file
    debugrename   dump rename information
    debugrevlog   show data and statistics about a revlog
    debugrevspec  parse and apply a revision specification

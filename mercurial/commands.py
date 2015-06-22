@@ -21,7 +21,7 @@ import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod, copies
 import random
 import setdiscovery, treediscovery, dagutil, pvec, localrepo
-import phases, obsolete, exchange, bundle2
+import phases, obsolete, exchange, bundle2, repair
 import ui as uimod
 
 table = {}
@@ -2727,6 +2727,11 @@ def debugrebuilddirstate(ui, repo, rev):
         repo.dirstate.rebuild(ctx.node(), ctx.manifest())
     finally:
         wlock.release()
+
+@command('debugrebuildfncache', [], '')
+def debugrebuildfncache(ui, repo):
+    """rebuild the fncache file"""
+    repair.rebuildfncache(ui, repo)
 
 @command('debugrename',
     [('r', 'rev', '', _('revision to debug'), _('REV'))],

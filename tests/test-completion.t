@@ -96,6 +96,7 @@ Show debug commands if there are no other candidates
   debugpushkey
   debugpvec
   debugrebuilddirstate
+  debugrebuildfncache
   debugrename
   debugrevlog
   debugrevspec
@@ -254,6 +255,7 @@ Show all commands + options
   debugpushkey: 
   debugpvec: 
   debugrebuilddirstate: rev
+  debugrebuildfncache: 
   debugrename: rev
   debugrevlog: changelog, manifest, dir, dump
   debugrevspec: optimize

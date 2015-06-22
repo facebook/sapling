@@ -283,3 +283,98 @@ Aborted transactions can be recovered later
   1 files, 1 changesets, 1 total revisions
   $ cat .hg/store/fncache
   data/y.i
+
+  $ cd ..
+
+debugrebuildfncache does nothing unless repo has fncache requirement
+
+  $ hg --config format.usefncache=false init nofncache
+  $ cd nofncache
+  $ hg debugrebuildfncache
+  (not rebuilding fncache because repository does not support fncache
+
+  $ cd ..
+
+debugrebuildfncache works on empty repository
+
+  $ hg init empty
+  $ cd empty
+  $ hg debugrebuildfncache
+  fncache already up to date
+  $ cd ..
+
+debugrebuildfncache on an up to date repository no-ops
+
+  $ hg init repo
+  $ cd repo
+  $ echo initial > foo
+  $ echo initial > .bar
+  $ hg commit -A -m initial
+  adding .bar
+  adding foo
+
+  $ cat .hg/store/fncache | sort
+  data/.bar.i
+  data/foo.i
+
+  $ hg debugrebuildfncache
+  fncache already up to date
+
+debugrebuildfncache restores deleted fncache file
+
+  $ rm -f .hg/store/fncache
+  $ hg debugrebuildfncache
+  adding data/.bar.i
+  adding data/foo.i
+  2 items added, 0 removed from fncache
+
+  $ cat .hg/store/fncache | sort
+  data/.bar.i
+  data/foo.i
+
+Rebuild after rebuild should no-op
+
+  $ hg debugrebuildfncache
+  fncache already up to date
+
+A single missing file should get restored, an extra file should be removed
+
+  $ cat > .hg/store/fncache << EOF
+  > data/foo.i
+  > data/bad-entry.i
+  > EOF
+
+  $ hg debugrebuildfncache
+  removing data/bad-entry.i
+  adding data/.bar.i
+  1 items added, 1 removed from fncache
+
+  $ cat .hg/store/fncache | sort
+  data/.bar.i
+  data/foo.i
+
+  $ cd ..
+
+Try a simple variation without dotencode to ensure fncache is ignorant of encoding
+
+  $ hg --config format.dotencode=false init nodotencode
+  $ cd nodotencode
+  $ echo initial > foo
+  $ echo initial > .bar
+  $ hg commit -A -m initial
+  adding .bar
+  adding foo
+
+  $ cat .hg/store/fncache | sort
+  data/.bar.i
+  data/foo.i
+
+  $ rm .hg/store/fncache
+  $ hg debugrebuildfncache
+  adding data/.bar.i
+  adding data/foo.i
+  2 items added, 0 removed from fncache
+
+  $ cat .hg/store/fncache | sort
+  data/.bar.i
+  data/foo.i

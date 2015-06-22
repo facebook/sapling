@@ -227,3 +227,72 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             vfs.unlink(chgrpfile)
 
     repo.destroyed()
+
+def rebuildfncache(ui, repo):
+    """Rebuilds the fncache file from repo history.
+
+    Missing entries will be added. Extra entries will be removed.
+    """
+    repo = repo.unfiltered()
+
+    if 'fncache' not in repo.requirements:
+        ui.warn(_('(not rebuilding fncache because repository does not '
+                  'support fncache\n'))
+        return
+
+    lock = repo.lock()
+    try:
+        fnc = repo.store.fncache
+        # Trigger load of fncache.
+        if 'irrelevant' in fnc:
+            pass
+
+        oldentries = set(fnc.entries)
+        newentries = set()
+        seenfiles = set()
+
+        repolen = len(repo)
+        for rev in repo:
+            ui.progress(_('changeset'), rev, total=repolen)
+
+            ctx = repo[rev]
+            for f in ctx.files():
+                # This is to minimize I/O.
+                if f in seenfiles:
+                    continue
+                seenfiles.add(f)
+
+                i = 'data/%s.i' % f
+                d = 'data/%s.d' % f
+
+                if repo.store._exists(i):
+                    newentries.add(i)
+                if repo.store._exists(d):
+                    newentries.add(d)
+
+        ui.progress(_('changeset'), None)
+
+        addcount = len(newentries - oldentries)
+        removecount = len(oldentries - newentries)
+        for p in sorted(oldentries - newentries):
+            ui.write(_('removing %s\n') % p)
+        for p in sorted(newentries - oldentries):
+            ui.write(_('adding %s\n') % p)
+
+        if addcount or removecount:
+            ui.write(_('%d items added, %d removed from fncache\n') %
+                     (addcount, removecount))
+            fnc.entries = newentries
+            fnc._dirty = True
+
+            tr = repo.transaction('fncache')
+            try:
+                fnc.write(tr)
+                tr.close()
+            finally:
+                tr.release()
+        else:
+            ui.write(_('fncache already up to date\n'))
+    finally:
+        lock.release()
+
