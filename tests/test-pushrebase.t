@@ -58,7 +58,7 @@ Without server extension
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
 
-  $ hg push --onto default
+  $ hg --config experimental.bundle2-exp=False push --onto default
   pushing to ssh://user@dummy/server
   searching for changes
   abort: bundle2 needs to be enabled on client
