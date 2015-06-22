@@ -9,10 +9,6 @@
 import collections
 import cStringIO, email, os, errno, re, posixpath, copy
 import tempfile, zlib, shutil
-# On python2.4 you have to import these by name or they fail to
-# load. This was not a problem on Python 2.7.
-import email.Generator
-import email.Parser
 
 from i18n import _
 from node import hex, short
