@@ -3028,16 +3028,19 @@ class filteredset(abstractsmartset):
 
     def last(self):
         it = None
-        if self._subset.isascending:
+        if self.isascending():
             it = self.fastdesc
-        elif self._subset.isdescending:
-            it = self.fastdesc
-        if it is None:
-            # slowly consume everything. This needs improvement
-            it = lambda: reversed(list(self))
-        for x in it():
+        elif self.isdescending():
+            it = self.fastasc
+        if it is not None:
+            for x in it():
+                return x
+            return None #empty case
+        else:
+            x = None
+            for x in self:
+                pass
             return x
-        return None
 
     def __repr__(self):
         return '<%s %r>' % (type(self).__name__, self._subset)
