@@ -282,44 +282,30 @@ Check editing files newly added by a revert
   > mv tt  "$1"
   > __EOF__
 
-2) Remove f
-  $ hg rm f
-  $ hg commit -m "remove f"
-
-3) Do another commit on top
-  $ touch k; hg add k
+2) Add k
+  $ printf "1\n" > k
+  $ hg add k
   $ hg commit -m "add k"
-  $ hg st
 
-4) Use interactive revert to recover f and change it on the fly
-  $ HGEDITOR="\"sh\" \"${TESTTMP}/editor.sh\"" hg revert -i -r ".^^"  <<EOF
+3) Use interactive revert with editing (replacing +1 with +42):
+  $ printf "0\n2\n" > k
+  $ HGEDITOR="\"sh\" \"${TESTTMP}/editor.sh\"" hg revert -i  <<EOF
   > y
   > e
   > EOF
-  adding f
-  removing k
-  diff --git a/f b/f
-  new file mode 100644
-  examine changes to 'f'? [Ynesfdaq?] y
+  reverting k
+  diff --git a/k b/k
+  1 hunks, 2 lines changed
+  examine changes to 'k'? [Ynesfdaq?] y
   
-  @@ -0,0 +1,7 @@
-  +a
+  @@ -1,2 +1,1 @@
+  -0
+  -2
   +1
-  +2
-  +3
-  +4
-  +5
-  +b
-  record this change to 'f'? [Ynesfdaq?] e
+  record this change to 'k'? [Ynesfdaq?] e
   
-  $ cat f
-  a
+  $ cat k
   42
-  2
-  3
-  4
-  5
-  b
 
 Check the experimental config to invert the selection:
   $ cat <<EOF >> $HGRCPATH
@@ -332,7 +318,7 @@ Check the experimental config to invert the selection:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ printf 'firstline\nc\n1\n2\n3\n 3\n5\nd\nlastline\n' > folder1/g
   $ hg diff --nodates
-  diff -r 5a858e056dc0 folder1/g
+  diff -r a3d963a027aa folder1/g
   --- a/folder1/g
   +++ b/folder1/g
   @@ -1,7 +1,9 @@
@@ -383,7 +369,7 @@ Check the experimental config to invert the selection:
   record change 3/3 to 'folder1/g'? [Ynesfdaq?] n
   
   $ hg diff --nodates
-  diff -r 5a858e056dc0 folder1/g
+  diff -r a3d963a027aa folder1/g
   --- a/folder1/g
   +++ b/folder1/g
   @@ -5,3 +5,4 @@
