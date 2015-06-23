@@ -4174,9 +4174,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     importing only the patch metadata.
 
     It is possible to use external patch programs to perform the patch
-    by setting the ``ui.patch`` configuration option.
+    by setting the ``ui.patch`` configuration option. For the default
+    internal tool, the fuzz can also be configured via ``patch.fuzz``.
     See :hg:`help config` for more information about configuration
-    files and how to use this option.
+    files and how to use these options.
 
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
@@ -4207,6 +4208,10 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         the default internal tool.
 
           hg import --config ui.patch="patch --merge" fuzzy.patch
+
+      - change the default fuzzing from 2 to a less strict 7
+
+          hg import --config ui.fuzz=7 fuzz.patch
 
     Returns 0 on success, 1 on partial success (see --partial).
     """
