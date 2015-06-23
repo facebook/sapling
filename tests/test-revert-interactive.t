@@ -56,8 +56,8 @@ Revert interactive tests
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
   
-  @@ -1,6 +1,5 @@
-  -a
+  @@ -1,5 +1,6 @@
+  +a
    1
    2
    3
@@ -65,21 +65,21 @@ Revert interactive tests
    5
   record change 1/6 to 'f'? [Ynesfdaq?] y
   
-  @@ -2,6 +1,5 @@
+  @@ -1,5 +2,6 @@
    1
    2
    3
    4
    5
-  -b
+  +b
   record change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,6 +1,5 @@
-  -c
+  @@ -1,5 +1,6 @@
+  +c
    1
    2
    3
@@ -87,13 +87,13 @@ Revert interactive tests
    5
   record change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -2,6 +1,5 @@
+  @@ -1,5 +2,6 @@
    1
    2
    3
    4
    5
-  -d
+  +d
   record change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
@@ -155,8 +155,8 @@ Test that --interactive lift the need for --all
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
   
-  @@ -1,6 +1,5 @@
-  -a
+  @@ -1,5 +1,6 @@
+  +a
    1
    2
    3
@@ -164,21 +164,21 @@ Test that --interactive lift the need for --all
    5
   record change 1/6 to 'f'? [Ynesfdaq?] y
   
-  @@ -2,6 +1,5 @@
+  @@ -1,5 +2,6 @@
    1
    2
    3
    4
    5
-  -b
+  +b
   record change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,6 +1,5 @@
-  -c
+  @@ -1,5 +1,6 @@
+  +c
    1
    2
    3
@@ -186,13 +186,13 @@ Test that --interactive lift the need for --all
    5
   record change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -2,6 +1,5 @@
+  @@ -1,5 +2,6 @@
    1
    2
    3
    4
    5
-  -d
+  +d
   record change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
@@ -234,8 +234,8 @@ Test that --interactive lift the need for --all
   2 hunks, 2 lines changed
   examine changes to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +1,6 @@
-  +a
+  @@ -1,6 +1,5 @@
+  -a
    1
    2
    3
@@ -243,13 +243,13 @@ Test that --interactive lift the need for --all
    5
   record change 1/2 to 'f'? [Ynesfdaq?] y
   
-  @@ -1,5 +2,6 @@
+  @@ -2,6 +1,5 @@
    1
    2
    3
    4
    5
-  +b
+  -b
   record change 2/2 to 'f'? [Ynesfdaq?] n
   
   $ hg st
@@ -298,10 +298,10 @@ Check editing files newly added by a revert
   1 hunks, 2 lines changed
   examine changes to 'k'? [Ynesfdaq?] y
   
-  @@ -1,2 +1,1 @@
-  -0
-  -2
-  +1
+  @@ -1,1 +1,2 @@
+  -1
+  +0
+  +2
   record this change to 'k'? [Ynesfdaq?] e
   
   $ cat k
@@ -310,7 +310,7 @@ Check editing files newly added by a revert
 Check the experimental config to invert the selection:
   $ cat <<EOF >> $HGRCPATH
   > [experimental]
-  > revertalternateinteractivemode=True
+  > revertalternateinteractivemode=False
   > EOF
 
 
@@ -343,29 +343,29 @@ Check the experimental config to invert the selection:
   3 hunks, 3 lines changed
   examine changes to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,4 +1,5 @@
-  +firstline
+  @@ -1,5 +1,4 @@
+  -firstline
    c
    1
    2
    3
   record change 1/3 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -1,7 +2,7 @@
+  @@ -2,7 +1,7 @@
    c
    1
    2
    3
-  -4
-  + 3
+  - 3
+  +4
    5
    d
   record change 2/3 to 'folder1/g'? [Ynesfdaq?] y
   
-  @@ -6,2 +7,3 @@
+  @@ -7,3 +6,2 @@
    5
    d
-  +lastline
+  -lastline
   record change 3/3 to 'folder1/g'? [Ynesfdaq?] n
   
   $ hg diff --nodates

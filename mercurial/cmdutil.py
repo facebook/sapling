@@ -3102,7 +3102,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         diffopts.git = True
         reversehunks =  repo.ui.configbool('experimental',
                                            'revertalternateinteractivemode',
-                                           False)
+                                           True)
         if reversehunks:
             diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
         else:
