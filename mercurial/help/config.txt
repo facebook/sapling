@@ -1451,6 +1451,19 @@ User interface controls.
     markers is different from the encoding of the merged files,
     serious problems may occur.
 
+``patch``
+    An optional external tool that ``hg import`` and some extensions
+    will use for applying patches. By default Mercurial uses an
+    internal patch utility. The external tool must work as the common
+    Unix ``patch`` program. In particular, it must accept a ``-p``
+    argument to strip patch headers, a ``-d`` argument to specify the
+    current directory, a file name to patch, and a patch file to take
+    from stdin.
+
+    It is possible to specify a patch tool together with extra
+    arguments. For example, setting this option to ``patch --merge``
+    will use the ``patch`` program with its 2-way merge option.
+
 ``portablefilenames``
     Check for portable filenames. Can be ``warn``, ``ignore`` or ``abort``.
     Default is ``warn``.
