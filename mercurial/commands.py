@@ -4173,6 +4173,11 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     cleanly, :hg:`import --partial` will create an empty changeset,
     importing only the patch metadata.
 
+    It is possible to use external patch programs to perform the patch
+    by setting the ``ui.patch`` configuration option.
+    See :hg:`help config` for more information about configuration
+    files and how to use this option.
+
     To read a patch from standard input, use "-" as the patch name. If
     a URL is specified, the patch will be downloaded from it.
     See :hg:`help dates` for a list of formats valid for -d/--date.
@@ -4197,6 +4202,11 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         possible)::
 
           hg import --exact proposed-fix.patch
+
+      - use an external tool to apply a patch which is too fuzzy for
+        the default internal tool.
+
+          hg import --config ui.patch="patch --merge" fuzzy.patch
 
     Returns 0 on success, 1 on partial success (see --partial).
     """
