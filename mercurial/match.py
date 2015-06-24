@@ -505,6 +505,8 @@ def _regex(kind, pat, globsuffix):
     if kind == 're':
         return pat
     if kind == 'path':
+        if pat == '.':
+            return ''
         return '^' + util.re.escape(pat) + '(?:/|$)'
     if kind == 'relglob':
         return '(?:|.*/)' + _globre(pat) + globsuffix

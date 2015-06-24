@@ -2849,6 +2849,17 @@ Test string escaping:
   <>\n<]>
   <>\n<
 
+Test string escaping of quotes:
+
+  $ hg log -Ra -r0 -T '{"\""}\n'
+  "
+  $ hg log -Ra -r0 -T '{"\\\""}\n'
+  \"
+  $ hg log -Ra -r0 -T '{r"\""}\n'
+  \"
+  $ hg log -Ra -r0 -T '{r"\\\""}\n'
+  \\\"
+
 Test exception in quoted template. single backslash before quotation mark is
 stripped before parsing:
 
@@ -3121,6 +3132,9 @@ Test revset function
   Rev: 0
   Ancestor: 0
   
+  $ hg log --template '{revset("TIP"|lower)}\n' -l1
+  2
+
 Test active bookmark templating
 
   $ hg book foo

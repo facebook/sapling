@@ -47,7 +47,7 @@ def tokenize(program, start, end):
             s = pos
             while pos < end: # find closing quote
                 d = program[pos]
-                if decode and d == '\\': # skip over escaped characters
+                if d == '\\': # skip over escaped characters
                     pos += 2
                     continue
                 if d == c:
@@ -450,7 +450,7 @@ def revset(context, mapping, args):
         # i18n: "revset" is a keyword
         raise error.ParseError(_("revset expects one or more arguments"))
 
-    raw = args[0][1]
+    raw = stringify(args[0][0](context, mapping, args[0][1]))
     ctx = mapping['ctx']
     repo = ctx.repo()
 
