@@ -52,14 +52,14 @@ def wrapui(ui):
             def rotate(oldpath, newpath):
                 try:
                     os.unlink(newpath)
-                except OSError, err:
+                except OSError as err:
                     if err.errno != errno.ENOENT:
                         self.debug("warning: cannot remove '%s': %s\n" %
                                    (newpath, err.strerror))
                 try:
                     if newpath:
                         os.rename(oldpath, newpath)
-                except OSError, err:
+                except OSError as err:
                     if err.errno != errno.ENOENT:
                         self.debug("warning: cannot rename '%s' to '%s': %s\n" %
                                    (newpath, oldpath, err.strerror))
@@ -92,7 +92,7 @@ def wrapui(ui):
             elif util.safehasattr(self, '_bbopener'):
                 try:
                     self._blackbox = self._openlogfile()
-                except (IOError, OSError), err:
+                except (IOError, OSError) as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
                     del self._bbopener
@@ -110,7 +110,7 @@ def wrapui(ui):
                 formattedmsg = msg[0] % msg[1:]
                 try:
                     blackbox.write('%s %s> %s' % (date, user, formattedmsg))
-                except IOError, err:
+                except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
                 lastblackbox = blackbox

@@ -251,7 +251,7 @@ class KeepAliveHandler(object):
                 self._cm.add(host, h, 0)
                 self._start_transaction(h, req)
                 r = h.getresponse()
-        except (socket.error, httplib.HTTPException), err:
+        except (socket.error, httplib.HTTPException) as err:
             raise urllib2.URLError(err)
 
         # if not a persistent connection, don't try to reuse it
@@ -343,7 +343,7 @@ class KeepAliveHandler(object):
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest('GET', req.get_selector(), **skipheaders)
-        except (socket.error), err:
+        except (socket.error) as err:
             raise urllib2.URLError(err)
         for k, v in headers.items():
             h.putheader(k, v)
@@ -550,7 +550,7 @@ def safesend(self, str):
                 data = read(blocksize)
         else:
             self.sock.sendall(str)
-    except socket.error, v:
+    except socket.error as v:
         reraise = True
         if v[0] == errno.EPIPE:      # Broken pipe
             if self._HTTPConnection__state == httplib._CS_REQ_SENT:
@@ -605,7 +605,7 @@ def error_handler(url):
                 status, reason = fo.status, fo.reason
             except AttributeError:
                 status, reason = None, None
-        except IOError, e:
+        except IOError as e:
             print "  EXCEPTION: %s" % e
             raise
         else:

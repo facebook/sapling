@@ -138,16 +138,16 @@ def _smtp(ui):
                   (username))
         try:
             s.login(username, password)
-        except smtplib.SMTPException, inst:
+        except smtplib.SMTPException as inst:
             raise util.Abort(inst)
 
     def send(sender, recipients, msg):
         try:
             return s.sendmail(sender, recipients, msg)
-        except smtplib.SMTPRecipientsRefused, inst:
+        except smtplib.SMTPRecipientsRefused as inst:
             recipients = [r[1] for r in inst.recipients.values()]
             raise util.Abort('\n' + '\n'.join(recipients))
-        except smtplib.SMTPException, inst:
+        except smtplib.SMTPException as inst:
             raise util.Abort(inst)
 
     return send

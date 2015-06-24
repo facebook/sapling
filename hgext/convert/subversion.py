@@ -126,7 +126,7 @@ def get_log_child(fp, url, paths, start, end, limit=0,
     except IOError:
         # Caller may interrupt the iteration
         pickle.dump(None, fp, protocol)
-    except Exception, inst:
+    except Exception as inst:
         pickle.dump(str(inst), fp, protocol)
     else:
         pickle.dump(None, fp, protocol)
@@ -216,7 +216,7 @@ def httpcheck(ui, path, proto):
         opener = urllib2.build_opener()
         rsp = opener.open('%s://%s/!svn/ver/0/.svn' % (proto, path))
         data = rsp.read()
-    except urllib2.HTTPError, inst:
+    except urllib2.HTTPError as inst:
         if inst.code != 404:
             # Except for 404 we cannot know for sure this is not an svn repo
             ui.warn(_('svn: cannot probe remote repository, assume it could '
@@ -944,7 +944,8 @@ class svn_source(converter_source):
                             firstcset.parents.append(latest)
                 except SvnPathNotFound:
                     pass
-        except SubversionException, (inst, num):
+        except SubversionException as xxx_todo_changeme:
+            (inst, num) = xxx_todo_changeme.args
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
                 raise util.Abort(_('svn: branch has no revision %s')
                                  % to_revnum)
@@ -970,7 +971,7 @@ class svn_source(converter_source):
                 info = info[-1]
             mode = ("svn:executable" in info) and 'x' or ''
             mode = ("svn:special" in info) and 'l' or mode
-        except SubversionException, e:
+        except SubversionException as e:
             notfound = (svn.core.SVN_ERR_FS_NOT_FOUND,
                 svn.core.SVN_ERR_RA_DAV_PATH_NOT_FOUND)
             if e.apr_err in notfound: # File not found

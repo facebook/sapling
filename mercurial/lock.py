@@ -58,7 +58,7 @@ class lock(object):
             try:
                 self.trylock()
                 return self.timeout - timeout
-            except error.LockHeld, inst:
+            except error.LockHeld as inst:
                 if timeout != 0:
                     time.sleep(1)
                     if timeout > 0:
@@ -78,7 +78,7 @@ class lock(object):
             try:
                 self.vfs.makelock(lockname, self.f)
                 self.held = 1
-            except (OSError, IOError), why:
+            except (OSError, IOError) as why:
                 if why.errno == errno.EEXIST:
                     locker = self.testlock()
                     if locker is not None:
@@ -102,7 +102,7 @@ class lock(object):
         """
         try:
             locker = self.vfs.readlock(self.f)
-        except (OSError, IOError), why:
+        except (OSError, IOError) as why:
             if why.errno == errno.ENOENT:
                 return None
             raise

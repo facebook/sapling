@@ -147,7 +147,7 @@ def censor(ui, repo, path, rev='', tombstone='', **opts):
             # Immediate children of censored node must be re-added as fulltext.
             try:
                 revdata = flog.revision(srev)
-            except error.CensoredNodeError, e:
+            except error.CensoredNodeError as e:
                 revdata = e.tombstone
             dlen = rewrite(srev, offset, revdata)
         else:

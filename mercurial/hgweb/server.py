@@ -71,7 +71,7 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_write(self):
         try:
             self.do_hgweb()
-        except socket.error, inst:
+        except socket.error as inst:
             if inst[0] != errno.EPIPE:
                 raise
 
@@ -226,7 +226,7 @@ class _httprequesthandleropenssl(_httprequesthandler):
         import OpenSSL
         try:
             _httprequesthandler.do_write(self)
-        except OpenSSL.SSL.SysCallError, inst:
+        except OpenSSL.SSL.SysCallError as inst:
             if inst.args[0] != errno.EPIPE:
                 raise
 
@@ -344,6 +344,6 @@ def create_server(ui, app):
     port = util.getport(ui.config('web', 'port', 8000))
     try:
         return cls(ui, app, (address, port), handler)
-    except socket.error, inst:
+    except socket.error as inst:
         raise util.Abort(_("cannot start server at '%s:%d': %s")
                          % (address, port, inst.args[1]))

@@ -300,9 +300,9 @@ class _requesthandler(SocketServer.StreamRequestHandler):
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
             # known exceptions are caught by dispatch.
-            except util.Abort, inst:
+            except util.Abort as inst:
                 ui.warn(_('abort: %s\n') % inst)
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno != errno.EPIPE:
                     raise
             except KeyboardInterrupt:

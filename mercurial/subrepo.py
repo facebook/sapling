@@ -44,10 +44,10 @@ def annotatesubrepoerror(func):
     def decoratedmethod(self, *args, **kargs):
         try:
             res = func(self, *args, **kargs)
-        except SubrepoAbort, ex:
+        except SubrepoAbort as ex:
             # This exception has already been handled
             raise ex
-        except error.Abort, ex:
+        except error.Abort as ex:
             subrepo = subrelpath(self)
             errormsg = str(ex) + ' ' + _('(in subrepo %s)') % subrepo
             # avoid handling this exception by raising a SubrepoAbort exception
@@ -66,7 +66,7 @@ def state(ctx, ui):
         if f in ctx:
             try:
                 data = ctx[f].data()
-            except IOError, err:
+            except IOError as err:
                 if err.errno != errno.ENOENT:
                     raise
                 # handle missing subrepo spec files as removed
@@ -101,7 +101,7 @@ def state(ctx, ui):
                                      % (util.pathto(repo.root, repo.getcwd(),
                                         '.hgsubstate'), (i + 1)))
                 rev[path] = revision
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
 
@@ -116,7 +116,7 @@ def state(ctx, ui):
             repl = re.sub(r'\\\\([0-9]+)', r'\\\1', repl)
             try:
                 src = re.sub(pattern, repl, src, 1)
-            except re.error, e:
+            except re.error as e:
                 raise util.Abort(_("bad subrepository pattern in %s: %s")
                                  % (p.source('subpaths', pattern), e))
         return src
@@ -734,7 +734,7 @@ class hgsubrepo(abstractsubrepo):
             ctx1 = self._repo[rev1]
             ctx2 = self._repo[rev2]
             return self._repo.status(ctx1, ctx2, **opts)
-        except error.RepoLookupError, inst:
+        except error.RepoLookupError as inst:
             self.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                          % (inst, subrelpath(self)))
             return scmutil.status([], [], [], [], [], [], [])
@@ -751,7 +751,7 @@ class hgsubrepo(abstractsubrepo):
                                    node1, node2, match,
                                    prefix=posixpath.join(prefix, self._path),
                                    listsubrepos=True, **opts)
-        except error.RepoLookupError, inst:
+        except error.RepoLookupError as inst:
             self.ui.warn(_('warning: error "%s" in subrepository "%s"\n')
                           % (inst, subrelpath(self)))
 
@@ -1280,7 +1280,7 @@ class gitsubrepo(abstractsubrepo):
         try:
             self._gitexecutable = 'git'
             out, err = self._gitnodir(['--version'])
-        except OSError, e:
+        except OSError as e:
             if e.errno != 2 or os.name != 'nt':
                 raise
             self._gitexecutable = 'git.cmd'

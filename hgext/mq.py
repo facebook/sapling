@@ -448,7 +448,7 @@ class queue(object):
         try:
             lines = self.opener.read(self.statuspath).splitlines()
             return list(parselines(lines))
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return []
             raise
@@ -457,7 +457,7 @@ class queue(object):
     def fullseries(self):
         try:
             return self.opener.read(self.seriespath).splitlines()
-        except IOError, e:
+        except IOError as e:
             if e.errno == errno.ENOENT:
                 return []
             raise
@@ -574,7 +574,7 @@ class queue(object):
             self.activeguards = []
             try:
                 guards = self.opener.read(self.guardspath).split()
-            except IOError, err:
+            except IOError as err:
                 if err.errno != errno.ENOENT:
                     raise
                 guards = []
@@ -675,7 +675,7 @@ class queue(object):
             return
         try:
             os.unlink(undo)
-        except OSError, inst:
+        except OSError as inst:
             self.ui.warn(_('error removing undo: %s\n') % str(inst))
 
     def backup(self, repo, files, copy=False):
@@ -804,7 +804,7 @@ class queue(object):
             fuzz = patchmod.patch(self.ui, repo, patchfile, strip=1,
                                   files=files, eolmode=None)
             return (True, list(files), fuzz)
-        except Exception, inst:
+        except Exception as inst:
             self.ui.note(str(inst) + '\n')
             if not self.ui.verbose:
                 self.ui.warn(_("patch failed, unable to continue (try -v)\n"))
@@ -959,7 +959,7 @@ class queue(object):
             for p in patches:
                 try:
                     os.unlink(self.join(p))
-                except OSError, inst:
+                except OSError as inst:
                     if inst.errno != errno.ENOENT:
                         raise
 
@@ -1159,7 +1159,7 @@ class queue(object):
             try:
                 # if patch file write fails, abort early
                 p = self.opener(patchfn, "w")
-            except IOError, e:
+            except IOError as e:
                 raise util.Abort(_('cannot write patch "%s": %s')
                                  % (patchfn, e.strerror))
             try:
@@ -1816,7 +1816,7 @@ class queue(object):
             raise util.Abort(_("patch queue directory already exists"))
         try:
             os.mkdir(self.path)
-        except OSError, inst:
+        except OSError as inst:
             if inst.errno != errno.EEXIST or not create:
                 raise
         if create:

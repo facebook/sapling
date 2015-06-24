@@ -455,7 +455,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
     try:
         fp = open(f)
-    except IOError, e:
+    except IOError as e:
         print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
         return result
     pre = post = fp.read()

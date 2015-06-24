@@ -122,7 +122,7 @@ class config(object):
                     try:
                         include(inc, remap=remap, sections=sections)
                         break
-                    except IOError, inst:
+                    except IOError as inst:
                         if inst.errno != errno.ENOENT:
                             raise error.ParseError(_("cannot include %s (%s)")
                                                    % (inc, inst.strerror),

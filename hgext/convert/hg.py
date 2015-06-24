@@ -42,7 +42,7 @@ class mercurial_sink(converter_sink):
                 if not self.repo.local():
                     raise NoRepo(_('%s is not a local Mercurial repository')
                                  % path)
-            except error.RepoError, err:
+            except error.RepoError as err:
                 ui.traceback()
                 raise NoRepo(err.args[0])
         else:
@@ -487,7 +487,7 @@ class mercurial_source(converter_source):
                 copies[name] = copysource
             except TypeError:
                 pass
-            except error.LookupError, e:
+            except error.LookupError as e:
                 if not self.ignoreerrors:
                     raise
                 self.ignored.add(name)

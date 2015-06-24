@@ -222,7 +222,7 @@ class abstractvfs(object):
         '''gracefully return an empty string for missing files'''
         try:
             return self.read(path)
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
         return ""
@@ -231,7 +231,7 @@ class abstractvfs(object):
         '''gracefully return an empty array for missing files'''
         try:
             return self.readlines(path, mode=mode)
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
         return []
@@ -491,7 +491,7 @@ class vfs(abstractvfs):
                         if nlink < 1:
                             nlink = 2 # force mktempcopy (issue1922)
                         fd.close()
-                except (OSError, IOError), e:
+                except (OSError, IOError) as e:
                     if e.errno != errno.ENOENT:
                         raise
                     nlink = 0
@@ -519,7 +519,7 @@ class vfs(abstractvfs):
         if self._cansymlink:
             try:
                 os.symlink(src, linkname)
-            except OSError, err:
+            except OSError as err:
                 raise OSError(err.errno, _('could not symlink to %r: %s') %
                               (src, err.strerror), linkname)
         else:
@@ -1058,7 +1058,7 @@ class filecachesubentry(object):
     def stat(path):
         try:
             return util.cachestat(path)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
 

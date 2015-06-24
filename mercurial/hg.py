@@ -202,7 +202,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
     requirements = ''
     try:
         requirements = srcrepo.vfs.read('requires')
-    except IOError, inst:
+    except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
 
@@ -388,7 +388,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             try:
                 destpath = hgdir
                 util.makedir(destpath, notindexed=True)
-            except OSError, inst:
+            except OSError as inst:
                 if inst.errno == errno.EEXIST:
                     cleandir = None
                     raise util.Abort(_("destination '%s' already exists")
@@ -428,7 +428,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             try:
                 destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
                                 # only pass ui when no srcrepo
-            except OSError, inst:
+            except OSError as inst:
                 if inst.errno == errno.EEXIST:
                     cleandir = None
                     raise util.Abort(_("destination '%s' already exists")

@@ -153,7 +153,7 @@ def staticfile(directory, fname, req):
         req.respond(HTTP_OK, ct, body=data)
     except TypeError:
         raise ErrorResponse(HTTP_SERVER_ERROR, 'illegal filename')
-    except OSError, err:
+    except OSError as err:
         if err.errno == errno.ENOENT:
             raise ErrorResponse(HTTP_NOT_FOUND)
         else:

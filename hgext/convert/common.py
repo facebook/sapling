@@ -427,7 +427,7 @@ class mapfile(dict):
             return
         try:
             fp = open(self.path, 'r')
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             return
@@ -451,7 +451,7 @@ class mapfile(dict):
         if self.fp is None:
             try:
                 self.fp = open(self.path, 'a')
-            except IOError, err:
+            except IOError as err:
                 raise util.Abort(_('could not open map file %r: %s') %
                                  (self.path, err.strerror))
         self.fp.write('%s %s\n' % (key, value))

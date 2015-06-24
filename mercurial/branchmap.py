@@ -55,7 +55,7 @@ def read(repo):
                 partial._closednodes.add(node)
     except KeyboardInterrupt:
         raise
-    except Exception, inst:
+    except Exception as inst:
         if repo.ui.debugflag:
             msg = 'invalid branchheads cache'
             if repo.filtername is not None:
@@ -203,7 +203,7 @@ class branchcache(dict):
             repo.ui.log('branchcache',
                         'wrote %s branch cache with %d labels and %d nodes\n',
                         repo.filtername, len(self), nodecount)
-        except (IOError, OSError, util.Abort), inst:
+        except (IOError, OSError, util.Abort) as inst:
             repo.ui.debug("couldn't write branch cache: %s\n" % inst)
             # Abort may be raise by read only opener
             pass
@@ -315,7 +315,7 @@ class revbranchcache(object):
             bndata = repo.vfs.read(_rbcnames)
             self._rbcsnameslen = len(bndata) # for verification before writing
             self._names = [encoding.tolocal(bn) for bn in bndata.split('\0')]
-        except (IOError, OSError), inst:
+        except (IOError, OSError) as inst:
             if readonly:
                 # don't try to use cache - fall back to the slow path
                 self.branchinfo = self._branchinfo
@@ -324,7 +324,7 @@ class revbranchcache(object):
             try:
                 data = repo.vfs.read(_rbcrevs)
                 self._rbcrevs.fromstring(data)
-            except (IOError, OSError), inst:
+            except (IOError, OSError) as inst:
                 repo.ui.debug("couldn't read revision branch cache: %s\n" %
                               inst)
         # remember number of good records on disk
@@ -418,7 +418,7 @@ class revbranchcache(object):
                                   for b in self._names[self._rbcnamescount:]))
                 self._rbcsnameslen = f.tell()
                 f.close()
-            except (IOError, OSError, util.Abort), inst:
+            except (IOError, OSError, util.Abort) as inst:
                 repo.ui.debug("couldn't write revision branch cache names: "
                               "%s\n" % inst)
                 return
@@ -436,7 +436,7 @@ class revbranchcache(object):
                 end = revs * _rbcrecsize
                 f.write(self._rbcrevs[start:end])
                 f.close()
-            except (IOError, OSError, util.Abort), inst:
+            except (IOError, OSError, util.Abort) as inst:
                 repo.ui.debug("couldn't write revision branch cache: %s\n" %
                               inst)
                 return

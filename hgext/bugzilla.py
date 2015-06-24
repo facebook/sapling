@@ -357,7 +357,7 @@ class bzmysql(bzaccess):
         try:
             import MySQLdb as mysql
             bzmysql._MySQLdb = mysql
-        except ImportError, err:
+        except ImportError as err:
             raise util.Abort(_('python mysql support not available: %s') % err)
 
         bzaccess.__init__(self, ui)
@@ -910,5 +910,5 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
             for bug in bugs:
                 bz.update(bug, bugs[bug], ctx)
             bz.notify(bugs, util.email(ctx.user()))
-    except Exception, e:
+    except Exception as e:
         raise util.Abort(_('Bugzilla error: %s') % e)

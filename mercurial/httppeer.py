@@ -119,11 +119,11 @@ class httppeer(wireproto.wirepeer):
             req.add_unredirected_header('Content-Length', '%d' % size)
         try:
             resp = self.urlopener.open(req)
-        except urllib2.HTTPError, inst:
+        except urllib2.HTTPError as inst:
             if inst.code == 401:
                 raise util.Abort(_('authorization failed'))
             raise
-        except httplib.HTTPException, inst:
+        except httplib.HTTPException as inst:
             self.ui.debug('http error while sending %s command\n' % cmd)
             self.ui.traceback()
             raise IOError(None, inst)
@@ -205,7 +205,7 @@ class httppeer(wireproto.wirepeer):
             if len(vals) < 2:
                 raise error.ResponseError(_("unexpected response:"), r)
             return vals
-        except socket.error, err:
+        except socket.error as err:
             if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
                 raise util.Abort(_('push failed: %s') % err.args[1])
             raise util.Abort(err.args[1])
@@ -267,7 +267,7 @@ def instance(ui, path, create):
             # No luck, try older compatibility check.
             inst.between([(nullid, nullid)])
         return inst
-    except error.RepoError, httpexception:
+    except error.RepoError as httpexception:
         try:
             r = statichttprepo.instance(ui, "static-" + path, create)
             ui.note('(falling back to static-http)\n')

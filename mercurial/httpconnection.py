@@ -211,7 +211,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
                 path = '/' + path
             h.request(req.get_method(), path, req.data, headers)
             r = h.getresponse()
-        except socket.error, err: # XXX what error?
+        except socket.error as err: # XXX what error?
             raise urllib2.URLError(err)
 
         # Pick apart the HTTPResponse object to get the addinfourl

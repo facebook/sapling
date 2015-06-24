@@ -218,7 +218,7 @@ def parseeol(ui, repo, nodes):
                 return eolfile(ui, repo.root, data)
             except (IOError, LookupError):
                 pass
-    except error.ParseError, inst:
+    except error.ParseError as inst:
         ui.warn(_("warning: ignoring .hgeol file due to parse error "
                   "at %s: %s\n") % (inst.args[1], inst.args[0]))
     return None

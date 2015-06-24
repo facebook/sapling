@@ -431,12 +431,12 @@ class fsbackend(abstractbackend):
         isexec = False
         try:
             isexec = self.opener.lstat(fname).st_mode & 0o100 != 0
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
         try:
             return (self.opener.read(fname), (False, isexec))
-        except IOError, e:
+        except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
             return None, None
@@ -1363,7 +1363,7 @@ class binhunk(object):
                 l = ord(l) - ord('a') + 27
             try:
                 dec.append(base85.b85decode(line[1:])[:l])
-            except ValueError, e:
+            except ValueError as e:
                 raise PatchError(_('could not decode "%s" binary patch: %s')
                                  % (self._fname, str(e)))
             line = getline(lr, self.hunk)
@@ -1938,7 +1938,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
             try:
                 current_file = patcher(ui, gp, backend, store,
                                        eolmode=eolmode)
-            except PatchError, inst:
+            except PatchError as inst:
                 ui.warn(str(inst) + '\n')
                 current_file = None
                 rejects += 1

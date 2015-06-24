@@ -33,7 +33,7 @@ def update(rev):
     """update the repo to a revision"""
     try:
         check_call(['hg', 'update', '--quiet', '--check', str(rev)])
-    except CalledProcessError, exc:
+    except CalledProcessError as exc:
         print >> sys.stderr, 'update to revision %s failed, aborting' % rev
         sys.exit(exc.returncode)
 
@@ -56,7 +56,7 @@ def perf(revset, target=None):
     try:
         output = hg(['perfrevset', revset], repo=target)
         return parseoutput(output)
-    except CalledProcessError, exc:
+    except CalledProcessError as exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
         if exc.output is None:
             print >> sys.stderr, '(no ouput)'
@@ -201,7 +201,7 @@ def getrevs(spec):
     """get the list of rev matched by a revset"""
     try:
         out = check_output(['hg', 'log', '--template={rev}\n', '--rev', spec])
-    except CalledProcessError, exc:
+    except CalledProcessError as exc:
         print >> sys.stderr, "abort, can't get revision from %s" % spec
         sys.exit(exc.returncode)
     return [r for r in out.split() if r]

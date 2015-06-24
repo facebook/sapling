@@ -80,7 +80,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         sys.stdout, sys.stderr, sys.stdin = ui.fout, ui.ferr, ui.fin
 
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
-    except Exception, exc:
+    except Exception as exc:
         if isinstance(exc, util.Abort):
             ui.warn(_('error: %s hook failed: %s\n') %
                          (hname, exc.args[0]))

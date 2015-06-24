@@ -76,7 +76,7 @@ def rawfile(web, req, tmpl):
 
     try:
         fctx = webutil.filectx(web.repo, req)
-    except error.LookupError, inst:
+    except error.LookupError as inst:
         try:
             content = manifest(web, req, tmpl)
             req.respond(HTTP_OK, web.ctype)
@@ -160,7 +160,7 @@ def file(web, req, tmpl):
         return manifest(web, req, tmpl)
     try:
         return _filerevision(web, req, tmpl, webutil.filectx(web.repo, req))
-    except error.LookupError, inst:
+    except error.LookupError as inst:
         try:
             return manifest(web, req, tmpl)
         except ErrorResponse:

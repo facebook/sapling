@@ -293,9 +293,9 @@ class match(object):
                     for k, p, source in self._normalize(includepats, default,
                                                         root, cwd, auditor):
                         kindpats.append((k, p, source or pat))
-                except util.Abort, inst:
+                except util.Abort as inst:
                     raise util.Abort('%s: %s' % (pat, inst[0]))
-                except IOError, inst:
+                except IOError as inst:
                     if self._warn:
                         self._warn(_("skipping unreadable pattern file "
                                      "'%s': %s\n") % (pat, inst.strerror))

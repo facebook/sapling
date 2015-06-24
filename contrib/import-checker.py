@@ -328,7 +328,7 @@ def find_cycles(imports):
     for mod in sorted(imports.iterkeys()):
         try:
             checkmod(mod, imports)
-        except CircularImport, e:
+        except CircularImport as e:
             cycle = e.args[0]
             cycles.add(" -> ".join(rotatecycle(cycle)))
     return cycles

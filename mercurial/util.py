@@ -816,7 +816,7 @@ def copyfile(src, dest, hardlink=False):
         try:
             shutil.copyfile(src, dest)
             shutil.copymode(src, dest)
-        except shutil.Error, inst:
+        except shutil.Error as inst:
             raise Abort(str(inst))
 
 def copyfiles(src, dst, hardlink=None, progress=lambda t, pos: None):
@@ -915,7 +915,7 @@ else:
 def makelock(info, pathname):
     try:
         return os.symlink(info, pathname)
-    except OSError, why:
+    except OSError as why:
         if why.errno == errno.EEXIST:
             raise
     except AttributeError: # no symlink in os
@@ -928,7 +928,7 @@ def makelock(info, pathname):
 def readlock(pathname):
     try:
         return os.readlink(pathname)
-    except OSError, why:
+    except OSError as why:
         if why.errno not in (errno.EINVAL, errno.ENOSYS):
             raise
     except AttributeError: # no symlink in os
@@ -1145,7 +1145,7 @@ def mktempcopy(name, emptyok=False, createmode=None):
     try:
         try:
             ifp = posixfile(name, "rb")
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno == errno.ENOENT:
                 return temp
             if not getattr(inst, 'filename', None):
@@ -1204,7 +1204,7 @@ def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance"""
     try:
         makedir(name, notindexed)
-    except OSError, err:
+    except OSError as err:
         if err.errno == errno.EEXIST:
             return
         if err.errno != errno.ENOENT or not name:
@@ -1231,7 +1231,7 @@ def ensuredirs(name, mode=None, notindexed=False):
         ensuredirs(parent, mode, notindexed)
     try:
         makedir(name, notindexed)
-    except OSError, err:
+    except OSError as err:
         if err.errno == errno.EEXIST and os.path.isdir(name):
             # someone else seems to have won a directory creation race
             return

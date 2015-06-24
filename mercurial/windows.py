@@ -38,7 +38,7 @@ def posixfile(name, mode='r', buffering=-1):
             fp.seek(0, os.SEEK_END)
 
         return fp
-    except WindowsError, err:
+    except WindowsError as err:
         # convert to a friendlier exception
         raise IOError(err.errno, '%s: %s' % (name, err.strerror))
 
@@ -69,7 +69,7 @@ class winstdout(object):
                 end = start + limit
                 self.fp.write(s[start:end])
                 start = end
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != 0:
                 raise
             self.close()
@@ -78,7 +78,7 @@ class winstdout(object):
     def flush(self):
         try:
             return self.fp.flush()
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.EINVAL:
                 raise
             self.close()
@@ -259,7 +259,7 @@ def statfiles(files):
                 dmap = dict([(normcase(n), s)
                              for n, k, s in osutil.listdir(dir, True)
                              if getkind(s.st_mode) in _wantedkinds])
-            except OSError, err:
+            except OSError as err:
                 # Python >= 2.5 returns ENOENT and adds winerror field
                 # EINVAL is raised if dir is not a directory.
                 if err.errno not in (errno.ENOENT, errno.EINVAL,
@@ -303,7 +303,7 @@ def unlinkpath(f, ignoremissing=False):
     """unlink and remove the directory if it is empty"""
     try:
         unlink(f)
-    except OSError, e:
+    except OSError as e:
         if not (ignoremissing and e.errno == errno.ENOENT):
             raise
     # try removing directories that might now be empty
@@ -316,7 +316,7 @@ def rename(src, dst):
     '''atomically rename file src to dst, replacing dst if it exists'''
     try:
         os.rename(src, dst)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise
         unlink(dst)

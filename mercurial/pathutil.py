@@ -76,7 +76,7 @@ class pathauditor(object):
             curpath = os.path.join(self.root, prefix)
             try:
                 st = os.lstat(curpath)
-            except OSError, err:
+            except OSError as err:
                 # EINVAL can be raised as invalid path syntax under win32.
                 # They must be ignored for patterns can be checked too.
                 if err.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):

@@ -276,7 +276,7 @@ class notifier(object):
         p = email.Parser.Parser()
         try:
             msg = p.parsestr(data)
-        except email.Errors.MessageParseError, inst:
+        except email.Errors.MessageParseError as inst:
             raise util.Abort(inst)
 
         # store sender and subject

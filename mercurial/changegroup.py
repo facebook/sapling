@@ -491,7 +491,7 @@ class cg1packer(object):
         if revlog.iscensored(base) or revlog.iscensored(rev):
             try:
                 delta = revlog.revision(node)
-            except error.CensoredNodeError, e:
+            except error.CensoredNodeError as e:
                 delta = e.tombstone
             if base == nullrev:
                 prefix = mdiff.trivialdiffheader(len(delta))
@@ -665,7 +665,7 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
         try:
             if not fl.addgroup(source, revmap, trp):
                 raise util.Abort(_("received file revlog group is empty"))
-        except error.CensoredBaseError, e:
+        except error.CensoredBaseError as e:
             raise util.Abort(_("received delta base is censored: %s") % e)
         revisions += len(fl) - o
         files += 1

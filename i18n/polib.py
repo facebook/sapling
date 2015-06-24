@@ -1276,7 +1276,7 @@ class _POFileParser(object):
             (action, state) = self.transitions[(symbol, self.current_state)]
             if action():
                 self.current_state = state
-        except Exception, exc:
+        except Exception as exc:
             raise IOError('Syntax error in po file (line %s)' % linenum)
 
     # state handlers

@@ -45,7 +45,7 @@ class bmstore(dict):
                     self[refspec] = repo.changelog.lookup(sha)
                 except LookupError:
                     pass
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
 
@@ -54,7 +54,7 @@ class bmstore(dict):
         if 'HG_PENDING' in os.environ:
             try:
                 bkfile = repo.vfs('bookmarks.pending')
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
         if bkfile is None:
@@ -116,7 +116,7 @@ def readactive(repo):
     mark = None
     try:
         file = repo.vfs('bookmarks.current')
-    except IOError, inst:
+    except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
         return None
@@ -159,7 +159,7 @@ def deactivate(repo):
     try:
         repo.vfs.unlink('bookmarks.current')
         repo._activebookmark = None
-    except OSError, inst:
+    except OSError as inst:
         if inst.errno != errno.ENOENT:
             raise
     finally:

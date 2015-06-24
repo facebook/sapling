@@ -64,7 +64,7 @@ except AttributeError:
                 sock = socket.socket(af, socktype, proto)
                 logger.info("connect: (%s, %s)", host, port)
                 sock.connect(sa)
-            except socket.error, msg:
+            except socket.error as msg:
                 logger.info('connect fail: %s %s', host, port)
                 if sock:
                     sock.close()
@@ -100,7 +100,7 @@ else:
             while True:
                 try:
                     return self._ssl.read(buflen)
-                except socket.sslerror, x:
+                except socket.sslerror as x:
                     if x.args[0] == socket.SSL_ERROR_WANT_READ:
                         continue
                     else:

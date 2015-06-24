@@ -54,7 +54,7 @@ def convertsource(ui, path, type, rev):
         try:
             if not type or name == type:
                 return source(ui, path, rev), sortmode
-        except (NoRepo, MissingTool), inst:
+        except (NoRepo, MissingTool) as inst:
             exceptions.append(inst)
     if not ui.quiet:
         for inst in exceptions:
@@ -68,9 +68,9 @@ def convertsink(ui, path, type):
         try:
             if not type or name == type:
                 return sink(ui, path)
-        except NoRepo, inst:
+        except NoRepo as inst:
             ui.note(_("convert: %s\n") % inst)
-        except MissingTool, inst:
+        except MissingTool as inst:
             raise util.Abort('%s\n' % inst)
     raise util.Abort(_('%s: unknown repository type') % path)
 

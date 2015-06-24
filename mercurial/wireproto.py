@@ -705,7 +705,7 @@ def lookup(repo, proto, key):
         c = repo[k]
         r = c.hex()
         success = 1
-    except Exception, inst:
+    except Exception as inst:
         r = str(inst)
         success = 0
     return "%s %s\n" % (success, r)
@@ -800,7 +800,7 @@ def unbundle(repo, proto, heads):
             fp.close()
             os.unlink(tempname)
 
-    except (error.BundleValueError, util.Abort, error.PushRaced), exc:
+    except (error.BundleValueError, util.Abort, error.PushRaced) as exc:
         # handle non-bundle2 case first
         if not getattr(exc, 'duringunbundle2', False):
             try:
@@ -821,7 +821,7 @@ def unbundle(repo, proto, heads):
         try:
             try:
                 raise
-            except error.PushkeyFailed, exc:
+            except error.PushkeyFailed as exc:
                 # check client caps
                 remotecaps = getattr(exc, '_replycaps', None)
                 if (remotecaps is not None
@@ -840,19 +840,19 @@ def unbundle(repo, proto, heads):
                     part.addparam('old', exc.old, mandatory=False)
                 if exc.ret is not None:
                     part.addparam('ret', exc.ret, mandatory=False)
-        except error.BundleValueError, exc:
+        except error.BundleValueError as exc:
             errpart = bundler.newpart('error:unsupportedcontent')
             if exc.parttype is not None:
                 errpart.addparam('parttype', exc.parttype)
             if exc.params:
                 errpart.addparam('params', '\0'.join(exc.params))
-        except util.Abort, exc:
+        except util.Abort as exc:
             manargs = [('message', str(exc))]
             advargs = []
             if exc.hint is not None:
                 advargs.append(('hint', exc.hint))
             bundler.addpart(bundle2.bundlepart('error:abort',
                                                manargs, advargs))
-        except error.PushRaced, exc:
+        except error.PushRaced as exc:
             bundler.newpart('error:pushraced', [('message', str(exc))])
         return streamres(bundler.getchunks())

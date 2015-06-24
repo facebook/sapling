@@ -87,7 +87,8 @@ class SvnRaTransport(object):
                 self.ra = svn.client.open_ra_session(
                     self.svn_url,
                     self.client, self.pool)
-            except SubversionException, (inst, num):
+            except SubversionException as xxx_todo_changeme:
+                (inst, num) = xxx_todo_changeme.args
                 if num in (svn.core.SVN_ERR_RA_ILLEGAL_URL,
                            svn.core.SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED,
                            svn.core.SVN_ERR_BAD_URL):

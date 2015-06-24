@@ -115,7 +115,7 @@ def copymode(src, dst, mode=None):
     using umask.'''
     try:
         st_mode = os.lstat(src).st_mode & 0o777
-    except OSError, inst:
+    except OSError as inst:
         if inst.errno != errno.ENOENT:
             raise
         st_mode = mode
@@ -166,7 +166,7 @@ def checklink(path):
             fd.close()
     except AttributeError:
         return False
-    except OSError, inst:
+    except OSError as inst:
         # sshfs might report failure while successfully creating the link
         if inst[0] == errno.EIO and os.path.exists(name):
             os.unlink(name)
@@ -355,7 +355,7 @@ def testpid(pid):
     try:
         os.kill(pid, 0)
         return True
-    except OSError, inst:
+    except OSError as inst:
         return inst.errno != errno.ESRCH
 
 def explainexit(code):
@@ -410,7 +410,7 @@ def statfiles(files):
             st = lstat(nf)
             if getkind(st.st_mode) not in _wantedkinds:
                 st = None
-        except OSError, err:
+        except OSError as err:
             if err.errno not in (errno.ENOENT, errno.ENOTDIR):
                 raise
             st = None
@@ -477,7 +477,7 @@ def termwidth():
                     pass
             except ValueError:
                 pass
-            except IOError, e:
+            except IOError as e:
                 if e[0] == errno.EINVAL:
                     pass
                 else:
@@ -493,7 +493,7 @@ def unlinkpath(f, ignoremissing=False):
     """unlink and remove the directory if it is empty"""
     try:
         os.unlink(f)
-    except OSError, e:
+    except OSError as e:
         if not (ignoremissing and e.errno == errno.ENOENT):
             raise
     # try removing directories that might now be empty
@@ -560,7 +560,7 @@ class unixdomainserver(socket.socket):
                 os.unlink(self.path)
         try:
             self.bind(self.realpath)
-        except socket.error, err:
+        except socket.error as err:
             if err.args[0] == 'AF_UNIX path too long':
                 tmpdir = tempfile.mkdtemp(prefix='hg-%s-' % subsystem)
                 self.realpath = os.path.join(tmpdir, sockname)
@@ -578,7 +578,7 @@ class unixdomainserver(socket.socket):
         def okayifmissing(f, path):
             try:
                 f(path)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
 

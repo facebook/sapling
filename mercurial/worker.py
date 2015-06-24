@@ -101,7 +101,7 @@ def _posixworker(ui, func, staticargs, args):
         for p in pids:
             try:
                 os.kill(p, signal.SIGTERM)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.ESRCH:
                     raise
     def waitforworkers():

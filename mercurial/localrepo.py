@@ -135,7 +135,7 @@ class localpeer(peer.peerrepository):
                     stream = util.chunkbuffer(ret.getchunks())
                     ret = bundle2.getunbundler(self.ui, stream)
                 return ret
-            except Exception, exc:
+            except Exception as exc:
                 # If the exception contains output salvaged from a bundle2
                 # reply, we need to make sure it is printed before continuing
                 # to fail. So we build a bundle2 with such output and consume
@@ -152,7 +152,7 @@ class localpeer(peer.peerrepository):
                     b = bundle2.getunbundler(self.ui, stream)
                     bundle2.processbundle(self._repo, b)
                 raise
-        except error.PushRaced, exc:
+        except error.PushRaced as exc:
             raise error.ResponseError(_('push failed:'), str(exc))
 
     def lock(self):
@@ -272,7 +272,7 @@ class localrepository(object):
             try:
                 self.requirements = scmutil.readrequires(
                         self.vfs, self.supported)
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
 
@@ -285,7 +285,7 @@ class localrepository(object):
                 raise error.RepoError(
                     _('.hg/sharedpath points to nonexistent directory %s') % s)
             self.sharedpath = s
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
 
@@ -578,7 +578,7 @@ class localrepository(object):
 
         try:
             fp = self.wfile('.hgtags', 'rb+')
-        except IOError, e:
+        except IOError as e:
             if e.errno != errno.ENOENT:
                 raise
             fp = self.wfile('.hgtags', 'ab')
@@ -1189,7 +1189,7 @@ class localrepository(object):
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn, desc=desc)
-        except error.LockHeld, inst:
+        except error.LockHeld as inst:
             if not wait:
                 raise
             self.ui.warn(_("waiting for lock on %s held by %r\n") %
@@ -1570,10 +1570,10 @@ class localrepository(object):
                             m[f] = self._filecommit(fctx, m1, m2, linkrev,
                                                     trp, changed)
                             m.setflag(f, fctx.flags())
-                    except OSError, inst:
+                    except OSError as inst:
                         self.ui.warn(_("trouble committing %s!\n") % f)
                         raise
-                    except IOError, inst:
+                    except IOError as inst:
                         errcode = getattr(inst, 'errno', errno.ENOENT)
                         if error or errcode and errcode != errno.ENOENT:
                             self.ui.warn(_("trouble committing %s!\n") % f)
@@ -1888,7 +1888,7 @@ class localrepository(object):
             hookargs['old'] = old
             hookargs['new'] = new
             self.hook('prepushkey', throw=True, **hookargs)
-        except error.HookAbort, exc:
+        except error.HookAbort as exc:
             self.ui.write_err(_("pushkey-abort: %s\n") % exc)
             if exc.hint:
                 self.ui.write_err(_("(%s)\n") % exc.hint)

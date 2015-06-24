@@ -96,7 +96,7 @@ class basestore(object):
 
         try:
             gothash = self._getfile(tmpfile, filename, hash)
-        except StoreError, err:
+        except StoreError as err:
             self.ui.warn(err.longmessage())
             gothash = ""
         tmpfile.close()

@@ -129,7 +129,7 @@ def _readroots(repo, phasedefaults=None):
         if 'HG_PENDING' in os.environ:
             try:
                 f = repo.svfs('phaseroots.pending')
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
         if f is None:
@@ -140,7 +140,7 @@ def _readroots(repo, phasedefaults=None):
                 roots[int(phase)].add(bin(nh))
         finally:
             f.close()
-    except IOError, inst:
+    except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
         if phasedefaults:

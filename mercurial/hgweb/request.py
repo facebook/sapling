@@ -111,7 +111,7 @@ class wsgirequest(object):
         if thing:
             try:
                 self.server_write(thing)
-            except socket.error, inst:
+            except socket.error as inst:
                 if inst[0] != errno.ECONNRESET:
                     raise
 

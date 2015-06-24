@@ -222,7 +222,7 @@ class histeditstate(object):
         """Load histedit state from disk and set fields appropriately."""
         try:
             fp = self.repo.vfs('histedit-state', 'r')
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             raise util.Abort(_('no histedit in progress'))

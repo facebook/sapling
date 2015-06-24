@@ -37,7 +37,7 @@ def putlfile(repo, proto, sha):
             raise IOError(0, _('largefile contents do not match hash'))
         tmpfp.close()
         lfutil.linktousercache(repo, sha)
-    except IOError, e:
+    except IOError as e:
         repo.ui.warn(_('largefiles: failed to put %s into store: %s\n') %
                      (sha, e.strerror))
         return wireproto.pushres(1)

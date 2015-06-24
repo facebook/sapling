@@ -628,7 +628,7 @@ def patchbomb(ui, repo, *revs, **opts):
             try:
                 generator.flatten(m, 0)
                 fp.write('\n')
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno != errno.EPIPE:
                     raise
             if fp is not ui:

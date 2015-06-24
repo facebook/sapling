@@ -119,7 +119,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         # 1. filter patch, so we have intending-to apply subset of it
         try:
             chunks = filterfn(ui, originalchunks)
-        except patch.PatchError, err:
+        except patch.PatchError as err:
             raise util.Abort(_('error parsing patch: %s') % err)
 
         # We need to keep a backup of files that have been newly added and
@@ -153,7 +153,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             backupdir = repo.join('record-backups')
             try:
                 os.mkdir(backupdir)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.EEXIST:
                     raise
         try:
@@ -189,7 +189,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                     ui.debug('applying patch\n')
                     ui.debug(fp.getvalue())
                     patch.internalpatch(ui, repo, fp, 1, eolmode=None)
-                except patch.PatchError, err:
+                except patch.PatchError as err:
                     raise util.Abort(str(err))
             del fp
 
@@ -309,7 +309,7 @@ def logmessage(ui, opts):
                 message = ui.fin.read()
             else:
                 message = '\n'.join(util.readfile(logfile).splitlines())
-        except IOError, inst:
+        except IOError as inst:
             raise util.Abort(_("can't read commit message '%s': %s") %
                              (logfile, inst.strerror))
     return message
@@ -418,7 +418,7 @@ def makefilename(repo, pat, node, desc=None,
             newname.append(c)
             i += 1
         return ''.join(newname)
-    except KeyError, inst:
+    except KeyError as inst:
         raise util.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
@@ -605,7 +605,7 @@ def copy(ui, repo, pats, opts, rename=False):
                 else:
                     util.copyfile(src, target)
                 srcexists = True
-            except IOError, inst:
+            except IOError as inst:
                 if inst.errno == errno.ENOENT:
                     ui.warn(_('%s: deleted in working directory\n') % relsrc)
                     srcexists = False
@@ -773,7 +773,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         finally:
             try:
                 os.unlink(lockpath)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
         if parentfn:
@@ -898,7 +898,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             try:
                 patch.patch(ui, repo, tmpname, strip=strip, prefix=prefix,
                             files=files, eolmode=None, similarity=sim / 100.0)
-            except patch.PatchError, e:
+            except patch.PatchError as e:
                 if not partial:
                     raise util.Abort(str(e))
                 if partial:
@@ -942,7 +942,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 try:
                     patch.patchrepo(ui, repo, p1, store, tmpname, strip, prefix,
                                     files, eolmode=None)
-                except patch.PatchError, e:
+                except patch.PatchError as e:
                     raise util.Abort(str(e))
                 if opts.get('exact'):
                     editor = None
@@ -1459,10 +1459,10 @@ class changeset_templater(changeset_printer):
                     self.footer = templater.stringify(self.t(types['footer'],
                                                       **props))
 
-        except KeyError, inst:
+        except KeyError as inst:
             msg = _("%s: no key named '%s'")
             raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
-        except SyntaxError, inst:
+        except SyntaxError as inst:
             raise util.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
 def gettemplate(ui, tmpl, style):
@@ -1523,7 +1523,7 @@ def show_changeset(ui, repo, opts, buffered=False):
     try:
         t = changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile,
                                 buffered)
-    except SyntaxError, inst:
+    except SyntaxError as inst:
         raise util.Abort(inst.args[0])
     return t
 
@@ -2682,7 +2682,7 @@ def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
 
     try:
         t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
-    except SyntaxError, inst:
+    except SyntaxError as inst:
         raise util.Abort(inst.args[0])
 
     for k, v in repo.ui.configitems('committemplate'):
@@ -3115,7 +3115,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
             if reversehunks:
                 chunks = patch.reversehunks(chunks)
 
-        except patch.PatchError, err:
+        except patch.PatchError as err:
             raise util.Abort(_('error parsing patch: %s') % err)
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
@@ -3128,7 +3128,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         if dopatch:
             try:
                 patch.internalpatch(repo.ui, repo, fp, 1, eolmode=None)
-            except patch.PatchError, err:
+            except patch.PatchError as err:
                 raise util.Abort(str(err))
         del fp
     else:

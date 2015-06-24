@@ -159,7 +159,7 @@ if has_https:
                     sock.connect(sa)
                     return sock
 
-                except socket.error, msg:
+                except socket.error as msg:
                     if sock is not None:
                         sock.close()
 
@@ -411,7 +411,7 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
         try:
             return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
                         self, auth_header, host, req, headers)
-        except ValueError, inst:
+        except ValueError as inst:
             arg = inst.args[0]
             if arg.startswith("AbstractDigestAuthHandler doesn't know "):
                 return

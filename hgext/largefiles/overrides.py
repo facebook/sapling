@@ -580,7 +580,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
     installnormalfilesmatchfn(repo[None].manifest())
     try:
         result = orig(ui, repo, pats, opts, rename)
-    except util.Abort, e:
+    except util.Abort as e:
         if str(e) != _('no files to copy'):
             raise e
         else:
@@ -682,7 +682,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
                 lfdirstate.add(destlfile)
         lfdirstate.write()
-    except util.Abort, e:
+    except util.Abort as e:
         if str(e) != _('no files to copy'):
             raise e
         else:

@@ -1438,7 +1438,7 @@ class workingctx(committablectx):
     def copy(self, source, dest):
         try:
             st = self._repo.wvfs.lstat(dest)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
             self._repo.ui.warn(_("%s does not exist!\n") % dest)
@@ -1684,7 +1684,7 @@ class workingfilectx(committablefilectx):
         t, tz = self._changectx.date()
         try:
             return (int(self._repo.wvfs.lstat(self._path).st_mtime), tz)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
             return (t, tz)

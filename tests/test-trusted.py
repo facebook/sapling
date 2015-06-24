@@ -169,7 +169,7 @@ print "# error handling"
 def assertraises(f, exc=util.Abort):
     try:
         f()
-    except exc, inst:
+    except exc as inst:
         print 'raised', inst.__class__.__name__
     else:
         print 'no exception?!'
@@ -188,10 +188,10 @@ f.close()
 
 try:
     testui(user='abc', group='def', silent=True)
-except error.ParseError, inst:
+except error.ParseError as inst:
     print inst
 
 try:
     testui(debug=True, silent=True)
-except error.ParseError, inst:
+except error.ParseError as inst:
     print inst

@@ -39,7 +39,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
         else:
             try:
                 opener.unlink(f)
-            except (IOError, OSError), inst:
+            except (IOError, OSError) as inst:
                 if inst.errno != errno.ENOENT:
                     raise
 
@@ -62,10 +62,10 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
                 target = f or b
                 try:
                     vfs.unlink(target)
-                except (IOError, OSError), inst:
+                except (IOError, OSError) as inst:
                     if inst.errno != errno.ENOENT:
                         raise
-        except (IOError, OSError, util.Abort), inst:
+        except (IOError, OSError, util.Abort) as inst:
             if not c:
                 raise
 
@@ -77,7 +77,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
         for f in backupfiles:
             if opener.exists(f):
                 opener.unlink(f)
-    except (IOError, OSError, util.Abort), inst:
+    except (IOError, OSError, util.Abort) as inst:
         # only pure backup file remains, it is sage to ignore any error
         pass
 
@@ -405,7 +405,7 @@ class transaction(object):
             if not f and b and vfs.exists(b):
                 try:
                     vfs.unlink(b)
-                except (IOError, OSError, util.Abort), inst:
+                except (IOError, OSError, util.Abort) as inst:
                     if not c:
                         raise
                     # Abort may be raise by read only opener
@@ -428,7 +428,7 @@ class transaction(object):
                 if b and vfs.exists(b):
                     try:
                         vfs.unlink(b)
-                    except (IOError, OSError, util.Abort), inst:
+                    except (IOError, OSError, util.Abort) as inst:
                         if not c:
                             raise
                         # Abort may be raise by read only opener

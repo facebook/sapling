@@ -39,7 +39,7 @@ print repr(testui.config('values', 'unknown'))
 print "---"
 try:
     print repr(testui.configbool('values', 'string'))
-except error.ConfigError, inst:
+except error.ConfigError as inst:
     print inst
 print repr(testui.configbool('values', 'bool1'))
 print repr(testui.configbool('values', 'bool2'))

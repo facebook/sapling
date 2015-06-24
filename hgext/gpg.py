@@ -283,7 +283,7 @@ def sign(ui, repo, *revs, **opts):
         editor = cmdutil.getcommiteditor(editform='gpg.sign', **opts)
         repo.commit(message, opts['user'], opts['date'], match=msigs,
                     editor=editor)
-    except ValueError, inst:
+    except ValueError as inst:
         raise util.Abort(str(inst))
 
 def shortkey(ui, key):

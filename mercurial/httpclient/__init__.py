@@ -166,7 +166,7 @@ class HTTPResponse(object):
                 raise HTTPTimeoutException('timeout reading data')
         try:
             data = self.sock.recv(INCOMING_BUFFER_SIZE)
-        except socket.sslerror, e:
+        except socket.sslerror as e:
             if e.args[0] != socket.SSL_ERROR_WANT_READ:
                 raise
             logger.debug('SSL_ERROR_WANT_READ in _select, should retry later')
@@ -555,7 +555,7 @@ class HTTPConnection(object):
                 try:
                     try:
                         data = r[0].recv(INCOMING_BUFFER_SIZE)
-                    except socket.sslerror, e:
+                    except socket.sslerror as e:
                         if e.args[0] != socket.SSL_ERROR_WANT_READ:
                             raise
                         logger.debug('SSL_ERROR_WANT_READ while sending '
@@ -610,7 +610,7 @@ class HTTPConnection(object):
                     # Jump to the next select() call so we load more
                     # data if the server is still sending us content.
                     continue
-                except socket.error, e:
+                except socket.error as e:
                     if e[0] != errno.EPIPE and not was_first:
                         raise
 
@@ -633,7 +633,7 @@ class HTTPConnection(object):
                         else:
                             out = data
                     amt = w[0].send(out)
-                except socket.error, e:
+                except socket.error as e:
                     if e[0] == socket.SSL_ERROR_WANT_WRITE and self.ssl:
                         # This means that SSL hasn't flushed its buffer into
                         # the socket yet.

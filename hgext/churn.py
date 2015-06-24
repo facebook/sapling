@@ -26,7 +26,7 @@ def maketemplater(ui, repo, tmpl):
     try:
         t = cmdutil.changeset_templater(ui, repo, False, None, tmpl,
                                         None, False)
-    except SyntaxError, inst:
+    except SyntaxError as inst:
         raise util.Abort(inst.args[0])
     return t
 

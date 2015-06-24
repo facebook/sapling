@@ -190,7 +190,7 @@ class hgweb(object):
                 if cmd in perms:
                     self.check_perm(req, perms[cmd])
                 return protocol.call(self.repo, req, cmd)
-            except ErrorResponse, inst:
+            except ErrorResponse as inst:
                 # A client that sends unbundle without 100-continue will
                 # break if we respond early.
                 if (cmd == 'unbundle' and
@@ -269,17 +269,17 @@ class hgweb(object):
 
             return content
 
-        except (error.LookupError, error.RepoLookupError), err:
+        except (error.LookupError, error.RepoLookupError) as err:
             req.respond(HTTP_NOT_FOUND, ctype)
             msg = str(err)
             if (util.safehasattr(err, 'name') and
                 not isinstance(err,  error.ManifestLookupError)):
                 msg = 'revision not found: %s' % err.name
             return tmpl('error', error=msg)
-        except (error.RepoError, error.RevlogError), inst:
+        except (error.RepoError, error.RevlogError) as inst:
             req.respond(HTTP_SERVER_ERROR, ctype)
             return tmpl('error', error=str(inst))
-        except ErrorResponse, inst:
+        except ErrorResponse as inst:
             req.respond(inst, ctype)
             if inst.code == HTTP_NOT_MODIFIED:
                 # Not allowed to return a body on a 304

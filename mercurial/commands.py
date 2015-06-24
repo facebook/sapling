@@ -2340,7 +2340,7 @@ def debuginstall(ui):
     ui.status(_("checking encoding (%s)...\n") % encoding.encoding)
     try:
         encoding.fromlocal("test")
-    except util.Abort, inst:
+    except util.Abort as inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" (check that your locale is properly set)\n"))
         problems += 1
@@ -2358,7 +2358,7 @@ def debuginstall(ui):
     try:
         import bdiff, mpatch, base85, osutil
         dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
-    except Exception, inst:
+    except Exception as inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" One or more extensions could not be found"))
         ui.write(_(" (check that you compiled the extensions)\n"))
@@ -2374,7 +2374,7 @@ def debuginstall(ui):
             # template found, check if it is working
             try:
                 templater.templater(m)
-            except Exception, inst:
+            except Exception as inst:
                 ui.write(" %s\n" % inst)
                 p = None
         else:
@@ -2406,7 +2406,7 @@ def debuginstall(ui):
     ui.status(_("checking username...\n"))
     try:
         ui.username()
-    except util.Abort, e:
+    except util.Abort as e:
         ui.write(" %s\n" % e)
         ui.write(_(" (specify a username in your configuration file)\n"))
         problems += 1
@@ -2517,7 +2517,7 @@ def debuglocks(ui, repo, **opts):
                                  % (user, pid, host)
                 ui.write("%-6s %s (%ds)\n" % (name + ":", locker, age))
                 return 1
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
@@ -2581,7 +2581,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                                      parents=parents, date=date,
                                      metadata=metadata)
                 tr.close()
-            except ValueError, exc:
+            except ValueError as exc:
                 raise util.Abort(_('bad obsmarker input: %s') % exc)
             finally:
                 tr.release()
@@ -3470,7 +3470,7 @@ def graft(ui, repo, *revs, **opts):
         try:
             nodes = repo.vfs.read('graftstate').splitlines()
             revs = [repo[node].rev() for node in nodes]
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
             raise util.Abort(_("no graft state found, can't continue"))
@@ -3664,7 +3664,7 @@ def grep(ui, repo, pattern, *pats, **opts):
         reflags |= re.I
     try:
         regexp = util.re.compile(pattern, reflags)
-    except re.error, inst:
+    except re.error as inst:
         ui.warn(_("grep: invalid match pattern: %s\n") % inst)
         return 1
     sep, eol = ':', '\n'
@@ -5083,7 +5083,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
         checkout, movemarkfrom = bookmarks.calculateupdate(ui, repo, checkout)
         try:
             ret = hg.update(repo, checkout)
-        except util.Abort, inst:
+        except util.Abort as inst:
             ui.warn(_("not updating: %s\n") % str(inst))
             if inst.hint:
                 ui.warn(_("(%s)\n") % inst.hint)

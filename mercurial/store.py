@@ -489,7 +489,7 @@ class fncachestore(basicstore):
             ef = self.encode(f)
             try:
                 yield f, ef, self.getsize(ef)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
 
@@ -513,7 +513,7 @@ class fncachestore(basicstore):
         try:
             self.getsize(ef)
             return True
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
             # nonexistent entry

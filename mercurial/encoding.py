@@ -138,7 +138,7 @@ def tolocal(s):
             except UnicodeDecodeError:
                 u = s.decode("utf-8", "replace") # last ditch
                 return u.encode(encoding, "replace") # can't round-trip
-    except LookupError, k:
+    except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
 def fromlocal(s):
@@ -158,10 +158,10 @@ def fromlocal(s):
 
     try:
         return s.decode(encoding, encodingmode).encode("utf-8")
-    except UnicodeDecodeError, inst:
+    except UnicodeDecodeError as inst:
         sub = s[max(0, inst.start - 10):inst.start + 10]
         raise error.Abort("decoding near '%s': %s!" % (sub, inst))
-    except LookupError, k:
+    except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
 # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
@@ -330,7 +330,7 @@ def lower(s):
         return lu.encode(encoding)
     except UnicodeError:
         return s.lower() # we don't know how to fold this except in ASCII
-    except LookupError, k:
+    except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
 def upper(s):
@@ -353,7 +353,7 @@ def upperfallback(s):
         return uu.encode(encoding)
     except UnicodeError:
         return s.upper() # we don't know how to fold this except in ASCII
-    except LookupError, k:
+    except LookupError as k:
         raise error.Abort(k, hint="please check your locale settings")
 
 class normcasespecs(object):

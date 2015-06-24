@@ -84,7 +84,7 @@ def _hassharedbookmarks(repo):
     """Returns whether this repo has shared bookmarks"""
     try:
         shared = repo.vfs.read('shared').splitlines()
-    except IOError, inst:
+    except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
         return False

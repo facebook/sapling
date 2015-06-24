@@ -205,7 +205,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         for undovfs, undofile in repo.undofiles():
             try:
                 undovfs.unlink(undofile)
-            except OSError, e:
+            except OSError as e:
                 if e.errno != errno.ENOENT:
                     ui.warn(_('error removing %s: %s\n') %
                             (undovfs.join(undofile), str(e)))

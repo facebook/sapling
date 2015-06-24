@@ -264,7 +264,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
 
         try:
             host = socket.gethostbyname(host)
-        except socket.error, msg:
+        except socket.error as msg:
             raise urllib2.URLError(msg)
         path, attrs = splitattr(req.get_selector())
         dirs = path.split('/')
@@ -322,7 +322,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
                 headers += "Content-Length: %d\n" % retrlen
             headers = email.message_from_string(headers)
             return addinfourl(fp, headers, req.get_full_url())
-        except ftplib.all_errors, msg:
+        except ftplib.all_errors as msg:
             raise IOError('ftp error', msg)
 
     def connect_ftp(self, user, passwd, host, port, dirs):
@@ -352,7 +352,7 @@ class ftpwrapper(urllib.ftpwrapper):
             # Use nlst to see if the file exists at all
             try:
                 self.ftp.nlst(file)
-            except ftplib.error_perm, reason:
+            except ftplib.error_perm as reason:
                 raise IOError('ftp error', reason)
             # Restore the transfer mode!
             self.ftp.voidcmd(cmd)
@@ -360,7 +360,7 @@ class ftpwrapper(urllib.ftpwrapper):
             try:
                 cmd = 'RETR ' + file
                 conn = self.ftp.ntransfercmd(cmd, rest)
-            except ftplib.error_perm, reason:
+            except ftplib.error_perm as reason:
                 if str(reason).startswith('501'):
                     # workaround for REST not supported error
                     fp, retrlen = self.retrfile(file, type)

@@ -219,10 +219,10 @@ class hgwebdir(object):
                         # ensure caller gets private copy of ui
                         repo = hg.repository(self.ui.copy(), real)
                         return hgweb(repo).run_wsgi(req)
-                    except IOError, inst:
+                    except IOError as inst:
                         msg = inst.strerror
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
-                    except error.RepoError, inst:
+                    except error.RepoError as inst:
                         raise ErrorResponse(HTTP_SERVER_ERROR, str(inst))
 
                 up = virtualrepo.rfind('/')
@@ -240,7 +240,7 @@ class hgwebdir(object):
             req.respond(HTTP_NOT_FOUND, ctype)
             return tmpl("notfound", repo=virtual)
 
-        except ErrorResponse, err:
+        except ErrorResponse as err:
             req.respond(err, ctype)
             return tmpl('error', error=err.message or '')
         finally:
@@ -336,7 +336,7 @@ class hgwebdir(object):
                 u = self.ui.copy()
                 try:
                     u.readconfig(os.path.join(path, '.hg', 'hgrc'))
-                except Exception, e:
+                except Exception as e:
                     u.warn(_('error reading %s/.hg/hgrc: %s\n') % (path, e))
                     continue
                 def get(section, name, default=None):

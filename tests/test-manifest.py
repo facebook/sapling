@@ -325,21 +325,21 @@ class basemanifesttests(object):
         try:
             self.parsemanifest(backwards)
             self.fail('Should have raised ValueError')
-        except ValueError, v:
+        except ValueError as v:
             self.assertIn('Manifest lines not in sorted order.', str(v))
 
     def testNoTerminalNewline(self):
         try:
             self.parsemanifest(A_SHORT_MANIFEST + 'wat')
             self.fail('Should have raised ValueError')
-        except ValueError, v:
+        except ValueError as v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testNoNewLineAtAll(self):
         try:
             self.parsemanifest('wat')
             self.fail('Should have raised ValueError')
-        except ValueError, v:
+        except ValueError as v:
             self.assertIn('Manifest did not end in a newline.', str(v))
 
     def testHugeManifest(self):

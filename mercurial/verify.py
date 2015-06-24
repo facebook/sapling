@@ -108,7 +108,7 @@ def _verify(repo):
             if p2 not in seen and p2 != nullid:
                 err(lr, _("unknown parent 2 %s of %s") %
                     (short(p2), short(node)), f)
-        except Exception, inst:
+        except Exception as inst:
             exc(lr, _("checking parents of %s") % short(node), inst, f)
 
         if node in seen:
@@ -144,7 +144,7 @@ def _verify(repo):
                 refersmf = True
             for f in changes[3]:
                 filelinkrevs.setdefault(_normpath(f), []).append(i)
-        except Exception, inst:
+        except Exception as inst:
             refersmf = True
             exc(i, _("unpacking changeset %s") % short(n), inst)
     ui.progress(_('checking'), None)
@@ -171,7 +171,7 @@ def _verify(repo):
                     err(lr, _("file without name in manifest"))
                 elif f != "/dev/null": # ignore this in very old repos
                     filenodes.setdefault(_normpath(f), {}).setdefault(fn, lr)
-        except Exception, inst:
+        except Exception as inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
     ui.progress(_('checking'), None)
 
@@ -237,7 +237,7 @@ def _verify(repo):
 
         try:
             fl = repo.file(f)
-        except error.RevlogError, e:
+        except error.RevlogError as e:
             err(lr, _("broken revlog! (%s)") % e, f)
             continue
 
@@ -272,7 +272,7 @@ def _verify(repo):
             except error.CensoredNodeError:
                 if ui.config("censor", "policy", "abort") == "abort":
                     err(lr, _("censored file data"), f)
-            except Exception, inst:
+            except Exception as inst:
                 exc(lr, _("unpacking %s") % short(n), inst, f)
 
             # check renames
@@ -298,7 +298,7 @@ def _verify(repo):
                             % (f, lr, rp[0], short(rp[1])))
                     else:
                         fl2.rev(rp[1])
-            except Exception, inst:
+            except Exception as inst:
                 exc(lr, _("checking rename of %s") % short(n), inst, f)
 
         # cross-check

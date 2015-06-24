@@ -136,7 +136,7 @@ class convert_cvs(converter_source):
                                 passw = part2
                                 break
                         pf.close()
-                    except IOError, inst:
+                    except IOError as inst:
                         if inst.errno != errno.ENOENT:
                             if not getattr(inst, 'filename', None):
                                 inst.filename = cvspass

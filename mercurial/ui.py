@@ -153,7 +153,7 @@ class ui(object):
         try:
             cfg.read(filename, fp, sections=sections, remap=remap)
             fp.close()
-        except error.ConfigError, inst:
+        except error.ConfigError as inst:
             if trusted:
                 raise
             self.warn(_("ignored: %s\n") % str(inst))
@@ -605,7 +605,7 @@ class ui(object):
             # including stdout.
             if not getattr(self.ferr, 'closed', False):
                 self.ferr.flush()
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                 raise
 

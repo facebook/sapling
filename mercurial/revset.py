@@ -1019,7 +1019,7 @@ def grep(repo, subset, x):
     try:
         # i18n: "grep" is a keyword
         gr = re.compile(getstring(x, _("grep requires a string")))
-    except re.error, e:
+    except re.error as e:
         raise error.ParseError(_('invalid match pattern: %s') % e)
 
     def matches(x):
@@ -1900,7 +1900,7 @@ def _stringmatcher(pattern):
         pattern = pattern[3:]
         try:
             regex = re.compile(pattern)
-        except re.error, e:
+        except re.error as e:
             raise error.ParseError(_('invalid regular expression: %s')
                                    % e)
         return 're', pattern, regex.search
@@ -2416,7 +2416,7 @@ def _parsealiasdecl(decl):
             return (name, ('func', ('symbol', name)), args, None)
 
         return (decl, None, None, _("invalid format"))
-    except error.ParseError, inst:
+    except error.ParseError as inst:
         return (decl, None, None, parseerrordetail(inst))
 
 def _parsealiasdefn(defn, args):
@@ -2505,7 +2505,7 @@ class revsetalias(object):
             self.replacement = _parsealiasdefn(value, self.args)
             # Check for placeholder injection
             _checkaliasarg(self.replacement, self.args)
-        except error.ParseError, inst:
+        except error.ParseError as inst:
             self.error = _('failed to parse the definition of revset alias'
                            ' "%s": %s') % (self.name, parseerrordetail(inst))
 

@@ -253,7 +253,7 @@ def synthesize(ui, repo, descpath, **opts):
     '''
     try:
         fp = hg.openpath(ui, descpath)
-    except Exception, err:
+    except Exception as err:
         raise util.Abort('%s: %s' % (descpath, err[0].strerror))
     desc = json.load(fp)
     fp.close()
@@ -285,7 +285,7 @@ def synthesize(ui, repo, descpath, **opts):
     dictfile = opts.get('dict') or '/usr/share/dict/words'
     try:
         fp = open(dictfile, 'rU')
-    except IOError, err:
+    except IOError as err:
         raise util.Abort('%s: %s' % (dictfile, err.strerror))
     words = fp.read().splitlines()
     fp.close()

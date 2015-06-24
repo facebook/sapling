@@ -23,7 +23,7 @@ except ImportError:
 for filename in sys.argv[1:]:
     try:
         fp = open(filename, 'rb')
-    except IOError, msg:
+    except IOError as msg:
         sys.stderr.write('%s: Can\'t open: %s\n' % (filename, msg))
         sys.exit(1)
 
@@ -34,7 +34,7 @@ for filename in sys.argv[1:]:
             if not data:
                 break
             m.update(data)
-    except IOError, msg:
+    except IOError as msg:
         sys.stderr.write('%s: I/O error: %s\n' % (filename, msg))
         sys.exit(1)
     sys.stdout.write('%s  %s\n' % (m.hexdigest(), filename))

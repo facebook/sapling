@@ -76,12 +76,12 @@ def dispatch(req):
             req.ui.fout = req.fout
         if req.ferr:
             req.ui.ferr = req.ferr
-    except util.Abort, inst:
+    except util.Abort as inst:
         ferr.write(_("abort: %s\n") % inst)
         if inst.hint:
             ferr.write(_("(%s)\n") % inst.hint)
         return -1
-    except error.ParseError, inst:
+    except error.ParseError as inst:
         _formatparse(ferr.write, inst)
         return -1
 
@@ -172,29 +172,29 @@ def _runcatch(req):
 
     # Global exception handling, alphabetically
     # Mercurial-specific first, followed by built-in and library exceptions
-    except error.AmbiguousCommand, inst:
+    except error.AmbiguousCommand as inst:
         ui.warn(_("hg: command '%s' is ambiguous:\n    %s\n") %
                 (inst.args[0], " ".join(inst.args[1])))
-    except error.ParseError, inst:
+    except error.ParseError as inst:
         _formatparse(ui.warn, inst)
         return -1
-    except error.LockHeld, inst:
+    except error.LockHeld as inst:
         if inst.errno == errno.ETIMEDOUT:
             reason = _('timed out waiting for lock held by %s') % inst.locker
         else:
             reason = _('lock held by %s') % inst.locker
         ui.warn(_("abort: %s: %s\n") % (inst.desc or inst.filename, reason))
-    except error.LockUnavailable, inst:
+    except error.LockUnavailable as inst:
         ui.warn(_("abort: could not lock %s: %s\n") %
                (inst.desc or inst.filename, inst.strerror))
-    except error.CommandError, inst:
+    except error.CommandError as inst:
         if inst.args[0]:
             ui.warn(_("hg %s: %s\n") % (inst.args[0], inst.args[1]))
             commands.help_(ui, inst.args[0], full=False, command=True)
         else:
             ui.warn(_("hg: %s\n") % inst.args[1])
             commands.help_(ui, 'shortlist')
-    except error.OutOfBandError, inst:
+    except error.OutOfBandError as inst:
         if inst.args:
             msg = _("abort: remote error:\n")
         else:
@@ -204,11 +204,11 @@ def _runcatch(req):
             ui.warn(''.join(inst.args))
         if inst.hint:
             ui.warn('(%s)\n' % inst.hint)
-    except error.RepoError, inst:
+    except error.RepoError as inst:
         ui.warn(_("abort: %s!\n") % inst)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
-    except error.ResponseError, inst:
+    except error.ResponseError as inst:
         ui.warn(_("abort: %s") % inst.args[0])
         if not isinstance(inst.args[1], basestring):
             ui.warn(" %r\n" % (inst.args[1],))
@@ -216,13 +216,13 @@ def _runcatch(req):
             ui.warn(_(" empty string\n"))
         else:
             ui.warn("\n%r\n" % util.ellipsis(inst.args[1]))
-    except error.CensoredNodeError, inst:
+    except error.CensoredNodeError as inst:
         ui.warn(_("abort: file censored %s!\n") % inst)
-    except error.RevlogError, inst:
+    except error.RevlogError as inst:
         ui.warn(_("abort: %s!\n") % inst)
     except error.SignalInterrupt:
         ui.warn(_("killed!\n"))
-    except error.UnknownCommand, inst:
+    except error.UnknownCommand as inst:
         ui.warn(_("hg: unknown command '%s'\n") % inst.args[0])
         try:
             # check if the command is in a disabled extension
@@ -238,21 +238,21 @@ def _runcatch(req):
                     suggested = True
             if not suggested:
                 commands.help_(ui, 'shortlist')
-    except error.InterventionRequired, inst:
+    except error.InterventionRequired as inst:
         ui.warn("%s\n" % inst)
         return 1
-    except util.Abort, inst:
+    except util.Abort as inst:
         ui.warn(_("abort: %s\n") % inst)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
-    except ImportError, inst:
+    except ImportError as inst:
         ui.warn(_("abort: %s!\n") % inst)
         m = str(inst).split()[-1]
         if m in "mpatch bdiff".split():
             ui.warn(_("(did you forget to compile extensions?)\n"))
         elif m in "zlib".split():
             ui.warn(_("(is your Python install correct?)\n"))
-    except IOError, inst:
+    except IOError as inst:
         if util.safehasattr(inst, "code"):
             ui.warn(_("abort: %s\n") % inst)
         elif util.safehasattr(inst, "reason"):
@@ -276,7 +276,7 @@ def _runcatch(req):
                 ui.warn(_("abort: %s\n") % inst.strerror)
         else:
             raise
-    except OSError, inst:
+    except OSError as inst:
         if getattr(inst, "filename", None) is not None:
             ui.warn(_("abort: %s: '%s'\n") % (inst.strerror, inst.filename))
         else:
@@ -284,7 +284,7 @@ def _runcatch(req):
     except KeyboardInterrupt:
         try:
             ui.warn(_("interrupted!\n"))
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno == errno.EPIPE:
                 if ui.debugflag:
                     ui.warn(_("\nbroken pipe\n"))
@@ -292,11 +292,11 @@ def _runcatch(req):
                 raise
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
-    except SystemExit, inst:
+    except SystemExit as inst:
         # Commands shouldn't sys.exit directly, but give a return code.
         # Just in case catch this and and pass exit code to caller.
         return inst.code
-    except socket.error, inst:
+    except socket.error as inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
     except: # re-raises
         myver = util.version()
@@ -452,7 +452,7 @@ class cmdalias(object):
 
         try:
             args = shlex.split(self.definition)
-        except ValueError, inst:
+        except ValueError as inst:
             self.badalias = (_("error in definition for alias '%s': %s")
                              % (self.name, inst))
             return
@@ -543,7 +543,7 @@ def _parse(ui, args):
 
     try:
         args = fancyopts.fancyopts(args, commands.globalopts, options)
-    except fancyopts.getopt.GetoptError, inst:
+    except fancyopts.getopt.GetoptError as inst:
         raise error.CommandError(None, inst)
 
     if args:
@@ -566,7 +566,7 @@ def _parse(ui, args):
 
     try:
         args = fancyopts.fancyopts(args, c, cmdoptions, True)
-    except fancyopts.getopt.GetoptError, inst:
+    except fancyopts.getopt.GetoptError as inst:
         raise error.CommandError(cmd, inst)
 
     # separate global options back out
@@ -665,7 +665,7 @@ def _getlocal(ui, rpath):
     """
     try:
         wd = os.getcwd()
-    except OSError, e:
+    except OSError as e:
         raise util.Abort(_("error getting current working directory: %s") %
                          e.strerror)
     path = cmdutil.findrepo(wd) or ""

@@ -467,7 +467,7 @@ def unlink(f):
         try:
             os.rename(f, temp)  # raises OSError EEXIST if temp exists
             break
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
     else:

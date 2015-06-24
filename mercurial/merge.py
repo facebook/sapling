@@ -145,7 +145,7 @@ class mergestate(object):
                 else:
                     records.append(('F', l[:-1]))
             f.close()
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
         return records
@@ -170,7 +170,7 @@ class mergestate(object):
                 off += length
                 records.append((rtype, record))
             f.close()
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
         return records
@@ -660,7 +660,7 @@ def batchremove(repo, actions):
         audit(f)
         try:
             unlink(wjoin(f), ignoremissing=True)
-        except OSError, inst:
+        except OSError as inst:
             repo.ui.warn(_("update failed to remove %s: %s!\n") %
                          (f, inst.strerror))
         if i == 100:

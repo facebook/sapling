@@ -336,7 +336,7 @@ def processbundle(repo, unbundler, transactiongetter=None, op=None):
     try:
         for nbpart, part in iterparts:
             _processpart(op, part)
-    except BaseException, exc:
+    except BaseException as exc:
         for nbpart, part in iterparts:
             # consume the bundle content
             part.seek(0, 2)
@@ -380,7 +380,7 @@ def _processpart(op, part):
                 raise error.UnsupportedPartError(parttype=part.type,
                                                params=unknownparams)
             status = 'supported'
-        except error.UnsupportedPartError, exc:
+        except error.UnsupportedPartError as exc:
             if part.mandatory: # mandatory parts
                 raise
             indebug(op.ui, 'ignoring unsupported advisory part %s' % exc)
@@ -585,7 +585,7 @@ class unpackermixin(object):
         if self._seekable:
             try:
                 return self._fp.tell()
-            except IOError, e:
+            except IOError as e:
                 if e.errno == errno.ESPIPE:
                     self._seekable = False
                 else:
@@ -841,7 +841,7 @@ class bundlepart(object):
                 outdebug(ui, 'payload chunk size: %i' % len(chunk))
                 yield _pack(_fpayloadsize, len(chunk))
                 yield chunk
-        except BaseException, exc:
+        except BaseException as exc:
             # backup exception data for later
             ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
                      % exc)
@@ -1248,7 +1248,7 @@ def handleremotechangegroup(op, inpart):
         part.addparam('return', '%i' % ret, mandatory=False)
     try:
         real_part.validate()
-    except util.Abort, e:
+    except util.Abort as e:
         raise util.Abort(_('bundle at %s is corrupted:\n%s') %
             (util.hidepassword(raw_url), str(e)))
     assert not inpart.read()

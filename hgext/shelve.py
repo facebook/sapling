@@ -69,7 +69,7 @@ class shelvedfile(object):
     def opener(self, mode='rb'):
         try:
             return self.vfs(self.fname, mode)
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             raise util.Abort(_("shelved change '%s' not found") % self.name)
@@ -294,7 +294,7 @@ def deletecmd(ui, repo, pats):
         for name in pats:
             for suffix in 'hg patch'.split():
                 shelvedfile(repo, name, suffix).unlink()
-    except OSError, err:
+    except OSError as err:
         if err.errno != errno.ENOENT:
             raise
         raise util.Abort(_("shelved change '%s' not found") % name)
@@ -305,7 +305,7 @@ def listshelves(repo):
     """return all shelves in repo as list of (time, filename)"""
     try:
         names = repo.vfs.readdir('shelved')
-    except OSError, err:
+    except OSError as err:
         if err.errno != errno.ENOENT:
             raise
         return []
@@ -532,7 +532,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
         try:
             state = shelvedstate.load(repo)
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             raise util.Abort(_('no unshelve operation underway'))

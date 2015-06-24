@@ -194,7 +194,7 @@ def _terminfosetup(ui, mode):
 
     try:
         curses.setupterm()
-    except curses.error, e:
+    except curses.error as e:
         _terminfo_params = {}
         return
 

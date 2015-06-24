@@ -120,7 +120,7 @@ def readlocaltags(ui, repo, alltags, tagtypes):
     '''Read local tags in repo. Update alltags and tagtypes.'''
     try:
         data = repo.vfs.read("localtags")
-    except IOError, inst:
+    except IOError as inst:
         if inst.errno != errno.ENOENT:
             raise
         return
@@ -545,7 +545,7 @@ class hgtagsfnodescache(object):
                 self._dirtyoffset = None
             finally:
                 f.close()
-        except (IOError, OSError), inst:
+        except (IOError, OSError) as inst:
             repo.ui.log('tagscache',
                         "couldn't write %s: %s\n" % (
                         _fnodescachefile, inst))

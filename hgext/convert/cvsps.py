@@ -179,7 +179,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
                     break
 
             ui.note(_('cache has %d log entries\n') % len(oldlog))
-        except Exception, e:
+        except Exception as e:
             ui.note(_('error reading cache: %r\n') % e)
 
         if oldlog:
@@ -824,7 +824,7 @@ def debugcvsps(ui, *args, **opts):
                 log += createlog(ui, d, root=opts["root"], cache=cache)
         else:
             log = createlog(ui, root=opts["root"], cache=cache)
-    except logerror, e:
+    except logerror as e:
         ui.write("%r\n"%e)
         return
 

@@ -770,7 +770,7 @@ class templater(object):
             if val[0] in "'\"":
                 try:
                     self.cache[key] = unquotestring(val)
-                except SyntaxError, inst:
+                except SyntaxError as inst:
                     raise SyntaxError('%s: %s' %
                                       (conf.source('', key), inst.args[0]))
             else:
@@ -787,10 +787,10 @@ class templater(object):
         if t not in self.cache:
             try:
                 self.cache[t] = util.readfile(self.map[t][1])
-            except KeyError, inst:
+            except KeyError as inst:
                 raise TemplateNotFound(_('"%s" not in template map') %
                                        inst.args[0])
-            except IOError, inst:
+            except IOError as inst:
                 raise IOError(inst.args[0], _('template file %s: %s') %
                               (self.map[t][1], inst.args[1]))
         return self.cache[t]

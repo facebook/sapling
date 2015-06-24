@@ -53,7 +53,7 @@ def loadpath(path, module_name):
     else:
         try:
             return imp.load_source(module_name, path)
-        except IOError, exc:
+        except IOError as exc:
             if not exc.filename:
                 exc.filename = path # python does not fill this
             raise
@@ -82,7 +82,7 @@ def load(ui, name, path):
             return mod
         try:
             mod = importh("hgext.%s" % name)
-        except ImportError, err:
+        except ImportError as err:
             ui.debug('could not import hgext.%s (%s): trying %s\n'
                      % (name, err, name))
             if ui.debugflag:
@@ -105,7 +105,7 @@ def loadall(ui):
             load(ui, name, path)
         except KeyboardInterrupt:
             raise
-        except Exception, inst:
+        except Exception as inst:
             if path:
                 ui.warn(_("*** failed to import extension %s from %s: %s\n")
                         % (name, path, inst))

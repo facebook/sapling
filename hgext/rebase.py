@@ -838,7 +838,7 @@ def restorestatus(repo):
         _setrebasesetvisibility(repo, state.keys())
         return (originalwd, target, state, skipped,
                 collapse, keep, keepbranches, external, activebookmark)
-    except IOError, err:
+    except IOError as err:
         if err.errno != errno.ENOENT:
             raise
         raise util.Abort(_('no rebase in progress'))

@@ -89,7 +89,7 @@ def decompress(bin):
     if t == 'x':
         try:
             return _decompress(bin)
-        except zlib.error, e:
+        except zlib.error as e:
             raise RevlogError(_("revlog decompress error: %s") % str(e))
     if t == 'u':
         return bin[1:]
@@ -246,7 +246,7 @@ class revlog(object):
             if len(i) > 0:
                 v = struct.unpack(versionformat, i[:4])[0]
                 self._initempty = False
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
 
@@ -1571,7 +1571,7 @@ class revlog(object):
             actual = f.tell()
             f.close()
             dd = actual - expected
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
             dd = 0
@@ -1590,7 +1590,7 @@ class revlog(object):
                     databytes += max(0, self.length(r))
                 dd = 0
                 di = actual - len(self) * s - databytes
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
             di = 0

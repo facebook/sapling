@@ -115,7 +115,7 @@ class dirstate(object):
     def _branch(self):
         try:
             return self._opener.read("branch").strip() or "default"
-        except IOError, inst:
+        except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
             return "default"
@@ -131,7 +131,7 @@ class dirstate(object):
                 return st[:20], st[20:40]
             elif l > 0 and l < 40:
                 raise util.Abort(_('working directory state appears damaged!'))
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
         return [nullid, nullid]
@@ -331,7 +331,7 @@ class dirstate(object):
                 st = fp.read()
             finally:
                 fp.close()
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             return
@@ -717,7 +717,7 @@ class dirstate(object):
                     badfn(ff, badtype(kind))
                     if nf in dmap:
                         results[nf] = None
-            except OSError, inst: # nf not found on disk - it is dirstate only
+            except OSError as inst: # nf not found on disk - it is dirstate only
                 if nf in dmap: # does it exactly match a missing file?
                     results[nf] = None
                 else: # does it match a missing directory?
@@ -802,7 +802,7 @@ class dirstate(object):
                     skip = '.hg'
                 try:
                     entries = listdir(join(nd), stat=True, skip=skip)
-                except OSError, inst:
+                except OSError as inst:
                     if inst.errno in (errno.EACCES, errno.ENOENT):
                         match.bad(self.pathto(nd), inst.strerror)
                         continue

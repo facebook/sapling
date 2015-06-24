@@ -215,7 +215,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
             localwlock = pushop.repo.wlock()
         locallock = pushop.repo.lock()
         pushop.locallocked = True
-    except IOError, err:
+    except IOError as err:
         pushop.locallocked = False
         if err.errno != errno.EACCES:
             raise
@@ -646,16 +646,16 @@ def _pushbundle2(pushop):
     try:
         try:
             reply = pushop.remote.unbundle(stream, ['force'], 'push')
-        except error.BundleValueError, exc:
+        except error.BundleValueError as exc:
             raise util.Abort('missing support for %s' % exc)
         try:
             trgetter = None
             if pushback:
                 trgetter = pushop.trmanager.transaction
             op = bundle2.processbundle(pushop.repo, reply, trgetter)
-        except error.BundleValueError, exc:
+        except error.BundleValueError as exc:
             raise util.Abort('missing support for %s' % exc)
-    except error.PushkeyFailed, exc:
+    except error.PushkeyFailed as exc:
         partid = int(exc.partid)
         if partid not in pushop.pkfailcb:
             raise
@@ -1061,7 +1061,7 @@ def _pullbundle2(pullop):
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
-    except error.BundleValueError, exc:
+    except error.BundleValueError as exc:
         raise util.Abort('missing support for %s' % exc)
 
     if pullop.fetch:
@@ -1425,7 +1425,7 @@ def unbundle(repo, cg, heads, source, url):
                         def recordout(output):
                             r.newpart('output', data=output, mandatory=False)
                 tr.close()
-            except BaseException, exc:
+            except BaseException as exc:
                 exc.duringunbundle2 = True
                 if captureoutput and r is not None:
                     parts = exc._bundle2salvagedoutput = r.salvageoutput()
