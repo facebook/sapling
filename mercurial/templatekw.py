@@ -228,7 +228,7 @@ def showcurrentbookmark(**args):
     return showactivebookmark(**args)
 
 def showactivebookmark(**args):
-    """:activetbookmark: String. The active bookmark, if it is
+    """:activebookmark: String. The active bookmark, if it is
     associated with the changeset"""
     active = args['repo']._activebookmark
     if active and active in args['ctx'].bookmarks():
