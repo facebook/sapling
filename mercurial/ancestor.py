@@ -316,11 +316,14 @@ class lazyancestors(object):
         stoprev = self._stoprev
         visit = collections.deque(revs)
 
+        see = seen.add
+        schedule = visit.append
+
         while visit:
             for parent in parentrevs(visit.popleft()):
                 if parent >= stoprev and parent not in seen:
-                    visit.append(parent)
-                    seen.add(parent)
+                    schedule(parent)
+                    see(parent)
                     yield parent
 
     def __contains__(self, target):
@@ -337,6 +340,7 @@ class lazyancestors(object):
         stoprev = self._stoprev
         heappop = heapq.heappop
         heappush = heapq.heappush
+        see = seen.add
 
         targetseen = False
 
@@ -347,7 +351,7 @@ class lazyancestors(object):
                 # We need to make sure we push all parents into the heap so
                 # that we leave it in a consistent state for future calls.
                 heappush(visit, -parent)
-                seen.add(parent)
+                see(parent)
                 if parent == target:
                     targetseen = True
 
