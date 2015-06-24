@@ -1075,7 +1075,15 @@ class GitHandler(object):
 
     def fetch_pack(self, remote_name, heads=None):
         client, path = self.get_transport_and_path(remote_name)
-        graphwalker = self.git.get_graph_walker()
+
+        # The dulwich default walk only checks refs/heads/. We also want to
+        # consider remotes when doing discovery, so we build our own list.  We
+        # can't just do 'refs/' here because the tag class doesn't have a
+        # parents function for walking, and older versions of dulwich don't like
+        # that.
+        haveheads = self.git.refs.as_dict('refs/remotes/').values()
+        haveheads.extend(self.git.refs.as_dict('refs/heads/').values())
+        graphwalker = self.git.get_graph_walker(heads=haveheads)
 
         def determine_wants(refs):
             filteredrefs = self.filter_refs(refs, heads)
