@@ -130,8 +130,8 @@ class transaction(object):
         self._backupsfile.write('%d\n' % version)
 
         if createmode is not None:
-            opener.chmod(self.journal, createmode & 0666)
-            opener.chmod(self._backupjournal, createmode & 0666)
+            opener.chmod(self.journal, createmode & 0o666)
+            opener.chmod(self._backupjournal, createmode & 0o666)
 
         # hold file generations to be performed on commit
         self._filegenerators = {}

@@ -201,7 +201,7 @@ class darcs_source(converter_source, commandline):
             if inst.errno == errno.ENOENT:
                 return None, None
             raise
-        mode = (mode & 0111) and 'x' or ''
+        mode = (mode & 0o111) and 'x' or ''
         return data, mode
 
     def gettags(self):

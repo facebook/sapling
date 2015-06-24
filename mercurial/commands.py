@@ -3001,10 +3001,10 @@ def debugstate(ui, repo, nodates=None, datesort=None):
         else:
             timestr = time.strftime("%Y-%m-%d %H:%M:%S ",
                                     time.localtime(ent[3]))
-        if ent[1] & 020000:
+        if ent[1] & 0o20000:
             mode = 'lnk'
         else:
-            mode = '%3o' % (ent[1] & 0777 & ~util.umask)
+            mode = '%3o' % (ent[1] & 0o777 & ~util.umask)
         ui.write("%c %s %10d %s%s\n" % (ent[0], mode, ent[2], timestr, file_))
     for f in repo.dirstate.copies():
         ui.write(_("copy: %s -> %s\n") % (repo.dirstate.copied(f), f))

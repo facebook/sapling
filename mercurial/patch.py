@@ -288,8 +288,8 @@ class patchmeta(object):
         self.binary = False
 
     def setmode(self, mode):
-        islink = mode & 020000
-        isexec = mode & 0100
+        islink = mode & 0o20000
+        isexec = mode & 0o100
         self.mode = (islink, isexec)
 
     def copy(self):
@@ -430,7 +430,7 @@ class fsbackend(abstractbackend):
 
         isexec = False
         try:
-            isexec = self.opener.lstat(fname).st_mode & 0100 != 0
+            isexec = self.opener.lstat(fname).st_mode & 0o100 != 0
         except OSError, e:
             if e.errno != errno.ENOENT:
                 raise

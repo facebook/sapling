@@ -908,7 +908,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     archiver = archival.archivers[kind](dest, mtime or ctx.date()[0])
 
     if repo.ui.configbool("ui", "archivemeta", True):
-        write('.hg_archival.txt', 0644, False,
+        write('.hg_archival.txt', 0o644, False,
               lambda: archival.buildmetadata(ctx))
 
     for f in ctx:
@@ -937,7 +937,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
                         fd.close()
 
             getdata = getdatafn
-        write(f, 'x' in ff and 0755 or 0644, 'l' in ff, getdata)
+        write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, getdata)
 
     if subrepos:
         for subpath in sorted(ctx.substate):
@@ -991,7 +991,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
 
             getdata = getdatafn
 
-        write(f, 'x' in ff and 0755 or 0644, 'l' in ff, getdata)
+        write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, getdata)
 
     for subpath in sorted(ctx.substate):
         sub = ctx.workingsub(subpath)

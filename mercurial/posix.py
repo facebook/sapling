@@ -71,7 +71,7 @@ def sshargs(sshcmd, host, user, port):
 
 def isexec(f):
     """check whether a file is executable"""
-    return (os.lstat(f).st_mode & 0100 != 0)
+    return (os.lstat(f).st_mode & 0o100 != 0)
 
 def setflags(f, l, x):
     s = os.lstat(f).st_mode
@@ -98,30 +98,30 @@ def setflags(f, l, x):
         fp = open(f, "w")
         fp.write(data)
         fp.close()
-        s = 0666 & ~umask # avoid restatting for chmod
+        s = 0o666 & ~umask # avoid restatting for chmod
 
-    sx = s & 0100
+    sx = s & 0o100
     if x and not sx:
         # Turn on +x for every +r bit when making a file executable
         # and obey umask.
-        os.chmod(f, s | (s & 0444) >> 2 & ~umask)
+        os.chmod(f, s | (s & 0o444) >> 2 & ~umask)
     elif not x and sx:
         # Turn off all +x bits
-        os.chmod(f, s & 0666)
+        os.chmod(f, s & 0o666)
 
 def copymode(src, dst, mode=None):
     '''Copy the file mode from the file at path src to dst.
     If src doesn't exist, we're using mode instead. If mode is None, we're
     using umask.'''
     try:
-        st_mode = os.lstat(src).st_mode & 0777
+        st_mode = os.lstat(src).st_mode & 0o777
     except OSError, inst:
         if inst.errno != errno.ENOENT:
             raise
         st_mode = mode
         if st_mode is None:
             st_mode = ~umask
-        st_mode &= 0666
+        st_mode &= 0o666
     os.chmod(dst, st_mode)
 
 def checkexec(path):
@@ -140,10 +140,10 @@ def checkexec(path):
         fh, fn = tempfile.mkstemp(dir=path, prefix='hg-checkexec-')
         try:
             os.close(fh)
-            m = os.stat(fn).st_mode & 0777
+            m = os.stat(fn).st_mode & 0o777
             new_file_has_exec = m & EXECFLAGS
             os.chmod(fn, m ^ EXECFLAGS)
-            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0777) == m)
+            exec_flags_cannot_flip = ((os.stat(fn).st_mode & 0o777) == m)
         finally:
             os.unlink(fn)
     except (IOError, OSError):
@@ -593,7 +593,7 @@ def statislink(st):
 
 def statisexec(st):
     '''check whether a stat result is an executable file'''
-    return st and (st.st_mode & 0100 != 0)
+    return st and (st.st_mode & 0o100 != 0)
 
 def poll(fds):
     """block until something happens on any file descriptor

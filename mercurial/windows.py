@@ -25,7 +25,7 @@ termwidth = win32.termwidth
 testpid = win32.testpid
 unlink = win32.unlink
 
-umask = 0022
+umask = 0o022
 
 def posixfile(name, mode='r', buffering=-1):
     '''Open a file with even more POSIX-like semantics'''

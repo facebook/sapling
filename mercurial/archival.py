@@ -157,7 +157,7 @@ class tarit(object):
         i.size = len(data)
         if islink:
             i.type = tarfile.SYMTYPE
-            i.mode = 0777
+            i.mode = 0o777
             i.linkname = data
             data = None
             i.size = 0
@@ -220,7 +220,7 @@ class zipit(object):
         i.create_system = 3
         ftype = _UNX_IFREG
         if islink:
-            mode = 0777
+            mode = 0o777
             ftype = _UNX_IFLNK
         i.external_attr = (mode | ftype) << 16L
         # add "extended-timestamp" extra block, because zip archives
@@ -302,7 +302,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if repo.ui.configbool("ui", "archivemeta", True):
         name = '.hg_archival.txt'
         if not matchfn or matchfn(name):
-            write(name, 0644, False, lambda: buildmetadata(ctx))
+            write(name, 0o644, False, lambda: buildmetadata(ctx))
 
     if matchfn:
         files = [f for f in ctx.manifest().keys() if matchfn(f)]
@@ -314,7 +314,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         repo.ui.progress(_('archiving'), 0, unit=_('files'), total=total)
         for i, f in enumerate(files):
             ff = ctx.flags(f)
-            write(f, 'x' in ff and 0755 or 0644, 'l' in ff, ctx[f].data)
+            write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, ctx[f].data)
             repo.ui.progress(_('archiving'), i + 1, item=f,
                              unit=_('files'), total=total)
         repo.ui.progress(_('archiving'), None)

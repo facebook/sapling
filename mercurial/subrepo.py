@@ -540,7 +540,7 @@ class abstractsubrepo(object):
                          unit=_('files'), total=total)
         for i, name in enumerate(files):
             flags = self.fileflags(name)
-            mode = 'x' in flags and 0755 or 0644
+            mode = 'x' in flags and 0o755 or 0o644
             symlink = 'l' in flags
             archiver.addfile(prefix + self._path + '/' + name,
                              mode, symlink, self.filedata(name))

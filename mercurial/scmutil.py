@@ -450,7 +450,7 @@ class vfs(abstractvfs):
     def _fixfilemode(self, name):
         if self.createmode is None or not self._chmod:
             return
-        os.chmod(name, self.createmode & 0666)
+        os.chmod(name, self.createmode & 0o666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False,
                  notindexed=False):

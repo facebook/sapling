@@ -594,9 +594,9 @@ class dirstate(object):
                 self._map[f] = oldmap[f]
             else:
                 if 'x' in allfiles.flags(f):
-                    self._map[f] = dirstatetuple('n', 0777, -1, 0)
+                    self._map[f] = dirstatetuple('n', 0o777, -1, 0)
                 else:
-                    self._map[f] = dirstatetuple('n', 0666, -1, 0)
+                    self._map[f] = dirstatetuple('n', 0o666, -1, 0)
         self._pl = (parent, nullid)
         self._dirty = True
 
@@ -963,7 +963,7 @@ class dirstate(object):
                 mtime = int(st.st_mtime)
                 if (size >= 0 and
                     ((size != st.st_size and size != st.st_size & _rangemask)
-                     or ((mode ^ st.st_mode) & 0100 and checkexec))
+                     or ((mode ^ st.st_mode) & 0o100 and checkexec))
                     or size == -2 # other parent
                     or fn in copymap):
                     madd(fn)

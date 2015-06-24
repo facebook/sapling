@@ -215,7 +215,7 @@ class gnuarch_source(converter_source, commandline):
                 mode = ''
         else:
             data = open(os.path.join(self.tmppath, name), 'rb').read()
-            mode = (mode & 0111) and 'x' or ''
+            mode = (mode & 0o111) and 'x' or ''
         return data, mode
 
     def _exclude(self, name):

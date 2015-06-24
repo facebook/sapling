@@ -274,7 +274,7 @@ def _calcmode(vfs):
         # files in .hg/ will be created using this mode
         mode = vfs.stat().st_mode
             # avoid some useless chmods
-        if (0777 & ~util.umask) == (0777 & mode):
+        if (0o777 & ~util.umask) == (0o777 & mode):
             mode = None
     except OSError:
         mode = None
