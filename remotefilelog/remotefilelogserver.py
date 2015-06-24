@@ -41,9 +41,6 @@ def setupserver(ui, repo):
 
     wrapfunction(changegroup.cg1packer, 'generatefiles', generatefiles)
 
-    # add incoming hook to continuously generate file blobs
-    ui.setconfig("hooks", "changegroup.remotefilelog", incominghook)
-
 onetime = False
 def onetimesetup(ui):
     """Configures the wireprotocol for both clients and servers. 
@@ -234,51 +231,6 @@ def getfiles(repo, proto):
             os.umask(oldumask)
 
     return wireproto.streamres(streamer())
-
-
-def incominghook(ui, repo, node, source, url, **kwargs):
-    """Server hook that produces the shallow file blobs immediately after
-    a commit, in anticipation of them being requested soon.
-    """
-    cachepath = repo.ui.config("remotefilelog", "servercachepath")
-    if not cachepath:
-        cachepath = os.path.join(repo.path, "remotefilelogcache")
-
-    heads = repo.revs("heads(%s::)" % node)
-
-    # everything should be user & group read/writable
-    oldumask = os.umask(0o002)
-    try:
-        count = 0
-        for head in heads:
-            mf = repo[head].manifest()
-            for filename, filenode in mf.iteritems():
-                filecachepath = os.path.join(cachepath, filename, hex(filenode))
-                if os.path.exists(filecachepath):
-                    continue
-
-                # This can be a bit slow. Don't block the commit returning
-                # for large commits.
-                if count > 500:
-                    break
-                count += 1
-
-                filectx = repo.filectx(filename, fileid=filenode)
-
-                text = createfileblob(filectx)
-                text = lz4.compressHC(text)
-
-                dirname = os.path.dirname(filecachepath)
-                if not os.path.exists(dirname):
-                    os.makedirs(dirname)
-                f = open(filecachepath, "w")
-                try:
-                    f.write(text)
-                finally:
-                    f.close()
-    finally:
-        os.umask(oldumask)
-
 
 def createfileblob(filectx):
     text = filectx.data()
