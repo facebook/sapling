@@ -286,6 +286,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
     ui.debug('acl: checking access for user "%s"\n' % user)
 
+    # deprecated config: acl.config
     cfg = ui.config('acl', 'config')
     if cfg:
         ui.readconfig(cfg, sections=['acl.groups', 'acl.allow.branches',
