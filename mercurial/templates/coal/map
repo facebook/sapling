@@ -43,7 +43,7 @@ navgraph = '{before%navgraphentry}{after%navgraphentry}'
 filenav = '{before%filenaventry}{after%filenaventry}'
 
 direntry = '
-  <tr class="fileline parity{parity}">
+  <tr class="fileline">
     <td class="name">
       <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-folder.png" alt="dir."/> {basename|escape}/
@@ -57,7 +57,7 @@ direntry = '
   </tr>'
 
 fileentry = '
-  <tr class="fileline parity{parity}">
+  <tr class="fileline">
     <td class="filename">
       <a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">
         <img src="{staticurl|urlescape}coal-file.png" alt="file"/> {basename|escape}
@@ -73,11 +73,11 @@ filediff = ../paper/filediff.tmpl
 filecomparison = ../paper/filecomparison.tmpl
 filelog = ../paper/filelog.tmpl
 fileline = '
-  <div class="parity{parity} source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
+  <div class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</div>'
 filelogentry = ../paper/filelogentry.tmpl
 
 annotateline = '
-  <tr class="parity{parity}">
+  <tr>
     <td class="annotate">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
@@ -85,7 +85,7 @@ annotateline = '
     <td class="source"><a href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</td>
   </tr>'
 
-diffblock = '<div class="source bottomline parity{parity}"><pre>{lines}</pre></div>'
+diffblock = '<div class="source bottomline"><pre>{lines}</pre></div>'
 difflineplus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="plusline">{line|escape}</span>'
 difflineminus = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="minusline">{line|escape}</span>'
 difflineat = '<a href="#{lineid}" id="{lineid}">{linenumber}</a> <span class="atline">{line|escape}</span>'
@@ -156,7 +156,7 @@ fileannotatechild = '
   </tr>'
 tags = ../paper/tags.tmpl
 tagentry = '
-  <tr class="tagEntry parity{parity}">
+  <tr class="tagEntry">
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {tag|escape}
@@ -168,7 +168,7 @@ tagentry = '
   </tr>'
 bookmarks = ../paper/bookmarks.tmpl
 bookmarkentry = '
-  <tr class="tagEntry parity{parity}">
+  <tr class="tagEntry">
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {bookmark|escape}
@@ -180,7 +180,7 @@ bookmarkentry = '
   </tr>'
 branches = ../paper/branches.tmpl
 branchentry = '
-  <tr class="tagEntry parity{parity}">
+  <tr class="tagEntry">
     <td>
       <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
         {branch|escape}
@@ -219,7 +219,7 @@ filelogchild = '
   </tr>'
 
 indexentry = '
-  <tr class="parity{parity}">
+  <tr>
     <td><a href="{url|urlescape}{sessionvars%urlparameter}">{name|escape}</a></td>
     <td>{description}</td>
     <td>{contact|obfuscate}</td>

@@ -217,7 +217,7 @@ manifest with descending (coal)
     <td class="permissions">drwxr-xr-x</td>
   </tr>
   
-  <tr class="fileline parity1">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/tip/a1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> a1/
@@ -229,7 +229,7 @@ manifest with descending (coal)
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
   </tr>
-  <tr class="fileline parity0">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/tip/b1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> b1/
@@ -241,7 +241,7 @@ manifest with descending (coal)
   <td class="size"></td>
   <td class="permissions">drwxr-xr-x</td>
   </tr>
-  <tr class="fileline parity1">
+  <tr class="fileline">
   <td class="name">
   <a href="/file/tip/d1?style=coal">
   <img src="/static/coal-folder.png" alt="dir."/> d1/
