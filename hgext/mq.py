@@ -430,7 +430,9 @@ class queue(object):
             else:
                 self.gitmode = 'no'
         except error.ConfigError:
-            self.gitmode = ui.config('mq', 'git', 'auto').lower()
+            # let's have check-config ignore the type mismatch
+            self.gitmode = ui.config(r'mq', 'git', 'auto').lower()
+        # deprecated config: mq.plain
         self.plainmode = ui.configbool('mq', 'plain', False)
         self.checkapplied = True
 
