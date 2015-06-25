@@ -187,6 +187,7 @@ class progbar(object):
         delta = pos - initialpos
         if delta > 0:
             elapsed = now - self.starttimes[topic]
+            # experimental config: progress.estimate
             if elapsed > float(
                 self.ui.config('progress', 'estimate', default=2)):
                 seconds = (elapsed * (target - delta)) // delta + 1
