@@ -740,6 +740,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         else:
             revs.extend(freeargs)
             if len(revs) == 0:
+                # experimental config: histedit.defaultrev
                 histeditdefault = ui.config('histedit', 'defaultrev')
                 if histeditdefault:
                     revs.append(histeditdefault)
