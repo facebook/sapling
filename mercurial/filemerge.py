@@ -75,6 +75,7 @@ def _picktool(repo, ui, path, binary, symlink):
             return True
         return False
 
+    # internal config: ui.forcemerge
     # forcemerge comes from command line arguments, highest priority
     force = ui.config('ui', 'forcemerge')
     if force:
