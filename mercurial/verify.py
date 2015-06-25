@@ -270,6 +270,7 @@ def _verify(repo):
                         err(lr, _("unpacked size is %s, %s expected") %
                             (l, fl.size(i)), f)
             except error.CensoredNodeError:
+                # experimental config: censor.policy
                 if ui.config("censor", "policy", "abort") == "abort":
                     err(lr, _("censored file data"), f)
             except Exception as inst:
