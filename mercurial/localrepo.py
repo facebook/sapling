@@ -1872,6 +1872,7 @@ class localrepository(object):
                     if not streamreqs - self.supportedformats:
                         self.stream_in(remote, streamreqs)
 
+        # internal config: ui.quietbookmarkmove
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
         try:
             self.ui.setconfig('ui', 'quietbookmarkmove', True, 'clone')
