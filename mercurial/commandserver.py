@@ -132,6 +132,7 @@ class server(object):
     def __init__(self, ui, repo, fin, fout):
         self.cwd = os.getcwd()
 
+        # developer config: cmdserver.log
         logpath = ui.config("cmdserver", "log", None)
         if logpath:
             global logfile
