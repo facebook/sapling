@@ -217,6 +217,9 @@ def sign(ui, repo, *revs, **opts):
     If no revision is given, the parent of the working directory is used,
     or tip if no revision is checked out.
 
+    The ``gpg.cmd`` config setting can be used to specify the command
+    to run. A default key can be specified with ``gpg.key``.
+
     See :hg:`help dates` for a list of formats valid for -d/--date.
     """
 
