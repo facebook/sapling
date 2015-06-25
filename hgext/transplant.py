@@ -608,8 +608,10 @@ def transplant(ui, repo, *revs, **opts):
     checkopts(opts, revs)
 
     if not opts.get('log'):
+        # deprecated config: transplant.log
         opts['log'] = ui.config('transplant', 'log')
     if not opts.get('filter'):
+        # deprecated config: transplant.filter
         opts['filter'] = ui.config('transplant', 'filter')
 
     tp = transplanter(ui, repo, opts)
