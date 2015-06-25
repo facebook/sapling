@@ -129,10 +129,11 @@ def _runcatch(req):
                 for sec, name, val in cfgs:
                     req.repo.ui.setconfig(sec, name, val, source='--config')
 
-            # if we are in HGPLAIN mode, then disable custom debugging
+            # developer config: ui.debugger
             debugger = ui.config("ui", "debugger")
             debugmod = pdb
             if not debugger or ui.plain():
+                # if we are in HGPLAIN mode, then disable custom debugging
                 debugger = 'pdb'
             elif '--debugger' in req.args:
                 # This import can be slow for fancy debuggers, so only
