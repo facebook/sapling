@@ -1070,6 +1070,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                     # Allow jumping branches if clean and specific rev given
                     pas = [p1]
 
+        # deprecated config: merge.followcopies
         followcopies = False
         if overwrite:
             pas = [wc]
