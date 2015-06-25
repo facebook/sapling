@@ -469,6 +469,7 @@ def opener(ui, authinfo=None):
     construct an opener suitable for urllib2
     authinfo will be added to the password manager
     '''
+    # experimental config: ui.usehttp2
     if ui.configbool('ui', 'usehttp2', False):
         handlers = [httpconnectionmod.http2handler(ui, passwordmgr(ui))]
     else:

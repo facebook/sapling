@@ -126,6 +126,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
         self.ui = ui
         self.pwmgr = pwmgr
         self._connections = {}
+        # developer config: ui.http2debuglevel
         loglevel = ui.config('ui', 'http2debuglevel', default=None)
         if loglevel and not _configuredlogging:
             _configuredlogging = True
