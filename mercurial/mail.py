@@ -154,7 +154,7 @@ def _smtp(ui):
 
 def _sendmail(ui, sender, recipients, msg):
     '''send mail using sendmail.'''
-    program = ui.config('email', 'method')
+    program = ui.config('email', 'method', 'smtp')
     cmdline = '%s -f %s %s' % (program, util.email(sender),
                                ' '.join(map(util.email, recipients)))
     ui.note(_('sending mail: %s\n') % cmdline)
