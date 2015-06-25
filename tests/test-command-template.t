@@ -2291,6 +2291,50 @@ Test string escaping of quotes:
   $ hg log -Ra -r0 -T '{r"\\\""}\n'
   \\\"
 
+Test compatibility with 2.9.2-3.4 of escaped quoted strings in nested
+_evalifliteral() templates (issue4733):
+
+  $ cd latesttag
+
+  $ hg log -r 2 -T '{if(rev, "\"{rev}")}\n'
+  "2
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \"\\\"{rev}\")}")}\n'
+  "2
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \"{if(rev, \\\"\\\\\\\"{rev}\\\")}\")}")}\n'
+  "2
+
+  $ hg log -r 2 -T '{if(rev, "\\\"")}\n'
+  \"
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \"\\\\\\\"\")}")}\n'
+  \"
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \"{if(rev, \\\"\\\\\\\\\\\\\\\"\\\")}\")}")}\n'
+  \"
+
+  $ hg log -r 2 -T '{if(rev, r"\\\"")}\n'
+  \\\"
+  $ hg log -r 2 -T '{if(rev, "{if(rev, r\"\\\\\\\"\")}")}\n'
+  \\\"
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \"{if(rev, r\\\"\\\\\\\\\\\\\\\"\\\")}\")}")}\n'
+  \\\"
+
+escaped single quotes and errors:
+
+  $ hg log -r 2 -T "{if(rev, '{if(rev, \'foo\')}')}"'\n'
+  foo
+  $ hg log -r 2 -T "{if(rev, '{if(rev, r\'foo\')}')}"'\n'
+  foo
+  $ hg log -r 2 -T '{if(rev, "{if(rev, \")}")}\n'
+  hg: parse error at 11: unterminated string
+  [255]
+  $ hg log -r 2 -T '{if(rev, \"\\"")}\n'
+  hg: parse error at 11: syntax error
+  [255]
+  $ hg log -r 2 -T '{if(rev, r\"\\"")}\n'
+  hg: parse error at 12: syntax error
+  [255]
+
+  $ cd ..
+
 Test leading backslashes:
 
   $ cd latesttag
