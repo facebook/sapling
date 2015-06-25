@@ -258,6 +258,7 @@ class localrepository(object):
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
+                # experimental config: format.generaldelta
                 if self.ui.configbool('format', 'generaldelta', False):
                     self.requirements.add("generaldelta")
                 if self.ui.configbool('experimental', 'treemanifest', False):
@@ -341,12 +342,15 @@ class localrepository(object):
     def _applyopenerreqs(self):
         self.svfs.options = dict((r, 1) for r in self.requirements
                                            if r in self.openerreqs)
+        # experimental config: format.chunkcachesize
         chunkcachesize = self.ui.configint('format', 'chunkcachesize')
         if chunkcachesize is not None:
             self.svfs.options['chunkcachesize'] = chunkcachesize
+        # experimental config: format.maxchainlen
         maxchainlen = self.ui.configint('format', 'maxchainlen')
         if maxchainlen is not None:
             self.svfs.options['maxchainlen'] = maxchainlen
+        # experimental config: format.manifestcachesize
         manifestcachesize = self.ui.configint('format', 'manifestcachesize')
         if manifestcachesize is not None:
             self.svfs.options['manifestcachesize'] = manifestcachesize
@@ -432,6 +436,7 @@ class localrepository(object):
     @storecache('obsstore')
     def obsstore(self):
         # read default format for new obsstore.
+        # developer config: format.obsstore-version
         defaultformat = self.ui.configint('format', 'obsstore-version', None)
         # rely on obsstore class default when possible.
         kwargs = {}
