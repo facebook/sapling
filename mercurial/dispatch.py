@@ -938,6 +938,7 @@ def flameprofile(ui, func, fp):
         raise util.Abort(_(
             'flamegraph not available - install from '
             'https://github.com/evanhempel/python-flamegraph'))
+    # developer config: profiling.freq
     freq = ui.configint('profiling', 'freq', default=1000)
     filter_ = None
     collapse_recursion = True
