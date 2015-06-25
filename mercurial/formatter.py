@@ -197,8 +197,10 @@ def formatter(ui, topic, opts):
         return debugformatter(ui, topic, opts)
     elif template != "":
         return templateformatter(ui, topic, opts)
+    # developer config: ui.formatdebug
     elif ui.configbool('ui', 'formatdebug'):
         return debugformatter(ui, topic, opts)
+    # deprecated config: ui.formatjson
     elif ui.configbool('ui', 'formatjson'):
         return jsonformatter(ui, topic, opts)
     return plainformatter(ui, topic, opts)
