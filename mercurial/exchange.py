@@ -438,6 +438,8 @@ def _pushcheckoutgoing(pushop):
                     raise util.Abort(mso % ctx)
                 elif ctx.troubled():
                     raise util.Abort(mst[ctx.troubles()[0]] % ctx)
+
+        # internal config: bookmarks.pushing
         newbm = pushop.ui.configlist('bookmarks', 'pushing')
         discovery.checkheads(unfi, pushop.remote, outgoing,
                              pushop.remoteheads,
