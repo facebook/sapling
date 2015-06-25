@@ -171,6 +171,7 @@ def reposetup(ui, repo):
         repo.adddatafilter(name, fn)
 
 def extsetup(ui):
+    # deprecated config: win32text.warn
     if ui.configbool('win32text', 'warn', True):
         ui.warn(_("win32text is deprecated: "
                   "http://mercurial.selenic.com/wiki/Win32TextExtension\n"))
