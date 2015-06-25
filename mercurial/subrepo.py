@@ -607,6 +607,7 @@ class hgsubrepo(abstractsubrepo):
             v = r.ui.config(s, k)
             if v:
                 self.ui.setconfig(s, k, v, 'subrepo')
+        # internal config: ui._usedassubrepo
         self.ui.setconfig('ui', '_usedassubrepo', 'True', 'subrepo')
         self._initrepo(r, state[0], create)
 
