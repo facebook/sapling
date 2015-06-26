@@ -56,9 +56,6 @@ def validaterevset(repo, revset):
     if repo.revs('%r and public()', revset):
         raise util.Abort(_('cannot rebase public changesets'))
 
-    if repo.revs('%r and merge()', revset):
-        raise util.Abort(_('cannot rebase merge changesets'))
-
     if repo.revs('%r and obsolete()', revset):
         raise util.Abort(_('cannot rebase obsolete changesets'))
 
@@ -213,30 +210,39 @@ def _getrevs(bundle, onto):
     onto = bundle[onto.hex()]
 
     if revs:
-        tail = revs[0]
+        # We want to rebase the highest bundle root that is an ancestor of
+        # `onto`.
+        oldonto = list(bundle.set('max(roots(bundle() + parents(bundle()))'
+                                  ' & ::%d)', onto.rev()))
+        if not oldonto:
+            raise util.Abort(_('pushed commits do not branch from an ancestor '
+                               'of the desired destination %s' % onto.hex()))
+        oldonto = oldonto[0]
 
-        if onto.ancestor(tail).hex() != tail.p1().hex():
-            raise util.Abort(_('missing changesets between %r and %r') %
-                             (onto.ancestor(tail).hex(),
-                              tail.p1().hex()))
-
-        # Is there a more efficient way to do this check?
+        # Computes a list of all files that are in the changegroup, and diffs it
+        # against all the files that changed between the old onto (ex: our old
+        # bookmark location) and the new onto (ex: the server's actual bookmark
+        # location). Since oldonto->onto is the distance of the rebase, this
+        # should catch any conflicting changes.
         files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
-        filematcher = scmutil.matchfiles(tail.repo(), files)
-        commonmanifest = tail.p1().manifest().matches(filematcher)
+        filematcher = scmutil.matchfiles(bundle, files)
+        commonmanifest = oldonto.manifest().matches(filematcher)
         ontomanifest = onto.manifest().matches(filematcher)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
             raise util.Abort(_('conflicting changes in %r') % conflicts)
 
-    return revs
+    return revs, oldonto
 
-def _graft(repo, onto, rev):
-    '''duplicate changeset "rev" with parent "onto"'''
-    if rev.p2().node() != nullid:
-        raise util.Abort(_('cannot graft commit with a non-null p2'))
+def _graft(repo, rev, mapping):
+    '''duplicate changeset "rev" with parents from "mapping"'''
+    oldp1 = rev.p1().node()
+    oldp2 = rev.p2().node()
+    newp1 = mapping.get(oldp1, oldp1)
+    newp2 = mapping.get(oldp2, oldp2)
+
     return context.memctx(repo,
-                          [onto.node(), nullid],
+                          [newp1, newp2],
                           rev.description(),
                           rev.files(),
                           (lambda repo, memctx, path:
@@ -312,18 +318,28 @@ def bundle2rebase(op, part):
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
-        revs = _getrevs(bundle, onto)
+        revs, oldonto = _getrevs(bundle, onto)
 
         op.repo.hook("prechangegroup", **hookargs)
+
+        mapping = {}
+
+        # Seed the mapping with oldonto->onto
+        mapping[oldonto.node()] = onto.node()
 
         replacements = {}
         added = []
 
         for rev in revs:
-            newrev = _graft(op.repo, onto, rev)
-            onto = op.repo[newrev]
-            replacements[rev.node()] = onto.node()
-            added.append(onto.node())
+            newrev = _graft(op.repo, rev, mapping)
+
+            new = op.repo[newrev]
+            oldnode = rev.node()
+            newnode = new.node()
+            replacements[oldnode] = newnode
+            mapping[oldnode] = newnode
+            added.append(newnode)
+
         _buildobsolete(replacements, bundle, op.repo)
     finally:
         try:

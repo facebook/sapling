@@ -15,7 +15,7 @@
   > strip =
   > EOF
   $ alias commit='hg commit -d "0 0" -A -m'
-  $ alias log='hg log -G -T "{desc} [{phase}:{node|short}]"'
+  $ alias log='hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}"'
 
 Set up server repository
 
@@ -268,6 +268,107 @@ Stack with conflict in head should abort
   |
   o  initial [public:2bb9d20e471c]
   
+Pushing a merge should rebase only the latest side of the merge
+
+  $ hg book master -r tip
+  $ cd ../client
+  $ hg pull -q > /dev/null
+  $ hg strip -q -r tip
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip
+  $ hg book master -r tip
+  $ hg up -q 2
+  $ echo branched > c
+  $ hg commit -Aqm "branch start"
+  $ echo branched2 > c
+  $ hg commit -qm "branch middle"
+  $ hg merge -q master
+  $ hg commit -qm "merge"
+  $ echo ontopofmerge > c
+  $ hg commit -qm "on top of merge"
+  $ hg book master -r tip
+  moving bookmark 'master' forward from 137b1b6ef903
+  $ log
+  @  on top of merge [draft:a4a78a612a9c] master
+  |
+  o    merge [draft:cb3482060521]
+  |\
+  | o  branch middle [draft:25f2e23fb053]
+  | |
+  | o  branch start [draft:b9f6a18cb261]
+  | |
+  o |  b => quux [public:137b1b6ef903]
+  | |
+  o |  b => baz [public:7ba922f02e46]
+  |/
+  o  b => bar [public:fe66d1686ec2]
+  |
+  o  a => bar [public:add0c792bfce]
+  |
+  o  initial [public:2bb9d20e471c]
+  
+  $ hg push --onto master -B master
+  pushing to ssh://user@dummy/server
+  searching for changes
+  preoutgoing hook: HG_SOURCE=push
+  outgoing hook: HG_NODE=b9f6a18cb2619a206f6d99dbcbdfbd75b2975506 HG_SOURCE=push
+  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve * (glob)
+  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve * (glob)
+  remote: preoutgoing hook: HG_SOURCE=rebase:reply
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=b9f6a18cb2619a206f6d99dbcbdfbd75b2975506 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=b9f6a18cb2619a206f6d99dbcbdfbd75b2975506 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=25f2e23fb0530fa409515539d3cb936a2e3723a4 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=b3e5033049f316725da840de07b96879ac325775 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=8eaad82b215848062618b309ae58e600a81f87a5 HG_SOURCE=serve * (glob)
+  prechangegroup hook: HG_SOURCE=push-response * (glob)
+  adding changesets
+  remote: outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=rebase:reply
+  adding manifests
+  adding file changes
+  added 3 changesets with 1 changes to 2 files (+1 heads)
+  pretxnchangegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_PENDING=$TESTTMP/client HG_SOURCE=push-response * (glob)
+  updating bookmark master
+  changegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=b3e5033049f316725da840de07b96879ac325775 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=8eaad82b215848062618b309ae58e600a81f87a5 HG_SOURCE=push-response * (glob)
+  $ cd ../server
+  $ log
+  o  on top of merge [public:8eaad82b2158] master
+  |
+  o    merge [public:b3e5033049f3]
+  |\
+  | o  branch middle [public:25f2e23fb053]
+  | |
+  | o  branch start [public:b9f6a18cb261]
+  | |
+  @ |  a => baz [public:ddd9491cc0b4]
+  | |
+  o |  b => quux [public:137b1b6ef903]
+  | |
+  o |  b => baz [public:7ba922f02e46]
+  |/
+  o  b => bar [public:fe66d1686ec2]
+  |
+  o  a => bar [public:add0c792bfce]
+  |
+  o  initial [public:2bb9d20e471c]
+  
+  $ hg strip -r b9f6a18cb261 -q
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip
+  $ cd ../client
+  $ hg strip -r b9f6a18cb261 -q
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip
+  prechangegroup hook: HG_SOURCE=strip * (glob)
+  pretxnchangegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_PENDING=$TESTTMP/client HG_SOURCE=strip * (glob)
+  changegroup hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip * (glob)
+  incoming hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip * (glob)
+  $ hg book -d master
+  $ hg -R ../server book -d master
 
 With evolution enabled, should set obsolescence markers
 
@@ -276,6 +377,10 @@ With evolution enabled, should set obsolescence markers
   $ echo "evolve =" >> $HGRCPATH
 
   $ cd ../client
+  $ hg strip -qr ddd9491cc0b4
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip
+  $ hg up -q 137b1b6ef903
   $ echo 'foofoo' > b
   $ commit 'b => foofoo'
   $ echo 'foobar' > b
@@ -285,7 +390,7 @@ With evolution enabled, should set obsolescence markers
   |
   o  b => foofoo [draft:6e1d0b2f8180]
   |
-  o  b => quux [draft:137b1b6ef903]
+  o  b => quux [public:137b1b6ef903]
   |
   o  b => baz [public:7ba922f02e46]
   |
