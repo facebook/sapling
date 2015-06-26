@@ -14,7 +14,7 @@ except ImportError:
 
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
-from mercurial import obsolete, pushkey, phases
+from mercurial import obsolete, pushkey, phases, extensions
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.bundlerepo import bundlerepository
 from mercurial.node import nullid, hex, bin
@@ -30,8 +30,13 @@ experimental = 'experimental'
 configonto = 'server-rebase-onto'
 
 def extsetup(ui):
-    entry = wrapcommand(commands.table, 'push', _push)
-    entry[1].append(('', 'onto', '', _('server revision to rebase onto')))
+    # remotenames circumvents the default push implementation entirely, so make
+    # sure we wrap after it.
+    def wrappush(loaded):
+        entry = wrapcommand(commands.table, 'push', _push)
+        if not loaded:
+            entry[1].append(('', 'to', '', _('server revision to rebase onto')))
+    extensions.afterloaded('remotenames', wrappush)
 
     partorder = exchange.b2partsgenorder
     partorder.insert(partorder.index('changeset'),
@@ -109,16 +114,19 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
 
 def _push(orig, ui, repo, *args, **opts):
     oldonto = ui.backupconfig(experimental, configonto)
+    oldremotenames = ui.backupconfig('remotenames', 'allownonfastforward')
     oldphasemove = None
 
     try:
-        ui.setconfig(experimental, configonto, opts.get('onto'), '--onto')
+        ui.setconfig(experimental, configonto, opts.get('to'), '--to')
         if ui.config(experimental, configonto):
             ui.setconfig(experimental, 'bundle2.pushback', True)
             oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
+        ui.setconfig('remotenames', 'allownonfastforward', True)
         result = orig(ui, repo, *args, **opts)
     finally:
         ui.restoreconfig(oldonto)
+        ui.restoreconfig(oldremotenames)
         if oldphasemove:
             exchange._localphasemove = oldphasemove
 

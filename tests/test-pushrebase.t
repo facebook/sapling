@@ -58,7 +58,7 @@ Without server extension
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
 
-  $ hg --config experimental.bundle2-exp=False push --onto default
+  $ hg --config experimental.bundle2-exp=False push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   abort: bundle2 needs to be enabled on client
@@ -66,7 +66,7 @@ Without server extension
 
   $ echo "[experimental]" >> .hg/hgrc
   $ echo "bundle2-exp = True" >> .hg/hgrc
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   abort: no server support for 'b2x:rebase'
@@ -74,7 +74,7 @@ Without server extension
 
   $ echo "[experimental]" >> ../server/.hg/hgrc
   $ echo "bundle2-exp = True" >> ../server/.hg/hgrc
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   abort: no server support for 'b2x:rebase'
@@ -99,7 +99,7 @@ Stack of non-conflicting commits should be accepted
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
@@ -168,7 +168,7 @@ Regular commits should go through without changing hash
   @  b => quux [draft:137b1b6ef903]
   |
 
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
@@ -205,7 +205,7 @@ Stack with conflict in tail should abort
   $ commit 'a => quux'
   $ echo 'foofoo' > b
   $ commit 'b => foofoo'
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
@@ -240,7 +240,7 @@ Stack with conflict in head should abort
   $ commit 'b => foofoo'
   $ echo 'quux' > a
   $ commit 'a => quux'
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
@@ -307,7 +307,7 @@ Pushing a merge should rebase only the latest side of the merge
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --onto master -B master
+  $ hg push --to master -B master
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
@@ -400,7 +400,7 @@ With evolution enabled, should set obsolescence markers
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --onto default
+  $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
