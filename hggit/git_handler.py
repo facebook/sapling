@@ -1540,9 +1540,33 @@ class GitHandler(object):
             return string.decode('ascii', 'replace').encode('utf-8')
 
     def get_transport_and_path(self, uri):
+        """Method that sets up the transport (either ssh or http(s))
+
+        Tests:
+
+        >>> from dulwich.client import HttpGitClient, SSHGitClient
+        >>> from mercurial.ui import ui
+        >>> g = GitHandler('', ui())
+        >>> client, url = g.get_transport_and_path('http://fqdn.com/test.git')
+        >>> print isinstance(client, HttpGitClient)
+        True
+        >>> print url
+        http://fqdn.com/test.git
+        >>> client, url = g.get_transport_and_path('git@fqdn.com:user/repo.git')
+        >>> print isinstance(client, SSHGitClient)
+        True
+        >>> print url
+        user/repo.git
+        >>> print client.host
+        git@fqdn.com
+        """
         # pass hg's ui.ssh config to dulwich
         if not issubclass(client.get_ssh_vendor, _ssh.SSHVendor):
             client.get_ssh_vendor = _ssh.generate_ssh_vendor(self.ui)
+
+        # test for raw git ssh uri here so that we can reuse the logic below
+        if util.isgitsshuri(uri):
+            uri = "git+ssh://" + uri
 
         git_match = RE_GIT_URI.match(uri)
         if git_match:
