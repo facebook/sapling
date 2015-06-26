@@ -109,6 +109,20 @@ def _local(path):
 
 hg.schemes['file'] = _local
 
+def _httpgitwrapper(orig):
+    # we should probably test the connection but for now, we just keep it
+    # simple and check for a url ending in '.git'
+    def httpgitscheme(uri):
+        if uri.endswith('.git'):
+            return gitrepo
+
+        return orig(uri)
+
+    return httpgitscheme
+
+hg.schemes['https'] = _httpgitwrapper(hg.schemes['https'])
+hg.schemes['http'] = _httpgitwrapper(hg.schemes['http'])
+
 hgdefaultdest = hg.defaultdest
 def defaultdest(source):
     for scheme in util.gitschemes:
