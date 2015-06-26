@@ -517,12 +517,12 @@ class obsstore(object):
     # parents: (tuple of nodeid) or None, parents of precursors
     #          None is used when no data has been recorded
 
-    def __init__(self, sopener, defaultformat=_fm1version, readonly=False):
+    def __init__(self, svfs, defaultformat=_fm1version, readonly=False):
         # caches for various obsolescence related cache
         self.caches = {}
         self._all = []
-        self.sopener = sopener
-        data = sopener.tryread('obsstore')
+        self.svfs = svfs
+        data = svfs.tryread('obsstore')
         self._version = defaultformat
         self._readonly = readonly
         if data:
@@ -588,7 +588,7 @@ class obsstore(object):
                 known.add(m)
                 new.append(m)
         if new:
-            f = self.sopener('obsstore', 'ab')
+            f = self.svfs('obsstore', 'ab')
             try:
                 offset = f.tell()
                 transaction.add('obsstore', offset)
