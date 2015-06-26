@@ -293,7 +293,6 @@ class localrepository(object):
                 self.requirements, self.sharedpath, scmutil.vfs)
         self.spath = self.store.path
         self.svfs = self.store.vfs
-        self.sopener = self.svfs
         self.sjoin = self.store.join
         self.vfs.createmode = self.store.createmode
         self._applyopenerreqs()
@@ -983,7 +982,7 @@ class localrepository(object):
             reporef().hook('pretxnclose', throw=True, pending=pending,
                            txnname=desc, **tr.hookargs)
 
-        tr = transaction.transaction(rp, self.sopener, vfsmap,
+        tr = transaction.transaction(rp, self.svfs, vfsmap,
                                      "journal",
                                      "undo",
                                      aftertrans(renames),
