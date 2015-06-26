@@ -254,6 +254,7 @@ class bufferedinputpipe(object):
         self._input = input
         self._buffer = []
         self._eof = False
+        self._lenbuf = 0
 
     @property
     def hasbuffer(self):
@@ -283,6 +284,7 @@ class bufferedinputpipe(object):
             # this should not happen because both read and readline end with a
             # _frombuffer call that collapse it.
             self._buffer = [''.join(self._buffer)]
+            self._lenbuf = len(self._buffer[0])
         lfi = -1
         if self._buffer:
             lfi = self._buffer[-1].find('\n')
@@ -298,11 +300,6 @@ class bufferedinputpipe(object):
             size += self._lenbuf - len(self._buffer[-1])
         return self._frombuffer(size)
 
-    @property
-    def _lenbuf(self):
-        """return the current lengh of buffered data"""
-        return sum(len(d) for d in self._buffer)
-
     def _frombuffer(self, size):
         """return at most 'size' data from the buffer
 
@@ -317,8 +314,10 @@ class bufferedinputpipe(object):
         buf = buf[len(data):]
         if buf:
             self._buffer = [buf]
+            self._lenbuf = len(buf)
         else:
             self._buffer = []
+            self._lenbuf = 0
         return data
 
     def _fillbuffer(self):
@@ -327,6 +326,7 @@ class bufferedinputpipe(object):
         if not data:
             self._eof = True
         else:
+            self._lenbuf += len(data)
             self._buffer.append(data)
 
 def popen2(cmd, env=None, newlines=False):
