@@ -1484,10 +1484,10 @@ def generatestreamclone(repo):
                   (len(entries), total_bytes))
     yield '%d %d\n' % (len(entries), total_bytes)
 
-    sopener = repo.svfs
-    oldaudit = sopener.mustaudit
+    svfs = repo.svfs
+    oldaudit = svfs.mustaudit
     debugflag = repo.ui.debugflag
-    sopener.mustaudit = False
+    svfs.mustaudit = False
 
     try:
         for name, size in entries:
@@ -1496,17 +1496,17 @@ def generatestreamclone(repo):
             # partially encode name over the wire for backwards compat
             yield '%s\0%d\n' % (store.encodedir(name), size)
             if size <= 65536:
-                fp = sopener(name)
+                fp = svfs(name)
                 try:
                     data = fp.read(size)
                 finally:
                     fp.close()
                 yield data
             else:
-                for chunk in util.filechunkiter(sopener(name), limit=size):
+                for chunk in util.filechunkiter(svfs(name), limit=size):
                     yield chunk
     finally:
-        sopener.mustaudit = oldaudit
+        svfs.mustaudit = oldaudit
 
 def consumestreamclone(repo, fp):
     """Apply the contents from a streaming clone file.
