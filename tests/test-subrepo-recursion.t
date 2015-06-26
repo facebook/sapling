@@ -410,9 +410,6 @@ Note there's a slight output glitch on non-hardlink systems: the last
                                                               \r (no-eol) (esc)
   \r (no-eol) (esc)
   linking [ <=>                                           ] 1\r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
-  \r (no-eol) (esc)
-  linking [  <=>                                          ] 1cloning subrepo foo from $TESTTMP/repo/foo
   cloning subrepo foo/bar from $TESTTMP/repo/foo/bar (glob)
 #endif
 
