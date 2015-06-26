@@ -127,7 +127,6 @@ class statichttprepository(localrepo.localrepository):
         self.store = store.store(requirements, self.path, opener)
         self.spath = self.store.path
         self.svfs = self.store.opener
-        self.sopener = self.svfs
         self.sjoin = self.store.join
         self._filecache = {}
         self.requirements = requirements
