@@ -102,6 +102,9 @@ def _local(path):
         os.path.exists(os.path.join(p, 'refs')) and
         not os.path.exists(os.path.join(p, '.hg'))):
         return gitrepo
+    # detect git ssh urls (which mercurial thinks is a file-like path)
+    if util.isgitsshuri(p):
+        return gitrepo
     return _oldlocal(path)
 
 hg.schemes['file'] = _local
