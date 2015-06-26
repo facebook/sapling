@@ -1,3 +1,4 @@
+from util import isgitsshuri
 from mercurial import util
 try:
     from mercurial.error import RepoError
@@ -57,5 +58,8 @@ class gitrepo(peerrepository):
 instance = gitrepo
 
 def islocal(path):
+    if isgitsshuri(path):
+        return True
+
     u = util.url(path)
     return not u.scheme or u.scheme == 'file'
