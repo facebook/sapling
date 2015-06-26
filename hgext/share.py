@@ -72,7 +72,7 @@ def unshare(ui, repo):
         destlock and destlock.release()
         lock and lock.release()
 
-    # update store, spath, sopener and sjoin of repo
+    # update store, spath, svfs and sjoin of repo
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
 def extsetup(ui):
