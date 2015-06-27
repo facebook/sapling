@@ -322,6 +322,17 @@ quoting needed
   4
   $ hg book -d date
 
+keyword arguments
+
+  $ try 'foo=bar|baz'
+  (keyvalue
+    ('symbol', 'foo')
+    (or
+      ('symbol', 'bar')
+      ('symbol', 'baz')))
+  hg: parse error: can't use a key-value pair in this context
+  [255]
+
 Test that symbols only get parsed as functions if there's an opening
 parenthesis.
 

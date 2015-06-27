@@ -133,6 +133,7 @@ elements = {
     "or": (4, None, ("or", 4)),
     "|": (4, None, ("or", 4)),
     "+": (4, None, ("or", 4)),
+    "=": (3, None, ("keyvalue", 3)),
     ",": (2, None, ("list", 2)),
     ")": (0, None, None),
     "symbol": (0, ("symbol",), None),
@@ -190,7 +191,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
         elif c == '#' and program[pos:pos + 2] == '##': # look ahead carefully
             yield ('##', None, pos)
             pos += 1 # skip ahead
-        elif c in "():,-|&+!~^%": # handle simple operators
+        elif c in "():=,-|&+!~^%": # handle simple operators
             yield (c, None, pos)
         elif (c in '"\'' or c == 'r' and
               program[pos:pos + 2] in ("r'", 'r"')): # handle quoted strings
@@ -387,6 +388,9 @@ def notset(repo, subset, x):
 
 def listset(repo, subset, a, b):
     raise error.ParseError(_("can't use a list in this context"))
+
+def keyvaluepair(repo, subset, k, v):
+    raise error.ParseError(_("can't use a key-value pair in this context"))
 
 def func(repo, subset, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
@@ -2180,6 +2184,7 @@ methods = {
     "or": orset,
     "not": notset,
     "list": listset,
+    "keyvalue": keyvaluepair,
     "func": func,
     "ancestor": ancestorspec,
     "parent": parentspec,
