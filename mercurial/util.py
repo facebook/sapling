@@ -327,7 +327,6 @@ class bufferedinputpipe(object):
         if not data:
             self._eof = True
         else:
-            # inefficient add
             self._buffer.append(data)
 
 def popen2(cmd, env=None, newlines=False):
