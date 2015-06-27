@@ -445,6 +445,8 @@ check that we can merge tags that differ in rank
   $ hg tag -f t4 t5 t6
   $ hg tag --remove t5
   $ echo c4 > f4
+  $ hg log -r '.' -T "{latesttag}\n"
+  t4:t6
   $ hg ci -A -m4
   adding f4
   $ hg tag t2

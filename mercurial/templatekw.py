@@ -120,7 +120,7 @@ def getlatesttags(repo, ctx, cache):
     if 'latesttags' not in cache:
         # Cache mapping from rev to a tuple with tag date, tag
         # distance and tag name
-        cache['latesttags'] = {-1: (0, 0, 'null')}
+        cache['latesttags'] = {-1: (0, 0, ['null'])}
     latesttags = cache['latesttags']
 
     rev = ctx.rev()
@@ -133,7 +133,7 @@ def getlatesttags(repo, ctx, cache):
         tags = [t for t in ctx.tags()
                 if (repo.tagtype(t) and repo.tagtype(t) != 'local')]
         if tags:
-            latesttags[rev] = ctx.date()[0], 0, ':'.join(sorted(tags))
+            latesttags[rev] = ctx.date()[0], 0, [t for t in sorted(tags)]
             continue
         try:
             # The tuples are laid out so the right one can be found by
@@ -328,7 +328,7 @@ def showlatesttag(repo, ctx, templ, cache, **args):
     """:latesttag: String. Most recent global tag in the ancestors of this
     changeset.
     """
-    return getlatesttags(repo, ctx, cache)[2]
+    return ':'.join(getlatesttags(repo, ctx, cache)[2])
 
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
     """:latesttagdistance: Integer. Longest path to the latest tag."""
