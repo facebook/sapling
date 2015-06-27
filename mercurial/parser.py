@@ -91,6 +91,38 @@ class parser(object):
             return self.eval(t)
         return t
 
+def buildargsdict(trees, funcname, keys, keyvaluenode, keynode):
+    """Build dict from list containing positional and keyword arguments
+
+    Invalid keywords or too many positional arguments are rejected, but
+    missing arguments are just omitted.
+    """
+    if len(trees) > len(keys):
+        raise error.ParseError(_("%(func)s takes at most %(nargs)d arguments")
+                               % {'func': funcname, 'nargs': len(keys)})
+    args = {}
+    # consume positional arguments
+    for k, x in zip(keys, trees):
+        if x[0] == keyvaluenode:
+            break
+        args[k] = x
+    # remainder should be keyword arguments
+    for x in trees[len(args):]:
+        if x[0] != keyvaluenode or x[1][0] != keynode:
+            raise error.ParseError(_("%(func)s got an invalid argument")
+                                   % {'func': funcname})
+        k = x[1][1]
+        if k not in keys:
+            raise error.ParseError(_("%(func)s got an unexpected keyword "
+                                     "argument '%(key)s'")
+                                   % {'func': funcname, 'key': k})
+        if k in args:
+            raise error.ParseError(_("%(func)s got multiple values for keyword "
+                                     "argument '%(key)s'")
+                                   % {'func': funcname, 'key': k})
+        args[k] = x[2]
+    return args
+
 def _prettyformat(tree, leafnodes, level, lines):
     if not isinstance(tree, tuple) or tree[0] in leafnodes:
         lines.append((level, str(tree)))

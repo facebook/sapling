@@ -282,6 +282,10 @@ def getargs(x, min, max, err):
         raise error.ParseError(err)
     return l
 
+def getkwargs(x, funcname, keys):
+    return parser.buildargsdict(getlist(x), funcname, keys.split(),
+                                keyvaluenode='keyvalue', keynode='symbol')
+
 def isvalidsymbol(tree):
     """Examine whether specified ``tree`` is valid ``symbol`` or not
     """
