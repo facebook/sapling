@@ -334,6 +334,19 @@ def showlatesttagdistance(repo, ctx, templ, cache, **args):
     """:latesttagdistance: Integer. Longest path to the latest tag."""
     return getlatesttags(repo, ctx, cache)[1]
 
+def showchangessincelatesttag(repo, ctx, templ, cache, **args):
+    """:changessincelatesttag: Integer. All ancestors not in the latest tag."""
+    latesttag = getlatesttags(repo, ctx, cache)[2][0]
+    offset = 0
+    revs = [ctx.rev()]
+
+    # The only() revset doesn't currently support wdir()
+    if ctx.rev() is None:
+        offset = 1
+        revs = [p.rev() for p in ctx.parents()]
+
+    return len(repo.revs('only(%ld, %s)', revs, latesttag)) + offset
+
 def showmanifest(**args):
     repo, ctx, templ = args['repo'], args['ctx'], args['templ']
     mnode = ctx.manifestnode()
@@ -427,6 +440,7 @@ keywords = {
     'branch': showbranch,
     'branches': showbranches,
     'bookmarks': showbookmarks,
+    'changessincelatesttag': showchangessincelatesttag,
     'children': showchildren,
     # currentbookmark is deprecated
     'currentbookmark': showcurrentbookmark,
