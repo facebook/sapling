@@ -446,7 +446,8 @@ def expushdiscoverybookmarks(pushop):
         raise util.Abort(msg, hint=hint)
 
     # allow non-ff only if force is True
-    if not force and old != '':
+    allownonff = repo.ui.configbool('remotenames', 'allownonfastforward')
+    if not force and old != '' and not allownonff:
         if old not in repo:
             msg = _('remote bookmark revision is not in local repo')
             hint = _('pull and merge or rebase or use --force')
