@@ -2880,9 +2880,6 @@ stripped before parsing:
   $ hg log -r 2 --style ../escquotetmpl
   " \" \" \\" head1
 
-  $ hg log -r 2 -T esc --config templates.esc='{\"invalid\"}\n'
-  hg: parse error at 1: syntax error
-  [255]
   $ hg log -r 2 -T esc --config templates.esc='"{\"valid\"}\n"'
   valid
   $ hg log -r 2 -T esc --config templates.esc="'"'{\'"'"'valid\'"'"'}\n'"'"
