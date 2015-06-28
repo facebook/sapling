@@ -8,6 +8,33 @@ import sys
 import BaseHTTPServer
 import zlib
 
+# Whitelist of modules that symbols can be directly imported from.
+allowsymbolimports = (
+    '__future__',
+    'mercurial.i18n',
+    'mercurial.node',
+)
+
+# Modules that must be aliased because they are commonly confused with
+# common variables and can create aliasing and readability issues.
+requirealias = {
+    'ui': 'uimod',
+}
+
+def usingabsolute(root):
+    """Whether absolute imports are being used."""
+    if sys.version_info[0] >= 3:
+        return True
+
+    for node in ast.walk(root):
+        if isinstance(node, ast.ImportFrom):
+            if node.module == '__future__':
+                for n in node.names:
+                    if n.name == 'absolute_import':
+                        return True
+
+    return False
+
 def dotted_name_of_path(path, trimpure=False):
     """Given a relative path to a source file, return its dotted module name.
 
@@ -273,10 +300,157 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
                 yield found[1]
 
 def verify_import_convention(module, source):
-    """Verify imports match our established coding convention."""
-    root = ast.parse(source)
+    """Verify imports match our established coding convention.
 
-    return verify_stdlib_on_own_line(root)
+    We have 2 conventions: legacy and modern. The modern convention is in
+    effect when using absolute imports.
+
+    The legacy convention only looks for mixed imports. The modern convention
+    is much more thorough.
+    """
+    root = ast.parse(source)
+    absolute = usingabsolute(root)
+
+    if absolute:
+        return verify_modern_convention(module, root)
+    else:
+        return verify_stdlib_on_own_line(root)
+
+def verify_modern_convention(module, root):
+    """Verify a file conforms to the modern import convention rules.
+
+    The rules of the modern convention are:
+
+    * Ordering is stdlib followed by local imports. Each group is lexically
+      sorted.
+    * Importing multiple modules via "import X, Y" is not allowed: use
+      separate import statements.
+    * Importing multiple modules via "from X import ..." is allowed if using
+      parenthesis and one entry per line.
+    * Only 1 relative import statement per import level ("from .", "from ..")
+      is allowed.
+    * Relative imports from higher levels must occur before lower levels. e.g.
+      "from .." must be before "from .".
+    * Imports from peer packages should use relative import (e.g. do not
+      "import mercurial.foo" from a "mercurial.*" module).
+    * Symbols can only be imported from specific modules (see
+      `allowsymbolimports`). For other modules, first import the module then
+      assign the symbol to a module-level variable. In addition, these imports
+      must be performed before other relative imports. This rule only
+      applies to import statements outside of any blocks.
+    * Relative imports from the standard library are not allowed.
+    * Certain modules must be aliased to alternate names to avoid aliasing
+      and readability problems. See `requirealias`.
+    """
+    topmodule = module.split('.')[0]
+
+    # Whether a local/non-stdlib import has been performed.
+    seenlocal = False
+    # Whether a relative, non-symbol import has been seen.
+    seennonsymbolrelative = False
+    # The last name to be imported (for sorting).
+    lastname = None
+    # Relative import levels encountered so far.
+    seenlevels = set()
+
+    for node in ast.walk(root):
+        if isinstance(node, ast.Import):
+            # Disallow "import foo, bar" and require separate imports
+            # for each module.
+            if len(node.names) > 1:
+                yield 'multiple imported names: %s' % ', '.join(
+                    n.name for n in node.names)
+
+            name = node.names[0].name
+            asname = node.names[0].asname
+
+            # Ignore sorting rules on imports inside blocks.
+            if node.col_offset == 0:
+                if lastname and name < lastname:
+                    yield 'imports not lexically sorted: %s < %s' % (
+                           name, lastname)
+
+                lastname = name
+
+            # stdlib imports should be before local imports.
+            stdlib = name in stdlib_modules
+            if stdlib and seenlocal and node.col_offset == 0:
+                yield 'stdlib import follows local import: %s' % name
+
+            if not stdlib:
+                seenlocal = True
+
+            # Import of sibling modules should use relative imports.
+            topname = name.split('.')[0]
+            if topname == topmodule:
+                yield 'import should be relative: %s' % name
+
+            if name in requirealias and asname != requirealias[name]:
+                yield '%s module must be "as" aliased to %s' % (
+                       name, requirealias[name])
+
+        elif isinstance(node, ast.ImportFrom):
+            # Resolve the full imported module name.
+            if node.level > 0:
+                fullname = '.'.join(module.split('.')[:-node.level])
+                if node.module:
+                    fullname += '.%s' % node.module
+            else:
+                assert node.module
+                fullname = node.module
+
+                topname = fullname.split('.')[0]
+                if topname == topmodule:
+                    yield 'import should be relative: %s' % fullname
+
+            # __future__ is special since it needs to come first and use
+            # symbol import.
+            if fullname != '__future__':
+                if not fullname or fullname in stdlib_modules:
+                    yield 'relative import of stdlib module'
+                else:
+                    seenlocal = True
+
+            # Direct symbol import is only allowed from certain modules and
+            # must occur before non-symbol imports.
+            if node.module and node.col_offset == 0:
+                if fullname not in allowsymbolimports:
+                    yield 'direct symbol import from %s' % fullname
+
+                if seennonsymbolrelative:
+                    yield ('symbol import follows non-symbol import: %s' %
+                           fullname)
+
+            if not node.module:
+                assert node.level
+                seennonsymbolrelative = True
+
+                # Only allow 1 group per level.
+                if node.level in seenlevels and node.col_offset == 0:
+                    yield 'multiple "from %s import" statements' % (
+                           '.' * node.level)
+
+                # Higher-level groups come before lower-level groups.
+                if any(node.level > l for l in seenlevels):
+                    yield 'higher-level import should come first: %s' % (
+                           fullname)
+
+                seenlevels.add(node.level)
+
+            # Entries in "from .X import ( ... )" lists must be lexically
+            # sorted.
+            lastentryname = None
+
+            for n in node.names:
+                if lastentryname and n.name < lastentryname:
+                    yield 'imports from %s not lexically sorted: %s < %s' % (
+                           fullname, n.name, lastentryname)
+
+                lastentryname = n.name
+
+                if n.name in requirealias and n.asname != requirealias[n.name]:
+                    yield '%s from %s must be "as" aliased to %s' % (
+                          n.name, fullname, requirealias[n.name])
 
 def verify_stdlib_on_own_line(root):
     """Given some python source, verify that stdlib imports are done
