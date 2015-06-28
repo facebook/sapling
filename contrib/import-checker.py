@@ -272,7 +272,13 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
                     continue
                 yield found[1]
 
-def verify_stdlib_on_own_line(source):
+def verify_import_convention(module, source):
+    """Verify imports match our established coding convention."""
+    root = ast.parse(source)
+
+    return verify_stdlib_on_own_line(root)
+
+def verify_stdlib_on_own_line(root):
     """Given some python source, verify that stdlib imports are done
     in separate statements from relative local module imports.
 
@@ -280,14 +286,14 @@ def verify_stdlib_on_own_line(source):
     annoying lib2to3 bug in relative import rewrites:
     http://bugs.python.org/issue19510.
 
-    >>> list(verify_stdlib_on_own_line('import sys, foo'))
+    >>> list(verify_stdlib_on_own_line(ast.parse('import sys, foo')))
     ['mixed imports\\n   stdlib:    sys\\n   relative:  foo']
-    >>> list(verify_stdlib_on_own_line('import sys, os'))
+    >>> list(verify_stdlib_on_own_line(ast.parse('import sys, os')))
     []
-    >>> list(verify_stdlib_on_own_line('import foo, bar'))
+    >>> list(verify_stdlib_on_own_line(ast.parse('import foo, bar')))
     []
     """
-    for node in ast.walk(ast.parse(source)):
+    for node in ast.walk(root):
         if isinstance(node, ast.Import):
             from_stdlib = {False: [], True: []}
             for n in node.names:
@@ -367,7 +373,7 @@ def main(argv):
         src = f.read()
         used_imports[modname] = sorted(
             imported_modules(src, modname, localmods, ignore_nested=True))
-        for error in verify_stdlib_on_own_line(src):
+        for error in verify_import_convention(modname, src):
             any_errors = True
             print source_path, error
         f.close()
