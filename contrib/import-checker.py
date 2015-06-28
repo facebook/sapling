@@ -78,13 +78,26 @@ def fromlocalfunc(modulename, localmods):
     >>> # unknown = maybe standard library
     >>> fromlocal('os')
     False
+    >>> fromlocal(None, 1)
+    ('foo', 'foo.__init__', True)
+    >>> fromlocal2 = fromlocalfunc('foo.xxx.yyy', localmods)
+    >>> fromlocal2(None, 2)
+    ('foo', 'foo.__init__', True)
     """
     prefix = '.'.join(modulename.split('.')[:-1])
     if prefix:
         prefix += '.'
-    def fromlocal(name):
-        # check relative name at first
-        for n in prefix + name, name:
+    def fromlocal(name, level=0):
+        # name is None when relative imports are used.
+        if name is None:
+            # If relative imports are used, level must not be absolute.
+            assert level > 0
+            candidates = ['.'.join(modulename.split('.')[:-level])]
+        else:
+            # Check relative name first.
+            candidates = [prefix + name, name]
+
+        for n in candidates:
             if n in localmods:
                 return (n, n, False)
             dottedpath = n + '.__init__'
@@ -239,7 +252,7 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
                     continue
                 yield found[1]
         elif isinstance(node, ast.ImportFrom):
-            found = fromlocal(node.module)
+            found = fromlocal(node.module, node.level)
             if not found:
                 # this should import standard library
                 continue
