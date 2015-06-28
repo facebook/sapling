@@ -362,7 +362,13 @@ def rangeset(repo, subset, x, y):
         return baseset()
     m, n = m.first(), n.last()
 
-    if m < n:
+    if m == n:
+        r = baseset([m])
+    elif n == node.wdirrev:
+        r = spanset(repo, m, len(repo)) + baseset([n])
+    elif m == node.wdirrev:
+        r = baseset([m]) + spanset(repo, len(repo) - 1, n - 1)
+    elif m < n:
         r = spanset(repo, m, n + 1)
     else:
         r = spanset(repo, m, n - 1)

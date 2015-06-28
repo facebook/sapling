@@ -726,6 +726,16 @@ Test working-directory revision
   9
   2147483647
   $ hg debugrevspec '0:tip and wdir()'
+  $ log '0:wdir()' | tail -3
+  8
+  9
+  2147483647
+  $ log 'wdir():0' | head -3
+  2147483647
+  9
+  8
+  $ log 'wdir():wdir()'
+  2147483647
   $ log '(all() + wdir()) & min(. + wdir())'
   9
   $ log '(all() + wdir()) & max(. + wdir())'
