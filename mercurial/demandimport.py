@@ -24,8 +24,9 @@ These imports will not be delayed:
   b = __import__(a)
 '''
 
-import __builtin__, os, sys
+import os, sys
 from contextlib import contextmanager
+import __builtin__ as builtins
 
 _origimport = __import__
 
@@ -36,7 +37,7 @@ try:
     level = -1
     if sys.version_info[0] >= 3:
         level = 0
-    _origimport(__builtin__.__name__, {}, {}, None, level)
+    _origimport(builtins.__name__, {}, {}, None, level)
 except TypeError: # no level argument
     def _import(name, globals, locals, fromlist, level):
         "call _origimport with no level argument"
@@ -171,16 +172,16 @@ ignore = [
     ]
 
 def isenabled():
-    return __builtin__.__import__ == _demandimport
+    return builtins.__import__ == _demandimport
 
 def enable():
     "enable global demand-loading of modules"
     if os.environ.get('HGDEMANDIMPORT') != 'disable':
-        __builtin__.__import__ = _demandimport
+        builtins.__import__ = _demandimport
 
 def disable():
     "disable global demand-loading of modules"
-    __builtin__.__import__ = _origimport
+    builtins.__import__ = _origimport
 
 @contextmanager
 def deactivated():
