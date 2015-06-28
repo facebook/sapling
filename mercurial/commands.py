@@ -4069,6 +4069,10 @@ def identify(ui, repo, source=None, rev=None,
         if ctx.rev() is None:
             ctx = repo[None]
             parents = ctx.parents()
+            taglist = []
+            for p in parents:
+                taglist.extend(p.tags())
+
             changed = ""
             if default or id or num:
                 if (any(repo.status())
@@ -4085,6 +4089,7 @@ def identify(ui, repo, source=None, rev=None,
                 output = [hexfunc(ctx.node())]
             if num:
                 output.append(str(ctx.rev()))
+            taglist = ctx.tags()
 
         if default and not ui.quiet:
             b = ctx.branch()
@@ -4092,7 +4097,7 @@ def identify(ui, repo, source=None, rev=None,
                 output.append("(%s)" % b)
 
             # multiple tags for a single parent separated by '/'
-            t = '/'.join(ctx.tags())
+            t = '/'.join(taglist)
             if t:
                 output.append(t)
 
@@ -4105,7 +4110,7 @@ def identify(ui, repo, source=None, rev=None,
                 output.append(ctx.branch())
 
             if tags:
-                output.extend(ctx.tags())
+                output.extend(taglist)
 
             if bookmarks:
                 output.extend(ctx.bookmarks())
