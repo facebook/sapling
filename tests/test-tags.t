@@ -47,6 +47,8 @@ Setup:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg identify
   acb14030fe0a tip
+  $ hg identify -r 'wdir()'
+  acb14030fe0a tip
   $ cacheexists
   tag cache exists
 No fnodes cache because .hgtags file doesn't exist
@@ -173,6 +175,8 @@ Create a branch:
   $ hg co first
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg id
+  acb14030fe0a+ first
+  $ hg id -r 'wdir()'
   acb14030fe0a+ first
   $ hg -v id
   acb14030fe0a+ first

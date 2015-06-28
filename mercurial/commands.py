@@ -4064,7 +4064,9 @@ def identify(ui, repo, source=None, rev=None,
             if bm:
                 output.append(bm)
     else:
-        if not rev:
+        ctx = scmutil.revsingle(repo, rev, None)
+
+        if ctx.rev() is None:
             ctx = repo[None]
             parents = ctx.parents()
             changed = ""
@@ -4079,7 +4081,6 @@ def identify(ui, repo, source=None, rev=None,
                 output.append("%s%s" %
                   ('+'.join([str(p.rev()) for p in parents]), changed))
         else:
-            ctx = scmutil.revsingle(repo, rev)
             if default or id:
                 output = [hexfunc(ctx.node())]
             if num:
