@@ -324,6 +324,25 @@ quoting needed
 
 keyword arguments
 
+  $ log 'extra(branch, value=a)'
+  0
+
+  $ log 'extra(branch, a, b)'
+  hg: parse error: extra takes at most 2 arguments
+  [255]
+  $ log 'extra(a, label=b)'
+  hg: parse error: extra got multiple values for keyword argument 'label'
+  [255]
+  $ log 'extra(label=branch, default)'
+  hg: parse error: extra got an invalid argument
+  [255]
+  $ log 'extra(branch, foo+bar=baz)'
+  hg: parse error: extra got an invalid argument
+  [255]
+  $ log 'extra(unknown=branch)'
+  hg: parse error: extra got an unexpected keyword argument 'unknown'
+  [255]
+
   $ try 'foo=bar|baz'
   (keyvalue
     ('symbol', 'foo')

@@ -840,16 +840,19 @@ def extra(repo, subset, x):
     a regular expression. To match a value that actually starts with `re:`,
     use the prefix `literal:`.
     """
-
+    args = getkwargs(x, 'extra', 'label value')
+    if 'label' not in args:
+        # i18n: "extra" is a keyword
+        raise error.ParseError(_('extra takes at least 1 argument'))
     # i18n: "extra" is a keyword
-    l = getargs(x, 1, 2, _('extra takes at least 1 and at most 2 arguments'))
-    # i18n: "extra" is a keyword
-    label = getstring(l[0], _('first argument to extra must be a string'))
+    label = getstring(args['label'], _('first argument to extra must be '
+                                       'a string'))
     value = None
 
-    if len(l) > 1:
+    if 'value' in args:
         # i18n: "extra" is a keyword
-        value = getstring(l[1], _('second argument to extra must be a string'))
+        value = getstring(args['value'], _('second argument to extra must be '
+                                           'a string'))
         kind, value, matcher = _stringmatcher(value)
 
     def _matchvalue(r):
