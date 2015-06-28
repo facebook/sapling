@@ -1247,10 +1247,7 @@ class committablectx(basectx):
         return self._extra
 
     def tags(self):
-        t = []
-        for p in self.parents():
-            t.extend(p.tags())
-        return t
+        return []
 
     def bookmarks(self):
         b = []

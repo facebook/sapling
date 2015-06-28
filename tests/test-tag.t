@@ -416,6 +416,12 @@ check that we can merge tags that differ in rank
   $ hg ci -A -m0
   adding f0
   $ hg tag tbase
+  $ hg up -qr '.^'
+  $ hg log -r 'wdir()' -T "{latesttagdistance}\n"
+  1
+  $ hg up -q
+  $ hg log -r 'wdir()' -T "{latesttagdistance}\n"
+  2
   $ cd ..
   $ hg clone repo-automatic-tag-merge repo-automatic-tag-merge-clone
   updating to branch default
