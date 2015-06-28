@@ -26,7 +26,12 @@ These imports will not be delayed:
 
 import os, sys
 from contextlib import contextmanager
-import __builtin__ as builtins
+
+# __builtin__ in Python 2, builtins in Python 3.
+try:
+    import __builtin__ as builtins
+except ImportError:
+    import builtins
 
 _origimport = __import__
 
