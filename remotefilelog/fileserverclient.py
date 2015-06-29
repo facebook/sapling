@@ -177,6 +177,8 @@ class fileserverclient(object):
                     if not remote.capable("remotefilelog"):
                         raise util.Abort("configured remotefilelog server"
                                          " does not support remotefilelog")
+                    if not isinstance(remote, sshpeer.sshpeer):
+                        raise util.Abort('remotefilelog requires ssh servers')
                     remote._callstream("getfiles")
                 finally:
                     self.ui.verbose = verbose
