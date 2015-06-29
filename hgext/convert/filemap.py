@@ -156,6 +156,9 @@ class filemap_source(converter_source):
         self.origparents = {}
         self.children = {}
         self.seenchildren = {}
+        # experimental config: convert.ignoreancestorcheck
+        self.ignoreancestorcheck = self.ui.configbool('convert',
+                                                      'ignoreancestorcheck')
 
     def before(self):
         self.base.before()
@@ -306,7 +309,7 @@ class filemap_source(converter_source):
 
     def getchanges(self, rev, full):
         parents = self.commits[rev].parents
-        if len(parents) > 1:
+        if len(parents) > 1 and not self.ignoreancestorcheck:
             self.rebuild()
 
         # To decide whether we're interested in rev we:
@@ -332,9 +335,11 @@ class filemap_source(converter_source):
             mp1 = self.parentmap[p1]
             if mp1 == SKIPREV or mp1 in knownparents:
                 continue
-            isancestor = any(p2 for p2 in parents
-                                  if p1 != p2 and mp1 != self.parentmap[p2]
-                                  and mp1 in self.wantedancestors[p2])
+
+            isancestor = (not self.ignoreancestorcheck and
+                          any(p2 for p2 in parents
+                              if p1 != p2 and mp1 != self.parentmap[p2]
+                                 and mp1 in self.wantedancestors[p2]))
             if not isancestor and not hasbranchparent and len(parents) > 1:
                 # This could be expensive, avoid unnecessary calls.
                 if self._cachedcommit(p1).branch == branch:
