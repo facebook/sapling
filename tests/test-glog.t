@@ -2012,6 +2012,16 @@ Test --follow and forward --rev
   |
   o  0 add a
   
+  $ hg archive -r 7 archive
+  $ grep changessincelatesttag archive/.hg_archival.txt
+  changessincelatesttag: 1
+  $ rm -r archive
+
+changessincelatesttag with no prior tag
+  $ hg archive -r 4 archive
+  $ grep changessincelatesttag archive/.hg_archival.txt
+  changessincelatesttag: 5
+
   $ hg export 'all()'
   # HG changeset patch
   # User test
