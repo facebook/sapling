@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util, hook, wireproto, changegroup
+import util, hook, wireproto
 import os, sys
 
 class sshserver(wireproto.abstractserverproto):
@@ -119,33 +119,6 @@ class sshserver(wireproto.abstractserverproto):
                     self.sendresponse(r)
             else: self.sendresponse("")
         return cmd != ''
-
-    def do_lock(self):
-        '''DEPRECATED - allowing remote client to lock repo is not safe'''
-
-        self.lock = self.repo.lock()
-        return ""
-
-    def do_unlock(self):
-        '''DEPRECATED'''
-
-        if self.lock:
-            self.lock.release()
-        self.lock = None
-        return ""
-
-    def do_addchangegroup(self):
-        '''DEPRECATED'''
-
-        if not self.lock:
-            self.sendresponse("not locked")
-            return
-
-        self.sendresponse("")
-        cg = changegroup.cg1unpacker(self.fin, "UN")
-        r = changegroup.addchangegroup(self.repo, cg, 'serve', self._client())
-        self.lock.release()
-        return str(r)
 
     def _client(self):
         client = os.environ.get('SSH_CLIENT', '').split(' ', 1)[0]
