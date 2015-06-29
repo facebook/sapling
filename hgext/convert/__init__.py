@@ -355,6 +355,14 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
 
     :convert.hg.usebranchnames: preserve branch names. The default is
         True.
+
+    All Destinations
+    ################
+
+    All destination types accept the following options:
+
+    :convert.skiptags: does not convert tags from the source repo to the target
+        repo. The default is False.
     """
     return convcmd.convert(ui, src, dest, revmapfile, **opts)
 

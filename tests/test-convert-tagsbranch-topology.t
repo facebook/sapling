@@ -45,6 +45,19 @@ Build a GIT repo with at least 1 tag
   $ action tag -m "tag1" tag1
   $ cd ..
 
+Convert without tags
+
+  $ hg convert git-repo hg-repo --config convert.skiptags=True
+  initializing destination hg-repo repository
+  scanning source...
+  sorting...
+  converting...
+  0 rev1
+  updating bookmarks
+  $ hg -R hg-repo tags
+  tip                                0:d98c8ad3a4cf
+  $ rm -rf hg-repo
+
 Do a first conversion
 
   $ convertrepo

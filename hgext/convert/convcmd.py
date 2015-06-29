@@ -460,22 +460,23 @@ class converter(object):
                 self.copy(c)
             self.ui.progress(_('converting'), None)
 
-            tags = self.source.gettags()
-            ctags = {}
-            for k in tags:
-                v = tags[k]
-                if self.map.get(v, SKIPREV) != SKIPREV:
-                    ctags[k] = self.map[v]
+            if not self.ui.configbool('convert', 'skiptags'):
+                tags = self.source.gettags()
+                ctags = {}
+                for k in tags:
+                    v = tags[k]
+                    if self.map.get(v, SKIPREV) != SKIPREV:
+                        ctags[k] = self.map[v]
 
-            if c and ctags:
-                nrev, tagsparent = self.dest.puttags(ctags)
-                if nrev and tagsparent:
-                    # write another hash correspondence to override the previous
-                    # one so we don't end up with extra tag heads
-                    tagsparents = [e for e in self.map.iteritems()
-                                   if e[1] == tagsparent]
-                    if tagsparents:
-                        self.map[tagsparents[0][0]] = nrev
+                if c and ctags:
+                    nrev, tagsparent = self.dest.puttags(ctags)
+                    if nrev and tagsparent:
+                        # write another hash correspondence to override the
+                        # previous one so we don't end up with extra tag heads
+                        tagsparents = [e for e in self.map.iteritems()
+                                       if e[1] == tagsparent]
+                        if tagsparents:
+                            self.map[tagsparents[0][0]] = nrev
 
             bookmarks = self.source.getbookmarks()
             cbookmarks = {}

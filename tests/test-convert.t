@@ -295,6 +295,15 @@
       convert.hg.usebranchnames
                     preserve branch names. The default is True.
   
+      All Destinations
+      ################
+  
+      All destination types accept the following options:
+  
+      convert.skiptags
+                    does not convert tags from the source repo to the target
+                    repo. The default is False.
+  
   options:
   
    -s --source-type TYPE source repository type
