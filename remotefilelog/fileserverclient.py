@@ -173,6 +173,10 @@ class fileserverclient(object):
                         raise util.Abort("no remotefilelog server configured - "
                             "is your .hg/hgrc trusted?")
                     remote = hg.peer(self.ui, {}, fallbackpath)
+                    # TODO: deduplicate this with the constant in shallowrepo
+                    if not remote.capable("remotefilelog"):
+                        raise util.Abort("configured remotefilelog server"
+                                         " does not support remotefilelog")
                     remote._callstream("getfiles")
                 finally:
                     self.ui.verbose = verbose

@@ -8,8 +8,6 @@
   > EOF
   $ echo x > x
   $ hg commit -qAm x
-Bug: remotefilelog tries to fetch from a server which can't handle
-remotefilelog requests because it's http-based:
   $ hg serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log
 
   $ cd ..
@@ -17,7 +15,8 @@ remotefilelog requests because it's http-based:
 
   $ hgcloneshallow http://localhost:$HGPORT/ shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.00s
-  abort: HTTP Error 500: Internal Server Error
+  abort: configured remotefilelog server does not support remotefilelog
+
 
 The 'remotefilelog' capability should *not* be exported over http(s),
 as the getfile method it offers doesn't work with http.
