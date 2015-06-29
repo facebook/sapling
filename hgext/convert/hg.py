@@ -284,7 +284,7 @@ class mercurial_sink(converter_sink):
                 tr.release()
 
             text = "(octopus merge fixup)\n"
-            p2 = hex(self.repo.changelog.tip())
+            p2 = node
 
         if self.filemapmode and nparents == 1:
             man = self.repo.manifest
@@ -344,8 +344,8 @@ class mercurial_sink(converter_sink):
         ctx = context.memctx(self.repo, (tagparent, None), "update tags",
                              [".hgtags"], getfilectx, "convert-repo", date,
                              extra)
-        self.repo.commitctx(ctx)
-        return hex(self.repo.changelog.tip()), hex(tagparent)
+        node = self.repo.commitctx(ctx)
+        return hex(node), hex(tagparent)
 
     def setfilemapmode(self, active):
         self.filemapmode = active

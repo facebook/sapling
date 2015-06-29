@@ -83,7 +83,43 @@ Different hash because no x bit
      premerge1                 3:973ef48a98a4
      premerge2                 8:3537b15eaaca
 #endif
-  $ cd ..
+
+Test that redoing a convert results in an identical graph
+  $ cd ../
+  $ rm new/.hg/shamap
+  $ hg convert --datesort orig new 2>&1 | grep -v 'subversion python bindings could not be loaded'
+  scanning source...
+  sorting...
+  converting...
+  8 add foo bar
+  7 change foo
+  6 make bar and baz copies of foo
+  5 merge local copy
+  4 merge remote copy
+  3 Added tag that for changeset 88586c4e9f02
+  2 Removed tag that
+  1 Added tag this for changeset c56a7f387039
+  0 mark baz executable
+  updating bookmarks
+  $ hg -R new log -G -T '{rev} {desc}'
+  o  8 mark baz executable
+  |
+  o  7 Added tag this for changeset c56a7f387039
+  |
+  o  6 Removed tag that
+  |
+  o  5 Added tag that for changeset 88586c4e9f02
+  |
+  o    4 merge remote copy
+  |\
+  +---o  3 merge local copy
+  | |/
+  | o  2 make bar and baz copies of foo
+  | |
+  o |  1 change foo
+  |/
+  o  0 add foo bar
+  
 
 check shamap LF and CRLF handling
 
