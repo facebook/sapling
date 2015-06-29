@@ -175,6 +175,8 @@ def getfiles(repo, proto):
     """
     if shallowrepo.requirement in repo.requirements:
         raise util.Abort(_('cannot fetch remote files from shallow repo'))
+    if not isinstance(proto, sshserver.sshserver):
+        raise util.Abort(_('cannot fetch remote files over non-ssh protocol'))
 
     def streamer():
         fin = proto.fin
