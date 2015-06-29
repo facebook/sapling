@@ -75,6 +75,13 @@ should fail
 
   $ hg ci -m 0 --traceback
 
+  $ hg log -r "heads(. or wdir() & file('**'))"
+  changeset:   0:* (glob)
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     0
+  
 should fail
 
   $ hg add a
@@ -99,6 +106,15 @@ should fail
   M a
   ? a.orig
 
+wdir doesn't cause a crash, and can be dynamically selected if dirty
+
+  $ hg log -r "heads(. or wdir() & file('**'))"
+  changeset:   2:*+ (glob)
+  parent:      2:* (glob)
+  parent:      1:* (glob)
+  user:        test
+  date:        * (glob)
+  
 should fail
 
   $ hg add a

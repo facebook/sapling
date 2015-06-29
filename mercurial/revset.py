@@ -1468,7 +1468,10 @@ def parents(repo, subset, x):
         ps = set()
         cl = repo.changelog
         for r in getset(repo, fullreposet(repo), x):
-            ps.update(cl.parentrevs(r))
+            if r is None:
+                ps.update(p.rev() for p in repo[r].parents())
+            else:
+                ps.update(cl.parentrevs(r))
     ps -= set([node.nullrev])
     return subset & ps
 
