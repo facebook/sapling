@@ -280,17 +280,14 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    f2.txt: remote created -> g
   getting f2.txt
   updating: f2.txt 2/2 files (100.00%)
-  3 changesets found
+  2 changesets found
   list of changesets:
-  4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
   e31216eec445e44352c5f01588856059466a24c9
   2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
-  bundling: 1/3 changesets (33.33%)
-  bundling: 2/3 changesets (66.67%)
-  bundling: 3/3 changesets (100.00%)
-  bundling: 1/3 manifests (33.33%)
-  bundling: 2/3 manifests (66.67%)
-  bundling: 3/3 manifests (100.00%)
+  bundling: 1/2 changesets (50.00%)
+  bundling: 2/2 changesets (100.00%)
+  bundling: 1/2 manifests (50.00%)
+  bundling: 2/2 manifests (100.00%)
   bundling: f1.txt 1/1 files (100.00%)
   saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
   3 changesets found
