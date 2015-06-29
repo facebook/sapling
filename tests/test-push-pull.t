@@ -15,9 +15,19 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ hgcloneshallow ssh://user@dummy/master shallow2 -q
 
-# pull to shallow from full
+We should see the remotefilelog capability here, which advertises that
+the server supports our custom getfiles method.
 
   $ cd master
+  $ echo 'hello' | hg serve --stdio
+  * (glob)
+  capabilities: * remotefilelog (glob)
+  $ echo 'capabilities' | hg serve --stdio ; echo
+  * (glob)
+  * remotefilelog (glob)
+
+# pull to shallow from full
+
   $ echo y > y
   $ hg commit -qAm y
 
