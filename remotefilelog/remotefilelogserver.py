@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
-from mercurial import exchange
+from mercurial import exchange, sshserver
 from mercurial.extensions import wrapfunction
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
@@ -153,8 +153,9 @@ def onetimesetup(ui):
     # expose remotefilelog capabilities
     def _capabilities(orig, repo, proto):
         caps = orig(repo, proto)
-        if (shallowrepo.requirement in repo.requirements or
-            ui.configbool('remotefilelog', 'server')):
+        if ((shallowrepo.requirement in repo.requirements or
+            ui.configbool('remotefilelog', 'server'))
+            and isinstance(proto, sshserver.sshserver)):
             caps.append(shallowrepo.requirement)
         return caps
     wrapfunction(wireproto, '_capabilities', _capabilities)
