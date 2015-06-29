@@ -151,13 +151,13 @@ def onetimesetup(ui):
     wireproto.commands["getbundle_shallow"] = (getbundleshallow, '*')
 
     # expose remotefilelog capabilities
-    def capabilities(orig, repo, proto):
+    def _capabilities(orig, repo, proto):
         caps = orig(repo, proto)
         if (shallowrepo.requirement in repo.requirements or
             ui.configbool('remotefilelog', 'server')):
-            caps += " " + shallowrepo.requirement
+            caps.append(shallowrepo.requirement)
         return caps
-    wrapfunction(wireproto, 'capabilities', capabilities)
+    wrapfunction(wireproto, '_capabilities', _capabilities)
 
     def _adjustlinkrev(orig, self, path, filelog, fnode, *args, **kwargs):
         # When generating file blobs, taking the real path is too slow on large
