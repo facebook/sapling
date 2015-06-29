@@ -624,7 +624,8 @@ def _capabilities(repo, proto):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urllib.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
-    caps.append('httpheader=1024')
+    caps.append(
+        'httpheader=%d' % repo.ui.configint('server', 'maxhttpheaderlen', 1024))
     return caps
 
 # If you are writing an extension and consider wrapping this function. Wrap

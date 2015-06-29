@@ -1291,6 +1291,10 @@ Controls generic server settings.
     checking that all new file revisions specified in manifests are
     present. Default is False.
 
+``maxhttpheaderlen``
+    Instruct HTTP clients not to send request headers longer than this
+    many bytes. Default is 1024.
+
 ``smtp``
 --------
 
