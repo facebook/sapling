@@ -35,6 +35,8 @@ else:
 def uisetup(ui):
     """Wraps user facing Mercurial commands to swap them out with shallow versions.
     """
+    hg.wirepeersetupfuncs.append(fileserverclient.peersetup)
+
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
     entry[1].append(('', 'shallow', None,
                      _("create a shallow clone which uses remote file history")))

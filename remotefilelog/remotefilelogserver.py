@@ -53,6 +53,7 @@ def onetimesetup(ui):
 
     # support file content requests
     wireproto.commands['getfiles'] = (getfiles, '')
+    wireproto.commands['getfile'] = (getfile, 'file node')
 
     class streamstate(object):
         match = None
@@ -155,9 +156,11 @@ def onetimesetup(ui):
     def _capabilities(orig, repo, proto):
         caps = orig(repo, proto)
         if ((shallowrepo.requirement in repo.requirements or
-            ui.configbool('remotefilelog', 'server'))
-            and isinstance(proto, sshserver.sshserver)):
-            caps.append(shallowrepo.requirement)
+            ui.configbool('remotefilelog', 'server'))):
+            if isinstance(proto, sshserver.sshserver):
+                # legacy getfiles method which only works over ssh
+                caps.append(shallowrepo.requirement)
+            caps.append("getfile")
         return caps
     wrapfunction(wireproto, '_capabilities', _capabilities)
 
@@ -208,6 +211,17 @@ def _loadfileblob(repo, cachepath, path, node):
         with open(filecachepath, "r") as f:
             text = f.read()
     return text
+
+def getfile(repo, proto, file, node):
+    if shallowrepo.requirement in repo.requirements:
+        raise util.Abort(_('cannot fetch remote files from shallow repo'))
+    cachepath = repo.ui.config("remotefilelog", "servercachepath")
+    if not cachepath:
+        cachepath = os.path.join(repo.path, "remotefilelogcache")
+    node = bin(node.strip())
+    if node == nullid:
+        return ''
+    return _loadfileblob(repo, cachepath, file, node)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.

@@ -6,8 +6,8 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer, hg, error, util
-import os, socket, lz4, time, grp
+from mercurial import util, sshpeer, hg, error, util, wireproto
+import os, socket, lz4, time, grp, io
 
 # Statistics for debugging
 fetchcost = 0
@@ -33,6 +33,12 @@ def getcachekey(reponame, file, id):
 def getlocalkey(file, id):
     pathhash = util.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
+
+def peersetup(ui, peer):
+    class remotefilepeer(peer.__class__):
+        def getfile(self, file, node):
+            return self._call('getfile', file=file, node=node)
+    peer.__class__ = remotefilepeer
 
 class cacheconnection(object):
     """The connection for communicating with the remote cache. Performs
@@ -84,6 +90,14 @@ class cacheconnection(object):
             self.close()
 
         return result
+
+def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap):
+    for m in missed:
+        file_ = idmap[m]
+        node = m[-40:]
+        v = remote.getfile(file_, node)
+        receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), m)
+        progresstick()
 
 def _getfiles(
     remote, receivemissing, fallbackpath, progresstick, missed, idmap):
@@ -200,13 +214,17 @@ class fileserverclient(object):
                             "is your .hg/hgrc trusted?")
                     remote = hg.peer(self.ui, {}, fallbackpath)
                     # TODO: deduplicate this with the constant in shallowrepo
-                    if not remote.capable("remotefilelog"):
+                    if remote.capable("remotefilelog"):
+                        if not isinstance(remote, sshpeer.sshpeer):
+                            raise util.Abort('remotefilelog requires ssh servers')
+                        _getfiles(remote, self.receivemissing, fallbackpath,
+                                  progresstick, missed, idmap)
+                    elif remote.capable("getfile"):
+                        _getfilesbatch(
+                            remote, self.receivemissing, progresstick, missed, idmap)
+                    else:
                         raise util.Abort("configured remotefilelog server"
                                          " does not support remotefilelog")
-                    if not isinstance(remote, sshpeer.sshpeer):
-                        raise util.Abort('remotefilelog requires ssh servers')
-                    _getfiles(remote, self.receivemissing, fallbackpath,
-                              progresstick, missed, idmap)
                 finally:
                     self.ui.verbose = verbose
                 # send to memcache
