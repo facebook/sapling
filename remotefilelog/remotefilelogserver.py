@@ -189,16 +189,21 @@ def _loadfileblob(repo, cachepath, path, node):
         text = createfileblob(filectx)
         text = lz4.compressHC(text)
 
-        dirname = os.path.dirname(filecachepath)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+        # everything should be user & group read/writable
+        oldumask = os.umask(0o002)
         try:
-            with open(filecachepath, "w") as f:
-                f.write(text)
-        except IOError:
-            # Don't abort if the user only has permission to read,
-            # and not write.
-            pass
+            dirname = os.path.dirname(filecachepath)
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+            try:
+                with open(filecachepath, "w") as f:
+                    f.write(text)
+            except IOError:
+                # Don't abort if the user only has permission to read,
+                # and not write.
+                pass
+        finally:
+            os.umask(oldumask)
     else:
         with open(filecachepath, "r") as f:
             text = f.read()
@@ -220,31 +225,25 @@ def getfiles(repo, proto):
         if not cachepath:
             cachepath = os.path.join(repo.path, "remotefilelogcache")
 
-        # everything should be user & group read/writable
-        oldumask = os.umask(0o002)
-        try:
-            while True:
-                request = fin.readline()[:-1]
-                if not request:
-                    break
+        while True:
+            request = fin.readline()[:-1]
+            if not request:
+                break
 
-                node = bin(request[:40])
-                if node == nullid:
-                    yield '0\n'
-                    continue
+            node = bin(request[:40])
+            if node == nullid:
+                yield '0\n'
+                continue
 
-                path = request[40:]
+            path = request[40:]
 
-                text = _loadfileblob(repo, cachepath, path, node)
+            text = _loadfileblob(repo, cachepath, path, node)
 
-                yield '%d\n%s' % (len(text), text)
+            yield '%d\n%s' % (len(text), text)
 
-                # it would be better to only flush after processing a whole batch
-                # but currently we don't know if there are more requests coming
-                proto.fout.flush()
-        finally:
-            os.umask(oldumask)
-
+            # it would be better to only flush after processing a whole batch
+            # but currently we don't know if there are more requests coming
+            proto.fout.flush()
     return wireproto.streamres(streamer())
 
 def createfileblob(filectx):
