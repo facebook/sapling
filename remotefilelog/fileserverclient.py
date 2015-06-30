@@ -85,6 +85,30 @@ class cacheconnection(object):
 
         return result
 
+def _getfiles(
+    remote, receivemissing, fallbackpath, progresstick, missed, idmap):
+    remote._callstream("getfiles")
+    i = 0
+    while i < len(missed):
+        # issue a batch of requests
+        start = i
+        end = min(len(missed), start + 10000)
+        i = end
+        for missingid in missed[start:end]:
+            # issue new request
+            versionid = missingid[-40:]
+            file = idmap[missingid]
+            sshrequest = "%s%s\n" % (versionid, file)
+            remote.pipeo.write(sshrequest)
+        remote.pipeo.flush()
+
+        # receive batch results
+        for j in range(start, end):
+            receivemissing(remote.pipei, missed[j])
+            progresstick()
+    remote.cleanup()
+    remote = None
+
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
@@ -155,20 +179,22 @@ class fileserverclient(object):
         global fetchmisses
         fetchmisses += len(missed)
 
-        count = total - len(missed)
+        count = [total - len(missed)]
         self.ui.progress(_downloading, count, total=total)
 
         oldumask = os.umask(0o002)
         try:
             # receive cache misses from master
             if missed:
+                def progresstick():
+                    count[0] += 1
+                    self.ui.progress(_downloading, count[0], total=total)
+                # When verbose is true, sshpeer prints 'running ssh...'
+                # to stdout, which can interfere with some command
+                # outputs
                 verbose = self.ui.verbose
+                self.ui.verbose = False
                 try:
-                    # When verbose is true, sshpeer prints 'running ssh...'
-                    # to stdout, which can interfere with some command
-                    # outputs
-                    self.ui.verbose = False
-
                     if not fallbackpath:
                         raise util.Abort("no remotefilelog server configured - "
                             "is your .hg/hgrc trusted?")
@@ -179,36 +205,13 @@ class fileserverclient(object):
                                          " does not support remotefilelog")
                     if not isinstance(remote, sshpeer.sshpeer):
                         raise util.Abort('remotefilelog requires ssh servers')
-                    remote._callstream("getfiles")
+                    _getfiles(remote, self.receivemissing, fallbackpath,
+                              progresstick, missed, idmap)
                 finally:
                     self.ui.verbose = verbose
-
-                i = 0
-                while i < len(missed):
-                    # issue a batch of requests
-                    start = i
-                    end = min(len(missed), start + 10000)
-                    i = end
-                    for missingid in missed[start:end]:
-                        # issue new request
-                        versionid = missingid[-40:]
-                        file = idmap[missingid]
-                        sshrequest = "%s%s\n" % (versionid, file)
-                        remote.pipeo.write(sshrequest)
-                    remote.pipeo.flush()
-
-                    # receive batch results
-                    for j in range(start, end):
-                        self.receivemissing(remote.pipei, missed[j])
-                        count += 1
-                        self.ui.progress(_downloading, count, total=total)
-
-                remote.cleanup()
-                remote = None
-
                 # send to memcache
-                count = len(missed)
-                request = "set\n%d\n%s\n" % (count, "\n".join(missed))
+                count[0] = len(missed)
+                request = "set\n%d\n%s\n" % (count[0], "\n".join(missed))
                 cache.request(request)
 
             self.ui.progress(_downloading, None)
