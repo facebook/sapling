@@ -528,7 +528,7 @@ class remotefilelog(object):
                     allparents.add(p1)
                 if p2 != nullid:
                     parents.append(p2)
-                    allparents.add(p1)
+                    allparents.add(p2)
 
 
         # Breadth first traversal to build linkrev graph
