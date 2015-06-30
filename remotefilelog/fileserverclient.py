@@ -36,8 +36,14 @@ def getlocalkey(file, id):
 
 def peersetup(ui, peer):
     class remotefilepeer(peer.__class__):
+        @wireproto.batchable
         def getfile(self, file, node):
-            return self._call('getfile', file=file, node=node)
+            if not self.capable('getfile'):
+                raise util.Abort(
+                    'configured remotefile server does not support getfile')
+            f = wireproto.future()
+            yield {'file': file, 'node': node}, f
+            yield f.value
     peer.__class__ = remotefilepeer
 
 class cacheconnection(object):
@@ -92,10 +98,15 @@ class cacheconnection(object):
         return result
 
 def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap):
+    b = remote.batch()
+    futures = {}
     for m in missed:
         file_ = idmap[m]
         node = m[-40:]
-        v = remote.getfile(file_, node)
+        futures[m] = b.getfile(file_, node)
+    b.submit()
+    for m in missed:
+        v = futures[m].value
         receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), m)
         progresstick()
 
