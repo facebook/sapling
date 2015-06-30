@@ -482,6 +482,39 @@ test non-tab whitespace .gitmodules
   $ rm -rf hg-repo6
   $ cd git-repo6
   $ git reset --hard 'HEAD^' > /dev/null
+
+test missing .gitmodules
+
+  $ git submodule add ../git-repo4 >/dev/null 2>/dev/null
+  $ git checkout HEAD .gitmodules
+  $ git rm .gitmodules
+  rm '.gitmodules'
+  $ git commit -m "remove .gitmodules" .gitmodules
+  [master *] remove .gitmodules (glob)
+   Author: nottest <test@example.org>
+   1 file changed, 3 deletions(-)
+   delete mode 100644 .gitmodules
+  $ git commit -m "missing .gitmodules"
+  [master *] missing .gitmodules (glob)
+   Author: nottest <test@example.org>
+   1 file changed, 1 insertion(+)
+   create mode 160000 git-repo4
+  $ cd ..
+  $ hg convert git-repo6 hg-repo6 --traceback
+  fatal: Path '.gitmodules' does not exist in '*' (glob)
+  initializing destination hg-repo6 repository
+  scanning source...
+  sorting...
+  converting...
+  2 addsubmodule
+  1 remove .gitmodules
+  0 missing .gitmodules
+  warning: cannot read submodules config file in * (glob)
+  updating bookmarks
+  $ rm -rf hg-repo6
+  $ cd git-repo6
+  $ rm -rf git-repo4
+  $ git reset --hard 'HEAD^^' > /dev/null
   $ cd ..
 
 test invalid splicemap1

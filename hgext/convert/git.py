@@ -7,7 +7,7 @@
 
 import os
 import subprocess
-from mercurial import util, config
+from mercurial import util, config, error
 from mercurial.node import hex, nullid
 from mercurial.i18n import _
 
@@ -185,9 +185,19 @@ class convert_git(converter_source):
     def retrievegitmodules(self, version):
         modules, ret = self.gitread("git show %s:%s" % (version, '.gitmodules'))
         if ret:
-            raise util.Abort(_('cannot read submodules config file in %s') %
-                             version)
-        self.parsegitmodules(modules)
+            # This can happen if a file is in the repo that has permissions
+            # 160000, but there is no .gitmodules file.
+            self.ui.warn(_("warning: cannot read submodules config file in "
+                           "%s\n") % version)
+            return
+
+        try:
+            self.parsegitmodules(modules)
+        except error.ParseError:
+            self.ui.warn(_("warning: unable to parse .gitmodules in %s\n")
+                         % version)
+            return
+
         for m in self.submodules:
             node, ret = self.gitread("git rev-parse %s:%s" % (version, m.path))
             if ret:
