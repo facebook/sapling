@@ -178,6 +178,32 @@ def onetimesetup(ui):
 
     wrapfunction(httpprotocol, 'iscmd', _iscmd)
 
+def _loadfileblob(repo, cachepath, path, node):
+    filecachepath = os.path.join(cachepath, path, hex(node))
+    if not os.path.exists(filecachepath):
+        filectx = repo.filectx(path, fileid=node)
+        if filectx.node() == nullid:
+            repo.changelog = changelog.changelog(repo.svfs)
+            filectx = repo.filectx(path, fileid=node)
+
+        text = createfileblob(filectx)
+        text = lz4.compressHC(text)
+
+        dirname = os.path.dirname(filecachepath)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        try:
+            with open(filecachepath, "w") as f:
+                f.write(text)
+        except IOError:
+            # Don't abort if the user only has permission to read,
+            # and not write.
+            pass
+    else:
+        with open(filecachepath, "r") as f:
+            text = f.read()
+    return text
+
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
@@ -209,29 +235,7 @@ def getfiles(repo, proto):
 
                 path = request[40:]
 
-                filecachepath = os.path.join(cachepath, path, hex(node))
-                if not os.path.exists(filecachepath):
-                    filectx = repo.filectx(path, fileid=node)
-                    if filectx.node() == nullid:
-                        repo.changelog = changelog.changelog(repo.svfs)
-                        filectx = repo.filectx(path, fileid=node)
-
-                    text = createfileblob(filectx)
-                    text = lz4.compressHC(text)
-
-                    dirname = os.path.dirname(filecachepath)
-                    if not os.path.exists(dirname):
-                        os.makedirs(dirname)
-                    try:
-                        with open(filecachepath, "w") as f:
-                            f.write(text)
-                    except IOError:
-                        # Don't abort if the user only has permission to read,
-                        # and not write.
-                        pass
-                else:
-                    with open(filecachepath, "r") as f:
-                        text = f.read()
+                text = _loadfileblob(repo, cachepath, path, node)
 
                 yield '%d\n%s' % (len(text), text)
 
