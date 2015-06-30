@@ -174,8 +174,9 @@ class convert_git(converter_source):
         """
         self.submodules = []
         c = config.config()
-        # Each item in .gitmodules starts with \t that cant be parsed
-        c.parse('.gitmodules', content.replace('\t',''))
+        # Each item in .gitmodules starts with whitespace that cant be parsed
+        c.parse('.gitmodules', '\n'.join(line.strip() for line in
+                               content.split('\n')))
         for sec in c.sections():
             s = c[sec]
             if 'url' in s and 'path' in s:

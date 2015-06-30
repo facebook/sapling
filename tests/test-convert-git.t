@@ -457,6 +457,31 @@ test sub modules
   $ git init-db >/dev/null 2>/dev/null
   $ git submodule add ${BASE} >/dev/null 2>/dev/null
   $ commit -a -m 'addsubmodule' >/dev/null 2>/dev/null
+
+test non-tab whitespace .gitmodules
+
+  $ cat >> .gitmodules <<EOF
+  > [submodule "git-repo5"]
+  >   path = git-repo5
+  >   url = $TESTTMP/git-repo5
+  > EOF
+  $ git commit -a -m "weird white space submodule"
+  [master *] weird white space submodule (glob)
+   Author: nottest <test@example.org>
+   1 file changed, 3 insertions(+)
+  $ cd ..
+  $ hg convert git-repo6 hg-repo6
+  initializing destination hg-repo6 repository
+  scanning source...
+  sorting...
+  converting...
+  1 addsubmodule
+  0 weird white space submodule
+  updating bookmarks
+
+  $ rm -rf hg-repo6
+  $ cd git-repo6
+  $ git reset --hard 'HEAD^' > /dev/null
   $ cd ..
 
 test invalid splicemap1
