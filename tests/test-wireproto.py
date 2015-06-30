@@ -43,6 +43,6 @@ clt = clientpeer(srv)
 
 print clt.greet("Foobar")
 b = clt.batch()
-fs = [b.greet(s) for s in ["Fo, =;o", "Bar"]]
+fs = [b.greet(s) for s in ["Fo, =;:<o", "Bar"]]
 b.submit()
 print [f.value for f in fs]

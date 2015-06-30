@@ -182,17 +182,17 @@ def encodelist(l, sep=' '):
 
 def escapearg(plain):
     return (plain
-            .replace(':', '::')
-            .replace(',', ':,')
-            .replace(';', ':;')
-            .replace('=', ':='))
+            .replace(':', ':c')
+            .replace(',', ':o')
+            .replace(';', ':s')
+            .replace('=', ':e'))
 
 def unescapearg(escaped):
     return (escaped
-            .replace(':=', '=')
-            .replace(':;', ';')
-            .replace(':,', ',')
-            .replace('::', ':'))
+            .replace(':e', '=')
+            .replace(':s', ';')
+            .replace(':o', ',')
+            .replace(':c', ':'))
 
 # mapping of options accepted by getbundle and their types
 #
@@ -221,10 +221,11 @@ class wirepeer(peer.peerrepository):
     def _submitbatch(self, req):
         cmds = []
         for op, argsdict in req:
-            args = ','.join('%s=%s' % p for p in argsdict.iteritems())
+            args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
+                            for k, v in argsdict.iteritems())
             cmds.append('%s %s' % (op, args))
         rsp = self._call("batch", cmds=';'.join(cmds))
-        return rsp.split(';')
+        return [unescapearg(r) for r in rsp.split(';')]
     def _submitone(self, op, args):
         return self._call(op, **args)
 
