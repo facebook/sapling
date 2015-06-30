@@ -313,13 +313,11 @@ remote transplant with pull
   0  r1
 
 remote transplant without pull
-(I'm pretty sure this test is actually pulling,
-It was using "2" and "4" (as the previous transplant used to) which referenced
+(It was using "2" and "4" (as the previous transplant used to) which referenced
 revision different from one run to another)
 
   $ hg pull -q http://localhost:$HGPORT/
   $ hg transplant -s http://localhost:$HGPORT/ 8d9279348abb 722f4667af76
-  searching for changes
   skipping already applied revision 2:8d9279348abb
   applying 722f4667af76
   722f4667af76 transplanted to 76e321915884
