@@ -17,32 +17,42 @@ Try hg clone git:// or hg clone git+ssh://
 For more information and instructions, see :hg:`help git`
 '''
 
-__version__ = '0.8.1'
-
-def getversion():
-    """return version with dependencies for hg --version -v"""
-    import dulwich
-    dulver = '.'.join(str(i) for i in dulwich.__version__)
-    return __version__ + (" (dulwich %s)" % dulver)
-
-
-from bisect import insort
+# global modules
 import os
 
+# local modules
+import gitrepo
+import hgrepo
+import overlay
+import verify
+import util
+
+from bisect import insort
+from git_handler import GitHandler
 from mercurial import bundlerepo
 from mercurial import cmdutil
 from mercurial import demandimport
 from mercurial import dirstate
 from mercurial import discovery
+from mercurial import extensions
+from mercurial import help
+from mercurial import hg
+from mercurial import localrepo
+from mercurial import manifest
+from mercurial import revset
+from mercurial import scmutil
+from mercurial import templatekw
+from mercurial import util as hgutil
+from mercurial.node import hex
+from mercurial.i18n import _
+
 try:
     from mercurial import exchange
     exchange.push  # existed in first iteration of this file
 except ImportError:
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
-from mercurial import extensions
-from mercurial import help
-from mercurial import hg
+
 try:
     from mercurial import ignore
     ignore.readpats
@@ -50,25 +60,12 @@ try:
 except ImportError:
     # The ignore module disappeared in Mercurial 3.5
     ignoremod = False
-from mercurial import localrepo
-from mercurial import manifest
-from mercurial.node import hex
-from mercurial import revset
-from mercurial import scmutil
-from mercurial import templatekw
-from mercurial import util as hgutil
-from mercurial.i18n import _
-
-import gitrepo
-import hgrepo
-import overlay
-import util
-from git_handler import GitHandler
-import verify
 
 demandimport.ignore.extend([
     'collections',
 ])
+
+__version__ = '0.8.1'
 
 testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3 3.4'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
@@ -118,6 +115,12 @@ def defaultdest(source):
             break
     return hgdefaultdest(source)
 hg.defaultdest = defaultdest
+
+def getversion():
+    """return version with dependencies for hg --version -v"""
+    import dulwich
+    dulver = '.'.join(str(i) for i in dulwich.__version__)
+    return __version__ + (" (dulwich %s)" % dulver)
 
 # defend against tracebacks if we specify -r in 'hg pull'
 def safebranchrevs(orig, lrepo, repo, branches, revs):
