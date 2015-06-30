@@ -273,7 +273,7 @@ class fileserverclient(object):
         """
         repo = self.repo
         localcache = self.localcache
-        storepath = repo.sopener.vfs.base
+        storepath = repo.svfs.vfs.base
         reponame = repo.name
         missingids = []
         for file, id in fileids:

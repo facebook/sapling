@@ -38,7 +38,7 @@ def wraprepo(repo):
                 f = f[1:]
 
             if self.shallowmatch(f):
-                return remotefilelog.remotefilelog(self.sopener, f, self)
+                return remotefilelog.remotefilelog(self.svfs, f, self)
             else:
                 return super(shallowrepository, self).file(f)
 
@@ -167,6 +167,6 @@ def wraprepo(repo):
         repo.shallowmatch = match.match(repo.root, '', None,
             repo.includepattern, repo.excludepattern)
 
-    localpath = os.path.join(repo.sopener.vfs.base, 'data')
+    localpath = os.path.join(repo.svfs.vfs.base, 'data')
     if not os.path.exists(localpath):
         os.makedirs(localpath)

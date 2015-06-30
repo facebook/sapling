@@ -52,7 +52,7 @@ def buildtemprevlog(repo, file):
     temppath = repo.sjoin('data/temprevlog.i')
     if os.path.exists(temppath):
         os.remove(temppath)
-    r = filelog.filelog(repo.sopener, 'temprevlog')
+    r = filelog.filelog(repo.svfs, 'temprevlog')
 
     class faket(object):
         def add(self, a,b,c):

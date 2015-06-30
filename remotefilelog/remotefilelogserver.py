@@ -43,7 +43,7 @@ def setupserver(ui, repo):
 
 onetime = False
 def onetimesetup(ui):
-    """Configures the wireprotocol for both clients and servers. 
+    """Configures the wireprotocol for both clients and servers.
     """
     global onetime
     if onetime:
@@ -177,7 +177,7 @@ def getfiles(repo, proto):
 
     def streamer():
         fin = proto.fin
-        opener = repo.sopener
+        opener = repo.svfs
 
         cachepath = repo.ui.config("remotefilelog", "servercachepath")
         if not cachepath:
@@ -202,7 +202,7 @@ def getfiles(repo, proto):
                 if not os.path.exists(filecachepath):
                     filectx = repo.filectx(path, fileid=node)
                     if filectx.node() == nullid:
-                        repo.changelog = changelog.changelog(repo.sopener)
+                        repo.changelog = changelog.changelog(repo.svfs)
                         filectx = repo.filectx(path, fileid=node)
 
                     text = createfileblob(filectx)
