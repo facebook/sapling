@@ -8,6 +8,7 @@
 from mercurial import wireproto, changegroup, match, util, changelog, context
 from mercurial import exchange, sshserver
 from mercurial.extensions import wrapfunction
+from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 import shallowrepo
@@ -169,6 +170,13 @@ def onetimesetup(ui):
         return orig(self, path, filelog, fnode, *args, **kwargs)
 
     wrapfunction(context.basefilectx, '_adjustlinkrev', _adjustlinkrev)
+
+    def _iscmd(orig, cmd):
+        if cmd == 'getfiles':
+            return False
+        return orig(cmd)
+
+    wrapfunction(httpprotocol, 'iscmd', _iscmd)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.

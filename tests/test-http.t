@@ -31,6 +31,5 @@ as the getfile method it offers doesn't work with http.
 
   $ get-with-headers.py localhost:$HGPORT '?cmd=this-command-does-not-exist' | head -n 1
   400 no such method: this-command-does-not-exist
-Bug: this should return 400, not 5xx
   $ get-with-headers.py localhost:$HGPORT '?cmd=getfiles' | head -n 1
-  500 Internal Server Error
+  400 no such method: getfiles
