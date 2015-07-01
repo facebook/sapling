@@ -80,16 +80,12 @@ def buildmetadata(ctx):
                    if repo.tagtype(t) == 'global')
     if not tags:
         repo.ui.pushbuffer()
-        opts = {'template': '{latesttag}\n{latesttagdistance}',
+        opts = {'template': '{latesttag}\n{latesttagdistance}\n'
+                            '{changessincelatesttag}',
                 'style': '', 'patch': None, 'git': None}
         cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
-        ltags, dist = repo.ui.popbuffer().split('\n')
+        ltags, dist, changessince = repo.ui.popbuffer().split('\n')
         ltags = ltags.split(':')
-        if ctx.rev() is None:
-            changessince = len(repo.revs('only(%d,%s)', ctx.p1(),
-                                         ltags[0])) + 1
-        else:
-            changessince = len(repo.revs('only(%d,%s)', ctx.rev(), ltags[0]))
         tags = ''.join('latesttag: %s\n' % t for t in ltags)
         tags += 'latesttagdistance: %s\n' % dist
         tags += 'changessincelatesttag: %s\n' % changessince
