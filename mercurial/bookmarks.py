@@ -94,12 +94,6 @@ class bmstore(dict):
             self._write(file)
             file.close()
 
-            # touch 00changelog.i so hgweb reloads bookmarks (no lock needed)
-            try:
-                repo.svfs.utime('00changelog.i', None)
-            except OSError:
-                pass
-
         finally:
             wlock.release()
 
