@@ -37,9 +37,9 @@ githelp on a command with unrecognized option packed with other options should f
   $ hg githelp -- commit -pv
   abort: unknown option v packed with other options
   Please try passing the option as it's own flag: -v
-  
+
   If this is a valid git command, please log a task for the source_control oncall.
-  
+
   [255]
 githelp for git rebase --skip
   $ hg githelp -- git rebase --skip
@@ -57,7 +57,7 @@ githelp for git commit --amend --no-edit (hg amend does not pull up an editor)
 githelp for git checkout -- . (checking out a directory)
   $ hg githelp -- checkout -- .
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert .
 
 githelp for git checkout HEAD^ (should still work to pass a rev)
@@ -67,62 +67,69 @@ githelp for git checkout HEAD^ (should still work to pass a rev)
 githelp checkout: args after -- should be treated as paths no matter what
   $ hg githelp -- checkout -- HEAD
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert HEAD
 
 githelp for git checkout with rev and path
   $ hg githelp -- checkout HEAD^ -- file.txt
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert -r .^ file.txt
 
 githelp for git with rev and path, without separator
   $ hg githelp -- checkout HEAD^ file.txt
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert -r .^ file.txt
 
 githelp for checkout with a file as first argument
   $ hg githelp -- checkout test_file
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert test_file
 
 githelp for checkout with a removed file as first argument
   $ hg githelp -- checkout removed_file
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert removed_file
 
 githelp for checkout with a deleted file as first argument
   $ hg githelp -- checkout deleted_file
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert deleted_file
 
 githelp for checkout with a untracked file as first argument
   $ hg githelp -- checkout untracked_file
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert untracked_file
 
 githelp for checkout with a directory as first argument
   $ hg githelp -- checkout dir
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert dir
 
 githelp for checkout when not in repo root
   $ cd dir
   $ hg githelp -- checkout file
   note: use --no-backup to avoid creating .orig files
-  
+
   hg revert file
   $ cd ..
 
 githelp for checkout with an argument that is both a file and a revision
   $ hg githelp -- checkout both
   hg update both
+
+githelp for checkout with the -p option
+  $ hg githelp -- git checkout -p xyz
+  hg revert -i -r xyz
+
+  $ hg githelp -- git checkout -p xyz -- abc
+  hg revert -i -r xyz abc
 
 githelp for grep with pattern and path
   $ hg githelp -- grep shrubbery flib/intern/

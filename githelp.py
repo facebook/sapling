@@ -242,6 +242,7 @@ def checkout(ui, repo, *args, **kwargs):
         ('b', 'branch', '', ''),
         ('B', 'branch', '', ''),
         ('f', 'force', None, ''),
+        ('p', 'patch', None, ''),
     ]
     paths = []
     if '--' in args:
@@ -263,6 +264,10 @@ def checkout(ui, repo, *args, **kwargs):
     if opts.get('force'):
         cmd['-C'] = None
 
+    if opts.get('patch'):
+        cmd = Command('revert')
+        cmd['-i'] = None
+
     if opts.get('branch'):
         if len(args) == 0:
             cmd = Command('bookmark')
@@ -276,11 +281,16 @@ def checkout(ui, repo, *args, **kwargs):
     elif len(paths) > 0:
         ui.status("note: use --no-backup to avoid creating .orig files\n\n")
         cmd = Command('revert')
+        if opts.get('patch'):
+            cmd['-i'] = None
         if rev:
             cmd['-r'] = rev
         cmd.extend(paths)
     elif rev:
-        cmd.append(rev)
+        if opts.get('patch'):
+            cmd['-r'] = rev
+        else:
+            cmd.append(rev)
     else:
         raise GitUnknownError("a commit must be specified")
 
