@@ -31,6 +31,7 @@ perms = {
 # theses files. This should probably be relocated a bit higher in core.
 foi = [('spath', '00changelog.i'),
        ('spath', 'phaseroots'), # ! phase can change content at the same size
+       ('spath', 'obsstore'),
       ]
 
 def makebreadcrumb(url, prefix=''):
