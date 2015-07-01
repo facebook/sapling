@@ -2454,6 +2454,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 
     ui.note(_('amending changeset %s\n') % old)
     base = old.p1()
+    createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
     wlock = dsguard = lock = newid = None
     try:
@@ -2619,7 +2620,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                         marks[bm] = newid
                     marks.recordchange(tr)
             #commit the whole amend process
-            createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
             if createmarkers and newid != old.node():
                 # mark the new changeset as successor of the rewritten one
                 new = repo[newid]
