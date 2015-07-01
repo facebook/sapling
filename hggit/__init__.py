@@ -75,8 +75,7 @@ command = cmdutil.command(cmdtable)
 
 # support for `hg clone git://github.com/defunkt/facebox.git`
 # also hg clone git+ssh://git@github.com/schacon/simplegit.git
-_gitschemes = ('git', 'git+ssh', 'git+http', 'git+https')
-for _scheme in _gitschemes:
+for _scheme in util.gitschemes:
     hg.schemes[_scheme] = gitrepo
 
 # support for `hg clone localgitrepo`
@@ -109,10 +108,13 @@ hg.schemes['file'] = _local
 
 hgdefaultdest = hg.defaultdest
 def defaultdest(source):
-    for scheme in _gitschemes:
+    for scheme in util.gitschemes:
         if source.startswith('%s://' % scheme) and source.endswith('.git'):
-            source = source[:-4]
-            break
+            return hgdefaultdest(source[:-4])
+
+    if source.endswith('.git'):
+        return hgdefaultdest(source[:-4])
+
     return hgdefaultdest(source)
 hg.defaultdest = defaultdest
 
