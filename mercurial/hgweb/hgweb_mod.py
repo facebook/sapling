@@ -26,6 +26,13 @@ perms = {
     'pushkey': 'push',
 }
 
+## Files of interest
+# Used to check if the repository has changed looking at mtime and size of
+# theses files. This should probably be relocated a bit higher in core.
+foi = [('spath', '00changelog.i'),
+       ('spath', 'phaseroots'), # ! phase can change content at the same size
+      ]
+
 def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
 
@@ -120,10 +127,13 @@ class hgweb(object):
             return repo.filtered('served')
 
     def refresh(self, request=None):
-        st = get_stat(self.repo.spath, '00changelog.i')
-        pst = get_stat(self.repo.spath, 'phaseroots')
-        # changelog mtime and size, phaseroots mtime and size
-        repostate = ((st.st_mtime, st.st_size), (pst.st_mtime, pst.st_size))
+        repostate = []
+        # file of interrests mtime and size
+        for meth, fname in foi:
+            prefix = getattr(self.repo, meth)
+            st = get_stat(prefix, fname)
+            repostate.append((st.st_mtime, st.st_size))
+        repostate = tuple(repostate)
         # we need to compare file size in addition to mtime to catch
         # changes made less than a second ago
         if repostate != self.repostate:
