@@ -40,6 +40,8 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'internal'
 
+backupdir = 'shelve-backup'
+
 class shelvedfile(object):
     """Helper for the file storing a single shelve
 
@@ -49,7 +51,7 @@ class shelvedfile(object):
         self.repo = repo
         self.name = name
         self.vfs = scmutil.vfs(repo.join('shelved'))
-        self.backupvfs = scmutil.vfs(repo.join('shelve-backup'))
+        self.backupvfs = scmutil.vfs(repo.join(backupdir))
         self.ui = self.repo.ui
         if filetype:
             self.fname = name + '.' + filetype
@@ -155,6 +157,20 @@ class shelvedstate(object):
     @classmethod
     def clear(cls, repo):
         util.unlinkpath(repo.join(cls._filename), ignoremissing=True)
+
+def cleanupoldbackups(repo):
+    vfs = scmutil.vfs(repo.join(backupdir))
+    maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
+    hgfiles = [f for f in vfs.listdir() if f.endswith('.hg')]
+    hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
+    for mtime, f in hgfiles[:len(hgfiles) - maxbackups]:
+        base = f[:-3]
+        for ext in 'hg patch'.split():
+            try:
+                vfs.unlink(base + '.' + ext)
+            except OSError as err:
+                if err.errno != errno.ENOENT:
+                    raise
 
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
@@ -298,6 +314,7 @@ def cleanupcmd(ui, repo):
             suffix = name.rsplit('.', 1)[-1]
             if suffix in ('hg', 'patch'):
                 shelvedfile(repo, name).movetobackup()
+            cleanupoldbackups(repo)
     finally:
         lockmod.release(wlock)
 
@@ -310,6 +327,7 @@ def deletecmd(ui, repo, pats):
         for name in pats:
             for suffix in 'hg patch'.split():
                 shelvedfile(repo, name, suffix).movetobackup()
+        cleanupoldbackups(repo)
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise
@@ -459,6 +477,7 @@ def unshelvecleanup(ui, repo, name, opts):
     if not opts['keep']:
         for filetype in 'hg patch'.split():
             shelvedfile(repo, name, filetype).movetobackup()
+        cleanupoldbackups(repo)
 
 def unshelvecontinue(ui, repo, state, opts):
     """subcommand to continue an in-progress unshelve"""
@@ -534,6 +553,11 @@ def unshelve(ui, repo, *shelved, **opts):
     (Alternatively, you can use ``--abort`` to abandon an unshelve
     that causes a conflict. This reverts the unshelved changes, and
     leaves the bundle in place.)
+
+    After a successful unshelve, the shelved changes are stored in a
+    backup directory. Only the N most recent backups are kept. N
+    defaults to 10 but can be overridden using the shelve.maxbackups
+    configuration option.
     """
     abortf = opts['abort']
     continuef = opts['continue']

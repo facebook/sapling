@@ -5,6 +5,8 @@
   > [defaults]
   > diff = --nodates --git
   > qnew = --date '0 0'
+  > [shelve]
+  > maxbackups = 2
   > EOF
 
   $ hg init repo
@@ -247,6 +249,14 @@ and now "a/a" should reappear
   A c.copy
     c
   R b/b
+
+ensure old shelve backups are being deleted automatically
+
+  $ ls .hg/shelve-backup/
+  default-01.hg
+  default-01.patch
+  wibble.hg
+  wibble.patch
 
 cause unshelving to result in a merge with 'a' conflicting
 
