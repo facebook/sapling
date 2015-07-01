@@ -22,6 +22,7 @@ shelve".
 """
 
 import collections
+import itertools
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
@@ -48,6 +49,7 @@ class shelvedfile(object):
         self.repo = repo
         self.name = name
         self.vfs = scmutil.vfs(repo.join('shelved'))
+        self.backupvfs = scmutil.vfs(repo.join('shelve-backup'))
         self.ui = self.repo.ui
         if filetype:
             self.fname = name + '.' + filetype
@@ -60,8 +62,22 @@ class shelvedfile(object):
     def filename(self):
         return self.vfs.join(self.fname)
 
-    def unlink(self):
-        util.unlink(self.filename())
+    def backupfilename(self):
+        def gennames(base):
+            yield base
+            base, ext = base.rsplit('.', 1)
+            for i in itertools.count(1):
+                yield '%s-%d.%s' % (base, i, ext)
+
+        name = self.backupvfs.join(self.fname)
+        for n in gennames(name):
+            if not self.backupvfs.exists(n):
+                return n
+
+    def movetobackup(self):
+        if not self.backupvfs.isdir():
+            self.backupvfs.makedir()
+        util.rename(self.filename(), self.backupfilename())
 
     def stat(self):
         return self.vfs.stat(self.fname)
@@ -281,7 +297,7 @@ def cleanupcmd(ui, repo):
         for (name, _type) in repo.vfs.readdir('shelved'):
             suffix = name.rsplit('.', 1)[-1]
             if suffix in ('hg', 'patch'):
-                shelvedfile(repo, name).unlink()
+                shelvedfile(repo, name).movetobackup()
     finally:
         lockmod.release(wlock)
 
@@ -293,7 +309,7 @@ def deletecmd(ui, repo, pats):
     try:
         for name in pats:
             for suffix in 'hg patch'.split():
-                shelvedfile(repo, name, suffix).unlink()
+                shelvedfile(repo, name, suffix).movetobackup()
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise
@@ -442,7 +458,7 @@ def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
     if not opts['keep']:
         for filetype in 'hg patch'.split():
-            shelvedfile(repo, name, filetype).unlink()
+            shelvedfile(repo, name, filetype).movetobackup()
 
 def unshelvecontinue(ui, repo, state, opts):
     """subcommand to continue an in-progress unshelve"""
@@ -505,18 +521,19 @@ def unshelve(ui, repo, *shelved, **opts):
     restore. If none is given, the most recent shelved change is used.
 
     If a shelved change is applied successfully, the bundle that
-    contains the shelved changes is deleted afterwards.
+    contains the shelved changes is moved to a backup location
+    (.hg/shelve-backup).
 
     Since you can restore a shelved change on top of an arbitrary
     commit, it is possible that unshelving will result in a conflict
     between your changes and the commits you are unshelving onto. If
     this occurs, you must resolve the conflict, then use
     ``--continue`` to complete the unshelve operation. (The bundle
-    will not be deleted until you successfully complete the unshelve.)
+    will not be moved until you successfully complete the unshelve.)
 
     (Alternatively, you can use ``--abort`` to abandon an unshelve
     that causes a conflict. This reverts the unshelved changes, and
-    does not delete the bundle.)
+    leaves the bundle in place.)
     """
     abortf = opts['abort']
     continuef = opts['continue']

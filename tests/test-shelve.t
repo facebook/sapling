@@ -85,6 +85,12 @@ specified)
   nothing changed
   [1]
 
+make sure shelve files were backed up
+
+  $ ls .hg/shelve-backup
+  default.hg
+  default.patch
+
 create an mq patch - shelving should work fine with a patch applied
 
   $ echo n > n
@@ -153,6 +159,14 @@ delete our older shelved change
 
   $ hg shelve -d default
   $ hg qfinish -a -q
+
+ensure shelve backups aren't overwritten
+
+  $ ls .hg/shelve-backup/
+  default-1.hg
+  default-1.patch
+  default.hg
+  default.patch
 
 local edits should not prevent a shelved change from applying
 
