@@ -23,7 +23,7 @@ import stat
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
-testedwith = 'internal'
+testedwith = ''
 
 repoclass = localrepo.localrepository
 if util.safehasattr(repoclass, '_basesupported'):
