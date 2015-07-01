@@ -272,9 +272,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   removing f1.txt
    f2.txt: remote created -> g
   getting f2.txt
-  3 changesets found
+  2 changesets found
   list of changesets:
-  4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
   e31216eec445e44352c5f01588856059466a24c9
   2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
   saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)

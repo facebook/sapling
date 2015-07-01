@@ -73,6 +73,41 @@ def tokenize(program, start, end):
                 pos += 1
             yield ('integer', program[s:pos], s)
             pos -= 1
+        elif (c == '\\' and program[pos:pos + 2] in (r"\'", r'\"')
+              or c == 'r' and program[pos:pos + 3] in (r"r\'", r'r\"')):
+            # handle escaped quoted strings for compatibility with 2.9.2-3.4,
+            # where some of nested templates were preprocessed as strings and
+            # then compiled. therefore, \"...\" was allowed. (issue4733)
+            #
+            # processing flow of _evalifliteral() at 5ab28a2e9962:
+            # outer template string    -> stringify()  -> compiletemplate()
+            # ------------------------    ------------    ------------------
+            # {f("\\\\ {g(\"\\\"\")}"}    \\ {g("\"")}    [r'\\', {g("\"")}]
+            #             ~~~~~~~~
+            #             escaped quoted string
+            if c == 'r':
+                pos += 1
+                token = 'rawstring'
+            else:
+                token = 'string'
+            quote = program[pos:pos + 2]
+            s = pos = pos + 2
+            while pos < end: # find closing escaped quote
+                if program.startswith('\\\\\\', pos, end):
+                    pos += 4 # skip over double escaped characters
+                    continue
+                if program.startswith(quote, pos, end):
+                    try:
+                        # interpret as if it were a part of an outer string
+                        data = program[s:pos].decode('string-escape')
+                    except ValueError: # unbalanced escapes
+                        raise error.ParseError(_("syntax error"), s)
+                    yield (token, data, s)
+                    pos += 1
+                    break
+                pos += 1
+            else:
+                raise error.ParseError(_("unterminated string"), s)
         elif c.isalnum() or c in '_':
             s = pos
             pos += 1

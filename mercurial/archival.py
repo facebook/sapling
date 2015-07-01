@@ -85,7 +85,6 @@ def buildmetadata(ctx):
         cmdutil.show_changeset(repo.ui, repo, opts).show(ctx)
         ltags, dist = repo.ui.popbuffer().split('\n')
         ltags = ltags.split(':')
-        # XXX: ctx.rev() needs to be handled differently with wdir()
         if ctx.rev() is None:
             changessince = len(repo.revs('only(%d,%s)', ctx.p1(),
                                          ltags[0])) + 1

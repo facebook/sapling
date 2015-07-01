@@ -629,8 +629,14 @@ def transplant(ui, repo, *revs, **opts):
     if sourcerepo:
         peer = hg.peer(repo, opts, ui.expandpath(sourcerepo))
         heads = map(peer.lookup, opts.get('branch', ()))
+        target = set(heads)
+        for r in revs:
+            try:
+                target.add(peer.lookup(r))
+            except error.RepoError:
+                pass
         source, csets, cleanupfn = bundlerepo.getremotechanges(ui, repo, peer,
-                                    onlyheads=heads, force=True)
+                                    onlyheads=sorted(target), force=True)
     else:
         source = repo
         heads = map(source.lookup, opts.get('branch', ()))

@@ -585,11 +585,13 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     cl = repo.changelog
     if not roots:
         roots = [nullid]
-    # TODO: remove call to nodesbetween.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
     discbases = []
     for n in roots:
         discbases.extend([p for p in cl.parents(n) if p != nullid])
+    # TODO: remove call to nodesbetween.
+    csets, roots, heads = cl.nodesbetween(roots, heads)
+    included = set(csets)
+    discbases = [n for n in discbases if n not in included]
     outgoing = discovery.outgoing(cl, discbases, heads)
     bundler = packermap[version][0](repo)
     return getsubset(repo, outgoing, bundler, source, version=version)

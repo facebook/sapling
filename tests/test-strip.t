@@ -692,3 +692,137 @@ Verify bundles don't get overwritten:
   $ ls .hg/strip-backup
   3903775176ed-54390173-backup.hg
   3903775176ed-e68910bd-backup.hg
+  $ cd ..
+
+Test that we only bundle the stripped changesets (issue4736)
+------------------------------------------------------------
+
+initialisation (previous repo is empty anyway)
+
+  $ hg init issue4736
+  $ cd issue4736
+  $ echo a > a
+  $ hg add a
+  $ hg commit -m commitA
+  $ echo b > b
+  $ hg add b
+  $ hg commit -m commitB
+  $ echo c > c
+  $ hg add c
+  $ hg commit -m commitC
+  $ hg up 'desc(commitB)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo d > d
+  $ hg add d
+  $ hg commit -m commitD
+  created new head
+  $ hg up 'desc(commitC)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge 'desc(commitD)'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -m 'mergeCD'
+  $ hg log -G
+  @    changeset:   4:d8db9d137221
+  |\   tag:         tip
+  | |  parent:      2:5c51d8d6557d
+  | |  parent:      3:6625a5168474
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     mergeCD
+  | |
+  | o  changeset:   3:6625a5168474
+  | |  parent:      1:eca11cf91c71
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     commitD
+  | |
+  o |  changeset:   2:5c51d8d6557d
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     commitC
+  |
+  o  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+Check bundle behavior:
+
+  $ hg bundle -r 'desc(mergeCD)' --base 'desc(commitC)' ../issue4736.hg
+  2 changesets found
+  $ hg log -r 'bundle()' -R ../issue4736.hg
+  changeset:   3:6625a5168474
+  parent:      1:eca11cf91c71
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commitD
+  
+  changeset:   4:d8db9d137221
+  tag:         tip
+  parent:      2:5c51d8d6557d
+  parent:      3:6625a5168474
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     mergeCD
+  
+
+check strip behavior
+
+  $ hg --config extensions.strip= strip 'desc(commitD)' --debug
+  resolving manifests
+   branchmerge: False, force: True, partial: False
+   ancestor: d8db9d137221+, local: d8db9d137221+, remote: eca11cf91c71
+   c: other deleted -> r
+  removing c
+   d: other deleted -> r
+  removing d
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  2 changesets found
+  list of changesets:
+  6625a516847449b6f0fa3737b9ba56e9f0f3032c
+  d8db9d1372214336d2b5570f20ee468d2c72fa8b
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg (glob)
+  invalid branchheads cache (served): tip differs
+  truncating cache/rbc-revs-v1 to 24
+  $ hg log -G
+  o  changeset:   2:5c51d8d6557d
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitC
+  |
+  @  changeset:   1:eca11cf91c71
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     commitB
+  |
+  o  changeset:   0:105141ef12d0
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     commitA
+  
+
+strip backup content
+
+  $ hg log -r 'bundle()' -R .hg/strip-backup/6625a5168474-*-backup.hg
+  changeset:   3:6625a5168474
+  parent:      1:eca11cf91c71
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     commitD
+  
+  changeset:   4:d8db9d137221
+  tag:         tip
+  parent:      2:5c51d8d6557d
+  parent:      3:6625a5168474
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     mergeCD
+  

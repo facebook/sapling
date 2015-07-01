@@ -298,7 +298,7 @@ remote transplant with pull
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ../rp
-  $ hg transplant -s http://localhost:$HGPORT/ 2 4
+  $ hg transplant -s http://localhost:$HGPORT/ 37a1297eb21b a53251cdf717
   searching for changes
   searching for changes
   adding changesets
@@ -313,10 +313,11 @@ remote transplant with pull
   0  r1
 
 remote transplant without pull
+(It was using "2" and "4" (as the previous transplant used to) which referenced
+revision different from one run to another)
 
   $ hg pull -q http://localhost:$HGPORT/
-  $ hg transplant -s http://localhost:$HGPORT/ 2 4
-  searching for changes
+  $ hg transplant -s http://localhost:$HGPORT/ 8d9279348abb 722f4667af76
   skipping already applied revision 2:8d9279348abb
   applying 722f4667af76
   722f4667af76 transplanted to 76e321915884
