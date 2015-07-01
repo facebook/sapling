@@ -1523,21 +1523,10 @@ def commit(ui, repo, *pats, **opts):
                                match,
                                extra=extra)
 
-        active = repo._activebookmark
-        marks = old.bookmarks()
         node = cmdutil.amend(ui, repo, commitfunc, old, extra, pats, opts)
         if node == old.node():
             ui.status(_("nothing changed\n"))
             return 1
-        elif marks:
-            ui.debug('moving bookmarks %r from %s to %s\n' %
-                     (marks, old.hex(), hex(node)))
-            newmarks = repo._bookmarks
-            for bm in marks:
-                newmarks[bm] = node
-                if bm == active:
-                    bookmarks.activate(repo, bm)
-            newmarks.write()
     else:
         def commitfunc(ui, repo, message, match, opts):
             backup = ui.backupconfig('phases', 'new-commit')

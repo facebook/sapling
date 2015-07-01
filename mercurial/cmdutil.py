@@ -2614,6 +2614,8 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 if bms:
                     marks = repo._bookmarks
                     for bm in bms:
+                        ui.debug('moving bookmarks %r from %s to %s\n' %
+                                 (marks, old.hex(), hex(newid)))
                         marks[bm] = newid
                     marks.recordchange(tr)
             #commit the whole amend process
