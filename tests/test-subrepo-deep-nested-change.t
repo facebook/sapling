@@ -193,7 +193,7 @@ Archive wdir() with subrepos
   branch: default
   latesttag: null
   latesttagdistance: 4
-  changessincelatesttag: 3
+  changessincelatesttag: 4
 
 Attempting to archive 'wdir()' with a missing file is handled gracefully
   $ rm sub1/sub1
@@ -220,7 +220,7 @@ Continue relative path printing + subrepos
   branch: default
   latesttag: null
   latesttagdistance: 4
-  changessincelatesttag: 3
+  changessincelatesttag: 4
 
   $ touch sub1/sub2/folder/bar
   $ hg addremove sub1/sub2

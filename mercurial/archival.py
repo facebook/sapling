@@ -86,7 +86,11 @@ def buildmetadata(ctx):
         ltags, dist = repo.ui.popbuffer().split('\n')
         ltags = ltags.split(':')
         # XXX: ctx.rev() needs to be handled differently with wdir()
-        changessince = len(repo.revs('only(%d,%s)', ctx.rev(), ltags[0]))
+        if ctx.rev() is None:
+            changessince = len(repo.revs('only(%d,%s)', ctx.p1(),
+                                         ltags[0])) + 1
+        else:
+            changessince = len(repo.revs('only(%d,%s)', ctx.rev(), ltags[0]))
         tags = ''.join('latesttag: %s\n' % t for t in ltags)
         tags += 'latesttagdistance: %s\n' % dist
         tags += 'changessincelatesttag: %s\n' % changessince
