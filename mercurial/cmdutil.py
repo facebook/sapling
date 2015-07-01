@@ -2615,7 +2615,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                     marks = repo._bookmarks
                     for bm in bms:
                         marks[bm] = newid
-                    marks.write()
+                    marks.recordchange(tr)
             #commit the whole amend process
             createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
             if createmarkers and newid != old.node():
