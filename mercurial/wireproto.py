@@ -175,7 +175,6 @@ def encodelist(l, sep=' '):
     try:
         return sep.join(map(hex, l))
     except TypeError:
-        print l
         raise
 
 # batched call argument encoding
