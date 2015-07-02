@@ -602,3 +602,22 @@ running is placed.
   $ run-tests.py test-runtestdir.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+#if execbit
+
+test that TESTDIR is referred in PATH
+
+  $ cat > custom-command.sh <<EOF
+  > #!/bin/sh
+  > echo "hello world"
+  > EOF
+  $ chmod +x custom-command.sh
+  $ cat > test-testdir-path.t <<EOF
+  >   $ custom-command.sh
+  >   hello world
+  > EOF
+  $ run-tests.py test-testdir-path.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+#endif

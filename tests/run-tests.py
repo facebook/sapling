@@ -1812,6 +1812,8 @@ class TestRunner(object):
             realfile = os.path.realpath(fileb)
             realdir = os.path.abspath(os.path.dirname(realfile))
             path.insert(2, realdir)
+        if self._testdir != runtestdir:
+            path = [self._testdir] + path
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
         osenvironb[b"PATH"] = sepb.join(path)
