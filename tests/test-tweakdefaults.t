@@ -205,3 +205,17 @@ Crazy filenames
   $ hg grep str1 '**/*f1'
   f1:str1f1
   subdir1/subf1:str1sub
+
+Test tweaked branch command
+
+  $ hg branch
+  default
+  $ hg branch foo
+  abort: do not use branches; use bookmarks instead
+  (use --new if you are certain you want a branch)
+  [255]
+  $ hg branch --new foo
+  marked working directory as branch foo
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg branch -C
+  reset working directory to branch default

@@ -45,6 +45,10 @@ def extsetup(ui):
         opt = (opt[0], opt[1], opt[2], opt[3])
         entry[1].append(opt)
 
+    entry = wrapcommand(commands.table, 'branch', branchcmd)
+    options = entry[1]
+    options.append(('', 'new', None, _('allow branch creation')))
+
 def tweakorder():
     """
     Tweakdefaults generally should load first; other extensions may modify
@@ -207,6 +211,15 @@ def log(orig, ui, repo, *pats, **opts):
         opts['follow'] = True
 
     return orig(ui, repo, *pats, **opts)
+
+def branchcmd(orig, ui, repo, label=None, **opts):
+    if label is None or opts.get('new'):
+        if 'new' in opts:
+            del opts['new']
+        return orig(ui, repo, label, **opts)
+    raise util.Abort(
+            _('do not use branches; use bookmarks instead'),
+            hint=_('use --new if you are certain you want a branch'))
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):
