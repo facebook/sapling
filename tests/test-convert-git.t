@@ -463,7 +463,7 @@ test non-tab whitespace .gitmodules
   $ cat >> .gitmodules <<EOF
   > [submodule "git-repo5"]
   >   path = git-repo5
-  >   url = $TESTTMP/git-repo5
+  >   url = git-repo5
   > EOF
   $ git commit -q -a -m "weird white space submodule"
   $ cd ..
