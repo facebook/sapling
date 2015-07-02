@@ -465,10 +465,7 @@ test non-tab whitespace .gitmodules
   >   path = git-repo5
   >   url = $TESTTMP/git-repo5
   > EOF
-  $ git commit -a -m "weird white space submodule"
-  [master *] weird white space submodule (glob)
-   Author: nottest <test@example.org>
-   1 file changed, 3 insertions(+)
+  $ git commit -q -a -m "weird white space submodule"
   $ cd ..
   $ hg convert git-repo6 hg-repo6
   initializing destination hg-repo6 repository
@@ -489,16 +486,8 @@ test missing .gitmodules
   $ git checkout HEAD .gitmodules
   $ git rm .gitmodules
   rm '.gitmodules'
-  $ git commit -m "remove .gitmodules" .gitmodules
-  [master *] remove .gitmodules (glob)
-   Author: nottest <test@example.org>
-   1 file changed, 3 deletions(-)
-   delete mode 100644 .gitmodules
-  $ git commit -m "missing .gitmodules"
-  [master *] missing .gitmodules (glob)
-   Author: nottest <test@example.org>
-   1 file changed, 1 insertion(+)
-   create mode 160000 git-repo4
+  $ git commit -q -m "remove .gitmodules" .gitmodules
+  $ git commit -q -m "missing .gitmodules"
   $ cd ..
   $ hg convert git-repo6 hg-repo6 --traceback
   fatal: Path '.gitmodules' does not exist in '*' (glob)
