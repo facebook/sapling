@@ -564,7 +564,7 @@ def main(argv):
             print 'Import cycle:', c
             firstmods.add(first)
         any_errors = True
-    return not any_errors
+    return any_errors != 0
 
 if __name__ == '__main__':
     sys.exit(int(main(sys.argv)))

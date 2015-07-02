@@ -101,6 +101,7 @@ Run additional tests for the import checker
   testpackage/subpackage/levelpriority.py higher-level import should come first: testpackage
   testpackage/symbolimport.py direct symbol import from testpackage.unsorted
   testpackage/unsorted.py imports not lexically sorted: os < sys
+  [1]
 
   $ cd "$TESTDIR"/..
 
@@ -129,3 +130,4 @@ these may expose other cycles.
   Import cycle: mercurial.cmdutil -> mercurial.context -> mercurial.subrepo -> mercurial.cmdutil
   Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
   Import cycle: mercurial.commands -> mercurial.commandserver -> mercurial.dispatch -> mercurial.commands
+  [1]
