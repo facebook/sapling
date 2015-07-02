@@ -51,6 +51,12 @@ Second branch starting at nullrev:
   8 t
   7 f
 
+Working-directory revision has special identifiers, though they are still
+experimental:
+
+  $ hg log -r 'wdir()' -T '{rev}:{node}\n'
+  2147483647:ffffffffffffffffffffffffffffffffffffffff
+
 Some keywords are invalid for working-directory revision, but they should
 never cause crash:
 

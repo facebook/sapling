@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from node import hex
-import patch, util, error
+import patch, scmutil, util, error
 import hbisect
 
 # This helper class allows us to handle both:
@@ -400,7 +400,7 @@ def showphaseidx(repo, ctx, templ, **args):
 
 def showrev(repo, ctx, templ, **args):
     """:rev: Integer. The repository-local changeset revision number."""
-    return ctx.rev()
+    return scmutil.intrev(ctx.rev())
 
 def showsubrepos(**args):
     """:subrepos: List of strings. Updated subrepositories in the changeset."""
