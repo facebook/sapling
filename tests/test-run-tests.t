@@ -566,3 +566,20 @@ backslash on end of line with glob matching is handled properly
 
   $ rm -f test-glob-backslash.t
 
+Test reusability for third party tools
+======================================
+
+  $ mkdir "$TESTTMP"/anothertests
+  $ cd "$TESTTMP"/anothertests
+
+test that `run-tests.py` can execute hghave, even if it runs not in
+Mercurial source tree.
+
+  $ cat > test-hghave.t <<EOF
+  > #require true
+  >   $ echo foo
+  >   foo
+  > EOF
+  $ run-tests.py test-hghave.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.

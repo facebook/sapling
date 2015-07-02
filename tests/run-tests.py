@@ -902,7 +902,8 @@ class TTest(Test):
 
     def _hghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
-        tdir = self._testdir.replace(b'\\', b'/')
+        runtestdir = os.path.abspath(os.path.dirname(_bytespath(__file__)))
+        tdir = runtestdir.replace(b'\\', b'/')
         proc = Popen4(b'%s -c "%s/hghave %s"' %
                       (self._shell, tdir, b' '.join(reqs)),
                       self._testtmp, 0, self._getenv())
