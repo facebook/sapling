@@ -1801,6 +1801,7 @@ class TestRunner(object):
 
         fileb = _bytespath(__file__)
         runtestdir = os.path.abspath(os.path.dirname(fileb))
+        osenvironb[b'RUNTESTDIR'] = runtestdir
         if PYTHON3:
             sepb = _bytespath(os.pathsep)
         else:
@@ -1835,6 +1836,7 @@ class TestRunner(object):
         self._coveragefile = os.path.join(self._testdir, b'.coverage')
 
         vlog("# Using TESTDIR", self._testdir)
+        vlog("# Using RUNTESTDIR", osenvironb[b'RUNTESTDIR'])
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
         vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])

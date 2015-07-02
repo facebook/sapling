@@ -583,3 +583,22 @@ Mercurial source tree.
   $ run-tests.py test-hghave.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+test that RUNTESTDIR refers the directory, in which `run-tests.py` now
+running is placed.
+
+  $ cat > test-runtestdir.t <<EOF
+  > - $TESTDIR, in which test-run-tests.t is placed
+  > - \$TESTDIR, in which test-runtestdir.t is placed (expanded at runtime)
+  > - \$RUNTESTDIR, in which run-tests.py is placed (expanded at runtime)
+  > 
+  >   $ test "\$TESTDIR" = "$TESTTMP"/anothertests
+  >   $ test "\$RUNTESTDIR" = "$TESTDIR"
+  >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py
+  >   #!/usr/bin/env python
+  >   #
+  >   # check-code - a style and portability checker for Mercurial
+  > EOF
+  $ run-tests.py test-runtestdir.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
