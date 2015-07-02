@@ -15,7 +15,7 @@ This extension changes defaults to be more user friendly.
 
 from mercurial import util, cmdutil, commands, hg, scmutil
 from mercurial import bookmarks
-from mercurial.extensions import wrapcommand
+from mercurial.extensions import wrapcommand, _order
 from mercurial.i18n import _
 from hgext import rebase
 import errno, os, stat, subprocess
@@ -27,6 +27,9 @@ testedwith = 'internal'
 logopts = [
     ('', 'all', None, _('shows all commits in the repo')),
 ]
+
+def uisetup(ui):
+    tweakorder()
 
 def extsetup(ui):
     entry = wrapcommand(commands.table, 'update', update)
@@ -41,6 +44,19 @@ def extsetup(ui):
     for opt in logopts:
         opt = (opt[0], opt[1], opt[2], opt[3])
         entry[1].append(opt)
+
+def tweakorder():
+    """
+    Tweakdefaults generally should load first; other extensions may modify
+    behavior such that tweakdefaults will be happy, so we should not prevent
+    that from happening too early in the process. Note that by loading first,
+    we ensure that tweakdefault's function wrappers run *last*.
+
+    As of this writing, the extensions that we should load before are
+    remotenames and directaccess (NB: directaccess messes with order as well).
+    """
+    _order.remove('tweakdefaults')
+    _order.insert(0, 'tweakdefaults')
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
