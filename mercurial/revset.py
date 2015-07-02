@@ -282,7 +282,7 @@ def getargs(x, min, max, err):
         raise error.ParseError(err)
     return l
 
-def getkwargs(x, funcname, keys):
+def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, keys.split(),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
@@ -846,7 +846,7 @@ def extra(repo, subset, x):
     a regular expression. To match a value that actually starts with `re:`,
     use the prefix `literal:`.
     """
-    args = getkwargs(x, 'extra', 'label value')
+    args = getargsdict(x, 'extra', 'label value')
     if 'label' not in args:
         # i18n: "extra" is a keyword
         raise error.ParseError(_('extra takes at least 1 argument'))
