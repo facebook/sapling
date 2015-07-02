@@ -1627,6 +1627,7 @@ working-directory revision requires special treatment
 
   $ hg log -r 'wdir()'
   changeset:   0:65624cd9070a+
+  parent:      0:65624cd9070a
   user:        test
   date:        [A-Za-z0-9:+ ]+ (re)
   

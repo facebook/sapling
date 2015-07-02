@@ -1272,7 +1272,7 @@ class changeset_printer(object):
             return parents
         if self.ui.debugflag:
             return [parents[0], self.repo['null']]
-        if parents[0].rev() >= scmutil.intrev(self.repo, ctx.rev()) - 1:
+        if parents[0].rev() >= scmutil.intrev(ctx.rev()) - 1:
             return []
         return parents
 

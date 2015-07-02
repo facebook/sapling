@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-from mercurial.node import nullrev
+from mercurial.node import nullrev, wdirrev
 import util, error, osutil, revset, similar, encoding, phases
 import pathutil
 import match as matchmod
@@ -662,11 +662,11 @@ def rcpath():
             _rcpath = osrcpath()
     return _rcpath
 
-def intrev(repo, rev):
+def intrev(rev):
     """Return integer for a given revision that can be used in comparison or
     arithmetic operation"""
     if rev is None:
-        return len(repo)
+        return wdirrev
     return rev
 
 def revsingle(repo, revspec, default='.'):
