@@ -4,7 +4,7 @@ if all features are there, non-zero otherwise. If a feature name is
 prefixed with "no-", the absence of feature is tested.
 """
 import optparse
-import sys
+import os, sys
 import hghave
 
 checks = hghave.checks
@@ -33,8 +33,30 @@ parser.add_option("--list-features", action="store_true",
 parser.add_option("-q", "--quiet", action="store_true",
                   help="check features silently")
 
+def _loadaddon(quiet):
+    if 'TESTDIR' in os.environ:
+        # loading from '.' isn't needed, because `hghave` should be
+        # running at TESTTMP in this case
+        path = os.environ['TESTDIR']
+    else:
+        path = '.'
+
+    if not os.path.exists(os.path.join(path, 'hghaveaddon.py')):
+        return
+
+    sys.path.insert(0, path)
+    try:
+        import hghaveaddon
+    except BaseException, inst:
+        if not quiet:
+            sys.stderr.write('failed to import hghaveaddon.py from %r: %s\n'
+                             % (path, inst))
+        sys.exit(2)
+    sys.path.pop(0)
+
 if __name__ == '__main__':
     options, args = parser.parse_args()
+    _loadaddon(options.quiet)
     if options.list_features:
         list_features()
         sys.exit(0)
