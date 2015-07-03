@@ -112,8 +112,8 @@ def _statusmessage(code):
 def statusmessage(code, message=None):
     return '%d %s' % (code, message or _statusmessage(code))
 
-def get_stat(spath, fn="00changelog.i"):
-    """stat fn (00changelog.i by default) if it exists, spath otherwise"""
+def get_stat(spath, fn):
+    """stat fn if it exists, spath otherwise"""
     cl_path = os.path.join(spath, fn)
     if os.path.exists(cl_path):
         return os.stat(cl_path)
@@ -121,7 +121,7 @@ def get_stat(spath, fn="00changelog.i"):
         return os.stat(spath)
 
 def get_mtime(spath):
-    return get_stat(spath).st_mtime
+    return get_stat(spath, "00changelog.i").st_mtime
 
 def staticfile(directory, fname, req):
     """return a file inside directory with guessed Content-Type header

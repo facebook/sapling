@@ -120,7 +120,7 @@ class hgweb(object):
             return repo.filtered('served')
 
     def refresh(self, request=None):
-        st = get_stat(self.repo.spath)
+        st = get_stat(self.repo.spath, '00changelog.i')
         pst = get_stat(self.repo.spath, 'phaseroots')
         # changelog mtime and size, phaseroots mtime and size
         repostate = ((st.st_mtime, st.st_size), (pst.st_mtime, pst.st_size))
