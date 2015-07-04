@@ -3117,6 +3117,8 @@ Test shortest(node) function:
   e777603221
   bcc7ff960b
   f7769ec2ab
+  $ hg log --template '{node|shortest}\n' -l1
+  e777
 
 Test pad function
 

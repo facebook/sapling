@@ -252,6 +252,9 @@ def buildfilter(exp, context):
     if n in context._filters:
         filt = context._filters[n]
         return (runfilter, (func, data, filt))
+    if n in funcs:
+        f = funcs[n]
+        return (f, [(func, data)])
     raise error.ParseError(_("unknown function '%s'") % n)
 
 def runfilter(context, mapping, data):
