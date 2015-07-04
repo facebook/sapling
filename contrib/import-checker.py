@@ -195,6 +195,9 @@ def list_stdlib_modules():
         if 'site-packages' in libpath:
             continue
         for top, dirs, files in os.walk(libpath):
+            for i, d in reversed(list(enumerate(dirs))):
+                if not os.path.exists(os.path.join(top, d, '__init__.py')):
+                    del dirs[i]
             for name in files:
                 if name == '__init__.py':
                     continue
@@ -202,8 +205,6 @@ def list_stdlib_modules():
                         or name.endswith('.pyd')):
                     continue
                 full_path = os.path.join(top, name)
-                if 'site-packages' in full_path:
-                    continue
                 rel_path = full_path[len(libpath) + 1:]
                 mod = dotted_name_of_path(rel_path)
                 yield mod
