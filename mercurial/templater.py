@@ -205,12 +205,6 @@ def getlist(x):
         return getlist(x[1]) + [x[2]]
     return [x]
 
-def getfilter(exp, context):
-    f = getsymbol(exp)
-    if f not in context._filters:
-        raise error.ParseError(_("unknown function '%s'") % f)
-    return context._filters[f]
-
 def gettemplate(exp, context):
     if exp[0] == 'template':
         return [compileexp(e, context, methods) for e in exp[1]]
@@ -254,8 +248,11 @@ def runtemplate(context, mapping, template):
 
 def buildfilter(exp, context):
     func, data = compileexp(exp[1], context, methods)
-    filt = getfilter(exp[2], context)
-    return (runfilter, (func, data, filt))
+    n = getsymbol(exp[2])
+    if n in context._filters:
+        filt = context._filters[n]
+        return (runfilter, (func, data, filt))
+    raise error.ParseError(_("unknown function '%s'") % n)
 
 def runfilter(context, mapping, data):
     func, data, filt = data
