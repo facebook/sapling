@@ -192,11 +192,10 @@ def list_stdlib_modules():
         # of any().
         if not any(libpath.startswith(p) for p in stdlib_prefixes): # no-py24
             continue
-        if 'site-packages' in libpath:
-            continue
         for top, dirs, files in os.walk(libpath):
             for i, d in reversed(list(enumerate(dirs))):
-                if not os.path.exists(os.path.join(top, d, '__init__.py')):
+                if (not os.path.exists(os.path.join(top, d, '__init__.py'))
+                    or top == libpath and d in ('hgext', 'mercurial')):
                     del dirs[i]
             for name in files:
                 if name == '__init__.py':
