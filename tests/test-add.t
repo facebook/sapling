@@ -109,7 +109,7 @@ should fail
 wdir doesn't cause a crash, and can be dynamically selected if dirty
 
   $ hg log -r "heads(. or wdir() & file('**'))"
-  changeset:   2:*+ (glob)
+  changeset:   2147483647:ffffffffffff
   parent:      2:* (glob)
   parent:      1:* (glob)
   user:        test

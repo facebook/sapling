@@ -180,6 +180,26 @@ as default style, except for extra phase lines.
   $ hg log --debug -T phases > phases.out
   $ cmp log.out phases.out || diff -u log.out phases.out
 
+Default style of working-directory revision should also be the same (but
+date may change while running tests):
+
+  $ hg log -r 'wdir()' | sed 's|^date:.*|date:|' > log.out
+  $ hg log -r 'wdir()' --style default | sed 's|^date:.*|date:|' > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
+  $ hg log -r 'wdir()' -v | sed 's|^date:.*|date:|' > log.out
+  $ hg log -r 'wdir()' -v --style default | sed 's|^date:.*|date:|' > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
+  $ hg log -r 'wdir()' -q > log.out
+  $ hg log -r 'wdir()' -q --style default > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
+  $ hg log -r 'wdir()' --debug | sed 's|^date:.*|date:|' > log.out
+  $ hg log -r 'wdir()' --debug --style default \
+  > | sed 's|^date:.*|date:|' > style.out
+  $ cmp log.out style.out || diff -u log.out style.out
+
 Default style should also preserve color information (issue2866):
 
   $ cp $HGRCPATH $HGRCPATH-bak

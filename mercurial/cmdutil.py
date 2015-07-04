@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, nullid, nullrev, short
+from node import hex, bin, nullid, nullrev, short
 from i18n import _
 import os, sys, errno, re, tempfile, cStringIO, shutil
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
@@ -1152,11 +1152,9 @@ class changeset_printer(object):
             hexfunc = hex
         else:
             hexfunc = short
-        if rev is None:
-            pctx = ctx.p1()
-            revnode = (pctx.rev(), hexfunc(pctx.node()) + '+')
-        else:
-            revnode = (rev, hexfunc(changenode))
+        # as of now, wctx.node() and wctx.rev() return None, but we want to
+        # show the same values as {node} and {rev} templatekw
+        revnode = (scmutil.intrev(rev), hexfunc(bin(ctx.hex())))
 
         if self.ui.quiet:
             self.ui.write("%d:%s\n" % revnode, label='log.node')
