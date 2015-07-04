@@ -2498,7 +2498,7 @@ Behind the scenes, this will throw AttributeError
 Behind the scenes, this will throw ValueError
 
   $ hg tip --template '{author|email|date}\n'
-  abort: template filter 'datefilter' is not compatible with keyword 'author'
+  hg: parse error: date expects a date information
   [255]
 
 Error in nested template:

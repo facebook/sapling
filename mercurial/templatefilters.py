@@ -81,12 +81,6 @@ def count(i):
     """:count: List or text. Returns the length as an integer."""
     return len(i)
 
-def datefilter(text):
-    """:date: Date. Returns a date in a Unix date format, including the
-    timezone: "Mon Sep 04 15:13:13 2006 0700".
-    """
-    return util.datestr(text)
-
 def domain(author):
     """:domain: Any text. Finds the first string that looks like an email
     address, and extracts just the domain component. Example: ``User
@@ -348,10 +342,6 @@ def stringify(thing):
         return ""
     return str(thing)
 
-def strip(text):
-    """:strip: Any text. Strips all leading and trailing whitespace."""
-    return text.strip()
-
 def stripdir(text):
     """:stripdir: Treat the text as path and strip a directory level, if
     possible. For example, "foo" and "foo/bar" becomes "foo".
@@ -401,7 +391,6 @@ filters = {
     "age": age,
     "basename": basename,
     "count": count,
-    "date": datefilter,
     "domain": domain,
     "email": email,
     "escape": escape,
@@ -429,7 +418,6 @@ filters = {
     "splitlines": splitlines,
     "stringescape": stringescape,
     "stringify": stringify,
-    "strip": strip,
     "stripdir": stripdir,
     "tabindent": tabindent,
     "upper": upper,

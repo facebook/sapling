@@ -313,7 +313,8 @@ def buildfunc(exp, context):
 
 def date(context, mapping, args):
     """:date(date[, fmt]): Format a date. See :hg:`help dates` for formatting
-    strings."""
+    strings. The default is a Unix date format, including the timezone:
+    "Mon Sep 04 15:13:13 2006 0700"."""
     if not (1 <= len(args) <= 2):
         # i18n: "date" is a keyword
         raise error.ParseError(_("date expects one or two arguments"))
@@ -604,7 +605,8 @@ def shortest(context, mapping, args):
                 return shortest
 
 def strip(context, mapping, args):
-    """:strip(text[, chars]): Strip characters from a string."""
+    """:strip(text[, chars]): Strip characters from a string. By default,
+    strips all leading and trailing whitespace."""
     if not (1 <= len(args) <= 2):
         # i18n: "strip" is a keyword
         raise error.ParseError(_("strip expects one or two arguments"))
