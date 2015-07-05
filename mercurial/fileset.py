@@ -10,21 +10,21 @@ import parser, error, util, merge
 from i18n import _
 
 elements = {
-    # token-type: binding-strength, prefix, infix, suffix
-    "(": (20, ("group", 1, ")"), ("func", 1, ")"), None),
-    "-": (5, ("negate", 19), ("minus", 5), None),
-    "not": (10, ("not", 10), None, None),
-    "!": (10, ("not", 10), None, None),
-    "and": (5, None, ("and", 5), None),
-    "&": (5, None, ("and", 5), None),
-    "or": (4, None, ("or", 4), None),
-    "|": (4, None, ("or", 4), None),
-    "+": (4, None, ("or", 4), None),
-    ",": (2, None, ("list", 2), None),
-    ")": (0, None, None, None),
-    "symbol": (0, ("symbol",), None, None),
-    "string": (0, ("string",), None, None),
-    "end": (0, None, None, None),
+    # token-type: binding-strength, primary, prefix, infix, suffix
+    "(": (20, None, ("group", 1, ")"), ("func", 1, ")"), None),
+    "-": (5, None, ("negate", 19), ("minus", 5), None),
+    "not": (10, None, ("not", 10), None, None),
+    "!": (10, None, ("not", 10), None, None),
+    "and": (5, None, None, ("and", 5), None),
+    "&": (5, None, None, ("and", 5), None),
+    "or": (4, None, None, ("or", 4), None),
+    "|": (4, None, None, ("or", 4), None),
+    "+": (4, None, None, ("or", 4), None),
+    ",": (2, None, None, ("list", 2), None),
+    ")": (0, None, None, None, None),
+    "symbol": (0, "symbol", None, None, None),
+    "string": (0, "string", None, None, None),
+    "end": (0, None, None, None, None),
 }
 
 keywords = set(['and', 'or', 'not'])

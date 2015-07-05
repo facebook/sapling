@@ -11,8 +11,8 @@
 
 # takes a tokenizer and elements
 # tokenizer is an iterator that returns (type, value, pos) tuples
-# elements is a mapping of types to binding strength, prefix, infix and
-# suffix actions
+# elements is a mapping of types to binding strength, primary, prefix, infix
+# and suffix actions
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
@@ -31,7 +31,7 @@ class parser(object):
         return t
     def _hasnewterm(self):
         'True if next token may start new term'
-        return bool(self._elements[self.current[0]][1])
+        return any(self._elements[self.current[0]][1:3])
     def _match(self, m):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
@@ -50,17 +50,17 @@ class parser(object):
     def _parse(self, bind=0):
         token, value, pos = self._advance()
         # handle prefix rules on current token
-        prefix = self._elements[token][1]
-        if not prefix:
-            raise error.ParseError(_("not a prefix: %s") % token, pos)
-        if len(prefix) == 1:
-            expr = (prefix[0], value)
-        else:
+        primary, prefix = self._elements[token][1:3]
+        if primary:
+            expr = (primary, value)
+        elif prefix:
             expr = (prefix[0], self._parseoperand(*prefix[1:]))
+        else:
+            raise error.ParseError(_("not a prefix: %s") % token, pos)
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
             token, value, pos = self._advance()
-            infix, suffix = self._elements[token][2:]
+            infix, suffix = self._elements[token][3:]
             # check for suffix - next token isn't a valid prefix
             if suffix and not self._hasnewterm():
                 expr = (suffix[0], expr)

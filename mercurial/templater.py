@@ -15,17 +15,17 @@ import minirst
 # template parsing
 
 elements = {
-    # token-type: binding-strength, prefix, infix, suffix
-    "(": (20, ("group", 1, ")"), ("func", 1, ")"), None),
-    ",": (2, None, ("list", 2), None),
-    "|": (5, None, ("|", 5), None),
-    "%": (6, None, ("%", 6), None),
-    ")": (0, None, None, None),
-    "integer": (0, ("integer",), None, None),
-    "symbol": (0, ("symbol",), None, None),
-    "string": (0, ("string",), None, None),
-    "template": (0, ("template",), None, None),
-    "end": (0, None, None, None),
+    # token-type: binding-strength, primary, prefix, infix, suffix
+    "(": (20, None, ("group", 1, ")"), ("func", 1, ")"), None),
+    ",": (2, None, None, ("list", 2), None),
+    "|": (5, None, None, ("|", 5), None),
+    "%": (6, None, None, ("%", 6), None),
+    ")": (0, None, None, None, None),
+    "integer": (0, "integer", None, None, None),
+    "symbol": (0, "symbol", None, None, None),
+    "string": (0, "string", None, None, None),
+    "template": (0, "template", None, None, None),
+    "end": (0, None, None, None, None),
 }
 
 def tokenize(program, start, end):
