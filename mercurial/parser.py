@@ -12,7 +12,7 @@
 # takes a tokenizer and elements
 # tokenizer is an iterator that returns (type, value, pos) tuples
 # elements is a mapping of types to binding strength, prefix, infix and
-# optional suffix actions
+# suffix actions
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
@@ -54,16 +54,14 @@ class parser(object):
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
             token, value, pos = self._advance()
-            e = self._elements[token]
+            infix, suffix = self._elements[token][2:]
             # check for suffix - next token isn't a valid prefix
-            if len(e) == 4 and not self._elements[self.current[0]][1]:
-                suffix = e[3]
+            if suffix and not self._elements[self.current[0]][1]:
                 expr = (suffix[0], expr)
             else:
                 # handle infix rules
-                if len(e) < 3 or not e[2]:
+                if not infix:
                     raise error.ParseError(_("not an infix: %s") % token, pos)
-                infix = e[2]
                 if len(infix) == 3 and infix[2] == self.current[0]:
                     self._match(infix[2], pos)
                     expr = (infix[0], expr, (None))
