@@ -153,7 +153,7 @@ div.page-footer {
 }
   div.page-footer p {
     position: relative;
-    left: 20px;
+    padding-left: 20px;
     bottom: 5px;
     font-size: 1.2em;
   }
