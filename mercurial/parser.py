@@ -49,9 +49,9 @@ class parser(object):
         return expr
     def _parse(self, bind=0):
         token, value, pos = self._advance()
-        # handle prefix rules on current token
+        # handle prefix rules on current token, take as primary if unambiguous
         primary, prefix = self._elements[token][1:3]
-        if primary:
+        if primary and not (prefix and self._hasnewterm()):
             expr = (primary, value)
         elif prefix:
             expr = (prefix[0], self._parseoperand(*prefix[1:]))
