@@ -720,14 +720,13 @@ _revrangesep = ':'
 
 def revrange(repo, revs):
     """Yield revision as strings from a list of revision specifications."""
-    subsets = []
+    allspecs = []
     for spec in revs:
         if isinstance(spec, int):
             spec = revset.formatspec('rev(%d)', spec)
-        m = revset.match(repo.ui, spec, repo)
-        subsets.append(m(repo))
-
-    return revset._combinesets(subsets)
+        allspecs.append(spec)
+    m = revset.matchany(repo.ui, allspecs, repo)
+    return m(repo)
 
 def expandpats(pats):
     '''Expand bare globs when running on windows.
