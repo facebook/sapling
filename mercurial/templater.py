@@ -15,6 +15,7 @@ import minirst
 # template parsing
 
 elements = {
+    # token-type: binding-strength, prefix, infix, suffix
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
     ",": (2, None, ("list", 2)),
     "|": (5, None, ("|", 5)),

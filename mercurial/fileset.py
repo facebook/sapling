@@ -10,6 +10,7 @@ import parser, error, util, merge
 from i18n import _
 
 elements = {
+    # token-type: binding-strength, prefix, infix, suffix
     "(": (20, ("group", 1, ")"), ("func", 1, ")")),
     "-": (5, ("negate", 19), ("minus", 5)),
     "not": (10, ("not", 10)),

@@ -115,6 +115,7 @@ def _revsbetween(repo, roots, heads):
     return baseset(sorted(reachable))
 
 elements = {
+    # token-type: binding-strength, prefix, infix, suffix
     "(": (21, ("group", 1, ")"), ("func", 1, ")")),
     "##": (20, None, ("_concat", 20)),
     "~": (18, None, ("ancestor", 18)),
