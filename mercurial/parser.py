@@ -35,6 +35,15 @@ class parser(object):
             raise error.ParseError(_("unexpected token: %s") % self.current[0],
                                    self.current[2])
         self._advance()
+    def _parseoperand(self, bind, m=None):
+        'gather right-hand-side operand until an end condition or binding met'
+        if m and self.current[0] == m:
+            expr = None
+        else:
+            expr = self._parse(bind)
+        if m:
+            self._match(m)
+        return expr
     def _parse(self, bind=0):
         token, value, pos = self._advance()
         # handle prefix rules on current token
@@ -44,13 +53,7 @@ class parser(object):
         if len(prefix) == 1:
             expr = (prefix[0], value)
         else:
-            if len(prefix) > 2 and prefix[2] == self.current[0]:
-                self._match(prefix[2])
-                expr = (prefix[0], None)
-            else:
-                expr = (prefix[0], self._parse(prefix[1]))
-                if len(prefix) > 2:
-                    self._match(prefix[2])
+            expr = (prefix[0], self._parseoperand(*prefix[1:]))
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
             token, value, pos = self._advance()
@@ -62,13 +65,7 @@ class parser(object):
                 # handle infix rules
                 if not infix:
                     raise error.ParseError(_("not an infix: %s") % token, pos)
-                if len(infix) == 3 and infix[2] == self.current[0]:
-                    self._match(infix[2])
-                    expr = (infix[0], expr, (None))
-                else:
-                    expr = (infix[0], expr, self._parse(infix[1]))
-                    if len(infix) == 3:
-                        self._match(infix[2])
+                expr = (infix[0], expr, self._parseoperand(*infix[1:]))
         return expr
     def parse(self, tokeniter):
         'generate a parse tree from tokens'
