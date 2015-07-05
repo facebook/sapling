@@ -29,6 +29,9 @@ class parser(object):
         t = self.current
         self.current = next(self._iter, None)
         return t
+    def _hasnewterm(self):
+        'True if next token may start new term'
+        return bool(self._elements[self.current[0]][1])
     def _match(self, m):
         'make sure the tokenizer matches an end condition'
         if self.current[0] != m:
@@ -59,7 +62,7 @@ class parser(object):
             token, value, pos = self._advance()
             infix, suffix = self._elements[token][2:]
             # check for suffix - next token isn't a valid prefix
-            if suffix and not self._elements[self.current[0]][1]:
+            if suffix and not self._hasnewterm():
                 expr = (suffix[0], expr)
             else:
                 # handle infix rules
