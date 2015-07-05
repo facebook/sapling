@@ -682,7 +682,10 @@ def getsections(blocks):
     secs = []
 
     def getname(b):
-        x = b['lines'][0]
+        if b['type'] == 'field':
+            x = b['key']
+        else:
+            x = b['lines'][0]
         x = x.lower().strip('"')
         if '(' in x:
             x = x.split('(')[0]
@@ -696,7 +699,7 @@ def getsections(blocks):
             level = nest.index(i) + 1
             nest = nest[:level]
             secs.append((getname(b), level, [b]))
-        elif b['type'] == 'definition':
+        elif b['type'] in ('definition', 'field'):
             i = ' '
             if i not in nest:
                 nest += i

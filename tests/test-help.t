@@ -1117,6 +1117,10 @@ Test section lookup
   abort: help section not found
   [255]
 
+  $ hg help template.files
+      files         List of strings. All files modified, added, or removed by
+                    this changeset.
+
 Test dynamic list of merge tools only shows up once
   $ hg help merge-tools
   Merge Tools
