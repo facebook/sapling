@@ -117,6 +117,25 @@ trivial
   <spanset+ 0:1>
   0
   1
+  $ try --optimize :
+  (rangeall
+    None)
+  * optimized:
+  (range
+    ('string', '0')
+    ('string', 'tip'))
+  * set:
+  <spanset+ 0:9>
+  0
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
   $ try 3::6
   (dagrange
     ('symbol', '3')

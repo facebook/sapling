@@ -125,7 +125,7 @@ elements = {
            ("dagrangepost", 17)),
     "..": (17, None, ("dagrangepre", 17), ("dagrange", 17),
            ("dagrangepost", 17)),
-    ":": (15, None, ("rangepre", 15), ("range", 15), ("rangepost", 15)),
+    ":": (15, "rangeall", ("rangepre", 15), ("range", 15), ("rangepost", 15)),
     "not": (10, None, ("not", 10), None, None),
     "!": (10, None, ("not", 10), None, None),
     "and": (5, None, None, ("and", 5), None),
@@ -2227,6 +2227,8 @@ def optimize(x, small):
         return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
     elif op == 'dagrangepost':
         return optimize(('func', ('symbol', 'descendants'), x[1]), small)
+    elif op == 'rangeall':
+        return optimize(('range', ('string', '0'), ('string', 'tip')), small)
     elif op == 'rangepre':
         return optimize(('range', ('string', '0'), x[1]), small)
     elif op == 'rangepost':
