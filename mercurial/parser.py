@@ -62,7 +62,7 @@ class parser(object):
             token, value, pos = self._advance()
             # handle infix rules, take as suffix if unambiguous
             infix, suffix = self._elements[token][3:]
-            if suffix and not self._hasnewterm():
+            if suffix and not (infix and self._hasnewterm()):
                 expr = (suffix[0], expr)
             elif infix:
                 expr = (infix[0], expr, self._parseoperand(*infix[1:]))
