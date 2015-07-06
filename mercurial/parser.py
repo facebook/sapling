@@ -60,15 +60,14 @@ class parser(object):
         # gather tokens until we meet a lower binding strength
         while bind < self._elements[self.current[0]][0]:
             token, value, pos = self._advance()
+            # handle infix rules, take as suffix if unambiguous
             infix, suffix = self._elements[token][3:]
-            # check for suffix - next token isn't a valid prefix
             if suffix and not self._hasnewterm():
                 expr = (suffix[0], expr)
-            else:
-                # handle infix rules
-                if not infix:
-                    raise error.ParseError(_("not an infix: %s") % token, pos)
+            elif infix:
                 expr = (infix[0], expr, self._parseoperand(*infix[1:]))
+            else:
+                raise error.ParseError(_("not an infix: %s") % token, pos)
         return expr
     def parse(self, tokeniter):
         'generate a parse tree from tokens'
