@@ -40,24 +40,25 @@ class _hybrid(object):
             raise AttributeError(name)
         return getattr(self.values, name)
 
-def showlist(name, values, plural=None, element=None, **args):
+def showlist(name, values, plural=None, element=None, separator=' ', **args):
     if not element:
         element = name
-    f = _showlist(name, values, plural, **args)
+    f = _showlist(name, values, plural, separator, **args)
     return _hybrid(f, values, lambda x: {element: x})
 
-def _showlist(name, values, plural=None, **args):
+def _showlist(name, values, plural=None, separator=' ', **args):
     '''expand set of values.
     name is name of key in template map.
     values is list of strings or dicts.
     plural is plural of name, if not simply name + 's'.
+    separator is used to join values as a string
 
     expansion works like this, given name 'foo'.
 
     if values is empty, expand 'no_foos'.
 
     if 'foo' not in template map, return values as a string,
-    joined by space.
+    joined by 'separator'.
 
     expand 'start_foos'.
 
@@ -77,7 +78,7 @@ def _showlist(name, values, plural=None, **args):
         return
     if name not in templ:
         if isinstance(values[0], str):
-            yield ' '.join(values)
+            yield separator.join(values)
         else:
             for v in values:
                 yield dict(v, **args)
