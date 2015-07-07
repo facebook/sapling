@@ -293,12 +293,7 @@ def extsetup(ui):
     if _tracking(ui):
         try:
             rebase = extensions.find('rebase')
-
-            def afterload(loaded):
-                extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebasecmd)
-
-            if rebase:
-                extensions.afterloaded('tweakdefaults', afterload)
+            extensions.wrapcommand(rebase.cmdtable, 'rebase', exrebasecmd)
         except KeyError:
             # rebase isn't on, that's fine
             pass
