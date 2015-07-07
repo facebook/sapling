@@ -458,6 +458,9 @@ check that we can merge tags that differ in rank
   $ echo c4 > f4
   $ hg log -r '.' -T "{changessincelatesttag} changes since {latesttag}\n"
   2 changes since t4:t6
+  $ hg log -r '.' -T "{latesttag % '{latesttag}\n'}"
+  t4
+  t6
   $ hg ci -A -m4
   adding f4
   $ hg log -r 'wdir()' -T "{changessincelatesttag} changes since {latesttag}\n"

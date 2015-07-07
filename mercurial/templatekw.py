@@ -325,11 +325,15 @@ def showfiles(**args):
     """
     return showlist('file', args['ctx'].files(), **args)
 
-def showlatesttag(repo, ctx, templ, cache, **args):
-    """:latesttag: String. Most recent global tag in the ancestors of this
-    changeset.
+def showlatesttag(**args):
+    """:latesttag: List of strings. The global tags on the most recent globally
+    tagged ancestor of this changeset.
     """
-    return ':'.join(getlatesttags(repo, ctx, cache)[2])
+    repo, ctx = args['repo'], args['ctx']
+    cache = args['cache']
+    latesttags = getlatesttags(repo, ctx, cache)[2]
+
+    return showlist('latesttag', latesttags, separator=':', **args)
 
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
     """:latesttagdistance: Integer. Longest path to the latest tag."""
