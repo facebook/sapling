@@ -104,7 +104,7 @@ class Command(object):
     def __str__(self):
         cmd = "hg " + self.name
         if self.opts:
-            for k, values in self.opts.iteritems():
+            for k, values in sorted(self.opts.iteritems()):
                 for v in values:
                     if v:
                         cmd += " %s %s" % (k, v)
