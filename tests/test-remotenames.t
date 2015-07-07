@@ -282,3 +282,13 @@ Test clone --mirror
      bar                       2:95cb4ab9fe1d
      baz                       2:95cb4ab9fe1d
      foo                       2:95cb4ab9fe1d
+
+Test loading with hggit
+
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "hggit=" >> $HGRCPATH
+  $ hg help bookmarks  | grep -A 3 -- '--track'
+   -t --track BOOKMARK track this bookmark or remote name
+   -u --untrack        remove tracking for this bookmark
+   -a --all            show both remote and local bookmarks
+      --remote         show only remote bookmarks

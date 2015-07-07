@@ -330,42 +330,41 @@ def extsetup(ui):
         # histedit isn't on
         pass
 
-    def afterhggit(loaded):
-        entry = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
 
-        # check if hggit was loaded; if so, then we'll skip some of the
-        # duplicate options
-        hggit = False
-        for o in entry[1]:
-            if o[1] == 'remote':
-                hggit = True
+    bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
+    branchcmd = extensions.wrapcommand(commands.table, 'branches', exbranches)
+    pushcmd = extensions.wrapcommand(commands.table, 'push', expushcmd)
 
-        if not hggit:
-            entry[1].append(('a', 'all', None,
-                             'show both remote and local bookmarks'))
-            entry[1].append(('', 'remote', None, 'show only remote bookmarks'))
+    if _tracking(ui):
+        bookcmd[1].append(('t', 'track', '',
+                          'track this bookmark or remote name', 'BOOKMARK'))
+        bookcmd[1].append(('u', 'untrack', None,
+                         'remove tracking for this bookmark', 'BOOKMARK'))
 
-        if _tracking(ui):
-            entry[1].append(('t', 'track', '',
-                             'track this bookmark or remote name',
-                             'BOOKMARK'))
-            entry[1].append(('u', 'untrack', None,
-                             'remove tracking for this bookmark',
-                             'BOOKMARK'))
 
-        entry = extensions.wrapcommand(commands.table, 'branches', exbranches)
-        if not hggit:
-            entry[1].append(('a', 'all', None,
-                             'show both remote and local branches'))
-            entry[1].append(('', 'remote', None, 'show only remote branches'))
+    newopts = [
+        (bookcmd, ('a', 'all', None, 'show both remote and local bookmarks')),
+        (bookcmd, ('', 'remote', None, 'show only remote bookmarks')),
+        (branchcmd, ('a', 'all', None, 'show both remote and local branches')),
+        (branchcmd, ('', 'remote', None, 'show only remote branches')),
+        (pushcmd, ('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK')),
+        (pushcmd, ('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK')),
+    ]
 
-        entry = extensions.wrapcommand(commands.table, 'push', expushcmd)
-        if not hggit:
-            entry[1].append(('t', 'to', '', 'push revs to this bookmark',
-                             'BOOKMARK'))
-            entry[1].append(('d', 'delete', '', 'delete remote bookmark',
-                             'BOOKMARK'))
-    extensions.afterloaded('hggit', afterhggit)
+    def afterload(loaded):
+        if loaded:
+            raise ValueError('nonexistant extension should not be loaded')
+
+        for cmd, newopt in newopts:
+            # avoid adding duplicate optionms
+            skip = False
+            for opt in cmd[1]:
+                if opt[1] == newopt[1]:
+                    skip = True
+            if not skip:
+                cmd[1].append(newopt)
+
+    extensions.afterloaded('nonexistant', afterload)
 
 def exlog(orig, ui, repo, *args, **opts):
     # hack for logging that turns on the dynamic blockerhook
