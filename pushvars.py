@@ -18,6 +18,7 @@
 from mercurial import bundle2, cmdutil, exchange, extensions, hg
 from mercurial import util, error, commands
 from mercurial.i18n import _
+from mercurial.extensions import _order
 import errno, urllib
 
 cmdtable = {}
@@ -61,6 +62,12 @@ def push(orig, ui, repo, *args, **opts):
     return orig(ui, repo, *args, **opts)
   finally:
     del repo._shellvars
+
+def uisetup(ui):
+    # remotenames circumvents the default push implementation entirely, so make
+    # sure we load after it so that we wrap it.
+    _order.remove('pushvars')
+    _order.append('pushvars')
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'push', push)
