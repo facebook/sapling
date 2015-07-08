@@ -294,6 +294,10 @@
                     branch name for tag revisions, defaults to "default".
       convert.hg.usebranchnames
                     preserve branch names. The default is True.
+      convert.hg.sourcename
+                    records the given string as a 'convert_source' extra value
+                    on each commit made in the target repository. The default is
+                    None.
   
       All Destinations
       ################
@@ -503,3 +507,17 @@ test revset converted() lookup
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     e
   
+
+test specifying a sourcename
+  $ echo g > a/g
+  $ hg -R a ci -d'0 0' -Amg
+  adding g
+  $ hg --config convert.hg.sourcename=mysource --config convert.hg.saverev=True convert a c
+  scanning source...
+  sorting...
+  converting...
+  0 g
+  $ hg -R c log -r tip --template '{extras % "{extra}\n"}'
+  branch=default
+  convert_revision=a3bc6100aa8ec03e00aaf271f1f50046fb432072
+  convert_source=mysource

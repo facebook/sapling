@@ -356,6 +356,9 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     :convert.hg.usebranchnames: preserve branch names. The default is
         True.
 
+    :convert.hg.sourcename: records the given string as a 'convert_source' extra
+        value on each commit made in the target repository. The default is None.
+
     All Destinations
     ################
 

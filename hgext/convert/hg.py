@@ -225,6 +225,10 @@ class mercurial_sink(converter_sink):
 
         extra = commit.extra.copy()
 
+        sourcename = self.repo.ui.config('convert', 'hg.sourcename')
+        if sourcename:
+            extra['convert_source'] = sourcename
+
         for label in ('source', 'transplant_source', 'rebase_source',
                       'intermediate-source'):
             node = extra.get(label)
