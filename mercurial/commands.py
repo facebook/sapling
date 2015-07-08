@@ -1421,7 +1421,8 @@ def clone(ui, source, dest=None, **opts):
                  stream=opts.get('uncompressed'),
                  rev=opts.get('rev'),
                  update=opts.get('updaterev') or not opts.get('noupdate'),
-                 branch=opts.get('branch'))
+                 branch=opts.get('branch'),
+                 shareopts=opts.get('shareopts'))
 
     return r is None
 

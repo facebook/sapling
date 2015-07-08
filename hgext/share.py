@@ -3,10 +3,42 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''share a common history between several working directories'''
+'''share a common history between several working directories
+
+Automatic Pooled Storage for Clones
+-----------------------------------
+
+When this extension is active, :hg:`clone` can be configured to
+automatically share/pool storage across multiple clones. This
+mode effectively converts :hg:`clone` to :hg:`clone` + :hg:`share`.
+The benefit of using this mode is the automatic management of
+store paths and intelligent pooling of related repositories.
+
+The following ``share.`` config options influence this feature:
+
+``pool``
+    Filesystem path where shared repository data will be stored. When
+    defined, :hg:`clone` will automatically use shared repository
+    storage instead of creating a store inside each clone.
+
+``poolnaming``
+    How directory names in ``share.pool`` are constructed.
+
+    "identity" means the name is derived from the first changeset in the
+    repository. In this mode, different remotes share storage if their
+    root/initial changeset is identical. In this mode, the local shared
+    repository is an aggregate of all encountered remote repositories.
+
+    "remote" means the name is derived from the source repository's
+    path or URL. In this mode, storage is only shared if the path or URL
+    requested in the :hg:`clone` command matches exactly to a repository
+    that was cloned before.
+
+    The default naming mode is "identity."
+'''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, hg, util, extensions, bookmarks
+from mercurial import cmdutil, commands, hg, util, extensions, bookmarks
 from mercurial.hg import repository, parseurl
 import errno
 
@@ -75,10 +107,24 @@ def unshare(ui, repo):
     # update store, spath, svfs and sjoin of repo
     repo.unfiltered().__init__(repo.baseui, repo.root)
 
+# Wrap clone command to pass auto share options.
+def clone(orig, ui, source, *args, **opts):
+    pool = ui.config('share', 'pool', None)
+    if pool:
+        pool = util.expandpath(pool)
+
+    opts['shareopts'] = dict(
+        pool=pool,
+        mode=ui.config('share', 'poolnaming', 'identity'),
+    )
+
+    return orig(ui, source, *args, **opts)
+
 def extsetup(ui):
     extensions.wrapfunction(bookmarks.bmstore, 'getbkfile', getbkfile)
     extensions.wrapfunction(bookmarks.bmstore, 'recordchange', recordchange)
     extensions.wrapfunction(bookmarks.bmstore, 'write', write)
+    extensions.wrapcommand(commands.table, 'clone', clone)
 
 def _hassharedbookmarks(repo):
     """Returns whether this repo has shared bookmarks"""

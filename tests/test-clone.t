@@ -674,4 +674,342 @@ Test clone from the repository in (emulated) revlog format 0 (issue4203):
   $ hg clone -U -q src dst
   $ hg -R dst log -q
   0:e1bab28bca43
+
+Create repositories to test auto sharing functionality
+
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > share=
+  > EOF
+
+  $ hg init empty
+  $ hg init source1a
+  $ cd source1a
+  $ echo initial1 > foo
+  $ hg -q commit -A -m initial
+  $ echo second > foo
+  $ hg commit -m second
   $ cd ..
+
+  $ hg init filteredrev0
+  $ cd filteredrev0
+  $ cat >> .hg/hgrc << EOF
+  > [experimental]
+  > evolution=createmarkers
+  > EOF
+  $ echo initial1 > foo
+  $ hg -q commit -A -m initial0
+  $ hg -q up -r null
+  $ echo initial2 > foo
+  $ hg -q commit -A -m initial1
+  $ hg debugobsolete c05d5c47a5cf81401869999f3d05f7d699d2b29a e082c1832e09a7d1e78b7fd49a592d372de854c8
+  $ cd ..
+
+  $ hg -q clone --pull source1a source1b
+  $ cd source1a
+  $ hg bookmark bookA
+  $ echo 1a > foo
+  $ hg commit -m 1a
+  $ cd ../source1b
+  $ hg -q up -r 0
+  $ echo head1 > foo
+  $ hg commit -m head1
+  created new head
+  $ hg bookmark head1
+  $ hg -q up -r 0
+  $ echo head2 > foo
+  $ hg commit -m head2
+  created new head
+  $ hg bookmark head2
+  $ hg -q up -r 0
+  $ hg branch branch1
+  marked working directory as branch branch1
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo branch1 > foo
+  $ hg commit -m branch1
+  $ hg -q up -r 0
+  $ hg branch branch2
+  marked working directory as branch branch2
+  $ echo branch2 > foo
+  $ hg commit -m branch2
+  $ cd ..
+  $ hg init source2
+  $ cd source2
+  $ echo initial2 > foo
+  $ hg -q commit -A -m initial2
+  $ echo second > foo
+  $ hg commit -m second
+  $ cd ..
+
+Clone with auto share from an empty repo should not result in share
+
+  $ mkdir share
+  $ hg --config share.pool=share clone empty share-empty
+  (not using pooled storage: remote appears to be empty)
+  updating to branch default
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls share
+  $ test -d share-empty/.hg/store
+  $ test -f share-empty/.hg/sharedpath
+  [1]
+
+Clone with auto share from a repo with filtered revision 0 should not result in share
+
+  $ hg --config share.pool=share clone filteredrev0 share-filtered
+  (not using pooled storage: unable to resolve identity of remote)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Clone from repo with content should result in shared store being created
+
+  $ hg --config share.pool=share clone source1a share-dest1a
+  (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  no changes found
+  adding remote bookmark bookA
+
+The shared repo should have been created
+
+  $ ls share
+  b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1
+
+The destination should point to it
+
+  $ cat share-dest1a/.hg/sharedpath; echo
+  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg
+
+The destination should have bookmarks
+
+  $ hg -R share-dest1a bookmarks
+     bookA                     2:e5bfe23c0b47
+
+The default path should be the remote, not the share
+
+  $ hg -R share-dest1a config paths.default
+  $TESTTMP/source1a
+
+Clone with existing share dir should result in pull + share
+
+  $ hg --config share.pool=share clone source1b share-dest1b
+  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 4 changes to 1 files (+4 heads)
+  adding remote bookmark head1
+  adding remote bookmark head2
+
+  $ ls share
+  b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1
+
+  $ cat share-dest1b/.hg/sharedpath; echo
+  $TESTTMP/share/b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1/.hg
+
+We only get bookmarks from the remote, not everything in the share
+
+  $ hg -R share-dest1b bookmarks
+     head1                     3:4a8dc1ab4c13
+     head2                     4:99f71071f117
+
+Default path should be source, not share.
+
+  $ hg -R share-dest1b config paths.default
+  $TESTTMP/source1a
+
+Clone from unrelated repo should result in new share
+
+  $ hg --config share.pool=share clone source2 share-dest2
+  (sharing from new pooled repository 22aeff664783fd44c6d9b435618173c118c3448e)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  no changes found
+
+  $ ls share
+  22aeff664783fd44c6d9b435618173c118c3448e
+  b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1
+
+remote naming mode works as advertised
+
+  $ hg --config share.pool=shareremote --config share.poolnaming=remote clone source1a share-remote1a
+  (sharing from new pooled repository 195bb1fcdb595c14a6c13e0269129ed78f6debde)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  no changes found
+  adding remote bookmark bookA
+
+  $ ls shareremote
+  195bb1fcdb595c14a6c13e0269129ed78f6debde
+
+  $ hg --config share.pool=shareremote --config share.poolnaming=remote clone source1b share-remote1b
+  (sharing from new pooled repository c0d4f83847ca2a873741feb7048a45085fd47c46)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 1 files (+4 heads)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  no changes found
+  adding remote bookmark head1
+  adding remote bookmark head2
+
+  $ ls shareremote
+  195bb1fcdb595c14a6c13e0269129ed78f6debde
+  c0d4f83847ca2a873741feb7048a45085fd47c46
+
+request to clone a single revision is respected in sharing mode
+
+  $ hg --config share.pool=sharerevs clone -r 4a8dc1ab4c13 source1b share-1arev
+  (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  no changes found
+  adding remote bookmark head1
+
+  $ hg -R share-1arev log -G
+  @  changeset:   1:4a8dc1ab4c13
+  |  bookmark:    head1
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     head1
+  |
+  o  changeset:   0:b5f04eac9d8f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial
+  
+
+making another clone should only pull down requested rev
+
+  $ hg --config share.pool=sharerevs clone -r 99f71071f117 source1b share-1brev
+  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  adding remote bookmark head1
+  adding remote bookmark head2
+
+  $ hg -R share-1brev log -G
+  o  changeset:   2:99f71071f117
+  |  bookmark:    head2
+  |  tag:         tip
+  |  parent:      0:b5f04eac9d8f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     head2
+  |
+  | @  changeset:   1:4a8dc1ab4c13
+  |/   bookmark:    head1
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     head1
+  |
+  o  changeset:   0:b5f04eac9d8f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial
+  
+
+Request to clone a single branch is respected in sharing mode
+
+  $ hg --config share.pool=sharebranch clone -b branch1 source1b share-1bbranch1
+  (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  no changes found
+
+  $ hg -R share-1bbranch1 log -G
+  o  changeset:   1:5f92a6c1a1b1
+  |  branch:      branch1
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     branch1
+  |
+  @  changeset:   0:b5f04eac9d8f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial
+  
+
+  $ hg --config share.pool=sharebranch clone -b branch2 source1b share-1bbranch2
+  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+
+  $ hg -R share-1bbranch2 log -G
+  o  changeset:   2:6bacf4683960
+  |  branch:      branch2
+  |  tag:         tip
+  |  parent:      0:b5f04eac9d8f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     branch2
+  |
+  | o  changeset:   1:5f92a6c1a1b1
+  |/   branch:      branch1
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     branch1
+  |
+  @  changeset:   0:b5f04eac9d8f
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial
+  
+
+-U is respected in share clone mode
+
+  $ hg --config share.pool=share clone -U source1a share-1anowc
+  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  searching for changes
+  no changes found
+  adding remote bookmark bookA
+
+  $ ls share-1anowc
