@@ -3068,7 +3068,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
     node = ctx.node()
     def checkout(f):
         fc = ctx[f]
-        return repo.wwrite(f, fc.data(), fc.flags())
+        repo.wwrite(f, fc.data(), fc.flags())
 
     audit_path = pathutil.pathauditor(repo.root)
     for f in actions['forget'][0]:
@@ -3135,13 +3135,9 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         del fp
     else:
         for f in actions['revert'][0]:
-            wsize = checkout(f)
+            checkout(f)
             if normal:
                 normal(f)
-            elif wsize == repo.dirstate._map[f][2]:
-                # changes may be overlooked without normallookup,
-                # if size isn't changed at reverting
-                repo.dirstate.normallookup(f)
 
     for f in actions['add'][0]:
         # Don't checkout modified files, they are already created by the diff
