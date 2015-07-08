@@ -220,7 +220,14 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             except OSError:
                 pass
 
-    return commit(ui, repo, recordfunc, pats, opts)
+    def recordinwlock(ui, repo, message, match, opts):
+        wlock = repo.wlock()
+        try:
+            return recordfunc(ui, repo, message, match, opts)
+        finally:
+            wlock.release()
+
+    return commit(ui, repo, recordinwlock, pats, opts)
 
 def findpossible(cmd, table, strict=False):
     """
