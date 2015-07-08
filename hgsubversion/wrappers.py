@@ -204,6 +204,7 @@ def push(repo, dest, force, revs):
         hasobsolete = False
 
     temporary_commits = []
+    obsmarkers = []
     try:
         # TODO: implement --rev/#rev support
         # TODO: do credentials specified in the URL still work?
@@ -300,9 +301,7 @@ def push(repo, dest, force, revs):
                     if meta.get_source_rev(ctx=c)[0] == pushedrev.revnum:
                         # This is corresponds to the changeset we just pushed
                         if hasobsolete:
-                            ui.note('marking %s as obsoleted by %s\n' %
-                                    (original_ctx.hex(), c.hex()))
-                            obsolete.createmarkers(repo, [(original_ctx, [c])])
+                            obsmarkers.append([(original_ctx, [c])])
 
                     tip_ctx = c
 
@@ -343,7 +342,14 @@ def push(repo, dest, force, revs):
         finally:
             util.swap_out_encoding()
 
-        if not hasobsolete:
+        if hasobsolete:
+            for marker in obsmarkers:
+                obsolete.createmarkers(repo, marker)
+                beforepush = marker[0][0]
+                afterpush = marker[0][1][0]
+                ui.note('marking %s as obsoleted by %s\n' %
+                        (beforepush.hex(), afterpush.hex()))
+        else:
             # strip the original changesets since the push was
             # successful and changeset obsolescence is unavailable
             util.strip(ui, repo, outgoing, "all")
