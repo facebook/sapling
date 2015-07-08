@@ -25,6 +25,7 @@ setup(
         'inhibitwarn',
         'phabdiff',
         'phrevset',
+        'pushrebase',
         'pushvars',
         'rage',
         'reflog',
