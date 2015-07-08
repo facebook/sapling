@@ -513,8 +513,8 @@ class TestBase(unittest.TestCase):
             i18n._ugettext = self.oldugettext  # Mercurial >= 3.2
         except AttributeError:
             i18n.t = self.oldt
-        rmtree(self.tmpdir)
         os.chdir(self.oldwd)
+        rmtree(self.tmpdir)
         setattr(ui.ui, self.patch[0].func_name, self.patch[0])
 
         _verify_our_modules()
