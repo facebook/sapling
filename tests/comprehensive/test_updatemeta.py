@@ -26,7 +26,7 @@ from hgsubversion import svnmeta
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
     single = layout == 'single'
-    u = ui.ui()
+    u = test_util.testui()
     config = {}
     if layout == 'custom':
         config['hgsubversion.layout'] = 'custom'

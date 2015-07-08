@@ -158,7 +158,7 @@ class TestSingleDirPush(test_util.TestBase):
         self.assertTrue('foo' in test_util.svnls(repo_path, ''))
         self.assertEqual(compathacks.branchset(repo), set(['default']))
         # Have to cross to another branch head, so hg.update doesn't work
-        commands.update(ui.ui(),
+        commands.update(self.ui(),
                         self.repo,
                         self.repo.branchheads('default')[1],
                         clean=True)

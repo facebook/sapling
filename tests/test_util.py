@@ -746,7 +746,7 @@ class TestBase(unittest.TestCase):
         useful when debugging comprehensive tests.
         """
         # Could be more elegant, but it works with stock hg
-        _ui = ui.ui()
+        _ui = testui()
         _ui.setconfig('extensions', 'graphlog', '')
         extensions.loadall(_ui)
         graphlog = extensions.find('graphlog')

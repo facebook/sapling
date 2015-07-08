@@ -36,7 +36,7 @@ expect_youngest_skew = [('file_mixed_with_branches.svndump', False, False),
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
     single = layout == 'single'
-    u = ui.ui()
+    u = test_util.testui()
     config = {}
     if layout == 'custom':
         for branch, path in test_util.custom.get(name, {}).iteritems():
