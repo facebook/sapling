@@ -791,3 +791,90 @@ Explicitly kill daemons to let the test exit on Windows
 
   $ killdaemons.py
 
+Test that patch-ed files are treated as "modified", when transplant is
+aborted by failure of patching, even if none of mode, size and
+timestamp of them isn't changed on the filesystem (see also issue4583)
+
+  $ cd t
+
+  $ cat > $TESTTMP/abort.py <<EOF
+  > # emulate that patch.patch() is aborted at patching on "abort" file
+  > from mercurial import extensions, patch as patchmod
+  > def patch(orig, ui, repo, patchname,
+  >           strip=1, prefix='', files=None,
+  >           eolmode='strict', similarity=0):
+  >     if files is None:
+  >         files = set()
+  >     r = orig(ui, repo, patchname,
+  >         strip=strip, prefix=prefix, files=files,
+  >         eolmode=eolmode, similarity=similarity)
+  >     if 'abort' in files:
+  >         raise patchmod.PatchError('intentional error while patching')
+  >     return r
+  > def extsetup(ui):
+  >     extensions.wrapfunction(patchmod, 'patch', patch)
+  > EOF
+
+  $ echo X1 > r1
+  $ hg diff --nodates r1
+  diff -r a53251cdf717 r1
+  --- a/r1
+  +++ b/r1
+  @@ -1,1 +1,1 @@
+  -r1
+  +X1
+  $ hg commit -m "X1 as r1"
+
+  $ echo 'marking to abort patching' > abort
+  $ hg add abort
+  $ echo Y1 > r1
+  $ hg diff --nodates r1
+  diff -r 22c515968f13 r1
+  --- a/r1
+  +++ b/r1
+  @@ -1,1 +1,1 @@
+  -X1
+  +Y1
+  $ hg commit -m "Y1 as r1"
+
+  $ hg update -q -C d11e3596cc1a
+  $ cat r1
+  r1
+
+  $ cat >> .hg/hgrc <<EOF
+  > [fakedirstatewritetime]
+  > # emulate invoking dirstate.write() via repo.status() or markcommitted()
+  > # at 2000-01-01 00:00
+  > fakenow = 200001010000
+  > 
+  > # emulate invoking patch.internalpatch() at 2000-01-01 00:00
+  > [fakepatchtime]
+  > fakenow = 200001010000
+  > 
+  > [extensions]
+  > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
+  > fakepatchtime = $TESTDIR/fakepatchtime.py
+  > abort =  $TESTTMP/abort.py
+  > EOF
+  $ hg transplant "22c515968f13::"
+  applying 22c515968f13
+  22c515968f13 transplanted to * (glob)
+  applying e38700ba9dd3
+  intentional error while patching
+  abort: fix up the merge and run hg transplant --continue
+  [255]
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > fakedirstatewritetime = !
+  > fakepatchtime = !
+  > abort = !
+  > EOF
+
+  $ cat r1
+  Y1
+  $ hg debugstate | grep ' r1$'
+  n 644          3 unset               r1
+  $ hg status -A r1
+  M r1
+
+  $ cd ..

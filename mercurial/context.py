@@ -1316,6 +1316,11 @@ class committablectx(basectx):
         self._repo.dirstate.setparents(node)
         self._repo.dirstate.endparentchange()
 
+        # write changes out explicitly, because nesting wlock at
+        # runtime may prevent 'wlock.release()' in 'repo.commit()'
+        # from immediately doing so for subsequent changing files
+        self._repo.dirstate.write()
+
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
     the current working directory convenient.
