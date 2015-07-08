@@ -196,38 +196,54 @@ class p4_source(converter_source):
     def getfile(self, name, rev):
         cmd = 'p4 -G print %s' \
             % util.shellquote("%s#%s" % (self.depotname[name], rev))
-        stdout = util.popen(cmd, mode='rb')
 
-        mode = None
-        contents = ""
-        keywords = None
+        lasterror = None
+        while True:
+            stdout = util.popen(cmd, mode='rb')
 
-        for d in loaditer(stdout):
-            code = d["code"]
-            data = d.get("data")
+            mode = None
+            contents = ""
+            keywords = None
 
-            if code == "error":
-                raise IOError(d["generic"], data)
+            for d in loaditer(stdout):
+                code = d["code"]
+                data = d.get("data")
 
-            elif code == "stat":
-                action = d.get("action")
-                if action in ["purge", "delete", "move/delete"]:
-                    return None, None
-                p4type = self.re_type.match(d["type"])
-                if p4type:
-                    mode = ""
-                    flags = (p4type.group(1) or "") + (p4type.group(3) or "")
-                    if "x" in flags:
-                        mode = "x"
-                    if p4type.group(2) == "symlink":
-                        mode = "l"
-                    if "ko" in flags:
-                        keywords = self.re_keywords_old
-                    elif "k" in flags:
-                        keywords = self.re_keywords
+                if code == "error":
+                    # if this is the first time error happened
+                    # re-attempt getting the file
+                    if not lasterror:
+                        lasterror = IOError(d["generic"], data)
+                        # this will exit inner-most for-loop
+                        break
+                    else:
+                        raise lasterror
 
-            elif code == "text" or code == "binary":
-                contents += data
+                elif code == "stat":
+                    action = d.get("action")
+                    if action in ["purge", "delete", "move/delete"]:
+                        return None, None
+                    p4type = self.re_type.match(d["type"])
+                    if p4type:
+                        mode = ""
+                        flags = ((p4type.group(1) or "")
+                               + (p4type.group(3) or ""))
+                        if "x" in flags:
+                            mode = "x"
+                        if p4type.group(2) == "symlink":
+                            mode = "l"
+                        if "ko" in flags:
+                            keywords = self.re_keywords_old
+                        elif "k" in flags:
+                            keywords = self.re_keywords
+
+                elif code == "text" or code == "binary":
+                    contents += data
+
+                lasterror = None
+
+            if not lasterror:
+                break
 
         if mode is None:
             return None, None
