@@ -36,11 +36,13 @@ class p4_source(converter_source):
         self.heads = {}
         self.changeset = {}
         self.files = {}
+        self.copies = {}
         self.tags = {}
         self.lastbranch = {}
         self.parent = {}
         self.encoding = "latin_1"
         self.depotname = {}           # mapping from local name to depot name
+        self.localname = {} # mapping from depot name to local name
         self.re_type = re.compile(
             "([a-z]+)?(text|binary|symlink|apple|resource|unicode|utf\d+)"
             "(\+\w+)?$")
@@ -128,6 +130,8 @@ class p4_source(converter_source):
                        extra={"p4": change})
 
             files = []
+            copies = {}
+            copiedfiles = []
             i = 0
             while ("depotFile%d" % i) in d and ("rev%d" % i) in d:
                 oldname = d["depotFile%d" % i]
@@ -139,9 +143,48 @@ class p4_source(converter_source):
                 if filename:
                     files.append((filename, d["rev%d" % i]))
                     self.depotname[filename] = oldname
+                    if (d.get("action%d" % i) == "move/add"):
+                        copiedfiles.append(filename)
+                    self.localname[oldname] = filename
                 i += 1
+
+            # Collect information about copied files
+            for filename in copiedfiles:
+                oldname = self.depotname[filename]
+
+                flcmd = 'p4 -G filelog %s' \
+                      % util.shellquote(oldname)
+                flstdout = util.popen(flcmd, mode='rb')
+
+                copiedfilename = None
+                for d in loaditer(flstdout):
+                    copiedoldname = None
+
+                    i = 0
+                    while ("change%d" % i) in d:
+                        if (d["change%d" % i] == change and
+                            d["action%d" % i] == "move/add"):
+                            j = 0
+                            while ("file%d,%d" % (i, j)) in d:
+                                if d["how%d,%d" % (i, j)] == "moved from":
+                                    copiedoldname = d["file%d,%d" % (i, j)]
+                                    break
+                                j += 1
+                        i += 1
+
+                    if copiedoldname and copiedoldname in self.localname:
+                        copiedfilename = self.localname[copiedoldname]
+                        break
+
+                if copiedfilename:
+                    copies[filename] = copiedfilename
+                else:
+                    ui.warn(_("cannot find source for copied file: %s@%s\n")
+                            % (filename, change))
+
             self.changeset[change] = c
             self.files[change] = files
+            self.copies[change] = copies
             lastid = change
 
         if lastid:
@@ -198,7 +241,7 @@ class p4_source(converter_source):
     def getchanges(self, rev, full):
         if full:
             raise util.Abort(_("convert from p4 do not support --full"))
-        return self.files[rev], {}, set()
+        return self.files[rev], self.copies[rev], set()
 
     def getcommit(self, rev):
         return self.changeset[rev]
