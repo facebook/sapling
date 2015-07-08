@@ -86,8 +86,12 @@ class convert_git(converter_source):
         data = fh.read()
         return data, fh.close()
 
-    def __init__(self, ui, path, rev=None):
-        super(convert_git, self).__init__(ui, path, rev=rev)
+    def __init__(self, ui, path, revs=None):
+        super(convert_git, self).__init__(ui, path, revs=revs)
+
+        if revs and len(revs) > 1:
+            raise util.Abort(_("git source does not support specifying "
+                               "multiple revs"))
 
         if os.path.isdir(path + "/.git"):
             path += "/.git"
@@ -119,11 +123,12 @@ class convert_git(converter_source):
             f.close()
 
     def getheads(self):
-        if not self.rev:
+        if not self.revs:
             heads, ret = self.gitread('git rev-parse --branches --remotes')
             heads = heads.splitlines()
         else:
-            heads, ret = self.gitread("git rev-parse --verify %s" % self.rev)
+            heads, ret = self.gitread("git rev-parse --verify %s" %
+                                      self.revs[0])
             heads = [heads[:-1]]
         if ret:
             raise util.Abort(_('cannot retrieve git heads'))

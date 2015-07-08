@@ -46,14 +46,14 @@ sink_converters = [
     ('svn', svn_sink),
     ]
 
-def convertsource(ui, path, type, rev):
+def convertsource(ui, path, type, revs):
     exceptions = []
     if type and type not in [s[0] for s in source_converters]:
         raise util.Abort(_('%s: invalid source repository type') % type)
     for name, source, sortmode in source_converters:
         try:
             if not type or name == type:
-                return source(ui, path, rev), sortmode
+                return source(ui, path, revs), sortmode
         except (NoRepo, MissingTool) as inst:
             exceptions.append(inst)
     if not ui.quiet:

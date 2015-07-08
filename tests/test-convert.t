@@ -304,11 +304,11 @@
                     does not convert tags from the source repo to the target
                     repo. The default is False.
   
-  options:
+  options ([+] can be repeated):
   
    -s --source-type TYPE source repository type
    -d --dest-type TYPE   destination repository type
-   -r --rev REV          import up to source revision REV
+   -r --rev REV [+]      import up to source revision REV
    -A --authormap FILE   remap usernames using this file
       --filemap FILE     remap file names using contents of file
       --full             apply filemap changes by converting all files again

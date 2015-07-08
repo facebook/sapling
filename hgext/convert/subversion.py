@@ -268,8 +268,8 @@ def issvnurl(ui, url):
 # the parent module. A revision has at most one parent.
 #
 class svn_source(converter_source):
-    def __init__(self, ui, url, rev=None):
-        super(svn_source, self).__init__(ui, url, rev=rev)
+    def __init__(self, ui, url, revs=None):
+        super(svn_source, self).__init__(ui, url, revs=revs)
 
         if not (url.startswith('svn://') or url.startswith('svn+ssh://') or
                 (os.path.exists(url) and
@@ -325,11 +325,15 @@ class svn_source(converter_source):
                            "to libsvn version %s")
                          % (self.url, svnversion))
 
-        if rev:
+        if revs:
+            if len(revs) > 1:
+                raise util.Abort(_('subversion source does not support '
+                                   'specifying multiple revisions'))
             try:
-                latest = int(rev)
+                latest = int(revs[0])
             except ValueError:
-                raise util.Abort(_('svn: revision %s is not an integer') % rev)
+                raise util.Abort(_('svn: revision %s is not an integer') %
+                                 revs[0])
 
         self.trunkname = self.ui.config('convert', 'svn.trunk',
                                         'trunk').strip('/')

@@ -13,14 +13,17 @@ from common import commandline
 from mercurial.i18n import _
 
 class monotone_source(converter_source, commandline):
-    def __init__(self, ui, path=None, rev=None):
-        converter_source.__init__(self, ui, path, rev)
+    def __init__(self, ui, path=None, revs=None):
+        converter_source.__init__(self, ui, path, revs)
+        if revs and len(revs) > 1:
+            raise util.Abort(_('monotone source does not support specifying '
+                               'multiple revs'))
         commandline.__init__(self, ui, 'mtn')
 
         self.ui = ui
         self.path = path
         self.automatestdio = False
-        self.rev = rev
+        self.revs = revs
 
         norepo = NoRepo(_("%s does not look like a monotone repository")
                         % path)
@@ -219,10 +222,10 @@ class monotone_source(converter_source, commandline):
     # implement the converter_source interface:
 
     def getheads(self):
-        if not self.rev:
+        if not self.revs:
             return self.mtnrun("leaves").splitlines()
         else:
-            return [self.rev]
+            return self.revs
 
     def getchanges(self, rev, full):
         if full:

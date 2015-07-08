@@ -33,8 +33,8 @@ supportedkinds = ('file', 'symlink')
 class bzr_source(converter_source):
     """Reads Bazaar repositories by using the Bazaar Python libraries"""
 
-    def __init__(self, ui, path, rev=None):
-        super(bzr_source, self).__init__(ui, path, rev=rev)
+    def __init__(self, ui, path, revs=None):
+        super(bzr_source, self).__init__(ui, path, revs=revs)
 
         if not os.path.exists(os.path.join(path, '.bzr')):
             raise NoRepo(_('%s does not look like a Bazaar repository')
@@ -95,20 +95,20 @@ class bzr_source(converter_source):
         return self.sourcerepo.find_branches(using=True)
 
     def getheads(self):
-        if not self.rev:
+        if not self.revs:
             # Set using=True to avoid nested repositories (see issue3254)
             heads = sorted([b.last_revision() for b in self._bzrbranches()])
         else:
             revid = None
             for branch in self._bzrbranches():
                 try:
-                    r = RevisionSpec.from_string(self.rev)
+                    r = RevisionSpec.from_string(self.revs[0])
                     info = r.in_history(branch)
                 except errors.BzrError:
                     pass
                 revid = info.rev_id
             if revid is None:
-                raise util.Abort(_('%s is not a valid revision') % self.rev)
+                raise util.Abort(_('%s is not a valid revision') % self.revs[0])
             heads = [revid]
         # Empty repositories return 'null:', which cannot be retrieved
         heads = [h for h in heads if h != 'null:']

@@ -29,7 +29,7 @@ testedwith = 'internal'
       _('FILE')),
     ('s', 'source-type', '', _('source repository type'), _('TYPE')),
     ('d', 'dest-type', '', _('destination repository type'), _('TYPE')),
-    ('r', 'rev', '', _('import up to source revision REV'), _('REV')),
+    ('r', 'rev', [], _('import up to source revision REV'), _('REV')),
     ('A', 'authormap', '', _('remap usernames using this file'), _('FILE')),
     ('', 'filemap', '', _('remap file names using contents of file'),
      _('FILE')),

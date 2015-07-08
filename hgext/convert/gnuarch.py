@@ -27,8 +27,8 @@ class gnuarch_source(converter_source, commandline):
             self.ren_files = {}
             self.ren_dirs = {}
 
-    def __init__(self, ui, path, rev=None):
-        super(gnuarch_source, self).__init__(ui, path, rev=rev)
+    def __init__(self, ui, path, revs=None):
+        super(gnuarch_source, self).__init__(ui, path, revs=revs)
 
         if not os.path.exists(os.path.join(path, '{arch}')):
             raise NoRepo(_("%s does not look like a GNU Arch repository")

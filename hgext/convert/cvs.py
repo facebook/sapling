@@ -15,8 +15,8 @@ from common import makedatetimestamp
 import cvsps
 
 class convert_cvs(converter_source):
-    def __init__(self, ui, path, rev=None):
-        super(convert_cvs, self).__init__(ui, path, rev=rev)
+    def __init__(self, ui, path, revs=None):
+        super(convert_cvs, self).__init__(ui, path, revs=revs)
 
         cvs = os.path.join(path, "CVS")
         if not os.path.exists(cvs):
@@ -41,14 +41,17 @@ class convert_cvs(converter_source):
         self.changeset = {}
 
         maxrev = 0
-        if self.rev:
+        if self.revs:
+            if len(self.revs) > 1:
+                raise util.Abort(_('cvs source does not support specifying '
+                                   'multiple revs'))
             # TODO: handle tags
             try:
                 # patchset number?
-                maxrev = int(self.rev)
+                maxrev = int(self.revs[0])
             except ValueError:
                 raise util.Abort(_('revision %s is not a patchset number')
-                                 % self.rev)
+                                 % self.revs[0])
 
         d = os.getcwd()
         try:

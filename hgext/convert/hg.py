@@ -372,8 +372,11 @@ class mercurial_sink(converter_sink):
         return rev in self.repo
 
 class mercurial_source(converter_source):
-    def __init__(self, ui, path, rev=None):
-        converter_source.__init__(self, ui, path, rev)
+    def __init__(self, ui, path, revs=None):
+        converter_source.__init__(self, ui, path, revs)
+        if revs and len(revs) > 1:
+            raise util.Abort(_("mercurial source does not support specifying "
+                               "multiple revisions"))
         self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
         self.ignored = set()
         self.saverev = ui.configbool('convert', 'hg.saverev', False)
@@ -407,12 +410,12 @@ class mercurial_source(converter_source):
                 self.keep = children.__contains__
             else:
                 self.keep = util.always
-            if rev:
-                self._heads = [self.repo[rev].node()]
+            if revs:
+                self._heads = [self.repo[revs[0]].node()]
             else:
                 self._heads = self.repo.heads()
         else:
-            if rev or startnode is not None:
+            if revs or startnode is not None:
                 raise util.Abort(_('hg.revs cannot be combined with '
                                    'hg.startrev or --rev'))
             nodes = set()

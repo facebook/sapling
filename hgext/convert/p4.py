@@ -24,8 +24,8 @@ def loaditer(f):
         pass
 
 class p4_source(converter_source):
-    def __init__(self, ui, path, rev=None):
-        super(p4_source, self).__init__(ui, path, rev=rev)
+    def __init__(self, ui, path, revs=None):
+        super(p4_source, self).__init__(ui, path, revs=revs)
 
         if "/" in path and not path.startswith('//'):
             raise NoRepo(_('%s does not look like a P4 repository') % path)
@@ -49,6 +49,9 @@ class p4_source(converter_source):
             r":[^$\n]*\$")
         self.re_keywords_old = re.compile("\$(Id|Header):[^$\n]*\$")
 
+        if revs and len(revs) > 1:
+            raise util.Abort(_("p4 source does not support specifying "
+                               "multiple revisions"))
         self._parse(ui, path)
 
     def _parse_view(self, path):
@@ -99,7 +102,7 @@ class p4_source(converter_source):
         startrev = self.ui.config('convert', 'p4.startrev', default=0)
         self.p4changes = [x for x in self.p4changes
                           if ((not startrev or int(x) >= int(startrev)) and
-                              (not self.rev or int(x) <= int(self.rev)))]
+                              (not self.revs or int(x) <= int(self.revs[0])))]
 
         # now read the full changelists to get the list of file revisions
         ui.status(_('collecting p4 changelists\n'))

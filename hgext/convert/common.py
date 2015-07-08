@@ -59,12 +59,12 @@ class commit(object):
 class converter_source(object):
     """Conversion source interface"""
 
-    def __init__(self, ui, path=None, rev=None):
+    def __init__(self, ui, path=None, revs=None):
         """Initialize conversion source (or raise NoRepo("message")
         exception if path is not a valid repository)"""
         self.ui = ui
         self.path = path
-        self.rev = rev
+        self.revs = revs
 
         self.encoding = 'utf-8'
 
