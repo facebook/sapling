@@ -442,6 +442,40 @@ convert author committer
   abort: --sourcesort is not supported by this data source
   [255]
 
+test converting certain branches
+
+  $ mkdir git-testrevs
+  $ cd git-testrevs
+  $ git init
+  Initialized empty Git repository in $TESTTMP/git-testrevs/.git/
+  $ echo a >> a ; git add a > /dev/null; git commit -m 'first' > /dev/null
+  $ echo a >> a ; git add a > /dev/null; git commit -m 'master commit' > /dev/null
+  $ git checkout -b goodbranch 'HEAD^'
+  Switched to a new branch 'goodbranch'
+  $ echo a >> b ; git add b > /dev/null; git commit -m 'good branch commit' > /dev/null
+  $ git checkout -b badbranch 'HEAD^'
+  Switched to a new branch 'badbranch'
+  $ echo a >> c ; git add c > /dev/null; git commit -m 'bad branch commit' > /dev/null
+  $ cd ..
+  $ hg convert git-testrevs hg-testrevs --rev master --rev goodbranch
+  initializing destination hg-testrevs repository
+  scanning source...
+  sorting...
+  converting...
+  2 first
+  1 good branch commit
+  0 master commit
+  updating bookmarks
+  $ cd hg-testrevs
+  $ hg log -G -T '{rev} {bookmarks}'
+  o  2 master
+  |
+  | o  1 goodbranch
+  |/
+  o  0
+  
+  $ cd ..
+
 test sub modules
 
   $ mkdir git-repo5

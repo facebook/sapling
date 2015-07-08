@@ -89,10 +89,6 @@ class convert_git(converter_source):
     def __init__(self, ui, path, revs=None):
         super(convert_git, self).__init__(ui, path, revs=revs)
 
-        if revs and len(revs) > 1:
-            raise util.Abort(_("git source does not support specifying "
-                               "multiple revs"))
-
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
@@ -126,12 +122,15 @@ class convert_git(converter_source):
         if not self.revs:
             heads, ret = self.gitread('git rev-parse --branches --remotes')
             heads = heads.splitlines()
+            if ret:
+                raise util.Abort(_('cannot retrieve git heads'))
         else:
-            heads, ret = self.gitread("git rev-parse --verify %s" %
-                                      self.revs[0])
-            heads = [heads[:-1]]
-        if ret:
-            raise util.Abort(_('cannot retrieve git heads'))
+            heads = []
+            for rev in self.revs:
+                rawhead, ret = self.gitread("git rev-parse --verify %s" % rev)
+                heads.append(rawhead[:-1])
+                if ret:
+                    raise util.Abort(_('cannot retrieve git head "%s"') % rev)
         return heads
 
     def catfile(self, rev, type):
