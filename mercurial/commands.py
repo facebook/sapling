@@ -3345,6 +3345,8 @@ def forget(ui, repo, *pats, **opts):
     entire project history, and it does not delete them from the
     working directory.
 
+    To delete the file from the working directory, see :hg:`remove`.
+
     To undo a forget before the next commit, see :hg:`add`.
 
     .. container:: verbose
