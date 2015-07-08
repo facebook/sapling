@@ -1008,10 +1008,6 @@ largefiles (issue4547)
   > EOF
   $ hg clone -q enabled-but-no-largefiles no-largefiles
 
-(test rebasing implied by pull: precommit while rebasing unexpectedly
-shows "normal3" as "?", because lfdirstate isn't yet written out at
-that time)
-
   $ echo normal2 > enabled-but-no-largefiles/normal2
   $ hg -R enabled-but-no-largefiles add enabled-but-no-largefiles/normal2
   $ hg -R enabled-but-no-largefiles commit -m '#1@enabled-but-no-largefiles'
@@ -1026,7 +1022,7 @@ that time)
 
   $ hg -R no-largefiles -q pull --rebase
   Invoking status precommit hook
-  M normal3
+  A normal3
 
 (test reverting)
 

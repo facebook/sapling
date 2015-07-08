@@ -939,14 +939,32 @@ Issue1977: multirepo push should fail if subrepo push fails
 
 test if untracked file is not overwritten
 
+(this also tests that updated .hgsubstate is treated as "modified",
+when 'merge.update()' is aborted before 'merge.recordupdates()', even
+if none of mode, size and timestamp of it isn't changed on the
+filesystem (see also issue4583))
+
   $ echo issue3276_ok > repo/s/b
   $ hg -R repo2 push -f -q
   $ touch -t 200001010000 repo/.hgsubstate
-  $ hg -R repo status --config debug.dirstate.delaywrite=2 repo/.hgsubstate
+
+  $ cat >> repo/.hg/hgrc <<EOF
+  > [fakedirstatewritetime]
+  > # emulate invoking dirstate.write() via repo.status()
+  > # at 2000-01-01 00:00
+  > fakenow = 200001010000
+  > 
+  > [extensions]
+  > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
+  > EOF
   $ hg -R repo update
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision (in subrepo s)
   [255]
+  $ cat >> repo/.hg/hgrc <<EOF
+  > [extensions]
+  > fakedirstatewritetime = !
+  > EOF
 
   $ cat repo/s/b
   issue3276_ok

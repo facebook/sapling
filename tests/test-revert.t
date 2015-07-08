@@ -175,6 +175,46 @@ revert of exec bit
   executable
 #endif
 
+Test that files reverted to other than the parent are treated as
+"modified", even if none of mode, size and timestamp of it isn't
+changed on the filesystem (see also issue4583).
+
+  $ echo 321 > e
+  $ hg diff --git
+  diff --git a/e b/e
+  --- a/e
+  +++ b/e
+  @@ -1,1 +1,1 @@
+  -123
+  +321
+  $ hg commit -m 'ambiguity from size'
+
+  $ cat e
+  321
+  $ touch -t 200001010000 e
+  $ hg debugrebuildstate
+
+  $ cat >> .hg/hgrc <<EOF
+  > [fakedirstatewritetime]
+  > # emulate invoking dirstate.write() via repo.status()
+  > # at 2000-01-01 00:00
+  > fakenow = 200001010000
+  > 
+  > [extensions]
+  > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
+  > EOF
+  $ hg revert -r 0 e
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > fakedirstatewritetime = !
+  > EOF
+
+  $ cat e
+  123
+  $ touch -t 200001010000 e
+  $ hg status -A e
+  M e
+
   $ cd ..
 
 

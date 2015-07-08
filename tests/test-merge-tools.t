@@ -601,6 +601,17 @@ HGMERGE specifies internal:other but is overruled by --tool=false
 
 update is a merge ...
 
+(this also tests that files reverted with '--rev REV' are treated as
+"modified", even if none of mode, size and timestamp of them isn't
+changed on the filesystem (see also issue4583))
+
+  $ cat >> $HGRCPATH <<EOF
+  > [fakedirstatewritetime]
+  > # emulate invoking dirstate.write() via repo.status()
+  > # at 2000-01-01 00:00
+  > fakenow = 200001010000
+  > EOF
+
   $ beforemerge
   [merge-tools]
   false.whatever=
@@ -611,8 +622,16 @@ update is a merge ...
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f
-  $ hg status f
+  $ hg debugrebuildstate
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
+  > EOF
   $ hg revert -q -r 1 .
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > fakedirstatewritetime = !
+  > EOF
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f
@@ -646,8 +665,16 @@ update should also have --tool
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f
-  $ hg status f
+  $ hg debugrebuildstate
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
+  > EOF
   $ hg revert -q -r 1 .
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > fakedirstatewritetime = !
+  > EOF
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f

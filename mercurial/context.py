@@ -1517,6 +1517,10 @@ class workingctx(committablectx):
                 try:
                     for f in fixup:
                         normal(f)
+                    # write changes out explicitly, because nesting
+                    # wlock at runtime may prevent 'wlock.release()'
+                    # below from doing so for subsequent changing files
+                    self._repo.dirstate.write()
                 finally:
                     wlock.release()
             except error.LockError:
