@@ -203,8 +203,16 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         finally:
             # 5. finally restore backed-up files
             try:
+                dirstate = repo.dirstate
                 for realname, tmpname in backups.iteritems():
                     ui.debug('restoring %r to %r\n' % (tmpname, realname))
+
+                    if dirstate[realname] == 'n':
+                        # without normallookup, restoring timestamp
+                        # may cause partially committed files
+                        # to be treated as unmodified
+                        dirstate.normallookup(realname)
+
                     util.copyfile(tmpname, repo.wjoin(realname))
                     # Our calls to copystat() here and above are a
                     # hack to trick any editors that have f open that
