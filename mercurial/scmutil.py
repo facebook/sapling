@@ -282,6 +282,12 @@ class abstractvfs(object):
         finally:
             fp.close()
 
+    def basename(self, path):
+        """return base element of a path (as os.path.basename would do)
+
+        This exists to allow handling of strange encoding if needed."""
+        return os.path.basename(path)
+
     def chmod(self, path, mode):
         return os.chmod(self.join(path), mode)
 
