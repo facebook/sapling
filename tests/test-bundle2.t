@@ -37,13 +37,13 @@
   $ hg push ssh://user@dummy/master
   pushing to ssh://user@dummy/master
   searching for changes
-  abort: pretxnclose.abort hook exited with status 1
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: transaction abort!
   remote: rollback completed
+  abort: pretxnclose.abort hook exited with status 1
   [255]
   $ mv ../master/.hg/hgrc_good ../master/.hg/hgrc
   $ hg -R ../master bookmarks

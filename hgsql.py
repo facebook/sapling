@@ -659,7 +659,7 @@ def wraprepo(repo):
                 elif path == '00manifest.i':
                     rl = self.manifest
                 else:
-                    rl = revlog.revlog(self.sopener, path)
+                    rl = revlog.revlog(self.svfs, path)
                 localnode = hex(rl.node(rev))
                 if localnode != node:
                     raise CorruptionException(("expected node %s at rev %d of " +
@@ -729,7 +729,7 @@ def addentries(repo, queue, transaction):
     """Reads new rev entries from a queue and writes them to a buffered
     revlog. At the end it flushes all the new data to disk.
     """
-    opener = repo.sopener
+    opener = repo.svfs
 
     revlogs = {}
     def writeentry(revdata):
