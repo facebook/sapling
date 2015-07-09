@@ -313,7 +313,7 @@ def _sanitize(ui, vfs, ignore):
             if d.lower() == ignore:
                 del dirs[i]
                 break
-        if os.path.basename(dirname).lower() != '.hg':
+        if vfs.basename(dirname).lower() != '.hg':
             continue
         for f in names:
             if f.lower() == 'hgrc':
