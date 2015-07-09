@@ -291,6 +291,12 @@ class abstractvfs(object):
     def chmod(self, path, mode):
         return os.chmod(self.join(path), mode)
 
+    def dirname(self, path):
+        """return dirname element of a path (as os.path.dirname would do)
+
+        This exists to allow handling of strange encoding if needed."""
+        return os.path.dirname(path)
+
     def exists(self, path=None):
         return os.path.exists(self.join(path))
 
