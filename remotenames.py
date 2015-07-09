@@ -37,11 +37,6 @@ from mercurial.i18n import _
 from mercurial.node import hex, short
 from hgext import schemes
 
-_remotenames = {
-    "bookmarks": {},
-    "branches": {},
-}
-
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote)
@@ -79,7 +74,7 @@ def blockerhook(orig, repo, *args, **kwargs):
 
     # add remotenames to blockers by looping over all names in our own cache
     cl = repo.changelog
-    for remotename in _remotenames.keys():
+    for remotename in repo._remotenames.keys():
         rname = 'remote' + remotename
         try:
             ns = repo.names[rname]
@@ -142,7 +137,7 @@ def reposetup(ui, repo):
     ns = namespaces.namespace
 
     if ui.configbool('remotenames', 'bookmarks', True):
-        mark2nodes = _remotenames.get('bookmarks')
+        mark2nodes = repo._remotenames.get('bookmarks')
         node2marks = {}
         for name, node in mark2nodes.iteritems():
             node2marks.setdefault(node[0], []).append(name)
@@ -180,7 +175,7 @@ def reposetup(ui, repo):
             repo.names.addnamespace(hoistednamens)
 
     if ui.configbool('remotenames', 'branches', True):
-        branch2nodes = _remotenames.get('branches')
+        branch2nodes = repo._remotenames.get('branches')
         node2branch = {}
         for name, nodes in branch2nodes.iteritems():
             for node in nodes:
@@ -949,6 +944,11 @@ def readremotenames(repo):
     f.close()
 
 def loadremotenames(repo):
+    remotenames = {
+        'bookmarks': {},
+        'branches': {},
+    }
+
     alias_default = repo.ui.configbool('remotenames', 'alias.default')
 
     for node, nametype, remote, rname in readremotenames(repo):
@@ -966,9 +966,12 @@ def loadremotenames(repo):
 
         # only mark as remote if the head changeset isn't marked closed
         if not ctx.extra().get('close'):
-            nodes = _remotenames[nametype].get(name, [])
+            nodes = remotenames[nametype].get(name, [])
             nodes.append(ctx.node())
-            _remotenames[nametype][name] = nodes
+            remotenames[nametype][name] = nodes
+
+
+    repo._remotenames = remotenames
 
 def transition(repo, ui):
     """
@@ -1005,10 +1008,10 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
             transition(repo, repo.ui)
 
         # while we're removing old paths, also update _remotenames
-        for btype, rmap in _remotenames.iteritems():
+        for btype, rmap in repo._remotenames.iteritems():
             for rname in rmap.copy():
                 if remote == splitremotename(rname)[0]:
-                    del _remotenames[btype][rname]
+                    del repo._remotenames[btype][rname]
 
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
@@ -1151,7 +1154,7 @@ def precachedistance(repo):
 
 def upstream_revs(filt, repo, subset, x):
     upstream_tips = set()
-    for remotename in _remotenames.keys():
+    for remotename in repo._remotenames.keys():
         rname = 'remote' + remotename
         try:
             ns = repo.names[rname]
@@ -1205,7 +1208,7 @@ def remotenamesrevset(repo, subset, x):
     revset.getargs(x, 0, 0, "remotenames takes no arguments")
     remoterevs = set()
     cl = repo.changelog
-    for remotename in _remotenames.keys():
+    for remotename in repo._remotenames.keys():
         rname = 'remote' + remotename
         try:
             ns = repo.names[rname]
