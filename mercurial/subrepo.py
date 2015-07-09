@@ -1206,7 +1206,8 @@ class svnsubrepo(abstractsubrepo):
 
         self.wvfs.rmtree(forcibly=True)
         try:
-            self._ctx.repo().wvfs.removedirs(os.path.dirname(self._path))
+            pwvfs = self._ctx.repo().wvfs
+            pwvfs.removedirs(pwvfs.dirname(self._path))
         except OSError:
             pass
 
