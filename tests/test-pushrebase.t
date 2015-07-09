@@ -356,11 +356,11 @@ Pushing a merge should rebase only the latest side of the merge
   
   $ hg strip -r b9f6a18cb261 -q
   preoutgoing hook: HG_SOURCE=strip
-  outgoing hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip
+  outgoing hook: HG_NODE=b9f6a18cb2619a206f6d99dbcbdfbd75b2975506 HG_SOURCE=strip
   $ cd ../client
   $ hg strip -r b9f6a18cb261 -q
   preoutgoing hook: HG_SOURCE=strip
-  outgoing hook: HG_NODE=7ba922f02e46f2426e728a97137be032470cdd1b HG_SOURCE=strip
+  outgoing hook: HG_NODE=b9f6a18cb2619a206f6d99dbcbdfbd75b2975506 HG_SOURCE=strip
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=ddd9491cc0b4965056141b5064ac0c141153b1a9 HG_SOURCE=strip
   prechangegroup hook: HG_SOURCE=strip * (glob)
