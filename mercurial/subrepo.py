@@ -62,6 +62,7 @@ def state(ctx, ui):
     (key in types dict))
     """
     p = config.config()
+    repo = ctx.repo()
     def read(f, sections=None, remap=None):
         if f in ctx:
             try:
@@ -71,11 +72,10 @@ def state(ctx, ui):
                     raise
                 # handle missing subrepo spec files as removed
                 ui.warn(_("warning: subrepo spec file \'%s\' not found\n") %
-                        util.pathto(ctx.repo().root, ctx.repo().getcwd(), f))
+                        util.pathto(repo.root, repo.getcwd(), f))
                 return
             p.parse(f, data, sections, remap, read)
         else:
-            repo = ctx.repo()
             raise util.Abort(_("subrepo spec file \'%s\' not found") %
                              util.pathto(repo.root, repo.getcwd(), f))
 
@@ -95,7 +95,6 @@ def state(ctx, ui):
                 try:
                     revision, path = l.split(" ", 1)
                 except ValueError:
-                    repo = ctx.repo()
                     raise util.Abort(_("invalid subrepository revision "
                                        "specifier in \'%s\' line %d")
                                      % (util.pathto(repo.root, repo.getcwd(),
@@ -132,7 +131,7 @@ def state(ctx, ui):
             src = src.lstrip() # strip any extra whitespace after ']'
 
         if not util.url(src).isabs():
-            parent = _abssource(ctx.repo(), abort=False)
+            parent = _abssource(repo, abort=False)
             if parent:
                 parent = util.url(parent)
                 parent.path = posixpath.join(parent.path or '', src)
