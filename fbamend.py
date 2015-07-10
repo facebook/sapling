@@ -190,7 +190,8 @@ def fixupamend(ui, repo):
 
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
        # clean up the original node if inhibit kept it alive
-       obsolete.createmarkers(repo, [(old,())])
+       if not old.obsolete():
+            obsolete.createmarkers(repo, [(old,())])
     else:
        repair.strip(ui, repo, old.node(), topic='preamend-backup')
 
