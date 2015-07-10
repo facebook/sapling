@@ -31,6 +31,7 @@ msg = """
 |two lines:                                                                    |
 |[inhibit]                                                                     |
 |bypass-warning=True                                                           |
+|You shouldn't need to do anything else to make inhibit work for this repo.    |
 +------------------------------------------------------------------------------+
 """
 # Wether the warning message has been displayed already
