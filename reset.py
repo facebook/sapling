@@ -210,7 +210,13 @@ def _deleteunreachable(repo, ctx):
     """Deletes all ancestor and descendant commits of the given revision that
     aren't reachable from another bookmark.
     """
-    hiderevs = repo.revs('::%s - ::(bookmark() + .)', ctx.rev())
+    keepheads = "bookmark() + ."
+    try:
+        extensions.find('remotenames')
+        keepheads += " + remotenames()"
+    except KeyError:
+        pass
+    hiderevs = repo.revs('::%s - ::(%r)', ctx.rev(), keepheads)
     if hiderevs:
         if _isevolverepo(repo.ui):
             markers = []
