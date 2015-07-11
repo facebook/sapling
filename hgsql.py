@@ -536,14 +536,23 @@ def wraprepo(repo):
                     # commit at the end just to make sure we're clean
                     self.sqlconn.commit()
 
-                cursor.execute("""DELETE FROM revision_references WHERE repo = %s
-                               AND namespace = 'heads'""", (reponame,))
+                cursor.execute(
+                    "DELETE revision_references FROM revision_references " +
+                    "FORCE INDEX (bookmarkindex) " +
+                    "WHERE namespace = 'heads' " +
+                    "AND repo = %s", (reponame,)
+                )
 
                 # Write the bookmarks that are part of this transaction. This
                 # may write them even if nothing has changed, but that's not
                 # a big deal.
-                cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
-                               namespace = 'bookmarks'""", (repo.sqlreponame))
+                cursor.execute(
+                    "DELETE revision_references FROM revision_references " +
+                    "FORCE INDEX (bookmarkindex) " +
+                    "WHERE namespace = 'bookmarks' " +
+                    "AND repo = %s", (repo.sqlreponame,)
+                )
+
                 tmpl = []
                 values = []
                 for head in self.heads():
