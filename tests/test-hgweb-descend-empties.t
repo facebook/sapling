@@ -508,7 +508,7 @@ manifest with descending (spartan)
   <div class="buttons">
   <a href="/log/tip?style=spartan">changelog</a>
   <a href="/shortlog/tip?style=spartan">shortlog</a>
-  <a href="/graph?style=spartan">graph</a>
+  <a href="/graph/tip?style=spartan">graph</a>
   <a href="/tags?style=spartan">tags</a>
   <a href="/branches?style=spartan">branches</a>
   <a href="/rev/tip?style=spartan">changeset</a>
