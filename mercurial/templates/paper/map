@@ -161,36 +161,42 @@ tags = tags.tmpl
 tagentry = '
   <tr class="tagEntry">
     <td>
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}rev/{tag|revescape}{sessionvars%urlparameter}">
         {tag|escape}
       </a>
     </td>
     <td class="node">
-      {node|short}
+      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
+        {node|short}
+      </a>
     </td>
   </tr>'
 bookmarks = bookmarks.tmpl
 bookmarkentry = '
   <tr class="tagEntry">
     <td>
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
+      <a href="{url|urlescape}rev/{bookmark|revescape}{sessionvars%urlparameter}">
         {bookmark|escape}
       </a>
     </td>
     <td class="node">
-      {node|short}
+      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
+        {node|short}
+      </a>
     </td>
   </tr>'
 branches = branches.tmpl
 branchentry = '
   <tr class="tagEntry">
     <td>
-      <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
+      <a href="{url|urlescape}shortlog/{branch|revescape}{sessionvars%urlparameter}" class="{status}">
         {branch|escape}
       </a>
     </td>
     <td class="node">
-      {node|short}
+      <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
+        {node|short}
+      </a>
     </td>
   </tr>'
 changelogtag = '<span class="tag">{name|escape}</span> '

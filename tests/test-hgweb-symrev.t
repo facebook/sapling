@@ -33,7 +33,7 @@ Set up the repo
   $ hg serve --config web.allow_archive=zip -n test -p $HGPORT -d --pid-file=hg.pid -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
-  $ REVLINKS='href=[^>]+(rev=|/)(43c799df6e75|0|a7c1559b7bba|1|xyzzy|9d8c40cba617|2|tip)'
+  $ REVLINKS='href=[^>]+(rev=|/)(43c799df6e75|0|a7c1559b7bba|1|xyzzy|9d8c40cba617|2|tip|default)'
 
 (De)referencing symbolic revisions (paper)
 
@@ -73,6 +73,18 @@ Set up the repo
   <a href="/file/tip/dir?style=paper">
   <a href="/file/tip/dir/?style=paper">
   <a href="/file/tip/foo?style=paper">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'branches?style=paper' | egrep $REVLINKS
+  <a href="/shortlog/default?style=paper" class="open">
+  <a href="/shortlog/9d8c40cba617?style=paper" class="open">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'tags?style=paper' | egrep $REVLINKS
+  <a href="/rev/tip?style=paper">
+  <a href="/rev/9d8c40cba617?style=paper">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'bookmarks?style=paper' | egrep $REVLINKS
+  <a href="/rev/xyzzy?style=paper">
+  <a href="/rev/a7c1559b7bba?style=paper">
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog?style=paper&rev=all()' | egrep $REVLINKS
      <a href="/rev/9d8c40cba617?style=paper">third</a>
@@ -248,6 +260,18 @@ Set up the repo
   <a href="/file/tip/dir?style=coal">
   <a href="/file/tip/dir/?style=coal">
   <a href="/file/tip/foo?style=coal">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'branches?style=coal' | egrep $REVLINKS
+  <a href="/shortlog/default?style=coal" class="open">
+  <a href="/shortlog/9d8c40cba617?style=coal" class="open">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'tags?style=coal' | egrep $REVLINKS
+  <a href="/rev/tip?style=coal">
+  <a href="/rev/9d8c40cba617?style=coal">
+
+  $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'bookmarks?style=coal' | egrep $REVLINKS
+  <a href="/rev/xyzzy?style=coal">
+  <a href="/rev/a7c1559b7bba?style=coal">
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'shortlog?style=coal&rev=all()' | egrep $REVLINKS
      <a href="/rev/9d8c40cba617?style=coal">third</a>
