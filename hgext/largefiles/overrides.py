@@ -878,8 +878,20 @@ def overriderebase(orig, ui, repo, **opts):
         repo._lfstatuswriters.pop()
         repo._lfcommithooks.pop()
 
+def overridearchivecmd(orig, ui, repo, dest, **opts):
+    repo.unfiltered().lfstatus = True
+
+    try:
+        return orig(ui, repo.unfiltered(), dest, **opts)
+    finally:
+        repo.unfiltered().lfstatus = False
+
 def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             prefix='', mtime=None, subrepos=None):
+    if not repo.lfstatus:
+        return orig(repo, dest, node, kind, decode, matchfn, prefix, mtime,
+                    subrepos)
+
     # No need to lock because we are only reading history and
     # largefile caches, neither of which are modified.
     if node is not None:
@@ -943,11 +955,15 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
         for subpath in sorted(ctx.substate):
             sub = ctx.workingsub(subpath)
             submatch = match_.narrowmatcher(subpath, matchfn)
+            sub._repo.lfstatus = True
             sub.archive(archiver, prefix, submatch)
 
     archiver.done()
 
 def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
+    if not repo._repo.lfstatus:
+        return orig(repo, archiver, prefix, match)
+
     repo._get(repo._state + ('hg',))
     rev = repo._state[1]
     ctx = repo._repo[rev]
@@ -996,6 +1012,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
     for subpath in sorted(ctx.substate):
         sub = ctx.workingsub(subpath)
         submatch = match_.narrowmatcher(subpath, match)
+        sub._repo.lfstatus = True
         sub.archive(archiver, prefix + repo._path + '/', submatch)
 
 # If a largefile is modified, the change is not reflected in its
