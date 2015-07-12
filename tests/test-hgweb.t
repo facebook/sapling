@@ -10,6 +10,9 @@ Some tests for hgweb. Tests static files, plain files and different 404's.
   $ hg ci -Ambase
   adding da/foo
   adding foo
+  $ hg bookmark -r0 '@'
+  $ hg bookmark -r0 'a b c'
+  $ hg bookmark -r0 'd/e/f'
   $ hg serve -n test -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -264,7 +267,7 @@ try bad style
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
   <h3>
    directory / @ 0:<a href="/rev/2ef0ac749a14">2ef0ac749a14</a>
-   <span class="tag">tip</span> 
+   <span class="tag">tip</span> <span class="tag">@</span> <span class="tag">a b c</span> <span class="tag">d/e/f</span> 
   </h3>
   
   <form class="search" action="/log">
@@ -557,6 +560,9 @@ phase changes are refreshed (issue4061)
   summary:     base
   branch:      default
   tag:         tip
+  bookmark:    @
+  bookmark:    a b c
+  bookmark:    d/e/f
   
   
   $ hg phase --draft tip
@@ -580,8 +586,29 @@ phase changes are refreshed (issue4061)
   user:        test
   date:        Thu, 01 Jan 1970 00:00:00 +0000
   summary:     base
+  bookmark:    @
+  bookmark:    a b c
+  bookmark:    d/e/f
   
   
+
+access bookmarks
+
+  $ get-with-headers.py localhost:$HGPORT 'rev/@?style=paper' | egrep '^200|changeset 0:'
+  200 Script output follows
+   changeset 0:<a href="/rev/2ef0ac749a14?style=paper">2ef0ac749a14</a>
+
+  $ get-with-headers.py localhost:$HGPORT 'rev/%40?style=paper' | egrep '^200|changeset 0:'
+  200 Script output follows
+   changeset 0:<a href="/rev/2ef0ac749a14?style=paper">2ef0ac749a14</a>
+
+  $ get-with-headers.py localhost:$HGPORT 'rev/a%20b%20c?style=paper' | egrep '^200|changeset 0:'
+  200 Script output follows
+   changeset 0:<a href="/rev/2ef0ac749a14?style=paper">2ef0ac749a14</a>
+
+  $ get-with-headers.py localhost:$HGPORT 'rev/d%252Fe%252Ff?style=paper' | egrep '^200|changeset 0:'
+  200 Script output follows
+   changeset 0:<a href="/rev/2ef0ac749a14?style=paper">2ef0ac749a14</a>
 
 no style can be loaded from directories other than the specified paths
 

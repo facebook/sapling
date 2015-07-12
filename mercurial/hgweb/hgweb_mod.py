@@ -235,7 +235,7 @@ class hgweb(object):
                 req.form['file'] = ['/'.join(args)]
             else:
                 if args and args[0]:
-                    node = args.pop(0)
+                    node = args.pop(0).replace('%2F', '/')
                     req.form['node'] = [node]
                 if args:
                     req.form['file'] = args
