@@ -96,7 +96,7 @@ Some sample command line templates:
 
 - Mark the active bookmark with '*'::
 
-   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, \"*\")} '}\n"
+   $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, '*')} '}\n"
 
 - Mark the working copy parent with '@'::
 
@@ -104,7 +104,7 @@ Some sample command line templates:
 
 - Show only commit descriptions that start with "template"::
 
-   $ hg log --template "{startswith(\"template\", firstline(desc))}\n"
+   $ hg log --template "{startswith('template', firstline(desc))}\n"
 
 - Print the first word of each line of a commit message::
 
