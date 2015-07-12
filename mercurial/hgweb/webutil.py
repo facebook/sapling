@@ -6,10 +6,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, copy, urllib
+import os, copy
 from mercurial import match, patch, error, ui, util, pathutil, context
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, short
+from mercurial.templatefilters import revescape
 from common import ErrorResponse, paritygen
 from common import HTTP_NOT_FOUND
 import difflib
@@ -281,7 +282,7 @@ def changelistentry(web, ctx, tmpl):
 
 def symrevorshortnode(req, ctx):
     if 'node' in req.form:
-        return urllib.quote(req.form['node'][0])
+        return revescape(req.form['node'][0])
     else:
         return short(ctx.node())
 

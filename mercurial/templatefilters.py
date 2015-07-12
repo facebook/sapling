@@ -283,6 +283,13 @@ def person(author):
     f = author.find('@')
     return author[:f].replace('.', ' ')
 
+def revescape(text):
+    """:revescape: Any text. Escapes all "special" characters, except @.
+    Forward slashes are escaped twice to prevent web servers from prematurely
+    unescaping them. For example, "@foo bar/baz" becomes "@foo%20bar%252Fbaz".
+    """
+    return urllib.quote(text, safe='/@').replace('/', '%252F')
+
 def rfc3339date(text):
     """:rfc3339date: Date. Returns a date using the Internet date format
     specified in RFC 3339: "2009-08-18T13:00:13+02:00".
@@ -402,6 +409,7 @@ filters = {
     "obfuscate": obfuscate,
     "permissions": permissions,
     "person": person,
+    "revescape": revescape,
     "rfc3339date": rfc3339date,
     "rfc822date": rfc822date,
     "short": short,
