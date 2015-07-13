@@ -163,7 +163,14 @@ def cleanupoldbackups(repo):
     maxbackups = repo.ui.configint('shelve', 'maxbackups', 10)
     hgfiles = [f for f in vfs.listdir() if f.endswith('.hg')]
     hgfiles = sorted([(vfs.stat(f).st_mtime, f) for f in hgfiles])
+    if 0 < maxbackups and maxbackups < len(hgfiles):
+        bordermtime = hgfiles[-maxbackups][0]
+    else:
+        bordermtime = None
     for mtime, f in hgfiles[:len(hgfiles) - maxbackups]:
+        if mtime == bordermtime:
+            # keep it, because timestamp can't decide exact order of backups
+            continue
         base = f[:-3]
         for ext in 'hg patch'.split():
             try:
@@ -558,6 +565,12 @@ def unshelve(ui, repo, *shelved, **opts):
     backup directory. Only the N most recent backups are kept. N
     defaults to 10 but can be overridden using the shelve.maxbackups
     configuration option.
+
+    .. container:: verbose
+
+       Timestamp in seconds is used to decide order of backups. More
+       than ``maxbackups`` backups are kept, if same timestamp
+       prevents from deciding exact order of them, for safety.
     """
     abortf = opts['abort']
     continuef = opts['continue']

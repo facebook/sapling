@@ -185,6 +185,16 @@ local edits should not prevent a shelved change from applying
 
 apply it and make sure our state is as expected
 
+(this also tests that same timestamp prevents backups from being
+removed, even though there are more than 'maxbackups' backups)
+
+  $ f -t .hg/shelve-backup/default.hg
+  .hg/shelve-backup/default.hg: file
+  $ touch -t 200001010000 .hg/shelve-backup/default.hg
+  $ f -t .hg/shelve-backup/default-1.hg
+  .hg/shelve-backup/default-1.hg: file
+  $ touch -t 200001010000 .hg/shelve-backup/default-1.hg
+
   $ hg unshelve
   unshelving change 'default-01'
   $ hg status -C
@@ -195,6 +205,17 @@ apply it and make sure our state is as expected
     c
   R b/b
   $ hg shelve -l
+
+(both of default.hg and default-1.hg should be still kept, because it
+is difficult to decide actual order of them from same timestamp)
+
+  $ ls .hg/shelve-backup/
+  default-01.hg
+  default-01.patch
+  default-1.hg
+  default-1.patch
+  default.hg
+  default.patch
 
   $ hg unshelve
   abort: no shelved changes to apply!
