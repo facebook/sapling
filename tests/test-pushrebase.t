@@ -429,6 +429,7 @@ With evolution enabled, should set obsolescence markers
   searching for changes
   no changes found
   working directory parent is obsolete!
+  (use "hg evolve" to update to its successor)
 
   $ hg evolve
   update:[9] b => foobar

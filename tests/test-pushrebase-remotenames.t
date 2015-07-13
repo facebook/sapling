@@ -5,6 +5,8 @@
   > [extensions]
   > remotenames =
   > pushrebase = $TESTDIR/../pushrebase.py
+  > [remotenames]
+  > allownonfastforward=True
   > EOF
 
 Set up server repository
@@ -36,7 +38,7 @@ Test that pushing to a remotename gets rebased
   o  0 "initial" default/master
   
 
-  $ hg push --to master --traceback
+  $ hg push --to master
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark master
   searching for changes
   adding changesets
