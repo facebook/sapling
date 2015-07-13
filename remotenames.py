@@ -900,8 +900,14 @@ def joinremotename(remote, ref):
         remote += '/' + ref
     return remote
 
+def shareawarevfs(repo):
+    if repo.shared():
+        return scmutil.vfs(repo.sharedpath)
+    else:
+        return repo.vfs
+
 def readremotenames(repo):
-    rfile = repo.join('remotenames')
+    rfile = shareawarevfs(repo).join('remotenames')
     # exit early if there is nothing to do
     if not os.path.exists(rfile):
         return
@@ -1004,7 +1010,7 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
             if inst.errno != errno.ENOENT:
                 raise
 
-        if not repo.vfs.exists('remotenames'):
+        if not shareawarevfs(repo).exists('remotenames'):
             transition(repo, repo.ui)
 
         # while we're removing old paths, also update _remotenames
@@ -1016,7 +1022,7 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
 
-        f = repo.vfs('remotenames', 'w')
+        f = shareawarevfs(repo)('remotenames', 'w')
 
         # only update the given 'remote'; iterate over old data and re-save it
         for node, nametype, oldremote, rname in olddata:
