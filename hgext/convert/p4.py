@@ -137,7 +137,7 @@ class p4_source(converter_source):
                 oldname = d["depotFile%d" % i]
                 filename = None
                 for v in vieworder:
-                    if oldname.startswith(v):
+                    if oldname.lower().startswith(v.lower()):
                         filename = views[v] + oldname[len(v):]
                         break
                 if filename:
