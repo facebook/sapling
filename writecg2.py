@@ -45,12 +45,13 @@ def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
     cl = repo.changelog
     if not roots:
         roots = [nullid]
-    # TODO: remove call to nodesbetween.
-    csets, roots, stripped_heads = cl.nodesbetween(roots, heads)
-    unaffected_heads = set(heads) - set(stripped_heads)
-    discbases = list(unaffected_heads)
+    discbases = []
     for n in roots:
         discbases.extend([p for p in cl.parents(n) if p != nullid])
+    # TODO: remove call to nodesbetween.
+    csets, roots, heads = cl.nodesbetween(roots, heads)
+    included = set(csets)
+    discbases = [n for n in discbases if n not in included]
     outgoing = discovery.outgoing(cl, discbases, heads)
     # use packermap because other extensions might override it
     bundler = changegroup.packermap['02'][0](repo)
