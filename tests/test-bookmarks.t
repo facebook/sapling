@@ -673,6 +673,31 @@ tipmost surviving ancestor of the stripped revision.
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0
   
+test non-linear update not clearing active bookmark
+
+  $ hg up 1
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (leaving bookmark four)
+  $ hg book drop
+  $ hg up -C
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark drop)
+  $ hg sum
+  parent: 2:db815d6d32e6 
+   2
+  branch: default
+  bookmarks: should-end-on-two
+  commit: 2 unknown (clean)
+  update: 1 new changesets, 2 branch heads (merge)
+  phases: 4 draft
+  $ hg book
+     drop                      1:925d80f479bb
+     four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6
+  $ hg book -d drop
+  $ hg up four
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark four)
 
 test clearing divergent bookmarks of linear ancestors
 

@@ -6483,6 +6483,11 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if not ret and movemarkfrom:
         if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
             ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+        else:
+            # this can happen with a non-linear update
+            ui.status(_("(leaving bookmark %s)\n") %
+                      repo._activebookmark)
+            bookmarks.deactivate(repo)
     elif brev in repo._bookmarks:
         bookmarks.activate(repo, brev)
         ui.status(_("(activating bookmark %s)\n") % brev)
