@@ -642,6 +642,30 @@ submodules)
   $ hg -R git-repo6-hg tip -T "{file_dels}\n"
   .hgsub .hgsubstate
 
+convert using a different remote prefix
+  $ git init git-repo7
+  Initialized empty Git repository in $TESTTMP/git-repo7/.git/
+  $ cd git-repo7
+  $ touch a && git add a && git commit -am "commit a"
+  [master (root-commit) 8ae5f69] commit a
+   Author: nottest <test@example.org>
+   1 file changed, 0 insertions(+), 0 deletions(-)
+   create mode 100644 a
+  $ cd ..
+  $ git clone git-repo7 git-repo7-client
+  Cloning into 'git-repo7-client'...
+  done.
+  $ hg convert --config convert.git.remoteprefix=origin git-repo7-client hg-repo7
+  initializing destination hg-repo7 repository
+  scanning source...
+  sorting...
+  converting...
+  0 commit a
+  updating bookmarks
+  $ hg -R hg-repo7 bookmarks
+     master                    0:03bf38caa4c6
+     origin/master             0:03bf38caa4c6
+
 damaged git repository tests:
 In case the hard-coded hashes change, the following commands can be used to
 list the hashes and their corresponding types in the repository:

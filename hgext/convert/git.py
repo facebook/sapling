@@ -376,8 +376,9 @@ class convert_git(converter_source):
         prefixlen = len(prefix)
 
         # factor two commands
-        gitcmd = { 'remote/': 'git ls-remote --heads origin',
-                          '': 'git show-ref'}
+        remoteprefix = self.ui.config('convert', 'git.remoteprefix', 'remote')
+        gitcmd = { remoteprefix + '/': 'git ls-remote --heads origin',
+                                   '': 'git show-ref'}
 
         # Origin heads
         for reftype in gitcmd:

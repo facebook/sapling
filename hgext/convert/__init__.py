@@ -309,6 +309,10 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         is very expensive for large projects, and is only effective when
         ``convert.git.similarity`` is greater than 0. The default is False.
 
+    :convert.git.remoteprefix: remote refs are converted as bookmarks with
+        ``convert.git.remoteprefix`` as a prefix followed by a /. The default
+        is 'remote'.
+
     Perforce Source
     ###############
 
