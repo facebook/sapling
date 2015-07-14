@@ -371,6 +371,10 @@ def _wraprepo(ui, repo):
             except KeyError:
                 return self.filectx(profile, changeid=changeid).data()
 
+        def sparsechecksum(self, filepath):
+            fh = open(filepath)
+            return util.sha1(fh.read()).hexdigest()
+
         def sparsematch(self, *revs, **kwargs):
             """Returns the sparse match function for the given revs.
 
@@ -384,21 +388,22 @@ def _wraprepo(ui, repo):
                 revs = [self.changelog.rev(node) for node in
                     self.dirstate.parents() if node != nullid]
 
+            signature = 0
             try:
                 sparsepath = self.opener.join('sparse')
-                mtime = os.stat(sparsepath).st_mtime
-            except OSError:
-                mtime = 0
+                signature = self.sparsechecksum(sparsepath)
+            except (OSError, IOError):
+                pass
 
-            tempmtime = 0
+            tempsignature = 0
             try:
                 if kwargs.get('includetemp', True):
                     tempsparsepath = self.opener.join('tempsparse')
-                    tempmtime = os.stat(tempsparsepath).st_mtime
-            except OSError:
+                    tempsignature = self.sparsechecksum(tempsparsepath)
+            except (OSError, IOError):
                 pass
 
-            key = '%s %s %s' % (str(mtime), str(tempmtime),
+            key = '%s %s %s' % (str(signature), str(tempsignature),
                 ' '.join([str(r) for r in revs]))
             result = self.sparsecache.get(key, None)
             if result:
