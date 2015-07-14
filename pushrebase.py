@@ -168,7 +168,10 @@ def partgen(pushop, bundler):
 
     pushop.stepsdone.add('changesets')
     if not pushop.outgoing.missing:
-        pushop.ui.note(_('no changes to push'))
+        # It's important that this text match the text found in upstream
+        # Mercurial, since some tools rely on this string to know if a push
+        # succeeded despite not pushing commits.
+        pushop.ui.status(_('no changes found\n'))
         pushop.cgresult = 0
         return
 
@@ -225,9 +228,14 @@ def _getrevs(bundle, onto):
     if revs:
         # We want to rebase the highest bundle root that is an ancestor of
         # `onto`.
-        oldonto = list(bundle.set('max(roots(bundle() + parents(bundle()))'
-                                  ' & ::%d)', onto.rev()))
+        oldonto = list(bundle.set('max(parents(bundle()) - bundle() & ::%d)',
+                                  onto.rev()))
         if not oldonto:
+            # If there's no shared history, only allow the rebase if the
+            # incoming changes are completely distinct.
+            sharedparents = list(bundle.set('parents(bundle()) - bundle()'))
+            if not sharedparents:
+                return revs, bundle[nullid]
             raise util.Abort(_('pushed commits do not branch from an ancestor '
                                'of the desired destination %s' % onto.hex()))
         oldonto = oldonto[0]
@@ -253,6 +261,17 @@ def _graft(repo, rev, mapping):
     oldp2 = rev.p2().node()
     newp1 = mapping.get(oldp1, oldp1)
     newp2 = mapping.get(oldp2, oldp2)
+
+    # If the incoming commit has no parents, but requested a rebase,
+    # allow it only for the first commit. The null/null commit will always
+    # be the first commit since we only allow a nullid->nonnullid mapping if the
+    # incoming commits are a completely distinct history (see `sharedparents` in
+    # getrevs()), so there's no risk of commits with a single null parent
+    # accidentally getting translated first.
+    if oldp1 == nullid and oldp2 == nullid:
+        if newp1 != nullid:
+            newp2 = nullid
+            del mapping[nullid]
 
     return context.memctx(repo,
                           [newp1, newp2],
@@ -323,7 +342,12 @@ def bundle2rebase(op, part):
     hookargs = dict(tr.hookargs)
 
     bundlefile = None
-    onto = scmutil.revsingle(op.repo, params['onto'])
+    try:
+        onto = scmutil.revsingle(op.repo, params['onto'])
+    except error.RepoLookupError:
+        # Probably a new bookmark. onto == None means don't do rebasing
+        onto = None
+
     if not params['newhead']:
         if not op.repo.revs('%r and head()', params['onto']):
             raise util.Abort(_('rebase would produce a new head on server'))
@@ -331,6 +355,13 @@ def bundle2rebase(op, part):
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+        if onto == None:
+            maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))
+            if not maxcommonanc:
+                onto = op.repo[nullid]
+            else:
+                onto = maxcommonanc[0]
+
         revs, oldonto = _getrevs(bundle, onto)
 
         op.repo.hook("prechangegroup", **hookargs)

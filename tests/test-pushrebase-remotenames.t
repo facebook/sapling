@@ -65,3 +65,19 @@ Test that pushing to a remotename gets rebased
   |
   o  0 "initial"
   
+Test pushing a new bookmark
+  $ cd ..
+  $ hg -R client push --to newbook
+  pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
+  searching for changes
+  abort: not creating new bookmark
+  (use --force to create a new bookmark)
+  [255]
+
+  $ hg -R client push --to newbook -f
+  pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
+  searching for changes
+  exporting bookmark newbook
+  $ hg -R server book
+   * master                    2:796d44dcaae0
+     newbook                   3:5c3cfb78df2f
