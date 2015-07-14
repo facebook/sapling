@@ -15,6 +15,12 @@ Select no files
   $ touch empty-rw
   $ hg add empty-rw
 
+  $ hg record --config ui.interactive=false
+  abort: running non-interactively, use commit instead
+  [255]
+  $ hg commit -i --config ui.interactive=false
+  abort: running non-interactively
+  [255]
   $ hg commit -i empty-rw<<EOF
   > n
   > EOF

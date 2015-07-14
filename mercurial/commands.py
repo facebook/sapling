@@ -1480,7 +1480,7 @@ def commit(ui, repo, *pats, **opts):
     """
     if opts.get('interactive'):
         opts.pop('interactive')
-        cmdutil.dorecord(ui, repo, commit, 'commit', False,
+        cmdutil.dorecord(ui, repo, commit, None, False,
                         cmdutil.recordfilter, *pats, **opts)
         return
 

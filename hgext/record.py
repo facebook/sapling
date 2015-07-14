@@ -53,6 +53,10 @@ def record(ui, repo, *pats, **opts):
 
     This command is not available when committing a merge.'''
 
+    if not ui.interactive():
+        raise util.Abort(_('running non-interactively, use %s instead') %
+                         'commit')
+
     opts["interactive"] = True
     backup = ui.backupconfig('experimental', 'crecord')
     try:
