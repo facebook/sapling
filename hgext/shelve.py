@@ -279,7 +279,7 @@ def createcmd(ui, repo, pats, opts):
         if not interactive:
             node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
         else:
-            node = cmdutil.dorecord(ui, repo, interactivecommitfunc, 'commit',
+            node = cmdutil.dorecord(ui, repo, interactivecommitfunc, None,
                                     False, cmdutil.recordfilter, *pats, **opts)
         if not node:
             stat = repo.status(match=scmutil.match(repo[None], pats, opts))

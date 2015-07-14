@@ -860,6 +860,9 @@ Test interactive shelve
   $ cat foo/foo
   foo
   a
+  $ hg shelve --interactive --config ui.interactive=false
+  abort: running non-interactively
+  [255]
   $ hg shelve --interactive << EOF
   > y
   > y
