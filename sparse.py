@@ -604,17 +604,17 @@ def _config(ui, repo, pats, include=False, exclude=False, reset=False,
     """
     wlock = repo.wlock()
     try:
+        oldsparsematch = repo.sparsematch()
+
+        if repo.opener.exists('sparse'):
+            raw = repo.opener.read('sparse')
+            oldinclude, oldexclude, oldprofiles = repo.readsparseconfig(raw)
+        else:
+            oldinclude = set()
+            oldexclude = set()
+            oldprofiles = set()
+
         try:
-            oldsparsematch = repo.sparsematch()
-
-            if repo.opener.exists('sparse'):
-                raw = repo.opener.read('sparse')
-                oldinclude, oldexclude, oldprofiles = repo.readsparseconfig(raw)
-            else:
-                oldinclude = set()
-                oldexclude = set()
-                oldprofiles = set()
-
             if reset:
                 newinclude = set()
                 newexclude = set()
