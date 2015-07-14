@@ -140,7 +140,7 @@ class p4_source(converter_source):
             date = (int(d["time"]), 0)     # timezone not set
             c = commit(author=self.recode(d["user"]),
                        date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
-                       parents=parents, desc=desc, branch='',
+                       parents=parents, desc=desc, branch=None,
                        extra={"p4": change})
 
             files = []

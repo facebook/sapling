@@ -99,7 +99,7 @@ Test hg failing to call itself
 Convert 'trunk' to branch other than 'default'
 
   $ cat > branchmap <<EOF
-  > None hgtrunk
+  > default hgtrunk
   > 
   > 
   > EOF
@@ -121,9 +121,8 @@ Convert 'trunk' to branch other than 'default'
   0 last change to a
 
   $ cd C-hg
-  $ hg branches
-  hgtrunk                       10:745f063703b4
-  old                            9:aa50d7b8d922
-  old2                           8:c85a22267b6e (inactive)
+  $ hg branches --template '{branch}\n'
+  hgtrunk
+  old
+  old2
   $ cd ..
-

@@ -29,6 +29,39 @@ def recode(s):
     else:
         return s.decode('utf-8').encode(orig_encoding, 'replace')
 
+def mapbranch(branch, branchmap):
+    '''
+    >>> bmap = {'default': 'branch1'}
+    >>> for i in ['', None]:
+    ...     mapbranch(i, bmap)
+    'branch1'
+    'branch1'
+    >>> bmap = {'None': 'branch2'}
+    >>> for i in ['', None]:
+    ...     mapbranch(i, bmap)
+    'branch2'
+    'branch2'
+    >>> bmap = {'None': 'branch3', 'default': 'branch4'}
+    >>> for i in ['None', '', None, 'default', 'branch5']:
+    ...     mapbranch(i, bmap)
+    'branch3'
+    'branch4'
+    'branch4'
+    'branch4'
+    'branch5'
+    '''
+    # If branch is None or empty, this commit is coming from the source
+    # repository's default branch and destined for the default branch in the
+    # destination repository. For such commits, using a literal "default"
+    # in branchmap below allows the user to map "default" to an alternate
+    # default branch in the destination repository.
+    branch = branchmap.get(branch or 'default', branch)
+    # At some point we used "None" literal to denote the default branch,
+    # attempt to use that for backward compatibility.
+    if (not branch):
+        branch = branchmap.get(str(None), branch)
+    return branch
+
 source_converters = [
     ('cvs', convert_cvs, 'branchsort'),
     ('git', convert_git, 'branchsort'),
@@ -377,12 +410,7 @@ class converter(object):
     def cachecommit(self, rev):
         commit = self.source.getcommit(rev)
         commit.author = self.authors.get(commit.author, commit.author)
-        # If commit.branch is None, this commit is coming from the source
-        # repository's default branch and destined for the default branch in the
-        # destination repository. For such commits, passing a literal "None"
-        # string to branchmap.get() below allows the user to map "None" to an
-        # alternate default branch in the destination repository.
-        commit.branch = self.branchmap.get(str(commit.branch), commit.branch)
+        commit.branch = mapbranch(commit.branch, self.branchmap)
         self.commitcache[rev] = commit
         return commit
 
