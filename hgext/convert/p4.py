@@ -23,6 +23,20 @@ def loaditer(f):
     except EOFError:
         pass
 
+def decodefilename(filename):
+    """Perforce escapes special characters @, #, *, or %
+    with %40, %23, %2A, or %25 respectively
+
+    >>> decodefilename('portable-net45%252Bnetcore45%252Bwp8%252BMonoAndroid')
+    'portable-net45%2Bnetcore45%2Bwp8%2BMonoAndroid'
+    >>> decodefilename('//Depot/Directory/%2525/%2523/%23%40.%2A')
+    '//Depot/Directory/%25/%23/#@.*'
+    """
+    replacements = [('%2A', '*'), ('%23', '#'), ('%40', '@'), ('%25', '%')]
+    for k, v in replacements:
+        filename = filename.replace(k, v)
+    return filename
+
 class p4_source(converter_source):
     def __init__(self, ui, path, revs=None):
         super(p4_source, self).__init__(ui, path, revs=revs)
@@ -138,7 +152,7 @@ class p4_source(converter_source):
                 filename = None
                 for v in vieworder:
                     if oldname.lower().startswith(v.lower()):
-                        filename = views[v] + oldname[len(v):]
+                        filename = decodefilename(views[v] + oldname[len(v):])
                         break
                 if filename:
                     files.append((filename, d["rev%d" % i]))
