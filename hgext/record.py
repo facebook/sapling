@@ -79,7 +79,7 @@ def qrefresh(origfn, ui, repo, *pats, **opts):
         mq.refresh(ui, repo, **opts)
 
     # backup all changed files
-    cmdutil.dorecord(ui, repo, committomq, 'qrefresh', True,
+    cmdutil.dorecord(ui, repo, committomq, None, True,
                     cmdutil.recordfilter, *pats, **opts)
 
 # This command registration is replaced during uisetup().

@@ -177,6 +177,9 @@ Whole diff
 
 partial qrefresh
 
+  $ hg qrefresh -i --config ui.interactive=false
+  abort: running non-interactively
+  [255]
   $ hg qrefresh -i -d '0 0' <<EOF
   > y
   > y
