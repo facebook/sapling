@@ -123,6 +123,12 @@ Base commit
 
   $ hg add 1.txt 2.txt dir/a.txt
   $ hg commit -m aaa
+  $ hg qrecord --config ui.interactive=false patch
+  abort: running non-interactively, use qnew instead
+  [255]
+  $ hg qnew -i --config ui.interactive=false patch
+  abort: running non-interactively
+  [255]
   $ hg qnew -d '0 0' patch
 
 Changing files

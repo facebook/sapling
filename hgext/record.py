@@ -93,7 +93,9 @@ def qrecord(ui, repo, patch, *pats, **opts):
     See :hg:`help qnew` & :hg:`help record` for more information and
     usage.
     '''
+    return _qrecord('qnew', ui, repo, patch, *pats, **opts)
 
+def _qrecord(cmdsuggest, ui, repo, patch, *pats, **opts):
     try:
         mq = extensions.find('mq')
     except KeyError:
@@ -108,14 +110,14 @@ def qrecord(ui, repo, patch, *pats, **opts):
     backup = ui.backupconfig('experimental', 'crecord')
     try:
         ui.setconfig('experimental', 'crecord', False, 'record')
-        cmdutil.dorecord(ui, repo, committomq, 'qnew', False,
+        cmdutil.dorecord(ui, repo, committomq, cmdsuggest, False,
                          cmdutil.recordfilter, *pats, **opts)
     finally:
         ui.restoreconfig(backup)
 
 def qnew(origfn, ui, repo, patch, *args, **opts):
     if opts['interactive']:
-        return qrecord(ui, repo, patch, *args, **opts)
+        return _qrecord(None, ui, repo, patch, *args, **opts)
     return origfn(ui, repo, patch, *args, **opts)
 
 
