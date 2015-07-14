@@ -81,8 +81,11 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
     import merge as mergemod
 
     if not ui.interactive():
-        raise util.Abort(_('running non-interactively, use %s instead') %
-                         cmdsuggest)
+        if cmdsuggest:
+            msg = _('running non-interactively, use %s instead') % cmdsuggest
+        else:
+            msg = _('running non-interactively')
+        raise util.Abort(msg)
 
     # make sure username is set before going interactive
     if not opts.get('user'):
