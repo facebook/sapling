@@ -126,23 +126,36 @@ def showgitnode(repo, ctx, templ, **args):
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return ''
+    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos', default=[reponame])
 
     if ctx.mutable():
         # Local commits don't have translations
         return ''
 
-    try:
-        result = _call_conduit('scmquery.get.mirrored.revs',
-            from_repo=reponame,
-            from_scm='hg',
-            to_repo=reponame,
-            to_scm='git',
-            revs=[ctx.hex()]
-        )
-    except ConduitError:
-        # templates are expected to return an empty string when no data exists
+    matches = []
+    for backingrepo in backingrepos:
+        try:
+            result = _call_conduit('scmquery.get.mirrored.revs',
+                from_repo=reponame,
+                from_scm='hg',
+                to_repo=backingrepo,
+                to_scm='git',
+                revs=[ctx.hex()]
+            )
+            matches.append((backingrepo, result[ctx.hex()]))
+        except ConduitError:
+            pass
+
+    if len(matches) == 0:
         return ''
-    return result[ctx.hex()]
+    elif len(backingrepos) == 1:
+        return matches[0][1]
+    else:
+        # in case it's not clear, the sort() is to ensure the output is in a
+        # deterministic order.
+        matches.sort()
+        return "; ".join(["{0}: {1}".format(*match)
+                          for match in matches])
 
 def gitnode(repo, subset, x):
     """``gitnode(id)``
@@ -154,17 +167,22 @@ def gitnode(repo, subset, x):
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return subset.filter(lambda r: false)
+    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos', default=[reponame])
 
     peerpath = repo.ui.expandpath('default')
-    try:
-        result = _call_conduit('scmquery.get.mirrored.revs',
-            from_repo=reponame,
-            from_scm='git',
-            to_repo=reponame,
-            to_scm='hg',
-            revs=[n]
-        )
-    except ConduitError as e:
+    for backingrepo in backingrepos:
+        try:
+            result = _call_conduit('scmquery.get.mirrored.revs',
+                from_repo=backingrepo,
+                from_scm='git',
+                to_repo=reponame,
+                to_scm='hg',
+                revs=[n]
+            )
+            break
+        except ConduitError as e:
+            pass
+    else:
         if 'unknown revision' not in str(e.args):
             repo.ui.warn("Could not translate revision {0}.\n".format(n))
         return subset.filter(lambda r: False)
