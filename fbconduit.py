@@ -4,8 +4,9 @@
 #
 # Copyright 2015 Facebook, Inc.
 
-from mercurial import templater, extensions, revset, templatekw
+from mercurial import templater, extensions, revset, templatekw, node
 from mercurial.i18n import _
+
 import re
 import json
 from urllib import urlencode
@@ -165,9 +166,9 @@ def gitnode(repo, subset, x):
         )
     except ConduitError as e:
         if 'unknown revision' not in str(e.args):
-            mapping['repo'].ui.warn(str(e.args) + '\n')
-        return subset.filter(lambda r: false)
-    rn = repo[result[n]].rev()
+            repo.ui.warn("Could not translate revision {0}.\n".format(n))
+        return subset.filter(lambda r: False)
+    rn = repo[node.bin(result[n])].rev()
     return subset.filter(lambda r: r == rn)
 
 def overridestringset(orig, repo, subset, x):
