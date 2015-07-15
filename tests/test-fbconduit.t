@@ -14,6 +14,15 @@
   $ hg ci -m "initial commit"
   $ commitid=`hg log -T "{label('custom.fullrev',node)}"`
   $ hg phase -p $commitid
-  $ curl -s -X PUT http://localhost:8000/dummy/hg/dummy/git/$commitid/fakegithash
+  $ curl -s -X PUT http://localhost:8000/dummy/hg/dummy/git/$commitid/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   $ hg log -T '{gitnode}\n'
-  fakegithash
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ hg log -T '{mirrornode("git")}\n'
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ hg log -T '{mirrornode("dummy", "git")}\n'
+  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")'
+  Could not translate revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.
+  $ curl -s -X PUT http://localhost:8000/dummy/git/dummy/hg/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/$commitid
+  $ hg log -r 'gitnode("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")' -T '{desc}\n'
+  initial commit
