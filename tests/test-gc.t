@@ -29,7 +29,8 @@
 
 # gc client cache
 
-  $ find $CACHEDIR -type f -exec touch -d "last week" {} \;
+  $ lastweek=`python -c 'import datetime,time; print datetime.datetime.fromtimestamp(time.time() - (86400 * 7)).strftime("%y%m%d%H%M")'`
+  $ find $CACHEDIR -type f -exec touch -t $lastweek {} \;
 
   $ find $CACHEDIR -type f | wc -l
   3
