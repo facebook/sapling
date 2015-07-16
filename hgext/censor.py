@@ -47,6 +47,12 @@ def censor(ui, repo, path, rev='', tombstone='', **opts):
     if not rev:
         raise util.Abort(_('must specify revision to censor'))
 
+    wctx = repo[None]
+
+    m = scmutil.match(wctx, (path,))
+    if m.anypats() or len(m.files()) != 1:
+        raise util.Abort(_('can only specify an explicit filename'))
+    path = m.files()[0]
     flog = repo.file(path)
     if not len(flog):
         raise util.Abort(_('cannot censor file with no history'))
@@ -70,7 +76,6 @@ def censor(ui, repo, path, rev='', tombstone='', **opts):
         raise util.Abort(_('cannot censor file in heads (%s)') % headlist,
             hint=_('clean/delete and commit first'))
 
-    wctx = repo[None]
     wp = wctx.parents()
     if ctx.node() in [p.node() for p in wp]:
         raise util.Abort(_('cannot censor working directory'),

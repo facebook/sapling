@@ -72,7 +72,10 @@ Try to censor revision with too large of a tombstone message
 
 Censor revision with 2 offenses
 
-  $ hg censor -r $C2 -t "remove password" target
+(this also tests file pattern matching: path relative to cwd case)
+
+  $ mkdir -p foo/bar/baz
+  $ hg --cwd foo/bar/baz censor -r $C2 -t "remove password" ../../../target
   $ hg cat -r $H1 target
   Tainted file is now sanitized
   $ hg cat -r $H2 target
@@ -89,7 +92,9 @@ Censor revision with 2 offenses
 
 Censor revision with 1 offense
 
-  $ hg censor -r $C1 target
+(this also tests file pattern matching: with 'path:' scheme)
+
+  $ hg --cwd foo/bar/baz censor -r $C1 path:target
   $ hg cat -r $H1 target
   Tainted file is now sanitized
   $ hg cat -r $H2 target
