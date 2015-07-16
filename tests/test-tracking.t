@@ -274,6 +274,15 @@ Test when a local bookmark that was tracking goes missing
   $ hg book -v
    * d                         5:8d13dc14fef1
 
+Test renaming a bookmark with tracking
+
+  $ hg book d -t remote/a
+  $ hg book -v
+   * d                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+  $ hg book -m d x
+  $ hg book -v
+   * x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+
 Test bookmarks with difficult characters
 
   $ hg book -t remote/a "bookmark with spaces"
@@ -282,13 +291,13 @@ Test bookmarks with difficult characters
   $ hg book -v
      bookmark with spaces      5:8d13dc14fef1
    * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     d                         5:8d13dc14fef1
      with	tab too              5:8d13dc14fef1
+     x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg update bookmark/with/slashes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark bookmark/with/slashes)
   $ hg book -v
      bookmark with spaces      5:8d13dc14fef1
    * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     d                         5:8d13dc14fef1
      with	tab too              5:8d13dc14fef1
+     x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]

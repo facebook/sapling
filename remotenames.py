@@ -694,18 +694,34 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         return
 
     if delete or rename or args or inactive:
+        if delete and track:
+            msg = _('do not specifiy --track and --delete at the same time')
+            raise util.Abort(msg)
+
         ret = orig(ui, repo, *args, **opts)
+
+        oldtracking = _readtracking(repo)
+        tracking = dict(oldtracking)
+
+        if rename and not track:
+            tracked = tracking[rename]
+            del tracking[rename]
+            for arg in args:
+                tracking[arg] = tracked
+
         if track:
-            tracking = _readtracking(repo)
             for arg in args:
                 tracking[arg] = track
+
+        if delete:
+            for arg in args:
+                if arg in tracking:
+                    del tracking[arg]
+
+        if tracking != oldtracking:
             _writetracking(repo, tracking)
             # update the cache
             precachedistance(repo)
-
-        # also remove tracking for a deleted bookmark, if it exists
-        if delete:
-            _removetracking(repo, args)
 
         return ret
 
