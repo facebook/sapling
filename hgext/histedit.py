@@ -750,6 +750,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
     replacements = []
     state.keep = opts.get('keep', False)
+    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
     # rebuild state
     if goal == 'continue':
@@ -881,7 +882,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
             # TODO update mq state
-        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        if supportsmarkers:
             markers = []
             # sort by revision number because it sound "right"
             for prec in sorted(mapping, key=repo.changelog.rev):
