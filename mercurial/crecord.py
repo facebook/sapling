@@ -482,7 +482,10 @@ def chunkselector(ui, headerlist):
     """
     ui.write(_('starting interactive selection\n'))
     chunkselector = curseschunkselector(headerlist, ui)
+    f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main)
+    # ncurses does not restore signal handler for SIGTSTP
+    signal.signal(signal.SIGTSTP, f)
 
 def testdecorator(testfn, f):
     def u(*args, **kwargs):
