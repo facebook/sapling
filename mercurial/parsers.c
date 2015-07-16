@@ -752,8 +752,8 @@ static const char *index_deref(indexObject *self, Py_ssize_t pos)
 	return PyString_AS_STRING(self->data) + pos * v1_hdrsize;
 }
 
-static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
-				int *ps)
+static inline int index_get_parents(indexObject *self, Py_ssize_t rev,
+				    int *ps, int maxrev)
 {
 	if (rev >= self->length - 1) {
 		PyObject *tuple = PyList_GET_ITEM(self->added,
@@ -765,6 +765,13 @@ static inline void index_get_parents(indexObject *self, Py_ssize_t rev,
 		ps[0] = getbe32(data + 24);
 		ps[1] = getbe32(data + 28);
 	}
+	/* If index file is corrupted, ps[] may point to invalid revisions. So
+	 * there is a risk of buffer overflow to trust them unconditionally. */
+	if (ps[0] > maxrev || ps[1] > maxrev) {
+		PyErr_SetString(PyExc_ValueError, "parent out of range");
+		return -1;
+	}
+	return 0;
 }
 
 
@@ -1149,7 +1156,8 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	if (minrevallphases != -1) {
 		int parents[2];
 		for (i = minrevallphases; i < len; i++) {
-			index_get_parents(self, i, parents);
+			if (index_get_parents(self, i, parents, len - 1) < 0)
+				goto release_phasesetlist;
 			set_phase_from_parents(phases, parents[0], parents[1], i);
 		}
 	}
@@ -1248,7 +1256,8 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 			continue;
 		}
 
-		index_get_parents(self, i, parents);
+		if (index_get_parents(self, i, parents, len - 1) < 0)
+			goto bail;
 		for (j = 0; j < 2; j++) {
 			if (parents[j] >= 0)
 				nothead[parents[j]] = 1;
@@ -1716,7 +1725,8 @@ static PyObject *find_gca_candidates(indexObject *self, const int *revs,
 				}
 			}
 		}
-		index_get_parents(self, v, parents);
+		if (index_get_parents(self, v, parents, maxrev) < 0)
+			goto bail;
 
 		for (i = 0; i < 2; i++) {
 			int p = parents[i];
@@ -1813,7 +1823,8 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 			continue;
 
 		sv = seen[v];
-		index_get_parents(self, v, parents);
+		if (index_get_parents(self, v, parents, maxrev) < 0)
+			goto bail;
 
 		for (i = 0; i < 2; i++) {
 			int p = parents[i];
