@@ -4,8 +4,9 @@
 #
 # Copyright 2015 Facebook, Inc.
 
-from mercurial import templater, extensions, revset, templatekw
+from mercurial import templater, extensions, revset, templatekw, node
 from mercurial.i18n import _
+
 import re
 import json
 from urllib import urlencode
@@ -26,13 +27,16 @@ class HttpError(Exception):
 githashre = re.compile('g([0-9a-fA-F]{40,40})')
 
 def extsetup(ui):
-    global conduit_host, conduit_path
+    global conduit_host, conduit_path, conduit_protocol
     conduit_host = ui.config('fbconduit', 'host')
     conduit_path = ui.config('fbconduit', 'path')
-    
+    conduit_protocol = ui.config('fbconduit', 'protocol')
+
     if not conduit_host:
         ui.warn('No conduit host specified in config; disabling fbconduit\n')
         return
+    if not conduit_protocol:
+        conduit_protocol = 'https'
     templater.funcs['mirrornode'] = mirrornode
     templatekw.keywords['gitnode'] = showgitnode
 
@@ -43,11 +47,14 @@ def extsetup(ui):
     revset.methods['symbol'] = revset.stringset
 
 def _call_conduit(method, **kwargs):
-    global connection, conduit_host, conduit_path
+    global connection, conduit_host, conduit_path, conduit_protocol
 
     # start connection
     if connection is None:
-        connection = httplib.HTTPSConnection(conduit_host)
+        if conduit_protocol == 'https':
+            connection = httplib.HTTPSConnection(conduit_host)
+        elif conduit_protocol == 'http':
+            connection = httplib.HTTPConnection(conduit_host)
 
     # send request
     path = conduit_path + method
@@ -123,7 +130,7 @@ def showgitnode(repo, ctx, templ, **args):
     if ctx.mutable():
         # Local commits don't have translations
         return ''
-    
+
     try:
         result = _call_conduit('scmquery.get.mirrored.revs',
             from_repo=reponame,
@@ -159,9 +166,9 @@ def gitnode(repo, subset, x):
         )
     except ConduitError as e:
         if 'unknown revision' not in str(e.args):
-            mapping['repo'].ui.warn(str(e.args) + '\n')
-        return subset.filter(lambda r: false)
-    rn = repo[result[n]].rev()
+            repo.ui.warn("Could not translate revision {0}.\n".format(n))
+        return subset.filter(lambda r: False)
+    rn = repo[node.bin(result[n])].rev()
     return subset.filter(lambda r: r == rn)
 
 def overridestringset(orig, repo, subset, x):
