@@ -1,3 +1,5 @@
+python -c 'import lz4' || exit 80
+
 cp `echo $HGRCPATH` ./
 CACHEDIR=$PWD/hgcache
 cat >> .hgrc <<EOF
