@@ -111,7 +111,7 @@ the server supports our custom getfiles method.
   drwxrwxr-x* 395df8f7c51f007019cb30201c49e884b46b92fa (glob)
   drwxrwxr-x* 86f7e437faa5a7fce15d1ddcb9eaeaea377667b8 (glob)
   $ ls -l .hg/store/data/395df8f7c51f007019cb30201c49e884b46b92fa
-  total 8
+  total * (glob)
   -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a (glob)
   -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a1 (glob)
   $ cd ..
