@@ -32,18 +32,18 @@
   $ lastweek=`python -c 'import datetime,time; print datetime.datetime.fromtimestamp(time.time() - (86400 * 7)).strftime("%y%m%d%H%M")'`
   $ find $CACHEDIR -type f -exec touch -t $lastweek {} \;
 
-  $ find $CACHEDIR -type f | wc -l
+  $ find $CACHEDIR -type f | wc -l | sed -e 's/ //g'
   3
   $ hg gc
   finished: removed 1 of 2 files (0.00 GB to 0.00 GB)
-  $ find $CACHEDIR -type f | wc -l
+  $ find $CACHEDIR -type f | wc -l | sed -e 's/ //g'
   2
 
 # gc server cache
 
-  $ find master/.hg/remotefilelogcache -type f | wc -l
+  $ find master/.hg/remotefilelogcache -type f | wc -l | sed -e 's/ //g'
   2
   $ hg gc master
   finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
-  $ find master/.hg/remotefilelogcache -type f | wc -l
+  $ find master/.hg/remotefilelogcache -type f | wc -l | sed -e 's/ //g'
   1
