@@ -269,7 +269,7 @@ class changelog(revlog.revlog):
         access its content.
 
         This function will read all the index data out of the pending file and
-        extend the main index."""
+        overwrite the main index."""
 
         if not self.opener.exists(file):
             return # no pending data for changelog
