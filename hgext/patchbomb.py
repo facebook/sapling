@@ -636,7 +636,7 @@ def patchbomb(ui, repo, *revs, **opts):
                 fp.close()
         else:
             if not sendmail:
-                verifycert = ui.config('smtp', 'verifycert')
+                verifycert = ui.config('smtp', 'verifycert', 'strict')
                 if opts.get('insecure'):
                     ui.setconfig('smtp', 'verifycert', 'loose', 'patchbomb')
                 try:
