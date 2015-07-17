@@ -1612,8 +1612,12 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         # add 1 so to account for last line text reaching end of line
         self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
-        self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
 
+        try:
+            self.chunkpad = curses.newpad(self.numpadlines, self.xscreensize)
+        except curses.error:
+            self.initerr = _('this diff is too large to be displayed')
+            return
         # initialize selecteitemendline (initial start-line is 0)
         self.selecteditemendline = self.getnumlinesdisplayed(
             self.currentselecteditem, recursechildren=False)
