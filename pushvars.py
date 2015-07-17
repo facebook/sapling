@@ -66,8 +66,10 @@ def push(orig, ui, repo, *args, **opts):
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
     # sure we load after it so that we wrap it.
-    _order.remove('pushvars')
-    _order.append('pushvars')
+    order = list(extensions._order)
+    order.remove('pushvars')
+    order.append('pushvars')
+    extensions._order = order
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'push', push)
