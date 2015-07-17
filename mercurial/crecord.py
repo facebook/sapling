@@ -484,6 +484,8 @@ def chunkselector(ui, headerlist):
     chunkselector = curseschunkselector(headerlist, ui)
     f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main)
+    if chunkselector.initerr is not None:
+        raise util.Abort(chunkselector.initerr)
     # ncurses does not restore signal handler for SIGTSTP
     signal.signal(signal.SIGTSTP, f)
 
@@ -1582,6 +1584,9 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
         signal.signal(signal.SIGWINCH, self.sigwinchhandler)
         self.stdscr = stdscr
+        # error during initialization, cannot be printed in the curses
+        # interface, it should be printed by the calling code
+        self.initerr = None
         self.yscreensize, self.xscreensize = self.stdscr.getmaxyx()
 
         curses.start_color()
