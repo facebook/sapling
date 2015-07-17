@@ -116,7 +116,8 @@ def _httpgitwrapper(orig):
         if uri.endswith('.git'):
             return gitrepo
 
-        return orig(uri)
+        # the http(s) scheme just returns the _peerlookup
+        return orig
 
     return httpgitscheme
 
