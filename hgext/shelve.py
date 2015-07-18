@@ -563,7 +563,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
     After a successful unshelve, the shelved changes are stored in a
     backup directory. Only the N most recent backups are kept. N
-    defaults to 10 but can be overridden using the shelve.maxbackups
+    defaults to 10 but can be overridden using the ``shelve.maxbackups``
     configuration option.
 
     .. container:: verbose
