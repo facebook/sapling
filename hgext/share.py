@@ -16,12 +16,12 @@ store paths and intelligent pooling of related repositories.
 
 The following ``share.`` config options influence this feature:
 
-``pool``
+``share.pool``
     Filesystem path where shared repository data will be stored. When
     defined, :hg:`clone` will automatically use shared repository
     storage instead of creating a store inside each clone.
 
-``poolnaming``
+``share.poolnaming``
     How directory names in ``share.pool`` are constructed.
 
     "identity" means the name is derived from the first changeset in the
