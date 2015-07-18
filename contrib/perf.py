@@ -18,6 +18,7 @@ def gettimer(ui, opts=None):
     place instead of duplicating it in all performance command."""
 
     # enforce an idle period before execution to counteract power management
+    # experimental config: perf.presleep
     time.sleep(ui.configint("perf", "presleep", 1))
 
     if opts is None:
