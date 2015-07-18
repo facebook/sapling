@@ -178,6 +178,21 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
     if symletters is None:
         symletters = _symletters
 
+    if program and lookup:
+        # attempt to parse old-style ranges first to deal with
+        # things like old-tag which contain query metacharacters
+        parts = program.split(':', 1)
+        if all(lookup(sym) for sym in parts if sym):
+            if parts[0]:
+                yield ('symbol', parts[0], 0)
+            if len(parts) > 1:
+                s = len(parts[0])
+                yield (':', None, s)
+                if parts[1]:
+                    yield ('symbol', parts[1], s + 1)
+            yield ('end', None, len(program))
+            return
+
     pos, l = 0, len(program)
     while pos < l:
         c = program[pos]
