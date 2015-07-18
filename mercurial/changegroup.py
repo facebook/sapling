@@ -720,7 +720,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         return 0
 
     changesets = files = revisions = 0
-    efiles = set()
 
     tr = repo.transaction("\n".join([srctype, util.hidepassword(url)]))
     # The transaction could have been created before and already carries source
@@ -753,15 +752,19 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
                 self._count += 1
         source.callback = prog(_('changesets'), expectedtotal)
 
+        efiles = set()
+        def onchangelog(cl, node):
+            efiles.update(cl.read(node)[3])
+
         source.changelogheader()
-        srccontent = cl.addgroup(source, csmap, trp)
+        srccontent = cl.addgroup(source, csmap, trp,
+                                 addrevisioncb=onchangelog)
+        efiles = len(efiles)
+
         if not (srccontent or emptyok):
             raise util.Abort(_("received changelog group is empty"))
         clend = len(cl)
         changesets = clend - clstart
-        for c in xrange(clstart, clend):
-            efiles.update(repo[c].files())
-        efiles = len(efiles)
         repo.ui.progress(_('changesets'), None)
 
         # pull off the manifest group
