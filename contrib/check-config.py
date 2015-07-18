@@ -27,11 +27,9 @@ def main(args):
             m = re.match('\s*``(\S+)``', l)
             if m:
                 prevname = m.group(1)
-                continue
             if re.match('^\s*-+$', l):
                 sect = prevname
                 prevname = ''
-                continue
 
             if sect and prevname:
                 name = sect + '.' + prevname
