@@ -1379,13 +1379,16 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, bundle, linkmapper, transaction):
+    def addgroup(self, bundle, linkmapper, transaction, addrevisioncb=None):
         """
         add a delta group
 
         given a set of deltas, add them to the revision log. the
         first delta is against its parent, which should be in our
         log, the rest are against the previous delta.
+
+        If ``addrevisioncb`` is defined, it will be called with arguments of
+        this revlog and the node that was added.
         """
 
         # track the base of the current delta log
@@ -1459,6 +1462,14 @@ class revlog(object):
                 chain = self._addrevision(node, None, transaction, link,
                                           p1, p2, flags, (baserev, delta),
                                           ifh, dfh)
+
+                if addrevisioncb:
+                    # Data for added revision can't be read unless flushed
+                    # because _loadchunk always opensa new file handle and
+                    # there is no guarantee data was actually written yet.
+                    flush()
+                    addrevisioncb(self, chain)
+
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
                     # reopen the index
