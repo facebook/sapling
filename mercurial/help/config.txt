@@ -1644,6 +1644,9 @@ The full set of options is:
 ``cache``
     Whether to support caching in hgweb. Defaults to True.
 
+``certificate``
+    Certificate to use when running :hg:`serve`.
+
 ``collapse``
     With ``descend`` enabled, repositories in subdirectories are shown at
     a single level alongside repositories in the current path. With
