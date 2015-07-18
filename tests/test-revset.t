@@ -197,10 +197,16 @@ names that should work without quoting
   <filteredset
     <baseset [7]>>
   7
-  $ try -- '-a-b-c-' # complains
-  hg: parse error at 7: not a prefix: end
-  [255]
-  $ log -a-b-c- # succeeds with fallback
+
+names that should be caught by fallback mechanism
+
+  $ try -- '-a-b-c-'
+  (negate
+    ('symbol', 'a-b-c-'))
+  * set:
+  <baseset [4]>
+  4
+  $ log -a-b-c-
   4
 
   $ try -- -a-b-c--a # complains
