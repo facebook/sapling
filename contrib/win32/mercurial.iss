@@ -70,15 +70,15 @@ Source: contrib\win32\ReadMe.html; DestDir: {app}; Flags: isreadme
 Source: contrib\win32\postinstall.txt; DestDir: {app}; DestName: ReleaseNotes.txt
 Source: dist\hg.exe; DestDir: {app}; AfterInstall: Touch('{app}\hg.exe.local')
 #if ARCH == "x64"
-Source: dist\*.dll; Destdir: {app}
-Source: dist\*.pyd; Destdir: {app}
+Source: dist\lib\*.dll; Destdir: {app}\lib
+Source: dist\lib\*.pyd; Destdir: {app}\lib
 #else
-Source: dist\python*.dll; Destdir: {app}; Flags: skipifsourcedoesntexist
-Source: dist\msvc*.dll; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\w9xpopen.exe; DestDir: {app}
 #endif
+Source: dist\python*.dll; Destdir: {app}; Flags: skipifsourcedoesntexist
+Source: dist\msvc*.dll; DestDir: {app}; Flags: skipifsourcedoesntexist
 Source: dist\Microsoft.VC*.CRT.manifest; DestDir: {app}; Flags: skipifsourcedoesntexist
-Source: dist\library.zip; DestDir: {app}
+Source: dist\lib\library.zip; DestDir: {app}\lib
 Source: dist\add_path.exe; DestDir: {app}
 Source: doc\*.html; DestDir: {app}\Docs
 Source: doc\style.css; DestDir: {app}\Docs
