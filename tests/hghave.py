@@ -376,3 +376,7 @@ def has_absimport():
 @check("py3k", "running with Python 3.x")
 def has_py3k():
     return 3 == sys.version_info[0]
+
+@check("pure", "running with pure Python code")
+def has_pure():
+    return os.environ.get("HGTEST_RUN_TESTS_PURE") == "--pure"

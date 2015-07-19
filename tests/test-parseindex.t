@@ -62,6 +62,8 @@ We approximate that by reducing the read buffer to 1 byte.
 
 Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
+#if no-pure
+
   $ mkdir invalidparent
   $ cd invalidparent
 
@@ -118,3 +120,5 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
   find_deepest: parent out of range
 
   $ cd ..
+
+#endif
