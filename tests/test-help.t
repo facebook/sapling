@@ -117,6 +117,7 @@ Short help:
    phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
+   scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
    urls          URL Paths
@@ -192,6 +193,7 @@ Short help:
    phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
+   scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
    urls          URL Paths
@@ -740,6 +742,7 @@ Test that default list of commands omits extension commands
    phases        Working with Phases
    revisions     Specifying Single Revisions
    revsets       Specifying Revision Sets
+   scripting     Using Mercurial from scripts and automation
    subrepos      Subrepositories
    templating    Template Usage
    urls          URL Paths
@@ -1404,6 +1407,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   Specifying Revision Sets
+  </td></tr>
+  <tr><td>
+  <a href="/help/scripting">
+  scripting
+  </a>
+  </td><td>
+  Using Mercurial from scripts and automation
   </td></tr>
   <tr><td>
   <a href="/help/subrepos">

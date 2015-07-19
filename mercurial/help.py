@@ -166,6 +166,8 @@ helptable = sorted([
     (["hgignore", "ignore"], _("Syntax for Mercurial Ignore Files"),
      loaddoc('hgignore')),
     (["phases"], _("Working with Phases"), loaddoc('phases')),
+    (['scripting'], _('Using Mercurial from scripts and automation'),
+     loaddoc('scripting')),
 ])
 
 # Map topics to lists of callable taking the current topic help and

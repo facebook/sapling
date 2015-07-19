@@ -1086,6 +1086,10 @@ help/ shows help topics
         "topic": "revsets"
       },
       {
+        "summary": "Using Mercurial from scripts and automation",
+        "topic": "scripting"
+      },
+      {
         "summary": "Subrepositories",
         "topic": "subrepos"
       },
