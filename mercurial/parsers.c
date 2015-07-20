@@ -1156,7 +1156,8 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	if (minrevallphases != -1) {
 		int parents[2];
 		for (i = minrevallphases; i < len; i++) {
-			if (index_get_parents(self, i, parents, len - 1) < 0)
+			if (index_get_parents(self, i, parents,
+					      (int)len - 1) < 0)
 				goto release_phasesetlist;
 			set_phase_from_parents(phases, parents[0], parents[1], i);
 		}
@@ -1256,7 +1257,7 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 			continue;
 		}
 
-		if (index_get_parents(self, i, parents, len - 1) < 0)
+		if (index_get_parents(self, i, parents, (int)len - 1) < 0)
 			goto bail;
 		for (j = 0; j < 2; j++) {
 			if (parents[j] >= 0)
