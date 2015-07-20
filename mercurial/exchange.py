@@ -1419,7 +1419,7 @@ def unbundle(repo, cg, heads, source, url):
                 op = bundle2.bundleoperation(repo, lambda: tr,
                                              captureoutput=captureoutput)
                 try:
-                    r = bundle2.processbundle(repo, cg, op=op)
+                    op = bundle2.processbundle(repo, cg, op=op)
                 finally:
                     r = op.reply
                     if captureoutput and r is not None:
