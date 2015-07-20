@@ -571,7 +571,7 @@ def _pushb2obsmarkers(pushop, bundler):
 
 @b2partsgenerator('bookmarks')
 def _pushb2bookmarks(pushop, bundler):
-    """handle phase push through bundle2"""
+    """handle bookmark push through bundle2"""
     if 'bookmarks' in pushop.stepsdone:
         return
     b2caps = bundle2.bundle2caps(pushop.remote)
