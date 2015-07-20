@@ -120,7 +120,7 @@ as default style, except for extra phase lines.
   $ hg log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg log -T phases > phases.out
-  $ diff -U 0 log.out phases.out | grep -v '^---\|^+++'
+  $ diff -U 0 log.out phases.out | egrep -v '^---|^\+\+\+'
   @@ -2,0 +3 @@
   +phase:       draft
   @@ -6,0 +8 @@
@@ -146,7 +146,7 @@ as default style, except for extra phase lines.
   $ hg log -v --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg log -v -T phases > phases.out
-  $ diff -U 0 log.out phases.out | grep -v '^---\|^+++'
+  $ diff -U 0 log.out phases.out | egrep -v '^---|^\+\+\+'
   @@ -2,0 +3 @@
   +phase:       draft
   @@ -7,0 +9 @@
@@ -212,7 +212,7 @@ Default style should also preserve color information (issue2866):
   $ hg --color=debug log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg --color=debug log -T phases > phases.out
-  $ diff -U 0 log.out phases.out | grep -v '^---\|^+++'
+  $ diff -U 0 log.out phases.out | egrep -v '^---|^\+\+\+'
   @@ -2,0 +3 @@
   +[log.phase|phase:       draft]
   @@ -6,0 +8 @@
@@ -238,7 +238,7 @@ Default style should also preserve color information (issue2866):
   $ hg --color=debug -v log --style default > style.out
   $ cmp log.out style.out || diff -u log.out style.out
   $ hg --color=debug -v log -T phases > phases.out
-  $ diff -U 0 log.out phases.out | grep -v '^---\|^+++'
+  $ diff -U 0 log.out phases.out | egrep -v '^---|^\+\+\+'
   @@ -2,0 +3 @@
   +[log.phase|phase:       draft]
   @@ -7,0 +9 @@
