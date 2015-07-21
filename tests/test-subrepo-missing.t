@@ -24,7 +24,7 @@ abort more gracefully on .hgsubstate parsing error
   $ cp .hgsubstate .hgsubstate.old
   >>> file('.hgsubstate', 'wb').write('\ninvalid')
   $ hg st --subrepos --cwd $TESTTMP -R $TESTTMP/repo
-  abort: invalid subrepository revision specifier in 'repo/.hgsubstate' line 2 (glob)
+  abort: invalid subrepository revision specifier in 'repo/.hgsubstate' line 2
   [255]
   $ mv .hgsubstate.old .hgsubstate
 
@@ -45,8 +45,8 @@ delete .hgsub and update
 
   $ rm .hgsub
   $ hg up 0 --cwd $TESTTMP -R $TESTTMP/repo
-  warning: subrepo spec file 'repo/.hgsub' not found (glob)
-  warning: subrepo spec file 'repo/.hgsub' not found (glob)
+  warning: subrepo spec file 'repo/.hgsub' not found
+  warning: subrepo spec file 'repo/.hgsub' not found
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
   warning: subrepo spec file '.hgsub' not found
