@@ -307,6 +307,7 @@ def smartlogrevset(repo, subset, x):
             heads.add(rev(books[b]))
 
     # add 'interesting' remote bookmarks as well
+    remotebooks = set()
     if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
         ns = repo.names['remotebookmarks']
         remotebooks = set(ns.listnames(repo))
@@ -317,11 +318,19 @@ def smartlogrevset(repo, subset, x):
     heads.update(repo.revs('.'))
 
     global hiddenchanges
-    allheads = set(repo.revs('head() & branch(.)'))
+    headquery = 'head() & branch(.)'
+    if remotebooks:
+        # When we have remote bookmarks, only show draft heads, since public
+        # heads should have a remote bookmark indicating them. This allows us to
+        # force push server bookmarks to new locations, and not have the commits
+        # clutter the user's smartlog.
+        headquery += ' & draft()'
+
+    allheads = set(repo.revs(headquery))
     if scope == 'all':
         heads.update(allheads)
     else:
-        recent = set(repo.revs('head() & date(-14) & branch(.)'))
+        recent = set(repo.revs(headquery + ' & date(-14)'))
         hiddenchanges += len(allheads - heads) - len(recent - heads)
         heads.update(recent)
 
