@@ -205,7 +205,7 @@ class fileserverclient(object):
         fetchmisses += len(missed)
 
         count = [total - len(missed)]
-        self.ui.progress(_downloading, count, total=total)
+        self.ui.progress(_downloading, count[0], total=total)
 
         oldumask = os.umask(0o002)
         try:
