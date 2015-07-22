@@ -40,6 +40,7 @@ Updating to a specific date isn't blocked by our extensions'
   $ hg up -d "<today"
   found revision 2 from Thu Jan 01 00:00:00 1970 +0000
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (leaving bookmark temp)
   $ hg up temp
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark temp)
