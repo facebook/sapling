@@ -299,6 +299,20 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, pr, needfiles):
 
     skipcount = 0
 
+    # Prefetch the non-bundled revisions that we will need
+    prefetchfiles = []
+    for f, node in queue:
+        revisiondata = revisiondatas[(f, node)]
+        dependents = [revisiondata['p1'], revisiondata['p2'],
+                      revisiondata['deltabase']]
+
+        for dependent in dependents:
+            if dependent == nullid or (f, dependent) in revisiondatas:
+                continue
+            prefetchfiles.append((f, hex(dependent)))
+
+    repo.fileservice.prefetch(prefetchfiles)
+
     # Apply the revisions in topological order such that a revision
     # is only written once it's deltabase and parents have been written.
     while queue:

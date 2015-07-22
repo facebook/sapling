@@ -55,34 +55,44 @@ the server supports our custom getfiles method.
   $ cd shallow
   $ echo z > z
   $ hg commit -qAm z
+  $ echo x >> x
+  $ echo y >> y
+  $ hg commit -qAm xxyy
   $ cd ../shallow2
+  $ clearcache
   $ hg pull ../shallow
   pulling from ../shallow
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 1 files
+  added 3 changesets with 3 changes to 3 files
   (run 'hg update' to get a working copy)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
 # pull from shallow to shallow (ssh)
 
   $ hg strip -r 1
-  saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-2e489c37-backup.hg (glob)
-  $ hg pull ssh://user@dummy/$TESTTMP/shallow
+  saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-89d325c9-backup.hg (glob)
+  $ clearcache
+  $ hg pull ssh://user@dummy/$TESTTMP/shallow --config remotefilelog.cachepath=${CACHEDIR}2
   pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 1 files
+  added 3 changesets with 3 changes to 3 files
   (run 'hg update' to get a working copy)
+  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg up
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat z
   z
 
+
+  $ hg -R ../shallow strip -qr 3
+  $ hg strip -qr 3
   $ cd ..
 
 # push from shallow to shallow
@@ -108,8 +118,10 @@ the server supports our custom getfiles method.
 
   $ ls -l .hg/store/data
   total * (glob)
+  drwxrwxr-x* 11f6ad8ec52a2984abaafd7c3b516503785c2072 (glob)
   drwxrwxr-x* 395df8f7c51f007019cb30201c49e884b46b92fa (glob)
   drwxrwxr-x* 86f7e437faa5a7fce15d1ddcb9eaeaea377667b8 (glob)
+  drwxrwxr-x* 95cb0bfd2977c761298d9624e4b4d4c72a39974a (glob)
   $ ls -l .hg/store/data/395df8f7c51f007019cb30201c49e884b46b92fa
   total * (glob)
   -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a (glob)
