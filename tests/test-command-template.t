@@ -1035,6 +1035,33 @@ Include works:
   1
   0
 
+Check that recursive reference does not fall into RuntimeError (issue4758):
+
+ common mistake:
+
+  $ hg log -T '{changeset}\n'
+  abort: recursive reference 'changeset' in template
+  [255]
+
+ circular reference:
+
+  $ cat << EOF > issue4758
+  > changeset = '{foo}'
+  > foo = '{changeset}'
+  > EOF
+  $ hg log --style ./issue4758
+  abort: recursive reference 'foo' in template
+  [255]
+
+ not a recursion if a keyword of the same name exists:
+
+  $ cat << EOF > issue4758
+  > changeset = '{tags % rev}'
+  > rev = '{rev} {tag}\n'
+  > EOF
+  $ hg log --style ./issue4758 -r tip
+  8 tip
+
 Check that {phase} works correctly on parents:
 
   $ cat << EOF > parentphase

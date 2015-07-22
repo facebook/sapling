@@ -226,13 +226,22 @@ def runinteger(context, mapping, data):
 def runstring(context, mapping, data):
     return data
 
+def _recursivesymbolblocker(key):
+    def showrecursion(**args):
+        raise error.Abort(_("recursive reference '%s' in template") % key)
+    return showrecursion
+
 def runsymbol(context, mapping, key):
     v = mapping.get(key)
     if v is None:
         v = context._defaults.get(key)
     if v is None:
+        # put poison to cut recursion. we can't move this to parsing phase
+        # because "x = {x}" is allowed if "x" is a keyword. (issue4758)
+        safemapping = mapping.copy()
+        safemapping[key] = _recursivesymbolblocker(key)
         try:
-            v = context.process(key, mapping)
+            v = context.process(key, safemapping)
         except TemplateNotFound:
             v = ''
     if callable(v):
