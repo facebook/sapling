@@ -1053,6 +1053,12 @@ Check that recursive reference does not fall into RuntimeError (issue4758):
   abort: recursive reference 'foo' in template
   [255]
 
+ buildmap() -> gettemplate(), where no thunk was made:
+
+  $ hg log -T '{files % changeset}\n'
+  abort: recursive reference 'changeset' in template
+  [255]
+
  not a recursion if a keyword of the same name exists:
 
   $ cat << EOF > issue4758

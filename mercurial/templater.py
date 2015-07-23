@@ -231,6 +231,9 @@ def _recursivesymbolblocker(key):
         raise error.Abort(_("recursive reference '%s' in template") % key)
     return showrecursion
 
+def _runrecursivesymbol(context, mapping, key):
+    raise error.Abort(_("recursive reference '%s' in template") % key)
+
 def runsymbol(context, mapping, key):
     v = mapping.get(key)
     if v is None:
@@ -826,7 +829,13 @@ class engine(object):
     def _load(self, t):
         '''load, parse, and cache a template'''
         if t not in self._cache:
-            self._cache[t] = compiletemplate(self._loader(t), self)
+            # put poison to cut recursion while compiling 't'
+            self._cache[t] = [(_runrecursivesymbol, t)]
+            try:
+                self._cache[t] = compiletemplate(self._loader(t), self)
+            except: # re-raises
+                del self._cache[t]
+                raise
         return self._cache[t]
 
     def process(self, t, mapping):
