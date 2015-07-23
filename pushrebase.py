@@ -261,6 +261,13 @@ def _graft(repo, rev, mapping):
     oldp2 = rev.p2().node()
     newp1 = mapping.get(oldp1, oldp1)
     newp2 = mapping.get(oldp2, oldp2)
+    m = rev.manifest()
+    def getfilectx(repo, memctx, path):
+        if path in m:
+            return context.memfilectx(repo, path,rev[path].data())
+        else:
+            return None
+
 
     # If the incoming commit has no parents, but requested a rebase,
     # allow it only for the first commit. The null/null commit will always
@@ -277,8 +284,7 @@ def _graft(repo, rev, mapping):
                           [newp1, newp2],
                           rev.description(),
                           rev.files(),
-                          (lambda repo, memctx, path:
-                              context.memfilectx(repo, path,rev[path].data())),
+                          getfilectx,
                           rev.user(),
                           rev.date(),
                           rev.extra(),
