@@ -249,8 +249,11 @@ def _setupdirstate(ui):
 
         def __get__(self, obj, type=None):
             repo = obj.repo
-            sparsematch = repo.sparsematch()
             origignore = self.orig.__get__(obj)
+            if not util.safehasattr(repo, 'sparsematch'):
+                return origignore
+
+            sparsematch = repo.sparsematch()
             if self.sparsematch != sparsematch or self.origignore != origignore:
                 self.func = unionmatcher([origignore, negatematcher(sparsematch)])
                 self.sparsematch = sparsematch
@@ -267,10 +270,11 @@ def _setupdirstate(ui):
 
     # dirstate.rebuild should not add non-matching files
     def _rebuild(orig, self, parent, allfiles, changedfiles=None):
-        matcher = self.repo.sparsematch()
-        allfiles = allfiles.matches(matcher)
-        if changedfiles:
-            changedfiles = [f for f in changedfiles if matcher(f)]
+        if util.safehasattr(self.repo, 'sparsematch'):
+            matcher = self.repo.sparsematch()
+            allfiles = allfiles.matches(matcher)
+            if changedfiles:
+                changedfiles = [f for f in changedfiles if matcher(f)]
         return orig(self, parent, allfiles, changedfiles)
     extensions.wrapfunction(dirstate.dirstate, 'rebuild', _rebuild)
 
@@ -281,12 +285,13 @@ def _setupdirstate(ui):
     for func in editfuncs:
         def _wrapper(orig, self, *args):
             repo = self.repo
-            dirstate = repo.dirstate
-            sparsematch = repo.sparsematch()
-            for f in args:
-                if not sparsematch(f) and f not in dirstate:
-                    raise util.Abort(_("cannot add '%s' - it is outside the " +
-                                     "sparse checkout") % f, hint=hint)
+            if util.safehasattr(repo, 'sparsematch'):
+                dirstate = repo.dirstate
+                sparsematch = repo.sparsematch()
+                for f in args:
+                    if not sparsematch(f) and f not in dirstate:
+                        raise util.Abort(_("cannot add '%s' - it is outside the " +
+                                         "sparse checkout") % f, hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 

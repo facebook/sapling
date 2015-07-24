@@ -295,6 +295,9 @@ Test non-sparse repos work while sparse is loaded
   > [extensions]
   > sparse=$(dirname $TESTDIR)/sparse.py
   > EOF
+  $ cd ../nonsparserepo
+  $ echo x > x && hg add x && hg commit -qAm x
+  $ cd ../sparserepo
   $ hg clone ../nonsparserepo ../nonsparserepo2
   updating to branch default
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
