@@ -1,4 +1,5 @@
-  $ hg init
+  $ hg init ignorerepo
+  $ cd ignorerepo
 
 Issue562: .hgignore requires newline at end:
 
@@ -44,7 +45,7 @@ Should display baz only:
 
   $ echo "*.o" > .hgignore
   $ hg status
-  abort: $TESTTMP/.hgignore: invalid pattern (relre): *.o (glob)
+  abort: $TESTTMP/ignorerepo/.hgignore: invalid pattern (relre): *.o (glob)
   [255]
 
   $ echo ".*\.o" > .hgignore
@@ -69,7 +70,7 @@ Test that patterns from ui.ignore options are read:
   $ echo > .hgignore
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > ignore.other = $TESTTMP/.hg/testhgignore
+  > ignore.other = $TESTTMP/ignorerepo/.hg/testhgignore
   > EOF
   $ echo "glob:**.o" > .hg/testhgignore
   $ hg status
@@ -107,7 +108,7 @@ Test relative ignore path (issue4473):
 
   $ echo "syntax: invalid" > .hgignore
   $ hg status
-  $TESTTMP/.hgignore: ignoring invalid syntax 'invalid' (glob)
+  $TESTTMP/ignorerepo/.hgignore: ignoring invalid syntax 'invalid' (glob)
   A dir/b.o
   ? .hgignore
   ? a.c
