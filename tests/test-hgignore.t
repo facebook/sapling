@@ -186,8 +186,9 @@ Check using 'include:' in ignore file
 
 Check recursive uses of 'include:'
 
-  $ echo "include:nestedignore" >> otherignore
-  $ echo "glob:*ignore" > nestedignore
+  $ echo "include:nested/ignore" >> otherignore
+  $ mkdir nested
+  $ echo "glob:*ignore" > nested/ignore
   $ hg status
   A dir/b.o
 
@@ -198,6 +199,13 @@ Check recursive uses of 'include:'
   A dir/b.o
 
   $ mv goodignore otherignore
+
+Check using 'include:' while in a non-root directory
+
+  $ cd ..
+  $ hg -R ignorerepo status
+  A dir/b.o
+  $ cd ignorerepo
 
 Check including subincludes
 

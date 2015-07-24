@@ -289,7 +289,8 @@ class match(object):
                 continue
             elif kind == 'include':
                 try:
-                    includepats = readpatternfile(pat, self._warn)
+                    fullpath = pathutil.join(root, pat)
+                    includepats = readpatternfile(fullpath, self._warn)
                     for k, p, source in self._normalize(includepats, default,
                                                         root, cwd, auditor):
                         kindpats.append((k, p, source or pat))
