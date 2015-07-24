@@ -224,6 +224,9 @@ def _getrevs(bundle, onto):
     validaterevset(bundle, 'bundle()')
     revs = [bundle[r] for r in bundle.revs('sort(bundle())')]
     onto = bundle[onto.hex()]
+    # Fast forward update, no rebase needed
+    if list(bundle.set('bundle() & %d::', onto.rev())):
+        return revs, onto
 
     if revs:
         # We want to rebase the highest bundle root that is an ancestor of

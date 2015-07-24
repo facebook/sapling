@@ -476,4 +476,42 @@ With evolution enabled, should set obsolescence markers
   |
   o  initial [public:2bb9d20e471c]
   
-TODO: test pushing bookmarks
+Test pushing master bookmark, fast forward
+
+  $ hg book -r fb983dc509b6 master
+  $ cd ../client
+  $ hg book master
+  $ echo 'babar' > b
+  $ commit 'b => babar'
+  $ hg log -r master -T"{node}\n"
+  090f3f9005e1cfe225ffc9dca2e86da7f76e2a42
+  $ hg push --to master
+  pushing to ssh://user@dummy/server
+  searching for changes
+  preoutgoing hook: HG_SOURCE=push
+  outgoing hook: HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=push
+  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
+  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
+  updating bookmark master
+  $ hg log -r master -R ../server -T"{node}\n"
+  090f3f9005e1cfe225ffc9dca2e86da7f76e2a42
+
+Test pushing bookmark with no new commit
+
+  $ hg book stable -r fb983dc509b6
+  $ hg book stable -r fb983dc509b6^ -R ../server
+  $ hg push -r stable --to stable
+  pushing to ssh://user@dummy/server
+  searching for changes
+  no changes found
+  updating bookmark stable
+  [1]
+  $ hg log -r stable -R ../server
+  changeset:   5:fb983dc509b6
+  bookmark:    stable
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a => baz
+  
