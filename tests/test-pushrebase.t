@@ -382,14 +382,15 @@ With evolution enabled, should set obsolescence markers
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=strip
   $ hg up -q 741fd2094512
-  $ echo 'foofoo' > b
-  $ commit 'b => foofoo'
+  $ hg mv b k
+  $ commit 'b => k'
+  $ hg mv k b
   $ echo 'foobar' > b
   $ commit 'b => foobar'
   $ log
-  @  b => foobar [draft:1f154a7cab2e]
+  @  b => foobar [draft:e73acfaeee82]
   |
-  o  b => foofoo [draft:98788efd81b0]
+  o  b => k [draft:9467a8ee5d0d]
   |
   o  b => quux [public:741fd2094512]
   |
@@ -405,25 +406,25 @@ With evolution enabled, should set obsolescence markers
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
-  outgoing hook: HG_NODE=98788efd81b0d6e7f0e90fe90d7dd10595700b24 HG_SOURCE=push
+  outgoing hook: HG_NODE=9467a8ee5d0d993ba68d94946c9d4a3cae8d31ff HG_SOURCE=push
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=a8312811666c8b4ea8ce70564dd598ba67401713 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=a8312811666c8b4ea8ce70564dd598ba67401713 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=1154460130f470684fd941aea203cce5f7045584 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=19f645c2268ca700750bc628acc5badce2934e63 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   adding changesets
   remote: outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=rebase:reply
   adding manifests
   adding file changes
-  added 3 changesets with 1 changes to 2 files (+1 heads)
+  added 3 changesets with 1 changes to 3 files (+1 heads)
   pretxnchangegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   2 new obsolescence markers
   changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
   incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  incoming hook: HG_NODE=a8312811666c8b4ea8ce70564dd598ba67401713 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  incoming hook: HG_NODE=1154460130f470684fd941aea203cce5f7045584 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  incoming hook: HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  incoming hook: HG_NODE=19f645c2268ca700750bc628acc5badce2934e63 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
 
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -435,12 +436,12 @@ With evolution enabled, should set obsolescence markers
   $ hg evolve
   update:[9] b => foobar
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  working directory is now at 1154460130f4
+  working directory is now at 19f645c2268c
 
   $ log
-  @  b => foobar [public:1154460130f4]
+  @  b => foobar [public:19f645c2268c]
   |
-  o  b => foofoo [public:a8312811666c]
+  o  b => k [public:bccabe9de754]
   |
   o  a => baz [public:fb983dc509b6]
   |
@@ -456,10 +457,12 @@ With evolution enabled, should set obsolescence markers
   
 
   $ cd ../server
+  $ hg log -r bccabe9de754 -T '{file_copies}\n'
+  k (b)
   $ log
-  o  b => foobar [public:1154460130f4]
+  o  b => foobar [public:19f645c2268c]
   |
-  o  b => foofoo [public:a8312811666c]
+  o  b => k [public:bccabe9de754]
   |
   @  a => baz [public:fb983dc509b6]
   |

@@ -264,7 +264,15 @@ def _graft(repo, rev, mapping):
     m = rev.manifest()
     def getfilectx(repo, memctx, path):
         if path in m:
-            return context.memfilectx(repo, path,rev[path].data())
+            fctx = rev[path]
+            flags = fctx.flags()
+            copied = fctx.renamed()
+            if copied:
+                copied = copied[0]
+            return context.memfilectx(repo, fctx.path(), fctx.data(),
+                              islink='l' in flags,
+                              isexec='x' in flags,
+                              copied=copied)
         else:
             return None
 
