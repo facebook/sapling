@@ -308,7 +308,7 @@ debugrebuildfncache does nothing unless repo has fncache requirement
   $ hg --config format.usefncache=false init nofncache
   $ cd nofncache
   $ hg debugrebuildfncache
-  (not rebuilding fncache because repository does not support fncache
+  (not rebuilding fncache because repository does not support fncache)
 
   $ cd ..
 

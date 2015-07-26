@@ -237,7 +237,7 @@ def rebuildfncache(ui, repo):
 
     if 'fncache' not in repo.requirements:
         ui.warn(_('(not rebuilding fncache because repository does not '
-                  'support fncache\n'))
+                  'support fncache)\n'))
         return
 
     lock = repo.lock()
