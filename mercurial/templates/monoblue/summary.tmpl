@@ -66,11 +66,11 @@
         </tr>
     </table>
 
-    <h2 class="no-link">Branches</h2>
+    <h2><a href="{url|urlescape}branches{sessionvars%urlparameter}">Branches</a></h2>
     <table>
     {branches%branchentry}
         <tr class="light">
-          <td colspan="4"><a class="list"  href="#">...</a></td>
+          <td colspan="4"><a class="list" href="{url|urlescape}branches{sessionvars%urlparameter}">...</a></td>
         </tr>
     </table>
 {footer}
