@@ -101,12 +101,8 @@ def snapshot(ui, repo, files, node, tmproot, listsubrepos):
                          matchfn=scmutil.matchfiles(repo, files),
                          subrepos=listsubrepos)
 
-        ctx = repo[node]
         for fn in sorted(files):
             wfn = util.pconvert(fn)
-            if wfn not in ctx:
-                # File doesn't exist; could be a bogus modify
-                continue
             ui.note('  %s\n' % wfn)
 
             if node is None:
