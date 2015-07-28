@@ -143,6 +143,24 @@ unlinked by largefiles extension.
   $ hg update -q -C 3
   $ hg update -q 0
 
+  $ hg up -C -r 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg mv A a
+  $ hg diff -g > rename.diff
+  $ hg ci -m 'A -> a'
+  $ hg up -q '.^'
+  $ hg import rename.diff -m "import rename A -> a"
+  applying rename.diff
+  $ hg st
+  ? rename.diff
+  $ hg files
+  a
+  $ find * | sort
+  a
+  rename.diff
+
+  $ rm rename.diff
+
   $ cd ..
 
 issue 3342: file in nested directory causes unexpected abort

@@ -730,6 +730,34 @@ class dirstate(object):
                     else:
                         badfn(ff, inst.strerror)
 
+        # Case insensitive filesystems cannot rely on lstat() failing to detect
+        # a case-only rename.  Prune the stat object for any file that does not
+        # match the case in the filesystem, if there are multiple files that
+        # normalize to the same path.
+        if match.isexact() and self._checkcase:
+            normed = {}
+
+            for f, st in results.iteritems():
+                if st is None:
+                    continue
+
+                nc = util.normcase(f)
+                paths = normed.get(nc)
+
+                if paths is None:
+                    paths = set()
+                    normed[nc] = paths
+
+                paths.add(f)
+
+            for norm, paths in normed.iteritems():
+                if len(paths) > 1:
+                    for path in paths:
+                        folded = self._discoverpath(path, norm, True, None,
+                                                    self._dirfoldmap)
+                        if path != folded:
+                            results[path] = None
+
         return results, dirsfound, dirsnotfound
 
     def walk(self, match, subrepos, unknown, ignored, full=True):
