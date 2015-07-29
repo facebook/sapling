@@ -130,6 +130,34 @@ backout of backout is as if nothing happened
   update: (current)
   phases: 4 draft
 
+Test that 'hg rollback' restores dirstate just before opening
+transaction: in-memory dirstate changes should be written into
+'.hg/journal.dirstate' as expected.
+
+  $ echo 'removed soon' > b
+  $ hg commit -A -d '4 0' -m 'prepare for subsequent removing'
+  adding b
+  $ echo 'newly added' > c
+  $ hg add c
+  $ hg remove b
+  $ hg commit -d '5 0' -m 'prepare for subsequent backout'
+  $ touch -t 200001010000 c
+  $ hg status -A
+  C c
+  $ hg debugstate --nodates
+  n 644         12 set                 c
+  $ hg backout -d '6 0' -m 'to be rollback-ed soon' -r .
+  adding b
+  removing c
+  changeset 6:4bfec048029d backs out changeset 5:fac0b729a654
+  $ hg rollback -q
+  $ hg status -A
+  A b
+  R c
+  $ hg debugstate --nodates
+  a   0         -1 unset               b
+  r   0          0 set                 c
+
 across branch
 
   $ cd ..
