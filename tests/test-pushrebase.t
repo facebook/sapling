@@ -277,7 +277,13 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg strip -q -r tip
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=strip
+  $ hg up 741fd2094512
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "tux" > other
+  $ hg add other
+  $ hg commit -qm "branch left"
   $ hg book master -r tip
+  moving bookmark 'master' forward from 741fd2094512
   $ hg up -q 2
   $ echo branched > c
   $ hg commit -Aqm "branch start"
@@ -288,15 +294,17 @@ Pushing a merge should rebase only the latest side of the merge
   $ echo ontopofmerge > c
   $ hg commit -qm "on top of merge"
   $ hg book master -r tip
-  moving bookmark 'master' forward from 741fd2094512
+  moving bookmark 'master' forward from e6b7549904cd
   $ log
-  @  on top of merge [draft:f418284f828a] master
+  @  on top of merge [draft:9007d6a204f8] master
   |
-  o    merge [draft:e7421b6c8909]
+  o    merge [draft:2c0c699d7086]
   |\
   | o  branch middle [draft:5a0cbf3df4ef]
   | |
   | o  branch start [draft:add5ec74853d]
+  | |
+  o |  branch left [draft:e6b7549904cd]
   | |
   o |  b => quux [public:741fd2094512]
   | |
@@ -312,36 +320,40 @@ Pushing a merge should rebase only the latest side of the merge
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
-  outgoing hook: HG_NODE=add5ec74853d53cf76e4b735e033a2350e7fe4f3 HG_SOURCE=push
+  outgoing hook: HG_NODE=e6b7549904cd2a7991ef25bc2e0fd910801af2cd HG_SOURCE=push
   remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve * (glob)
   remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve * (glob)
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=add5ec74853d53cf76e4b735e033a2350e7fe4f3 HG_SOURCE=serve * (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=serve * (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=add5ec74853d53cf76e4b735e033a2350e7fe4f3 HG_SOURCE=serve * (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=5a0cbf3df4ef43ccc96fedd1030d6b8c59f2cd32 HG_SOURCE=serve * (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=3e17ba2f27efc203461e5fe69955ea254859a448 HG_SOURCE=serve * (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=72a687360bf32741a6197d7367755262f87082b8 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=e93e7b12de70d92e56a0c685749c84b56b02e4c8 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=b7256d378dad2703d5b21f1f1dfe0de56413e5f8 HG_SOURCE=serve * (glob)
   prechangegroup hook: HG_SOURCE=push-response * (glob)
   adding changesets
   remote: outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=rebase:reply
   adding manifests
   adding file changes
-  added 3 changesets with 1 changes to 2 files (+1 heads)
+  added 4 changesets with 1 changes to 3 files (+1 heads)
   pretxnchangegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_PENDING=$TESTTMP/client HG_SOURCE=push-response * (glob)
   updating bookmark master
   changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
   incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
-  incoming hook: HG_NODE=3e17ba2f27efc203461e5fe69955ea254859a448 HG_SOURCE=push-response * (glob)
-  incoming hook: HG_NODE=72a687360bf32741a6197d7367755262f87082b8 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=e93e7b12de70d92e56a0c685749c84b56b02e4c8 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=b7256d378dad2703d5b21f1f1dfe0de56413e5f8 HG_SOURCE=push-response * (glob)
   $ cd ../server
   $ log
-  o  on top of merge [public:72a687360bf3] master
+  o  on top of merge [public:b7256d378dad] master
   |
-  o    merge [public:3e17ba2f27ef]
+  o    merge [public:e93e7b12de70]
   |\
   | o  branch middle [public:5a0cbf3df4ef]
   | |
   | o  branch start [public:add5ec74853d]
+  | |
+  o |  branch left [public:cf07bdf4226e]
   | |
   @ |  a => baz [public:fb983dc509b6]
   | |
@@ -368,6 +380,7 @@ Pushing a merge should rebase only the latest side of the merge
   pretxnchangegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_PENDING=$TESTTMP/client HG_SOURCE=strip * (glob)
   changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=strip * (glob)
   incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=strip * (glob)
+  incoming hook: HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=strip * (glob)
   $ hg book -d master
   $ hg -R ../server book -d master
 
@@ -381,6 +394,9 @@ With evolution enabled, should set obsolescence markers
   $ hg strip -qr fb983dc509b6
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=strip
+  $ hg strip -qr e6b7549904cd2a7991ef25bc2e0fd910801af2cd
+  preoutgoing hook: HG_SOURCE=strip
+  outgoing hook: HG_NODE=e6b7549904cd2a7991ef25bc2e0fd910801af2cd HG_SOURCE=strip
   $ hg up -q 741fd2094512
   $ hg mv b k
   $ commit 'b => k'
@@ -407,24 +423,25 @@ With evolution enabled, should set obsolescence markers
   searching for changes
   preoutgoing hook: HG_SOURCE=push
   outgoing hook: HG_NODE=9467a8ee5d0d993ba68d94946c9d4a3cae8d31ff HG_SOURCE=push
-  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
+  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve * (glob)
+  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve * (glob)
   remote: preoutgoing hook: HG_SOURCE=rebase:reply
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=19f645c2268ca700750bc628acc5badce2934e63 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
-  prechangegroup hook: HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=0d76868c25e6789734c06e056f235e1fa223da74 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=0d76868c25e6789734c06e056f235e1fa223da74 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=d53a62ed14be0980584e1f92f9c47031ef806a62 HG_SOURCE=serve * (glob)
+  prechangegroup hook: HG_SOURCE=push-response * (glob)
   adding changesets
   remote: outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=rebase:reply
   adding manifests
   adding file changes
-  added 3 changesets with 1 changes to 3 files (+1 heads)
-  pretxnchangegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_PENDING=$TESTTMP/client HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  added 4 changesets with 2 changes to 4 files (+1 heads)
+  pretxnchangegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_PENDING=$TESTTMP/client HG_SOURCE=push-response * (glob)
   2 new obsolescence markers
-  changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  incoming hook: HG_NODE=bccabe9de75405c80eea94ab6857e9444fe05eef HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
-  incoming hook: HG_NODE=19f645c2268ca700750bc628acc5badce2934e63 HG_SOURCE=push-response HG_TXNID=TXN:* HG_URL=ssh://user@dummy/server (glob)
+  changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=0d76868c25e6789734c06e056f235e1fa223da74 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=d53a62ed14be0980584e1f92f9c47031ef806a62 HG_SOURCE=push-response * (glob)
 
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -434,14 +451,16 @@ With evolution enabled, should set obsolescence markers
   (use "hg evolve" to update to its successor)
 
   $ hg evolve
-  update:[9] b => foobar
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  working directory is now at 19f645c2268c
+  update:[10] b => foobar
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  working directory is now at d53a62ed14be
 
   $ log
-  @  b => foobar [public:19f645c2268c]
+  @  b => foobar [public:d53a62ed14be]
   |
-  o  b => k [public:bccabe9de754]
+  o  b => k [public:0d76868c25e6]
+  |
+  o  branch left [public:cf07bdf4226e]
   |
   o  a => baz [public:fb983dc509b6]
   |
@@ -458,11 +477,14 @@ With evolution enabled, should set obsolescence markers
 
   $ cd ../server
   $ hg log -r bccabe9de754 -T '{file_copies}\n'
-  k (b)
+  abort: unknown revision 'bccabe9de754'!
+  [255]
   $ log
-  o  b => foobar [public:19f645c2268c]
+  o  b => foobar [public:d53a62ed14be]
   |
-  o  b => k [public:bccabe9de754]
+  o  b => k [public:0d76868c25e6]
+  |
+  o  branch left [public:cf07bdf4226e]
   |
   @  a => baz [public:fb983dc509b6]
   |
@@ -484,19 +506,19 @@ Test pushing master bookmark, fast forward
   $ echo 'babar' > b
   $ commit 'b => babar'
   $ hg log -r master -T"{node}\n"
-  090f3f9005e1cfe225ffc9dca2e86da7f76e2a42
+  56b2e094996609874ae1c9aae1626bfba61d07d8
   $ hg push --to master
   pushing to ssh://user@dummy/server
   searching for changes
   preoutgoing hook: HG_SOURCE=push
-  outgoing hook: HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=push
-  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
-  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve HG_TXNID=TXN:* (glob)
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=090f3f9005e1cfe225ffc9dca2e86da7f76e2a42 HG_SOURCE=serve HG_TXNID=TXN:* (glob)
+  outgoing hook: HG_NODE=56b2e094996609874ae1c9aae1626bfba61d07d8 HG_SOURCE=push
+  remote: prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=serve * (glob)
+  remote: pretxnchangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/server HG_SOURCE=serve * (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=56b2e094996609874ae1c9aae1626bfba61d07d8 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=56b2e094996609874ae1c9aae1626bfba61d07d8 HG_SOURCE=serve * (glob)
   updating bookmark master
   $ hg log -r master -R ../server -T"{node}\n"
-  090f3f9005e1cfe225ffc9dca2e86da7f76e2a42
+  56b2e094996609874ae1c9aae1626bfba61d07d8
 
 Test pushing bookmark with no new commit
 

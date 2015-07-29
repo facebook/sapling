@@ -69,20 +69,11 @@ def validaterevset(repo, revset):
     if repo.revs('%r and obsolete()', revset):
         raise util.Abort(_('cannot rebase obsolete changesets'))
 
-    tails = repo.revs('%r and ancestor(%r)', revset, revset)
-    if not tails:
-        raise util.Abort(_('cannot rebase unrelated changesets'))
-    if len(tails) != 1:
-        raise util.Abort(_('logic error: multiple tails not possible'))
-    tail = repo[tails.first()]
-
     heads = repo.revs('heads(%r)', revset)
     if len(heads) > 1:
         raise util.Abort(_('cannot rebase divergent changesets'))
-    head = repo[heads.first()]
 
-    repo.ui.note(_('validated revset %r::%r for rebase\n') %
-                 (head.hex(), tail.hex()))
+    repo.ui.note(_('validated revset for rebase\n'))
 
 def getrebasepart(repo, peer, outgoing, onto, newhead=False):
     if not outgoing.missing:
