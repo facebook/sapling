@@ -666,6 +666,28 @@ convert using a different remote prefix
      master                    0:03bf38caa4c6
      origin/master             0:03bf38caa4c6
 
+Run convert when the remote branches have changed
+(there was an old bug where the local convert read branches from the server)
+
+  $ cd git-repo7
+  $ echo a >> a
+  $ git commit -am "move master forward"
+  [master 0c81947] move master forward
+   Author: nottest <test@example.org>
+   1 file changed, 1 insertion(+)
+  $ cd ..
+  $ rm -rf hg-repo7
+  $ hg convert --config convert.git.remoteprefix=origin git-repo7-client hg-repo7
+  initializing destination hg-repo7 repository
+  scanning source...
+  sorting...
+  converting...
+  0 commit a
+  updating bookmarks
+  $ hg -R hg-repo7 bookmarks
+     master                    0:03bf38caa4c6
+     origin/master             0:03bf38caa4c6
+
 damaged git repository tests:
 In case the hard-coded hashes change, the following commands can be used to
 list the hashes and their corresponding types in the repository:
