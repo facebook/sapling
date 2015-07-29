@@ -216,7 +216,7 @@ class p4_source(converter_source):
             stdout = util.popen(cmd, mode='rb')
 
             mode = None
-            contents = ""
+            contents = []
             keywords = None
 
             for d in loaditer(stdout):
@@ -252,7 +252,7 @@ class p4_source(converter_source):
                             keywords = self.re_keywords
 
                 elif code == "text" or code == "binary":
-                    contents += data
+                    contents.append(data)
 
                 lasterror = None
 
@@ -261,6 +261,8 @@ class p4_source(converter_source):
 
         if mode is None:
             return None, None
+
+        contents = ''.join(contents)
 
         if keywords:
             contents = keywords.sub("$\\1$", contents)
