@@ -57,7 +57,7 @@ class bundle2y(bundle2.bundle20):
             typeid = 'b2x:' + typeid
         return super(bundle2y, self).newpart(typeid, *args, **kwargs)
 
-def wrapbundle20(orig, ui, b2caps):
+def wrapbundle20(orig, ui, b2caps=()):
     """use a HG2Y bundler if the remote only support that format"""
     if 'HG20' in b2caps:
         return orig(ui, b2caps)
