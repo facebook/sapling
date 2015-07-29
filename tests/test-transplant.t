@@ -867,6 +867,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
   > [hooks]
   > fakedirstatewritetime = !
   > fakepatchtime = !
+  > [extensions]
   > abort = !
   > EOF
 
@@ -876,5 +877,42 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
   n 644          3 unset               r1
   $ hg status -A r1
   M r1
+
+Test that rollback by unexpected failure after transplanting the first
+revision restores dirstate correctly.
+
+  $ hg rollback -q
+  $ rm -f abort
+  $ hg update -q -C d11e3596cc1a
+  $ hg parents -T "{node|short}\n"
+  d11e3596cc1a
+  $ hg status -A
+  C r1
+  C r2
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > # emulate failure at transplanting the 2nd revision
+  > pretxncommit.abort = test ! -f abort
+  > EOF
+  $ hg transplant "22c515968f13::"
+  applying 22c515968f13
+  22c515968f13 transplanted to * (glob)
+  applying e38700ba9dd3
+  transaction abort!
+  rollback completed
+  abort: pretxncommit.abort hook exited with status 1
+  [255]
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.abort = !
+  > EOF
+
+  $ hg parents -T "{node|short}\n"
+  d11e3596cc1a
+  $ hg status -A
+  M r1
+  ? abort
+  C r2
 
   $ cd ..

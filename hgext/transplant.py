@@ -125,9 +125,10 @@ class transplanter(object):
         diffopts = patch.difffeatureopts(self.ui, opts)
         diffopts.git = True
 
-        lock = wlock = tr = None
+        lock = wlock = tr = dsguard = None
         try:
             wlock = repo.wlock()
+            dsguard = cmdutil.dirstateguard(repo, 'transplant')
             lock = repo.lock()
             tr = repo.transaction('transplant')
             for rev in revs:
@@ -200,6 +201,7 @@ class transplanter(object):
                             # Do not rollback, it is up to the user to
                             # fix the merge or cancel everything
                             tr.close()
+                            dsguard.close()
                             raise
                         if n and domerge:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
@@ -212,6 +214,7 @@ class transplanter(object):
                         if patchfile:
                             os.unlink(patchfile)
             tr.close()
+            dsguard.close()
             if pulls:
                 exchange.pull(repo, source.peer(), heads=pulls)
                 merge.update(repo, pulls[-1], False, False, None)
@@ -220,7 +223,10 @@ class transplanter(object):
             self.transplants.write()
             if tr:
                 tr.release()
-            lock.release()
+            if lock:
+                lock.release()
+            if dsguard:
+                dsguard.release()
             wlock.release()
 
     def filter(self, filter, node, changelog, patchfile):
