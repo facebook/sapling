@@ -476,9 +476,8 @@ With evolution enabled, should set obsolescence markers
   
 
   $ cd ../server
-  $ hg log -r bccabe9de754 -T '{file_copies}\n'
-  abort: unknown revision 'bccabe9de754'!
-  [255]
+  $ hg log -r 0d76868c25e6 -T '{file_copies}\n'
+  k (b)
   $ log
   o  b => foobar [public:d53a62ed14be]
   |
