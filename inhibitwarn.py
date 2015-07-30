@@ -19,10 +19,11 @@ msg = """
 |You seem to be an evolve beta user. We installed the inhibit extension        |
 |on your computer and it will inhibit the effect of evolve and disturb         |
 |your workflow. You need to disable inhibit in your .hgrc to keep working      |
-|with evolve. Use hg config --local to open your local config and add the next |
-|four lines:                                                                   |
+|with evolve. Use hg config --local to open your local config and add the      |
+|following lines:                                                              |
 |[extensions]                                                                  |
 |inhibit=!                                                                     |
+|directaccess=!                                                                |
 |[experimental]                                                                |
 |evolution=all                                                                 |
 |                                                                              |
