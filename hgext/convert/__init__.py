@@ -192,6 +192,9 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
         (forces target IDs to change). It takes a boolean argument and
         defaults to False.
 
+    :convert.hg.startrev: specify the initial Mercurial revision.
+        The default is 0.
+
     :convert.hg.revs: revset specifying the source revisions to convert.
 
     CVS Source
