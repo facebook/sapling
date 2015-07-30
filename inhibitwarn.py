@@ -49,9 +49,9 @@ def reposetup(ui, repo):
     bypass = repo.ui.configbool('inhibit', 'bypass-warning', False)
     if bypass:
         return
-    cutoffdate = repo.ui.config('inhibit', 'cutoff') or '18/05/2015'
+    cutoffdate = repo.ui.config('inhibit', 'cutoff') or '2015-05-18'
     cutofftime = int(datetime.datetime.strptime(cutoffdate,
-                    '%d/%m/%Y').strftime("%s"))
+                    '%Y-%m-%d').strftime("%s"))
     if repo.local():
         for marker in repo.obsstore._all:
             timestamp = marker[4][0]
