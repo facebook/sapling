@@ -798,13 +798,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 break
         else:
             pass
-        if supportsmarkers:
-            obsolete.createmarkers(repo,
-                                   ((repo[t],()) for t in sorted(tmpnodes)))
-            obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(leafs)))
-        else:
-            cleanupnode(ui, repo, 'created', tmpnodes)
-            cleanupnode(ui, repo, 'temp', leafs)
+        cleanupnode(ui, repo, 'created', tmpnodes)
+        cleanupnode(ui, repo, 'temp', leafs)
         state.clear()
         return
     else:
@@ -899,10 +894,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 obsolete.createmarkers(repo, markers)
         else:
             cleanupnode(ui, repo, 'replaced', mapping)
-    if supportsmarkers:
-        obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(tmpnodes)))
-    else:
-        cleanupnode(ui, repo, 'temp', tmpnodes)
+
+    cleanupnode(ui, repo, 'temp', tmpnodes)
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
