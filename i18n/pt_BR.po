@@ -24339,7 +24339,7 @@ msgstr ""
 "como se fossem especificados manualmente.\n"
 "``subinclude:`` aplicará os padrões apenas a arquivos sob o diretório\n"
 "que contém o arquivo incluído.\n"
-"Veja :hg:`help para detalhes do formato desses arquivos."
+"Veja :hg:`help hgignore` para detalhes do formato desses arquivos."
 
 msgid ""
 "All patterns, except for ``glob:`` specified in command line (not for\n"
