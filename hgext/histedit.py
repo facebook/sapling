@@ -1035,7 +1035,7 @@ def processreplacement(state):
     replaced = set()
     fullmapping = {}
     # initialise basic set
-    # fullmapping record all operation recorded in replacement
+    # fullmapping record all operations recorded in replacement
     for rep in replacements:
         allsuccs.update(rep[1])
         replaced.add(rep[0])
