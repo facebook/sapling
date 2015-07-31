@@ -233,3 +233,142 @@ abort on a failing command, e.g when we have children
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   abort: cannot amend changeset with children
+
+  $ hg histedit --abort
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test that we can recover exec with evolve on
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > evolve=/home/pyd/src/mutable-history/hgext/evolve.py
+  > EOF
+
+  $ hg up -q tip
+
+Test continue a stopped evolve histedit
+
+  $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
+  @  652413bf663e f
+  |
+  o  e860deea161a e
+  |
+  o  055a42cdd887 d
+  |
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
+  $ hg histedit 055a42cdd887 --commands - 2>&1 << EOF
+  > pick e860deea161a e
+  > pick 055a42cdd887 d
+  > exec false
+  > pick 652413bf663e f
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'false' failed with exit status 1
+  [1]
+  $ echo d >> d
+  $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
+  @  883a5225844a d
+  |
+  o  d8249471110a e
+  |
+  | o  652413bf663e f
+  | |
+  | o  e860deea161a e
+  | |
+  | o  055a42cdd887 d
+  |/
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
+  $ hg commit --amend -m d
+  $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
+  @  8800a5180f91 d
+  |
+  | x  640ef1d53e8f temporary amend commit for 883a5225844a
+  | |
+  | x  883a5225844a d
+  |/
+  o  d8249471110a e
+  |
+  | o  652413bf663e f
+  | |
+  | o  e860deea161a e
+  | |
+  | o  055a42cdd887 d
+  |/
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
+  $ hg histedit --continue --traceback
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/883a5225844a-a1f56ffe-backup.hg (glob)
+  $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
+  @  0d9a4961b100 f
+  |
+  o  8800a5180f91 d
+  |
+  o  d8249471110a e
+  |
+  | x  652413bf663e f
+  | |
+  | x  e860deea161a e
+  | |
+  | x  055a42cdd887 d
+  |/
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
+
+Test abort a stopped evolve histedit
+
+  $ hg histedit d8249471110a --commands - 2>&1 << EOF
+  > pick 8800a5180f91 d
+  > pick d8249471110a e
+  > exec false
+  > pick 0d9a4961b100 f
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  Command 'false' failed with exit status 1
+  [1]
+  $ echo e >> e
+  $ hg commit --amend -m e
+  $ hg histedit --abort --traceback
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/abce911bf7cf-8dbdf3a3-backup.hg (glob)
+  $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
+  @  0d9a4961b100 f
+  |
+  o  8800a5180f91 d
+  |
+  o  d8249471110a e
+  |
+  | x  652413bf663e f
+  | |
+  | x  e860deea161a e
+  | |
+  | x  055a42cdd887 d
+  |/
+  o  177f92b77385 c
+  |
+  o  d2ae7f538514 b
+  |
+  o  cb9a9f314b8b a
+  
