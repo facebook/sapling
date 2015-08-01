@@ -100,9 +100,9 @@ def decompress(bin):
 #  4 bytes: compressed length
 #  4 bytes: base rev
 #  4 bytes: link rev
-# 32 bytes: parent 1 nodeid
-# 32 bytes: parent 2 nodeid
-# 32 bytes: nodeid
+# 20 bytes: parent 1 nodeid
+# 20 bytes: parent 2 nodeid
+# 20 bytes: nodeid
 indexformatv0 = ">4l20s20s20s"
 v0shaoffset = 56
 
