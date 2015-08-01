@@ -90,6 +90,11 @@ class bmstore(dict):
         can be copied back on rollback.
         '''
         repo = self._repo
+        if (repo.ui.configbool('devel', 'all-warnings')
+                or repo.ui.configbool('devel', 'check-locks')):
+            l = repo._wlockref and repo._wlockref()
+            if l is None or not l.held:
+                repo.ui.develwarn('bookmarks write with no wlock')
         self._writerepo(repo)
         repo.invalidatevolatilesets()
 
