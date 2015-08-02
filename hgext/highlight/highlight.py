@@ -49,7 +49,12 @@ def pygmentize(field, fctx, style, tmpl):
         try:
             lexer = guess_lexer(text[:1024], stripnl=False)
         except (ClassNotFound, ValueError):
-            lexer = TextLexer(stripnl=False)
+            # Don't highlight unknown files
+            return
+
+    # Don't highlight text files
+    if isinstance(lexer, TextLexer):
+        return
 
     formatter = HtmlFormatter(nowrap=True, style=style)
 
