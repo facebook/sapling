@@ -156,7 +156,7 @@ def commonheadshandler(op, inpart):
 @exchange.b2partsgenerator(rebaseparttype)
 def partgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
-    if 'changesets' in pushop.stepsdone or not onto:
+    if 'changesets' in pushop.stepsdone or not onto or pushop.force:
         return
 
     pushop.stepsdone.add('changesets')
