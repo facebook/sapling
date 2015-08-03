@@ -792,7 +792,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
         # check whether we should update away
         if repo.unfiltered().revs('parents() and (%n  or %ln)',
-                                  state.parentctxnode, leafs):
+                                  state.parentctxnode, leafs | tmpnodes):
             hg.clean(repo, state.topmost)
         cleanupnode(ui, repo, 'created', tmpnodes)
         cleanupnode(ui, repo, 'temp', leafs)
