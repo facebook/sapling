@@ -791,7 +791,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             os.remove(backupfile)
 
         # check whether we should update away
-        if repo.unfiltered().revs('parents() and (%n  or %ln)',
+        if repo.unfiltered().revs('parents() and (%n  or %ln::)',
                                   state.parentctxnode, leafs | tmpnodes):
             hg.clean(repo, state.topmost)
         cleanupnode(ui, repo, 'created', tmpnodes)
