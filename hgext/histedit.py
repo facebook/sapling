@@ -796,8 +796,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             if n in parentnodes:
                 hg.clean(repo, state.topmost)
                 break
-        else:
-            pass
         cleanupnode(ui, repo, 'created', tmpnodes)
         cleanupnode(ui, repo, 'temp', leafs)
         state.clear()
