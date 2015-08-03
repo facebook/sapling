@@ -511,10 +511,10 @@ test clone with a specific revision
 
 test clone with update to a bookmark
 
-  $ hg clone -u Z . cloned-bookmarks-update
+  $ hg clone -u Z . ../cloned-bookmarks-update
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R cloned-bookmarks-update bookmarks
+  $ hg -R ../cloned-bookmarks-update bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
    * Z                         2:db815d6d32e6
@@ -569,10 +569,10 @@ pull --update works the same as pull && update
 
   $ hg bookmark -r3 Y
   moving bookmark 'Y' forward from db815d6d32e6
-  $ hg -R cloned-bookmarks-update update Y
+  $ hg -R ../cloned-bookmarks-update update Y
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark Y)
-  $ hg -R cloned-bookmarks-update pull --update .
+  $ hg -R ../cloned-bookmarks-update pull --update .
   pulling from .
   searching for changes
   adding changesets
