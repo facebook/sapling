@@ -23,7 +23,7 @@ def rage(ui, repo):
     - unixname
     - hostname
     - repo location
-    - current bookmark
+    - active bookmark
 
     Your configured editor will be invoked to let you edit the task title
     and description.
@@ -62,7 +62,7 @@ def rage(ui, repo):
         ('unixname', os.getlogin()),
         ('hostname', socket.gethostname()),
         ('repo location', repo.root),
-        ('current bookmark', bookmarks.readcurrent(repo)),
+        ('active bookmark', bookmarks.readactive(repo)),
     ]
 
     ui._colormode = None
