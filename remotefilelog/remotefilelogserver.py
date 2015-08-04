@@ -213,15 +213,20 @@ def _loadfileblob(repo, cachepath, path, node):
     return text
 
 def getfile(repo, proto, file, node):
+    """A server api for requesting a particular version of a file. Can be used
+    in batches to request many files at once. The return protocol is:
+    <errorcode>\0<data/errormsg> where <errorcode> is 0 for success or
+    non-zero for an error.
+    """
     if shallowrepo.requirement in repo.requirements:
-        raise util.Abort(_('cannot fetch remote files from shallow repo'))
+        return '1\0' + _('cannot fetch remote files from shallow repo')
     cachepath = repo.ui.config("remotefilelog", "servercachepath")
     if not cachepath:
         cachepath = os.path.join(repo.path, "remotefilelogcache")
     node = bin(node.strip())
     if node == nullid:
-        return ''
-    return _loadfileblob(repo, cachepath, file, node)
+        return '0\0'
+    return '0\0' + _loadfileblob(repo, cachepath, file, node)
 
 def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.

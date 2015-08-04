@@ -43,7 +43,10 @@ def peersetup(ui, peer):
                     'configured remotefile server does not support getfile')
             f = wireproto.future()
             yield {'file': file, 'node': node}, f
-            yield f.value
+            code, data = f.value.split('\0', 1)
+            if int(code):
+                raise error.LookupError(data)
+            yield data
     peer.__class__ = remotefilepeer
 
 class cacheconnection(object):
