@@ -9,6 +9,7 @@
 Adds a s/stop verb to histedit to stop after a commit was picked.
 """
 
+import os
 from mercurial import cmdutil
 from mercurial import error
 from mercurial import extensions
@@ -37,6 +38,7 @@ def defineactions():
             self.state = state
             self.repo = state.repo
             self.command = command
+            self.cwd = state.repo.root
 
         @classmethod
         def fromrule(cls, state, rule):
@@ -56,7 +58,7 @@ def defineactions():
             try:
                 ctx = repo[ctxnode]
                 rc = util.system(self.command, environ={'HGNODE': ctx.hex()},
-                                 cwd=repo.root)
+                                 cwd=self.cwd)
             except OSError as os:
                 raise error.InterventionRequired(
                     _("Cannot execute command '%s': %s") % (cmd, os))
@@ -89,7 +91,12 @@ def defineactions():
                 return newctx, [(parentctxnode, (newctx.node(),))]
             return newctx, []
 
-    return stop, execute
+    class executerelative(execute):
+        def __init__(self, state, command):
+            super(executerelative, self).__init__(state, command)
+            self.cwd = os.getcwd()
+
+    return stop, execute, executerelative
 
 # HACK:
 # The following function verifyrules and bootstrap continue are copied from
@@ -109,7 +116,7 @@ def verifyrules(orig, rules, repo, ctxs):
             raise util.Abort(_('malformed line "%s"') % r)
         action, rest = r.split(' ', 1)
         # Our x/exec specialcasing
-        if action in ['x', 'exec']:
+        if action in ['x', 'exec', 'xr', 'execr']:
             parsed.append([action, rest])
         else:
             ha = rest.strip().split(' ', 1)[0]
@@ -148,12 +155,15 @@ def extsetup(ui):
 #  d, drop = remove commit from history
 #  m, mess = edit message without changing commit content
 #  x, exec = execute given command
+#  xr, execr = execute given command relative to current directory
 #
     """)
-    stop, execute = defineactions()
+    stop, execute, executerel = defineactions()
     histedit.actiontable['s'] = stop
     histedit.actiontable['stop'] = stop
     histedit.actiontable['x'] = execute
     histedit.actiontable['exec'] = execute
+    histedit.actiontable['xr'] = executerel
+    histedit.actiontable['execr'] = executerel
 
     extensions.wrapfunction(histedit, 'verifyrules', verifyrules)

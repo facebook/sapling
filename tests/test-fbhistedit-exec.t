@@ -237,6 +237,30 @@ abort on a failing command, e.g when we have children
   $ hg histedit --abort
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+test 'execr' executing in the current directory
+
+  $ hg up 5
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkdir subdir
+  $ cd subdir
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
+  > pick 177f92b77385 c
+  > pick 055a42cdd887 d
+  > execr echo "added long" >> subfile
+  > pick e860deea161a e
+  > execr echo "added short" >> subfile
+  > pick 652413bf663e f
+  > EOF
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls
+  subfile
+  $ cat subfile
+  added long
+  added short
+  $ cd ..
+
 Test that we can recover exec with evolve on
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
