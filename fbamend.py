@@ -23,6 +23,7 @@ from mercurial import util, cmdutil, phases, commands, bookmarks, repair
 from mercurial import merge, extensions
 from mercurial.node import hex
 from mercurial import obsolete
+from mercurial import lock as lockmod
 from mercurial.i18n import _
 import errno, os, re
 
@@ -125,84 +126,98 @@ def amend(ui, repo, *pats, **opts):
                 orig(ui, repo, *args, **kwargs)
         extensions.wrapfunction(repair, 'strip', fakestrip)
 
-    node = cmdutil.amend(ui, repo, commitfunc, old, {}, pats, opts)
+    wlock = None
+    lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        node = cmdutil.amend(ui, repo, commitfunc, old, {}, pats, opts)
 
-    if node == old.node():
-        ui.status(_("nothing changed\n"))
-        return 1
+        if node == old.node():
+            ui.status(_("nothing changed\n"))
+            return 1
 
-    if haschildren and not rebase:
-        msg = _("warning: the commit's children were left behind\n")
-        if _histediting(repo):
-            ui.warn(msg)
-            ui.status(_('(this is okay since a histedit is in progress)\n'))
-        else:
-            _usereducation(ui)
-            ui.warn(msg)
-            ui.status("(use 'hg amend --fixup' to rebase them)\n")
+        if haschildren and not rebase:
+            msg = _("warning: the commit's children were left behind\n")
+            if _histediting(repo):
+                ui.warn(msg)
+                ui.status(_('(this is okay since a histedit is in progress)\n'))
+            else:
+                _usereducation(ui)
+                ui.warn(msg)
+                ui.status("(use 'hg amend --fixup' to rebase them)\n")
 
-    newbookmarks = repo._bookmarks
+        newbookmarks = repo._bookmarks
 
-    # move old bookmarks to new node
-    for bm in oldbookmarks:
-        newbookmarks[bm] = node
+        # move old bookmarks to new node
+        for bm in oldbookmarks:
+            newbookmarks[bm] = node
 
-    if not _histediting(repo):
-        preamendname = _preamendname(repo, node)
-        if haschildren:
-            newbookmarks[preamendname] = old.node()
-        elif not active:
-            # update bookmark if it isn't based on the active bookmark name
-            oldname = _preamendname(repo, old.node())
-            if oldname in repo._bookmarks:
-                newbookmarks[preamendname] = repo._bookmarks[oldname]
-                del newbookmarks[oldname]
+        if not _histediting(repo):
+            preamendname = _preamendname(repo, node)
+            if haschildren:
+                newbookmarks[preamendname] = old.node()
+            elif not active:
+                # update bookmark if it isn't based on the active bookmark name
+                oldname = _preamendname(repo, old.node())
+                if oldname in repo._bookmarks:
+                    newbookmarks[preamendname] = repo._bookmarks[oldname]
+                    del newbookmarks[oldname]
 
-    newbookmarks.write()
+        newbookmarks.write()
 
-    if rebase and haschildren:
-        fixupamend(ui, repo)
+        if rebase and haschildren:
+            fixupamend(ui, repo)
+    finally:
+        lockmod.release(wlock, lock)
 
 def fixupamend(ui, repo):
     """rebases any children found on the preamend commit and strips the
     preamend commit
     """
-    current = repo['.']
-    preamendname = _preamendname(repo, current.node())
+    wlock = None
+    lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        current = repo['.']
+        preamendname = _preamendname(repo, current.node())
 
-    if not preamendname in repo._bookmarks:
-        raise util.Abort(_('no bookmark %s' % preamendname),
-                         hint=_('check if your bookmark is active'))
+        if not preamendname in repo._bookmarks:
+            raise util.Abort(_('no bookmark %s' % preamendname),
+                             hint=_('check if your bookmark is active'))
 
-    ui.status("rebasing the children of %s\n" % (preamendname))
+        ui.status("rebasing the children of %s\n" % (preamendname))
 
-    old = repo[preamendname]
-    oldbookmarks = old.bookmarks()
+        old = repo[preamendname]
+        oldbookmarks = old.bookmarks()
 
-    active = bmactive(repo)
-    opts = {
-        'rev' : [str(c.rev()) for c in old.descendants()],
-        'dest' : active
-    }
+        active = bmactive(repo)
+        opts = {
+            'rev' : [str(c.rev()) for c in old.descendants()],
+            'dest' : active
+        }
 
-    if opts['rev'] and opts['rev'][0]:
-        rebase.rebase(ui, repo, **opts)
+        if opts['rev'] and opts['rev'][0]:
+            rebase.rebase(ui, repo, **opts)
 
-    for bookmark in oldbookmarks:
-        repo._bookmarks.pop(bookmark)
+        for bookmark in oldbookmarks:
+            repo._bookmarks.pop(bookmark)
 
-    repo._bookmarks.write()
+        repo._bookmarks.write()
 
-    if obsolete.isenabled(repo, obsolete.createmarkersopt):
-       # clean up the original node if inhibit kept it alive
-       if not old.obsolete():
-            obsolete.createmarkers(repo, [(old,())])
-    else:
-       repair.strip(ui, repo, old.node(), topic='preamend-backup')
+        if obsolete.isenabled(repo, obsolete.createmarkersopt):
+           # clean up the original node if inhibit kept it alive
+           if not old.obsolete():
+                obsolete.createmarkers(repo, [(old,())])
+        else:
+           repair.strip(ui, repo, old.node(), topic='preamend-backup')
 
-    merge.update(repo, current.node(), False, True, False)
-    if active:
-        bmactivate(repo, active)
+        merge.update(repo, current.node(), False, True, False)
+        if active:
+            bmactivate(repo, active)
+    finally:
+        lockmod.release(wlock, lock)
 
 def _preamendname(repo, node):
     suffix = '.preamend'
