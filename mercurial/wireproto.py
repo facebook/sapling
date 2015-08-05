@@ -149,7 +149,10 @@ gboptsmap = {'heads':  'nodes',
 class wirepeer(peer.peerrepository):
 
     def batch(self):
-        return remotebatch(self)
+        if self.capable('batch'):
+            return remotebatch(self)
+        else:
+            return peer.localbatch(self)
     def _submitbatch(self, req):
         cmds = []
         for op, argsdict in req:
