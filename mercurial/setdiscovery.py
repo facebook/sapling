@@ -138,22 +138,12 @@ def findcommonheads(ui, local, remote,
     sample = _limitsample(ownheads, initialsamplesize)
     # indices between sample and externalized version must match
     sample = list(sample)
-    if remote.local():
-        # stopgap until we have a proper localpeer that supports batch()
-        srvheadhashes = remote.heads()
-        yesno = remote.known(dag.externalizeall(sample))
-    elif remote.capable('batch'):
-        batch = remote.batch()
-        srvheadhashesref = batch.heads()
-        yesnoref = batch.known(dag.externalizeall(sample))
-        batch.submit()
-        srvheadhashes = srvheadhashesref.value
-        yesno = yesnoref.value
-    else:
-        # compatibility with pre-batch, but post-known remotes during 1.9
-        # development
-        srvheadhashes = remote.heads()
-        sample = []
+    batch = remote.batch()
+    srvheadhashesref = batch.heads()
+    yesnoref = batch.known(dag.externalizeall(sample))
+    batch.submit()
+    srvheadhashes = srvheadhashesref.value
+    yesno = yesnoref.value
 
     if cl.tip() == nullid:
         if srvheadhashes != [nullid]:
