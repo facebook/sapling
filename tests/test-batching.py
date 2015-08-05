@@ -5,7 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.wireproto import localbatch, remotebatch, batchable, future
+from mercurial.peer import localbatch, batchable, future
+from mercurial.wireproto import remotebatch
 
 # equivalent of repo.repository
 class thing(object):

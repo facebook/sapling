@@ -12,6 +12,10 @@ class proto(object):
 class clientpeer(wireproto.wirepeer):
     def __init__(self, serverrepo):
         self.serverrepo = serverrepo
+
+    def _capabilities(self):
+        return ['batch']
+
     def _call(self, cmd, **args):
         return wireproto.dispatch(self.serverrepo, proto(args), cmd)
 
