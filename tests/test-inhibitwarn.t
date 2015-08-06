@@ -53,23 +53,28 @@ One marker before the cutoff date should show a warning
   $ hg log -r .
   
   +------------------------------------------------------------------------------+
-  |You seem to be an evolve beta user. We installed the inhibit extension        |
-  |on your computer and it will inhibit the effect of evolve and disturb         |
-  |your workflow. You need to disable inhibit in your .hgrc to keep working      |
-  |with evolve. Use hg config --local to open your local config and add the      |
-  |following lines:                                                              |
+  |You seems to be a beta user of Changeset Evolution                            |
+  |https://fb.facebook.com/groups/630370820344870/                               |
+  |                                                                              |
+  |We just rolled out a major change to our mercurial                            |
+  |https://fb.facebook.com/groups/scm.fyi/permalink/711128702353004/             |
+  |                                                                              |
+  |The rollout contains a lightweight version of Evolution that break your usual |
+  |workflow using the "hg evolve" commands:                                      |
+  | https://fb.facebook.com/groups/630370820344870/permalink/907861022595847/    |
+  |                                                                              |
+  |If you want to keep using evolve run `hg config -e` and add this to your      |
+  |config:                                                                       |
   |[extensions]                                                                  |
   |inhibit=!                                                                     |
   |directaccess=!                                                                |
   |[experimental]                                                                |
   |evolution=all                                                                 |
   |                                                                              |
-  |If you are no longer an evolve beta user and you don't want to see this error |
-  |with evolve use hg config --local to open your local config and add the next  |
-  |two lines:                                                                    |
+  |If you have no recollection of using evolution or stopped using it. run       |
+  |`hg config -e` and add this to your config:                                   |
   |[inhibit]                                                                     |
   |bypass-warning=True                                                           |
-  |You shouldn't need to do anything else to make inhibit work for this repo.    |
   +------------------------------------------------------------------------------+
   changeset:   2:4538525df7e2
   user:        test
