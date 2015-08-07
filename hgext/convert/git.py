@@ -255,12 +255,18 @@ class convert_git(converter_source):
                 entry = l.split()
                 continue
             f = l
+            if entry[4][0] == 'C':
+                copysrc = f
+                copydest = difftree[i]
+                i += 1
+                f = copydest
+                copies[copydest] = copysrc
             if f not in seen:
                 add(entry, f, False)
             # A file can be copied multiple times, or modified and copied
             # simultaneously. So f can be repeated even if fdest isn't.
-            if entry[4][0] in 'RC':
-                # rename or copy: next line is the destination
+            if entry[4][0] == 'R':
+                # rename: next line is the destination
                 fdest = difftree[i]
                 i += 1
                 if fdest not in seen:
