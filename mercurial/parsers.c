@@ -1105,6 +1105,134 @@ static inline void set_phase_from_parents(char *phases, int parent_1,
 		phases[i] = phases[parent_2];
 }
 
+static PyObject *reachableroots(indexObject *self, PyObject *args)
+{
+
+	/* Input */
+	long minroot;
+	PyObject *includepatharg = NULL;
+	int includepath = 0;
+	PyObject *heads = NULL;
+	Py_ssize_t numheads;
+	PyObject *roots = NULL;
+	PyObject *reachable = NULL;
+
+	PyObject *val;
+	Py_ssize_t len = index_length(self) - 1;
+	long revnum;
+	Py_ssize_t k;
+	Py_ssize_t i;
+	int r;
+	int minidx;
+	int parents[2];
+
+	/* Internal data structure:
+	 * tovisit: array of length len+1 (all revs + nullrev), filled upto lentovisit
+	 * seen: array of length len+1 (all revs + nullrev) 0: not seen, 1 seen*/
+	int *tovisit = NULL;
+	long lentovisit = 0;
+	char *seen = NULL;
+
+	/* Get arguments */
+	if (!PyArg_ParseTuple(args, "lO!O!O!", &minroot, &PySet_Type, &heads,
+				&PyList_Type, &roots, &PyBool_Type, &includepatharg))
+		goto bail;
+
+	if (includepatharg == Py_True)
+		includepath = 1;
+
+	/* Initialize return set */
+	reachable = PySet_New(0);
+	if (reachable == NULL)
+		goto bail;
+
+	/* Initialize internal datastructures */
+	tovisit = (int *)malloc((len + 1) * sizeof(int));
+	if (tovisit == NULL) {
+		PyErr_SetNone(PyExc_MemoryError);
+		goto release_reachable;
+	}
+
+	seen = (char *)calloc(len+1, 1);
+	if (seen == NULL) {
+		PyErr_SetNone(PyExc_MemoryError);
+		goto release_seen_and_tovisit;
+	}
+
+	/* Populate tovisit with all the heads */
+	numheads = PyList_GET_SIZE(heads);
+	for (i = 0; i < numheads; i++) {
+		revnum = PyInt_AS_LONG(PyList_GET_ITEM(heads, i));
+		if (seen[revnum+1] == 0) {
+			tovisit[lentovisit++] = revnum;
+			seen[revnum+1]=1;
+		}
+	}
+
+	/* Visit the tovisit list and find the reachable roots */
+	k = 0;
+	while (k < lentovisit) {
+		/* Add the node to reachable if it is a root*/
+		revnum = tovisit[k++];
+		val = PyInt_FromLong(revnum);
+		if (PySet_Contains(roots, val) == 1) {
+			PySet_Add(reachable, val);
+			if (includepath == 0) {
+				Py_XDECREF(val);
+				continue;
+			}
+		}
+		Py_XDECREF(val);
+
+		/* Add its parents to the list of nodes to visit */
+		if (revnum != -1) {
+			r = index_get_parents(self, revnum, parents, (int)len - 1);
+			if (r < 0)
+				goto release_seen_and_tovisit;
+
+			for (i = 0; i < 2; i++) {
+				if (seen[parents[i] + 1] == 0 && parents[i] >= minroot) {
+					tovisit[lentovisit++] = parents[i];
+					seen[parents[i] + 1] = 1;
+				}
+			}
+		}
+	}
+
+	/* Find all the nodes in between the roots we found and the heads
+	 * and add them to the reachable set */
+	if (includepath == 1) {
+		minidx = minroot;
+		if (minidx < 0)
+			minidx = 0;
+		for (i = minidx; i < len; i++) {
+			if (seen[i + 1] == 1) {
+				r = index_get_parents(self, i, parents, (int)len - 1);
+				/* Corrupted index file, error is set from index_get_parents */
+				if (r < 0)
+					goto release_seen_and_tovisit;
+				for (k = 0; k < 2; k++) {
+					PyObject *p = PyInt_FromLong(parents[k]);
+					if (PySet_Contains(reachable, p) == 1)
+						PySet_Add(reachable, PyInt_FromLong(i));
+					Py_XDECREF(p);
+				}
+			}
+		}
+	}
+
+release_seen_and_tovisit:
+	free(seen);
+	free(tovisit);
+	return reachable;
+release_reachable:
+	Py_XDECREF(reachable);
+bail:
+	val = Py_None;
+	Py_INCREF(Py_None);
+	return val;
+}
+
 static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 {
 	PyObject *roots = Py_None;
@@ -2282,6 +2410,8 @@ static PyMethodDef index_methods[] = {
 	 "get an index entry"},
 	{"computephasesmapsets", (PyCFunction)compute_phases_map_sets,
 			METH_VARARGS, "compute phases"},
+	{"reachableroots", (PyCFunction)reachableroots, METH_VARARGS,
+		"reachableroots"},
 	{"headrevs", (PyCFunction)index_headrevs, METH_VARARGS,
 	 "get head revisions"}, /* Can do filtering since 3.2 */
 	{"headrevsfiltered", (PyCFunction)index_headrevs, METH_VARARGS,
