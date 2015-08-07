@@ -87,7 +87,7 @@ def _revdescendants(repo, revs, followfirst):
 
     return generatorset(iterate(), iterasc=True)
 
-def _revsbetween(repo, roots, heads):
+def revsbetween(repo, roots, heads):
     """Return all paths between roots and heads, inclusive of both endpoint
     sets."""
     if not roots:
@@ -406,7 +406,7 @@ def rangeset(repo, subset, x, y):
 
 def dagrange(repo, subset, x, y):
     r = fullreposet(repo)
-    xs = _revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
+    xs = revsbetween(repo, getset(repo, r, x), getset(repo, r, y))
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
     return xs & subset
