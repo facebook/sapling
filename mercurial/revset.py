@@ -2669,6 +2669,24 @@ def match(ui, spec, repo=None):
     tree = parse(spec, lookup)
     return _makematcher(ui, tree, repo)
 
+def matchany(ui, specs, repo=None):
+    """Create a matcher that will include any revisions matching one of the
+    given specs"""
+    if not specs:
+        def mfunc(repo, subset=None):
+            return baseset()
+        return mfunc
+    if not all(specs):
+        raise error.ParseError(_("empty query"))
+    lookup = None
+    if repo:
+        lookup = repo.__contains__
+    if len(specs) == 1:
+        tree = parse(specs[0], lookup)
+    else:
+        tree = ('or',) + tuple(parse(s, lookup) for s in specs)
+    return _makematcher(ui, tree, repo)
+
 def _makematcher(ui, tree, repo):
     if ui:
         tree = findaliases(ui, tree, showwarning=ui.warn)
