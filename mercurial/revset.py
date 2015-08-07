@@ -2667,6 +2667,9 @@ def match(ui, spec, repo=None):
     if repo:
         lookup = repo.__contains__
     tree = parse(spec, lookup)
+    return _makematcher(ui, tree, repo)
+
+def _makematcher(ui, tree, repo):
     if ui:
         tree = findaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
