@@ -87,7 +87,7 @@ def _revdescendants(repo, revs, followfirst):
 
     return generatorset(iterate(), iterasc=True)
 
-def reachableroots(repo, roots, heads, includepath=False):
+def reachablerootspure(repo, minroot, roots, heads, includepath):
     """return (heads(::<roots> and ::<heads>))
 
     If includepath is True, return (<roots>::<heads>)."""
@@ -97,10 +97,6 @@ def reachableroots(repo, roots, heads, includepath=False):
     visit = list(heads)
     reachable = set()
     seen = {}
-    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
-    # (and if it is not, it should.)
-    minroot = min(roots)
-    roots = set(roots)
     # prefetch all the things! (because python is slow)
     reached = reachable.add
     dovisit = visit.append
@@ -127,6 +123,22 @@ def reachableroots(repo, roots, heads, includepath=False):
             if parent in reachable:
                 reached(rev)
     return baseset(sorted(reachable))
+
+def reachableroots(repo, roots, heads, includepath=False):
+    """return (heads(::<roots> and ::<heads>))
+
+    If includepath is True, return (<roots>::<heads>)."""
+    if not roots:
+        return baseset()
+    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
+    # (and if it is not, it should.)
+    minroot = min(roots)
+    roots = set(roots)
+    heads = list(heads)
+    try:
+        return repo.changelog.reachableroots(minroot, heads, roots, includepath)
+    except AttributeError:
+        return reachablerootspure(repo, minroot, roots, heads, includepath)
 
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
