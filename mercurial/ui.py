@@ -996,7 +996,17 @@ class paths(dict):
             # No location is the same as not existing.
             if not loc:
                 continue
+
+            # TODO ignore default-push once all consumers stop referencing it
+            # since it is handled specifically below.
+
             self[name] = path(name, rawloc=loc)
+
+        # Handle default-push, which is a one-off that defines the push URL for
+        # the "default" path.
+        defaultpush = ui.config('paths', 'default-push')
+        if defaultpush and 'default' in self:
+            self['default']._pushloc = defaultpush
 
     def getpath(self, name, default=None):
         """Return a ``path`` from a string, falling back to a default.
@@ -1027,11 +1037,12 @@ class paths(dict):
 class path(object):
     """Represents an individual path and its configuration."""
 
-    def __init__(self, name, rawloc=None):
+    def __init__(self, name, rawloc=None, pushloc=None):
         """Construct a path from its config options.
 
         ``name`` is the symbolic name of the path.
         ``rawloc`` is the raw location, as defined in the config.
+        ``pushloc`` is the raw locations pushes should be made to.
 
         If ``name`` is not defined, we require that the location be a) a local
         filesystem path with a .hg directory or b) a URL. If not,
@@ -1053,6 +1064,7 @@ class path(object):
         self.name = name
         self.rawloc = rawloc
         self.loc = str(u)
+        self._pushloc = pushloc
 
         # When given a raw location but not a symbolic name, validate the
         # location is valid.
@@ -1060,6 +1072,10 @@ class path(object):
             and not os.path.isdir(os.path.join(str(u), '.hg'))):
             raise ValueError('location is not a URL or path to a local '
                              'repo: %s' % rawloc)
+
+    @property
+    def pushloc(self):
+        return self._pushloc or self.loc
 
 # we instantiate one globally shared progress bar to avoid
 # competing progress bars when multiple UI objects get created
