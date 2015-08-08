@@ -37,18 +37,11 @@ _origimport = __import__
 
 nothing = object()
 
-try:
-    # Python 3 doesn't have relative imports nor level -1.
-    level = -1
-    if sys.version_info[0] >= 3:
-        level = 0
-    _origimport(builtins.__name__, {}, {}, None, level)
-except TypeError: # no level argument
-    def _import(name, globals, locals, fromlist, level):
-        "call _origimport with no level argument"
-        return _origimport(name, globals, locals, fromlist)
-else:
-    _import = _origimport
+# Python 3 doesn't have relative imports nor level -1.
+level = -1
+if sys.version_info[0] >= 3:
+    level = 0
+_import = _origimport
 
 def _hgextimport(importfunc, name, globals, *args):
     try:
