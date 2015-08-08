@@ -5,13 +5,37 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import os, sys, atexit, signal, pdb, socket, errno, shlex, time, traceback, re
+from __future__ import absolute_import
+
+import atexit
 import difflib
-import util, commands, hg, fancyopts, extensions, hook, error
-import cmdutil, encoding
-import ui as uimod
-import demandimport
+import errno
+import os
+import pdb
+import re
+import shlex
+import signal
+import socket
+import sys
+import time
+import traceback
+
+
+from .i18n import _
+
+from . import (
+    cmdutil,
+    commands,
+    demandimport,
+    encoding,
+    error,
+    extensions,
+    fancyopts,
+    hg,
+    hook,
+    ui as uimod,
+    util,
+)
 
 class request(object):
     def __init__(self, args, ui=None, repo=None, fin=None, fout=None,
@@ -909,7 +933,7 @@ def lsprofile(ui, func, fp):
         format = 'text'
 
     try:
-        from mercurial import lsprof
+        from . import lsprof
     except ImportError:
         raise util.Abort(_(
             'lsprof not available - install from '
@@ -922,7 +946,7 @@ def lsprofile(ui, func, fp):
         p.disable()
 
         if format == 'kcachegrind':
-            import lsprofcalltree
+            from . import lsprofcalltree
             calltree = lsprofcalltree.KCacheGrind(p)
             calltree.output(fp)
         else:
