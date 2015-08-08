@@ -826,3 +826,26 @@ strip backup content
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD
   
+
+Error during post-close callback of the strip transaction
+(They should be gracefully handled and reported)
+
+  $ cat > ../crashstrip.py << EOF
+  > from mercurial import error
+  > def reposetup(ui, repo):
+  >     class crashstriprepo(repo.__class__):
+  >         def transaction(self, desc, *args, **kwargs):
+  >             tr = super(crashstriprepo, self).transaction(self, desc, *args, **kwargs)
+  >             if desc == 'strip':
+  >                 def crash(tra): raise error.Abort('boom')
+  >                 tr.addpostclose('crash', crash)
+  >             return tr
+  >     repo.__class__ = crashstriprepo
+  > EOF
+  $ hg strip tip --config extensions.crash=$TESTTMP/crashstrip.py
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg (glob)
+  strip failed, full bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg'
+  abort: boom
+  [255]
+
+
