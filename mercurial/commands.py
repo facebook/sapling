@@ -5274,11 +5274,11 @@ def push(ui, repo, dest=None, **opts):
                 # this lets simultaneous -r, -b options continue working
                 opts.setdefault('rev', []).append("null")
 
-    path = ui.paths.getpath(dest or 'default-push', default='default')
+    path = ui.paths.getpath(dest, default='default')
     if not path:
         raise util.Abort(_('default repository not configured!'),
                          hint=_('see the "path" section in "hg help config"'))
-    dest, branches = path.loc, (path.branch, opts.get('branch') or [])
+    dest, branches = path.pushloc, (path.branch, opts.get('branch') or [])
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.peer(repo, opts, dest)
