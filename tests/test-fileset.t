@@ -144,6 +144,8 @@ Test files properties
   2k
   $ fileset '(1k or 2k) and size(".5KB - 1.5kB")'
   1k
+  $ fileset 'size("1M")'
+  $ fileset 'size("1 GB")'
 
 Test merge states
 
