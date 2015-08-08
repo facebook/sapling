@@ -5274,18 +5274,14 @@ def push(ui, repo, dest=None, **opts):
                 # this lets simultaneous -r, -b options continue working
                 opts.setdefault('rev', []).append("null")
 
-    dest = ui.expandpath(dest or 'default-push', dest or 'default')
-    dest, branches = hg.parseurl(dest, opts.get('branch'))
+    path = ui.paths.getpath(dest or 'default-push', default='default')
+    if not path:
+        raise util.Abort(_('default repository not configured!'),
+                         hint=_('see the "path" section in "hg help config"'))
+    dest, branches = path.loc, (path.branch, opts.get('branch') or [])
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
-    try:
-        other = hg.peer(repo, opts, dest)
-    except error.RepoError:
-        if dest == "default-push":
-            raise util.Abort(_("default repository not configured!"),
-                    hint=_('see the "path" section in "hg help config"'))
-        else:
-            raise
+    other = hg.peer(repo, opts, dest)
 
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
