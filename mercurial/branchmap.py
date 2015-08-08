@@ -5,13 +5,28 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import bin, hex, nullid, nullrev
-import encoding
-import scmutil
-import util
+from __future__ import absolute_import
+
+import array
+import struct
 import time
-from array import array
-from struct import calcsize, pack, unpack
+
+from .node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+)
+from . import (
+    encoding,
+    scmutil,
+    util,
+)
+
+array = array.array
+calcsize = struct.calcsize
+pack = struct.pack
+unpack = struct.unpack
 
 def _filename(repo):
     """name of a branchcache file for a given repo or repoview"""
