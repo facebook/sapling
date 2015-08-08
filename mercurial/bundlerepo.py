@@ -11,12 +11,33 @@ This provides a read-only repository interface to bundles as if they
 were part of the actual repository.
 """
 
-from node import nullid
-from i18n import _
-import os, tempfile, shutil
-import changegroup, util, mdiff, discovery, cmdutil, scmutil, exchange
-import localrepo, changelog, manifest, filelog, revlog, error, phases, bundle2
-import pathutil
+from __future__ import absolute_import
+
+import os
+import shutil
+import tempfile
+
+from .i18n import _
+from .node import nullid
+
+from . import (
+    bundle2,
+    changegroup,
+    changelog,
+    cmdutil,
+    discovery,
+    error,
+    exchange,
+    filelog,
+    localrepo,
+    manifest,
+    mdiff,
+    pathutil,
+    phases,
+    revlog,
+    scmutil,
+    util,
+)
 
 class bundlerevlog(revlog.revlog):
     def __init__(self, opener, indexfile, bundle, linkmapper):
