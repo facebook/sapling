@@ -5,12 +5,32 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
+import bz2
+import os
+import struct
+import tempfile
 import weakref
-from i18n import _
-from node import nullrev, nullid, hex, short
-import mdiff, util, dagutil
-import struct, os, bz2, zlib, tempfile
-import discovery, error, phases, branchmap
+import zlib
+
+from .i18n import _
+from .node import (
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
+
+from . import (
+    branchmap,
+    dagutil,
+    discovery,
+    error,
+    mdiff,
+    phases,
+    util,
+)
 
 _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
@@ -103,7 +123,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
         cleanup = filename
 
         if bundletype == "HG20":
-            import bundle2
+            from . import bundle2
             bundle = bundle2.bundle20(ui)
             part = bundle.newpart('changegroup', data=cg.getchunks())
             part.addparam('version', cg.version)
