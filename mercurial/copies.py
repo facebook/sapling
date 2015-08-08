@@ -5,8 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util, pathutil
+from __future__ import absolute_import
+
 import heapq
+
+from . import (
+    pathutil,
+    util,
+)
 
 def _findlimit(repo, a, b):
     """
