@@ -128,5 +128,4 @@ these may expose other cycles.
      stdlib:    formatter
      relative:  config, error, progress, scmutil, util
   Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
-  Import cycle: mercurial.commands -> mercurial.commandserver -> mercurial.dispatch -> mercurial.commands
   [1]
