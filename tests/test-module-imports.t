@@ -127,7 +127,6 @@ these may expose other cycles.
   mercurial/ui.py mixed imports
      stdlib:    formatter
      relative:  config, error, progress, scmutil, util
-  Import cycle: mercurial.cmdutil -> mercurial.context -> mercurial.subrepo -> mercurial.cmdutil
   Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
   Import cycle: mercurial.commands -> mercurial.commandserver -> mercurial.dispatch -> mercurial.commands
   [1]

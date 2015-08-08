@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile, cStringIO, shutil
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import context, repair, graphmod, revset, phases, obsolete, pathutil
+import repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import encoding
@@ -848,6 +848,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     :updatefunc: a function that update a repo to a given node
                  updatefunc(<repo>, <node>)
     """
+    # avoid cycle context -> subrepo -> cmdutil
+    import context
     tmpname, message, user, date, branch, nodeid, p1, p2 = \
         patch.extract(ui, hunk)
 
@@ -2464,6 +2466,9 @@ def commit(ui, repo, commitfunc, pats, opts):
     return commitfunc(ui, repo, message, matcher, opts)
 
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
+    # avoid cycle context -> subrepo -> cmdutil
+    import context
+
     # amend will reuse the existing user if not specified, but the obsolete
     # marker creation requires that the current user's name is specified.
     if obsolete.isenabled(repo, obsolete.createmarkersopt):
