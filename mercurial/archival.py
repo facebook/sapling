@@ -5,14 +5,27 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import match as matchmod
-import cmdutil
-import scmutil, util, encoding
-import cStringIO, os, tarfile, time, zipfile
-import zlib, gzip
+from __future__ import absolute_import
+
+import cStringIO
+import gzip
+import os
 import struct
-import error
+import tarfile
+import time
+import zipfile
+import zlib
+
+from .i18n import _
+
+from . import (
+    cmdutil,
+    encoding,
+    error,
+    match as matchmod,
+    scmutil,
+    util,
+)
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
