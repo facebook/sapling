@@ -128,15 +128,27 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
                 return locals[base]
         return _demandmod(name, globals, locals, level)
     else:
-        if level != -1:
-            # from . import b,c,d or from .a import b,c,d
-            return _origimport(name, globals, locals, fromlist, level)
+        # There is a fromlist.
         # from a import b,c,d
+        # from . import b,c,d
+        # from .a import b,c,d
+
+        # level == -1: relative and absolute attempted (Python 2 only).
+        # level >= 0: absolute only (Python 2 w/ absolute_import and Python 3).
+        # The modern Mercurial convention is to use absolute_import everywhere,
+        # so modern Mercurial code will have level >= 0.
+
+        if level >= 0:
+            return _origimport(name, globals, locals, fromlist, level)
+
+        # But, we still need to support lazy loading of standard library and 3rd
+        # party modules. So handle level == -1.
         mod = _hgextimport(_origimport, name, globals, locals)
         # recurse down the module chain
         for comp in name.split('.')[1:]:
             if getattr(mod, comp, nothing) is nothing:
-                setattr(mod, comp, _demandmod(comp, mod.__dict__, mod.__dict__))
+                setattr(mod, comp,
+                        _demandmod(comp, mod.__dict__, mod.__dict__))
             mod = getattr(mod, comp)
         for x in fromlist:
             # set requested submodules for demand load
