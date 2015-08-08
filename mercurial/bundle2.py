@@ -145,19 +145,25 @@ future, dropping the stream may become an option for channel we do not care to
 preserve.
 """
 
-import errno
-import sys
-import util
-import struct
-import urllib
-import string
-import obsolete
-import pushkey
-import url
-import re
+from __future__ import absolute_import
 
-import changegroup, error, tags
-from i18n import _
+import errno
+import re
+import string
+import struct
+import sys
+import urllib
+
+from .i18n import _
+from . import (
+    changegroup,
+    error,
+    obsolete,
+    pushkey,
+    tags,
+    url,
+    util,
+)
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -1233,7 +1239,7 @@ def handleremotechangegroup(op, inpart):
     # we need to make sure we trigger the creation of a transaction object used
     # for the whole processing scope.
     op.gettransaction()
-    import exchange
+    from . import exchange
     cg = exchange.readbundle(op.repo.ui, real_part, raw_url)
     if not isinstance(cg, changegroup.cg1unpacker):
         raise util.Abort(_('%s: not a bundle version 1.0') %
