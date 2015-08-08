@@ -139,7 +139,24 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         # so modern Mercurial code will have level >= 0.
 
         if level >= 0:
-            return _origimport(name, globals, locals, fromlist, level)
+            # Mercurial's enforced import style does not use
+            # "from a import b,c,d" or "from .a import b,c,d" syntax. In
+            # addition, this appears to be giving errors with some modules
+            # for unknown reasons. Since we shouldn't be using this syntax
+            # much, work around the problems.
+            if name:
+                return _hgextimport(_origimport, name, globals, locals,
+                                    fromlist, level)
+
+            mod = _hgextimport(_origimport, name, globals, locals, level=level)
+            for x in fromlist:
+                # Missing symbols mean they weren't defined in the module
+                # itself which means they are sub-modules.
+                if getattr(mod, x, nothing) is nothing:
+                    setattr(mod, x,
+                            _demandmod(x, mod.__dict__, locals, level=level))
+
+            return mod
 
         # But, we still need to support lazy loading of standard library and 3rd
         # party modules. So handle level == -1.
