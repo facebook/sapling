@@ -5,11 +5,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os
-from mercurial.i18n import _
-from mercurial.node import hex, bin
-from mercurial import encoding, util, obsolete, lock as lockmod
+from __future__ import absolute_import
+
 import errno
+import os
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+)
+from . import (
+    encoding,
+    lock as lockmod,
+    obsolete,
+    util,
+)
 
 class bmstore(dict):
     """Storage for bookmarks.
