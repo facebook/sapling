@@ -550,12 +550,9 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        if util.hasscheme(loc) or os.path.isdir(os.path.join(loc, '.hg')):
-            return loc
-
         p = self.paths.getpath(loc, default=default)
         if p:
-            return p.loc
+            return p.rawloc
         return loc
 
     @util.propertycache
@@ -1002,7 +999,10 @@ class paths(dict):
             self[name] = path(name, rawloc=loc)
 
     def getpath(self, name, default=None):
-        """Return a ``path`` for the specified name, falling back to a default.
+        """Return a ``path`` from a string, falling back to a default.
+
+        ``name`` can be a named path or locations. Locations are filesystem
+        paths or URIs.
 
         Returns the first of ``name`` or ``default`` that is present, or None
         if neither is present.
@@ -1010,6 +1010,12 @@ class paths(dict):
         try:
             return self[name]
         except KeyError:
+            # Try to resolve as a local path or URI.
+            try:
+                return path(None, rawloc=name)
+            except ValueError:
+                pass
+
             if default is not None:
                 try:
                     return self[default]
@@ -1026,10 +1032,34 @@ class path(object):
 
         ``name`` is the symbolic name of the path.
         ``rawloc`` is the raw location, as defined in the config.
+
+        If ``name`` is not defined, we require that the location be a) a local
+        filesystem path with a .hg directory or b) a URL. If not,
+        ``ValueError`` is raised.
         """
+        if not rawloc:
+            raise ValueError('rawloc must be defined')
+
+        # Locations may define branches via syntax <base>#<branch>.
+        u = util.url(rawloc)
+        branch = None
+        if u.fragment:
+            branch = u.fragment
+            u.fragment = None
+
+        self.url = u
+        self.branch = branch
+
         self.name = name
-        # We'll do more intelligent things with rawloc in the future.
-        self.loc = rawloc
+        self.rawloc = rawloc
+        self.loc = str(u)
+
+        # When given a raw location but not a symbolic name, validate the
+        # location is valid.
+        if (not name and not u.scheme
+            and not os.path.isdir(os.path.join(str(u), '.hg'))):
+            raise ValueError('location is not a URL or path to a local '
+                             'repo: %s' % rawloc)
 
 # we instantiate one globally shared progress bar to avoid
 # competing progress bars when multiple UI objects get created
