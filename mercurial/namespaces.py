@@ -1,6 +1,10 @@
-from i18n import _
-from mercurial import util
-import templatekw
+from __future__ import absolute_import
+
+from .i18n import _
+from . import (
+    templatekw,
+    util,
+)
 
 def tolist(val):
     """
