@@ -11,6 +11,8 @@ This allows us to catch exceptions at higher levels without forcing
 imports.
 """
 
+from __future__ import absolute_import
+
 # Do not import anything here, please
 
 class HintException(Exception):
@@ -32,7 +34,7 @@ class LookupError(RevlogError, KeyError):
         # Python 2.6+ complain about the 'message' property being deprecated
         self.lookupmessage = message
         if isinstance(name, str) and len(name) == 20:
-            from node import short
+            from .node import short
             name = short(name)
         RevlogError.__init__(self, '%s@%s: %s' % (index, name, message))
 
@@ -78,7 +80,7 @@ class UnknownIdentifier(ParseError):
     """Exception raised when a {rev,file}set references an unknown identifier"""
 
     def __init__(self, function, symbols):
-        from i18n import _
+        from .i18n import _
         ParseError.__init__(self, _("unknown identifier: %s") % function)
         self.function = function
         self.symbols = symbols
@@ -173,7 +175,7 @@ class CensoredNodeError(RevlogError):
     """
 
     def __init__(self, filename, node, tombstone):
-        from node import short
+        from .node import short
         RevlogError.__init__(self, '%s:%s' % (filename, short(node)))
         self.tombstone = tombstone
 
