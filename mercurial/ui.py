@@ -5,11 +5,28 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
+import errno
+import getpass
 import inspect
-from i18n import _
-import errno, getpass, os, socket, sys, tempfile, traceback
-import config, scmutil, util, error, formatter, progress
-from node import hex
+import os
+import socket
+import sys
+import tempfile
+import traceback
+
+from .i18n import _
+from .node import hex
+
+from . import (
+    config,
+    error,
+    formatter,
+    progress,
+    scmutil,
+    util,
+)
 
 samplehgrcs = {
     'user':
