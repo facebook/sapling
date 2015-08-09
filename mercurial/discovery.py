@@ -5,10 +5,23 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import nullid, short
-from i18n import _
-import util, setdiscovery, treediscovery, phases, obsolete, bookmarks
-import branchmap
+from __future__ import absolute_import
+
+from .i18n import _
+from .node import (
+    nullid,
+    short,
+)
+
+from . import (
+    bookmarks,
+    branchmap,
+    obsolete,
+    phases,
+    setdiscovery,
+    treediscovery,
+    util,
+)
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, anyincoming, heads) used to identify the common
