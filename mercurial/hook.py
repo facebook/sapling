@@ -5,9 +5,19 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import os, sys, time
-import extensions, util, demandimport, error
+from __future__ import absolute_import
+
+import os
+import sys
+import time
+
+from .i18n import _
+from . import (
+    demandimport,
+    error,
+    extensions,
+    util,
+)
 
 def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     '''call python hook. hook is callable object, looked up as
