@@ -5,9 +5,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import imp, os
-import util, cmdutil, error
-from i18n import _, gettext
+from __future__ import absolute_import
+
+import imp
+import os
+
+from .i18n import (
+    _,
+    gettext,
+)
+
+from . import (
+    cmdutil,
+    error,
+    util,
+)
 
 _extensions = {}
 _aftercallbacks = {}
