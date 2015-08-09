@@ -11,11 +11,25 @@
 allowing operations like diff and log with revsets.
 """
 
-from node import nullid
-from i18n import _
+from __future__ import absolute_import
+
 import os
-import util, mdiff, cmdutil, scmutil
-import localrepo, changelog, manifest, filelog, revlog, pathutil
+
+from .i18n import _
+from .node import nullid
+
+from . import (
+    changelog,
+    cmdutil,
+    filelog,
+    localrepo,
+    manifest,
+    mdiff,
+    pathutil,
+    revlog,
+    scmutil,
+    util,
+)
 
 class unionrevlog(revlog.revlog):
     def __init__(self, opener, indexfile, revlog2, linkmapper):
