@@ -5,15 +5,34 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import copy
-import errno, os, re, posixpath, sys
+import errno
+import os
+import posixpath
+import re
+import stat
+import subprocess
+import sys
+import tarfile
 import xml.dom.minidom
-import stat, subprocess, tarfile
-from i18n import _
-import config, util, node, error, cmdutil, scmutil, match as matchmod
-import phases
-import pathutil
-import exchange
+
+
+from .i18n import _
+from . import (
+    cmdutil,
+    config,
+    error,
+    exchange,
+    match as matchmod,
+    node,
+    pathutil,
+    phases,
+    scmutil,
+    util,
+)
+
 hg = None
 propertycache = util.propertycache
 
@@ -328,7 +347,7 @@ def subrepo(ctx, path, allowwdir=False):
     # so we manually delay the circular imports to not break
     # scripts that don't use our demand-loading
     global hg
-    import hg as h
+    from . import hg as h
     hg = h
 
     pathutil.pathauditor(ctx.repo().root)(path)
@@ -346,7 +365,7 @@ def nullsubrepo(ctx, path, pctx):
     # so we manually delay the circular imports to not break
     # scripts that don't use our demand-loading
     global hg
-    import hg as h
+    from . import hg as h
     hg = h
 
     pathutil.pathauditor(ctx.repo().root)(path)
