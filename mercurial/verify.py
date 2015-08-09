@@ -5,10 +5,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import nullid, short
-from i18n import _
+from __future__ import absolute_import
+
 import os
-import revlog, util, error
+
+from .i18n import _
+from .node import (
+    nullid,
+    short,
+)
+
+from . import (
+    error,
+    revlog,
+    util,
+)
 
 def verify(repo):
     lock = repo.lock()
