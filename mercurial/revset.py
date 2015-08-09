@@ -5,16 +5,25 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re
-import parser, util, error, hbisect, phases
-import node
+from __future__ import absolute_import
+
 import heapq
-import match as matchmod
-from i18n import _
-import encoding
-import obsolete as obsmod
-import pathutil
-import repoview
+import re
+
+from .i18n import _
+from . import (
+    encoding,
+    error,
+    hbisect,
+    match as matchmod,
+    node,
+    obsolete as obsmod,
+    parser,
+    pathutil,
+    phases,
+    repoview,
+    util,
+)
 
 def _revancestors(repo, revs, followfirst):
     """Like revlog.ancestors(), but supports followfirst."""
@@ -1435,8 +1444,10 @@ def outgoing(repo, subset, x):
     default push location.
     """
     # Avoid cycles.
-    import discovery
-    import hg
+    from . import (
+        discovery,
+        hg,
+    )
     # i18n: "outgoing" is a keyword
     l = getargs(x, 0, 1, _("outgoing takes one or no arguments"))
     # i18n: "outgoing" is a keyword
@@ -1617,7 +1628,7 @@ def remote(repo, subset, x):
     synonym for the current local branch.
     """
 
-    import hg # avoid start-up nasties
+    from . import hg # avoid start-up nasties
     # i18n: "remote" is a keyword
     l = getargs(x, 0, 2, _("remote takes one, two or no arguments"))
 
