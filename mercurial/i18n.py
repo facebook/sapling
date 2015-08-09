@@ -5,8 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import encoding
-import gettext as gettextmod, sys, os, locale
+from __future__ import absolute_import
+
+import gettext as gettextmod
+import locale
+import os
+import sys
+
+from . import encoding
 
 # modelled after templater.templatepath:
 if getattr(sys, 'frozen', None) is not None:
