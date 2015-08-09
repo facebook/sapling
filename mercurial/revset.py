@@ -2245,8 +2245,10 @@ def optimize(x, small):
         # (::x and not ::y)/(not ::y and ::x) have a fast path
         def isonly(revs, bases):
             return (
-                revs[0] == 'func'
+                revs is not None
+                and revs[0] == 'func'
                 and getstring(revs[1], _('not a symbol')) == 'ancestors'
+                and bases is not None
                 and bases[0] == 'not'
                 and bases[1][0] == 'func'
                 and getstring(bases[1][1], _('not a symbol')) == 'ancestors')

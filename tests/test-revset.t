@@ -1230,6 +1230,23 @@ check that conversion to only works
   5
   6
 
+no crash by empty group "()" while optimizing to "only()"
+
+  $ try --optimize '::1 and ()'
+  (and
+    (dagrangepre
+      ('symbol', '1'))
+    (group
+      None))
+  * optimized:
+  (and
+    None
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '1')))
+  hg: parse error: missing argument
+  [255]
+
 we can use patterns when searching for tags
 
   $ log 'tag("1..*")'
