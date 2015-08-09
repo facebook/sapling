@@ -17,10 +17,12 @@ context of the graph returned. Type is a constant specifying the node type.
 Data depends on type.
 """
 
-from mercurial.node import nullrev
-import util
+from __future__ import absolute_import
 
 import heapq
+
+from .node import nullrev
+from . import util
 
 CHANGESET = 'C'
 
