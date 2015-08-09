@@ -5,9 +5,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex
-import patch, scmutil, util, error
-import hbisect
+from __future__ import absolute_import
+
+from .node import hex
+from . import (
+    error,
+    hbisect,
+    patch,
+    scmutil,
+    util,
+)
 
 # This helper class allows us to handle both:
 #  "{files}" (legacy command-line-specific list hack) and
