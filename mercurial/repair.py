@@ -6,10 +6,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import changegroup, exchange, util, bundle2
-from mercurial.node import short
-from mercurial.i18n import _
+from __future__ import absolute_import
+
 import errno
+
+from .i18n import _
+from .node import short
+from . import (
+    bundle2,
+    changegroup,
+    exchange,
+    util,
+)
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
