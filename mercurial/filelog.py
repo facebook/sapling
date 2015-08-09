@@ -5,8 +5,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import error, mdiff, revlog
-import re, struct
+from __future__ import absolute_import
+
+import re
+import struct
+
+from . import (
+    error,
+    mdiff,
+    revlog,
+)
 
 _mdre = re.compile('\1\n')
 def parsemeta(text):
