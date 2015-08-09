@@ -5,9 +5,18 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util, error
-import errno, os, socket, time
+from __future__ import absolute_import
+
+import errno
+import os
+import socket
+import time
 import warnings
+
+from . import (
+    error,
+    util,
+)
 
 class lock(object):
     '''An advisory lock held by one process to control access to a set
