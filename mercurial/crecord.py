@@ -8,11 +8,23 @@
 # This code is based on the Mark Edgington's crecord extension.
 # (Itself based on Bryan O'Sullivan's record extension.)
 
-from i18n import _
-import patch as patchmod
-import util, encoding
+from __future__ import absolute_import
 
-import os, re, sys, struct, signal, tempfile, locale, cStringIO
+import cStringIO
+import locale
+import os
+import re
+import signal
+import struct
+import sys
+import tempfile
+
+from .i18n import _
+from . import (
+    encoding,
+    patch as patchmod,
+    util,
+)
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
@@ -21,7 +33,8 @@ locale.setlocale(locale.LC_ALL, '')
 # os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
 if os.name == 'posix':
     import curses
-    import fcntl, termios
+    import fcntl
+    import termios
 else:
     # I have no idea if wcurses works with crecord...
     try:
