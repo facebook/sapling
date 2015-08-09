@@ -5,12 +5,29 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, tempfile, os, sys
-from i18n import _
-from node import bin, hex
-import changegroup as changegroupmod, bundle2, pushkey as pushkeymod
-import peer, error, encoding, util, exchange
+from __future__ import absolute_import
 
+import os
+import sys
+import tempfile
+import urllib
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+)
+
+from . import (
+    bundle2,
+    changegroup as changegroupmod,
+    encoding,
+    error,
+    exchange,
+    peer,
+    pushkey as pushkeymod,
+    util,
+)
 
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
