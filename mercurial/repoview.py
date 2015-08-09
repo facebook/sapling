@@ -6,15 +6,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import heapq
+from __future__ import absolute_import
+
 import copy
-import error
-import phases
-import util
-import obsolete
+import heapq
 import struct
-import tags as tagsmod
-from node import nullrev
+
+from .node import nullrev
+from . import (
+    error,
+    obsolete,
+    phases,
+    tags as tagsmod,
+    util,
+)
 
 def hideablerevs(repo):
     """Revisions candidates to be hidden
