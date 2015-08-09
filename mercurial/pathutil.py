@@ -1,8 +1,15 @@
-import os, errno, stat, posixpath
+from __future__ import absolute_import
 
-import encoding
-import util
-from i18n import _
+import errno
+import os
+import posixpath
+import stat
+
+from .i18n import _
+from . import (
+    encoding,
+    util,
+)
 
 def _lowerclean(s):
     return encoding.hfsignoreclean(s.lower())
