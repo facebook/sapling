@@ -5,9 +5,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import getopt
-import util
-from i18n import _
+
+from .i18n import _
+from . import util
 
 def gnugetopt(args, options, longoptions):
     """Parse options mostly like getopt.gnu_getopt.
