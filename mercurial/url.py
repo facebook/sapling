@@ -7,10 +7,23 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import urllib, urllib2, httplib, os, socket, cStringIO, base64
-from i18n import _
-import keepalive, util, sslutil
-import httpconnection as httpconnectionmod
+from __future__ import absolute_import
+
+import base64
+import cStringIO
+import httplib
+import os
+import socket
+import urllib
+import urllib2
+
+from .i18n import _
+from . import (
+    httpconnection as httpconnectionmod,
+    keepalive,
+    sslutil,
+    util,
+)
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
