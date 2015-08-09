@@ -6,9 +6,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import error
-import util
+from __future__ import absolute_import
+
+from .i18n import _
+from . import (
+    error,
+    util,
+)
 
 # abstract batching support
 
