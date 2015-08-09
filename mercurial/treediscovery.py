@@ -5,10 +5,19 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import collections
-from node import nullid, short
-from i18n import _
-import util, error
+
+from .i18n import _
+from .node import (
+    nullid,
+    short,
+)
+from . import (
+    error,
+    util,
+)
 
 def findcommonincoming(repo, remote, heads=None, force=False):
     """Return a tuple (common, fetch, heads) used to identify the common
