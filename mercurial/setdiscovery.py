@@ -40,11 +40,20 @@ nodes that will maximize the number of nodes that will be
 classified with it (since all ancestors or descendants will be marked as well).
 """
 
+from __future__ import absolute_import
+
 import collections
-from node import nullid, nullrev
-from i18n import _
 import random
-import util, dagutil
+
+from .i18n import _
+from .node import (
+    nullid,
+    nullrev,
+)
+from . import (
+    dagutil,
+    util,
+)
 
 def _updatesample(dag, nodes, sample, quicksamplesize=0):
     """update an existing sample to match the expected size
