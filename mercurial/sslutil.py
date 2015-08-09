@@ -6,10 +6,15 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-import os, sys, ssl
 
-from mercurial import util
-from mercurial.i18n import _
+from __future__ import absolute_import
+
+import os
+import ssl
+import sys
+
+from .i18n import _
+from . import util
 
 _canloaddefaultcerts = False
 try:
