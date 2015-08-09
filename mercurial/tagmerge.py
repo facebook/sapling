@@ -71,11 +71,20 @@
 #         - put blocks whose nodes come all from p2 first
 #     - write the tag blocks in the sorted order
 
-import tags as tagsmod
-import util
-from node import nullid, hex
-from i18n import _
+from __future__ import absolute_import
+
 import operator
+
+from .i18n import _
+from .node import (
+    hex,
+    nullid,
+)
+from .import (
+    tags as tagsmod,
+    util,
+)
+
 hexnullid = hex(nullid)
 
 def readtagsformerge(ui, repo, lines, fn='', keeplinenums=False):
