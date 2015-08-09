@@ -10,14 +10,26 @@
 # Eventually, it could take care of updating (adding/removing/moving)
 # tags too.
 
-from node import nullid, bin, hex, short
-from i18n import _
-import util
-import encoding
-import error
-from array import array
+from __future__ import absolute_import
+
+import array
 import errno
 import time
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+    nullid,
+    short,
+)
+from . import (
+    encoding,
+    error,
+    util,
+)
+
+array = array.array
 
 # Tags computation can be expensive and caches exist to make it fast in
 # the common case.
@@ -263,7 +275,7 @@ def _readtagcache(ui, repo):
     If the cache is not up to date, the caller is responsible for reading tag
     info from each returned head. (See findglobaltags().)
     '''
-    import scmutil  # avoid cycle
+    from . import scmutil  # avoid cycle
 
     try:
         cachefile = repo.vfs(_filename(repo), 'r')
