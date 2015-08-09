@@ -24,14 +24,19 @@ These imports will not be delayed:
   b = __import__(a)
 '''
 
-import os, sys
-from contextlib import contextmanager
+from __future__ import absolute_import
+
+import contextlib
+import os
+import sys
 
 # __builtin__ in Python 2, builtins in Python 3.
 try:
     import __builtin__ as builtins
 except ImportError:
     import builtins
+
+contextmanager = contextlib.contextmanager
 
 _origimport = __import__
 
