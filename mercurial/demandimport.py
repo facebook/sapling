@@ -43,9 +43,9 @@ if sys.version_info[0] >= 3:
     level = 0
 _import = _origimport
 
-def _hgextimport(importfunc, name, globals, *args):
+def _hgextimport(importfunc, name, globals, *args, **kwargs):
     try:
-        return importfunc(name, globals, *args)
+        return importfunc(name, globals, *args, **kwargs)
     except ImportError:
         if not globals:
             raise
@@ -56,7 +56,7 @@ def _hgextimport(importfunc, name, globals, *args):
         if nameroot != contextroot:
             raise
         # retry to import with "hgext_" prefix
-        return importfunc(hgextname, globals, *args)
+        return importfunc(hgextname, globals, *args, **kwargs)
 
 class _demandmod(object):
     """module demand-loader and proxy"""
