@@ -5,9 +5,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import re
-import parser, error, util, merge
-from i18n import _
+
+from .i18n import _
+from . import (
+    error,
+    merge,
+    parser,
+    util,
+)
 
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
@@ -410,7 +418,7 @@ def subrepo(mctx, x):
         # i18n: "subrepo" is a keyword
         pat = getstring(x, _("subrepo requires a pattern or no arguments"))
 
-        import match as matchmod # avoid circular import issues
+        from . import match as matchmod # avoid circular import issues
         fast = not matchmod.patkind(pat)
         if fast:
             def m(s):
