@@ -5,11 +5,26 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import encoding
-import os, sys, errno, stat, getpass, pwd, grp, socket, tempfile, unicodedata
+from __future__ import absolute_import
+
+import errno
+import fcntl
+import getpass
+import grp
+import os
+import pwd
+import re
 import select
-import fcntl, re
+import socket
+import stat
+import sys
+import tempfile
+import unicodedata
+
+from .i18n import _
+from . import (
+    encoding,
+)
 
 posixfile = open
 normpath = os.path.normpath
@@ -459,7 +474,8 @@ def gethgcmd():
 
 def termwidth():
     try:
-        import termios, array
+        import array
+        import termios
         for dev in (sys.stderr, sys.stdout, sys.stdin):
             try:
                 try:
