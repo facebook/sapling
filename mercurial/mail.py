@@ -5,10 +5,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import util, encoding, sslutil
-import os, smtplib, socket, quopri, time, sys
+from __future__ import absolute_import
+
 import email
+import os
+import quopri
+import smtplib
+import socket
+import sys
+import time
+
+from .i18n import _
+from . import (
+    encoding,
+    sslutil,
+    util,
+)
 
 _oldheaderinit = email.Header.Header.__init__
 def _unifiedheaderinit(self, *args, **kw):
