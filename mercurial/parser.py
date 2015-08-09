@@ -16,8 +16,10 @@
 # an action is a tree node name, a tree label, and an optional match
 # __call__(program) parses program into a labeled tree
 
-import error
-from i18n import _
+from __future__ import absolute_import
+
+from .i18n import _
+from . import error
 
 class parser(object):
     def __init__(self, elements, methods=None):
