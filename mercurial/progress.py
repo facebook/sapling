@@ -5,13 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import sys
-import time
 import threading
-from mercurial import encoding
+import time
 
-from mercurial.i18n import _
-
+from .i18n import _
+from . import encoding
 
 def spacejoin(*args):
     return ' '.join(s for s in args if s)
