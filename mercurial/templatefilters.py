@@ -5,10 +5,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cgi, re, os, time, urllib
-import encoding, node, util
-import hbisect
-import templatekw
+from __future__ import absolute_import
+
+import cgi
+import os
+import re
+import time
+import urllib
+
+from . import (
+    encoding,
+    hbisect,
+    node,
+    templatekw,
+    util,
+)
 
 def addbreaks(text):
     """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
