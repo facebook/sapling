@@ -6,8 +6,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import util, hook, wireproto
-import os, sys
+from __future__ import absolute_import
+
+import os
+import sys
+
+from . import (
+    hook,
+    util,
+    wireproto,
+)
 
 class sshserver(wireproto.abstractserverproto):
     def __init__(self, ui, repo):
