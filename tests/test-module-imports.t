@@ -112,9 +112,6 @@ hidden by deduplication algorithm in the cycle detector, so fixing
 these may expose other cycles.
 
   $ hg locate 'mercurial/**.py' 'hgext/**.py' | sed 's-\\-/-g' | python "$import_checker" -
-  mercurial/templater.py mixed imports
-     stdlib:    parser
-     relative:  config, error, templatefilters, templatekw, util
   mercurial/ui.py mixed imports
      stdlib:    formatter
      relative:  config, error, progress, scmutil, util

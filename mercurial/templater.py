@@ -5,12 +5,23 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import os, re
-import util, config, templatefilters, templatekw, parser, error
-import revset as revsetmod
+from __future__ import absolute_import
+
+import os
+import re
 import types
-import minirst
+
+from .i18n import _
+from . import (
+    config,
+    error,
+    minirst,
+    parser,
+    revset as revsetmod,
+    templatefilters,
+    templatekw,
+    util,
+)
 
 # template parsing
 
