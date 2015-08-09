@@ -5,9 +5,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re, string
-import util
-from i18n import _
+from __future__ import absolute_import
+
+import re
+import string
+
+from .i18n import _
+from . import util
 
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
