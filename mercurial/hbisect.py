@@ -8,12 +8,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import collections
 import os
-import error
-from i18n import _
-from node import short, hex
-import util
+
+from .i18n import _
+from .node import (
+    hex,
+    short,
+)
+from . import (
+    error,
+    util,
+)
 
 def bisect(changelog, state):
     """find the next node (if any) for testing during a bisect search.
