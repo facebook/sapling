@@ -2280,7 +2280,7 @@ def optimize(x, small):
             del ss[:]
         for y in x[1:]:
             w, t = optimize(y, False)
-            if t[0] == 'string' or t[0] == 'symbol':
+            if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
                 continue
             flushss()
