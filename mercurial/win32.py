@@ -5,7 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import ctypes, errno, msvcrt, os, subprocess, random
+from __future__ import absolute_import
+
+import ctypes
+import errno
+import msvcrt
+import os
+import random
+import subprocess
 
 _kernel32 = ctypes.windll.kernel32
 _advapi32 = ctypes.windll.advapi32
