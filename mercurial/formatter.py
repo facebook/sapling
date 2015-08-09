@@ -5,12 +5,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import
+
 import cPickle
-from node import hex, short
-from i18n import _
-import encoding, util
-import templater
 import os
+
+from .i18n import _
+from .node import (
+    hex,
+    short,
+)
+
+from . import (
+    encoding,
+    templater,
+    util,
+)
 
 class baseformatter(object):
     def __init__(self, ui, topic, opts):
