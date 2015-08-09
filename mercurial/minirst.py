@@ -18,11 +18,16 @@ Remember to update http://mercurial.selenic.com/wiki/HelpStyleGuide
 when adding support for new constructs.
 """
 
-import re
-import util, encoding
-from i18n import _
+from __future__ import absolute_import
 
 import cgi
+import re
+
+from .i18n import _
+from . import (
+    encoding,
+    util,
+)
 
 def section(s):
     return "%s\n%s\n\n" % (s, "\"" * encoding.colwidth(s))
