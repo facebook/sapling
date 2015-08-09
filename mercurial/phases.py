@@ -100,11 +100,23 @@ Note: old client behave as a publishing server with draft only content
 
 """
 
-import os
+from __future__ import absolute_import
+
 import errno
-from node import nullid, nullrev, bin, hex, short
-from i18n import _
-import util, error
+import os
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
+from . import (
+    error,
+    util,
+)
 
 allphases = public, draft, secret = range(3)
 trackedphases = allphases[1:]
