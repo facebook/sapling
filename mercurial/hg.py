@@ -6,17 +6,41 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-from lock import release
-from node import nullid
+from __future__ import absolute_import
 
-import localrepo, bundlerepo, unionrepo, httppeer, sshpeer, statichttprepo
-import bookmarks, lock, util, extensions, error, node, scmutil, phases, url
-import cmdutil, discovery, repoview, exchange
-import ui as uimod
-import merge as mergemod
-import verify as verifymod
-import errno, os, shutil
+import errno
+import os
+import shutil
+
+from .i18n import _
+from .node import nullid
+
+from . import (
+    bookmarks,
+    bundlerepo,
+    cmdutil,
+    discovery,
+    error,
+    exchange,
+    extensions,
+    httppeer,
+    localrepo,
+    lock,
+    merge as mergemod,
+    node,
+    phases,
+    repoview,
+    scmutil,
+    sshpeer,
+    statichttprepo,
+    ui as uimod,
+    unionrepo,
+    url,
+    util,
+    verify as verifymod,
+)
+
+release = lock.release
 
 def _local(path):
     path = util.expandpath(util.urllocalpath(path))
