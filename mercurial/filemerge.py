@@ -5,11 +5,25 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import short
-from i18n import _
-import util, simplemerge, match, error, templater, templatekw
-import os, tempfile, re, filecmp
-import tagmerge
+from __future__ import absolute_import
+
+import filecmp
+import os
+import re
+import tempfile
+
+from .i18n import _
+from .node import short
+
+from . import (
+    error,
+    match,
+    simplemerge,
+    tagmerge,
+    templatekw,
+    templater,
+    util,
+)
 
 def _toolstr(ui, tool, part, default=""):
     return ui.config("merge-tools", tool + "." + part, default)
