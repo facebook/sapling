@@ -5,9 +5,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import copy, os, re
-import util, pathutil
-from i18n import _
+from __future__ import absolute_import
+
+import copy
+import os
+import re
+
+from .i18n import _
+from . import (
+    pathutil,
+    util,
+)
 
 propertycache = util.propertycache
 
