@@ -16,9 +16,17 @@
 # mbp: "you know that thing where cvs gives you conflict markers?"
 # s: "i hate that."
 
-from i18n import _
-import scmutil, util, mdiff
-import sys, os
+from __future__ import absolute_import
+
+import os
+import sys
+
+from .i18n import _
+from . import (
+    mdiff,
+    scmutil,
+    util,
+)
 
 class CantReprocessAndShowBase(Exception):
     pass
