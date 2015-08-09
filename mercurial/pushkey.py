@@ -5,7 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import bookmarks, phases, obsolete, encoding
+from __future__ import absolute_import
+
+from . import (
+    bookmarks,
+    encoding,
+    obsolete,
+    phases,
+)
 
 def _nslist(repo):
     n = {}
