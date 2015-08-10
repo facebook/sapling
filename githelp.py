@@ -407,6 +407,10 @@ def commit(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def deprecated(ui, repo, *args, **kwargs):
+    ui.warn('This command has been deprecated in the git project, ' +
+        'thus isn\'t supported by this tool.\n\n')
+
 def diff(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('a', 'all', None, ''),
@@ -994,6 +998,7 @@ gitcommands = {
     'status': status,
     'svn': svn,
     'tag': tag,
+    'whatchanged': deprecated,
 }
 
 gitsvncommands = {
