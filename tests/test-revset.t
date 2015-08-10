@@ -1186,6 +1186,20 @@ test that chained `or` operations make balanced addsets
   4
   5
 
+no crash by empty group "()" while optimizing `or` operations
+
+  $ try --optimize '0|()'
+  (or
+    ('symbol', '0')
+    (group
+      None))
+  * optimized:
+  (or
+    ('symbol', '0')
+    None)
+  hg: parse error: missing argument
+  [255]
+
 test that chained `or` operations never eat up stack (issue4624)
 (uses `0:1` instead of `0` to avoid future optimization of trivial revisions)
 
@@ -1271,6 +1285,23 @@ check that conversion to only works
   3
   5
   6
+
+no crash by empty group "()" while optimizing to "only()"
+
+  $ try --optimize '::1 and ()'
+  (and
+    (dagrangepre
+      ('symbol', '1'))
+    (group
+      None))
+  * optimized:
+  (and
+    None
+    (func
+      ('symbol', 'ancestors')
+      ('symbol', '1')))
+  hg: parse error: missing argument
+  [255]
 
 we can use patterns when searching for tags
 

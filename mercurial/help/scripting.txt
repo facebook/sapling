@@ -13,7 +13,7 @@ These include:
 - Calling out to a command server
 
 Executing ``hg`` processes is very similar to how humans interact with
-Mercurial in the shell. It should already be familar to you.
+Mercurial in the shell. It should already be familiar to you.
 
 :hg:`serve` can be used to start a server. By default, this will start
 a "hgweb" HTTP server. This HTTP server has support for machine-readable

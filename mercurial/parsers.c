@@ -1113,6 +1113,7 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	PyObject *phaseroots = NULL;
 	PyObject *phaseset = NULL;
 	PyObject *phasessetlist = NULL;
+	PyObject *rev = NULL;
 	Py_ssize_t len = index_length(self) - 1;
 	Py_ssize_t numphase = 0;
 	Py_ssize_t minrevallphases = 0;
@@ -1172,7 +1173,9 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 		 * is computed as a difference */
 		if (phase != 0) {
 			phaseset = PyList_GET_ITEM(phasessetlist, phase);
-			PySet_Add(phaseset, PyInt_FromLong(i));
+			rev = PyInt_FromLong(i);
+			PySet_Add(phaseset, rev);
+			Py_XDECREF(rev);
 		}
 		PyList_SET_ITEM(phaseslist, i, PyInt_FromLong(phase));
 	}

@@ -295,7 +295,7 @@ def grep(mctx, x):
 
 def _sizetomax(s):
     try:
-        s = s.strip()
+        s = s.strip().lower()
         for k, v in util._sizeunits:
             if s.endswith(k):
                 # max(4k) = 5k - 1, max(4.5k) = 4.6k - 1
