@@ -74,8 +74,7 @@ def _do_case(self, name, layout):
                                           rev=shallowtip.node(),
                                           stupid=False))
 
-        stupidui = ui.ui(repo.ui)
-        stupidui.config('hgsubversion', 'stupid', True)
+        stupidui = test_util.testui(stupid=True)
         self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),
                                        stupid=True), 0)
         self.assertEqual(verify.verify(stupidui, repo, rev=ctx.node(),

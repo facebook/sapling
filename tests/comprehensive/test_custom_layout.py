@@ -31,17 +31,14 @@ def _do_case(self, name, stupid):
     checkout_path = repo_path
     if subdir:
         checkout_path += '/' + subdir
-    u = ui.ui()
-    if stupid:
-        u.setconfig('hgsubversion', 'stupid', '1')
-    u.setconfig('hgsubversion', 'layout', 'custom')
+    u = test_util.testui(stupid=stupid, layout='custom')
     for branch, path in test_util.custom.get(name, {}).iteritems():
         u.setconfig('hgsubversionbranch', branch, path)
     test_util.hgclone(u,
                       test_util.fileurl(checkout_path),
                       wc2_path,
                       update=False)
-    self.repo2 = hg.repository(ui.ui(), wc2_path)
+    self.repo2 = hg.repository(test_util.testui(), wc2_path)
     self.assertEqual(self.repo.heads(), self.repo2.heads())
 
 

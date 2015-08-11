@@ -31,7 +31,7 @@ class DiffTests(test_util.TestBase):
         self.commitchanges([('foo', 'foo', 'This is missing a newline.'),
                             ('alpha', 'alpha', 'alpha\n\nadded line\n'),
                             ])
-        u = ui.ui()
+        u = test_util.testui()
         u.pushbuffer()
         wrappers.diff(lambda x, y, z: None, u, self.repo, svn=True)
         self.assertEqual(u.popbuffer(), expected_diff_output)

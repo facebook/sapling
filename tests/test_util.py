@@ -290,6 +290,7 @@ def testui(stupid=False, layout='auto', startrev=0):
     return u
 
 def dispatch(cmd):
+    assert '--quiet' in cmd
     cmd = getattr(dispatchmod, 'request', lambda x: x)(cmd)
     return dispatchmod.dispatch(cmd)
 
@@ -567,6 +568,7 @@ class TestBase(unittest.TestCase):
 
         cmd = [
             'clone',
+            '--quiet',
             '--layout=%s' % layout,
             '--startrev=%s' % startrev,
             fileurl(projectpath),
@@ -746,7 +748,7 @@ class TestBase(unittest.TestCase):
         useful when debugging comprehensive tests.
         """
         # Could be more elegant, but it works with stock hg
-        _ui = ui.ui()
+        _ui = testui()
         _ui.setconfig('extensions', 'graphlog', '')
         extensions.loadall(_ui)
         graphlog = extensions.find('graphlog')

@@ -19,7 +19,7 @@ from hgsubversion import wrappers
 def _do_case(self, name, layout):
     subdir = test_util.subdir.get(name, '')
     config = {}
-    u = ui.ui()
+    u = test_util.testui()
     for branch, path in test_util.custom.get(name, {}).iteritems():
         config['hgsubversionbranch.%s' % branch] = path
         u.setconfig('hgsubversionbranch', branch, path)
@@ -38,7 +38,7 @@ def _do_case(self, name, layout):
     test_util.hgclone(u, test_util.fileurl(checkout_path), wc2_path, update=False)
     if layout == 'single':
         self.assertEqual(len(self.repo.heads()), 1)
-    self.repo2 = hg.repository(ui.ui(), wc2_path)
+    self.repo2 = hg.repository(test_util.testui(), wc2_path)
     self.assertEqual(self.repo.heads(), self.repo2.heads())
 
 
