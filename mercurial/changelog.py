@@ -186,14 +186,8 @@ class changelog(revlog.revlog):
         return self._nodecache
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
-        reachable = self.index.reachableroots(minroot, heads, roots,
-                                              includepath)
-        if reachable is None:
-            # The C code hasn't been able to initialize a list, something went
-            # really wrong, let's rely on the pure implementation in that case
-            raise AttributeError()
-        else:
-            return revset.baseset(sorted(reachable))
+        return revset.baseset(sorted(
+            self.index.reachableroots(minroot, heads, roots, includepath)))
 
     def headrevs(self):
         if self.filteredrevs:
