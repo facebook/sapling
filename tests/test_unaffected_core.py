@@ -11,6 +11,7 @@ from mercurial import node
 from mercurial import ui
 
 def _dispatch(ui, cmd):
+    assert '--quiet' in cmd
     try:
         req = dispatch.request(cmd, ui=ui)
         dispatch._dispatch(req)

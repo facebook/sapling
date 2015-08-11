@@ -290,6 +290,7 @@ def testui(stupid=False, layout='auto', startrev=0):
     return u
 
 def dispatch(cmd):
+    assert '--quiet' in cmd
     cmd = getattr(dispatchmod, 'request', lambda x: x)(cmd)
     return dispatchmod.dispatch(cmd)
 
