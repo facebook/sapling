@@ -567,6 +567,7 @@ class TestBase(unittest.TestCase):
 
         cmd = [
             'clone',
+            '--quiet',
             '--layout=%s' % layout,
             '--startrev=%s' % startrev,
             fileurl(projectpath),

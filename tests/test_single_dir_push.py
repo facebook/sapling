@@ -171,7 +171,7 @@ class TestSingleDirPush(test_util.TestBase):
         # Tests pulling and pushing with a renamed branch
         # Based on test_push_single_dir
         repo_path = self.load_svndump('branch_from_tag.svndump')
-        cmd = ['clone', '--layout=single', '--branch=flaf']
+        cmd = ['clone', '--quiet', '--layout=single', '--branch=flaf']
         if self.stupid:
             cmd.append('--stupid')
         cmd += [test_util.fileurl(repo_path), self.wc_path]
