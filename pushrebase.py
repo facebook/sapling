@@ -284,10 +284,23 @@ def _graft(repo, rev, mapping):
             newp2 = nullid
             del mapping[nullid]
 
+    if oldp1 != nullid and oldp2 != nullid:
+        # If it's a merge commit, Mercurial's rev.files() only returns the files
+        # that are different from both p1 and p2, so it would not capture all of
+        # the incoming changes from p2 (for instance, new files in p2). The fix
+        # is to manually diff the rev manifest and it's p1 to get the list of
+        # files that have changed. We only need to diff against p1, and not p2,
+        # because Mercurial constructs new commits by applying our specified
+        # files on top of a copy of the p1 manifest, so we only need the diff
+        # against p1.
+        files = rev.manifest().diff(repo[oldp1].manifest()).keys()
+    else:
+        files = rev.files()
+
     return context.memctx(repo,
                           [newp1, newp2],
                           rev.description(),
-                          rev.files(),
+                          files,
                           getfilectx,
                           rev.user(),
                           rev.date(),

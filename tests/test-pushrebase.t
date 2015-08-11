@@ -328,8 +328,8 @@ Pushing a merge should rebase only the latest side of the merge
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=serve * (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=add5ec74853d53cf76e4b735e033a2350e7fe4f3 HG_SOURCE=serve * (glob)
   remote: incoming hook: HG_BUNDLE2=1 HG_NODE=5a0cbf3df4ef43ccc96fedd1030d6b8c59f2cd32 HG_SOURCE=serve * (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=e93e7b12de70d92e56a0c685749c84b56b02e4c8 HG_SOURCE=serve * (glob)
-  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=b7256d378dad2703d5b21f1f1dfe0de56413e5f8 HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=93a3cc822f6ac9c91c5c645cab8fec47a26da52e HG_SOURCE=serve * (glob)
+  remote: incoming hook: HG_BUNDLE2=1 HG_NODE=7548c79a5591fca7a09470b814ead1b3f471aa89 HG_SOURCE=serve * (glob)
   prechangegroup hook: HG_SOURCE=push-response * (glob)
   adding changesets
   remote: outgoing hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=rebase:reply
@@ -341,13 +341,13 @@ Pushing a merge should rebase only the latest side of the merge
   changegroup hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
   incoming hook: HG_NODE=fb983dc509b61b92a3f19cc326f62b424bb25d1c HG_SOURCE=push-response * (glob)
   incoming hook: HG_NODE=cf07bdf4226ef5167b9f86119e915ff3f239642a HG_SOURCE=push-response * (glob)
-  incoming hook: HG_NODE=e93e7b12de70d92e56a0c685749c84b56b02e4c8 HG_SOURCE=push-response * (glob)
-  incoming hook: HG_NODE=b7256d378dad2703d5b21f1f1dfe0de56413e5f8 HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=93a3cc822f6ac9c91c5c645cab8fec47a26da52e HG_SOURCE=push-response * (glob)
+  incoming hook: HG_NODE=7548c79a5591fca7a09470b814ead1b3f471aa89 HG_SOURCE=push-response * (glob)
   $ cd ../server
   $ log
-  o  on top of merge [public:b7256d378dad] master
+  o  on top of merge [public:7548c79a5591] master
   |
-  o    merge [public:e93e7b12de70]
+  o    merge [public:93a3cc822f6a]
   |\
   | o  branch middle [public:5a0cbf3df4ef]
   | |
@@ -367,6 +367,12 @@ Pushing a merge should rebase only the latest side of the merge
   |
   o  initial [public:2bb9d20e471c]
   
+- Verify the content of the merge files is correct
+  $ hg cat -r master^ c
+  branched2
+  $ hg cat -r master^ other
+  tux
+
   $ hg strip -r add5ec74853d -q
   preoutgoing hook: HG_SOURCE=strip
   outgoing hook: HG_NODE=add5ec74853d53cf76e4b735e033a2350e7fe4f3 HG_SOURCE=strip
