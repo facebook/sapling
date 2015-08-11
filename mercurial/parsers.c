@@ -1151,13 +1151,13 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	/* Initialize internal datastructures */
 	tovisit = (int *)malloc((len + 1) * sizeof(int));
 	if (tovisit == NULL) {
-		PyErr_SetNone(PyExc_MemoryError);
+		PyErr_NoMemory();
 		goto release_reachable;
 	}
 
 	seen = (char *)calloc(len+1, 1);
 	if (seen == NULL) {
-		PyErr_SetNone(PyExc_MemoryError);
+		PyErr_NoMemory();
 		goto release_seen_and_tovisit;
 	}
 
