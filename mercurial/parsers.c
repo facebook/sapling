@@ -1112,8 +1112,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	long minroot;
 	PyObject *includepatharg = NULL;
 	int includepath = 0;
+	/* heads is a list */
 	PyObject *heads = NULL;
 	Py_ssize_t numheads;
+	/* roots is a set */
 	PyObject *roots = NULL;
 	PyObject *reachable = NULL;
 
@@ -1134,8 +1136,8 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	char *seen = NULL;
 
 	/* Get arguments */
-	if (!PyArg_ParseTuple(args, "lO!O!O!", &minroot, &PySet_Type, &heads,
-				&PyList_Type, &roots, &PyBool_Type, &includepatharg))
+	if (!PyArg_ParseTuple(args, "lO!O!O!", &minroot, &PyList_Type, &heads,
+				&PySet_Type, &roots, &PyBool_Type, &includepatharg))
 		goto bail;
 
 	if (includepatharg == Py_True)
