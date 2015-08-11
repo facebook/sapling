@@ -1232,9 +1232,7 @@ release_seen_and_tovisit:
 release_reachable:
 	Py_XDECREF(reachable);
 bail:
-	val = Py_None;
-	Py_INCREF(Py_None);
-	return val;
+	return NULL;
 }
 
 static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
