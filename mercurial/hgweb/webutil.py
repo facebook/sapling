@@ -203,7 +203,7 @@ def cleanpath(repo, path):
     path = path.lstrip('/')
     return pathutil.canonpath(repo.root, '', path)
 
-def changeidctx (repo, changeid):
+def changeidctx(repo, changeid):
     try:
         ctx = repo[changeid]
     except error.RepoError:
@@ -212,11 +212,11 @@ def changeidctx (repo, changeid):
 
     return ctx
 
-def changectx (repo, req):
+def changectx(repo, req):
     changeid = "tip"
     if 'node' in req.form:
         changeid = req.form['node'][0]
-        ipos=changeid.find(':')
+        ipos = changeid.find(':')
         if ipos != -1:
             changeid = changeid[(ipos + 1):]
     elif 'manifest' in req.form:
@@ -227,7 +227,7 @@ def changectx (repo, req):
 def basechangectx(repo, req):
     if 'node' in req.form:
         changeid = req.form['node'][0]
-        ipos=changeid.find(':')
+        ipos = changeid.find(':')
         if ipos != -1:
             changeid = changeid[:ipos]
             return changeidctx(repo, changeid)
