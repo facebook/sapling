@@ -373,11 +373,6 @@ manifest with descending (monoblue)
           <p><a href="http://mercurial.selenic.com/" title="Mercurial"><img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a></p>
       </div>
   
-      <div id="corner-top-left"></div>
-      <div id="corner-top-right"></div>
-      <div id="corner-bottom-left"></div>
-      <div id="corner-bottom-right"></div>
-  
   </div>
   
   </body>

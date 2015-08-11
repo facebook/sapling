@@ -311,44 +311,6 @@ div#powered-by a {
 div#powered-by a:hover {
   text-decoration: underline;
 }
-/*
-div#monoblue-corner-top-left {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 10px;
-  height: 10px;
-  background: url(./monoblue-corner.png) top left no-repeat !important;
-  background: none;
-}
-div#monoblue-corner-top-right {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background: url(./monoblue-corner.png) top right no-repeat !important;
-  background: none;
-}
-div#monoblue-corner-bottom-left {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 10px;
-  height: 10px;
-  background: url(./monoblue-corner.png) bottom left no-repeat !important;
-  background: none;
-}
-div#monoblue-corner-bottom-right {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background: url(./monoblue-corner.png) bottom right no-repeat !important;
-  background: none;
-}
-*/
 /** end of common settings **/
 
 /** summary **/
