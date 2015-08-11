@@ -1143,8 +1143,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 
 	/* Initialize return set */
 	reachable = PySet_New(0);
-	if (reachable == NULL)
+	if (reachable == NULL) {
+		PyErr_NoMemory();
 		goto bail;
+	}
 
 	/* Initialize internal datastructures */
 	tovisit = (int *)malloc((len + 1) * sizeof(int));
