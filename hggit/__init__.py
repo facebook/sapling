@@ -65,7 +65,7 @@ demandimport.ignore.extend([
     'collections',
 ])
 
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 
 testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3 3.4'
 buglink = 'https://bitbucket.org/durin42/hg-git/issues'
