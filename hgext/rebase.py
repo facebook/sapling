@@ -1026,40 +1026,46 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
     if opts.get('rebase'):
-        if opts.get('update'):
-            del opts['update']
-            ui.debug('--update and --rebase are not compatible, ignoring '
-                     'the update flag\n')
-
-        movemarkfrom = repo['.'].node()
-        revsprepull = len(repo)
-        origpostincoming = commands.postincoming
-        def _dummy(*args, **kwargs):
-            pass
-        commands.postincoming = _dummy
+        wlock = lock = None
         try:
-            orig(ui, repo, *args, **opts)
+            wlock = repo.wlock()
+            lock = repo.lock()
+            if opts.get('update'):
+                del opts['update']
+                ui.debug('--update and --rebase are not compatible, ignoring '
+                         'the update flag\n')
+
+            movemarkfrom = repo['.'].node()
+            revsprepull = len(repo)
+            origpostincoming = commands.postincoming
+            def _dummy(*args, **kwargs):
+                pass
+            commands.postincoming = _dummy
+            try:
+                orig(ui, repo, *args, **opts)
+            finally:
+                commands.postincoming = origpostincoming
+            revspostpull = len(repo)
+            if revspostpull > revsprepull:
+                # --rev option from pull conflict with rebase own --rev
+                # dropping it
+                if 'rev' in opts:
+                    del opts['rev']
+                # positional argument from pull conflicts with rebase's own
+                # --source.
+                if 'source' in opts:
+                    del opts['source']
+                rebase(ui, repo, **opts)
+                branch = repo[None].branch()
+                dest = repo[branch].rev()
+                if dest != repo['.'].rev():
+                    # there was nothing to rebase we force an update
+                    hg.update(repo, dest)
+                    if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                        ui.status(_("updating bookmark %s\n")
+                                  % repo._activebookmark)
         finally:
-            commands.postincoming = origpostincoming
-        revspostpull = len(repo)
-        if revspostpull > revsprepull:
-            # --rev option from pull conflict with rebase own --rev
-            # dropping it
-            if 'rev' in opts:
-                del opts['rev']
-            # positional argument from pull conflicts with rebase's own
-            # --source.
-            if 'source' in opts:
-                del opts['source']
-            rebase(ui, repo, **opts)
-            branch = repo[None].branch()
-            dest = repo[branch].rev()
-            if dest != repo['.'].rev():
-                # there was nothing to rebase we force an update
-                hg.update(repo, dest)
-                if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                    ui.status(_("updating bookmark %s\n")
-                              % repo._activebookmark)
+            release(lock, wlock)
     else:
         if opts.get('tool'):
             raise util.Abort(_('--tool can only be used with --rebase'))
