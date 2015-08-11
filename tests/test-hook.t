@@ -223,8 +223,8 @@ update hook
   $ echo "update = printenv.py update" >> .hg/hgrc
   $ hg update
   preupdate hook: HG_PARENT1=539e4b31b6dc
-  update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  update hook: HG_ERROR=0 HG_PARENT1=539e4b31b6dc
 
 pushkey hook
 
@@ -644,8 +644,8 @@ final release (and dirstate flush).
   $ hg ci -ma
   223eafe2750c tip
   $ hg up 0 --config extensions.largefiles=
-  cb9a9f314b8b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  cb9a9f314b8b
 
 make sure --verbose (and --quiet/--debug etc.) are propagated to the local ui
 that is passed to pre/post hooks
