@@ -32,14 +32,10 @@ class RequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         response = {}
 
         for rev in revs:
-            if not translations.has_key(rev):
-                response['result'] = None
-                response['error_code'] = "ERR-CONDUIT-CORE"
-                response['error_info'] = "get_mirrored_revs Failed, " \
-                                         "error: 'NoneType' object is not "\
-                                         "iterable"
-                break
-            translated_revs[rev] = translations[rev]
+            if rev in translations:
+                translated_revs[rev] = translations[rev]
+            else:
+                translated_revs[rev] = ""
         else:
             response['result'] = translated_revs
             response['error_code'] = None

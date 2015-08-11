@@ -142,7 +142,9 @@ def showgitnode(repo, ctx, templ, **args):
                 to_scm='git',
                 revs=[ctx.hex()]
             )
-            matches.append((backingrepo, result[ctx.hex()]))
+            githash = result[ctx.hex()]
+            if githash != "":
+                matches.append((backingrepo, githash))
         except ConduitError:
             pass
 
@@ -170,6 +172,7 @@ def gitnode(repo, subset, x):
     backingrepos = repo.ui.configlist('fbconduit', 'backingrepos', default=[reponame])
 
     peerpath = repo.ui.expandpath('default')
+    translationerror = False
     for backingrepo in backingrepos:
         try:
             result = _call_conduit('scmquery.get.mirrored.revs',
@@ -179,13 +182,18 @@ def gitnode(repo, subset, x):
                 to_scm='hg',
                 revs=[n]
             )
-            break
+            hghash = result[n]
+            if hghash != '':
+                break
         except ConduitError as e:
             pass
     else:
-        if 'unknown revision' not in str(e.args):
-            repo.ui.warn("Could not translate revision {0}.\n".format(n))
+        translationerror = True
+
+    if translationerror or result[n] == "":
+        repo.ui.warn("Could not translate revision {0}.\n".format(n))
         return subset.filter(lambda r: False)
+
     rn = repo[node.bin(result[n])].rev()
     return subset.filter(lambda r: r == rn)
 
