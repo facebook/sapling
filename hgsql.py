@@ -429,48 +429,52 @@ def wraprepo(repo):
             ui = self.ui
             clrev = fetchstart
             chunksize = 1000
-            while True:
-                if abort.isSet():
-                    break
+            try:
+                while True:
+                    if abort.isSet():
+                        break
 
-                maxrev = min(clrev + chunksize, fetchend + 1)
-                self.sqlcursor.execute("""SELECT path, chunk, chunkcount,
-                    linkrev, entry, data0, data1 FROM revisions WHERE repo = %s
-                    AND linkrev > %s AND linkrev < %s ORDER BY linkrev ASC""",
-                    (self.sqlreponame, clrev - 1, maxrev))
+                    maxrev = min(clrev + chunksize, fetchend + 1)
+                    self.sqlcursor.execute("""SELECT path, chunk, chunkcount,
+                        linkrev, entry, data0, data1 FROM revisions WHERE repo = %s
+                        AND linkrev > %s AND linkrev < %s ORDER BY linkrev ASC""",
+                        (self.sqlreponame, clrev - 1, maxrev))
 
-                # Put split chunks back together into a single revision
-                groupedrevdata = {}
-                for revdata in self.sqlcursor:
-                    name = revdata[0]
-                    chunk = revdata[1]
-                    linkrev = revdata[3]
-                    groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
+                    # Put split chunks back together into a single revision
+                    groupedrevdata = {}
+                    for revdata in self.sqlcursor:
+                        name = revdata[0]
+                        chunk = revdata[1]
+                        linkrev = revdata[3]
+                        groupedrevdata.setdefault((name, linkrev), {})[chunk] = revdata
 
-                if not groupedrevdata:
-                    break
+                    if not groupedrevdata:
+                        break
 
-                fullrevisions = []
-                for chunks in groupedrevdata.itervalues():
-                    chunkcount = chunks[0][2]
-                    if chunkcount == 1:
-                        fullrevisions.append(chunks[0])
-                    elif chunkcount == len(chunks):
-                        fullchunk = list(chunks[0])
-                        data1 = ""
-                        for i in range(0, chunkcount):
-                            data1 += chunks[i][6]
-                        fullchunk[6] = data1
-                        fullrevisions.append(tuple(fullchunk))
-                    else:
-                        raise Exception("missing revision chunk - expected %s got %s" %
-                            (chunkcount, len(chunks)))
+                    fullrevisions = []
+                    for chunks in groupedrevdata.itervalues():
+                        chunkcount = chunks[0][2]
+                        if chunkcount == 1:
+                            fullrevisions.append(chunks[0])
+                        elif chunkcount == len(chunks):
+                            fullchunk = list(chunks[0])
+                            data1 = ""
+                            for i in range(0, chunkcount):
+                                data1 += chunks[i][6]
+                            fullchunk[6] = data1
+                            fullrevisions.append(tuple(fullchunk))
+                        else:
+                            raise Exception("missing revision chunk - expected %s got %s" %
+                                (chunkcount, len(chunks)))
 
-                fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[3])
-                for revdata in fullrevisions:
-                    queue.put(revdata)
+                    fullrevisions = sorted(fullrevisions, key=lambda revdata: revdata[3])
+                    for revdata in fullrevisions:
+                        queue.put(revdata)
 
-                clrev += chunksize
+                    clrev += chunksize
+            except Exception as ex:
+                queue.put(ex)
+                return
 
             queue.put(False)
 
@@ -780,6 +784,11 @@ def addentries(repo, queue, transaction):
             if not revdata:
                 exit = True
                 break
+
+            # The background thread had an exception, rethrow from the
+            # foreground thread.
+            if isinstance(revdata, Exception):
+                raise revdata
 
             linkrev = revdata[3]
             if currentlinkrev == -1:
