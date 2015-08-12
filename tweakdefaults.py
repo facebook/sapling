@@ -8,9 +8,14 @@
 
 This extension changes defaults to be more user friendly.
 
-  hg log      always follows history (-f)
-  hg rebase   does nothing without arguments
-  hg update   does nothing without arguments
+  hg log        always follows history (-f)
+  hg rebase     aborts without arguments
+  hg update     aborts without arguments
+                aborts if working copy is not clean
+  hg branch     aborts and encourages use of bookmarks
+  hg grep       greps the working directory instead of history
+  hg histgrep   renamed from grep
+
 """
 
 from mercurial import util, cmdutil, commands, hg, scmutil
