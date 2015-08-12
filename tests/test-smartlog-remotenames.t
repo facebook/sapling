@@ -16,7 +16,7 @@
   $ echo x >> x
   $ hg commit -qAm x2
 
-Resetting past a remote bookmark should not delete the remote bookmark
+Non-bookmarked public heads should not be visible in smartlog
 
   $ cd ..
   $ hg clone repo client
@@ -26,23 +26,61 @@ Resetting past a remote bookmark should not delete the remote bookmark
   $ hg book mybook -r 0
   $ hg up 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg smartlog -T '{node|short} {bookmarks} {remotebookmarks}'
-  o  a89d614e2364  default/master
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  o  1  default/master
   |
-  @  b292c1e3311f mybook
+  @  0 mybook
   
+Old head (rev 1) should no longer be visible
+
   $ echo z >> x
   $ hg commit -qAm x3
-  $ hg push -f --to master
-  pushing rev d14b8058ba3a to destination $TESTTMP/repo bookmark master
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files (+1 heads)
-  updating bookmark master
-  $ hg smartlog -T '{node|short} {bookmarks} {remotebookmarks}'
-  @  d14b8058ba3a  default/master
+  $ hg push -f -q --to master
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  @  2  default/master
   |
-  o  b292c1e3311f mybook
+  o  0 mybook
+  
+
+Test configuration of "interesting" bookmarks
+
+  $ hg up -q .^
+  $ echo x >> x
+  $ hg commit -qAm x4
+  $ hg push -f -q --to project/bookmark --force
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  o  2  default/master
+  |
+  | @  3  default/project/bookmark
+  |/
+  o  0 mybook
+  
+
+  $ hg up .^
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  o  2  default/master
+  |
+  @  0 mybook
+  
+  $ cat >> $HGRCPATH << EOF
+  > [smartlog]
+  > repos=default/
+  > names=project/bookmark
+  > EOF
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  o  3  default/project/bookmark
+  |
+  @  0 mybook
+  
+  $ cat >> $HGRCPATH << EOF
+  > [smartlog]
+  > names=master project/bookmark
+  > EOF
+  $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
+  o  2  default/master
+  |
+  | o  3  default/project/bookmark
+  |/
+  @  0 mybook
   

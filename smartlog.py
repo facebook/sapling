@@ -246,16 +246,16 @@ def _masterrevset(ui, repo, masterstring):
     if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
         names.update(set(repo.names['remotebookmarks'].listnames(repo)))
 
-    for name in _reposnames():
+    for name in _reposnames(ui):
         if name in names:
             return name
 
     return 'tip'
 
-def _reposnames():
+def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.
-    repos = ['', 'remote/', 'default/']
-    names = ['@', 'master', 'trunk', 'stable']
+    repos = ui.configlist('smartlog', 'repos', ['', 'remote/', 'default/'])
+    names = ui.configlist('smartlog', 'names', ['@', 'master', 'stable'])
 
     for repo in repos:
         for name in names:
@@ -311,7 +311,7 @@ def smartlogrevset(repo, subset, x):
     if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
         ns = repo.names['remotebookmarks']
         remotebooks = set(ns.listnames(repo))
-        for name in _reposnames():
+        for name in _reposnames(repo.ui):
             if name in remotebooks:
                 heads.add(rev(ns.namemap(repo, name)[0]))
 
