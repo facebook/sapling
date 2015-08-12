@@ -181,9 +181,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 if troffset == 0:
                     repo.store.markremoved(file)
             tr.close()
-        except: # re-raises
-            tr.abort()
-            raise
+        finally:
+            tr.release()
 
         if saveheads or savebases:
             ui.note(_("adding branch\n"))

@@ -394,7 +394,8 @@ class icasefsmatcher(match):
     def __init__(self, root, cwd, patterns, include, exclude, default, auditor,
                  ctx, listsubrepos=False, badfn=None):
         init = super(icasefsmatcher, self).__init__
-        self._dsnormalize = ctx.repo().dirstate.normalize
+        self._dirstate = ctx.repo().dirstate
+        self._dsnormalize = self._dirstate.normalize
 
         init(root, cwd, patterns, include, exclude, default, auditor=auditor,
              ctx=ctx, listsubrepos=listsubrepos, badfn=badfn)
@@ -410,7 +411,13 @@ class icasefsmatcher(match):
         kindpats = []
         for kind, pats, source in self._kp:
             if kind not in ('re', 'relre'):  # regex can't be normalized
+                p = pats
                 pats = self._dsnormalize(pats)
+
+                # Preserve the original to handle a case only rename.
+                if p != pats and p in self._dirstate:
+                    kindpats.append((kind, p, source))
+
             kindpats.append((kind, pats, source))
         return kindpats
 

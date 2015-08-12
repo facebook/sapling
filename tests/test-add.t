@@ -232,9 +232,17 @@ and OS X
   -xyz
   +def
 
+  $ hg mv CapsDir1/CapsDir/abc.txt CapsDir1/CapsDir/ABC.txt
+  moving CapsDir1/CapsDir/AbC.txt to CapsDir1/CapsDir/ABC.txt (glob)
+  $ hg ci -m "case changing rename" CapsDir1/CapsDir/AbC.txt CapsDir1/CapsDir/ABC.txt
+
+  $ hg status -A capsdir1/capsdir
+  M CapsDir1/CapsDir/SubDir/Def.txt
+  C CapsDir1/CapsDir/ABC.txt
+
   $ hg remove -f 'glob:**.txt' -X capsdir1/capsdir
   $ hg remove -f 'glob:**.txt' -I capsdir1/capsdir
-  removing CapsDir1/CapsDir/AbC.txt (glob)
+  removing CapsDir1/CapsDir/ABC.txt (glob)
   removing CapsDir1/CapsDir/SubDir/Def.txt (glob)
 #endif
 
