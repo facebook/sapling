@@ -90,7 +90,8 @@ class Merge3Text(object):
                     start_marker='<<<<<<<',
                     mid_marker='=======',
                     end_marker='>>>>>>>',
-                    base_marker=None):
+                    base_marker=None,
+                    localorother=None):
         """Return merge in cvs-like form.
         """
         self.conflicts = False
@@ -119,21 +120,28 @@ class Merge3Text(object):
                 for i in range(t[1], t[2]):
                     yield self.b[i]
             elif what == 'conflict':
-                self.conflicts = True
-                if start_marker is not None:
-                    yield start_marker + newline
-                for i in range(t[3], t[4]):
-                    yield self.a[i]
-                if base_marker is not None:
-                    yield base_marker + newline
-                    for i in range(t[1], t[2]):
-                        yield self.base[i]
-                if mid_marker is not None:
-                    yield mid_marker + newline
-                for i in range(t[5], t[6]):
-                    yield self.b[i]
-                if end_marker is not None:
-                    yield end_marker + newline
+                if localorother == 'local':
+                    for i in range(t[3], t[4]):
+                        yield self.a[i]
+                elif localorother == 'other':
+                    for i in range(t[5], t[6]):
+                        yield self.b[i]
+                else:
+                    self.conflicts = True
+                    if start_marker is not None:
+                        yield start_marker + newline
+                    for i in range(t[3], t[4]):
+                        yield self.a[i]
+                    if base_marker is not None:
+                        yield base_marker + newline
+                        for i in range(t[1], t[2]):
+                            yield self.base[i]
+                    if mid_marker is not None:
+                        yield mid_marker + newline
+                    for i in range(t[5], t[6]):
+                        yield self.b[i]
+                    if end_marker is not None:
+                        yield end_marker + newline
             else:
                 raise ValueError(what)
 
@@ -390,7 +398,7 @@ def simplemerge(ui, local, base, other, **opts):
         out = sys.stdout
 
     m3 = Merge3Text(basetext, localtext, othertext)
-    extrakwargs = {}
+    extrakwargs = {"localorother": opts.get("localorother", None)}
     if mode == 'union':
         extrakwargs['start_marker'] = None
         extrakwargs['mid_marker'] = None
