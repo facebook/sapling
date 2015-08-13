@@ -29,14 +29,24 @@ Testing diff --change
   -first
   +second
 
+  $ cd ..
+
 Test dumb revspecs (issue3474)
+
+  $ hg clone -q a dumbspec
+  $ cd dumbspec
+  $ echo "wdir" > file.txt
 
   $ hg diff -r 2:2
   $ hg diff -r "2 and 1"
   abort: empty revision range
   [255]
 
+  $ cd ..
+
 Testing diff --change when merge:
+
+  $ cd a
 
   $ for i in 1 2 3 4 5 6 7 8 9 10; do
   >    echo $i >> file.txt
