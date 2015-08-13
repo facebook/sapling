@@ -60,9 +60,40 @@ We approximate that by reducing the read buffer to 1 byte.
 
   $ cd ..
 
-Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
-
 #if no-pure
+
+Test SEGV caused by bad revision passed to reachableroots() (issue4775):
+
+  $ cd a
+
+  $ python <<EOF
+  > from mercurial import changelog, scmutil
+  > cl = changelog.changelog(scmutil.vfs('.hg/store'))
+  > print 'goods:'
+  > for head in [0, len(cl) - 1, -1]:
+  >     print'%s: %r' % (head, cl.reachableroots(0, [head], set([0])))
+  > print 'bads:'
+  > for head in [len(cl), 10000, -2, -10000]:
+  >     print '%s:' % head,
+  >     try:
+  >         cl.reachableroots(0, [head], set([0]))
+  >         print 'uncaught buffer overflow?'
+  >     except IndexError as inst:
+  >         print inst
+  > EOF
+  goods:
+  0: <baseset [0]>
+  1: <baseset [0]>
+  -1: <baseset []>
+  bads:
+  2: head out of range
+  10000: head out of range
+  -2: head out of range
+  -10000: head out of range
+
+  $ cd ..
+
+Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
 
   $ mkdir invalidparent
   $ cd invalidparent
