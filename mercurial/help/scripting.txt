@@ -56,7 +56,7 @@ HGENCODING
    incorrectly (often by using "?" as a placeholder for invalid
    characters in the current locale).
 
-   Explcitly setting this environment variable is a good practice to
+   Explicitly setting this environment variable is a good practice to
    guarantee consistent results. "utf-8" is a good choice on UNIX-like
    environments.
 
