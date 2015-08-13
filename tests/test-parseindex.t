@@ -94,6 +94,8 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
   > cl = changelog.changelog(scmutil.vfs(sys.argv[1]))
   > n0, n1 = cl.node(0), cl.node(1)
   > ops = [
+  >     ('reachableroots',
+  >      lambda: cl.index.reachableroots(0, [1], set([0]), False)),
   >     ('compute_phases_map_sets', lambda: cl.computephases([[0], []])),
   >     ('index_headrevs', lambda: cl.headrevs()),
   >     ('find_gca_candidates', lambda: cl.commonancestorsheads(n0, n1)),
@@ -109,11 +111,13 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
   > EOF
 
   $ python test.py limit/.hg/store
+  reachableroots: parent out of range
   compute_phases_map_sets: parent out of range
   index_headrevs: parent out of range
   find_gca_candidates: parent out of range
   find_deepest: parent out of range
   $ python test.py segv/.hg/store
+  reachableroots: parent out of range
   compute_phases_map_sets: parent out of range
   index_headrevs: parent out of range
   find_gca_candidates: parent out of range

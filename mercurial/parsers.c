@@ -1154,13 +1154,13 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	tovisit = (int *)malloc((len + 1) * sizeof(int));
 	if (tovisit == NULL) {
 		PyErr_NoMemory();
-		goto release_reachable;
+		goto bail;
 	}
 
 	seen = (char *)calloc(len+1, 1);
 	if (seen == NULL) {
 		PyErr_NoMemory();
-		goto release_seen_and_tovisit;
+		goto bail;
 	}
 
 	/* Populate tovisit with all the heads */
@@ -1192,7 +1192,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (revnum != -1) {
 			r = index_get_parents(self, revnum, parents, (int)len - 1);
 			if (r < 0)
-				goto release_seen_and_tovisit;
+				goto bail;
 
 			for (i = 0; i < 2; i++) {
 				if (seen[parents[i] + 1] == 0 && parents[i] >= minroot) {
@@ -1214,7 +1214,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 				r = index_get_parents(self, i, parents, (int)len - 1);
 				/* Corrupted index file, error is set from index_get_parents */
 				if (r < 0)
-					goto release_seen_and_tovisit;
+					goto bail;
 				for (k = 0; k < 2; k++) {
 					PyObject *p = PyInt_FromLong(parents[k]);
 					if (PySet_Contains(reachable, p) == 1)
@@ -1225,13 +1225,13 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		}
 	}
 
-release_seen_and_tovisit:
 	free(seen);
 	free(tovisit);
 	return reachable;
-release_reachable:
-	Py_XDECREF(reachable);
 bail:
+	Py_XDECREF(reachable);
+	free(seen);
+	free(tovisit);
 	return NULL;
 }
 
