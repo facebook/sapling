@@ -2700,9 +2700,12 @@ def debugpvec(ui, repo, a, b=None):
               pa.distance(pb), rel))
 
 @command('debugrebuilddirstate|debugrebuildstate',
-    [('r', 'rev', '', _('revision to rebuild to'), _('REV'))],
+    [('r', 'rev', '', _('revision to rebuild to'), _('REV')),
+     ('', 'minimal', None, _('only rebuild files that are inconsistent with '
+                             'the working copy parent')),
+    ],
     _('[-r REV]'))
-def debugrebuilddirstate(ui, repo, rev):
+def debugrebuilddirstate(ui, repo, rev, **opts):
     """rebuild the dirstate as it would look like for the given revision
 
     If no revision is specified the first current parent will be used.
@@ -2711,13 +2714,33 @@ def debugrebuilddirstate(ui, repo, rev):
     The actual working directory content or existing dirstate
     information such as adds or removes is not considered.
 
+    ``minimal`` will only rebuild the dirstate status for files that claim to be
+    tracked but are not in the parent manifest, or that exist in the parent
+    manifest but are not in the dirstate. It will not change adds, removes, or
+    modified files that are in the working copy parent.
+
     One use of this command is to make the next :hg:`status` invocation
     check the actual file content.
     """
     ctx = scmutil.revsingle(repo, rev)
     wlock = repo.wlock()
     try:
-        repo.dirstate.rebuild(ctx.node(), ctx.manifest())
+        dirstate = repo.dirstate
+
+        # See command doc for what minimal does.
+        if opts.get('minimal'):
+            dirstatefiles = set(dirstate)
+            ctxfiles = set(ctx.manifest().keys())
+            for file in (dirstatefiles | ctxfiles):
+                indirstate = file in dirstatefiles
+                inctx = file in ctxfiles
+
+                if indirstate and not inctx and dirstate[file] != 'a':
+                    dirstate.drop(file)
+                elif inctx and not indirstate:
+                    dirstate.normallookup(file)
+        else:
+            dirstate.rebuild(ctx.node(), ctx.manifest())
     finally:
         wlock.release()
 

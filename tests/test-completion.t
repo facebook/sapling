@@ -254,7 +254,7 @@ Show all commands + options
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
-  debugrebuilddirstate: rev
+  debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugrename: rev
   debugrevlog: changelog, manifest, dir, dump
