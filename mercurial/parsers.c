@@ -1144,7 +1144,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		includepath = 1;
 
 	/* Initialize return set */
-	reachable = PySet_New(0);
+	reachable = PySet_New(NULL);
 	if (reachable == NULL) {
 		PyErr_NoMemory();
 		goto bail;
