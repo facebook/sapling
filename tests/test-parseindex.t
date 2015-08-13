@@ -73,12 +73,12 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   > for head in [0, len(cl) - 1, -1]:
   >     print'%s: %r' % (head, cl.reachableroots(0, [head], set([0])))
   > print 'bads:'
-  > for head in [len(cl), 10000, -2, -10000]:
+  > for head in [len(cl), 10000, -2, -10000, None]:
   >     print '%s:' % head,
   >     try:
   >         cl.reachableroots(0, [head], set([0]))
   >         print 'uncaught buffer overflow?'
-  >     except IndexError as inst:
+  >     except (IndexError, TypeError) as inst:
   >         print inst
   > EOF
   goods:
@@ -90,6 +90,7 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   10000: head out of range
   -2: head out of range
   -10000: head out of range
+  None: an integer is required
 
   $ cd ..
 

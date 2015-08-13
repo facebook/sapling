@@ -1166,7 +1166,9 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	/* Populate tovisit with all the heads */
 	numheads = PyList_GET_SIZE(heads);
 	for (i = 0; i < numheads; i++) {
-		revnum = PyInt_AS_LONG(PyList_GET_ITEM(heads, i));
+		revnum = PyInt_AsLong(PyList_GET_ITEM(heads, i));
+		if (revnum == -1 && PyErr_Occurred())
+			goto bail;
 		if (revnum + 1 < 0 || revnum + 1 >= len + 1) {
 			PyErr_SetString(PyExc_IndexError, "head out of range");
 			goto bail;
