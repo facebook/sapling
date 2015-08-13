@@ -690,6 +690,11 @@ def revsingle(repo, revspec, default='.'):
         raise util.Abort(_('empty revision set'))
     return repo[l.last()]
 
+def _pairspec(revspec):
+    tree = revset.parse(revspec)
+    tree = revset.optimize(tree, True)[1]  # fix up "x^:y" -> "(x^):y"
+    return tree and tree[0] in ('range', 'rangepre', 'rangepost', 'rangeall')
+
 def revpair(repo, revs):
     if not revs:
         return repo.dirstate.p1(), None
@@ -711,12 +716,11 @@ def revpair(repo, revs):
     if first is None:
         raise util.Abort(_('empty revision range'))
 
-    if first == second and len(revs) == 1 and _revrangesep not in revs[0]:
+    # if top-level is range expression, the result must always be a pair
+    if first == second and len(revs) == 1 and not _pairspec(revs[0]):
         return repo.lookup(first), None
 
     return repo.lookup(first), repo.lookup(second)
-
-_revrangesep = ':'
 
 def revrange(repo, revs):
     """Yield revision as strings from a list of revision specifications."""

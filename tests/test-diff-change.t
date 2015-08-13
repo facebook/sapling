@@ -31,16 +31,50 @@ Testing diff --change
 
   $ cd ..
 
-Test dumb revspecs (issue3474)
+Test dumb revspecs: top-level "x:y", "x:", ":y" and ":" ranges should be handled
+as pairs even if x == y, but not for "f(x:y)" nor "x::y" (issue3474, issue4774)
 
   $ hg clone -q a dumbspec
   $ cd dumbspec
   $ echo "wdir" > file.txt
 
   $ hg diff -r 2:2
+  $ hg diff -r 2:.
+  $ hg diff -r 2:
+  $ hg diff -r :0
+  $ hg diff -r '2:first(2:2)'
+  $ hg diff -r 'first(2:2)' --nodates
+  diff -r bf5ff72eb7e0 file.txt
+  --- a/file.txt
+  +++ b/file.txt
+  @@ -1,1 +1,1 @@
+  -third
+  +wdir
+  $ hg diff -r 2::2 --nodates
+  diff -r bf5ff72eb7e0 file.txt
+  --- a/file.txt
+  +++ b/file.txt
+  @@ -1,1 +1,1 @@
+  -third
+  +wdir
   $ hg diff -r "2 and 1"
   abort: empty revision range
   [255]
+
+  $ cd ..
+
+  $ hg clone -qr0 a dumbspec-rev0
+  $ cd dumbspec-rev0
+  $ echo "wdir" > file.txt
+
+  $ hg diff -r :
+  $ hg diff -r 'first(:)' --nodates
+  diff -r 4bb65dda5db4 file.txt
+  --- a/file.txt
+  +++ b/file.txt
+  @@ -1,1 +1,1 @@
+  -first
+  +wdir
 
   $ cd ..
 

@@ -1515,10 +1515,16 @@ test usage in revpair (with "+")
 (single rev)
 
   $ hg diff -r 'tip^' -r 'tip^'
-  $ hg diff -r 'tip^::tip^ or tip^'
+  $ hg diff -r 'tip^:tip^'
 
 (single rev that does not looks like a range)
 
+  $ hg diff -r 'tip^::tip^ or tip^'
+  diff -r d5d0dcbdc4d9 .hgtags
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/.hgtags	* (glob)
+  @@ -0,0 +1,1 @@
+  +e0cc66ef77e8b6f711815af4e001a6594fde3ba5 1.0
   $ hg diff -r 'tip^ or tip^'
   diff -r d5d0dcbdc4d9 .hgtags
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
