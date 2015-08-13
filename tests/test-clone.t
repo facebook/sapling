@@ -1013,3 +1013,15 @@ Request to clone a single branch is respected in sharing mode
   adding remote bookmark bookA
 
   $ ls share-1anowc
+
+Test that auto sharing doesn't cause failure of "hg clone local remote"
+
+  $ cd $TESTTMP
+  $ hg -R a id -r 0
+  acb14030fe0a
+  $ hg id -R remote -r 0
+  abort: there is no Mercurial repository here (.hg not found)
+  [255]
+  $ hg --config share.pool=share -q clone -e "python \"$TESTDIR/dummyssh\"" a ssh://user@dummy/remote
+  $ hg -R remote id -r 0
+  acb14030fe0a
