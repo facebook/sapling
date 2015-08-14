@@ -1185,14 +1185,16 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		/* Add the node to reachable if it is a root*/
 		revnum = tovisit[k++];
 		val = PyInt_FromLong(revnum);
+		if (val == NULL)
+			goto bail;
 		if (PySet_Contains(roots, val) == 1) {
 			PySet_Add(reachable, val);
 			if (includepath == 0) {
-				Py_XDECREF(val);
+				Py_DECREF(val);
 				continue;
 			}
 		}
-		Py_XDECREF(val);
+		Py_DECREF(val);
 
 		/* Add its parents to the list of nodes to visit */
 		if (revnum != -1) {
@@ -1223,9 +1225,15 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 					goto bail;
 				for (k = 0; k < 2; k++) {
 					PyObject *p = PyInt_FromLong(parents[k]);
-					if (PySet_Contains(reachable, p) == 1)
-						PySet_Add(reachable, PyInt_FromLong(i));
-					Py_XDECREF(p);
+					if (p == NULL)
+						goto bail;
+					if (PySet_Contains(reachable, p) == 1) {
+						val = PyInt_FromLong(i);
+						if (val == NULL)
+							goto bail;
+						PySet_Add(reachable, val);
+					}
+					Py_DECREF(p);
 				}
 			}
 		}
