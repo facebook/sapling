@@ -1130,9 +1130,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 
 	/* Internal data structure:
 	 * tovisit: array of length len+1 (all revs + nullrev), filled upto lentovisit
-	 * revstates: array of length len+1 (all revs + nullrev) 0: not seen, 1 seen*/
+	 * revstates: array of length len+1 (all revs + nullrev) */
 	int *tovisit = NULL;
 	long lentovisit = 0;
+	enum { RS_SEEN = 1 };
 	char *revstates = NULL;
 
 	/* Get arguments */
@@ -1173,9 +1174,9 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 			PyErr_SetString(PyExc_IndexError, "head out of range");
 			goto bail;
 		}
-		if (revstates[revnum+1] == 0) {
+		if (!(revstates[revnum + 1] & RS_SEEN)) {
 			tovisit[lentovisit++] = revnum;
-			revstates[revnum+1]=1;
+			revstates[revnum + 1] |= RS_SEEN;
 		}
 	}
 
@@ -1203,10 +1204,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (r < 0)
 			goto bail;
 		for (i = 0; i < 2; i++) {
-			if (revstates[parents[i] + 1] == 0
+			if (!(revstates[parents[i] + 1] & RS_SEEN)
 			    && parents[i] >= minroot) {
 				tovisit[lentovisit++] = parents[i];
-				revstates[parents[i] + 1] = 1;
+				revstates[parents[i] + 1] |= RS_SEEN;
 			}
 		}
 	}
@@ -1218,7 +1219,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (minidx < 0)
 			minidx = 0;
 		for (i = minidx; i < len; i++) {
-			if (revstates[i + 1] != 1)
+			if (!(revstates[i + 1] & RS_SEEN))
 				continue;
 			r = index_get_parents(self, i, parents, (int)len - 1);
 			/* Corrupted index file, error is set from
