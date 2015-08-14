@@ -1187,7 +1187,7 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			goto bail;
 		}
 		if (!(revstates[revnum + 1] & RS_SEEN)) {
-			tovisit[lentovisit++] = revnum;
+			tovisit[lentovisit++] = (int)revnum;
 			revstates[revnum + 1] |= RS_SEEN;
 		}
 	}
@@ -1228,7 +1228,7 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 	/* Find all the nodes in between the roots we found and the heads
 	 * and add them to the reachable set */
 	if (includepath == 1) {
-		int minidx = minroot;
+		long minidx = minroot;
 		if (minidx < 0)
 			minidx = 0;
 		for (i = minidx; i < len; i++) {
