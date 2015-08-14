@@ -71,9 +71,11 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
     if not node and not rev and not kwargs['date']:
         raise util.Abort(
-            'you must specify a destination to update to',
-            hint="if you're trying to move a bookmark forward, try " +
-                 "'hg rebase -d <destination>'")
+            'You must specify a destination to update to,' +
+            ' for example "hg update master".',
+            hint='If you\'re trying to move a bookmark forward, try ' +
+                 '"hg rebase -d <destination>".')
+
 
     # By default, never update when there are local changes unless updating to
     # the current rev. This is useful for, eg, arc feature when the only
