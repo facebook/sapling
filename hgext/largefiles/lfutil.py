@@ -247,6 +247,8 @@ def getstandinmatcher(repo, rmatcher=None):
 
     if rmatcher and not rmatcher.always():
         pats = [os.path.join(standindir, pat) for pat in rmatcher.files()]
+        if not pats:
+            pats = [standindir]
         match = scmutil.match(repo[None], pats, badfn=badfn)
         # if pats is empty, it would incorrectly always match, so clear _always
         match._always = False

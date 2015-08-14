@@ -428,7 +428,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     shareopts = shareopts or {}
     sharepool = shareopts.get('pool')
     sharenamemode = shareopts.get('mode')
-    if sharepool:
+    if sharepool and islocal(dest):
         sharepath = None
         if sharenamemode == 'identity':
             # Resolve the name from the initial changeset in the remote

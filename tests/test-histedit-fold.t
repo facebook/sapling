@@ -505,4 +505,8 @@ into the hook command.
   1:9599899f62c0 a
   0:79b99e9c8e49 b
 
+  $ echo "foo" > amended.txt
+  $ hg add amended.txt
+  $ hg ci -q --config extensions.largefiles= --amend -I amended.txt
+
   $ cd ..

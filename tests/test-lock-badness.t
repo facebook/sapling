@@ -59,7 +59,6 @@ One process waiting for another
   $ hg -R b up -q --config hooks.pre-update="python:`pwd`/hooks.py:sleephalf"
   waiting for lock on working directory of b held by '*:*' (glob)
   got lock after ? seconds (glob)
-  warning: ignoring unknown working parent d2ae7f538514!
   $ wait
   $ cat stdout
   adding b

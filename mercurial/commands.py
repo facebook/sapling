@@ -6475,51 +6475,55 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if rev is None or rev == '':
         rev = node
 
-    cmdutil.clearunfinished(repo)
+    wlock = repo.wlock()
+    try:
+        cmdutil.clearunfinished(repo)
 
-    # with no argument, we also move the active bookmark, if any
-    rev, movemarkfrom = bookmarks.calculateupdate(ui, repo, rev)
+        # with no argument, we also move the active bookmark, if any
+        rev, movemarkfrom = bookmarks.calculateupdate(ui, repo, rev)
 
-    # if we defined a bookmark, we have to remember the original bookmark name
-    brev = rev
-    rev = scmutil.revsingle(repo, rev, rev).rev()
+        # if we defined a bookmark, we have to remember the original name
+        brev = rev
+        rev = scmutil.revsingle(repo, rev, rev).rev()
 
-    if check and clean:
-        raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
+        if check and clean:
+            raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
 
-    if date:
-        if rev is not None:
-            raise util.Abort(_("you can't specify a revision and a date"))
-        rev = cmdutil.finddate(ui, repo, date)
+        if date:
+            if rev is not None:
+                raise util.Abort(_("you can't specify a revision and a date"))
+            rev = cmdutil.finddate(ui, repo, date)
 
-    if check:
-        cmdutil.bailifchanged(repo, merge=False)
-        if rev is None:
-            rev = repo[repo[None].branch()].rev()
+        if check:
+            cmdutil.bailifchanged(repo, merge=False)
+            if rev is None:
+                rev = repo[repo[None].branch()].rev()
 
-    repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
+        repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
-    if clean:
-        ret = hg.clean(repo, rev)
-    else:
-        ret = hg.update(repo, rev)
-
-    if not ret and movemarkfrom:
-        if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-            ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+        if clean:
+            ret = hg.clean(repo, rev)
         else:
-            # this can happen with a non-linear update
-            ui.status(_("(leaving bookmark %s)\n") %
-                      repo._activebookmark)
+            ret = hg.update(repo, rev)
+
+        if not ret and movemarkfrom:
+            if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+            else:
+                # this can happen with a non-linear update
+                ui.status(_("(leaving bookmark %s)\n") %
+                          repo._activebookmark)
+                bookmarks.deactivate(repo)
+        elif brev in repo._bookmarks:
+            bookmarks.activate(repo, brev)
+            ui.status(_("(activating bookmark %s)\n") % brev)
+        elif brev:
+            if repo._activebookmark:
+                ui.status(_("(leaving bookmark %s)\n") %
+                          repo._activebookmark)
             bookmarks.deactivate(repo)
-    elif brev in repo._bookmarks:
-        bookmarks.activate(repo, brev)
-        ui.status(_("(activating bookmark %s)\n") % brev)
-    elif brev:
-        if repo._activebookmark:
-            ui.status(_("(leaving bookmark %s)\n") %
-                      repo._activebookmark)
-        bookmarks.deactivate(repo)
+    finally:
+        wlock.release()
 
     return ret
 
