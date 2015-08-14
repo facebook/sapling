@@ -1108,16 +1108,15 @@ static inline void set_phase_from_parents(char *phases, int parent_1,
 		phases[i] = phases[parent_2];
 }
 
-static PyObject *reachableroots(indexObject *self, PyObject *args)
+static PyObject *reachableroots2(indexObject *self, PyObject *args)
 {
 
 	/* Input */
 	long minroot;
 	PyObject *includepatharg = NULL;
 	int includepath = 0;
-	/* heads is a list */
+	/* heads and roots are lists */
 	PyObject *heads = NULL;
-	/* roots is a set */
 	PyObject *roots = NULL;
 	PyObject *reachable = NULL;
 
@@ -1136,12 +1135,13 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	 * revstates: array of length len+1 (all revs + nullrev) */
 	int *tovisit = NULL;
 	long lentovisit = 0;
-	enum { RS_SEEN = 1 };
+	enum { RS_SEEN = 1, RS_ROOT = 2 };
 	char *revstates = NULL;
 
 	/* Get arguments */
 	if (!PyArg_ParseTuple(args, "lO!O!O!", &minroot, &PyList_Type, &heads,
-				&PySet_Type, &roots, &PyBool_Type, &includepatharg))
+			      &PyList_Type, &roots,
+			      &PyBool_Type, &includepatharg))
 		goto bail;
 
 	if (includepatharg == Py_True)
@@ -1167,6 +1167,18 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		goto bail;
 	}
 
+	l = PyList_GET_SIZE(roots);
+	for (i = 0; i < l; i++) {
+		revnum = PyInt_AsLong(PyList_GET_ITEM(roots, i));
+		if (revnum == -1 && PyErr_Occurred())
+			goto bail;
+		/* If root is out of range, e.g. wdir(), it must be unreachable
+		 * from heads. So we can just ignore it. */
+		if (revnum + 1 < 0 || revnum + 1 >= len + 1)
+			continue;
+		revstates[revnum + 1] |= RS_ROOT;
+	}
+
 	/* Populate tovisit with all the heads */
 	l = PyList_GET_SIZE(heads);
 	for (i = 0; i < l; i++) {
@@ -1188,17 +1200,15 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	while (k < lentovisit) {
 		/* Add the node to reachable if it is a root*/
 		revnum = tovisit[k++];
-		val = PyInt_FromLong(revnum);
-		if (val == NULL)
-			goto bail;
-		if (PySet_Contains(roots, val) == 1) {
+		if (revstates[revnum + 1] & RS_ROOT) {
+			val = PyInt_FromLong(revnum);
+			if (val == NULL)
+				goto bail;
 			PySet_Add(reachable, val);
-			if (includepath == 0) {
-				Py_DECREF(val);
+			Py_DECREF(val);
+			if (includepath == 0)
 				continue;
-			}
 		}
-		Py_DECREF(val);
 
 		/* Add its parents to the list of nodes to visit */
 		if (revnum == -1)
@@ -2434,7 +2444,7 @@ static PyMethodDef index_methods[] = {
 	 "get an index entry"},
 	{"computephasesmapsets", (PyCFunction)compute_phases_map_sets,
 			METH_VARARGS, "compute phases"},
-	{"reachableroots", (PyCFunction)reachableroots, METH_VARARGS,
+	{"reachableroots2", (PyCFunction)reachableroots2, METH_VARARGS,
 		"reachableroots"},
 	{"headrevs", (PyCFunction)index_headrevs, METH_VARARGS,
 	 "get head revisions"}, /* Can do filtering since 3.2 */

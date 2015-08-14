@@ -94,6 +94,7 @@ def reachablerootspure(repo, minroot, roots, heads, includepath):
     if not roots:
         return baseset()
     parentrevs = repo.changelog.parentrevs
+    roots = set(roots)
     visit = list(heads)
     reachable = set()
     seen = {}
@@ -133,7 +134,7 @@ def reachableroots(repo, roots, heads, includepath=False):
     # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
     # (and if it is not, it should.)
     minroot = min(roots)
-    roots = set(roots)
+    roots = list(roots)
     heads = list(heads)
     try:
         return repo.changelog.reachableroots(minroot, heads, roots, includepath)

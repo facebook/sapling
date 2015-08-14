@@ -187,7 +187,7 @@ class changelog(revlog.revlog):
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
         return revset.baseset(sorted(
-            self.index.reachableroots(minroot, heads, roots, includepath)))
+            self.index.reachableroots2(minroot, heads, roots, includepath)))
 
     def headrevs(self):
         if self.filteredrevs:

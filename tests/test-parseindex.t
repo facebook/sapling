@@ -69,27 +69,52 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   $ python <<EOF
   > from mercurial import changelog, scmutil
   > cl = changelog.changelog(scmutil.vfs('.hg/store'))
-  > print 'goods:'
+  > print 'good heads:'
   > for head in [0, len(cl) - 1, -1]:
-  >     print'%s: %r' % (head, cl.reachableroots(0, [head], set([0])))
-  > print 'bads:'
+  >     print'%s: %r' % (head, cl.reachableroots(0, [head], [0]))
+  > print 'bad heads:'
   > for head in [len(cl), 10000, -2, -10000, None]:
   >     print '%s:' % head,
   >     try:
-  >         cl.reachableroots(0, [head], set([0]))
+  >         cl.reachableroots(0, [head], [0])
   >         print 'uncaught buffer overflow?'
   >     except (IndexError, TypeError) as inst:
   >         print inst
+  > print 'good roots:'
+  > for root in [0, len(cl) - 1, -1]:
+  >     print '%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root]))
+  > print 'out-of-range roots are ignored:'
+  > for root in [len(cl), 10000, -2, -10000]:
+  >     print '%s: %r' % (root, cl.reachableroots(root, [len(cl) - 1], [root]))
+  > print 'bad roots:'
+  > for root in [None]:
+  >     print '%s:' % root,
+  >     try:
+  >         cl.reachableroots(root, [len(cl) - 1], [root])
+  >         print 'uncaught error?'
+  >     except TypeError as inst:
+  >         print inst
   > EOF
-  goods:
+  good heads:
   0: <baseset [0]>
   1: <baseset [0]>
   -1: <baseset []>
-  bads:
+  bad heads:
   2: head out of range
   10000: head out of range
   -2: head out of range
   -10000: head out of range
+  None: an integer is required
+  good roots:
+  0: <baseset [0]>
+  1: <baseset [1]>
+  -1: <baseset [-1]>
+  out-of-range roots are ignored:
+  2: <baseset []>
+  10000: <baseset []>
+  -2: <baseset []>
+  -10000: <baseset []>
+  bad roots:
   None: an integer is required
 
   $ cd ..
@@ -127,7 +152,7 @@ Test corrupted p1/p2 fields that could cause SEGV at parsers.c:
   > n0, n1 = cl.node(0), cl.node(1)
   > ops = [
   >     ('reachableroots',
-  >      lambda: cl.index.reachableroots(0, [1], set([0]), False)),
+  >      lambda: cl.index.reachableroots2(0, [1], [0], False)),
   >     ('compute_phases_map_sets', lambda: cl.computephases([[0], []])),
   >     ('index_headrevs', lambda: cl.headrevs()),
   >     ('find_gca_candidates', lambda: cl.commonancestorsheads(n0, n1)),
