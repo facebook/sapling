@@ -1148,11 +1148,9 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 		includepath = 1;
 
 	/* Initialize return set */
-	reachable = PySet_New(NULL);
-	if (reachable == NULL) {
-		PyErr_NoMemory();
+	reachable = PyList_New(0);
+	if (reachable == NULL)
 		goto bail;
-	}
 
 	/* Initialize internal datastructures */
 	tovisit = (int *)malloc((len + 1) * sizeof(int));
@@ -1205,7 +1203,7 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			val = PyInt_FromLong(revnum);
 			if (val == NULL)
 				goto bail;
-			PySet_Add(reachable, val);
+			PyList_Append(reachable, val);
 			Py_DECREF(val);
 			if (includepath == 0)
 				continue;
@@ -1241,12 +1239,13 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			if (r < 0)
 				goto bail;
 			for (k = 0; k < 2; k++) {
-				if (revstates[parents[k] + 1] & RS_REACHABLE) {
+				if ((revstates[parents[k] + 1] & RS_REACHABLE)
+				    && !(revstates[i + 1] & RS_REACHABLE)) {
 					revstates[i + 1] |= RS_REACHABLE;
 					val = PyInt_FromLong(i);
 					if (val == NULL)
 						goto bail;
-					PySet_Add(reachable, val);
+					PyList_Append(reachable, val);
 					Py_DECREF(val);
 				}
 			}
