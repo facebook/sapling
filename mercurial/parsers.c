@@ -1232,6 +1232,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 						if (val == NULL)
 							goto bail;
 						PySet_Add(reachable, val);
+						Py_DECREF(val);
 					}
 					Py_DECREF(p);
 				}
