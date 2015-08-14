@@ -1130,10 +1130,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 
 	/* Internal data structure:
 	 * tovisit: array of length len+1 (all revs + nullrev), filled upto lentovisit
-	 * seen: array of length len+1 (all revs + nullrev) 0: not seen, 1 seen*/
+	 * revstates: array of length len+1 (all revs + nullrev) 0: not seen, 1 seen*/
 	int *tovisit = NULL;
 	long lentovisit = 0;
-	char *seen = NULL;
+	char *revstates = NULL;
 
 	/* Get arguments */
 	if (!PyArg_ParseTuple(args, "lO!O!O!", &minroot, &PyList_Type, &heads,
@@ -1157,8 +1157,8 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		goto bail;
 	}
 
-	seen = (char *)calloc(len+1, 1);
-	if (seen == NULL) {
+	revstates = (char *)calloc(len + 1, 1);
+	if (revstates == NULL) {
 		PyErr_NoMemory();
 		goto bail;
 	}
@@ -1173,9 +1173,9 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 			PyErr_SetString(PyExc_IndexError, "head out of range");
 			goto bail;
 		}
-		if (seen[revnum+1] == 0) {
+		if (revstates[revnum+1] == 0) {
 			tovisit[lentovisit++] = revnum;
-			seen[revnum+1]=1;
+			revstates[revnum+1]=1;
 		}
 	}
 
@@ -1203,10 +1203,10 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (r < 0)
 			goto bail;
 		for (i = 0; i < 2; i++) {
-			if (seen[parents[i] + 1] == 0
+			if (revstates[parents[i] + 1] == 0
 			    && parents[i] >= minroot) {
 				tovisit[lentovisit++] = parents[i];
-				seen[parents[i] + 1] = 1;
+				revstates[parents[i] + 1] = 1;
 			}
 		}
 	}
@@ -1218,7 +1218,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (minidx < 0)
 			minidx = 0;
 		for (i = minidx; i < len; i++) {
-			if (seen[i + 1] != 1)
+			if (revstates[i + 1] != 1)
 				continue;
 			r = index_get_parents(self, i, parents, (int)len - 1);
 			/* Corrupted index file, error is set from
@@ -1241,12 +1241,12 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		}
 	}
 
-	free(seen);
+	free(revstates);
 	free(tovisit);
 	return reachable;
 bail:
 	Py_XDECREF(reachable);
-	free(seen);
+	free(revstates);
 	free(tovisit);
 	return NULL;
 }
