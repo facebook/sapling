@@ -1135,7 +1135,7 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 	 * revstates: array of length len+1 (all revs + nullrev) */
 	int *tovisit = NULL;
 	long lentovisit = 0;
-	enum { RS_SEEN = 1, RS_ROOT = 2 };
+	enum { RS_SEEN = 1, RS_ROOT = 2, RS_REACHABLE = 4 };
 	char *revstates = NULL;
 
 	/* Get arguments */
@@ -1201,6 +1201,7 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 		/* Add the node to reachable if it is a root*/
 		revnum = tovisit[k++];
 		if (revstates[revnum + 1] & RS_ROOT) {
+			revstates[revnum + 1] |= RS_REACHABLE;
 			val = PyInt_FromLong(revnum);
 			if (val == NULL)
 				goto bail;
@@ -1240,17 +1241,14 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			if (r < 0)
 				goto bail;
 			for (k = 0; k < 2; k++) {
-				PyObject *p = PyInt_FromLong(parents[k]);
-				if (p == NULL)
-					goto bail;
-				if (PySet_Contains(reachable, p) == 1) {
+				if (revstates[parents[k] + 1] & RS_REACHABLE) {
+					revstates[i + 1] |= RS_REACHABLE;
 					val = PyInt_FromLong(i);
 					if (val == NULL)
 						goto bail;
 					PySet_Add(reachable, val);
 					Py_DECREF(val);
 				}
-				Py_DECREF(p);
 			}
 		}
 	}
