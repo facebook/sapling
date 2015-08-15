@@ -42,6 +42,7 @@ class filemapper(object):
         self.include = {}
         self.exclude = {}
         self.rename = {}
+        self.targetprefixes = None
         if path:
             if self.parse(path):
                 raise util.Abort(_('errors in filemap'))
@@ -99,6 +100,30 @@ class filemapper(object):
             except KeyError:
                 pass
         return '', name, ''
+
+    def istargetfile(self, filename):
+        """Return true if the given target filename is covered as a destination
+        of the filemap. This is useful for identifying what parts of the target
+        repo belong to the source repo and what parts don't."""
+        if self.targetprefixes is None:
+            self.targetprefixes = set()
+            for before, after in self.rename.iteritems():
+                self.targetprefixes.add(after)
+
+        # If "." is a target, then all target files are considered from the
+        # source.
+        if not self.targetprefixes or '.' in self.targetprefixes:
+            return True
+
+        filename = normalize(filename)
+        for pre, suf in rpairs(filename):
+            # This check is imperfect since it doesn't account for the
+            # include/exclude list, but it should work in filemaps that don't
+            # apply include/exclude to the same source directories they are
+            # renaming.
+            if pre in self.targetprefixes:
+                return True
+        return False
 
     def __call__(self, name):
         if self.include:
@@ -409,6 +434,9 @@ class filemap_source(converter_source):
                     ncopies[newc] = newsource
 
         return files, ncopies, ncleanp2
+
+    def targetfilebelongstosource(self, targetfilename):
+        return self.filemapper.istargetfile(targetfilename)
 
     def getfile(self, name, rev):
         realname, realrev = rev
