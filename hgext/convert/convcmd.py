@@ -120,6 +120,9 @@ class progresssource(object):
                          item=file, total=self.filecount)
         return self.source.getfile(file, rev)
 
+    def targetfilebelongstosource(self, targetfilename):
+        return self.source.targetfilebelongstosource(targetfilename)
+
     def lookuprev(self, rev):
         return self.source.lookuprev(rev)
 

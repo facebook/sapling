@@ -82,6 +82,13 @@ class converter_source(object):
     def after(self):
         pass
 
+    def targetfilebelongstosource(self, targetfilename):
+        """Returns true if the given targetfile belongs to the source repo. This
+        is useful when only a subdirectory of the target belongs to the source
+        repo."""
+        # For normal full repo converts, this is always True.
+        return True
+
     def setrevmap(self, revmap):
         """set the map of already-converted revisions"""
         pass
