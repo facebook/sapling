@@ -1114,7 +1114,6 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	int includepath = 0;
 	/* heads is a list */
 	PyObject *heads = NULL;
-	Py_ssize_t numheads;
 	/* roots is a set */
 	PyObject *roots = NULL;
 	PyObject *reachable = NULL;
@@ -1124,6 +1123,7 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	long revnum;
 	Py_ssize_t k;
 	Py_ssize_t i;
+	Py_ssize_t l;
 	int r;
 	int minidx;
 	int parents[2];
@@ -1164,8 +1164,8 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 	}
 
 	/* Populate tovisit with all the heads */
-	numheads = PyList_GET_SIZE(heads);
-	for (i = 0; i < numheads; i++) {
+	l = PyList_GET_SIZE(heads);
+	for (i = 0; i < l; i++) {
 		revnum = PyInt_AsLong(PyList_GET_ITEM(heads, i));
 		if (revnum == -1 && PyErr_Occurred())
 			goto bail;
