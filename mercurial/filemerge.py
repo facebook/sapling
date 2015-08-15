@@ -227,15 +227,12 @@ def _premerge(repo, toolconf, files, labels=None):
             util.copyfile(back, a) # restore from backup and try again
     return 1 # continue merging
 
-@internaltool('merge', True,
-              _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"))
-def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     """
     Uses the internal non-interactive simple merge algorithm for merging
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file. Markers will have two sections, one for each side
-    of merge."""
+    of merge, unless mode equals 'union' which suppresses the markers."""
     tool, toolpath, binary, symlink = toolconf
     if symlink:
         repo.ui.warn(_('warning: internal :merge cannot merge symlinks '
@@ -247,9 +244,21 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
         ui = repo.ui
 
-        r = simplemerge.simplemerge(ui, a, b, c, label=labels)
+        r = simplemerge.simplemerge(ui, a, b, c, label=labels, mode=mode)
         return True, r
     return False, 0
+
+@internaltool('merge', True,
+              _("merging %s incomplete! "
+                "(edit conflicts, then use 'hg resolve --mark')\n"))
+def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    """
+    Uses the internal non-interactive simple merge algorithm for merging
+    files. It will fail if there are any conflicts and leave markers in
+    the partially merged file. Markers will have two sections, one for each side
+    of merge."""
+    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf,
+                  files, labels, 'merge')
 
 @internaltool('merge3', True,
               _("merging %s incomplete! "
