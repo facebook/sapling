@@ -33,6 +33,8 @@ def update(rev):
     """update the repo to a revision"""
     try:
         check_call(['hg', 'update', '--quiet', '--check', str(rev)])
+        check_output(['make', 'local'],
+                     stderr=None)  # suppress output except for error/warning
     except CalledProcessError as exc:
         print >> sys.stderr, 'update to revision %s failed, aborting' % rev
         sys.exit(exc.returncode)
