@@ -100,9 +100,9 @@ class Merge3Text(object):
                 newline = '\r\n'
             elif self.a[0].endswith('\r'):
                 newline = '\r'
-        if name_a:
+        if name_a and start_marker:
             start_marker = start_marker + ' ' + name_a
-        if name_b:
+        if name_b and end_marker:
             end_marker = end_marker + ' ' + name_b
         if name_base and base_marker:
             base_marker = base_marker + ' ' + name_base
@@ -120,17 +120,20 @@ class Merge3Text(object):
                     yield self.b[i]
             elif what == 'conflict':
                 self.conflicts = True
-                yield start_marker + newline
+                if start_marker is not None:
+                    yield start_marker + newline
                 for i in range(t[3], t[4]):
                     yield self.a[i]
                 if base_marker is not None:
                     yield base_marker + newline
                     for i in range(t[1], t[2]):
                         yield self.base[i]
-                yield mid_marker + newline
+                if mid_marker is not None:
+                    yield mid_marker + newline
                 for i in range(t[5], t[6]):
                     yield self.b[i]
-                yield end_marker + newline
+                if end_marker is not None:
+                    yield end_marker + newline
             else:
                 raise ValueError(what)
 
@@ -353,18 +356,24 @@ def simplemerge(ui, local, base, other, **opts):
                 raise util.Abort(msg)
         return text
 
-    name_a = local
-    name_b = other
-    name_base = None
-    labels = opts.get('label', [])
-    if len(labels) > 0:
-        name_a = labels[0]
-    if len(labels) > 1:
-        name_b = labels[1]
-    if len(labels) > 2:
-        name_base = labels[2]
-    if len(labels) > 3:
-        raise util.Abort(_("can only specify three labels."))
+    mode = opts.get('mode','merge')
+    if mode == 'union':
+        name_a = None
+        name_b = None
+        name_base = None
+    else:
+        name_a = local
+        name_b = other
+        name_base = None
+        labels = opts.get('label', [])
+        if len(labels) > 0:
+            name_a = labels[0]
+        if len(labels) > 1:
+            name_b = labels[1]
+        if len(labels) > 2:
+            name_base = labels[2]
+        if len(labels) > 3:
+            raise util.Abort(_("can only specify three labels."))
 
     try:
         localtext = readfile(local)
@@ -382,7 +391,11 @@ def simplemerge(ui, local, base, other, **opts):
 
     m3 = Merge3Text(basetext, localtext, othertext)
     extrakwargs = {}
-    if name_base is not None:
+    if mode == 'union':
+        extrakwargs['start_marker'] = None
+        extrakwargs['mid_marker'] = None
+        extrakwargs['end_marker'] = None
+    elif name_base is not None:
         extrakwargs['base_marker'] = '|||||||'
         extrakwargs['name_base'] = name_base
     for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
@@ -391,7 +404,7 @@ def simplemerge(ui, local, base, other, **opts):
     if not opts.get('print'):
         out.close()
 
-    if m3.conflicts:
+    if m3.conflicts and not mode == 'union':
         if not opts.get('quiet'):
             ui.warn(_("warning: conflicts during merge.\n"))
         return 1
