@@ -1203,8 +1203,10 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			val = PyInt_FromLong(revnum);
 			if (val == NULL)
 				goto bail;
-			PyList_Append(reachable, val);
+			r = PyList_Append(reachable, val);
 			Py_DECREF(val);
+			if (r < 0)
+				goto bail;
 			if (includepath == 0)
 				continue;
 		}
@@ -1245,8 +1247,10 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 					val = PyInt_FromLong(i);
 					if (val == NULL)
 						goto bail;
-					PyList_Append(reachable, val);
+					r = PyList_Append(reachable, val);
 					Py_DECREF(val);
+					if (r < 0)
+						goto bail;
 				}
 			}
 		}
