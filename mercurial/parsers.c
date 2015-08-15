@@ -1197,16 +1197,16 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		Py_DECREF(val);
 
 		/* Add its parents to the list of nodes to visit */
-		if (revnum != -1) {
-			r = index_get_parents(self, revnum, parents, (int)len - 1);
-			if (r < 0)
-				goto bail;
-
-			for (i = 0; i < 2; i++) {
-				if (seen[parents[i] + 1] == 0 && parents[i] >= minroot) {
-					tovisit[lentovisit++] = parents[i];
-					seen[parents[i] + 1] = 1;
-				}
+		if (revnum == -1)
+			continue;
+		r = index_get_parents(self, revnum, parents, (int)len - 1);
+		if (r < 0)
+			goto bail;
+		for (i = 0; i < 2; i++) {
+			if (seen[parents[i] + 1] == 0
+			    && parents[i] >= minroot) {
+				tovisit[lentovisit++] = parents[i];
+				seen[parents[i] + 1] = 1;
 			}
 		}
 	}
@@ -1218,24 +1218,25 @@ static PyObject *reachableroots(indexObject *self, PyObject *args)
 		if (minidx < 0)
 			minidx = 0;
 		for (i = minidx; i < len; i++) {
-			if (seen[i + 1] == 1) {
-				r = index_get_parents(self, i, parents, (int)len - 1);
-				/* Corrupted index file, error is set from index_get_parents */
-				if (r < 0)
+			if (seen[i + 1] != 1)
+				continue;
+			r = index_get_parents(self, i, parents, (int)len - 1);
+			/* Corrupted index file, error is set from
+			 * index_get_parents */
+			if (r < 0)
+				goto bail;
+			for (k = 0; k < 2; k++) {
+				PyObject *p = PyInt_FromLong(parents[k]);
+				if (p == NULL)
 					goto bail;
-				for (k = 0; k < 2; k++) {
-					PyObject *p = PyInt_FromLong(parents[k]);
-					if (p == NULL)
+				if (PySet_Contains(reachable, p) == 1) {
+					val = PyInt_FromLong(i);
+					if (val == NULL)
 						goto bail;
-					if (PySet_Contains(reachable, p) == 1) {
-						val = PyInt_FromLong(i);
-						if (val == NULL)
-							goto bail;
-						PySet_Add(reachable, val);
-						Py_DECREF(val);
-					}
-					Py_DECREF(p);
+					PySet_Add(reachable, val);
+					Py_DECREF(val);
 				}
+				Py_DECREF(p);
 			}
 		}
 	}
