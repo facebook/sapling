@@ -1202,6 +1202,11 @@ Test dynamic list of merge tools only shows up once
       ":tagmerge"
         Uses the internal tag merge algorithm (experimental).
   
+      ":union"
+        Uses the internal non-interactive simple merge algorithm for merging
+        files. It will use both left and right sides for conflict regions. No
+        markers are inserted.
+  
       Internal tools are always available and do not require a GUI but will by
       default not handle symlinks or binary files.
   

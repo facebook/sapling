@@ -248,6 +248,17 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
         return True, r
     return False, 0
 
+@internaltool('union', True,
+              _("merging %s incomplete! "
+                "(edit conflicts, then use 'hg resolve --mark')\n"))
+def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
+    """
+    Uses the internal non-interactive simple merge algorithm for merging
+    files. It will use both left and right sides for conflict regions.
+    No markers are inserted."""
+    return _merge(repo, mynode, orig, fcd, fco, fca, toolconf,
+                  files, labels, 'union')
+
 @internaltool('merge', True,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"))

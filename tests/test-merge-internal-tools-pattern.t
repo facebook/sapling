@@ -1,5 +1,6 @@
-Make sure that the internal merge tools (internal:fail, internal:local, and
-internal:other) are used when matched by a merge-pattern in hgrc
+Make sure that the internal merge tools (internal:fail, internal:local,
+internal:union and internal:other) are used when matched by a
+merge-pattern in hgrc
 
 Make sure HGMERGE doesn't interfere with the test:
 
@@ -110,3 +111,31 @@ Merge using default tool:
   $ hg stat
   M f
 
+Merge using internal:union tool:
+
+  $ hg update -C 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ echo "line 4a" >>f
+  $ hg ci -Am "Adding fourth line (commit 4)"
+  $ hg update 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ echo "line 4b" >>f
+  $ hg ci -Am "Adding fourth line v2 (commit 5)"
+  created new head
+
+  $ echo "[merge-patterns]" > .hg/hgrc
+  $ echo "* = internal:union" >> .hg/hgrc
+
+  $ hg merge 3
+  merging f
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cat f
+  line 1
+  line 2
+  third line
+  line 4b
+  line 4a
