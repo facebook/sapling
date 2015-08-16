@@ -1240,18 +1240,17 @@ static PyObject *reachableroots2(indexObject *self, PyObject *args)
 			 * index_get_parents */
 			if (r < 0)
 				goto bail;
-			for (k = 0; k < 2; k++) {
-				if ((revstates[parents[k] + 1] & RS_REACHABLE)
-				    && !(revstates[i + 1] & RS_REACHABLE)) {
-					revstates[i + 1] |= RS_REACHABLE;
-					val = PyInt_FromLong(i);
-					if (val == NULL)
-						goto bail;
-					r = PyList_Append(reachable, val);
-					Py_DECREF(val);
-					if (r < 0)
-						goto bail;
-				}
+			if (((revstates[parents[0] + 1] |
+			      revstates[parents[1] + 1]) & RS_REACHABLE)
+			    && !(revstates[i + 1] & RS_REACHABLE)) {
+				revstates[i + 1] |= RS_REACHABLE;
+				val = PyInt_FromLong(i);
+				if (val == NULL)
+					goto bail;
+				r = PyList_Append(reachable, val);
+				Py_DECREF(val);
+				if (r < 0)
+					goto bail;
 			}
 		}
 	}
