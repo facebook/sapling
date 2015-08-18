@@ -517,10 +517,11 @@ def label(context, mapping, args):
     yield args[1][0](context, mapping, args[1][1])
 
 def localdate(context, mapping, args):
-    """:localdate(date): Converts a date to local date."""
-    if len(args) != 1:
+    """:localdate(date[, tz]): Converts a date to the specified timezone.
+    The default is local date."""
+    if not (1 <= len(args) <= 2):
         # i18n: "localdate" is a keyword
-        raise error.ParseError(_("localdate expects one argument"))
+        raise error.ParseError(_("localdate expects one or two arguments"))
 
     date = evalfuncarg(context, mapping, args[0])
     try:
@@ -528,7 +529,19 @@ def localdate(context, mapping, args):
     except AttributeError:  # not str nor date tuple
         # i18n: "localdate" is a keyword
         raise error.ParseError(_("localdate expects a date information"))
-    tzoffset = util.makedate()[1]
+    if len(args) >= 2:
+        tzoffset = None
+        tz = evalfuncarg(context, mapping, args[1])
+        if isinstance(tz, str):
+            tzoffset = util.parsetimezone(tz)
+        if tzoffset is None:
+            try:
+                tzoffset = int(tz)
+            except (TypeError, ValueError):
+                # i18n: "localdate" is a keyword
+                raise error.ParseError(_("localdate expects a timezone"))
+    else:
+        tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
 
 def revset(context, mapping, args):

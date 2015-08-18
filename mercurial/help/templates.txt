@@ -69,6 +69,10 @@ Some sample command line templates:
 
    $ hg log -r 0 --template "{date(date, '%Y')}\n"
 
+- Display date in UTC::
+
+   $ hg log -r 0 --template "{localdate(date, 'UTC')|date}\n"
+
 - Output the description set to a fill-width of 30::
 
    $ hg log -r 0 --template "{fill(desc, 30)}"
