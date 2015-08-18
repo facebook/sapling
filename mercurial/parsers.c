@@ -253,8 +253,11 @@ static PyObject *make_file_foldmap(PyObject *self, PyObject *args)
 
 			if (normed == NULL)
 				goto quit;
-			if (PyDict_SetItem(file_foldmap, normed, k) == -1)
+			if (PyDict_SetItem(file_foldmap, normed, k) == -1) {
+				Py_DECREF(normed);
 				goto quit;
+			}
+			Py_DECREF(normed);
 		}
 	}
 	return file_foldmap;
