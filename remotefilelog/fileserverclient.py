@@ -100,18 +100,21 @@ class cacheconnection(object):
 
         return result
 
-def _getfilesbatch(remote, receivemissing, progresstick, missed, idmap):
-    b = remote.batch()
-    futures = {}
-    for m in missed:
-        file_ = idmap[m]
-        node = m[-40:]
-        futures[m] = b.getfile(file_, node)
-    b.submit()
-    for m in missed:
-        v = futures[m].value
-        receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), m)
-        progresstick()
+def _getfilesbatch(
+        remote, receivemissing, progresstick, missed, idmap, batchsize):
+    while missed:
+        chunk, missed = missed[:batchsize], missed[batchsize:]
+        b = remote.batch()
+        futures = {}
+        for m in chunk:
+            file_ = idmap[m]
+            node = m[-40:]
+            futures[m] = b.getfile(file_, node)
+        b.submit()
+        for m in chunk:
+            v = futures[m].value
+            receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), m)
+            progresstick()
 
 def _getfiles(
     remote, receivemissing, fallbackpath, progresstick, missed, idmap):
@@ -234,8 +237,12 @@ class fileserverclient(object):
                         _getfiles(remote, self.receivemissing, fallbackpath,
                                   progresstick, missed, idmap)
                     elif remote.capable("getfile"):
+                        batchdefault = 100 if remote.capable('batch') else 10
+                        batchsize = self.ui.configint(
+                            'remotefilelog', 'batchsize', batchdefault)
                         _getfilesbatch(
-                            remote, self.receivemissing, progresstick, missed, idmap)
+                            remote, self.receivemissing, progresstick, missed,
+                            idmap, batchsize)
                     else:
                         raise util.Abort("configured remotefilelog server"
                                          " does not support remotefilelog")

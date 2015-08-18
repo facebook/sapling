@@ -20,6 +20,12 @@ Build a query string for later use:
   $ hgcloneshallow http://localhost:$HGPORT/ shallow -q
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
+Clear filenode cache so we can test fetching with a modified batch size
+  $ rm -r $TESTTMP/hgcache
+Now do a fetch with a large batch size so we're sure it works
+  $ hgcloneshallow http://localhost:$HGPORT/ shallow-large-batch \
+  >    --config remotefilelog.batchsize=1000 -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
 The 'remotefilelog' capability should *not* be exported over http(s),
 as the getfile method it offers doesn't work with http.
