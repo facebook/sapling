@@ -2158,16 +2158,18 @@ bail:
  */
 static PyObject *index_ancestors(indexObject *self, PyObject *args)
 {
+	PyObject *ret;
 	PyObject *gca = index_commonancestorsheads(self, args);
 	if (gca == NULL)
 		return NULL;
 
 	if (PyList_GET_SIZE(gca) <= 1) {
-		Py_INCREF(gca);
 		return gca;
 	}
 
-	return find_deepest(self, gca);
+	ret = find_deepest(self, gca);
+	Py_DECREF(gca);
+	return ret;
 }
 
 /*
