@@ -1034,15 +1034,15 @@ def processreplacement(state):
     allsuccs = set()
     replaced = set()
     fullmapping = {}
-    # initialise basic set
-    # fullmapping record all operations recorded in replacement
+    # initialize basic set
+    # fullmapping records all operations recorded in replacement
     for rep in replacements:
         allsuccs.update(rep[1])
         replaced.add(rep[0])
         fullmapping.setdefault(rep[0], set()).update(rep[1])
     new = allsuccs - replaced
     tmpnodes = allsuccs & replaced
-    # Reduce content fullmapping  into direct relation between original nodes
+    # Reduce content fullmapping into direct relation between original nodes
     # and final node created during history edition
     # Dropped changeset are replaced by an empty list
     toproceed = set(fullmapping)
