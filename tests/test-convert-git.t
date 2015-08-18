@@ -656,10 +656,12 @@ convert using a different remote prefix
   $ git init git-repo7
   Initialized empty Git repository in $TESTTMP/git-repo7/.git/
   $ cd git-repo7
-  $ touch a && git add a && git commit -am "commit a"
+TODO: it'd be nice to use (?) lines instead of grep -v to handle the
+git output variance, but that doesn't currently work in the middle of
+a block, so do this for now.
+  $ touch a && git add a && git commit -am "commit a" | grep -v changed
   [master (root-commit) 8ae5f69] commit a
    Author: nottest <test@example.org>
-   1 file changed, 0 insertions(+), 0 deletions(-)
    create mode 100644 a
   $ cd ..
   $ git clone git-repo7 git-repo7-client
