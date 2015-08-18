@@ -684,6 +684,8 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 
 	hashobj = PyObject_CallMethod(shaobj, "digest", "");
 	Py_DECREF(shaobj);
+	if (hashobj == NULL)
+		return -1;
 
 	if (!PyString_Check(hashobj) || PyString_GET_SIZE(hashobj) != 20) {
 		PyErr_SetString(PyExc_TypeError,
