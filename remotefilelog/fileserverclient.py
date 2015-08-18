@@ -45,7 +45,7 @@ def peersetup(ui, peer):
             yield {'file': file, 'node': node}, f
             code, data = f.value.split('\0', 1)
             if int(code):
-                raise error.LookupError(data)
+                raise error.LookupError(file, node, data)
             yield data
     peer.__class__ = remotefilepeer
 
