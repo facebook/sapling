@@ -481,8 +481,11 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 	len = readlen;
 
 	/* read parents */
-	if (len < 40)
+	if (len < 40) {
+		PyErr_SetString(
+			PyExc_ValueError, "too little data for parents");
 		goto quit;
+	}
 
 	parents = Py_BuildValue("s#s#", str, 20, str + 20, 20);
 	if (!parents)
