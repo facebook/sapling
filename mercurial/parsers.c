@@ -478,9 +478,6 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 			      &str, &readlen))
 		goto quit;
 
-	if (readlen < 0)
-		goto quit;
-
 	len = readlen;
 
 	/* read parents */
