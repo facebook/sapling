@@ -338,7 +338,7 @@ def mergecopies(repo, c1, c2, ca):
     fullcopy = dict(fullcopy1.items() + fullcopy2.items())
 
     renamedelete = {}
-    renamedelete2 = set()
+    renamedeleteset = set()
     divergeset = set()
     for of, fl in diverge.items():
         if len(fl) == 1 or of in c1 or of in c2:
@@ -347,7 +347,7 @@ def mergecopies(repo, c1, c2, ca):
                 # renamed on one side, deleted on the other side, but filter
                 # out files that have been renamed and then deleted
                 renamedelete[of] = [f for f in fl if f in c1 or f in c2]
-                renamedelete2.update(fl) # reverse map for below
+                renamedeleteset.update(fl) # reverse map for below
         else:
             divergeset.update(fl) # reverse map for below
 
@@ -372,7 +372,7 @@ def mergecopies(repo, c1, c2, ca):
                 note += "*"
             if f in divergeset:
                 note += "!"
-            if f in renamedelete2:
+            if f in renamedeleteset:
                 note += "%"
             repo.ui.debug("   src: '%s' -> dst: '%s' %s\n" % (fullcopy[f], f,
                                                               note))
