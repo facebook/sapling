@@ -316,9 +316,9 @@ def mergecopies(repo, c1, c2, ca):
             return fctx
         return util.lrucachefunc(makectx)
 
-    copy = {}
-    movewithdir = {}
-    fullcopy = {}
+    copy1, copy2, = {}, {}
+    movewithdir1, movewithdir2 = {}, {}
+    fullcopy1, fullcopy2 = {}, {}
     diverge = {}
 
     repo.ui.debug("  searching for copies back to rev %d\n" % limit)
@@ -329,11 +329,15 @@ def mergecopies(repo, c1, c2, ca):
 
     for f in u1:
         getfctx = setupctx(c1)
-        checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
+        checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
 
     for f in u2:
         getfctx = setupctx(c2)
-        checkcopies(getfctx, f, m2, m1, ca, limit, diverge, copy, fullcopy)
+        checkcopies(getfctx, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
+
+    copy = dict(copy1.items() + copy2.items())
+    movewithdir = dict(movewithdir1.items() + movewithdir2.items())
+    fullcopy = dict(fullcopy1.items() + fullcopy2.items())
 
     renamedelete = {}
     renamedelete2 = set()
