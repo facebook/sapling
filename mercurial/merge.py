@@ -596,10 +596,14 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
                 repo, wctx, mctx, ancestor, branchmerge, force, partial,
                 acceptremote, followcopies)
             _checkunknownfiles(repo, wctx, mctx, force, actions)
-            if diverge is None: # and renamedelete is None.
-                # Arbitrarily pick warnings from first iteration
+
+            # Track the shortest set of warning on the theory that bid
+            # merge will correctly incorporate more information
+            if diverge is None or len(diverge1) < len(diverge):
                 diverge = diverge1
+            if renamedelete is None or len(renamedelete) < len(renamedelete1):
                 renamedelete = renamedelete1
+
             for f, a in sorted(actions.iteritems()):
                 m, args, msg = a
                 repo.ui.debug(' %s: %s -> %s\n' % (f, msg, m))
