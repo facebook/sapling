@@ -277,6 +277,8 @@ def mergecopies(repo, c1, c2, ca):
     if limit is None:
         # no common ancestor, no copies
         return {}, {}, {}, {}
+    repo.ui.debug("  searching for copies back to rev %d\n" % limit)
+
     m1 = c1.manifest()
     m2 = c2.manifest()
     ma = ca.manifest()
@@ -320,8 +322,6 @@ def mergecopies(repo, c1, c2, ca):
     movewithdir1, movewithdir2 = {}, {}
     fullcopy1, fullcopy2 = {}, {}
     diverge = {}
-
-    repo.ui.debug("  searching for copies back to rev %d\n" % limit)
 
     addedinm1 = m1.filesnotin(ma)
     addedinm2 = m2.filesnotin(ma)
