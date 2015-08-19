@@ -639,6 +639,7 @@ Set up the repo
 (De)referencing symbolic revisions (monoblue)
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'summary?style=monoblue' | egrep $REVLINKS
+              <li><a href="/archive/tip.zip">zip</a></li>
   <a href="/rev/9d8c40cba617?style=monoblue">
   <a href="/rev/9d8c40cba617?style=monoblue">changeset</a> |
   <a href="/file/9d8c40cba617?style=monoblue">files</a>
