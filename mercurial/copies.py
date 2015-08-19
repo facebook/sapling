@@ -328,12 +328,10 @@ def mergecopies(repo, c1, c2, ca):
     u1, u2 = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
 
     for f in u1:
-        getfctx = _makegetfctx(c1)
-        checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
+        checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
 
     for f in u2:
-        getfctx = _makegetfctx(c2)
-        checkcopies(getfctx, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
+        checkcopies(c2, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
 
     copy = dict(copy1.items() + copy2.items())
     movewithdir = dict(movewithdir1.items() + movewithdir2.items())
@@ -359,12 +357,8 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(bothnew))
     bothdiverge, _copy, _fullcopy = {}, {}, {}
     for f in bothnew:
-        getfctx = _makegetfctx(c1)
-        checkcopies(getfctx, f, m1, m2, ca, limit, bothdiverge,
-                    _copy, _fullcopy)
-        getfctx = _makegetfctx(c2)
-        checkcopies(getfctx, f, m2, m1, ca, limit, bothdiverge,
-                    _copy, _fullcopy)
+        checkcopies(c1, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
+        checkcopies(c2, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
@@ -444,11 +438,11 @@ def mergecopies(repo, c1, c2, ca):
 
     return copy, movewithdir, diverge, renamedelete
 
-def checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     """
     check possible copies of f from m1 to m2
 
-    getfctx = function accepting (filename, node) that returns a filectx.
+    ctx = starting context for f in m1
     f = the filename to check
     m1 = the source manifest
     m2 = the destination manifest
@@ -460,6 +454,7 @@ def checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     """
 
     ma = ca.manifest()
+    getfctx = _makegetfctx(ctx)
 
     def _related(f1, f2, limit):
         # Walk back to common ancestor to see if the two files originate
