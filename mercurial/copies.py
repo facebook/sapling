@@ -237,6 +237,41 @@ def _computenonoverlap(repo, c1, c2, addedinm1, addedinm2):
                       % "\n   ".join(u2))
     return u1, u2
 
+def _makegetfctx(ctx):
+    """return a 'getfctx' function suitable for checkcopies usage
+
+    We have to re-setup the function building 'filectx' for each
+    'checkcopies' to ensure the linkrev adjustement is properly setup for
+    each. Linkrev adjustment is important to avoid bug in rename
+    detection. Moreover, having a proper '_ancestrycontext' setup ensures
+    the performance impact of this adjustment is kept limited. Without it,
+    each file could do a full dag traversal making the time complexity of
+    the operation explode (see issue4537).
+
+    This function exists here mostly to limit the impact on stable. Feel
+    free to refactor on default.
+    """
+    rev = ctx.rev()
+    repo = ctx._repo
+    ac = getattr(ctx, '_ancestrycontext', None)
+    if ac is None:
+        revs = [rev]
+        if rev is None:
+            revs = [p.rev() for p in ctx.parents()]
+        ac = repo.changelog.ancestors(revs, inclusive=True)
+        ctx._ancestrycontext = ac
+    def makectx(f, n):
+        if len(n) != 20:  # in a working context?
+            if ctx.rev() is None:
+                return ctx.filectx(f)
+            return repo[None][f]
+        fctx = repo.filectx(f, fileid=n)
+        # setup only needed for filectx not create from a changectx
+        fctx._ancestrycontext = ac
+        fctx._descendantrev = rev
+        return fctx
+    return util.lrucachefunc(makectx)
+
 def mergecopies(repo, c1, c2, ca):
     """
     Find moves and copies between context c1 and c2 that are relevant
@@ -283,42 +318,6 @@ def mergecopies(repo, c1, c2, ca):
     m2 = c2.manifest()
     ma = ca.manifest()
 
-
-    def setupctx(ctx):
-        """return a 'getfctx' function suitable for checkcopies usage
-
-        We have to re-setup the function building 'filectx' for each
-        'checkcopies' to ensure the linkrev adjustement is properly setup for
-        each. Linkrev adjustment is important to avoid bug in rename
-        detection. Moreover, having a proper '_ancestrycontext' setup ensures
-        the performance impact of this adjustment is kept limited. Without it,
-        each file could do a full dag traversal making the time complexity of
-        the operation explode (see issue4537).
-
-        This function exists here mostly to limit the impact on stable. Feel
-        free to refactor on default.
-        """
-        rev = ctx.rev()
-        ac = getattr(ctx, '_ancestrycontext', None)
-        repo = ctx._repo
-        if ac is None:
-            revs = [rev]
-            if rev is None:
-                revs = [p.rev() for p in ctx.parents()]
-            ac = ctx._repo.changelog.ancestors(revs, inclusive=True)
-            ctx._ancestrycontext = ac
-        def makectx(f, n):
-            if len(n) != 20:  # in a working context?
-                if ctx.rev() is None:
-                    return ctx.filectx(f)
-                return repo[None][f]
-            fctx = repo.filectx(f, fileid=n)
-            # setup only needed for filectx not create from a changectx
-            fctx._ancestrycontext = ac
-            fctx._descendantrev = rev
-            return fctx
-        return util.lrucachefunc(makectx)
-
     copy1, copy2, = {}, {}
     movewithdir1, movewithdir2 = {}, {}
     fullcopy1, fullcopy2 = {}, {}
@@ -329,11 +328,11 @@ def mergecopies(repo, c1, c2, ca):
     u1, u2 = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
 
     for f in u1:
-        getfctx = setupctx(c1)
+        getfctx = _makegetfctx(c1)
         checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
 
     for f in u2:
-        getfctx = setupctx(c2)
+        getfctx = _makegetfctx(c2)
         checkcopies(getfctx, f, m2, m1, ca, limit, diverge, copy2, fullcopy2)
 
     copy = dict(copy1.items() + copy2.items())
@@ -360,10 +359,10 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(bothnew))
     bothdiverge, _copy, _fullcopy = {}, {}, {}
     for f in bothnew:
-        getfctx = setupctx(c1)
+        getfctx = _makegetfctx(c1)
         checkcopies(getfctx, f, m1, m2, ca, limit, bothdiverge,
                     _copy, _fullcopy)
-        getfctx = setupctx(c2)
+        getfctx = _makegetfctx(c2)
         checkcopies(getfctx, f, m2, m1, ca, limit, bothdiverge,
                     _copy, _fullcopy)
     for of, fl in bothdiverge.items():
