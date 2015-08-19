@@ -323,9 +323,11 @@ def mergecopies(repo, c1, c2, ca):
     fullcopy1, fullcopy2 = {}, {}
     diverge = {}
 
+    # find interesting file sets from manifests
     addedinm1 = m1.filesnotin(ma)
     addedinm2 = m2.filesnotin(ma)
     u1, u2 = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
+    bothnew = sorted(addedinm1 & addedinm2)
 
     for f in u1:
         checkcopies(c1, f, m1, m2, ca, limit, diverge, copy1, fullcopy1)
@@ -351,7 +353,6 @@ def mergecopies(repo, c1, c2, ca):
         else:
             divergeset.update(fl) # reverse map for below
 
-    bothnew = sorted(addedinm1 & addedinm2)
     if bothnew:
         repo.ui.debug("  unmatched files new in both:\n   %s\n"
                       % "\n   ".join(bothnew))
