@@ -283,7 +283,7 @@ def mergecopies(repo, c1, c2, ca):
 
 
     def setupctx(ctx):
-        """return a 'makectx' function suitable for checkcopies usage from ctx
+        """return a 'getfctx' function suitable for checkcopies usage
 
         We have to re-setup the function building 'filectx' for each
         'checkcopies' to ensure the linkrev adjustement is properly setup for
@@ -328,12 +328,12 @@ def mergecopies(repo, c1, c2, ca):
     u1, u2 = _computenonoverlap(repo, c1, c2, addedinm1, addedinm2)
 
     for f in u1:
-        ctx = setupctx(c1)
-        checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
+        getfctx = setupctx(c1)
+        checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy, fullcopy)
 
     for f in u2:
-        ctx = setupctx(c2)
-        checkcopies(ctx, f, m2, m1, ca, limit, diverge, copy, fullcopy)
+        getfctx = setupctx(c2)
+        checkcopies(getfctx, f, m2, m1, ca, limit, diverge, copy, fullcopy)
 
     renamedelete = {}
     renamedelete2 = set()
@@ -355,10 +355,12 @@ def mergecopies(repo, c1, c2, ca):
                       % "\n   ".join(bothnew))
     bothdiverge, _copy, _fullcopy = {}, {}, {}
     for f in bothnew:
-        ctx = setupctx(c1)
-        checkcopies(ctx, f, m1, m2, ca, limit, bothdiverge, _copy, _fullcopy)
-        ctx = setupctx(c2)
-        checkcopies(ctx, f, m2, m1, ca, limit, bothdiverge, _copy, _fullcopy)
+        getfctx = setupctx(c1)
+        checkcopies(getfctx, f, m1, m2, ca, limit, bothdiverge,
+                    _copy, _fullcopy)
+        getfctx = setupctx(c2)
+        checkcopies(getfctx, f, m2, m1, ca, limit, bothdiverge,
+                    _copy, _fullcopy)
     for of, fl in bothdiverge.items():
         if len(fl) == 2 and fl[0] == fl[1]:
             copy[fl[0]] = of # not actually divergent, just matching renames
@@ -438,11 +440,11 @@ def mergecopies(repo, c1, c2, ca):
 
     return copy, movewithdir, diverge, renamedelete
 
-def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
+def checkcopies(getfctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
     """
     check possible copies of f from m1 to m2
 
-    ctx = function accepting (filename, node) that returns a filectx.
+    getfctx = function accepting (filename, node) that returns a filectx.
     f = the filename to check
     m1 = the source manifest
     m2 = the destination manifest
@@ -488,7 +490,7 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
 
     of = None
     seen = set([f])
-    for oc in ctx(f, m1[f]).ancestors():
+    for oc in getfctx(f, m1[f]).ancestors():
         ocr = oc.linkrev()
         of = oc.path()
         if of in seen:
@@ -503,7 +505,7 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
             continue # no match, keep looking
         if m2[of] == ma.get(of):
             break # no merge needed, quit early
-        c2 = ctx(of, m2[of])
+        c2 = getfctx(of, m2[of])
         cr = _related(oc, c2, ca.rev())
         if cr and (of == f or of == c2.path()): # non-divergent
             copy[f] = of
