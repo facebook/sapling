@@ -1039,34 +1039,37 @@ def first(repo, subset, x):
     return limit(repo, subset, x)
 
 def _follow(repo, subset, x, name, followfirst=False):
-    l = getargs(x, 0, 1, _("%s takes no arguments or a filename") % name)
+    l = getargs(x, 0, 1, _("%s takes no arguments or a pattern") % name)
     c = repo['.']
     if l:
-        x = getstring(l[0], _("%s expected a filename") % name)
-        if x in c:
-            cx = c[x]
-            s = set(ctx.rev() for ctx in cx.ancestors(followfirst=followfirst))
-            # include the revision responsible for the most recent version
-            s.add(cx.introrev())
-        else:
-            return baseset()
+        x = getstring(l[0], _("%s expected a pattern") % name)
+        matcher = matchmod.match(repo.root, repo.getcwd(), [x],
+                                 ctx=repo[None], default='path')
+
+        s = set()
+        for fname in c:
+            if matcher(fname):
+                fctx = c[fname]
+                s = s.union(set(c.rev() for c in fctx.ancestors(followfirst)))
+                # include the revision responsible for the most recent version
+                s.add(fctx.introrev())
     else:
         s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
     return subset & s
 
 def follow(repo, subset, x):
-    """``follow([file])``
+    """``follow([pattern])``
     An alias for ``::.`` (ancestors of the working directory's first parent).
-    If a filename is specified, the history of the given file is followed,
-    including copies.
+    If pattern is specified, the histories of files matching given
+    pattern is followed, including copies.
     """
     return _follow(repo, subset, x, 'follow')
 
 def _followfirst(repo, subset, x):
-    # ``followfirst([file])``
-    # Like ``follow([file])`` but follows only the first parent of
-    # every revision or file revision.
+    # ``followfirst([pattern])``
+    # Like ``follow([pattern])`` but follows only the first parent of
+    # every revisions or files revisions.
     return _follow(repo, subset, x, '_followfirst', followfirst=True)
 
 def getall(repo, subset, x):
