@@ -300,6 +300,7 @@ def mergecopies(repo, c1, c2, ca):
         """
         rev = ctx.rev()
         ac = getattr(ctx, '_ancestrycontext', None)
+        repo = ctx._repo
         if ac is None:
             revs = [rev]
             if rev is None:
@@ -308,9 +309,9 @@ def mergecopies(repo, c1, c2, ca):
             ctx._ancestrycontext = ac
         def makectx(f, n):
             if len(n) != 20:  # in a working context?
-                if c1.rev() is None:
-                    return c1.filectx(f)
-                return c2.filectx(f)
+                if ctx.rev() is None:
+                    return ctx.filectx(f)
+                return repo[None][f]
             fctx = repo.filectx(f, fileid=n)
             # setup only needed for filectx not create from a changectx
             fctx._ancestrycontext = ac
