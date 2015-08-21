@@ -2967,6 +2967,8 @@ class baseset(abstractsmartset):
     """
     def __init__(self, data=()):
         if not isinstance(data, list):
+            if isinstance(data, set):
+                self._set = data
             data = list(data)
         self._list = data
         self._ascending = None
