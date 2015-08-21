@@ -21,7 +21,7 @@ static char b85dec[256];
 static void
 b85prep(void)
 {
-	int i;
+	unsigned i;
 
 	memset(b85dec, 0, sizeof(b85dec));
 	for (i = 0; i < sizeof(b85chars); i++)
