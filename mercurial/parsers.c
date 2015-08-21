@@ -705,8 +705,8 @@ typedef struct {
 	PyObject *headrevs;    /* cache, invalidated on changes */
 	PyObject *filteredrevs;/* filtered revs set */
 	nodetree *nt;          /* base-16 trie */
-	int ntlength;          /* # nodes in use */
-	int ntcapacity;        /* # nodes allocated */
+	unsigned ntlength;          /* # nodes in use */
+	unsigned ntcapacity;        /* # nodes allocated */
 	int ntdepth;           /* maximum depth of tree */
 	int ntsplits;          /* # splits performed */
 	int ntrev;             /* last rev scanned */
