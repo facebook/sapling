@@ -262,7 +262,8 @@ def checkout(ui, repo, *args, **kwargs):
     cmd = Command('update')
 
     if opts.get('force'):
-        cmd['-C'] = None
+        if paths or rev:
+            cmd['-C'] = None
 
     if opts.get('patch'):
         cmd = Command('revert')
@@ -291,6 +292,9 @@ def checkout(ui, repo, *args, **kwargs):
             cmd['-r'] = rev
         else:
             cmd.append(rev)
+    elif opts.get('force'):
+        cmd = Command('revert')
+        cmd['--all'] = None
     else:
         raise GitUnknownError("a commit must be specified")
 

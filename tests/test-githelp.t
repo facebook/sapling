@@ -145,6 +145,18 @@ githelp for checkout with the -p option
   
   hg revert -i -r xyz abc
 
+githelp for checkout with the -f option and a rev
+  $ hg githelp -- git checkout -f xyz
+  hg update -C xyz
+  $ hg githelp -- git checkout --force xyz
+  hg update -C xyz
+
+githelp for checkout with the -f option without an arg
+  $ hg githelp -- git checkout -f
+  hg revert --all
+  $ hg githelp -- git checkout --force
+  hg revert --all
+
 githelp for grep with pattern and path
   $ hg githelp -- grep shrubbery flib/intern/
   hg grep shrubbery flib/intern/
