@@ -96,9 +96,9 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   >         print inst
   > EOF
   good heads:
-  0: <baseset [0]>
-  1: <baseset [0]>
-  -1: <baseset []>
+  0: <baseset+ [0]>
+  1: <baseset+ [0]>
+  -1: <baseset+ []>
   bad heads:
   2: head out of range
   10000: head out of range
@@ -106,14 +106,14 @@ Test SEGV caused by bad revision passed to reachableroots() (issue4775):
   -10000: head out of range
   None: an integer is required
   good roots:
-  0: <baseset [0]>
-  1: <baseset [1]>
-  -1: <baseset [-1]>
+  0: <baseset+ [0]>
+  1: <baseset+ [1]>
+  -1: <baseset+ [-1]>
   out-of-range roots are ignored:
-  2: <baseset []>
-  10000: <baseset []>
-  -2: <baseset []>
-  -10000: <baseset []>
+  2: <baseset+ []>
+  10000: <baseset+ []>
+  -2: <baseset+ []>
+  -10000: <baseset+ []>
   bad roots:
   None: an integer is required
 

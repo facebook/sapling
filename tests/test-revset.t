@@ -141,7 +141,7 @@ trivial
     ('symbol', '3')
     ('symbol', '6'))
   * set:
-  <baseset [3, 5, 6]>
+  <baseset+ [3, 5, 6]>
   3
   5
   6
@@ -991,7 +991,7 @@ test that `or` operation skips duplicated revisions from right-hand side
       ('symbol', '4')))
   * set:
   <addset
-    <baseset [5, 3, 1]>,
+    <baseset- [1, 3, 5]>,
     <generatorset+>>
   5
   3
@@ -1014,7 +1014,7 @@ test that `or` operation skips duplicated revisions from right-hand side
   * set:
   <addset+
     <generatorset+>,
-    <baseset [5, 3, 1]>>
+    <baseset- [1, 3, 5]>>
   0
   1
   2

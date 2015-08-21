@@ -186,8 +186,10 @@ class changelog(revlog.revlog):
         return self._nodecache
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
-        return revset.baseset(sorted(
-            self.index.reachableroots2(minroot, heads, roots, includepath)))
+        rroots = self.index.reachableroots2(minroot, heads, roots, includepath)
+        rroots = revset.baseset(rroots)
+        rroots.sort()
+        return rroots
 
     def headrevs(self):
         if self.filteredrevs:
