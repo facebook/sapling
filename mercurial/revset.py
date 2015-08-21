@@ -133,9 +133,7 @@ def reachableroots(repo, roots, heads, includepath=False):
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
         return baseset()
-    # XXX this should be 'parentset.min()' assuming 'parentset' is a smartset
-    # (and if it is not, it should.)
-    minroot = min(roots)
+    minroot = roots.min()
     roots = list(roots)
     heads = list(heads)
     try:
