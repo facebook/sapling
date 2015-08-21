@@ -247,7 +247,8 @@ def dagwalker(repo, revs):
         if firstbranchrevset:
             firstbranch = repo.revs(firstbranchrevset)
         parentrevs = repo.changelog.parentrevs
-        revs = list(groupbranchiter(revs, parentrevs, firstbranch))
+        revs = groupbranchiter(revs, parentrevs, firstbranch)
+        revs = revset.baseset(revs)
 
     for rev in revs:
         ctx = repo[rev]
