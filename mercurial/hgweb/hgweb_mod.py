@@ -224,7 +224,7 @@ class hgweb(object):
             # we trust caller to give us a private copy
             r = repo
 
-        r = self._getview(r)
+        r = getwebview(r)
         r.ui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.baseui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.ui.setconfig('ui', 'nontty', 'true', 'hgweb')
@@ -238,26 +238,6 @@ class hgweb(object):
         self.repostate = None
         self.mtime = -1
         self.reponame = name
-
-    def _getview(self, repo):
-        """The 'web.view' config controls changeset filter to hgweb. Possible
-        values are ``served``, ``visible`` and ``all``. Default is ``served``.
-        The ``served`` filter only shows changesets that can be pulled from the
-        hgweb instance.  The``visible`` filter includes secret changesets but
-        still excludes "hidden" one.
-
-        See the repoview module for details.
-
-        The option has been around undocumented since Mercurial 2.5, but no
-        user ever asked about it. So we better keep it undocumented for now."""
-        viewconfig = repo.ui.config('web', 'view', 'served',
-                                    untrusted=True)
-        if viewconfig == 'all':
-            return repo.unfiltered()
-        elif viewconfig in repoview.filtertable:
-            return repo.filtered(viewconfig)
-        else:
-            return repo.filtered('served')
 
     def refresh(self):
         repostate = []
@@ -273,7 +253,7 @@ class hgweb(object):
         # changes made less than a second ago
         if repostate != self.repostate:
             r = hg.repository(self.repo.baseui, self.repo.url())
-            self.repo = self._getview(r)
+            self.repo = getwebview(r)
             # update these last to avoid threads seeing empty settings
             self.repostate = repostate
             # mtime is needed for ETag
@@ -444,3 +424,24 @@ class hgweb(object):
     def check_perm(self, rctx, req, op):
         for permhook in permhooks:
             permhook(rctx, req, op)
+
+def getwebview(repo):
+    """The 'web.view' config controls changeset filter to hgweb. Possible
+    values are ``served``, ``visible`` and ``all``. Default is ``served``.
+    The ``served`` filter only shows changesets that can be pulled from the
+    hgweb instance.  The``visible`` filter includes secret changesets but
+    still excludes "hidden" one.
+
+    See the repoview module for details.
+
+    The option has been around undocumented since Mercurial 2.5, but no
+    user ever asked about it. So we better keep it undocumented for now."""
+    viewconfig = repo.ui.config('web', 'view', 'served',
+                                untrusted=True)
+    if viewconfig == 'all':
+        return repo.unfiltered()
+    elif viewconfig in repoview.filtertable:
+        return repo.filtered(viewconfig)
+    else:
+        return repo.filtered('served')
+
