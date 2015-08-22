@@ -195,7 +195,7 @@ class hgweb(object):
         else:
             return repo.filtered('served')
 
-    def refresh(self, request):
+    def refresh(self):
         repostate = []
         # file of interrests mtime and size
         for meth, fname in foi:
@@ -208,14 +208,10 @@ class hgweb(object):
         if repostate != self.repostate:
             r = hg.repository(self.repo.baseui, self.repo.url())
             self.repo = self._getview(r)
-            encoding.encoding = self.config("web", "encoding",
-                                            encoding.encoding)
             # update these last to avoid threads seeing empty settings
             self.repostate = repostate
             # mtime is needed for ETag
             self.mtime = st.st_mtime
-
-        self.repo.ui.environ = request.env
 
     def run(self):
         """Start a server from CGI environment.
@@ -243,8 +239,12 @@ class hgweb(object):
         This is typically only called by Mercurial. External consumers
         should be using instances of this class as the WSGI application.
         """
-        self.refresh(req)
+        self.refresh()
         rctx = requestcontext(self)
+
+        # This state is global across all threads.
+        encoding.encoding = rctx.config('web', 'encoding', encoding.encoding)
+        rctx.repo.ui.environ = req.env
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
