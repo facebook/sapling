@@ -135,6 +135,74 @@ class requestcontext(object):
             if typ in allowed or self.configbool('web', 'allow%s' % typ):
                 yield {'type': typ, 'extension': spec[2], 'node': nodeid}
 
+    def templater(self, req):
+        # determine scheme, port and server name
+        # this is needed to create absolute urls
+
+        proto = req.env.get('wsgi.url_scheme')
+        if proto == 'https':
+            proto = 'https'
+            default_port = '443'
+        else:
+            proto = 'http'
+            default_port = '80'
+
+        port = req.env['SERVER_PORT']
+        port = port != default_port and (':' + port) or ''
+        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
+        logourl = self.config('web', 'logourl', 'http://mercurial.selenic.com/')
+        logoimg = self.config('web', 'logoimg', 'hglogo.png')
+        staticurl = self.config('web', 'staticurl') or req.url + 'static/'
+        if not staticurl.endswith('/'):
+            staticurl += '/'
+
+        # some functions for the templater
+
+        def motd(**map):
+            yield self.config('web', 'motd', '')
+
+        # figure out which style to use
+
+        vars = {}
+        styles = (
+            req.form.get('style', [None])[0],
+            self.config('web', 'style'),
+            'paper',
+        )
+        style, mapfile = templater.stylemap(styles, self.templatepath)
+        if style == styles[0]:
+            vars['style'] = style
+
+        start = req.url[-1] == '?' and '&' or '?'
+        sessionvars = webutil.sessionvars(vars, start)
+
+        if not self.reponame:
+            self.reponame = (self.config('web', 'name')
+                             or req.env.get('REPO_NAME')
+                             or req.url.strip('/') or self.repo.root)
+
+        def websubfilter(text):
+            return websub(text, self.websubtable)
+
+        # create the templater
+
+        tmpl = templater.templater(mapfile,
+                                   filters={'websub': websubfilter},
+                                   defaults={'url': req.url,
+                                             'logourl': logourl,
+                                             'logoimg': logoimg,
+                                             'staticurl': staticurl,
+                                             'urlbase': urlbase,
+                                             'repo': self.reponame,
+                                             'encoding': encoding.encoding,
+                                             'motd': motd,
+                                             'sessionvars': sessionvars,
+                                             'pathdef': makebreadcrumb(req.url),
+                                             'style': style,
+                                            })
+        return tmpl
+
+
 class hgweb(object):
     """HTTP server for individual repositories.
 
@@ -172,12 +240,6 @@ class hgweb(object):
         self.mtime = -1
         self.reponame = name
         self.websubtable = webutil.getwebsubs(r)
-
-    # The CGI scripts are often run by a user different from the repo owner.
-    # Trust the settings from the .hg/hgrc files by default.
-    def config(self, section, name, default=None, untrusted=True):
-        return self.repo.ui.config(section, name, default,
-                                   untrusted=untrusted)
 
     def _getview(self, repo):
         """The 'web.view' config controls changeset filter to hgweb. Possible
@@ -336,7 +398,7 @@ class hgweb(object):
         # process the web interface request
 
         try:
-            tmpl = self.templater(req)
+            tmpl = rctx.templater(req)
             ctype = tmpl('mimetype', encoding=encoding.encoding)
             ctype = templater.stringify(ctype)
 
@@ -378,74 +440,6 @@ class hgweb(object):
                 # Not allowed to return a body on a 304
                 return ['']
             return tmpl('error', error=inst.message)
-
-    def templater(self, req):
-
-        # determine scheme, port and server name
-        # this is needed to create absolute urls
-
-        proto = req.env.get('wsgi.url_scheme')
-        if proto == 'https':
-            proto = 'https'
-            default_port = "443"
-        else:
-            proto = 'http'
-            default_port = "80"
-
-        port = req.env["SERVER_PORT"]
-        port = port != default_port and (":" + port) or ""
-        urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
-        logourl = self.config("web", "logourl", "http://mercurial.selenic.com/")
-        logoimg = self.config("web", "logoimg", "hglogo.png")
-        staticurl = self.config("web", "staticurl") or req.url + 'static/'
-        if not staticurl.endswith('/'):
-            staticurl += '/'
-
-        # some functions for the templater
-
-        def motd(**map):
-            yield self.config("web", "motd", "")
-
-        # figure out which style to use
-
-        vars = {}
-        styles = (
-            req.form.get('style', [None])[0],
-            self.config('web', 'style'),
-            'paper',
-        )
-        style, mapfile = templater.stylemap(styles, self.templatepath)
-        if style == styles[0]:
-            vars['style'] = style
-
-        start = req.url[-1] == '?' and '&' or '?'
-        sessionvars = webutil.sessionvars(vars, start)
-
-        if not self.reponame:
-            self.reponame = (self.config("web", "name")
-                             or req.env.get('REPO_NAME')
-                             or req.url.strip('/') or self.repo.root)
-
-        def websubfilter(text):
-            return websub(text, self.websubtable)
-
-        # create the templater
-
-        tmpl = templater.templater(mapfile,
-                                   filters={"websub": websubfilter},
-                                   defaults={"url": req.url,
-                                             "logourl": logourl,
-                                             "logoimg": logoimg,
-                                             "staticurl": staticurl,
-                                             "urlbase": urlbase,
-                                             "repo": self.reponame,
-                                             "encoding": encoding.encoding,
-                                             "motd": motd,
-                                             "sessionvars": sessionvars,
-                                             "pathdef": makebreadcrumb(req.url),
-                                             "style": style,
-                                            })
-        return tmpl
 
     def check_perm(self, rctx, req, op):
         for permhook in permhooks:
