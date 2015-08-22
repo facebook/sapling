@@ -171,10 +171,6 @@ class hgweb(object):
         return self.repo.ui.config(section, name, default,
                                    untrusted=untrusted)
 
-    def configbool(self, section, name, default=False, untrusted=True):
-        return self.repo.ui.configbool(section, name, default,
-                                       untrusted=untrusted)
-
     def _getview(self, repo):
         """The 'web.view' config controls changeset filter to hgweb. Possible
         values are ``served``, ``visible`` and ``all``. Default is ``served``.
@@ -342,7 +338,7 @@ class hgweb(object):
                 req.form['cmd'] = [tmpl.cache['default']]
                 cmd = req.form['cmd'][0]
 
-            if self.configbool('web', 'cache', True):
+            if rctx.configbool('web', 'cache', True):
                 caching(self, req) # sets ETag header or raises NOT_MODIFIED
             if cmd not in webcommands.__all__:
                 msg = 'no such method: %s' % cmd
