@@ -156,7 +156,7 @@ class hgweb(object):
         r.baseui.setconfig('progress', 'disable', 'true', 'hgweb')
         self.repo = r
         hook.redirect(True)
-        self.repostate = ((-1, -1), (-1, -1))
+        self.repostate = None
         self.mtime = -1
         self.reponame = name
         # we use untrusted=False to prevent a repo owner from using
