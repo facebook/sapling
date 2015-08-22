@@ -61,6 +61,25 @@ def makebreadcrumb(url, prefix=''):
     return reversed(breadcrumb)
 
 
+class requestcontext(object):
+    """Holds state/context for an individual request.
+
+    Servers can be multi-threaded. Holding state on the WSGI application
+    is prone to race conditions. Instances of this class exist to hold
+    mutable and race-free state for requests.
+    """
+    def __init__(self, app):
+        object.__setattr__(self, 'app', app)
+        object.__setattr__(self, 'repo', app.repo)
+
+    # Proxy unknown reads and writes to the application instance
+    # until everything is moved to us.
+    def __getattr__(self, name):
+        return getattr(self.app, name)
+
+    def __setattr__(self, name, value):
+        return setattr(self.app, name, value)
+
 class hgweb(object):
     """HTTP server for individual repositories.
 
@@ -193,6 +212,7 @@ class hgweb(object):
         should be using instances of this class as the WSGI application.
         """
         self.refresh(req)
+        rctx = requestcontext(self)
 
         # work with CGI variables to create coherent structure
         # use SCRIPT_NAME, PATH_INFO and QUERY_STRING as well as our REPO_NAME
@@ -223,7 +243,7 @@ class hgweb(object):
                 if query:
                     raise ErrorResponse(HTTP_NOT_FOUND)
                 if cmd in perms:
-                    self.check_perm(req, perms[cmd])
+                    self.check_perm(rctx, req, perms[cmd])
                 return protocol.call(self.repo, req, cmd)
             except ErrorResponse as inst:
                 # A client that sends unbundle without 100-continue will
@@ -284,7 +304,7 @@ class hgweb(object):
 
             # check read permissions non-static content
             if cmd != 'static':
-                self.check_perm(req, None)
+                self.check_perm(rctx, req, None)
 
             if cmd == '':
                 req.form['cmd'] = [tmpl.cache['default']]
@@ -297,9 +317,9 @@ class hgweb(object):
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
             elif cmd == 'file' and 'raw' in req.form.get('style', []):
                 self.ctype = ctype
-                content = webcommands.rawfile(self, req, tmpl)
+                content = webcommands.rawfile(rctx, req, tmpl)
             else:
-                content = getattr(webcommands, cmd)(self, req, tmpl)
+                content = getattr(webcommands, cmd)(rctx, req, tmpl)
                 req.respond(HTTP_OK, ctype)
 
             return content
@@ -442,6 +462,6 @@ class hgweb(object):
         'zip': ('application/zip', 'zip', '.zip', None),
         }
 
-    def check_perm(self, req, op):
+    def check_perm(self, rctx, req, op):
         for permhook in permhooks:
-            permhook(self, req, op)
+            permhook(rctx, req, op)
