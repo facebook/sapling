@@ -62,6 +62,16 @@ def makebreadcrumb(url, prefix=''):
 
 
 class hgweb(object):
+    """HTTP server for individual repositories.
+
+    Instances of this class serve HTTP responses for a particular
+    repository.
+
+    Instances are typically used as WSGI applications.
+
+    Some servers are multi-threaded. On these servers, there may
+    be multiple active threads inside __call__.
+    """
     def __init__(self, repo, name=None, baseui=None):
         if isinstance(repo, str):
             if baseui:
@@ -157,6 +167,11 @@ class hgweb(object):
             self.repo.ui.environ = request.env
 
     def run(self):
+        """Start a server from CGI environment.
+
+        Modern servers should be using WSGI and should avoid this
+        method, if possible.
+        """
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
             raise RuntimeError("This function is only intended to be "
                                "called while running as a CGI script.")
@@ -164,11 +179,19 @@ class hgweb(object):
         wsgicgi.launch(self)
 
     def __call__(self, env, respond):
+        """Run the WSGI application.
+
+        This may be called by multiple threads.
+        """
         req = wsgirequest(env, respond)
         return self.run_wsgi(req)
 
     def run_wsgi(self, req):
+        """Internal method to run the WSGI application.
 
+        This is typically only called by Mercurial. External consumers
+        should be using instances of this class as the WSGI application.
+        """
         self.refresh(req)
 
         # work with CGI variables to create coherent structure

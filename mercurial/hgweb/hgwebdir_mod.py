@@ -79,6 +79,13 @@ def geturlcgivars(baseurl, port):
     return name, str(port), path
 
 class hgwebdir(object):
+    """HTTP server for multiple repositories.
+
+    Given a configuration, different repositories will be served depending
+    on the request path.
+
+    Instances are typically used as WSGI applications.
+    """
     def __init__(self, conf, baseui=None):
         self.conf = conf
         self.baseui = baseui
