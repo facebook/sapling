@@ -324,7 +324,7 @@ class hgweb(object):
                     raise ErrorResponse(HTTP_NOT_FOUND)
                 if cmd in perms:
                     self.check_perm(rctx, req, perms[cmd])
-                return protocol.call(self.repo, req, cmd)
+                return protocol.call(rctx.repo, req, cmd)
             except ErrorResponse as inst:
                 # A client that sends unbundle without 100-continue will
                 # break if we respond early.
