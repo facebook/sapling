@@ -1078,7 +1078,7 @@ def archive(web, req, tmpl):
                 raise ErrorResponse(HTTP_NOT_FOUND,
                     'file(s) not found: %s' % file[0])
 
-    mimetype, artype, extension, encoding = web.archive_specs[type_]
+    mimetype, artype, extension, encoding = web.archivespecs[type_]
     headers = [
         ('Content-Disposition', 'attachment; filename=%s%s' % (name, extension))
         ]

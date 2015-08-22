@@ -72,6 +72,8 @@ class requestcontext(object):
         object.__setattr__(self, 'app', app)
         object.__setattr__(self, 'repo', app.repo)
 
+        object.__setattr__(self, 'archives', ('zip', 'gz', 'bz2'))
+
         object.__setattr__(self, 'maxchanges',
                            self.configint('web', 'maxchanges', 10))
         object.__setattr__(self, 'stripecount',
@@ -109,6 +111,18 @@ class requestcontext(object):
         return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
+    archivespecs = {
+        'bz2': ('application/x-bzip2', 'tbz2', '.tar.bz2', None),
+        'gz': ('application/x-gzip', 'tgz', '.tar.gz', None),
+        'zip': ('application/zip', 'zip', '.zip', None),
+    }
+
+    def archivelist(self, nodeid):
+        allowed = self.configlist('web', 'allow_archive')
+        for typ, spec in self.archivespecs.iteritems():
+            if typ in allowed or self.configbool('web', 'allow%s' % typ):
+                yield {'type': typ, 'extension': spec[2], 'node': nodeid}
+
 class hgweb(object):
     """HTTP server for individual repositories.
 
@@ -145,7 +159,6 @@ class hgweb(object):
         self.repostate = ((-1, -1), (-1, -1))
         self.mtime = -1
         self.reponame = name
-        self.archives = 'zip', 'gz', 'bz2'
         # a repo owner may set web.templates in .hg/hgrc to get any file
         # readable by the user running the CGI script
         self.templatepath = self.config('web', 'templates')
@@ -159,10 +172,6 @@ class hgweb(object):
 
     def configbool(self, section, name, default=False, untrusted=True):
         return self.repo.ui.configbool(section, name, default,
-                                       untrusted=untrusted)
-
-    def configlist(self, section, name, default=None, untrusted=True):
-        return self.repo.ui.configlist(section, name, default,
                                        untrusted=untrusted)
 
     def _getview(self, repo):
@@ -311,7 +320,7 @@ class hgweb(object):
 
             if cmd == 'archive':
                 fn = req.form['node'][0]
-                for type_, spec in self.archive_specs.iteritems():
+                for type_, spec in rctx.archivespecs.iteritems():
                     ext = spec[2]
                     if fn.endswith(ext):
                         req.form['node'] = [fn[:-len(ext)]]
@@ -471,18 +480,6 @@ class hgweb(object):
                                              "style": style,
                                             })
         return tmpl
-
-    def archivelist(self, nodeid):
-        allowed = self.configlist("web", "allow_archive")
-        for i, spec in self.archive_specs.iteritems():
-            if i in allowed or self.configbool("web", "allow" + i):
-                yield {"type" : i, "extension" : spec[2], "node" : nodeid}
-
-    archive_specs = {
-        'bz2': ('application/x-bzip2', 'tbz2', '.tar.bz2', None),
-        'gz': ('application/x-gzip', 'tgz', '.tar.gz', None),
-        'zip': ('application/zip', 'zip', '.zip', None),
-        }
 
     def check_perm(self, rctx, req, op):
         for permhook in permhooks:
