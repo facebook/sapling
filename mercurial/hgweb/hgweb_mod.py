@@ -6,7 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, re
+import os
 from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
 from mercurial.templatefilters import websub
 from mercurial.i18n import _
@@ -59,7 +59,6 @@ def makebreadcrumb(url, prefix=''):
         breadcrumb.append({'url': urlel, 'name': pathel})
         urlel = os.path.dirname(urlel)
     return reversed(breadcrumb)
-
 
 class requestcontext(object):
     """Holds state/context for an individual request.
@@ -163,7 +162,7 @@ class hgweb(object):
         # web.templates in .hg/hgrc to get access to any file readable
         # by the user running the CGI script
         self.templatepath = self.config('web', 'templates', untrusted=False)
-        self.websubtable = self.loadwebsub()
+        self.websubtable = webutil.getwebsubs(r)
 
     # The CGI scripts are often run by a user different from the repo owner.
     # Trust the settings from the .hg/hgrc files by default.
@@ -368,47 +367,6 @@ class hgweb(object):
                 # Not allowed to return a body on a 304
                 return ['']
             return tmpl('error', error=inst.message)
-
-    def loadwebsub(self):
-        websubtable = []
-        websubdefs = self.repo.ui.configitems('websub')
-        # we must maintain interhg backwards compatibility
-        websubdefs += self.repo.ui.configitems('interhg')
-        for key, pattern in websubdefs:
-            # grab the delimiter from the character after the "s"
-            unesc = pattern[1]
-            delim = re.escape(unesc)
-
-            # identify portions of the pattern, taking care to avoid escaped
-            # delimiters. the replace format and flags are optional, but
-            # delimiters are required.
-            match = re.match(
-                r'^s%s(.+)(?:(?<=\\\\)|(?<!\\))%s(.*)%s([ilmsux])*$'
-                % (delim, delim, delim), pattern)
-            if not match:
-                self.repo.ui.warn(_("websub: invalid pattern for %s: %s\n")
-                                  % (key, pattern))
-                continue
-
-            # we need to unescape the delimiter for regexp and format
-            delim_re = re.compile(r'(?<!\\)\\%s' % delim)
-            regexp = delim_re.sub(unesc, match.group(1))
-            format = delim_re.sub(unesc, match.group(2))
-
-            # the pattern allows for 6 regexp flags, so set them if necessary
-            flagin = match.group(3)
-            flags = 0
-            if flagin:
-                for flag in flagin.upper():
-                    flags |= re.__dict__[flag]
-
-            try:
-                regexp = re.compile(regexp, flags)
-                websubtable.append((regexp, format))
-            except re.error:
-                self.repo.ui.warn(_("websub: invalid regexp for %s: %s\n")
-                                  % (key, regexp))
-        return websubtable
 
     def templater(self, req):
 

@@ -7,6 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, copy
+import re
 from mercurial import match, patch, error, ui, util, pathutil, context
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, short
@@ -540,3 +541,44 @@ class wsgiui(ui.ui):
     # default termwidth breaks under mod_wsgi
     def termwidth(self):
         return 80
+
+def getwebsubs(repo):
+    websubtable = []
+    websubdefs = repo.ui.configitems('websub')
+    # we must maintain interhg backwards compatibility
+    websubdefs += repo.ui.configitems('interhg')
+    for key, pattern in websubdefs:
+        # grab the delimiter from the character after the "s"
+        unesc = pattern[1]
+        delim = re.escape(unesc)
+
+        # identify portions of the pattern, taking care to avoid escaped
+        # delimiters. the replace format and flags are optional, but
+        # delimiters are required.
+        match = re.match(
+            r'^s%s(.+)(?:(?<=\\\\)|(?<!\\))%s(.*)%s([ilmsux])*$'
+            % (delim, delim, delim), pattern)
+        if not match:
+            repo.ui.warn(_("websub: invalid pattern for %s: %s\n")
+                              % (key, pattern))
+            continue
+
+        # we need to unescape the delimiter for regexp and format
+        delim_re = re.compile(r'(?<!\\)\\%s' % delim)
+        regexp = delim_re.sub(unesc, match.group(1))
+        format = delim_re.sub(unesc, match.group(2))
+
+        # the pattern allows for 6 regexp flags, so set them if necessary
+        flagin = match.group(3)
+        flags = 0
+        if flagin:
+            for flag in flagin.upper():
+                flags |= re.__dict__[flag]
+
+        try:
+            regexp = re.compile(regexp, flags)
+            websubtable.append((regexp, format))
+        except re.error:
+            repo.ui.warn(_("websub: invalid regexp for %s: %s\n")
+                         % (key, regexp))
+    return websubtable
