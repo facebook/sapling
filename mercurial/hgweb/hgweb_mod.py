@@ -90,6 +90,13 @@ class requestcontext(object):
         object.__setattr__(self, 'templatepath',
                            self.config('web', 'templates', untrusted=False))
 
+        # This object is more expensive to build than simple config values.
+        # It is shared across requests. The app will replace the object
+        # if it is updated. Since this is a reference and nothing should
+        # modify the underlying object, it should be constant for the lifetime
+        # of the request.
+        object.__setattr__(self, 'websubtable', app.websubtable)
+
     # Proxy unknown reads and writes to the application instance
     # until everything is moved to us.
     def __getattr__(self, name):
