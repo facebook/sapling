@@ -47,17 +47,16 @@ def checkfeatures(features):
 
     return result
 
-def require(features, quiet=False):
+def require(features):
     """Require that features are available, exiting if not."""
     result = checkfeatures(features)
 
-    if not quiet:
-        for missing in result['missing']:
-            sys.stderr.write('skipped: unknown feature: %s\n' % missing)
-        for msg in result['skipped']:
-            sys.stderr.write('skipped: %s\n' % msg)
-        for msg in result['error']:
-            sys.stderr.write('%s\n' % msg)
+    for missing in result['missing']:
+        sys.stderr.write('skipped: unknown feature: %s\n' % missing)
+    for msg in result['skipped']:
+        sys.stderr.write('skipped: %s\n' % msg)
+    for msg in result['error']:
+        sys.stderr.write('%s\n' % msg)
 
     if result['missing']:
         sys.exit(2)
