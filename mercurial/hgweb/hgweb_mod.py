@@ -84,6 +84,12 @@ class requestcontext(object):
         object.__setattr__(self, 'allowpull',
                            self.configbool('web', 'allowpull', True))
 
+        # we use untrusted=False to prevent a repo owner from using
+        # web.templates in .hg/hgrc to get access to any file readable
+        # by the user running the CGI script
+        object.__setattr__(self, 'templatepath',
+                           self.config('web', 'templates', untrusted=False))
+
     # Proxy unknown reads and writes to the application instance
     # until everything is moved to us.
     def __getattr__(self, name):
@@ -158,10 +164,6 @@ class hgweb(object):
         self.repostate = None
         self.mtime = -1
         self.reponame = name
-        # we use untrusted=False to prevent a repo owner from using
-        # web.templates in .hg/hgrc to get access to any file readable
-        # by the user running the CGI script
-        self.templatepath = self.config('web', 'templates', untrusted=False)
         self.websubtable = webutil.getwebsubs(r)
 
     # The CGI scripts are often run by a user different from the repo owner.
