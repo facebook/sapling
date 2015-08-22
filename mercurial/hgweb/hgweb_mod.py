@@ -238,7 +238,6 @@ class hgweb(object):
         self.repostate = None
         self.mtime = -1
         self.reponame = name
-        self.websubtable = webutil.getwebsubs(r)
 
     def _getview(self, repo):
         """The 'web.view' config controls changeset filter to hgweb. Possible
@@ -279,6 +278,8 @@ class hgweb(object):
             self.repostate = repostate
             # mtime is needed for ETag
             self.mtime = mtime
+
+            self.websubtable = webutil.getwebsubs(r)
 
     def run(self):
         """Start a server from CGI environment.
