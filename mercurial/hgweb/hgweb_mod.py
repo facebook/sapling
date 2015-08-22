@@ -72,6 +72,17 @@ class requestcontext(object):
         object.__setattr__(self, 'app', app)
         object.__setattr__(self, 'repo', app.repo)
 
+        object.__setattr__(self, 'maxchanges',
+                           self.configint('web', 'maxchanges', 10))
+        object.__setattr__(self, 'stripecount',
+                           self.configint('web', 'stripes', 1))
+        object.__setattr__(self, 'maxshortchanges',
+                           self.configint('web', 'maxshortchanges', 60))
+        object.__setattr__(self, 'maxfiles',
+                           self.configint('web', 'maxfiles', 10))
+        object.__setattr__(self, 'allowpull',
+                           self.configbool('web', 'allowpull', True))
+
     # Proxy unknown reads and writes to the application instance
     # until everything is moved to us.
     def __getattr__(self, name):
@@ -79,6 +90,24 @@ class requestcontext(object):
 
     def __setattr__(self, name, value):
         return setattr(self.app, name, value)
+
+    # Servers are often run by a user different from the repo owner.
+    # Trust the settings from the .hg/hgrc files by default.
+    def config(self, section, name, default=None, untrusted=True):
+        return self.repo.ui.config(section, name, default,
+                                   untrusted=untrusted)
+
+    def configbool(self, section, name, default=False, untrusted=True):
+        return self.repo.ui.configbool(section, name, default,
+                                       untrusted=untrusted)
+
+    def configint(self, section, name, default=None, untrusted=True):
+        return self.repo.ui.configint(section, name, default,
+                                      untrusted=untrusted)
+
+    def configlist(self, section, name, default=None, untrusted=True):
+        return self.repo.ui.configlist(section, name, default,
+                                       untrusted=untrusted)
 
 class hgweb(object):
     """HTTP server for individual repositories.
@@ -117,7 +146,6 @@ class hgweb(object):
         self.mtime = -1
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
-        self.stripecount = 1
         # a repo owner may set web.templates in .hg/hgrc to get any file
         # readable by the user running the CGI script
         self.templatepath = self.config('web', 'templates')
@@ -170,12 +198,6 @@ class hgweb(object):
         if repostate != self.repostate:
             r = hg.repository(self.repo.baseui, self.repo.url())
             self.repo = self._getview(r)
-            self.maxchanges = int(self.config("web", "maxchanges", 10))
-            self.stripecount = int(self.config("web", "stripes", 1))
-            self.maxshortchanges = int(self.config("web", "maxshortchanges",
-                                                   60))
-            self.maxfiles = int(self.config("web", "maxfiles", 10))
-            self.allowpull = self.configbool("web", "allowpull", True)
             encoding.encoding = self.config("web", "encoding",
                                             encoding.encoding)
             # update these last to avoid threads seeing empty settings
