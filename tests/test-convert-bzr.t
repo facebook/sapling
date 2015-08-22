@@ -1,3 +1,5 @@
+#require bzr
+
   $ . "$TESTDIR/bzr-definitions"
 
 create and rename on the same file in the same step

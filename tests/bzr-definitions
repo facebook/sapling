@@ -1,7 +1,5 @@
 # this file holds the definitions that are used in various bzr tests
 
-"$TESTDIR/hghave" bzr || exit 80
-
 TERM=dumb; export TERM
 echo '[extensions]' >> $HGRCPATH
 echo 'convert = ' >> $HGRCPATH

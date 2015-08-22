@@ -1,3 +1,5 @@
+#require bzr
+
 N.B. bzr 1.13 has a bug that breaks this test.  If you see this
 test fail, check your bzr version.  Upgrading to bzr 1.13.1
 should fix it.

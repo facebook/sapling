@@ -1,4 +1,4 @@
-#require bzr114
+#require bzr bzr114
 
   $ . "$TESTDIR/bzr-definitions"
 
