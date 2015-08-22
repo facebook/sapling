@@ -138,7 +138,7 @@ class hgweb(object):
         else:
             return repo.filtered('served')
 
-    def refresh(self, request=None):
+    def refresh(self, request):
         repostate = []
         # file of interrests mtime and size
         for meth, fname in foi:
@@ -163,8 +163,8 @@ class hgweb(object):
             self.repostate = repostate
             # mtime is needed for ETag
             self.mtime = st.st_mtime
-        if request:
-            self.repo.ui.environ = request.env
+
+        self.repo.ui.environ = request.env
 
     def run(self):
         """Start a server from CGI environment.
