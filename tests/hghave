@@ -64,36 +64,4 @@ if __name__ == '__main__':
     if options.test_features:
         sys.exit(test_features())
 
-    quiet = options.quiet
-
-    failures = 0
-
-    def error(msg):
-        global failures
-        if not quiet:
-            sys.stderr.write(msg + '\n')
-        failures += 1
-
-    for feature in args:
-        negate = feature.startswith('no-')
-        if negate:
-            feature = feature[3:]
-
-        if feature not in checks:
-            error('skipped: unknown feature: ' + feature)
-            sys.exit(2)
-
-        check, desc = checks[feature]
-        try:
-            available = check()
-        except Exception, e:
-            error('hghave check failed: ' + feature)
-            continue
-
-        if not negate and not available:
-            error('skipped: missing feature: ' + desc)
-        elif negate and available:
-            error('skipped: system supports %s' % desc)
-
-    if failures != 0:
-        sys.exit(1)
+    hghave.require(args, options.quiet)

@@ -17,6 +17,54 @@ def check(name, desc):
         return func
     return decorator
 
+def checkfeatures(features):
+    result = {
+        'error': [],
+        'missing': [],
+        'skipped': [],
+    }
+
+    for feature in features:
+        negate = feature.startswith('no-')
+        if negate:
+            feature = feature[3:]
+
+        if feature not in checks:
+            result['missing'].append(feature)
+            continue
+
+        check, desc = checks[feature]
+        try:
+            available = check()
+        except Exception:
+            result['error'].append('hghave check failed: %s' % feature)
+            continue
+
+        if not negate and not available:
+            result['skipped'].append('missing feature: %s' % desc)
+        elif negate and available:
+            result['skipped'].append('system supports %s' % desc)
+
+    return result
+
+def require(features, quiet=False):
+    """Require that features are available, exiting if not."""
+    result = checkfeatures(features)
+
+    if not quiet:
+        for missing in result['missing']:
+            sys.stderr.write('skipped: unknown feature: %s\n' % missing)
+        for msg in result['skipped']:
+            sys.stderr.write('skipped: %s\n' % msg)
+        for msg in result['error']:
+            sys.stderr.write('%s\n' % msg)
+
+    if result['missing']:
+        sys.exit(2)
+
+    if result['skipped'] or result['error']:
+        sys.exit(1)
+
 def matchoutput(cmd, regexp, ignorestatus=False):
     """Return True if cmd executes successfully and its output
     is matched by the supplied regular expression.
