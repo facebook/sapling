@@ -398,7 +398,8 @@ class hgweb(object):
                 msg = 'no such method: %s' % cmd
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
             elif cmd == 'file' and 'raw' in req.form.get('style', []):
-                self.ctype = ctype
+                # TODO convert to regular assignment once app proxy is removed.
+                object.__setattr__(rctx, 'ctype', ctype)
                 content = webcommands.rawfile(rctx, req, tmpl)
             else:
                 content = getattr(webcommands, cmd)(rctx, req, tmpl)
