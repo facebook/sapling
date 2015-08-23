@@ -25,15 +25,6 @@ perms = {
     'pushkey': 'push',
 }
 
-## Files of interest
-# Used to check if the repository has changed looking at mtime and size of
-# theses files. This should probably be relocated a bit higher in core.
-foi = [('spath', '00changelog.i'),
-       ('spath', 'phaseroots'), # ! phase can change content at the same size
-       ('spath', 'obsstore'),
-       ('path', 'bookmarks'), # ! bookmark can change content at the same size
-      ]
-
 def makebreadcrumb(url, prefix=''):
     '''Return a 'URL breadcrumb' list
 
@@ -66,8 +57,8 @@ class requestcontext(object):
     is prone to race conditions. Instances of this class exist to hold
     mutable and race-free state for requests.
     """
-    def __init__(self, app):
-        self.repo = app.repo
+    def __init__(self, app, repo):
+        self.repo = repo
         self.reponame = app.reponame
 
         self.archives = ('zip', 'gz', 'bz2')
@@ -217,10 +208,8 @@ class hgweb(object):
         # break some wsgi implementation.
         r.ui.setconfig('progress', 'disable', 'true', 'hgweb')
         r.baseui.setconfig('progress', 'disable', 'true', 'hgweb')
-        self.repo = self._webifyrepo(r)
+        self._repo = hg.cachedlocalrepo(self._webifyrepo(r))
         hook.redirect(True)
-        self.repostate = None
-        self.mtime = -1
         self.reponame = name
 
     def _webifyrepo(self, repo):
@@ -228,25 +217,13 @@ class hgweb(object):
         self.websubtable = webutil.getwebsubs(repo)
         return repo
 
-    def refresh(self):
-        repostate = []
-        mtime = 0
-        # file of interrests mtime and size
-        for meth, fname in foi:
-            prefix = getattr(self.repo, meth)
-            st = get_stat(prefix, fname)
-            repostate.append((st.st_mtime, st.st_size))
-            mtime = max(mtime, st.st_mtime)
-        repostate = tuple(repostate)
-        # we need to compare file size in addition to mtime to catch
-        # changes made less than a second ago
-        if repostate != self.repostate:
-            r = hg.repository(self.repo.baseui, self.repo.url())
-            self.repo = self._webifyrepo(r)
-            # update these last to avoid threads seeing empty settings
-            self.repostate = repostate
-            # mtime is needed for ETag
-            self.mtime = mtime
+    def _getrepo(self):
+        r, created = self._repo.fetch()
+        if created:
+            r = self._webifyrepo(r)
+
+        self.mtime = self._repo.mtime
+        return r
 
     def run(self):
         """Start a server from CGI environment.
@@ -274,8 +251,8 @@ class hgweb(object):
         This is typically only called by Mercurial. External consumers
         should be using instances of this class as the WSGI application.
         """
-        self.refresh()
-        rctx = requestcontext(self)
+        repo = self._getrepo()
+        rctx = requestcontext(self, repo)
 
         # This state is global across all threads.
         encoding.encoding = rctx.config('web', 'encoding', encoding.encoding)

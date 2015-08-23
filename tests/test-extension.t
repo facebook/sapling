@@ -115,8 +115,6 @@ Check hgweb's load order:
   3) bar extsetup
   4) foo reposetup
   4) bar reposetup
-  4) foo reposetup
-  4) bar reposetup
 
   $ echo 'foo = !' >> $HGRCPATH
   $ echo 'bar = !' >> $HGRCPATH

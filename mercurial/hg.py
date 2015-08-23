@@ -823,3 +823,72 @@ def remoteui(src, opts):
         dst.setconfig('web', 'cacerts', util.expandpath(v), 'copied')
 
     return dst
+
+# Files of interest
+# Used to check if the repository has changed looking at mtime and size of
+# theses files.
+foi = [('spath', '00changelog.i'),
+       ('spath', 'phaseroots'), # ! phase can change content at the same size
+       ('spath', 'obsstore'),
+       ('path', 'bookmarks'), # ! bookmark can change content at the same size
+      ]
+
+class cachedlocalrepo(object):
+    """Holds a localrepository that can be cached and reused."""
+
+    def __init__(self, repo):
+        """Create a new cached repo from an existing repo.
+
+        We assume the passed in repo was recently created. If the
+        repo has changed between when it was created and when it was
+        turned into a cache, it may not refresh properly.
+        """
+        assert isinstance(repo, localrepo.localrepository)
+        self._repo = repo
+        self._state, self.mtime = self._repostate()
+
+    def fetch(self):
+        """Refresh (if necessary) and return a repository.
+
+        If the cached instance is out of date, it will be recreated
+        automatically and returned.
+
+        Returns a tuple of the repo and a boolean indicating whether a new
+        repo instance was created.
+        """
+        # We compare the mtimes and sizes of some well-known files to
+        # determine if the repo changed. This is not precise, as mtimes
+        # are susceptible to clock skew and imprecise filesystems and
+        # file content can change while maintaining the same size.
+
+        state, mtime = self._repostate()
+        if state == self._state:
+            return self._repo, False
+
+        self._repo = repository(self._repo.baseui, self._repo.url())
+        self._state = state
+        self.mtime = mtime
+
+        return self._repo, True
+
+    def _repostate(self):
+        state = []
+        maxmtime = -1
+        for attr, fname in foi:
+            prefix = getattr(self._repo, attr)
+            p = os.path.join(prefix, fname)
+            try:
+                st = os.stat(p)
+            except OSError:
+                st = os.stat(prefix)
+            state.append((st.st_mtime, st.st_size))
+            maxmtime = max(maxmtime, st.st_mtime)
+
+        return tuple(state), maxmtime
+
+    def copy(self):
+        """Obtain a copy of this class instance."""
+        c = cachedlocalrepo(self._repo)
+        c._state = self._state
+        c.mtime = self.mtime
+        return c
