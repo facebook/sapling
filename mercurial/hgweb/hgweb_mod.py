@@ -209,7 +209,6 @@ class hgweb(object):
             # we trust caller to give us a private copy
             r = repo
 
-        r = getwebview(r)
         r.ui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.baseui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.ui.setconfig('ui', 'nontty', 'true', 'hgweb')
@@ -218,11 +217,16 @@ class hgweb(object):
         # break some wsgi implementation.
         r.ui.setconfig('progress', 'disable', 'true', 'hgweb')
         r.baseui.setconfig('progress', 'disable', 'true', 'hgweb')
-        self.repo = r
+        self.repo = self._webifyrepo(r)
         hook.redirect(True)
         self.repostate = None
         self.mtime = -1
         self.reponame = name
+
+    def _webifyrepo(self, repo):
+        repo = getwebview(repo)
+        self.websubtable = webutil.getwebsubs(repo)
+        return repo
 
     def refresh(self):
         repostate = []
@@ -238,13 +242,11 @@ class hgweb(object):
         # changes made less than a second ago
         if repostate != self.repostate:
             r = hg.repository(self.repo.baseui, self.repo.url())
-            self.repo = getwebview(r)
+            self.repo = self._webifyrepo(r)
             # update these last to avoid threads seeing empty settings
             self.repostate = repostate
             # mtime is needed for ETag
             self.mtime = mtime
-
-            self.websubtable = webutil.getwebsubs(r)
 
     def run(self):
         """Start a server from CGI environment.
