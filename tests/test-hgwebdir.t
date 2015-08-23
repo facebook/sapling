@@ -1245,6 +1245,67 @@ rss-log with basedir /foo/
   $ get-with-headers.py localhost:$HGPORT2 'a/rss-log' | grep '<guid'
       <guid isPermaLink="true">http://hg.example.com:8080/foo/a/rev/8580ff50825a</guid>
 
+Path refreshing works as expected
+
+  $ killdaemons.py
+  $ mkdir $root/refreshtest
+  $ hg init $root/refreshtest/a
+  $ cat > paths.conf << EOF
+  > [paths]
+  > / = $root/refreshtest/*
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
+  200 Script output follows
+  
+  
+  /a/
+  
+
+By default refreshing occurs every 20s and a new repo won't be listed
+immediately.
+
+  $ hg init $root/refreshtest/b
+  $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
+  200 Script output follows
+  
+  
+  /a/
+  
+
+Restart the server with no refresh interval. New repo should appear
+immediately.
+
+  $ killdaemons.py
+  $ cat > paths.conf << EOF
+  > [web]
+  > refreshinterval = -1
+  > [paths]
+  > / = $root/refreshtest/*
+  > EOF
+  $ hg serve -p $HGPORT1 -d --pid-file hg.pid --webdir-conf paths.conf
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
+  200 Script output follows
+  
+  
+  /a/
+  /b/
+  
+
+  $ hg init $root/refreshtest/c
+  $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
+  200 Script output follows
+  
+  
+  /a/
+  /b/
+  /c/
+  
+
 paths errors 1
 
   $ cat error-paths-1.log

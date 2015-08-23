@@ -1752,6 +1752,14 @@ The full set of options is:
     Whether to require that inbound pushes be transported over SSL to
     prevent password sniffing. Default is True.
 
+``refreshinterval``
+    How frequently directory listings re-scan the filesystem for new
+    repositories, in seconds. This is relevant when wildcards are used
+    to define paths. Depending on how much filesystem traversal is
+    required, refreshing may negatively impact performance.
+
+    Default is 20. Values less than or equal to 0 always refresh.
+
 ``staticurl``
     Base URL to use for static files. If unset, static files (e.g. the
     hgicon.png favicon) will be served by the CGI script itself. Use
