@@ -69,6 +69,7 @@ class requestcontext(object):
     def __init__(self, app):
         object.__setattr__(self, 'app', app)
         object.__setattr__(self, 'repo', app.repo)
+        object.__setattr__(self, 'reponame', app.reponame)
 
         object.__setattr__(self, 'archives', ('zip', 'gz', 'bz2'))
 
@@ -176,9 +177,10 @@ class requestcontext(object):
         sessionvars = webutil.sessionvars(vars, start)
 
         if not self.reponame:
-            self.reponame = (self.config('web', 'name')
-                             or req.env.get('REPO_NAME')
-                             or req.url.strip('/') or self.repo.root)
+            object.__setattr__(self, 'reponame',
+                               (self.config('web', 'name')
+                                or req.env.get('REPO_NAME')
+                                or req.url.strip('/') or self.repo.root))
 
         def websubfilter(text):
             return websub(text, self.websubtable)
