@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import contextlib
 import os
 from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
 from mercurial.templatefilters import websub
@@ -208,7 +209,8 @@ class hgweb(object):
         # break some wsgi implementation.
         r.ui.setconfig('progress', 'disable', 'true', 'hgweb')
         r.baseui.setconfig('progress', 'disable', 'true', 'hgweb')
-        self._repo = hg.cachedlocalrepo(self._webifyrepo(r))
+        self._repos = [hg.cachedlocalrepo(self._webifyrepo(r))]
+        self._lastrepo = self._repos[0]
         hook.redirect(True)
         self.reponame = name
 
@@ -217,13 +219,34 @@ class hgweb(object):
         self.websubtable = webutil.getwebsubs(repo)
         return repo
 
-    def _getrepo(self):
-        r, created = self._repo.fetch()
-        if created:
-            r = self._webifyrepo(r)
+    @contextlib.contextmanager
+    def _obtainrepo(self):
+        """Obtain a repo unique to the caller.
 
-        self.mtime = self._repo.mtime
-        return r
+        Internally we maintain a stack of cachedlocalrepo instances
+        to be handed out. If one is available, we pop it and return it,
+        ensuring it is up to date in the process. If one is not available,
+        we clone the most recently used repo instance and return it.
+
+        It is currently possible for the stack to grow without bounds
+        if the server allows infinite threads. However, servers should
+        have a thread limit, thus establishing our limit.
+        """
+        if self._repos:
+            cached = self._repos.pop()
+            r, created = cached.fetch()
+            if created:
+                r = self._webifyrepo(r)
+        else:
+            cached = self._lastrepo.copy()
+            r, created = cached.fetch()
+
+        self._lastrepo = cached
+        self.mtime = cached.mtime
+        try:
+            yield r
+        finally:
+            self._repos.append(cached)
 
     def run(self):
         """Start a server from CGI environment.
@@ -251,7 +274,10 @@ class hgweb(object):
         This is typically only called by Mercurial. External consumers
         should be using instances of this class as the WSGI application.
         """
-        repo = self._getrepo()
+        with self._obtainrepo() as repo:
+            return self._runwsgi(req, repo)
+
+    def _runwsgi(self, req, repo):
         rctx = requestcontext(self, repo)
 
         # This state is global across all threads.

@@ -64,7 +64,8 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > print '---- OS.ENVIRON wsgi variables'
   > print sorted([x for x in os.environ if x.startswith('wsgi')])
   > print '---- request.ENVIRON wsgi variables'
-  > print sorted([x for x in i._getrepo().ui.environ if x.startswith('wsgi')])
+  > with i._obtainrepo() as repo:
+  >     print sorted([x for x in repo.ui.environ if x.startswith('wsgi')])
   > EOF
   $ python request.py
   ---- STATUS
