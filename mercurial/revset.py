@@ -690,7 +690,7 @@ def bookmark(repo, subset, x):
         bm = getstring(args[0],
                        # i18n: "bookmark" is a keyword
                        _('the argument to bookmark must be a string'))
-        kind, pattern, matcher = _stringmatcher(bm)
+        kind, pattern, matcher = util.stringmatcher(bm)
         bms = set()
         if kind == 'literal':
             bmrev = repo._bookmarks.get(pattern, None)
@@ -731,7 +731,7 @@ def branch(repo, subset, x):
         # not a string, but another revspec, e.g. tip()
         pass
     else:
-        kind, pattern, matcher = _stringmatcher(b)
+        kind, pattern, matcher = util.stringmatcher(b)
         if kind == 'literal':
             # note: falls through to the revspec case if no branch with
             # this name exists
@@ -1019,7 +1019,7 @@ def extra(repo, subset, x):
         # i18n: "extra" is a keyword
         value = getstring(args['value'], _('second argument to extra must be '
                                            'a string'))
-        kind, value, matcher = _stringmatcher(value)
+        kind, value, matcher = util.stringmatcher(value)
 
     def _matchvalue(r):
         extra = repo[r].extra()
@@ -1466,7 +1466,7 @@ def named(repo, subset, x):
     ns = getstring(args[0],
                    # i18n: "named" is a keyword
                    _('the argument to named must be a string'))
-    kind, pattern, matcher = _stringmatcher(ns)
+    kind, pattern, matcher = util.stringmatcher(ns)
     namespaces = set()
     if kind == 'literal':
         if pattern not in repo.names:
@@ -2034,7 +2034,7 @@ def subrepo(repo, subset, x):
     m = matchmod.exact(repo.root, repo.root, ['.hgsubstate'])
 
     def submatches(names):
-        k, p, m = _stringmatcher(pat)
+        k, p, m = util.stringmatcher(pat)
         for name in names:
             if m(name):
                 yield name
@@ -2064,47 +2064,8 @@ def subrepo(repo, subset, x):
 
     return subset.filter(matches)
 
-def _stringmatcher(pattern):
-    """
-    accepts a string, possibly starting with 're:' or 'literal:' prefix.
-    returns the matcher name, pattern, and matcher function.
-    missing or unknown prefixes are treated as literal matches.
-
-    helper for tests:
-    >>> def test(pattern, *tests):
-    ...     kind, pattern, matcher = _stringmatcher(pattern)
-    ...     return (kind, pattern, [bool(matcher(t)) for t in tests])
-
-    exact matching (no prefix):
-    >>> test('abcdefg', 'abc', 'def', 'abcdefg')
-    ('literal', 'abcdefg', [False, False, True])
-
-    regex matching ('re:' prefix)
-    >>> test('re:a.+b', 'nomatch', 'fooadef', 'fooadefbar')
-    ('re', 'a.+b', [False, False, True])
-
-    force exact matches ('literal:' prefix)
-    >>> test('literal:re:foobar', 'foobar', 're:foobar')
-    ('literal', 're:foobar', [False, True])
-
-    unknown prefixes are ignored and treated as literals
-    >>> test('foo:bar', 'foo', 'bar', 'foo:bar')
-    ('literal', 'foo:bar', [False, False, True])
-    """
-    if pattern.startswith('re:'):
-        pattern = pattern[3:]
-        try:
-            regex = re.compile(pattern)
-        except re.error as e:
-            raise error.ParseError(_('invalid regular expression: %s')
-                                   % e)
-        return 're', pattern, regex.search
-    elif pattern.startswith('literal:'):
-        pattern = pattern[8:]
-    return 'literal', pattern, pattern.__eq__
-
 def _substringmatcher(pattern):
-    kind, pattern, matcher = _stringmatcher(pattern)
+    kind, pattern, matcher = util.stringmatcher(pattern)
     if kind == 'literal':
         matcher = lambda s: pattern in s
     return kind, pattern, matcher
@@ -2124,7 +2085,7 @@ def tag(repo, subset, x):
         pattern = getstring(args[0],
                             # i18n: "tag" is a keyword
                             _('the argument to tag must be a string'))
-        kind, pattern, matcher = _stringmatcher(pattern)
+        kind, pattern, matcher = util.stringmatcher(pattern)
         if kind == 'literal':
             # avoid resolving all tags
             tn = repo._tagscache.tags.get(pattern, None)

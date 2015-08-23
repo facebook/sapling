@@ -1605,6 +1605,45 @@ def matchdate(date):
         start, stop = lower(date), upper(date)
         return lambda x: x >= start and x <= stop
 
+def stringmatcher(pattern):
+    """
+    accepts a string, possibly starting with 're:' or 'literal:' prefix.
+    returns the matcher name, pattern, and matcher function.
+    missing or unknown prefixes are treated as literal matches.
+
+    helper for tests:
+    >>> def test(pattern, *tests):
+    ...     kind, pattern, matcher = stringmatcher(pattern)
+    ...     return (kind, pattern, [bool(matcher(t)) for t in tests])
+
+    exact matching (no prefix):
+    >>> test('abcdefg', 'abc', 'def', 'abcdefg')
+    ('literal', 'abcdefg', [False, False, True])
+
+    regex matching ('re:' prefix)
+    >>> test('re:a.+b', 'nomatch', 'fooadef', 'fooadefbar')
+    ('re', 'a.+b', [False, False, True])
+
+    force exact matches ('literal:' prefix)
+    >>> test('literal:re:foobar', 'foobar', 're:foobar')
+    ('literal', 're:foobar', [False, True])
+
+    unknown prefixes are ignored and treated as literals
+    >>> test('foo:bar', 'foo', 'bar', 'foo:bar')
+    ('literal', 'foo:bar', [False, False, True])
+    """
+    if pattern.startswith('re:'):
+        pattern = pattern[3:]
+        try:
+            regex = remod.compile(pattern)
+        except remod.error as e:
+            raise error.ParseError(_('invalid regular expression: %s')
+                                   % e)
+        return 're', pattern, regex.search
+    elif pattern.startswith('literal:'):
+        pattern = pattern[8:]
+    return 'literal', pattern, pattern.__eq__
+
 def shortuser(user):
     """Return a short representation of a user name or email address."""
     f = user.find('@')
