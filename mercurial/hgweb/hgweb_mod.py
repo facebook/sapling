@@ -67,45 +67,29 @@ class requestcontext(object):
     mutable and race-free state for requests.
     """
     def __init__(self, app):
-        object.__setattr__(self, 'app', app)
-        object.__setattr__(self, 'repo', app.repo)
-        object.__setattr__(self, 'reponame', app.reponame)
+        self.repo = app.repo
+        self.reponame = app.reponame
 
-        object.__setattr__(self, 'archives', ('zip', 'gz', 'bz2'))
+        self.archives = ('zip', 'gz', 'bz2')
 
-        object.__setattr__(self, 'maxchanges',
-                           self.configint('web', 'maxchanges', 10))
-        object.__setattr__(self, 'stripecount',
-                           self.configint('web', 'stripes', 1))
-        object.__setattr__(self, 'maxshortchanges',
-                           self.configint('web', 'maxshortchanges', 60))
-        object.__setattr__(self, 'maxfiles',
-                           self.configint('web', 'maxfiles', 10))
-        object.__setattr__(self, 'allowpull',
-                           self.configbool('web', 'allowpull', True))
+        self.maxchanges = self.configint('web', 'maxchanges', 10)
+        self.stripecount = self.configint('web', 'stripes', 1)
+        self.maxshortchanges = self.configint('web', 'maxshortchanges', 60)
+        self.maxfiles = self.configint('web', 'maxfiles', 10)
+        self.allowpull = self.configbool('web', 'allowpull', True)
 
         # we use untrusted=False to prevent a repo owner from using
         # web.templates in .hg/hgrc to get access to any file readable
         # by the user running the CGI script
-        object.__setattr__(self, 'templatepath',
-                           self.config('web', 'templates', untrusted=False))
+        self.templatepath = self.config('web', 'templates', untrusted=False)
 
         # This object is more expensive to build than simple config values.
         # It is shared across requests. The app will replace the object
         # if it is updated. Since this is a reference and nothing should
         # modify the underlying object, it should be constant for the lifetime
         # of the request.
-        object.__setattr__(self, 'websubtable', app.websubtable)
+        self.websubtable = app.websubtable
 
-    # Proxy unknown reads and writes to the application instance
-    # until everything is moved to us.
-    def __getattr__(self, name):
-        return getattr(self.app, name)
-
-    def __setattr__(self, name, value):
-        return setattr(self.app, name, value)
-
-    # Servers are often run by a user different from the repo owner.
     # Trust the settings from the .hg/hgrc files by default.
     def config(self, section, name, default=None, untrusted=True):
         return self.repo.ui.config(section, name, default,
@@ -177,10 +161,9 @@ class requestcontext(object):
         sessionvars = webutil.sessionvars(vars, start)
 
         if not self.reponame:
-            object.__setattr__(self, 'reponame',
-                               (self.config('web', 'name')
-                                or req.env.get('REPO_NAME')
-                                or req.url.strip('/') or self.repo.root))
+            self.reponame = (self.config('web', 'name')
+                             or req.env.get('REPO_NAME')
+                             or req.url.strip('/') or self.repo.root)
 
         def websubfilter(text):
             return websub(text, self.websubtable)
@@ -398,8 +381,7 @@ class hgweb(object):
                 msg = 'no such method: %s' % cmd
                 raise ErrorResponse(HTTP_BAD_REQUEST, msg)
             elif cmd == 'file' and 'raw' in req.form.get('style', []):
-                # TODO convert to regular assignment once app proxy is removed.
-                object.__setattr__(rctx, 'ctype', ctype)
+                rctx.ctype = ctype
                 content = webcommands.rawfile(rctx, req, tmpl)
             else:
                 content = getattr(webcommands, cmd)(rctx, req, tmpl)
