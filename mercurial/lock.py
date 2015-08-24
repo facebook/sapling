@@ -83,7 +83,9 @@ class lock(object):
         if lock._host is None:
             lock._host = socket.gethostname()
         lockname = '%s:%s' % (lock._host, self.pid)
-        while not self.held:
+        retry = 5
+        while not self.held and retry:
+            retry -= 1
             try:
                 self.vfs.makelock(lockname, self.f)
                 self.held = 1
