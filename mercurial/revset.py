@@ -123,7 +123,9 @@ def reachablerootspure(repo, minroot, roots, heads, includepath):
         for parent in seen[rev]:
             if parent in reachable:
                 reached(rev)
-    return baseset(sorted(reachable))
+    reachable = baseset(reachable)
+    reachable.sort()
+    return reachable
 
 def reachableroots(repo, roots, heads, includepath=False):
     """return (heads(::<roots> and ::<heads>))
