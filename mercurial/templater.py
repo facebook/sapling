@@ -512,6 +512,19 @@ def label(context, mapping, args):
     # ignore args[0] (the label string) since this is supposed to be a a no-op
     yield args[1][0](context, mapping, args[1][1])
 
+def latesttag(context, mapping, args):
+    """:latesttag([pattern]): The global tags matching the given pattern on the
+    most recent globally tagged ancestor of this changeset."""
+    if len(args) > 1:
+        # i18n: "latesttag" is a keyword
+        raise error.ParseError(_("latesttag expects at most one argument"))
+
+    pattern = None
+    if len(args) == 1:
+        pattern = stringify(args[0][0](context, mapping, args[0][1]))
+
+    return templatekw.showlatesttags(pattern, **mapping)
+
 def localdate(context, mapping, args):
     """:localdate(date[, tz]): Converts a date to the specified timezone.
     The default is local date."""
@@ -733,6 +746,7 @@ funcs = {
     "indent": indent,
     "join": join,
     "label": label,
+    "latesttag": latesttag,
     "localdate": localdate,
     "pad": pad,
     "revset": revset,

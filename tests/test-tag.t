@@ -461,6 +461,13 @@ check that we can merge tags that differ in rank
   $ hg log -r '.' -T "{latesttag % '{latesttag}\n'}"
   t4
   t6
+  $ hg log -r '.' -T "{latesttag('t4') % 'T: {tag}, C: {changes}, D: {distance}\n'}"
+  T: t4, C: 2, D: 2
+  $ hg log -r '.' -T "{latesttag('re:\d') % 'T: {tag}, C: {changes}, D: {distance}\n'}"
+  T: t4, C: 2, D: 2
+  T: t6, C: 2, D: 2
+  $ hg log -r . -T '{join(latesttag(), "*")}\n'
+  t4*t6
   $ hg ci -A -m4
   adding f4
   $ hg log -r 'wdir()' -T "{changessincelatesttag} changes since {latesttag}\n"

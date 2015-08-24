@@ -102,6 +102,10 @@ Some sample command line templates:
 
    $ hg log --template "{bookmarks % '{bookmark}{ifeq(bookmark, active, '*')} '}\n"
 
+- Find the previous release candidate tag, the distance and changes since the tag::
+
+   $ hg log -r . --template "{latesttag('re:^.*-rc$') % '{tag}, {changes}, {distance}'}\n"
+
 - Mark the working copy parent with '@'::
 
    $ hg log --template "{ifcontains(rev, revset('.'), '@')}\n"
