@@ -122,14 +122,21 @@ def getfiles(repo, ctx, revcache):
         revcache['files'] = repo.status(ctx.p1(), ctx)[:3]
     return revcache['files']
 
-def getlatesttags(repo, ctx, cache):
+def getlatesttags(repo, ctx, cache, pattern=None):
     '''return date, distance and name for the latest tag of rev'''
 
-    if 'latesttags' not in cache:
+    cachename = 'latesttags'
+    if pattern is not None:
+        cachename += '-' + pattern
+        match = util.stringmatcher(pattern)[2]
+    else:
+        match = util.always
+
+    if cachename not in cache:
         # Cache mapping from rev to a tuple with tag date, tag
         # distance and tag name
-        cache['latesttags'] = {-1: (0, 0, ['null'])}
-    latesttags = cache['latesttags']
+        cache[cachename] = {-1: (0, 0, ['null'])}
+    latesttags = cache[cachename]
 
     rev = ctx.rev()
     todo = [rev]
@@ -139,7 +146,8 @@ def getlatesttags(repo, ctx, cache):
             continue
         ctx = repo[rev]
         tags = [t for t in ctx.tags()
-                if (repo.tagtype(t) and repo.tagtype(t) != 'local')]
+                if (repo.tagtype(t) and repo.tagtype(t) != 'local'
+                    and match(t))]
         if tags:
             latesttags[rev] = ctx.date()[0], 0, [t for t in sorted(tags)]
             continue
