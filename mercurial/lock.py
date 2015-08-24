@@ -65,7 +65,7 @@ class lock(object):
         timeout = self.timeout
         while True:
             try:
-                self.trylock()
+                self._trylock()
                 return self.timeout - timeout
             except error.LockHeld as inst:
                 if timeout != 0:
@@ -76,7 +76,7 @@ class lock(object):
                 raise error.LockHeld(errno.ETIMEDOUT, inst.filename, self.desc,
                                      inst.locker)
 
-    def trylock(self):
+    def _trylock(self):
         if self.held:
             self.held += 1
             return
