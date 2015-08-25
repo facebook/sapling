@@ -414,6 +414,23 @@ def has_aix():
 def has_osx():
     return sys.platform == 'darwin'
 
+@check("docker", "docker support")
+def has_docker():
+    pat = r'A self-sufficient runtime for linux containers\.'
+    if matchoutput('docker --help', pat):
+        if 'linux' not in sys.platform:
+            # TODO: in theory we should be able to test docker-based
+            # package creation on non-linux using boot2docker, but in
+            # practice that requires extra coordination to make sure
+            # $TESTTEMP is going to be visible at the same path to the
+            # boot2docker VM. If we figure out how to verify that, we
+            # can use the following instead of just saying False:
+            # return 'DOCKER_HOST' in os.environ
+            return False
+
+        return True
+    return False
+
 @check("debhelper", "debian packaging tools")
 def has_debhelper():
     dpkg = matchoutput('dpkg --version',
