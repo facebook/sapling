@@ -159,9 +159,7 @@ osx:
 
 deb:
 	mkdir -p packages/debian-unknown
-	contrib/builddeb
-	mv debbuild/*.deb packages/debian-unknown
-	rm -rf debbuild
+	contrib/builddeb --release unknown
 
 docker-debian-jessie:
 	mkdir -p packages/debian-jessie

@@ -8,13 +8,14 @@ export ROOTDIR=$(cd $BUILDDIR/..; pwd)
 
 checkdocker
 
+DEBPLATFORM="$1"
 PLATFORM="debian-$1"
 shift # extra params are passed to build process
 
 initcontainer $PLATFORM
 
-DEBBUILDDIR=$ROOTDIR/packages/$PLATFORM
-contrib/builddeb --debbuilddir $DEBBUILDDIR/staged --prepare
+DEBBUILDDIR=${OUTPUTDIR:=$ROOTDIR/packages/$PLATFORM}
+OUTPUTDIR=$DEBBUILDDIR/staged contrib/builddeb --release $DEBPLATFORM --prepare
 
 DSHARED=/mnt/shared/
 if [ $(uname) = "Darwin" ] ; then

@@ -7,9 +7,14 @@
 . $(dirname $0)/packagelib.sh
 
 BUILD=1
-DEBBUILDDIR="$PWD/debbuild"
+DEBVERSION=jessie
 while [ "$1" ]; do
     case "$1" in
+    --release )
+        shift
+        DEBVERSION="$1"
+        shift
+        ;;
     --prepare )
         shift
         BUILD=
@@ -25,6 +30,8 @@ while [ "$1" ]; do
         ;;
     esac
 done
+
+DEBBUILDDIR=${OUTPUTDIR:="$PWD/debbuild"}
 
 set -u
 
