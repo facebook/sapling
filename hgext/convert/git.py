@@ -224,6 +224,8 @@ class convert_git(converter_source):
         lcount = len(difftree)
         i = 0
 
+        skipsubmodules = self.ui.configbool('convert', 'git.skipsubmodules',
+                                            False)
         def add(entry, f, isdest):
             seen.add(f)
             h = entry[3]
@@ -232,6 +234,9 @@ class convert_git(converter_source):
             renamesource = (not isdest and entry[4][0] == 'R')
 
             if f == '.gitmodules':
+                if skipsubmodules:
+                    return
+
                 subexists[0] = True
                 if entry[4] == 'D' or renamesource:
                     subdeleted[0] = True
@@ -239,7 +244,8 @@ class convert_git(converter_source):
                 else:
                     changes.append(('.hgsub', ''))
             elif entry[1] == '160000' or entry[0] == ':160000':
-                subexists[0] = True
+                if not skipsubmodules:
+                    subexists[0] = True
             else:
                 if renamesource:
                     h = hex(nullid)
