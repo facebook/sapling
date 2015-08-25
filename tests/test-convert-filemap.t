@@ -677,34 +677,39 @@ test converting merges into a repo that contains other files
 
   $ hg init merge-test1
   $ cd merge-test1
-  $ touch a && hg commit -Aqm a
-  $ hg up -q null
-  $ touch b && hg commit -Aqm b
-  $ hg merge -q 0 && hg commit -qm merge
+  $ touch a && hg commit -Aqm 'add a'
+  $ echo a > a && hg commit -Aqm 'edit a'
+  $ hg up -q 0
+  $ touch b && hg commit -Aqm 'add b'
+  $ hg merge -q 1 && hg commit -qm 'merge a & b'
+
   $ cd ..
   $ hg init merge-test2
   $ cd merge-test2
   $ mkdir converted
-  $ touch converted/a && hg commit -Aqm 'a'
-  $ touch x && hg commit -Aqm 'x'
+  $ touch converted/a toberemoved && hg commit -Aqm 'add converted/a & toberemoved'
+  $ touch x && rm toberemoved && hg commit -Aqm 'add x & remove tobremoved'
   $ cd ..
-  $ hg log -G -T '{node}' -R merge-test1
-  @    ea7c1a7ae9588677a715ce4f204cd89c28d5471f
+  $ hg log -G -T '{shortest(node)} {desc}' -R merge-test1
+  @    1191 merge a & b
   |\
-  | o  d7486e00c6f1b633dcadc0582f78006d805c7a0f
-  |
-  o  3903775176ed42b1458a6281db4a0ccf4d9f287a
+  | o  9077 add b
+  | |
+  o |  d19f edit a
+  |/
+  o  ac82 add a
   
-  $ hg log -G -T '{node}' -R merge-test2
-  @  34f1aa7da42559bae87920880b522d47b3ddbc0d
+  $ hg log -G -T '{shortest(node)} {desc}' -R merge-test2
+  @  150e add x & remove tobremoved
   |
-  o  e01a12b07b4fdfd61ff90a2a1b4560a7a776f323
+  o  bbac add converted/a & toberemoved
   
 - Build a shamap where the target converted/a is in on top of an unrelated
 - change to 'x'. This simulates using convert to merge several repositories
 - together.
   $ cat >> merge-test2/.hg/shamap <<EOF
-  > 3903775176ed42b1458a6281db4a0ccf4d9f287a 34f1aa7da42559bae87920880b522d47b3ddbc0d
+  > $(hg -R merge-test1 log -r 0 -T '{node}') $(hg -R merge-test2 log -r 0 -T '{node}')
+  > $(hg -R merge-test1 log -r 1 -T '{node}') $(hg -R merge-test2 log -r 1 -T '{node}')
   > EOF
   $ cat >> merge-test-filemap <<EOF
   > rename . converted/
@@ -713,19 +718,26 @@ test converting merges into a repo that contains other files
   scanning source...
   sorting...
   converting...
-  1 b
-  0 merge
+  1 add b
+  0 merge a & b
   $ hg -R merge-test2 manifest -r tip
   converted/a
   converted/b
   x
-  $ hg -R merge-test2 log -G -T '{node}\n{files % "{file}\n"}'
-  o    4b5e2f0218d3442a0c14892b18685bf9c8059c4a
-  |\
-  | o  214325dd2e4cff981dcf00cb120cd39e1ea36dcc
-  |    converted/b
-  @  34f1aa7da42559bae87920880b522d47b3ddbc0d
-  |  x
-  o  e01a12b07b4fdfd61ff90a2a1b4560a7a776f323
-     converted/a
+  $ hg -R merge-test2 log -G -T '{shortest(node)} {desc}\n{files % "- {file}\n"}\n'
+  o    6eaa merge a & b
+  |\   - converted/a
+  | |  - toberemoved
+  | |
+  | o  2995 add b
+  | |  - converted/b
+  | |
+  @ |  150e add x & remove tobremoved
+  |/   - toberemoved
+  |    - x
+  |
+  o  bbac add converted/a & toberemoved
+     - converted/a
+     - toberemoved
+  
 

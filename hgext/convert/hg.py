@@ -223,7 +223,12 @@ class mercurial_sink(converter_sink):
         def getfilectx(repo, memctx, f):
             if p2ctx and f in p2files and f not in copies:
                 self.ui.debug('reusing %s from p2\n' % f)
-                return p2ctx[f]
+                try:
+                    return p2ctx[f]
+                except error.ManifestLookupError:
+                    # If the file doesn't exist in p2, then we're syncing a
+                    # delete, so just return None.
+                    return None
             try:
                 v = files[f]
             except KeyError:
