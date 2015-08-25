@@ -42,6 +42,7 @@ from mercurial import manifest
 from mercurial import revset
 from mercurial import scmutil
 from mercurial import templatekw
+from mercurial import ui as hgui
 from mercurial import util as hgutil
 from mercurial.node import hex
 from mercurial.i18n import _
@@ -91,16 +92,26 @@ except AttributeError:
         def localpath(self):
             return self.p
 
+def _isgitdir(path):
+    """True if the given file path is a git repo."""
+    if os.path.exists(os.path.join(path, '.hg')):
+        return False
+
+    if os.path.exists(os.path.join(path, '.git')):
+        # is full git repo
+        return True
+
+    if (os.path.exists(os.path.join(path, 'HEAD')) and
+        os.path.exists(os.path.join(path, 'objects')) and
+        os.path.exists(os.path.join(path, 'refs'))):
+        # is bare git repo
+        return True
+
+    return False
+
 def _local(path):
     p = urlcls(path).localpath()
-    if (os.path.exists(os.path.join(p, '.git')) and
-        not os.path.exists(os.path.join(p, '.hg'))):
-        return gitrepo
-    # detect a bare repository
-    if (os.path.exists(os.path.join(p, 'HEAD')) and
-        os.path.exists(os.path.join(p, 'objects')) and
-        os.path.exists(os.path.join(p, 'refs')) and
-        not os.path.exists(os.path.join(p, '.hg'))):
+    if _isgitdir(p):
         return gitrepo
     # detect git ssh urls (which mercurial thinks is a file-like path)
     if util.isgitsshuri(p):
