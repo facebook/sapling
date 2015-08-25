@@ -414,6 +414,16 @@ def has_aix():
 def has_osx():
     return sys.platform == 'darwin'
 
+@check("debhelper", "debian packaging tools")
+def has_debhelper():
+    dpkg = matchoutput('dpkg --version',
+                       "Debian `dpkg' package management program")
+    dh = matchoutput('dh --help',
+                     'dh is a part of debhelper.')
+    dh_py2 = matchoutput('dh_python2 --help',
+                         'other supported Python versions')
+    return dpkg and dh and dh_py2
+
 @check("absimport", "absolute_import in __future__")
 def has_absimport():
     import __future__
