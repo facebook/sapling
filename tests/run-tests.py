@@ -259,6 +259,8 @@ def getparser():
                       help='run tests in random order')
     parser.add_option('--profile-runner', action='store_true',
                       help='run statprof on run-tests')
+    parser.add_option('--allow-slow-tests', action='store_true',
+                      help='allow extremely slow tests')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -1834,6 +1836,11 @@ class TestRunner(object):
 
         if self.options.pure:
             os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
+
+        if self.options.allow_slow_tests:
+            os.environ["HGTEST_SLOW"] = "slow"
+        elif 'HGTEST_SLOW' in os.environ:
+            del os.environ['HGTEST_SLOW']
 
         self._coveragefile = os.path.join(self._testdir, b'.coverage')
 

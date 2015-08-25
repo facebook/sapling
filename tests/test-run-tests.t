@@ -621,3 +621,17 @@ test that TESTDIR is referred in PATH
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
 #endif
+
+test support for --allow-slow-tests
+  $ cat > test-very-slow-test.t <<EOF
+  > #require slow
+  >   $ echo pass
+  >   pass
+  > EOF
+  $ run-tests.py test-very-slow-test.t
+  s
+  Skipped test-very-slow-test.t: skipped
+  # Ran 0 tests, 1 skipped, 0 warned, 0 failed.
+  $ run-tests.py --allow-slow-tests test-very-slow-test.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
