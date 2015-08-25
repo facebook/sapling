@@ -10,3 +10,8 @@
 This extension has been merged into core, you can remove it from your config.
 See hg help config.progress for configuration options.
 """
+# Note for extension authors: ONLY specify testedwith = 'internal' for
+# extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
+# be specifying the version(s) of Mercurial they are tested with, or
+# leave the attribute unspecified.
+testedwith = 'internal'
