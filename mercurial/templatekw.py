@@ -350,6 +350,26 @@ def showlatesttag(**args):
 
     return showlist('latesttag', latesttags, separator=':', **args)
 
+def showlatesttags(pattern, **args):
+    """helper method for the latesttag keyword and function"""
+    repo, ctx = args['repo'], args['ctx']
+    cache = args['cache']
+    latesttags = getlatesttags(repo, ctx, cache, pattern)
+
+    # latesttag[0] is an implementation detail for sorting csets on different
+    # branches in a stable manner- it is the date the tagged cset was created,
+    # not the date the tag was created.  Therefore it isn't made visible here.
+    makemap = lambda v: {
+        'changes': _showchangessincetag,
+        'distance': latesttags[1],
+        'latesttag': v,   # BC with {latesttag % '{latesttag}'}
+        'tag': v
+    }
+
+    tags = latesttags[2]
+    f = _showlist('latesttag', tags, separator=':', **args)
+    return _hybrid(f, tags, makemap, lambda x: x['latesttag'])
+
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
     """:latesttagdistance: Integer. Longest path to the latest tag."""
     return getlatesttags(repo, ctx, cache)[1]
