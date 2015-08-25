@@ -344,11 +344,7 @@ def showlatesttag(**args):
     """:latesttag: List of strings. The global tags on the most recent globally
     tagged ancestor of this changeset.
     """
-    repo, ctx = args['repo'], args['ctx']
-    cache = args['cache']
-    latesttags = getlatesttags(repo, ctx, cache)[2]
-
-    return showlist('latesttag', latesttags, separator=':', **args)
+    return showlatesttags(None, **args)
 
 def showlatesttags(pattern, **args):
     """helper method for the latesttag keyword and function"""

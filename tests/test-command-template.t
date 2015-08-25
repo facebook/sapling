@@ -2690,6 +2690,19 @@ Merged tag overrides:
   1: t1+0
   0: null+1
 
+  $ hg log --template "{rev}: {latesttag % '{tag}+{distance},{changes} '}\n"
+  10: t5+5,5 
+  9: t5+4,4 
+  8: t5+3,3 
+  7: t5+2,2 
+  6: t5+1,1 
+  5: t5+0,0 
+  4: at3+1,1 t3+1,1 
+  3: at3+0,0 t3+0,0 
+  2: t2+0,0 
+  1: t1+0,0 
+  0: null+1,1 
+
   $ hg log --template "{rev}: {latesttag('re:^t[13]$') % '{tag}, C: {changes}, D: {distance}'}\n"
   10: t3, C: 8, D: 7
   9: t3, C: 7, D: 6
