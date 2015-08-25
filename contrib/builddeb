@@ -49,6 +49,7 @@ sed "s/__VERSION__/$version/" < $control > $control.tmp
 mv $control.tmp $control
 
 if [ "$BUILD" ]; then
+    make PREFIX=$DEBBUILDDIR/usr install
     dpkg-deb --build $DEBBUILDDIR
     mv $DEBBUILDDIR.deb $DEBBUILDDIR/mercurial-$version-$release.deb
     if [ $? = 0 ]; then
