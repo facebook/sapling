@@ -1441,7 +1441,6 @@ class changeset_templater(changeset_printer):
         props['cache'] = self.cache
 
         # find correct templates for current mode
-
         tmplmodes = [
             (True, None),
             (self.ui.verbose, 'verbose'),
@@ -1449,15 +1448,14 @@ class changeset_templater(changeset_printer):
             (self.ui.debugflag, 'debug'),
         ]
 
-        types = {'header': '', 'footer':'', 'changeset': 'changeset'}
-        for mode, postfix  in tmplmodes:
+        types = {'header': '', 'footer': '', 'changeset': 'changeset'}
+        for mode, postfix in tmplmodes:
             for type in types:
                 cur = postfix and ('%s_%s' % (type, postfix)) or type
                 if mode and cur in self.t:
                     types[type] = cur
 
         try:
-
             # write header
             if types['header']:
                 h = templater.stringify(self.t(types['header'], **props))
@@ -1477,7 +1475,6 @@ class changeset_templater(changeset_printer):
                 if not self.footer:
                     self.footer = templater.stringify(self.t(types['footer'],
                                                       **props))
-
         except KeyError as inst:
             msg = _("%s: no key named '%s'")
             raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
