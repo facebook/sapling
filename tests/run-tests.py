@@ -2078,7 +2078,11 @@ class TestRunner(object):
         vlog("# Running", cmd)
         if os.system(cmd) == 0:
             if not self.options.verbose:
-                os.remove(installerrs)
+                try:
+                    os.remove(installerrs)
+                except OSError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
         else:
             f = open(installerrs, 'rb')
             for line in f:
