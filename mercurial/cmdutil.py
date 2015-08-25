@@ -1451,7 +1451,9 @@ class changeset_templater(changeset_printer):
         types = {'header': '', 'footer': '', 'changeset': 'changeset'}
         for mode, postfix in tmplmodes:
             for t in types:
-                cur = postfix and ('%s_%s' % (t, postfix)) or t
+                cur = t
+                if postfix:
+                    cur += "_" + postfix
                 if mode and cur in self.t:
                     types[t] = cur
 
