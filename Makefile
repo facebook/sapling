@@ -164,7 +164,7 @@ deb:
 	rm -rf debbuild
 
 docker-debian-jessie:
-	mkdir -p packages/debian/jessie
+	mkdir -p packages/debian-jessie
 	contrib/dockerdeb jessie
 
 fedora20:
