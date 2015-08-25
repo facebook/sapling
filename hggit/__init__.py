@@ -275,6 +275,12 @@ def peer(orig, uiorrepo, *args, **opts):
     return newpeer
 extensions.wrapfunction(hg, 'peer', peer)
 
+def isvalidlocalpath(orig, self, path):
+    return orig(self, path) or _isgitdir(path)
+if (hgutil.safehasattr(hgui, 'path') and
+    hgutil.safehasattr(hgui.path, '_isvalidlocalpath')):
+    extensions.wrapfunction(hgui.path, '_isvalidlocalpath', isvalidlocalpath)
+
 @util.transform_notgit
 def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(),
                  **kwargs):
