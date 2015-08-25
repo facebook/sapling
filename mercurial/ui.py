@@ -1068,10 +1068,16 @@ class path(object):
 
         # When given a raw location but not a symbolic name, validate the
         # location is valid.
-        if (not name and not u.scheme
-            and not os.path.isdir(os.path.join(str(u), '.hg'))):
+        if not name and not u.scheme and not self._isvalidlocalpath(self.loc):
             raise ValueError('location is not a URL or path to a local '
                              'repo: %s' % rawloc)
+
+    def _isvalidlocalpath(self, path):
+        """Returns True if the given path is a potentially valid repository.
+        This is its own function so that extensions can change the definition of
+        'valid' in this case (like when pulling from a git repo into a hg
+        one)."""
+        return os.path.isdir(os.path.join(path, '.hg'))
 
     @property
     def pushloc(self):
