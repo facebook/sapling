@@ -1414,6 +1414,23 @@ class changeset_templater(changeset_printer):
 
         self.cache = {}
 
+        # find correct templates for current mode
+        tmplmodes = [
+            (True, None),
+            (self.ui.verbose, 'verbose'),
+            (self.ui.quiet, 'quiet'),
+            (self.ui.debugflag, 'debug'),
+        ]
+
+        self._parts = {'header': '', 'footer': '', 'changeset': 'changeset'}
+        for mode, postfix in tmplmodes:
+            for t in self._parts:
+                cur = t
+                if postfix:
+                    cur += "_" + postfix
+                if mode and cur in self.t:
+                    self._parts[t] = cur
+
     def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
 
@@ -1440,27 +1457,10 @@ class changeset_templater(changeset_printer):
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
 
-        # find correct templates for current mode
-        tmplmodes = [
-            (True, None),
-            (self.ui.verbose, 'verbose'),
-            (self.ui.quiet, 'quiet'),
-            (self.ui.debugflag, 'debug'),
-        ]
-
-        types = {'header': '', 'footer': '', 'changeset': 'changeset'}
-        for mode, postfix in tmplmodes:
-            for t in types:
-                cur = t
-                if postfix:
-                    cur += "_" + postfix
-                if mode and cur in self.t:
-                    types[t] = cur
-
         try:
             # write header
-            if types['header']:
-                h = templater.stringify(self.t(types['header'], **props))
+            if self._parts['header']:
+                h = templater.stringify(self.t(self._parts['header'], **props))
                 if self.buffered:
                     self.header[ctx.rev()] = h
                 else:
@@ -1469,14 +1469,14 @@ class changeset_templater(changeset_printer):
                         self.ui.write(h)
 
             # write changeset metadata, then patch if requested
-            key = types['changeset']
+            key = self._parts['changeset']
             self.ui.write(templater.stringify(self.t(key, **props)))
             self.showpatch(ctx.node(), matchfn)
 
-            if types['footer']:
+            if self._parts['footer']:
                 if not self.footer:
-                    self.footer = templater.stringify(self.t(types['footer'],
-                                                      **props))
+                    self.footer = templater.stringify(
+                        self.t(self._parts['footer'], **props))
         except KeyError as inst:
             msg = _("%s: no key named '%s'")
             raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
