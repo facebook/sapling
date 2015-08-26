@@ -1,0 +1,5 @@
+mercurial (__VERSION__) unstable; urgency=medium
+
+  * Automated build performed by upstream.
+
+ -- Mercurial Devel <mercurial-devel@selenic.com>  __DATE__

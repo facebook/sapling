@@ -7,6 +7,7 @@
 . $(dirname $0)/packagelib.sh
 
 BUILD=1
+CLEANUP=1
 DEBVERSION=jessie
 while [ "$1" ]; do
     case "$1" in
@@ -15,9 +16,13 @@ while [ "$1" ]; do
         DEBVERSION="$1"
         shift
         ;;
-    --prepare )
+    --cleanup )
         shift
         BUILD=
+        ;;
+    --build )
+        shift
+        CLEANUP=
         ;;
     --debbuilddir )
         shift
@@ -31,12 +36,9 @@ while [ "$1" ]; do
     esac
 done
 
-DEBBUILDDIR=${OUTPUTDIR:="$PWD/debbuild"}
+trap "if [ '$CLEANUP' ] ; then rm -r '$PWD/debian' ; fi" EXIT
 
 set -u
-
-rm -rf $DEBBUILDDIR
-mkdir -p $DEBBUILDDIR
 
 if [ ! -d .hg ]; then
     echo 'You are not inside a Mercurial repository!' 1>&2
@@ -45,26 +47,38 @@ fi
 
 gethgversion
 
-cp -r $PWD/contrib/debian $DEBBUILDDIR/DEBIAN
-chmod -R 0755 $DEBBUILDDIR/DEBIAN
-
-control=$DEBBUILDDIR/DEBIAN/control
-
-# This looks like sed -i, but sed -i behaves just differently enough
-# between BSD and GNU sed that I gave up and did the dumb thing.
-sed "s/__VERSION__/$version/" < $control > $control.tmp
-mv $control.tmp $control
+control=debian/control
+changelog=debian/changelog
 
 if [ "$BUILD" ]; then
-    make PREFIX=$DEBBUILDDIR/usr install
-    dpkg-deb --build $DEBBUILDDIR
-    mv $DEBBUILDDIR.deb $DEBBUILDDIR/mercurial-$version-$release.deb
-    if [ $? = 0 ]; then
-        echo
-        echo "Built packages for $version-$release:"
-        find $DEBBUILDDIR/ -type f -newer $control
+    if [ -d debian ] ; then
+        echo "Error! debian control directory already exists!"
+        exit 1
     fi
-else
-    echo "Prepared sources for $version-$release $control are in $DEBBUILDDIR - use like:"
-    echo "dpkg-deb --build $DEBBUILDDIR"
+
+    cp -r $PWD/contrib/debian debian
+    chmod -R 0755 debian
+
+    # This looks like sed -i, but sed -i behaves just differently enough
+    # between BSD and GNU sed that I gave up and did the dumb thing.
+    sed "s/__VERSION__/$version/" < $changelog > $changelog.tmp
+    date=$(date --rfc-2822)
+    sed "s/__DATE__/$date/" < $changelog.tmp > $changelog
+    rm $changelog.tmp
+
+    debuild -us -uc -b
+    if [ $? != 0 ]; then
+        echo 'debuild failed!'
+        exit 1
+    fi
+
+fi
+if [ "$CLEANUP" ] ; then
+    echo
+    OUTPUTDIR=${OUTPUTDIR:=packages/debian-$DEBVERSION}
+    find ../mercurial*.deb ../mercurial_*.build ../mercurial_*.changes \
+          -type f -newer $control -print0 | \
+      xargs -Inarf -0 mv narf "$OUTPUTDIR"
+    echo "Built packages for $version-$release:"
+    find "$OUTPUTDIR" -type f -newer $control -name '*.deb'
 fi

@@ -1,9 +1,47 @@
-Package: mercurial
-Version: __VERSION__
+Source: mercurial
 Section: vcs
 Priority: optional
-Architecture: all
-Depends: python
-Conflicts: mercurial-common
 Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
-Description: Mercurial (probably nightly) package built by upstream.
+Build-Depends:
+ debhelper (>= 7),
+ dh-python,
+ python-all
+Standards-Version: 3.9.4
+X-Python-Version: >= 2.6
+
+Package: mercurial
+Depends:
+ python,
+ ${shlibs:Depends},
+ ${misc:Depends},
+ ${python:Depends},
+ mercurial-common (= ${source:Version})
+Architecture: any
+Description: fast, easy to use, distributed revision control tool.
+ Mercurial is a fast, lightweight Source Control Management system designed
+ for efficient handling of very large distributed projects.
+ .
+ Its features include:
+  * O(1) delta-compressed file storage and retrieval scheme
+  * Complete cross-indexing of files and changesets for efficient exploration
+    of project history
+  * Robust SHA1-based integrity checking and append-only storage model
+  * Decentralized development model with arbitrary merging between trees
+  * Easy-to-use command-line interface
+  * Integrated stand-alone web interface
+  * Small Python codebase
+
+Package: mercurial-common
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python:Depends},
+Recommends: mercurial (= ${source:Version}), ca-certificates
+Breaks: mercurial (<< ${source:Version})
+Replaces: mercurial (<< 2.6.3)
+Description: easy-to-use, scalable distributed version control system (common files)
+ Mercurial is a fast, lightweight Source Control Management system designed
+ for efficient handling of very large distributed projects.
+ .
+ This package contains the architecture independent components of Mercurial,
+ and is generally useless without the mercurial package.

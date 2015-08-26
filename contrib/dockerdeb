@@ -12,29 +12,23 @@ DEBPLATFORM="$1"
 PLATFORM="debian-$1"
 shift # extra params are passed to build process
 
+OUTPUTDIR=${OUTPUTDIR:=$ROOTDIR/packages/$PLATFORM}
+
 initcontainer $PLATFORM
 
-DEBBUILDDIR=${OUTPUTDIR:=$ROOTDIR/packages/$PLATFORM}
-OUTPUTDIR=$DEBBUILDDIR/staged contrib/builddeb --release $DEBPLATFORM --prepare
+# debuild only appears to be able to save built debs etc to .., so we
+# have to share the .. of the current directory with the docker
+# container and hope it's writable. Whee.
+dn=$(basename $PWD)
 
-DSHARED=/mnt/shared/
 if [ $(uname) = "Darwin" ] ; then
-    $DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
-            sh -c "cd /mnt/hg && make clean && make local"
+    $DOCKER run -u $DBUILDUSER --rm -v $PWD/..:/mnt $CONTAINER \
+            sh -c "cd /mnt/$dn && make clean && make local"
 fi
-$DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
-  sh -c "cd /mnt/hg && make PREFIX=$DSHARED/staged/usr install"
-$DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED $CONTAINER \
-  dpkg-deb --build $DSHARED/staged
+$DOCKER run -u $DBUILDUSER --rm -v $PWD/..:/mnt $CONTAINER \
+  sh -c "cd /mnt/$dn && DEB_BUILD_OPTIONS='${DEB_BUILD_OPTIONS:=}' contrib/builddeb --build --release $DEBPLATFORM"
+contrib/builddeb --cleanup --release $DEBPLATFORM
 if [ $(uname) = "Darwin" ] ; then
-    $DOCKER run -u $DBUILDUSER --rm -v $DEBBUILDDIR:$DSHARED -v $PWD:/mnt/hg $CONTAINER \
-            sh -c "cd /mnt/hg && make clean"
+    $DOCKER run -u $DBUILDUSER --rm -v $PWD/..:/mnt $CONTAINER \
+            sh -c "cd /mnt/$dn && make clean"
 fi
-
-gethgversion
-
-rm -r $DEBBUILDDIR/staged
-mv $DEBBUILDDIR/staged.deb $DEBBUILDDIR/mercurial-$version-$release.deb
-
-echo
-echo "Build complete - results can be found in $DEBBUILDDIR"

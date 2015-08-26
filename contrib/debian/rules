@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+# Uncomment this to turn on verbose mode.
+# export DH_VERBOSE=1
+
+CPUS=$(shell cat /proc/cpuinfo | grep -E ^processor | wc -l)
+
+%:
+	dh $@ --with python2
+
+override_dh_auto_test:
+	http_proxy='' dh_auto_test -- TESTFLAGS="-j$(CPUS)"
+
+override_dh_python2:
+	dh_python2
+	find debian/mercurial/usr/share -type d -empty -delete
+
+override_dh_install:
+	python$(PYVERS) setup.py install --root $(CURDIR)/debian/mercurial --install-layout=deb
+	# remove arch-independent python stuff
+	find $(CURDIR)/debian/mercurial/usr/lib \
+		! -name '*.so' ! -type d -delete , \
+		-type d -empty -delete
+	python$(PYVERS) setup.py install --root $(CURDIR)/debian/mercurial-common --install-layout=deb
+	make install-doc PREFIX=$(CURDIR)/debian/mercurial-common/usr
+	# remove arch-dependent python stuff
+	find $(CURDIR)/debian/mercurial-common/usr/lib \
+		-name '*.so' ! -type d -delete , \
+		-type d -empty -delete
+	rm $(CURDIR)/debian/mercurial-common/usr/bin/hg
