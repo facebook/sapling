@@ -1,5 +1,5 @@
-header = '<?xml version="1.0"?>\n<log>\n'
-footer = '</log>\n'
+docheader = '<?xml version="1.0"?>\n<log>\n'
+docfooter = '</log>\n'
 
 changeset = '<logentry revision="{rev}" node="{node}">\n{branches}{bookmarks}{tags}{parents}<author email="{author|email|xmlescape}">{author|person|xmlescape}</author>\n<date>{date|rfc3339date}</date>\n<msg xml:space="preserve">{desc|xmlescape}</msg>\n</logentry>\n'
 changeset_verbose = '<logentry revision="{rev}" node="{node}">\n{branches}{bookmarks}{tags}{parents}<author email="{author|email|xmlescape}">{author|person|xmlescape}</author>\n<date>{date|rfc3339date}</date>\n<msg xml:space="preserve">{desc|xmlescape}</msg>\n<paths>\n{file_adds}{file_dels}{file_mods}</paths>\n{file_copies}</logentry>\n'

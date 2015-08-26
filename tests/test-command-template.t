@@ -343,6 +343,11 @@ Compact style works:
 
 Test xml styles:
 
+  $ hg log --style xml -r 'not all()'
+  <?xml version="1.0"?>
+  <log>
+  </log>
+
   $ hg log --style xml
   <?xml version="1.0"?>
   <log>

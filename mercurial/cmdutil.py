@@ -1422,7 +1422,8 @@ class changeset_templater(changeset_printer):
             (self.ui.debugflag, 'debug'),
         ]
 
-        self._parts = {'header': '', 'footer': '', 'changeset': 'changeset'}
+        self._parts = {'header': '', 'footer': '', 'changeset': 'changeset',
+                       'docheader': '', 'docfooter': ''}
         for mode, postfix in tmplmodes:
             for t in self._parts:
                 cur = t
@@ -1430,6 +1431,16 @@ class changeset_templater(changeset_printer):
                     cur += "_" + postfix
                 if mode and cur in self.t:
                     self._parts[t] = cur
+
+        if self._parts['docheader']:
+            self.ui.write(templater.stringify(self.t(self._parts['docheader'])))
+
+    def close(self):
+        if self._parts['docfooter']:
+            if not self.footer:
+                self.footer = ""
+            self.footer += templater.stringify(self.t(self._parts['docfooter']))
+        return super(changeset_templater, self).close()
 
     def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
