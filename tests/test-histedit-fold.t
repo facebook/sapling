@@ -509,4 +509,64 @@ into the hook command.
   $ hg add amended.txt
   $ hg ci -q --config extensions.largefiles= --amend -I amended.txt
 
+Test that folding multiple changes in a row doesn't show multiple
+editors.
+
+  $ echo foo >> foo
+  $ hg add foo
+  $ hg ci -m foo1
+  $ echo foo >> foo
+  $ hg ci -m foo2
+  $ echo foo >> foo
+  $ hg ci -m foo3
+  $ hg logt
+  4:21679ff7675c foo3
+  3:b7389cc4d66e foo2
+  2:0e01aeef5fa8 foo1
+  1:578c7455730c a
+  0:79b99e9c8e49 b
+  $ cat > $TESTTMP/editor.sh <<EOF
+  > echo ran editor >> $TESTTMP/editorlog.txt
+  > cat \$1 >> $TESTTMP/editorlog.txt
+  > echo END >> $TESTTMP/editorlog.txt
+  > echo merged foos > \$1
+  > EOF
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 1 --commands - 2>&1 <<EOF | fixbundle
+  > pick 578c7455730c 1 a
+  > pick 0e01aeef5fa8 2 foo1
+  > fold b7389cc4d66e 3 foo2
+  > fold 21679ff7675c 4 foo3
+  > EOF
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  reverting foo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  merging foo
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg logt
+  2:e8bedbda72c1 merged foos
+  1:578c7455730c a
+  0:79b99e9c8e49 b
+Editor should have run only once
+  $ cat $TESTTMP/editorlog.txt
+  ran editor
+  foo1
+  ***
+  foo2
+  ***
+  foo3
+  
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'default'
+  HG: added foo
+  END
+
   $ cd ..

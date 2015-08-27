@@ -557,7 +557,20 @@ class fold(histeditaction):
                                middlecommits)
 
     def skipprompt(self):
+        """Returns true if the rule should skip the message editor.
+
+        For example, 'fold' wants to show an editor, but 'rollup'
+        doesn't want to.
+        """
         return False
+
+    def mergedescs(self):
+        """Returns true if the rule should merge messages of multiple changes.
+
+        This exists mainly so that 'rollup' rules can be a subclass of
+        'fold'.
+        """
+        return True
 
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
@@ -566,7 +579,7 @@ class fold(histeditaction):
         commitopts = {}
         commitopts['user'] = ctx.user()
         # commit message
-        if self.skipprompt():
+        if not self.mergedescs():
             newmessage = ctx.description()
         else:
             newmessage = '\n***\n'.join(
@@ -601,7 +614,22 @@ class fold(histeditaction):
             replacements.append((ich, (n,)))
         return repo[n], replacements
 
+class _multifold(fold):
+    """fold subclass used for when multiple folds happen in a row
+
+    We only want to fire the editor for the folded message once when
+    (say) four changes are folded down into a single change. This is
+    similar to rollup, but we should preserve both messages so that
+    when the last fold operation runs we can show the user all the
+    commit messages in their editor.
+    """
+    def skipprompt(self):
+        return True
+
 class rollup(fold):
+    def mergedescs(self):
+        return False
+
     def skipprompt(self):
         return True
 
@@ -644,6 +672,7 @@ actiontable = {'p': pick,
                'edit': edit,
                'f': fold,
                'fold': fold,
+               '_multifold': _multifold,
                'r': rollup,
                'roll': rollup,
                'd': drop,
@@ -850,6 +879,14 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                                         'histedit')
         state.backupfile = backupfile
 
+    # preprocess rules so that we can hide inner folds from the user
+    # and only show one editor
+    rules = state.rules[:]
+    for idx, ((action, ha), (nextact, unused)) in enumerate(
+            zip(rules, rules[1:] + [(None, None)])):
+        if action == 'fold' and nextact == 'fold':
+            state.rules[idx] = '_multifold', ha
+
     while state.rules:
         state.write()
         action, ha = state.rules.pop(0)
@@ -995,7 +1032,7 @@ def verifyrules(rules, repo, ctxs):
             raise util.Abort(_('duplicated command for changeset %s') %
                     ha[:12])
         seen.add(ha)
-        if action not in actiontable:
+        if action not in actiontable or action.startswith('_'):
             raise util.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     missing = sorted(expected - seen)  # sort to stabilize output
