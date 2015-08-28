@@ -697,7 +697,7 @@ Verify bundles don't get overwritten:
 Test that we only bundle the stripped changesets (issue4736)
 ------------------------------------------------------------
 
-initialisation (previous repo is empty anyway)
+initialization (previous repo is empty anyway)
 
   $ hg init issue4736
   $ cd issue4736
