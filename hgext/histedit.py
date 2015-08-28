@@ -38,7 +38,7 @@ file open in your editor::
  #  f, fold = use commit, but combine it with the one above
  #  r, roll = like fold, but discard this commit's description
  #  d, drop = remove commit from history
- #  m, mess = edit message without changing commit content
+ #  m, mess = edit commit message without changing commit content
  #
 
 In this file, lines beginning with ``#`` are ignored. You must specify a rule
@@ -60,7 +60,7 @@ would reorganize the file to look like this::
  #  f, fold = use commit, but combine it with the one above
  #  r, roll = like fold, but discard this commit's description
  #  d, drop = remove commit from history
- #  m, mess = edit message without changing commit content
+ #  m, mess = edit commit message without changing commit content
  #
 
 At which point you close the editor and ``histedit`` starts working. When you
@@ -198,7 +198,7 @@ editcomment = _("""# Edit history between %s and %s
 #  f, fold = use commit, but combine it with the one above
 #  r, roll = like fold, but discard this commit's description
 #  d, drop = remove commit from history
-#  m, mess = edit message without changing commit content
+#  m, mess = edit commit message without changing commit content
 #
 """)
 

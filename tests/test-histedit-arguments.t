@@ -69,7 +69,7 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
   #  d, drop = remove commit from history
-  #  m, mess = edit message without changing commit content
+  #  m, mess = edit commit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -292,7 +292,7 @@ Test that trimming description using multi-byte characters
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
   #  d, drop = remove commit from history
-  #  m, mess = edit message without changing commit content
+  #  m, mess = edit commit message without changing commit content
   #
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
