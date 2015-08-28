@@ -2885,6 +2885,7 @@ class abstractsmartset(object):
         """True if the set will iterate in descending order"""
         raise NotImplementedError()
 
+    @util.cachefunc
     def min(self):
         """return the minimum element in the set"""
         if self.fastasc is not None:
@@ -2893,6 +2894,7 @@ class abstractsmartset(object):
             raise ValueError('arg is an empty sequence')
         return min(self)
 
+    @util.cachefunc
     def max(self):
         """return the maximum element in the set"""
         if self.fastdesc is not None:
