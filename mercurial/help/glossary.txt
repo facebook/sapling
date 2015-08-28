@@ -32,12 +32,12 @@ Branch
     explicitly with a named branch, but it can also be done locally,
     using bookmarks or clones and anonymous branches.
 
-    Example: "The experimental branch".
+    Example: "The experimental branch."
 
     (Verb) The action of creating a child changeset which results in
     its parent having more than one child.
 
-    Example: "I'm going to branch at X".
+    Example: "I'm going to branch at X."
 
 Branch, anonymous
     Every time a new child changeset is created from a parent that is not
@@ -135,7 +135,7 @@ Child changeset
     See 'Changeset, child'.
 
 Close changeset
-    See 'Head, closed branch'
+    See 'Head, closed branch'.
 
 Closed branch
     See 'Branch, closed'.
@@ -144,11 +144,11 @@ Clone
     (Noun) An entire or partial copy of a repository. The partial
     clone must be in the form of a revision and its ancestors.
 
-    Example: "Is your clone up to date?".
+    Example: "Is your clone up to date?"
 
     (Verb) The process of creating a clone, using :hg:`clone`.
 
-    Example: "I'm going to clone the repository".
+    Example: "I'm going to clone the repository."
 
 Closed branch head
     See 'Head, closed branch'.
@@ -398,13 +398,13 @@ Tip, branch
 Update
     (Noun) Another synonym of changeset.
 
-    Example: "I've pushed an update".
+    Example: "I've pushed an update."
 
     (Verb) This term is usually used to describe updating the state of
     the working directory to that of a specific changeset. See
     :hg:`help update`.
 
-    Example: "You should update".
+    Example: "You should update."
 
 Working directory
     See 'Directory, working'.
