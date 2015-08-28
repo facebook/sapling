@@ -31,10 +31,10 @@ def _unifiedheaderinit(self, *args, **kw):
     constructor, and 2.7 removed this parameter.
 
     Default argument is continuation_ws=' ', which means that the
-    behaviour is different in <2.7 and 2.7
+    behavior is different in <2.7 and 2.7
 
-    We consider the 2.7 behaviour to be preferable, but need
-    to have an unified behaviour for versions 2.4 to 2.7
+    We consider the 2.7 behavior to be preferable, but need
+    to have an unified behavior for versions 2.4 to 2.7
     """
     # override continuation_ws
     kw['continuation_ws'] = ' '

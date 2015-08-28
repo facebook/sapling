@@ -1436,10 +1436,10 @@ class changeset_templater(changeset_printer):
 
         showlist = templatekw.showlist
 
-        # showparents() behaviour depends on ui trace level which
-        # causes unexpected behaviours at templating level and makes
+        # showparents() behavior depends on ui trace level which
+        # causes unexpected behaviors at templating level and makes
         # it harder to extract it in a standalone function. Its
-        # behaviour cannot be changed so leave it here for now.
+        # behavior cannot be changed so leave it here for now.
         def showparents(**args):
             ctx = args['ctx']
             parents = [[('rev', p.rev()),
@@ -1929,7 +1929,7 @@ def _makelogrevset(repo, pats, opts, revs):
         followfirst = 1
     else:
         followfirst = 0
-    # --follow with FILE behaviour depends on revs...
+    # --follow with FILE behavior depends on revs...
     it = iter(revs)
     startrev = it.next()
     followdescendants = startrev < next(it, startrev)
@@ -2050,7 +2050,7 @@ def _makelogrevset(repo, pats, opts, revs):
     return expr, filematcher
 
 def _logrevs(repo, opts):
-    # Default --rev value depends on --follow but --follow behaviour
+    # Default --rev value depends on --follow but --follow behavior
     # depends on revisions resolved from --rev...
     follow = opts.get('follow') or opts.get('follow_first')
     if opts.get('rev'):

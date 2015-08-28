@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Tests the behaviour of filelog w.r.t. data starting with '\1\n'
+Tests the behavior of filelog w.r.t. data starting with '\1\n'
 """
 from mercurial import ui, hg
 from mercurial.node import nullid, hex

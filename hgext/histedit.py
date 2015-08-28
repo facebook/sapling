@@ -144,7 +144,7 @@ repository that Mercurial does not detect to be related to the source
 repo, you can add a ``--force`` option.
 
 Histedit rule lines are truncated to 80 characters by default. You
-can customise this behaviour by setting a different length in your
+can customise this behavior by setting a different length in your
 configuration file::
 
   [histedit]

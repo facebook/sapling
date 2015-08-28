@@ -30,7 +30,7 @@ but can not handle patch files containing multiple patches as is common with
 software development projects. This plugin provides that missing
 functionality.
 
-It also improves on |:diffpatch|'s behaviour of creating the patched files in
+It also improves on |:diffpatch|'s behavior of creating the patched files in
 the same directory as original file which can lead to project workspace
 pollution.
 

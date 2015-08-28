@@ -682,7 +682,7 @@ typedef struct {
 } nodetree;
 
 /*
- * This class has two behaviours.
+ * This class has two behaviors.
  *
  * When used in a list-like way (with integer keys), we decode an
  * entry in a RevlogNG index file on demand. Our last entry is a

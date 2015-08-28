@@ -2260,7 +2260,7 @@ def sizetoint(s):
 
 class hooks(object):
     '''A collection of hook functions that can be used to extend a
-    function's behaviour. Hooks are called in lexicographic order,
+    function's behavior. Hooks are called in lexicographic order,
     based on the names of their sources.'''
 
     def __init__(self):

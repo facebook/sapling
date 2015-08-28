@@ -1062,7 +1062,7 @@ class filecache(object):
     Mercurial either atomic renames or appends for files under .hg,
     so to ensure the cache is reliable we need the filesystem to be able
     to tell us if a file has been replaced. If it can't, we fallback to
-    recreating the object on every call (essentially the same behaviour as
+    recreating the object on every call (essentially the same behavior as
     propertycache).
 
     '''
