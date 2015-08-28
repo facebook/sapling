@@ -955,7 +955,7 @@ proxy.
 
 ``always``
     Optional. Always use the proxy, even for localhost and any entries
-    in ``http_proxy.no``. True or False. (default: False)
+    in ``http_proxy.no``. (default: False)
 
 ``merge-patterns``
 ------------------
@@ -1405,7 +1405,7 @@ User interface controls.
     (default: False)
 
 ``debug``
-    Print debugging information. True or False. (default: False)
+    Print debugging information. (default: False)
 
 ``editor``
     The editor to use during a commit. (default: ``$EDITOR`` or ``vi``)
@@ -1423,7 +1423,7 @@ User interface controls.
     of the ignore file format, see the ``hgignore(5)`` man page.
 
 ``interactive``
-    Allow to prompt the user. True or False. (default: True)
+    Allow to prompt the user. (default: True)
 
 ``logtemplate``
     Template string for commands that print changesets.
@@ -1482,14 +1482,14 @@ User interface controls.
     On Windows, this configuration option is ignored and the command aborted.
 
 ``quiet``
-    Reduce the amount of output printed. True or False. (default: False)
+    Reduce the amount of output printed. (default: False)
 
 ``remotecmd``
     Remote command to use for clone/push/pull operations. (default: ``hg``)
 
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
-    trusted user or group. True or False. (default: True)
+    trusted user or group. (default: True)
 
 ``slash``
     Display paths using a slash (``/``) as the path separator. This
@@ -1506,7 +1506,7 @@ User interface controls.
 
 ``strict``
     Require exact command names, instead of allowing unambiguous
-    abbreviations. True or False. (default: False)
+    abbreviations. (default: False)
 
 ``style``
     Name of style to use for command output.
@@ -1538,7 +1538,7 @@ User interface controls.
     hgrc file)
 
 ``verbose``
-    Increase the amount of output printed. True or False. (default: False)
+    Increase the amount of output printed. (default: False)
 
 
 ``web``
