@@ -1251,7 +1251,7 @@ have a definite end point.
     term width) will be used).
 
 ``clear-complete``
-    clear the progress bar after it's done. (default: True)
+    Clear the progress bar after it's done. (default: True)
 
 ``disable``
     If true, don't show a progress bar.
@@ -1485,7 +1485,7 @@ User interface controls.
     Reduce the amount of output printed. True or False. (default: False)
 
 ``remotecmd``
-    remote command to use for clone/push/pull operations. (default: ``hg``)
+    Remote command to use for clone/push/pull operations. (default: ``hg``)
 
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
@@ -1502,7 +1502,7 @@ User interface controls.
     Display copies in the status command.
 
 ``ssh``
-    command to use for SSH connections. (default: ``ssh``)
+    Command to use for SSH connections. (default: ``ssh``)
 
 ``strict``
     Require exact command names, instead of allowing unambiguous
