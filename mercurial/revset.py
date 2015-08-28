@@ -87,7 +87,7 @@ def _revdescendants(repo, revs, followfirst):
 
     return generatorset(iterate(), iterasc=True)
 
-def reachablerootspure(repo, minroot, roots, heads, includepath):
+def _reachablerootspure(repo, minroot, roots, heads, includepath):
     """return (heads(::<roots> and ::<heads>))
 
     If includepath is True, return (<roots>::<heads>)."""
@@ -137,7 +137,7 @@ def reachableroots(repo, roots, heads, includepath=False):
     try:
         revs = repo.changelog.reachableroots(minroot, heads, roots, includepath)
     except AttributeError:
-        revs = reachablerootspure(repo, minroot, roots, heads, includepath)
+        revs = _reachablerootspure(repo, minroot, roots, heads, includepath)
     revs = baseset(revs)
     revs.sort()
     return revs
