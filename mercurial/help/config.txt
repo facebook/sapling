@@ -10,7 +10,7 @@ by ``name = value`` entries::
   verbose = True
 
 The above entries will be referred to as ``ui.username`` and
-``ui.verbose``, respectively. See the Syntax section below.
+``ui.verbose``, respectively. See :hg:`help config.syntax`.
 
 Files
 =====
@@ -76,8 +76,8 @@ particular repository. This file is not version-controlled, and
 will not get transferred during a "clone" operation. Options in
 this file override options in all other configuration files. On
 Plan 9 and Unix, most of this file will be ignored if it doesn't
-belong to a trusted user or to a trusted group. See the documentation
-for the ``[trusted]`` section below for more details.
+belong to a trusted user or to a trusted group. See
+:hg:`help config.trusted` for more details.
 
 Per-user configuration file(s) are for the user running Mercurial. On
 Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``. Options in these
@@ -274,8 +274,8 @@ echo foo`` call above, ``$HG_ARGS`` would expand to ``echo foo``.
 ------------
 
 Settings used when displaying file annotations. All values are
-Booleans and default to False. See ``diff`` section for related
-options for the diff command.
+Booleans and default to False. See :hg:`help config.diff` for
+related options for the diff command.
 
 ``ignorews``
     Ignore white space when comparing lines.
@@ -292,7 +292,7 @@ options for the diff command.
 
 Authentication credentials for HTTP authentication. This section
 allows you to store usernames and passwords for use when logging
-*into* HTTP servers. See the ``[web]`` configuration section if
+*into* HTTP servers. See :hg:`help config.web` if
 you want to configure *who* can login to your HTTP server.
 
 Each line has the following format::
@@ -537,8 +537,8 @@ to the aliases of the commands defined.
 --------
 
 Settings used when displaying diffs. Everything except for ``unified``
-is a Boolean and defaults to False. See ``annotate`` section for
-related options for the annotate command.
+is a Boolean and defaults to False. See :hg:`help config.annotate`
+for related options for the annotate command.
 
 ``git``
     Use git extended diff format.
@@ -749,7 +749,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``outgoing``
   Run after sending changes from local repository to another. ID of
   first changeset sent is in ``$HG_NODE``. Source of operation is in
-  ``$HG_SOURCE``; see "preoutgoing" hook for description.
+  ``$HG_SOURCE``; Also see :hg:`help config.preoutgoing` hook.
 
 ``post-<command>``
   Run after successful invocations of the associated command. The
@@ -831,12 +831,12 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. See ``pretxnclose`` docs for details about
-  available variables.
+  after the lock is released. See :hg:`help config.pretxnclose` docs for
+  details about available variables.
 
 ``txnabort``
-  Run when a transaction is aborted. See ``pretxnclose`` docs for details about
-  available variables.
+  Run when a transaction is aborted. See :hg:`help config.pretxnclose`
+  docs for details about available variables.
 
 ``pretxnchangegroup``
   Run after a changegroup has been added via push, pull or unbundle,
