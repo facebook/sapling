@@ -675,9 +675,9 @@ def histedit(ui, repo, *freeargs, **opts):
     destination repository. If URL of the destination is omitted, the
     'default-push' (or 'default') path will be used.
 
-    For safety, this command is aborted, also if there are ambiguous
-    outgoing revisions which may confuse users: for example, there are
-    multiple branches containing outgoing revisions.
+    For safety, this command is also aborted if there are ambiguous
+    outgoing revisions which may confuse users: for example, if there
+    are multiple branches containing outgoing revisions.
 
     Use "min(outgoing() and ::.)" or similar revset specification
     instead of --outgoing to specify edit target revision exactly in
