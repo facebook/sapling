@@ -18,7 +18,6 @@ from . import (
     encoding,
     error,
     revlog,
-    revset,
     util,
 )
 
@@ -186,10 +185,7 @@ class changelog(revlog.revlog):
         return self._nodecache
 
     def reachableroots(self, minroot, heads, roots, includepath=False):
-        rroots = self.index.reachableroots2(minroot, heads, roots, includepath)
-        rroots = revset.baseset(rroots)
-        rroots.sort()
-        return rroots
+        return self.index.reachableroots2(minroot, heads, roots, includepath)
 
     def headrevs(self):
         if self.filteredrevs:

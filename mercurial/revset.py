@@ -92,7 +92,7 @@ def reachablerootspure(repo, minroot, roots, heads, includepath):
 
     If includepath is True, return (<roots>::<heads>)."""
     if not roots:
-        return baseset()
+        return []
     parentrevs = repo.changelog.parentrevs
     roots = set(roots)
     visit = list(heads)
@@ -123,8 +123,6 @@ def reachablerootspure(repo, minroot, roots, heads, includepath):
         for parent in seen[rev]:
             if parent in reachable:
                 reached(rev)
-    reachable = baseset(reachable)
-    reachable.sort()
     return reachable
 
 def reachableroots(repo, roots, heads, includepath=False):
@@ -137,9 +135,12 @@ def reachableroots(repo, roots, heads, includepath=False):
     roots = list(roots)
     heads = list(heads)
     try:
-        return repo.changelog.reachableroots(minroot, heads, roots, includepath)
+        revs = repo.changelog.reachableroots(minroot, heads, roots, includepath)
     except AttributeError:
-        return reachablerootspure(repo, minroot, roots, heads, includepath)
+        revs = reachablerootspure(repo, minroot, roots, heads, includepath)
+    revs = baseset(revs)
+    revs.sort()
+    return revs
 
 elements = {
     # token-type: binding-strength, primary, prefix, infix, suffix
