@@ -144,7 +144,7 @@ repository that Mercurial does not detect to be related to the source
 repo, you can add a ``--force`` option.
 
 Histedit rule lines are truncated to 80 characters by default. You
-can customise this behavior by setting a different length in your
+can customize this behavior by setting a different length in your
 configuration file::
 
   [histedit]
@@ -406,7 +406,7 @@ def applychanges(ui, repo, ctx, opts):
     """Merge changeset from ctx (only) in the current working directory"""
     wcpar = repo.dirstate.parents()[0]
     if ctx.p1().node() == wcpar:
-        # edition ar "in place" we do not need to make any merge,
+        # edits are "in place" we do not need to make any merge,
         # just applies changes on parent for edition
         cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
         stats = None
@@ -617,7 +617,7 @@ class message(histeditaction):
 def findoutgoing(ui, repo, remote=None, force=False, opts={}):
     """utility function to find the first outgoing changeset
 
-    Used by initialisation code"""
+    Used by initialization code"""
     dest = ui.expandpath(remote or 'default-push', remote or 'default')
     dest, revs = hg.parseurl(dest, None)[:2]
     ui.status(_('comparing with %s\n') % util.hidepassword(dest))
@@ -1132,8 +1132,8 @@ def cleanupnode(ui, repo, name, nodes):
         # we should probably get ride of obsolescence marker created during the
         # histedit, but we currently do not have such information.
         repo = repo.unfiltered()
-        # Find all node that need to be stripped
-        # (we hg %lr instead of %ln to silently ignore unknown item
+        # Find all nodes that need to be stripped
+        # (we use %lr instead of %ln to silently ignore unknown items)
         nm = repo.changelog.nodemap
         nodes = sorted(n for n in nodes if n in nm)
         roots = [c.node() for c in repo.set("roots(%ln)", nodes)]
