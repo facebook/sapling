@@ -36,6 +36,7 @@ from mercurial import util
 from mercurial.i18n import _
 from mercurial.node import hex, short
 from hgext import schemes
+from hgext.convert import hg as converthg
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
@@ -128,6 +129,27 @@ def exactivate(orig, repo, mark):
     res = orig(repo, mark)
     precachedistance(repo)
     return res
+
+def exconvertbookmarks(orig, source):
+    """Make hg convert map remote bookmarks in the source to normal bookmarks in
+    the target.
+    
+    This is useful for instance if you need to convert a repo from server A to
+    server B. You clone the repo from A (now you have remote bookmarks), convert
+    to a local version of B, and push those bookmarks to server B.
+    """
+    bookmarks = orig(source)
+
+    repo = source.repo
+    n = 'remotebookmarks'
+    if n in repo.names:
+        ns = repo.names[n]
+        for name in ns.listnames(repo):
+            nodes = ns.nodes(repo, name)
+            if nodes:
+                bookmarks.setdefault(name, hex(nodes[0]))
+
+    return bookmarks
 
 def reposetup(ui, repo):
     if not repo.local():
@@ -284,6 +306,9 @@ def extsetup(ui):
     extensions.wrapfunction(hg, 'clone', exclone)
     extensions.wrapfunction(hg, 'updaterepo', exupdate)
     extensions.wrapfunction(localrepo.localrepository, 'commit', excommit)
+
+    extensions.wrapfunction(converthg.mercurial_source, 'getbookmarks',
+                            exconvertbookmarks)
 
     if _tracking(ui):
         try:
