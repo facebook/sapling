@@ -217,7 +217,8 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
                 repo.sqlunlock(writelock)
             if connected:
                 repo.sqlclose()
-        except _mysql_exceptions.ProgrammingError, ex:
+        except (_mysql_exceptions.ProgrammingError,
+                _mysql_exceptions.OperationalError):
             if success:
                 raise
             # If the action caused an exception, hide sql cleanup exceptions,
