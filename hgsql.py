@@ -651,37 +651,49 @@ def wraprepo(repo):
             if not expectedrevs:
                 return
 
-            whereclauses = []
-            args = []
-            args.append(reponame)
-            for path, rev in expectedrevs:
-                whereclauses.append("(path, rev, chunk) = (%s, %s, 0)")
-                args.append(path)
-                args.append(rev)
+            missingrevs = []
+            expectedlist = list(expectedrevs)
+            expectedcount = len(expectedrevs)
+            batchsize = self.ui.configint('hgsql', 'verifybatchsize', 1000)
+            i = 0
+            while i < expectedcount:
+                checkrevs = set(expectedlist[i:i + batchsize])
+                i += batchsize
 
-            whereclause = ' OR '.join(whereclauses)
-            cursor.execute("""SELECT path, rev, node FROM revisions WHERE
-                repo = %s AND (""" + whereclause + ")",
-                args)
+                whereclauses = []
+                args = []
+                args.append(reponame)
+                for path, rev in checkrevs:
+                    whereclauses.append("(path, rev, chunk) = (%s, %s, 0)")
+                    args.append(path)
+                    args.append(rev)
 
-            for path, rev, node in cursor:
-                rev = int(rev)
-                expectedrevs.remove((path, rev))
-                rl = None
-                if path == '00changelog.i':
-                    rl = self.changelog
-                elif path == '00manifest.i':
-                    rl = self.manifest
-                else:
-                    rl = revlog.revlog(self.svfs, path)
-                localnode = hex(rl.node(rev))
-                if localnode != node:
-                    raise CorruptionException(("expected node %s at rev %d of " +
-                    "%s but found %s") % (node, rev, path, localnode))
+                whereclause = ' OR '.join(whereclauses)
+                cursor.execute("""SELECT path, rev, node FROM revisions WHERE
+                    repo = %s AND (""" + whereclause + ")",
+                    args)
 
-            if len(expectedrevs) > 0:
+                for path, rev, node in cursor:
+                    rev = int(rev)
+                    checkrevs.remove((path, rev))
+                    rl = None
+                    if path == '00changelog.i':
+                        rl = self.changelog
+                    elif path == '00manifest.i':
+                        rl = self.manifest
+                    else:
+                        rl = revlog.revlog(self.svfs, path)
+                    localnode = hex(rl.node(rev))
+                    if localnode != node:
+                        raise CorruptionException(("expected node %s at rev %d of "
+                            "%s but found %s") % (node, rev, path, localnode))
+
+                if len(checkrevs) > 0:
+                    missingrevs.extend(checkrevs)
+
+            if missingrevs:
                 raise CorruptionException(("unable to verify %d dependent " +
-                    "revisions before adding a commit") % (len(expectedrevs)))
+                    "revisions before adding a commit") % (len(missingrevs)))
 
     ui = repo.ui
 
