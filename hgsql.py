@@ -498,13 +498,25 @@ def wraprepo(repo):
             reponame = self.sqlreponame
             cursor = self.sqlcursor
             maxcommitsize = self.maxcommitsize
+            maxinsertsize = self.maxinsertsize
             maxrowsize = self.maxrowsize
 
             if self.pendingrevs:
                 self._validatependingrevs()
 
+            def insert(args, values):
+                argstring = ','.join(args)
+                cursor.execute("INSERT INTO revisions(repo, path, "
+                    "chunk, chunkcount, linkrev, rev, node, entry, "
+                    "data0, data1, createdtime) VALUES %s" %
+                    argstring, values)
+
             try:
-                datasize = 0
+                commitsize = 0
+                insertsize = 0
+                args = []
+                values = []
+                now = time.strftime('%Y-%m-%d %H:%M:%S')
                 for revision in self.pendingrevs:
                     path, linkrev, rev, node, entry, data0, data1 = revision
 
@@ -520,24 +532,35 @@ def wraprepo(repo):
                     while chunk == 0 or start < len(data1):
                         end = min(len(data1), start + maxrowsize)
                         datachunk = data1[start:end]
-                        cursor.execute("""INSERT INTO revisions(repo, path, chunk,
-                            chunkcount, linkrev, rev, node, entry, data0, data1, createdtime)
-                            VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                            (reponame, path, chunk, chunkcount, linkrev, rev,
-                             node, entry, data0, datachunk,
-                             time.strftime('%Y-%m-%d %H:%M:%S')))
+                        args.append('(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)')
+                        values.extend((reponame, path, chunk, chunkcount, linkrev, rev,
+                             node, entry, data0, datachunk, now))
+
+                        size = len(datachunk)
+                        commitsize += size
+                        insertsize += size
+
                         chunk += 1
                         start = end
+
+                        # Minimize roundtrips by doing bulk inserts
+                        if insertsize > maxinsertsize:
+                            insert(args, values)
+                            del args[:]
+                            del values[:]
+                            insertsize = 0
 
                         # MySQL transactions can only reach a certain size, so we commit
                         # every so often.  As long as we don't update the tip pushkey,
                         # this is ok.
-                        datasize += len(datachunk)
-                        if datasize > maxcommitsize:
+                        if commitsize > maxcommitsize:
                             self.sqlconn.commit()
-                            datasize = 0
+                            commitsize = 0
 
-                if datasize > 0:
+                if insertsize > 0:
+                    insert(args, values)
+
+                if commitsize > 0:
                     # commit at the end just to make sure we're clean
                     self.sqlconn.commit()
 
@@ -712,7 +735,8 @@ def wraprepo(repo):
     repo.sqlreponame = ui.config("hgsql", "reponame")
     if not repo.sqlreponame:
         raise Exception("missing hgsql.reponame")
-    repo.maxcommitsize = ui.configbytes("hgsql", "maxcommitsize", 52428800)
+    repo.maxcommitsize = ui.configbytes("hgsql", "maxcommitsize", 52428800) # 50MB
+    repo.maxinsertsize = ui.configbytes("hgsql", "maxinsertsize", 1048576) # 1MB
     repo.maxrowsize = ui.configbytes("hgsql", "maxrowsize", 1048576)
     repo.sqlconn = None
     repo.sqlcursor = None
