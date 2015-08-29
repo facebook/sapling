@@ -357,6 +357,8 @@ class localcache(object):
         self.ui = repo.ui
         self.repo = repo
         self.cachepath = self.ui.config("remotefilelog", "cachepath")
+        if not self.cachepath:
+            raise util.Abort(_("could not find config option remotefilelog.cachepath"))
         self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
         if self.cachepath:
             self.cachepath = util.expandpath(self.cachepath)
