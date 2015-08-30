@@ -582,7 +582,10 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                     try:
                         uprev = destrepo.lookup(checkout)
                     except error.RepoLookupError:
-                        pass
+                        try:
+                            uprev = destrepo.lookup(update)
+                        except error.RepoLookupError:
+                            pass
                 if uprev is None:
                     try:
                         uprev = destrepo._bookmarks['@']

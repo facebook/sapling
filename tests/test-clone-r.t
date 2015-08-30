@@ -218,3 +218,26 @@
   4 files, 9 changesets, 7 total revisions
   $ cd ..
 
+  $ hg clone test test-9
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd test-9
+  $ hg branch foobar
+  marked working directory as branch foobar
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo file2 >> file2
+  $ hg add file2
+  $ hg commit -m "changeset9"
+  $ echo file3 >> file3
+  $ hg add file3
+  $ hg commit -m "changeset10"
+  $ cd ..
+  $ hg clone -r 9 -u foobar test-9 test-10
+  adding changesets
+  adding manifests
+  adding file changes
+  added 6 changesets with 6 changes to 3 files
+  updating to branch foobar
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+
