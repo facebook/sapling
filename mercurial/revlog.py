@@ -210,6 +210,7 @@ class revlog(object):
         self._chunkcache = (0, '')
         self._chunkcachesize = 65536
         self._maxchainlen = None
+        self._aggressivemergedeltas = False
         self.index = []
         self._pcache = {}
         self._nodecache = {nullid: nullrev}
@@ -227,6 +228,8 @@ class revlog(object):
                 self._chunkcachesize = opts['chunkcachesize']
             if 'maxchainlen' in opts:
                 self._maxchainlen = opts['maxchainlen']
+            if 'aggressivemergedeltas' in opts:
+                self._aggressivemergedeltas = opts['aggressivemergedeltas']
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -1343,15 +1346,34 @@ class revlog(object):
         # should we try to build a delta?
         if prev != nullrev:
             if self._generaldelta:
-                # Pick whichever parent is closer to us (to minimize the
-                # chance of having to build a fulltext). Since
-                # nullrev == -1, any non-merge commit will always pick p1r.
-                drev = p2r if p2r > p1r else p1r
-                d = builddelta(drev)
-                # If the chosen delta will result in us making a full text,
-                # give it one last try against prev.
-                if drev != prev and not self._isgooddelta(d, textlen):
-                    d = builddelta(prev)
+                if p2r != nullrev and self._aggressivemergedeltas:
+                    d = builddelta(p1r)
+                    d2 = builddelta(p2r)
+                    p1good = self._isgooddelta(d, textlen)
+                    p2good = self._isgooddelta(d2, textlen)
+                    if p1good and p2good:
+                        # If both are good deltas, choose the smallest
+                        if d2[1] < d[1]:
+                            d = d2
+                    elif p2good:
+                        # If only p2 is good, use it
+                        d = d2
+                    elif p1good:
+                        pass
+                    else:
+                        # Neither is good, try against prev to hopefully save us
+                        # a fulltext.
+                        d = builddelta(prev)
+                else:
+                    # Pick whichever parent is closer to us (to minimize the
+                    # chance of having to build a fulltext). Since
+                    # nullrev == -1, any non-merge commit will always pick p1r.
+                    drev = p2r if p2r > p1r else p1r
+                    d = builddelta(drev)
+                    # If the chosen delta will result in us making a full text,
+                    # give it one last try against prev.
+                    if drev != prev and not self._isgooddelta(d, textlen):
+                        d = builddelta(prev)
             else:
                 d = builddelta(prev)
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
