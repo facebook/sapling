@@ -1332,6 +1332,14 @@ class revlog(object):
         basecache = self._basecache
         p1r, p2r = self.rev(p1), self.rev(p2)
 
+        # full versions are inserted when the needed deltas
+        # become comparable to the uncompressed text
+        if text is None:
+            textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
+                                        cachedelta[1])
+        else:
+            textlen = len(text)
+
         # should we try to build a delta?
         if prev != nullrev:
             if self._generaldelta:
@@ -1344,14 +1352,6 @@ class revlog(object):
             else:
                 d = builddelta(prev)
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
-
-        # full versions are inserted when the needed deltas
-        # become comparable to the uncompressed text
-        if text is None:
-            textlen = mdiff.patchedsize(self.rawsize(cachedelta[0]),
-                                        cachedelta[1])
-        else:
-            textlen = len(text)
 
         if not self._isgooddelta(d, textlen):
             text = buildtext()
