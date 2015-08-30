@@ -1233,6 +1233,25 @@ class revlog(object):
             return ('u', text)
         return ("", bin)
 
+    def _isgooddelta(self, d, textlen):
+        """Returns True if the given delta is good. Good means that it is within
+        the disk span, disk size, and chain length bounds that we know to be
+        performant."""
+        if d is None:
+            return False
+
+        # - 'dist' is the distance from the base revision -- bounding it limits
+        #   the amount of I/O we need to do.
+        # - 'compresseddeltalen' is the sum of the total size of deltas we need
+        #   to apply -- bounding it limits the amount of CPU we consume.
+        dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
+        if (dist > textlen * 4 or l > textlen or
+            compresseddeltalen > textlen * 2 or
+            (self._maxchainlen and chainlen > self._maxchainlen)):
+            return False
+
+        return True
+
     def _addrevision(self, node, text, transaction, link, p1, p2, flags,
                      cachedelta, ifh, dfh):
         """internal function to add revisions to the log
@@ -1334,13 +1353,7 @@ class revlog(object):
         else:
             textlen = len(text)
 
-        # - 'dist' is the distance from the base revision -- bounding it limits
-        #   the amount of I/O we need to do.
-        # - 'compresseddeltalen' is the sum of the total size of deltas we need
-        #   to apply -- bounding it limits the amount of CPU we consume.
-        if (d is None or dist > textlen * 4 or l > textlen or
-            compresseddeltalen > textlen * 2 or
-            (self._maxchainlen and chainlen > self._maxchainlen)):
+        if not self._isgooddelta(d, textlen):
             text = buildtext()
             data = self.compress(text)
             l = len(data[1]) + len(data[0])
