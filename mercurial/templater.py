@@ -427,7 +427,7 @@ def indent(context, mapping, args):
 def get(context, mapping, args):
     """:get(dict, key): Get an attribute/key from an object. Some keywords
     are complex types. This function allows you to obtain the value of an
-    attribute on these type."""
+    attribute on these types."""
     if len(args) != 2:
         # i18n: "get" is a keyword
         raise error.ParseError(_("get() expects two arguments"))
