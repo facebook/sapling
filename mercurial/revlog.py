@@ -1343,11 +1343,14 @@ class revlog(object):
         # should we try to build a delta?
         if prev != nullrev:
             if self._generaldelta:
-                if p1r >= basecache[1]:
-                    d = builddelta(p1r)
-                elif p2r >= basecache[1]:
-                    d = builddelta(p2r)
-                else:
+                # Pick whichever parent is closer to us (to minimize the
+                # chance of having to build a fulltext). Since
+                # nullrev == -1, any non-merge commit will always pick p1r.
+                drev = p2r if p2r > p1r else p1r
+                d = builddelta(drev)
+                # If the chosen delta will result in us making a full text,
+                # give it one last try against prev.
+                if drev != prev and not self._isgooddelta(d, textlen):
                     d = builddelta(prev)
             else:
                 d = builddelta(prev)
