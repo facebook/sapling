@@ -912,6 +912,16 @@ Test a help topic
       working directory is checked out, it is equivalent to null. If an
       uncommitted merge is in progress, "." is the revision of the first parent.
 
+Test repeated config section name
+
+  $ hg help config.host
+      "http_proxy.host"
+          Host name and (optional) port of the proxy server, for example
+          "myproxy:8000".
+  
+      "smtp.host"
+          Host name of mail server, e.g. "mail.example.com".
+  
 Test templating help
 
   $ hg help templating | egrep '(desc|diffstat|firstline|nonempty)  '

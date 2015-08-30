@@ -656,13 +656,17 @@ def formatblocks(blocks, width):
 def format(text, width=80, indent=0, keep=None, style='plain', section=None):
     """Parse and format the text according to width."""
     blocks, pruned = parse(text, indent, keep or [])
+    parents = []
     if section:
         sections = getsections(blocks)
         blocks = []
         i = 0
         while i < len(sections):
             name, nest, b = sections[i]
+            del parents[nest:]
+            parents.append(name)
             if name == section:
+                b[0]['path'] = parents[3:]
                 blocks.extend(b)
 
                 ## Also show all subnested sections
@@ -674,6 +678,14 @@ def format(text, width=80, indent=0, keep=None, style='plain', section=None):
     if style == 'html':
         text = formathtml(blocks)
     else:
+        if len([b for b in blocks if b['type'] == 'definition']) > 1:
+            i = 0
+            while i < len(blocks):
+                if blocks[i]['type'] == 'definition':
+                    if 'path' in blocks[i]:
+                        blocks[i]['lines'][0] = '"%s"' % '.'.join(
+                            blocks[i]['path'])
+                i += 1
         text = ''.join(formatblock(b, width) for b in blocks)
     if keep is None:
         return text
