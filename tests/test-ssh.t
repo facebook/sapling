@@ -34,14 +34,14 @@ configure for serving
 repo not found error
 
   $ hg clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/nonexistent local
-  remote: abort: there is no Mercurial repository here (.hg not found)!
+  remote: abort: repository nonexistent not found!
   abort: no suitable response from remote hg!
   [255]
 
 non-existent absolute path
 
   $ hg clone -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/`pwd`/nonexistent local
-  remote: abort: there is no Mercurial repository here (.hg not found)!
+  remote: abort: repository $TESTTMP/nonexistent not found!
   abort: no suitable response from remote hg!
   [255]
 
@@ -119,7 +119,7 @@ pull from wrong ssh URL
 
   $ hg pull -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/doesnotexist
   pulling from ssh://user@dummy/doesnotexist
-  remote: abort: there is no Mercurial repository here (.hg not found)!
+  remote: abort: repository doesnotexist not found!
   abort: no suitable response from remote hg!
   [255]
 

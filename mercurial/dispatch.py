@@ -890,6 +890,8 @@ def _dispatch(req):
             except error.RequirementError:
                 raise
             except error.RepoError:
+                if rpath and rpath[-1]: # invalid -R path
+                    raise
                 if cmd not in commands.optionalrepo.split():
                     if (cmd in commands.inferrepo.split() and
                         args and not path): # try to infer -R from command args

@@ -589,6 +589,15 @@ start without repository:
   000000000000 tip
 
 
+don't fall back to cwd if invalid -R path is specified (issue4805):
+
+  $ cd repo
+  $ hg serve --cmdserver pipe -R ../nonexistent
+  abort: repository ../nonexistent not found!
+  [255]
+  $ cd ..
+
+
 unix domain socket:
 
   $ cd repo

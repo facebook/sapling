@@ -1020,7 +1020,7 @@ Test that auto sharing doesn't cause failure of "hg clone local remote"
   $ hg -R a id -r 0
   acb14030fe0a
   $ hg id -R remote -r 0
-  abort: there is no Mercurial repository here (.hg not found)
+  abort: repository remote not found!
   [255]
   $ hg --config share.pool=share -q clone -e "python \"$TESTDIR/dummyssh\"" a ssh://user@dummy/remote
   $ hg -R remote id -r 0
