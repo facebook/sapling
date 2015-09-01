@@ -159,9 +159,10 @@ class hgweb(object):
         self.repostate = ((-1, -1), (-1, -1))
         self.mtime = -1
         self.reponame = name
-        # a repo owner may set web.templates in .hg/hgrc to get any file
-        # readable by the user running the CGI script
-        self.templatepath = self.config('web', 'templates')
+        # we use untrusted=False to prevent a repo owner from using
+        # web.templates in .hg/hgrc to get access to any file readable
+        # by the user running the CGI script
+        self.templatepath = self.config('web', 'templates', untrusted=False)
         self.websubtable = self.loadwebsub()
 
     # The CGI scripts are often run by a user different from the repo owner.
