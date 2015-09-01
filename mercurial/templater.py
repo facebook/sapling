@@ -256,26 +256,26 @@ def runtemplate(context, mapping, template):
         yield func(context, mapping, data)
 
 def buildfilter(exp, context):
-    func, data = compileexp(exp[1], context, methods)
+    arg = compileexp(exp[1], context, methods)
     n = getsymbol(exp[2])
     if n in context._filters:
         filt = context._filters[n]
-        return (runfilter, (func, data, filt))
+        return (runfilter, (arg, filt))
     if n in funcs:
         f = funcs[n]
-        return (f, [(func, data)])
+        return (f, [arg])
     raise error.ParseError(_("unknown function '%s'") % n)
 
 def runfilter(context, mapping, data):
-    func, data, filt = data
-    thing = evalfuncarg(context, mapping, (func, data))
+    arg, filt = data
+    thing = evalfuncarg(context, mapping, arg)
     try:
         return filt(thing)
     except (ValueError, AttributeError, TypeError):
-        if isinstance(data, tuple):
-            dt = data[1]
+        if isinstance(arg[1], tuple):
+            dt = arg[1][1]
         else:
-            dt = data
+            dt = arg[1]
         raise util.Abort(_("template filter '%s' is not compatible with "
                            "keyword '%s'") % (filt.func_name, dt))
 
@@ -313,7 +313,7 @@ def buildfunc(exp, context):
         if len(args) != 1:
             raise error.ParseError(_("filter %s expects one argument") % n)
         f = context._filters[n]
-        return (runfilter, (args[0][0], args[0][1], f))
+        return (runfilter, (args[0], f))
     raise error.ParseError(_("unknown function '%s'") % n)
 
 def date(context, mapping, args):
