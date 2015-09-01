@@ -685,18 +685,6 @@ def summary(web, req, tmpl):
                    'date': web.repo[n].date(),
                    'node': hex(n)}
 
-    def branches(**map):
-        parity = paritygen(web.stripecount)
-
-        b = web.repo.branchmap()
-        l = [(-web.repo.changelog.rev(tip), tip, tag)
-             for tag, heads, tip, closed in b.iterbranches()]
-        for r, n, t in sorted(l):
-            yield {'parity': parity.next(),
-                   'branch': t,
-                   'node': hex(n),
-                   'date': web.repo[n].date()}
-
     def changelist(**map):
         parity = paritygen(web.stripecount, offset=start - end)
         l = [] # build a list in forward order for efficiency
@@ -736,7 +724,7 @@ def summary(web, req, tmpl):
                 lastchange=tip.date(),
                 tags=tagentries,
                 bookmarks=bookmarks,
-                branches=branches,
+                branches=webutil.branchentries(web.repo, web.stripecount),
                 shortlog=changelist,
                 node=tip.hex(),
                 symrev='tip',

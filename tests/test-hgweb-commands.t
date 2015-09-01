@@ -1653,7 +1653,7 @@ Overviews
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/cad8025a2e87?style=gitweb"><b>cad8025a2e87</b></a></td>
-  <td class="">unstable</td>
+  <td class="open">unstable</td>
   <td class="link">
   <a href="/changeset/cad8025a2e87?style=gitweb">changeset</a> |
   <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
@@ -1663,7 +1663,7 @@ Overviews
   <tr class="parity1">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/1d22e65f027e?style=gitweb"><b>1d22e65f027e</b></a></td>
-  <td class="">stable</td>
+  <td class="inactive">stable</td>
   <td class="link">
   <a href="/changeset/1d22e65f027e?style=gitweb">changeset</a> |
   <a href="/log/1d22e65f027e?style=gitweb">changelog</a> |
@@ -1673,7 +1673,7 @@ Overviews
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/shortlog/a4f92ed23982?style=gitweb"><b>a4f92ed23982</b></a></td>
-  <td class="">default</td>
+  <td class="inactive">default</td>
   <td class="link">
   <a href="/changeset/a4f92ed23982?style=gitweb">changeset</a> |
   <a href="/log/a4f92ed23982?style=gitweb">changelog</a> |
