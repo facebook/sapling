@@ -724,7 +724,7 @@ def summary(web, req, tmpl):
                 lastchange=tip.date(),
                 tags=tagentries,
                 bookmarks=bookmarks,
-                branches=webutil.branchentries(web.repo, web.stripecount),
+                branches=webutil.branchentries(web.repo, web.stripecount, 10),
                 shortlog=changelist,
                 node=tip.hex(),
                 symrev='tip',
