@@ -1,6 +1,9 @@
-import os, stat
+import errno
+import os
 import re
 import socket
+import stat
+import subprocess
 import sys
 import tempfile
 
@@ -69,14 +72,16 @@ def matchoutput(cmd, regexp, ignorestatus=False):
     is matched by the supplied regular expression.
     """
     r = re.compile(regexp)
-    fh = os.popen(cmd)
-    s = fh.read()
     try:
-        ret = fh.close()
-    except IOError:
-        # Happen in Windows test environment
-        ret = 1
-    return (ignorestatus or ret is None) and r.search(s)
+        p = subprocess.Popen(
+            cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        ret = -1
+    ret = p.wait()
+    s = p.stdout.read()
+    return (ignorestatus or not ret) and r.search(s)
 
 @check("baz", "GNU Arch baz client")
 def has_baz():
