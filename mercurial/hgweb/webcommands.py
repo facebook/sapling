@@ -639,35 +639,10 @@ def branches(web, req, tmpl):
 
     The ``branches`` template is rendered.
     """
-    tips = []
-    heads = web.repo.heads()
-    parity = paritygen(web.stripecount)
-    sortkey = lambda item: (not item[1], item[0].rev())
-
-    def entries(limit, **map):
-        count = 0
-        if not tips:
-            for tag, hs, tip, closed in web.repo.branchmap().iterbranches():
-                tips.append((web.repo[tip], closed))
-        for ctx, closed in sorted(tips, key=sortkey, reverse=True):
-            if limit > 0 and count >= limit:
-                return
-            count += 1
-            if closed:
-                status = 'closed'
-            elif ctx.node() not in heads:
-                status = 'inactive'
-            else:
-                status = 'open'
-            yield {'parity': parity.next(),
-                   'branch': ctx.branch(),
-                   'status': status,
-                   'node': ctx.hex(),
-                   'date': ctx.date()}
-
+    entries = webutil.branchentries(web.repo, web.stripecount)
+    latestentry = webutil.branchentries(web.repo, web.stripecount, 1)
     return tmpl('branches', node=hex(web.repo.changelog.tip()),
-                entries=lambda **x: entries(0, **x),
-                latestentry=lambda **x: entries(1, **x))
+                entries=entries, latestentry=latestentry)
 
 @webcommand('summary')
 def summary(web, req, tmpl):

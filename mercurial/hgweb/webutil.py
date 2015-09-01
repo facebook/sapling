@@ -199,6 +199,37 @@ def showbookmark(repo, tmpl, t1, node=nullid, **args):
     for t in repo.nodebookmarks(node):
         yield tmpl(t1, bookmark=t, **args)
 
+def branchentries(repo, stripecount, limit=0):
+    tips = []
+    heads = repo.heads()
+    parity = paritygen(stripecount)
+    sortkey = lambda item: (not item[1], item[0].rev())
+
+    def entries(**map):
+        count = 0
+        if not tips:
+            for tag, hs, tip, closed in repo.branchmap().iterbranches():
+                tips.append((repo[tip], closed))
+        for ctx, closed in sorted(tips, key=sortkey, reverse=True):
+            if limit > 0 and count >= limit:
+                return
+            count += 1
+            if closed:
+                status = 'closed'
+            elif ctx.node() not in heads:
+                status = 'inactive'
+            else:
+                status = 'open'
+            yield {
+                'parity': parity.next(),
+                'branch': ctx.branch(),
+                'status': status,
+                'node': ctx.hex(),
+                'date': ctx.date()
+            }
+
+    return entries
+
 def cleanpath(repo, path):
     path = path.lstrip('/')
     return pathutil.canonpath(repo.root, '', path)
