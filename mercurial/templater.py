@@ -215,6 +215,15 @@ def gettemplate(exp, context):
         return context._load(exp[1])
     raise error.ParseError(_("expected template specifier"))
 
+def evalfuncarg(context, mapping, arg):
+    func, data = arg
+    # func() may return string, generator of strings or arbitrary object such
+    # as date tuple, but filter does not want generator.
+    thing = func(context, mapping, data)
+    if isinstance(thing, types.GeneratorType):
+        thing = stringify(thing)
+    return thing
+
 def runinteger(context, mapping, data):
     return int(data)
 
@@ -259,11 +268,7 @@ def buildfilter(exp, context):
 
 def runfilter(context, mapping, data):
     func, data, filt = data
-    # func() may return string, generator of strings or arbitrary object such
-    # as date tuple, but filter does not want generator.
-    thing = func(context, mapping, data)
-    if isinstance(thing, types.GeneratorType):
-        thing = stringify(thing)
+    thing = evalfuncarg(context, mapping, (func, data))
     try:
         return filt(thing)
     except (ValueError, AttributeError, TypeError):
