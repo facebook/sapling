@@ -2495,6 +2495,10 @@ Behind the scenes, this will throw AttributeError
   abort: template filter 'escape' is not compatible with keyword 'date'
   [255]
 
+  $ hg log -l 3 --template 'line: {extras|localdate}\n'
+  hg: parse error: localdate expects a date information
+  [255]
+
 Behind the scenes, this will throw ValueError
 
   $ hg tip --template '{author|email|date}\n'

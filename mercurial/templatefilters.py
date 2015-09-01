@@ -235,10 +235,6 @@ def jsonescape(s):
         s = s.replace(k, v)
     return ''.join(_uescape(c) for c in s)
 
-def localdate(text):
-    """:localdate: Date. Converts a date to local date."""
-    return (util.parsedate(text)[0], util.makedate()[1])
-
 def lower(text):
     """:lower: Any text. Converts the text to lowercase."""
     return encoding.lower(text)
@@ -403,7 +399,6 @@ filters = {
     "isodatesec": isodatesec,
     "json": json,
     "jsonescape": jsonescape,
-    "localdate": localdate,
     "lower": lower,
     "nonempty": nonempty,
     "obfuscate": obfuscate,

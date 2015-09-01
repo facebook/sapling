@@ -516,6 +516,21 @@ def label(context, mapping, args):
     # ignore args[0] (the label string) since this is supposed to be a a no-op
     yield args[1][0](context, mapping, args[1][1])
 
+def localdate(context, mapping, args):
+    """:localdate(date): Converts a date to local date."""
+    if len(args) != 1:
+        # i18n: "localdate" is a keyword
+        raise error.ParseError(_("localdate expects one argument"))
+
+    date = evalfuncarg(context, mapping, args[0])
+    try:
+        date = util.parsedate(date)
+    except AttributeError:  # not str nor date tuple
+        # i18n: "localdate" is a keyword
+        raise error.ParseError(_("localdate expects a date information"))
+    tzoffset = util.makedate()[1]
+    return (date[0], tzoffset)
+
 def revset(context, mapping, args):
     """:revset(query[, formatargs...]): Execute a revision set query. See
     :hg:`help revset`."""
@@ -700,6 +715,7 @@ funcs = {
     "indent": indent,
     "join": join,
     "label": label,
+    "localdate": localdate,
     "pad": pad,
     "revset": revset,
     "rstdoc": rstdoc,
