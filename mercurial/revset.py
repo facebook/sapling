@@ -2067,14 +2067,17 @@ def _list(repo, subset, x):
             r = int(t)
             if str(r) != t or r not in cl:
                 raise ValueError
+            revs = [r]
         except ValueError:
-            r = repo[t].rev()
-        if r in seen:
-            continue
-        if (r in subset
-            or r == node.nullrev and isinstance(subset, fullreposet)):
-            ls.append(r)
-        seen.add(r)
+            revs = stringset(repo, subset, t)
+
+        for r in revs:
+            if r in seen:
+                continue
+            if (r in subset
+                or r == node.nullrev and isinstance(subset, fullreposet)):
+                ls.append(r)
+            seen.add(r)
     return baseset(ls)
 
 # for internal use
