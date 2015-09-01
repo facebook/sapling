@@ -218,7 +218,7 @@ def rebase(ui, repo, **opts):
             if srcf or basef or destf:
                 raise util.Abort(
                     _('abort and continue do not allow specifying revisions'))
-            if opts.get('tool', False):
+            if abortf and opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
 
             try:
