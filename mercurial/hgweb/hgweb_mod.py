@@ -89,9 +89,10 @@ class hgweb(object):
         self.reponame = name
         self.archives = 'zip', 'gz', 'bz2'
         self.stripecount = 1
-        # a repo owner may set web.templates in .hg/hgrc to get any file
-        # readable by the user running the CGI script
-        self.templatepath = self.config('web', 'templates')
+        # we use untrusted=False to prevent a repo owner from using
+        # web.templates in .hg/hgrc to get access to any file readable
+        # by the user running the CGI script
+        self.templatepath = self.config('web', 'templates', untrusted=False)
         self.websubtable = self.loadwebsub()
 
     # The CGI scripts are often run by a user different from the repo owner.
