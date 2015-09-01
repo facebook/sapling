@@ -78,6 +78,7 @@ Create an extension to test bundle2 API
   >           ('', 'reply', False, 'produce a reply bundle'),
   >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
   >           ('', 'genraise', False, 'includes a part that raise an exception during generation'),
+  >           ('', 'timeout', False, 'emulate a timeout during bundle generation'),
   >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
@@ -143,6 +144,18 @@ Create an extension to test bundle2 API
   >     else:
   >         file = open(path, 'wb')
   > 
+  >     if opts['timeout']:
+  >         bundler.newpart('test:song', data=ELEPHANTSSONG, mandatory=False)
+  >         for idx, junk in enumerate(bundler.getchunks()):
+  >             ui.write('%d chunk\n' % idx)
+  >             if idx > 4:
+  >                 # This throws a GeneratorExit inside the generator, which
+  >                 # can cause problems if the exception-recovery code is
+  >                 # too zealous. It's important for this test that the break
+  >                 # occur while we're in the middle of a part.
+  >                 break
+  >         ui.write('fake timeout complete.\n')
+  >         return
   >     try:
   >         for chunk in bundler.getchunks():
   >             file.write(chunk)
@@ -238,6 +251,26 @@ Test bundling
 
   $ hg bundle2
   HG20\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+
+Test timeouts during bundling
+  $ hg bundle2 --timeout --debug --config devel.bundle2.debug=yes
+  bundle2-output-bundle: "HG20", 1 parts total
+  bundle2-output: start emission of HG20 stream
+  0 chunk
+  bundle2-output: bundle parameter: 
+  1 chunk
+  bundle2-output: start of parts
+  bundle2-output: bundle part: "test:song"
+  bundle2-output-part: "test:song" (advisory) 178 bytes payload
+  bundle2-output: part 0: "test:song"
+  bundle2-output: header chunk size: 16
+  2 chunk
+  3 chunk
+  bundle2-output: payload chunk size: 178
+  4 chunk
+  5 chunk
+  bundle2-generatorexit
+  fake timeout complete.
 
 Test unbundling
 

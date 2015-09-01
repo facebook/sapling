@@ -847,6 +847,12 @@ class bundlepart(object):
                 outdebug(ui, 'payload chunk size: %i' % len(chunk))
                 yield _pack(_fpayloadsize, len(chunk))
                 yield chunk
+        except GeneratorExit:
+            # GeneratorExit means that nobody is listening for our
+            # results anyway, so just bail quickly rather than trying
+            # to produce an error part.
+            ui.debug('bundle2-generatorexit\n')
+            raise
         except BaseException as exc:
             # backup exception data for later
             ui.debug('bundle2-input-stream-interrupt: encoding exception %s'
