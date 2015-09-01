@@ -56,6 +56,7 @@ else
     RPMPYTHONVER=%{nil}
 fi
 
+mkdir -p $RPMBUILDDIR/SOURCES
 $HG archive -t tgz $RPMBUILDDIR/SOURCES/mercurial-$version-$release.tar.gz
 if [ "$PYTHONVER" ]; then
 (
@@ -79,6 +80,7 @@ if [ "$PYTHONVER" ]; then
 )
 fi
 
+mkdir -p $RPMBUILDDIR/SPECS
 rpmspec=$RPMBUILDDIR/SPECS/mercurial.spec
 
 sed -e "s,^Version:.*,Version: $version," \
