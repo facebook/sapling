@@ -441,7 +441,7 @@ def has_debhelper():
     dpkg = matchoutput('dpkg --version',
                        "Debian `dpkg' package management program")
     dh = matchoutput('dh --help',
-                     'dh is a part of debhelper.')
+                     'dh is a part of debhelper.', ignorestatus=True)
     dh_py2 = matchoutput('dh_python2 --help',
                          'other supported Python versions')
     return dpkg and dh and dh_py2
