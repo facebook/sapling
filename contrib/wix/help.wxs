@@ -23,6 +23,7 @@
           <File Name="phases.txt" />
           <File Name="revisions.txt" />
           <File Name="revsets.txt" />
+          <File Name="scripting.txt" />
           <File Name="subrepos.txt" />
           <File Name="templates.txt" />
           <File Name="urls.txt" />
