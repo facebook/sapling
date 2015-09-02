@@ -516,7 +516,7 @@ format. We suggest you use the ``eol`` extension for convenience.
 ``defaults``
 ------------
 
-(defaults are deprecated. Don't use them. Use aliases instead)
+(defaults are deprecated. Don't use them. Use aliases instead.)
 
 Use the ``[defaults]`` section to define command defaults, i.e. the
 default options/arguments to pass to the specified commands.
@@ -1251,16 +1251,16 @@ have a definite end point.
 
 ``width``
     If set, the maximum width of the progress information (that is, min(width,
-    term width) will be used)
+    term width) will be used).
 
 ``clear-complete``
     clear the progress bar after it's done (default to True)
 
 ``disable``
-    If true, don't show a progress bar
+    If true, don't show a progress bar.
 
 ``assume-tty``
-    If true, ALWAYS show a progress bar, unless disable is given
+    If true, ALWAYS show a progress bar, unless disable is given.
 
 ``revsetalias``
 ---------------
@@ -1703,7 +1703,7 @@ The full set of options is:
 
 ``encoding``
     Character encoding name. Default is the current locale charset.
-    Example: "UTF-8"
+    Example: "UTF-8".
 
 ``errorlog``
     Where to output the error log. Default is stderr.
