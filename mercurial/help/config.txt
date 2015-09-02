@@ -1038,7 +1038,7 @@ Supported arguments:
   selected by file pattern match.
 
 ``check``
-  A list of merge success-checking options:
+  A list of merge success-checking options::
 
   ``changed``
     Ask whether merge was successful when the merged file shows no changes.
