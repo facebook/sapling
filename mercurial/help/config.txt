@@ -1332,7 +1332,7 @@ Configuration for extensions that need to send email messages.
     password; non-interactive sessions will fail. Default: none.
 
 ``local_hostname``
-    Optional. It's the hostname that the sender can use to identify
+    Optional. The hostname that the sender can use to identify
     itself to the MTA.
 
 
