@@ -1130,8 +1130,7 @@ Test section lookup
   
       "default"
           Directory or URL to use when pulling if no source is specified.
-          Default is set to repository from which the current repository was
-          cloned.
+          (default: repository from which the current repository was cloned)
   
       "default-push"
           Optional. Directory or URL to use when pushing if no destination is
