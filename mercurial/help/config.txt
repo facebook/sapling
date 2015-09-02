@@ -713,8 +713,7 @@ hooks can be run for the same action by appending a suffix to the
 action. Overriding a site-wide hook can be done by changing its
 value or setting it to an empty string.  Hooks can be prioritized
 by adding a prefix of ``priority`` to the hook name on a new line
-and setting the priority.  The default priority is 0 if
-not specified.
+and setting the priority. The default priority is 0.
 
 Example ``.hg/hgrc``::
 
