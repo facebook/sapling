@@ -208,6 +208,7 @@ keys, and their possible values.
 ---------
 
 Defines command aliases.
+
 Aliases allow you to define your own commands in terms of other
 commands (or aliases), optionally including arguments. Positional
 arguments in the form of ``$1``, ``$2``, etc in the alias definition
@@ -1446,8 +1447,10 @@ User interface controls.
     The template used to print the commit description next to each conflict
     marker during merge conflicts. See :hg:`help templates` for the template
     format.
+
     Defaults to showing the hash, tags, branches, bookmarks, author, and
     the first line of the commit description.
+
     If you use non-ASCII characters in names for tags, branches, bookmarks,
     authors, and/or commit descriptions, you must pay attention to encodings of
     managed files. At template expansion, non-ASCII characters use the encoding
