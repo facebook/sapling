@@ -18,7 +18,7 @@ Testing hghave extensibility for third party tools
   >   $ echo foo
   >   foo
   > EOF
-  $ run-tests.py test-hghaveaddon.t
+  $ run-tests.py $HGTEST_RUN_TESTS_PURE test-hghaveaddon.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
