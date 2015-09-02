@@ -922,6 +922,22 @@ Test repeated config section name
       "smtp.host"
           Host name of mail server, e.g. "mail.example.com".
   
+Help subsection:
+
+  $ hg help config.charsets |grep "Email example:" > /dev/null
+  [1]
+
+Last item in help config.*:
+
+  $ hg help config.`hg help config|grep '^    "'| \
+  >       tail -1|sed 's![ "]*!!g'`| \
+  >   grep "hg help -c config" > /dev/null
+  [1]
+
+note to use help -c for general hg help config:
+
+  $ hg help config |grep "hg help -c config" > /dev/null
+
 Test templating help
 
   $ hg help templating | egrep '(desc|diffstat|firstline|nonempty)  '

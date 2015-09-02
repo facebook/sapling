@@ -727,6 +727,21 @@ def getsections(blocks):
             if not secs:
                 # add an initial empty section
                 secs = [('', 0, [])]
+            if b['type'] != 'margin':
+                pointer = 1
+                bindent = b['indent']
+                while pointer < len(secs):
+                    section = secs[-pointer][2][0]
+                    if section['type'] != 'margin':
+                        sindent = section['indent']
+                        if len(section['lines']) > 1:
+                            sindent += len(section['lines'][1]) - \
+                              len(section['lines'][1].lstrip(' '))
+                        if bindent >= sindent:
+                            break
+                    pointer += 1
+                if pointer > 1:
+                    secs.append(('', secs[-pointer][1] + 1, []))
             secs[-1][2].append(b)
     return secs
 
