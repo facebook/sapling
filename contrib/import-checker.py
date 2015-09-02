@@ -200,7 +200,10 @@ def list_stdlib_modules():
             for name in files:
                 if name == '__init__.py':
                     continue
-                if not (name.endswith('.py') or name.endswith('.so')
+                if not (name.endswith('.py')
+                        or name.endswith('.so')
+                        or name.endswith('.pyc')
+                        or name.endswith('.pyo')
                         or name.endswith('.pyd')):
                     continue
                 full_path = os.path.join(top, name)
