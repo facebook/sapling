@@ -133,7 +133,7 @@ def exactivate(orig, repo, mark):
 def exconvertbookmarks(orig, source):
     """Make hg convert map remote bookmarks in the source to normal bookmarks in
     the target.
-    
+
     This is useful for instance if you need to convert a repo from server A to
     server B. You clone the repo from A (now you have remote bookmarks), convert
     to a local version of B, and push those bookmarks to server B.
@@ -729,10 +729,11 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         tracking = dict(oldtracking)
 
         if rename and not track:
-            tracked = tracking[rename]
-            del tracking[rename]
-            for arg in args:
-                tracking[arg] = tracked
+            if rename in tracking:
+                tracked = tracking[rename]
+                del tracking[rename]
+                for arg in args:
+                    tracking[arg] = tracked
 
         if track:
             for arg in args:

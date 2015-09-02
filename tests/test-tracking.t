@@ -283,6 +283,16 @@ Test renaming a bookmark with tracking
   $ hg book -v
    * x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
 
+Test renaming a bookmark without tracking
+
+  $ hg book -u x
+  $ hg book -v
+   * x                         5:8d13dc14fef1
+  $ hg book -m x d
+  $ hg book -v
+   * d                         5:8d13dc14fef1
+  $ hg book -d d
+
 Test bookmarks with difficult characters
 
   $ hg book -t remote/a "bookmark with spaces"
@@ -292,7 +302,6 @@ Test bookmarks with difficult characters
      bookmark with spaces      5:8d13dc14fef1
    * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
      with	tab too              5:8d13dc14fef1
-     x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg update bookmark/with/slashes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark bookmark/with/slashes)
@@ -300,4 +309,3 @@ Test bookmarks with difficult characters
      bookmark with spaces      5:8d13dc14fef1
    * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
      with	tab too              5:8d13dc14fef1
-     x                         5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
