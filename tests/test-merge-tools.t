@@ -65,7 +65,7 @@ hg merge -r 2
 override $PATH to ensure hgmerge not visible; use $PYTHON in case we're
 running from a devel copy, not a temp installation
 
-  $ PATH="$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
+  $ PATH="$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -111,7 +111,7 @@ unexecutable file in $PATH shouldn't be found:
 
   $ echo "echo fail" > false
   $ hg up -qC 1
-  $ PATH="`pwd`:$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
+  $ PATH="`pwd`:$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
@@ -126,7 +126,7 @@ executable directory in $PATH shouldn't be found:
 
   $ mkdir false
   $ hg up -qC 1
-  $ PATH="`pwd`:$BINDIR" $PYTHON "$BINDIR"/hg merge -r 2
+  $ PATH="`pwd`:$BINDIR:/usr/sbin" $PYTHON "$BINDIR"/hg merge -r 2
   merging f
   warning: conflicts during merge.
   merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
