@@ -1587,11 +1587,11 @@ The full set of options is:
 
 ``allow_push``
     Whether to allow pushing to the repository. If empty or not set,
-    push is not allowed. If the special value ``*``, any remote user can
-    push, including unauthenticated users. Otherwise, the remote user
-    must have been authenticated, and the authenticated user name must
-    be present in this list. The contents of the allow_push list are
-    examined after the deny_push list.
+    pushing is not allowed. If the special value ``*``, any remote
+    user can push, including unauthenticated users. Otherwise, the
+    remote user must have been authenticated, and the authenticated
+    user name must be present in this list. The contents of the
+    allow_push list are examined after the deny_push list.
 
 ``allow_read``
     If the user has not already been denied repository access due to
