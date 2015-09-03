@@ -194,3 +194,7 @@ ul#graphnodes li .info {
 .scroll-loading-error {
     background-color: #FFCCCC !important;
 }
+
+#doc {
+    margin: 0 8px;
+}
