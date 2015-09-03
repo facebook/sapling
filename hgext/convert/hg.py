@@ -431,9 +431,6 @@ class mercurial_sink(converter_sink):
 class mercurial_source(converter_source):
     def __init__(self, ui, path, revs=None):
         converter_source.__init__(self, ui, path, revs)
-        if revs and len(revs) > 1:
-            raise util.Abort(_("mercurial source does not support specifying "
-                               "multiple revisions"))
         self.ignoreerrors = ui.configbool('convert', 'hg.ignoreerrors', False)
         self.ignored = set()
         self.saverev = ui.configbool('convert', 'hg.saverev', False)
@@ -468,7 +465,7 @@ class mercurial_source(converter_source):
             else:
                 self.keep = util.always
             if revs:
-                self._heads = [self.repo[revs[0]].node()]
+                self._heads = [self.repo[r].node() for r in revs]
             else:
                 self._heads = self.repo.heads()
         else:

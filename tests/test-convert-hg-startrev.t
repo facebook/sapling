@@ -201,4 +201,23 @@ Convert from revset in convert.hg.revs
   |
   o  0 "0: add a b f" files: a b f
   
-  $ cd ..
+Convert from specified revs
+
+  $ hg convert --rev 3 --rev 2 source multiplerevs
+  initializing destination multiplerevs repository
+  scanning source...
+  sorting...
+  converting...
+  3 0: add a b f
+  2 1: add c, move f to d
+  1 2: copy e from a, change b
+  0 3: change a
+  $ glog multiplerevs
+  o  3 "3: change a" files: a
+  |
+  | o  2 "2: copy e from a, change b" files: b e
+  | |
+  | o  1 "1: add c, move f to d" files: c d f
+  |/
+  o  0 "0: add a b f" files: a b f
+  
