@@ -300,6 +300,7 @@ class localrepository(object):
         if create:
             self._writerequirements()
 
+        self._dirstatevalidatewarned = False
 
         self._branchcaches = {}
         self._revbranchcache = None
@@ -473,19 +474,19 @@ class localrepository(object):
 
     @repofilecache('dirstate')
     def dirstate(self):
-        warned = [0]
-        def validate(node):
-            try:
-                self.changelog.rev(node)
-                return node
-            except error.LookupError:
-                if not warned[0]:
-                    warned[0] = True
-                    self.ui.warn(_("warning: ignoring unknown"
-                                   " working parent %s!\n") % short(node))
-                return nullid
+        return dirstate.dirstate(self.vfs, self.ui, self.root,
+                                 self._dirstatevalidate)
 
-        return dirstate.dirstate(self.vfs, self.ui, self.root, validate)
+    def _dirstatevalidate(self, node):
+        try:
+            self.changelog.rev(node)
+            return node
+        except error.LookupError:
+            if not self._dirstatevalidatewarned:
+                self._dirstatevalidatewarned = True
+                self.ui.warn(_("warning: ignoring unknown"
+                               " working parent %s!\n") % short(node))
+            return nullid
 
     def __getitem__(self, changeid):
         if changeid is None or changeid == wdirrev:
