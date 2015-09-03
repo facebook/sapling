@@ -201,11 +201,13 @@ class hgweb(object):
 
     def refresh(self):
         repostate = []
+        mtime = 0
         # file of interrests mtime and size
         for meth, fname in foi:
             prefix = getattr(self.repo, meth)
             st = get_stat(prefix, fname)
             repostate.append((st.st_mtime, st.st_size))
+            mtime = max(mtime, st.st_mtime)
         repostate = tuple(repostate)
         # we need to compare file size in addition to mtime to catch
         # changes made less than a second ago
@@ -215,7 +217,7 @@ class hgweb(object):
             # update these last to avoid threads seeing empty settings
             self.repostate = repostate
             # mtime is needed for ETag
-            self.mtime = st.st_mtime
+            self.mtime = mtime
 
     def run(self):
         """Start a server from CGI environment.
