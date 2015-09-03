@@ -50,15 +50,15 @@ HGPLAIN
     invoking ``hg`` processes.
 
 HGENCODING
-   If not set, the locale used by Mercurial will be detected from the
-   environment. If the determined locale does not support display of
-   certain characters, Mercurial may render these character sequences
-   incorrectly (often by using "?" as a placeholder for invalid
-   characters in the current locale).
+    If not set, the locale used by Mercurial will be detected from the
+    environment. If the determined locale does not support display of
+    certain characters, Mercurial may render these character sequences
+    incorrectly (often by using "?" as a placeholder for invalid
+    characters in the current locale).
 
-   Explicitly setting this environment variable is a good practice to
-   guarantee consistent results. "utf-8" is a good choice on UNIX-like
-   environments.
+    Explicitly setting this environment variable is a good practice to
+    guarantee consistent results. "utf-8" is a good choice on UNIX-like
+    environments.
 
 HGRCPATH
     If not set, Mercurial will inherit config options from config files
