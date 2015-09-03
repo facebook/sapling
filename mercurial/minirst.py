@@ -741,7 +741,10 @@ def getsections(blocks):
                             break
                     pointer += 1
                 if pointer > 1:
-                    secs.append(('', secs[-pointer][1] + 1, []))
+                    blevel = secs[-pointer][1]
+                    if section['type'] != b['type']:
+                        blevel += 1
+                    secs.append(('', blevel, []))
             secs[-1][2].append(b)
     return secs
 
