@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
-from mercurial import exchange, sshserver
+from mercurial import exchange, sshserver, store
 from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
