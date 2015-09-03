@@ -922,6 +922,10 @@ Test repeated config section name
       "smtp.host"
           Host name of mail server, e.g. "mail.example.com".
   
+Test capitalized section name
+
+  $ hg help scripting.HGPLAIN > /dev/null
+
 Help subsection:
 
   $ hg help config.charsets |grep "Email example:" > /dev/null
