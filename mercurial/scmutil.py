@@ -586,6 +586,8 @@ class readonlyvfs(abstractvfs, auditvfs):
             raise util.Abort('this vfs is read only')
         return self.vfs(path, mode, *args, **kw)
 
+    def join(self, path, *insidef):
+        return self.vfs.join(path, *insidef)
 
 def walkrepos(path, followsym=False, seen_dirs=None, recurse=False):
     '''yield every hg repository under path, always recursively.
