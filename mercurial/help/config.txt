@@ -356,8 +356,9 @@ for credentials as usual if required by the remote.
 ``committemplate``
 ------------------
 
-``changeset`` configuration in this section is used as the template to
-customize the text shown in the editor when committing.
+``changeset``
+    String: configuration in this section is used as the template to
+    customize the text shown in the editor when committing.
 
 In addition to pre-defined template keywords, commit log specific one
 below can be used for customization:
