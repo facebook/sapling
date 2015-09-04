@@ -875,7 +875,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
     [('f', 'force', False, _('force')),
     ('r', 'rev', '', _('revision'), _('REV')),
     ('d', 'delete', False, _('delete a given bookmark')),
-    ('m', 'rename', '', _('rename a given bookmark'), _('NAME')),
+    ('m', 'rename', '', _('rename a given bookmark'), _('OLD')),
     ('i', 'inactive', False, _('mark a bookmark inactive')),
     ] + formatteropts,
     _('hg bookmarks [OPTIONS]... [NAME]...'))
@@ -915,6 +915,10 @@ def bookmark(ui, repo, *names, **opts):
       - create an inactive bookmark on another changeset::
 
           hg book -r .^ tested
+
+      - rename bookmark turkey to dinner::
+
+          hg book -m turkey dinner
 
       - move the '@' bookmark from another branch::
 
