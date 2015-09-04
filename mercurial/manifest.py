@@ -9,6 +9,7 @@ from i18n import _
 import mdiff, parsers, error, revlog, util
 import array, struct
 import os
+import heapq
 
 propertycache = util.propertycache
 
@@ -970,12 +971,9 @@ class manifest(revlog.revlog):
             # revlog layer.
 
             _checkforbidden(added)
-            # combine the changed lists into one list for sorting
-            work = [(x, False) for x in added]
-            work.extend((x, True) for x in removed)
-            # this could use heapq.merge() (from Python 2.6+) or equivalent
-            # since the lists are already sorted
-            work.sort()
+            # combine the changed lists into one sorted iterator
+            work = heapq.merge([(x, False) for x in added],
+                               [(x, True) for x in removed])
 
             arraytext, deltatext = m.fastdelta(self._mancache[p1][1], work)
             cachedelta = self.rev(p1), deltatext
