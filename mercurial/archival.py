@@ -124,11 +124,7 @@ class tarit(object):
         def _write_gzip_header(self):
             self.fileobj.write('\037\213')             # magic header
             self.fileobj.write('\010')                 # compression method
-            # Python 2.6 introduced self.name and deprecated self.filename
-            try:
-                fname = self.name
-            except AttributeError:
-                fname = self.filename
+            fname = self.name
             if fname and fname.endswith('.gz'):
                 fname = fname[:-3]
             flags = 0
