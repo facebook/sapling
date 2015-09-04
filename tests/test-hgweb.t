@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 5372
+  content-length: 5401
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; }
@@ -538,6 +538,10 @@ static file
   
   .scroll-loading-error {
       background-color: #FFCCCC !important;
+  }
+  
+  #doc {
+      margin: 0 8px;
   }
   304 Not Modified
   
