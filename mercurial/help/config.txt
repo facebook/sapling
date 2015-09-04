@@ -392,10 +392,10 @@ one shown by default::
    detail), this customization should be configured carefully, to
    avoid showing broken characters.
 
-   For example, if multibyte character ending with backslash (0x5c) is
-   followed by ASCII character 'n' in the customized template,
-   sequence of backslash and 'n' is treated as line-feed unexpectedly
-   (and multibyte character is broken, too).
+   For example, if a multibyte character ending with backslash (0x5c) is
+   followed by the ASCII character 'n' in the customized template,
+   the sequence of backslash and 'n' is treated as line-feed unexpectedly
+   (and the multibyte character is broken, too).
 
 Customized template is used for commands below (``--edit`` may be
 required):
