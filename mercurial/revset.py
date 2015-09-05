@@ -3077,14 +3077,9 @@ class filteredset(abstractsmartset):
         """
         self._subset = subset
         self._condition = condition
-        self._cache = {}
 
     def __contains__(self, x):
-        c = self._cache
-        if x not in c:
-            v = c[x] = x in self._subset and self._condition(x)
-            return v
-        return c[x]
+        return x in self._subset and self._condition(x)
 
     def __iter__(self):
         return self._iterfilter(self._subset)
