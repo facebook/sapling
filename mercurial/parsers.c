@@ -2564,7 +2564,7 @@ static PyObject *readshas(
 			Py_DECREF(list);
 			return NULL;
 		}
-		PyTuple_SetItem(list, i, hash);
+		PyTuple_SET_ITEM(list, i, hash);
 		source += hashwidth;
 	}
 	return list;
@@ -2647,7 +2647,7 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 		if (!tmp) {
 			goto bail;
 		}
-		PyTuple_SetItem(metadata, i, tmp);
+		PyTuple_SET_ITEM(metadata, i, tmp);
 	}
 	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags,
 			    metadata, mtime, (int)tz * 60, parents);
