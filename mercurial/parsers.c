@@ -2636,17 +2636,15 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 		metasize = (unsigned char)(*data++);
 		right = PyString_FromStringAndSize(meta, metasize);
 		meta += metasize;
-		if (!left || !right) {
+		tmp = PyTuple_New(2);
+		if (!left || !right || !tmp) {
 			Py_XDECREF(left);
 			Py_XDECREF(right);
+			Py_XDECREF(tmp);
 			goto bail;
 		}
-		tmp = PyTuple_Pack(2, left, right);
-		Py_DECREF(left);
-		Py_DECREF(right);
-		if (!tmp) {
-			goto bail;
-		}
+		PyTuple_SET_ITEM(tmp, 0, left);
+		PyTuple_SET_ITEM(tmp, 1, right);
 		PyTuple_SET_ITEM(metadata, i, tmp);
 	}
 	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags,
