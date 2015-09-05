@@ -116,11 +116,12 @@ def onetimesetup(ui):
                             visit.append(fp)
 
             # Return .d and .i files that do not match the shallow pattern
-            match = state.match or match.always(repo.root, '')
-            for (u, e, s) in repo.store.datafiles():
-                f = u[5:-2]  # trim data/...  and .i/.d
-                if not state.match(f):
-                    yield (u, e, s)
+            match = state.match
+            if match and not match.always():
+                for (u, e, s) in repo.store.datafiles():
+                    f = u[5:-2]  # trim data/...  and .i/.d
+                    if not state.match(f):
+                        yield (u, e, s)
 
             for x in repo.store.topfiles():
                 yield x
