@@ -550,9 +550,21 @@ class ui(object):
 
     def expandpath(self, loc, default=None):
         """Return repository location relative to cwd or from [paths]"""
-        p = self.paths.getpath(loc, default=default)
-        if p:
-            return p.rawloc
+        try:
+            p = self.paths.getpath(loc)
+            if p:
+                return p.rawloc
+        except error.RepoError:
+            pass
+
+        if default:
+            try:
+                p = self.paths.getpath(default)
+                if p:
+                    return p.rawloc
+            except error.RepoError:
+                pass
+
         return loc
 
     @util.propertycache
@@ -1014,9 +1026,24 @@ class paths(dict):
         ``name`` can be a named path or locations. Locations are filesystem
         paths or URIs.
 
-        Returns the first of ``name`` or ``default`` that is present, or None
-        if neither is present.
+        Returns None if ``name`` is not a registered path, a URI, or a local
+        path to a repo.
         """
+        # Only fall back to default if no path was requested.
+        if name is None:
+            if default:
+                try:
+                    return self[default]
+                except KeyError:
+                    return None
+            else:
+                return None
+
+        # Most likely empty string.
+        # This may need to raise in the future.
+        if not name:
+            return None
+
         try:
             return self[name]
         except KeyError:
@@ -1024,15 +1051,10 @@ class paths(dict):
             try:
                 return path(None, rawloc=name)
             except ValueError:
-                pass
+                raise error.RepoError(_('repository %s does not exist') %
+                                        name)
 
-            if default is not None:
-                try:
-                    return self[default]
-                except KeyError:
-                    pass
-
-        return None
+        assert False
 
 class path(object):
     """Represents an individual path and its configuration."""

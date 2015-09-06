@@ -45,3 +45,9 @@ Push should push to 'default-push' when set:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+
+Pushing to a path that isn't defined should not fall back to default
+
+  $ hg --cwd b push doesnotexist
+  abort: repository doesnotexist does not exist!
+  [255]
