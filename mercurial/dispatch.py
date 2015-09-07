@@ -1003,13 +1003,17 @@ def statprofile(ui, func, fp):
         statprof.display(fp)
 
 def _runcommand(ui, options, cmd, cmdfunc):
+    """Enables the profiler if applicable.
+
+    ``profiling.enabled`` - boolean config that enables or disables profiling
+    """
     def checkargs():
         try:
             return cmdfunc()
         except error.SignatureError:
             raise error.CommandError(cmd, _("invalid arguments"))
 
-    if options['profile']:
+    if options['profile'] or ui.configbool('profiling', 'enabled'):
         profiler = os.getenv('HGPROF')
         if profiler is None:
             profiler = ui.config('profiling', 'type', default='ls')
