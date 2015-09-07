@@ -2731,6 +2731,13 @@ Test the sub function of templating for expansion:
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
   xx
 
+  $ hg log -R latesttag -r 10 -T '{sub("[", "x", rev)}\n'
+  hg: parse error: sub got an invalid pattern: [
+  [255]
+  $ hg log -R latesttag -r 10 -T '{sub("[0-9]", r"\1", rev)}\n'
+  hg: parse error: sub got an invalid replacement: \1
+  [255]
+
 Test the strip function with chars specified:
 
   $ hg log -R latesttag --template '{desc}\n'

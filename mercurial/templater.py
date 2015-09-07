@@ -660,7 +660,16 @@ def sub(context, mapping, args):
     pat = stringify(args[0][0](context, mapping, args[0][1]))
     rpl = stringify(args[1][0](context, mapping, args[1][1]))
     src = stringify(args[2][0](context, mapping, args[2][1]))
-    yield re.sub(pat, rpl, src)
+    try:
+        patre = re.compile(pat)
+    except re.error:
+        # i18n: "sub" is a keyword
+        raise error.ParseError(_("sub got an invalid pattern: %s") % pat)
+    try:
+        yield patre.sub(rpl, src)
+    except re.error:
+        # i18n: "sub" is a keyword
+        raise error.ParseError(_("sub got an invalid replacement: %s") % rpl)
 
 def startswith(context, mapping, args):
     """:startswith(pattern, text): Returns the value from the "text" argument
