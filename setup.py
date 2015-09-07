@@ -32,6 +32,7 @@ setup(
         'simplecache',
         'smartlog',
         'sparse',
+        'statprof',
         'tweakdefaults',
         'upgradegeneraldelta',
         'writecg2',
