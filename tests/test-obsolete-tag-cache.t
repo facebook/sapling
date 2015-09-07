@@ -68,10 +68,10 @@ Hiding a non-tip changeset should change filtered hash and cause tags recompute
   55482a6fb4b1881fa8f746fd52cf6f096bb21c89 test1
 
   $ hg blackbox -l 4
-  1970/01/01 00:00:00 bob> tags
-  1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 2 tags
-  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> tags (glob)
+  1970/01/01 00:00:00 bob (*)> 2/2 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> writing .hg/cache/tags2-visible with 2 tags (glob)
+  1970/01/01 00:00:00 bob (*)> tags exited 0 after * seconds (glob)
 
 Hiding another changeset should cause the filtered hash to change
 
@@ -87,10 +87,10 @@ Hiding another changeset should cause the filtered hash to change
   042eb6bfcc4909bad84a1cbf6eb1ddf0ab587d41 head2
 
   $ hg blackbox -l 4
-  1970/01/01 00:00:00 bob> tags
-  1970/01/01 00:00:00 bob> 1/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> tags (glob)
+  1970/01/01 00:00:00 bob (*)> 1/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> writing .hg/cache/tags2-visible with 1 tags (glob)
+  1970/01/01 00:00:00 bob (*)> tags exited 0 after * seconds (glob)
 
 Resolving tags on an unfiltered repo writes a separate tags cache
 
@@ -107,7 +107,7 @@ Resolving tags on an unfiltered repo writes a separate tags cache
   d75775ffbc6bca1794d300f5571272879bd280da test2
 
   $ hg blackbox -l 4
-  1970/01/01 00:00:00 bob> --hidden tags
-  1970/01/01 00:00:00 bob> 2/2 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob> writing .hg/cache/tags2 with 3 tags
-  1970/01/01 00:00:00 bob> --hidden tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> --hidden tags (glob)
+  1970/01/01 00:00:00 bob (*)> 2/2 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob (*)> writing .hg/cache/tags2 with 3 tags (glob)
+  1970/01/01 00:00:00 bob (*)> --hidden tags exited 0 after * seconds (glob)

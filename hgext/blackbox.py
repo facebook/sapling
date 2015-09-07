@@ -107,9 +107,11 @@ def wrapui(ui):
             if blackbox:
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
+                pid = str(os.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 try:
-                    blackbox.write('%s %s> %s' % (date, user, formattedmsg))
+                    blackbox.write('%s %s (%s)> %s' %
+                                   (date, user, pid, formattedmsg))
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
