@@ -52,6 +52,7 @@ def extsetup(ui):
     partorder.insert(0, partorder.pop(partorder.index(commonheadsparttype)))
 
     wrapfunction(discovery, 'checkheads', _checkheads)
+    wrapfunction(exchange, 'check_heads', _exchangecheckheads)
 
     origpushkeyhandler = bundle2.parthandlermapping['pushkey']
     newpushkeyhandler = lambda *args, **kwargs: \
@@ -109,6 +110,16 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
         return
     else:
         return orig(repo, remote, *args, **kwargs)
+
+def _exchangecheckheads(orig, repo, *args, **kwargs):
+    # This function is used to verify that the heads haven't changed since the
+    # client did the initial discovery. Pushrebase is meant to allow concurrent
+    # pushes, so the heads may have very well changed. So let's not do this
+    # check.
+    onto = repo.ui.config(experimental, configonto)
+    if not onto:
+        # Only do this work if it's not a rebasing push
+        return orig(repo, *args, **kwargs)
 
 def _push(orig, ui, repo, *args, **opts):
     oldonto = ui.backupconfig(experimental, configonto)
