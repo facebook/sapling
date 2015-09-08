@@ -18,11 +18,11 @@ systems. The pages are grouped in numbered sections:
  7 miscellaneous
  8 system administration
 
-Man pages are written *troff*, a text file formatting system.
+Man pages are written in *troff*, a text file formatting system.
 
 See http://www.tldp.org/HOWTO/Man-Page for a start.
 
-Man pages have no subsection only parts.
+Man pages have no subsections only parts.
 Standard parts
 
   NAME ,
@@ -317,7 +317,7 @@ class Translator(nodes.NodeVisitor):
                     self._cnt = 0
                 self._indent = 2
                 if style == 'arabic':
-                    # indentation depends on number of childrens
+                    # indentation depends on number of children
                     # and start value.
                     self._indent = len(str(len(node.children)))
                     self._indent += len(str(self._cnt)) + 1
