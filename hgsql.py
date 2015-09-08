@@ -199,6 +199,7 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
         connected = True
 
     locked = False
+    startlock = time.time()
     if sqllock and not writelock in repo.heldlocks:
             repo.sqllock(writelock)
             locked = True
@@ -214,6 +215,8 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
         try:
             # Release the locks in the reverse order they were obtained
             if locked:
+                repo.ui.log("sqllock", "held sql lock for %s seconds\n",
+                            time.time() - startlock)
                 repo.sqlunlock(writelock)
             if connected:
                 repo.sqlclose()
