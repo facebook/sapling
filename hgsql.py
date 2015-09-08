@@ -254,10 +254,12 @@ def wraprepo(repo):
             self.sqlconn.autocommit(False)
             waittimeout = self.ui.config('hgsql', 'waittimeout', '300')
             waittimeout = self.sqlconn.escape_string("%s" % (waittimeout,))
-            locktimeout = self.ui.config('hgsql', 'locktimeout', '60')
-            locktimeout = self.sqlconn.escape_string("%s" % (locktimeout,))
+            self.locktimeout = self.ui.config('hgsql', 'locktimeout', '60')
+            self.locktimeout = self.sqlconn.escape_string("%s" %
+                                                          (self.locktimeout,))
             self.sqlconn.query("SET wait_timeout=%s" % waittimeout)
-            self.sqlconn.query("SET innodb_lock_wait_timeout=%s" % locktimeout)
+            self.sqlconn.query("SET innodb_lock_wait_timeout=%s" %
+                               self.locktimeout)
             self.sqlcursor = self.sqlconn.cursor()
 
         def sqlclose(self):
@@ -268,11 +270,12 @@ def wraprepo(repo):
             self.sqlcursor = None
             self.sqlconn = None
 
-        def sqllock(self, name, timeout=60):
-            escapedname = self.sqlconn.escape_string("%s_%s" % (name, self.sqlreponame))
+        def sqllock(self, name):
+            escapedname = self.sqlconn.escape_string("%s_%s" %
+                                                     (name, self.sqlreponame))
             # cast to int to prevent passing bad sql data
-            timeout = int(timeout)
-            self.sqlconn.query("SELECT GET_LOCK('%s', %s)" % (escapedname, timeout))
+            self.sqlconn.query("SELECT GET_LOCK('%s', %s)" %
+                               (escapedname, self.locktimeout))
             result = self.sqlconn.store_result().fetch_row()[0][0]
             if result != 1:
                 raise Exception("unable to obtain %s lock" % escapedname)
