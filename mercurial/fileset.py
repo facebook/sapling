@@ -243,7 +243,7 @@ def symlink(mctx, x):
 
 def resolved(mctx, x):
     """``resolved()``
-    File that is marked resolved according to the resolve state.
+    File that is marked resolved according to :hg:`resolve -l`.
     """
     # i18n: "resolved" is a keyword
     getargs(x, 0, 0, _("resolved takes no arguments"))
@@ -254,7 +254,7 @@ def resolved(mctx, x):
 
 def unresolved(mctx, x):
     """``unresolved()``
-    File that is marked unresolved according to the resolve state.
+    File that is marked unresolved according to :hg:`resolve -l`.
     """
     # i18n: "unresolved" is a keyword
     getargs(x, 0, 0, _("unresolved takes no arguments"))
