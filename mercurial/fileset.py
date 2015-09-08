@@ -132,7 +132,7 @@ def listset(mctx, a, b):
 
 def modified(mctx, x):
     """``modified()``
-    File that is modified according to status.
+    File that is modified according to :hg:`status`.
     """
     # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
@@ -141,7 +141,7 @@ def modified(mctx, x):
 
 def added(mctx, x):
     """``added()``
-    File that is added according to status.
+    File that is added according to :hg:`status`.
     """
     # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
@@ -150,7 +150,7 @@ def added(mctx, x):
 
 def removed(mctx, x):
     """``removed()``
-    File that is removed according to status.
+    File that is removed according to :hg:`status`.
     """
     # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
@@ -159,7 +159,7 @@ def removed(mctx, x):
 
 def deleted(mctx, x):
     """``deleted()``
-    File that is deleted according to status.
+    File that is deleted according to :hg:`status`.
     """
     # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
@@ -168,7 +168,7 @@ def deleted(mctx, x):
 
 def unknown(mctx, x):
     """``unknown()``
-    File that is unknown according to status. These files will only be
+    File that is unknown according to :hg:`status`. These files will only be
     considered if this predicate is used.
     """
     # i18n: "unknown" is a keyword
@@ -178,7 +178,7 @@ def unknown(mctx, x):
 
 def ignored(mctx, x):
     """``ignored()``
-    File that is ignored according to status. These files will only be
+    File that is ignored according to :hg:`status`. These files will only be
     considered if this predicate is used.
     """
     # i18n: "ignored" is a keyword
@@ -188,7 +188,7 @@ def ignored(mctx, x):
 
 def clean(mctx, x):
     """``clean()``
-    File that is clean according to status.
+    File that is clean according to :hg:`status`.
     """
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
