@@ -356,7 +356,7 @@ class hgweb(object):
                 else:
                     req.headers.append(('Connection', 'Close'))
                 req.respond(inst, protocol.HGTYPE,
-                            body='0\n%s\n' % inst.message)
+                            body='0\n%s\n' % inst)
                 return ''
 
         # translate user-visible url structure to internal structure
@@ -439,7 +439,7 @@ class hgweb(object):
             if inst.code == HTTP_NOT_MODIFIED:
                 # Not allowed to return a body on a 304
                 return ['']
-            return tmpl('error', error=inst.message)
+            return tmpl('error', error=str(inst))
 
     def check_perm(self, rctx, req, op):
         for permhook in permhooks:

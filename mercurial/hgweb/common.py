@@ -80,12 +80,9 @@ class ErrorResponse(Exception):
     def __init__(self, code, message=None, headers=[]):
         if message is None:
             message = _statusmessage(code)
-        Exception.__init__(self)
+        Exception.__init__(self, message)
         self.code = code
-        self.message = message
         self.headers = headers
-    def __str__(self):
-        return self.message
 
 class continuereader(object):
     def __init__(self, f, write):
