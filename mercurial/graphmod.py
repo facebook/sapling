@@ -260,6 +260,10 @@ def dagwalker(repo, revs):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
+                # precompute slow query as we know reachableroots() goes
+                # through all revs (issue4782)
+                if not isinstance(revs, revset.baseset):
+                    revs = revset.baseset(revs)
                 gp = gpcache[mpar] = revset.reachableroots(repo, revs, [mpar])
             if not gp:
                 parents.append(mpar)
