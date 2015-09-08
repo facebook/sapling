@@ -239,7 +239,7 @@ class _httprequesthandleropenssl(_httprequesthandler):
             pass
 
 class _httprequesthandlerssl(_httprequesthandler):
-    """HTTPS handler based on Pythons ssl module (introduced in 2.6)"""
+    """HTTPS handler based on Python's ssl module"""
 
     url_scheme = 'https'
 
