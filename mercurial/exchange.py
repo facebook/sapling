@@ -147,7 +147,7 @@ class pushoperation(object):
         #
         # We can pick:
         # * missingheads part of common (::commonheads)
-        common = set(self.outgoing.common)
+        common = self.outgoing.common
         nm = self.repo.changelog.nodemap
         cheads = [node for node in self.revs if nm[node] in common]
         # and
