@@ -1023,7 +1023,10 @@ def _runcommand(ui, options, cmd, cmdfunc):
 
         output = ui.config('profiling', 'output')
 
-        if output:
+        if output == 'blackbox':
+            import StringIO
+            fp = StringIO.StringIO()
+        elif output:
             path = ui.expandpath(output)
             fp = open(path, 'wb')
         else:
@@ -1038,6 +1041,12 @@ def _runcommand(ui, options, cmd, cmdfunc):
                 return statprofile(ui, checkargs, fp)
         finally:
             if output:
+                if output == 'blackbox':
+                    val = "Profile:\n%s" % fp.getvalue()
+                    # ui.log treats the input as a format string,
+                    # so we need to escape any % signs.
+                    val = val.replace('%', '%%')
+                    ui.log('profile', val)
                 fp.close()
     else:
         return checkargs()
