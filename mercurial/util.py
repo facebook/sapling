@@ -1667,7 +1667,7 @@ def MBTextWrapper(**kwargs):
             elif not cur_line:
                 cur_line.append(reversed_chunks.pop())
 
-        # this overriding code is imported from TextWrapper of python 2.6
+        # this overriding code is imported from TextWrapper of Python 2.6
         # to calculate columns of string by 'encoding.ucolwidth()'
         def _wrap_chunks(self, chunks):
             colwidth = encoding.ucolwidth
