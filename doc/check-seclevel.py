@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# checkseclevel - checking section title levels in each online help documents
+# checkseclevel - checking section title levels in each online help document
 
 import sys, os
 import optparse
