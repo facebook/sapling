@@ -276,17 +276,21 @@ def stop():
         save_data()
 
 def save_data(path=None):
-    path = path or (os.environ['HOME'] + '/statprof.data')
-    file = open(path, "w+")
+    try:
+        path = path or (os.environ['HOME'] + '/statprof.data')
+        file = open(path, "w+")
 
-    file.write(str(state.accumulated_time) + '\n')
-    for sample in state.samples:
-        time = str(sample.time)
-        stack = sample.stack
-        sites = ['\1'.join([s.path, str(s.lineno), s.function]) for s in stack]
-        file.write(time + '\0' + '\0'.join(sites) + '\n')
+        file.write(str(state.accumulated_time) + '\n')
+        for sample in state.samples:
+            time = str(sample.time)
+            stack = sample.stack
+            sites = ['\1'.join([s.path, str(s.lineno), s.function]) for s in stack]
+            file.write(time + '\0' + '\0'.join(sites) + '\n')
 
-    file.close()
+        file.close()
+    except (IOError, OSError) as ex:
+        # The home directory probably didn't exist, or wasn't writable. Oh well.
+        pass
 
 def load_data(path=None):
     path = path or (os.environ['HOME'] + '/statprof.data')
