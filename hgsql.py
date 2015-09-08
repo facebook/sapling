@@ -237,7 +237,20 @@ def wraprepo(repo):
                 raise Exception("SQL connection already open")
             if self.sqlcursor:
                 raise Exception("SQL cursor already open without connection")
-            self.sqlconn = MySQLdb.connect(**self.sqlargs)
+            retry = 3
+            while True:
+                try:
+                    self.sqlconn = MySQLdb.connect(**self.sqlargs)
+                    break
+                except (_mysql_exceptions.ProgrammingError,
+                        _mysql_exceptions.OperationalError):
+                    # mysql can be flakey occasionally, so do some minimal
+                    # retrying.
+                    retry -= 1
+                    if retry == 0:
+                        raise
+                    time.sleep(0.2)
+
             self.sqlconn.autocommit(False)
             waittimeout = self.ui.config('hgsql', 'waittimeout', '300')
             waittimeout = self.sqlconn.escape_string("%s" % (waittimeout,))
