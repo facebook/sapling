@@ -2208,7 +2208,12 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     if abort or warn:
         cca = scmutil.casecollisionauditor(ui, abort, repo.dirstate)
 
-    for f in wctx.walk(matchmod.badmatch(match, badfn)):
+    badmatch = matchmod.badmatch(match, badfn)
+    dirstate = repo.dirstate
+    # We don't want to just call wctx.walk here, since it would return a lot of
+    # clean files, which we aren't interested in and takes time.
+    for f in sorted(dirstate.walk(badmatch, sorted(wctx.substate),
+                                  True, False, full=False)):
         exact = match.exact(f)
         if exact or not explicitonly and f not in wctx and repo.wvfs.lexists(f):
             if cca:
