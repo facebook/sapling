@@ -135,7 +135,7 @@ def amend(ui, repo, *pats, **opts):
 
         if node == old.node():
             ui.status(_("nothing changed\n"))
-            return 1
+            return 0
 
         if haschildren and not rebase:
             msg = _("warning: the commit's children were left behind\n")
