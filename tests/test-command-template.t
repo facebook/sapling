@@ -2936,10 +2936,10 @@ escaped single quotes and errors:
   hg: parse error at 21: unterminated string
   [255]
   $ hg log -r 2 -T '{if(rev, \"\\"")}\n'
-  hg: parse error at 11: syntax error
+  hg: parse error: trailing \ in string
   [255]
   $ hg log -r 2 -T '{if(rev, r\"\\"")}\n'
-  hg: parse error at 12: syntax error
+  hg: parse error: trailing \ in string
   [255]
 
   $ cd ..
@@ -3417,3 +3417,12 @@ Test with non-strings like dates
   $ hg log -T "{indent(date, '   ')}\n" -r 2:3 -R a
      1200000.00
      1300000.00
+
+Test broken string escapes:
+
+  $ hg log -T "bogus\\" -R a
+  hg: parse error: trailing \ in string
+  [255]
+  $ hg log -T "\\xy" -R a
+  hg: parse error: invalid \x escape
+  [255]

@@ -39,6 +39,13 @@ elements = {
     "end": (0, None, None, None, None),
 }
 
+def _unescape(s):
+    try:
+        return s.decode("string_escape")
+    except ValueError as e:
+        # mangle Python's exception into our format
+        raise error.ParseError(str(e).lower())
+
 def tokenize(program, start, end):
     pos = start
     while pos < end:
@@ -105,11 +112,8 @@ def tokenize(program, start, end):
                     pos += 4 # skip over double escaped characters
                     continue
                 if program.startswith(quote, pos, end):
-                    try:
-                        # interpret as if it were a part of an outer string
-                        data = program[s:pos].decode('string-escape')
-                    except ValueError: # unbalanced escapes
-                        raise error.ParseError(_("syntax error"), s)
+                    # interpret as if it were a part of an outer string
+                    data = _unescape(program[s:pos])
                     if token == 'template':
                         data = _parsetemplate(data, 0, len(data))[0]
                     yield (token, data, s)
@@ -158,19 +162,18 @@ def _parsetemplate(tmpl, start, stop, quote=''):
         n = min((tmpl.find(c, pos, stop) for c in sepchars),
                 key=lambda n: (n < 0, n))
         if n < 0:
-            parsed.append(('string', tmpl[pos:stop].decode('string-escape')))
+            parsed.append(('string', _unescape(tmpl[pos:stop])))
             pos = stop
             break
         c = tmpl[n]
         bs = (n - pos) - len(tmpl[pos:n].rstrip('\\'))
         if bs % 2 == 1:
             # escaped (e.g. '\{', '\\\{', but not '\\{')
-            parsed.append(('string',
-                           tmpl[pos:n - 1].decode('string-escape') + c))
+            parsed.append(('string', _unescape(tmpl[pos:n - 1]) + c))
             pos = n + 1
             continue
         if n > pos:
-            parsed.append(('string', tmpl[pos:n].decode('string-escape')))
+            parsed.append(('string', _unescape(tmpl[pos:n])))
         if c == quote:
             return parsed, n + 1
 
