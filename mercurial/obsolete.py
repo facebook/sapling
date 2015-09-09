@@ -843,13 +843,13 @@ def foreground(repo, nodes):
 def successorssets(repo, initialnode, cache=None):
     """Return all set of successors of initial nodes
 
-    The successors set of a changeset A are a group of revisions that succeed
+    The successors set of a changeset A are the group of revisions that succeed
     A. It succeeds A as a consistent whole, each revision being only a partial
     replacement. The successors set contains non-obsolete changesets only.
 
     This function returns the full list of successor sets which is why it
     returns a list of tuples and not just a single tuple. Each tuple is a valid
-    successors set. Not that (A,) may be a valid successors set for changeset A
+    successors set. Note that (A,) may be a valid successors set for changeset A
     (see below).
 
     In most cases, a changeset A will have a single element (e.g. the changeset
@@ -865,7 +865,7 @@ def successorssets(repo, initialnode, cache=None):
 
     If a changeset A is not obsolete, then it will conceptually have no
     successors set. To distinguish this from a pruned changeset, the successor
-    set will only contain itself, i.e. [(A,)].
+    set will contain itself only, i.e. [(A,)].
 
     Finally, successors unknown locally are considered to be pruned (obsoleted
     without any successors).
@@ -873,9 +873,9 @@ def successorssets(repo, initialnode, cache=None):
     The optional `cache` parameter is a dictionary that may contain precomputed
     successors sets. It is meant to reuse the computation of a previous call to
     `successorssets` when multiple calls are made at the same time. The cache
-    dictionary is updated in place. The caller is responsible for its live
-    spawn. Code that makes multiple calls to `successorssets` *must* use this
-    cache mechanism or suffer terrible performances.
+    dictionary is updated in place. The caller is responsible for its life
+    span. Code that makes multiple calls to `successorssets` *must* use this
+    cache mechanism or suffer terrible performance.
 
     """
 
