@@ -1129,7 +1129,7 @@ def cleanupnode(ui, repo, name, nodes):
     try:
         lock = repo.lock()
         # do not let filtering get in the way of the cleanse
-        # we should probably get ride of obsolescence marker created during the
+        # we should probably get rid of obsolescence marker created during the
         # histedit, but we currently do not have such information.
         repo = repo.unfiltered()
         # Find all nodes that need to be stripped
