@@ -3,3 +3,4 @@ syntax: regexp
 \.so$
 ^build/
 \.err$
+^packages/
