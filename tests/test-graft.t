@@ -332,6 +332,38 @@ Disallow grafting an already grafted cset onto its original branch
   skipping already grafted revision 7:ef0ef43d49e7 (was grafted from 2:5c095ad7e90f)
   [255]
 
+  $ hg extdiff --config extensions.extdiff= --patch -r 2 -r 13
+  --- */hg-5c095ad7e90f.patch	* +0000 (glob)
+  +++ */hg-7a4785234d87.patch	* +0000 (glob)
+  @@ -1,18 +1,18 @@
+   # HG changeset patch
+  -# User test
+  +# User foo
+   # Date 0 0
+   #      Thu Jan 01 00:00:00 1970 +0000
+  -# Node ID 5c095ad7e90f871700f02dd1fa5012cb4498a2d4
+  -# Parent  5d205f8b35b66bc36375c9534ffd3237730e8f04
+  +# Node ID 7a4785234d87ec1aa420ed6b11afe40fa73e12a9
+  +# Parent  b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
+   2
+   
+  -diff -r 5d205f8b35b6 -r 5c095ad7e90f a
+  +diff -r b592ea63bb0c -r 7a4785234d87 a
+   --- a/a	Thu Jan 01 00:00:00 1970 +0000
+   +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
+   @@ -1,1 +0,0 @@
+  --b
+  -diff -r 5d205f8b35b6 -r 5c095ad7e90f b
+  +-a
+  +diff -r b592ea63bb0c -r 7a4785234d87 b
+   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+   +++ b/b	Thu Jan 01 00:00:00 1970 +0000
+   @@ -0,0 +1,1 @@
+  -+b
+  ++a
+  [1]
+
+
 Disallow grafting already grafted csets with the same origin onto each other
   $ hg up -q 13
   $ hg graft 2

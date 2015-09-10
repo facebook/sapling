@@ -147,7 +147,12 @@ def dodiff(ui, repo, cmdline, pats, opts):
 
     matcher = scmutil.match(repo[node2], pats, opts)
 
-    if True:
+    if opts.get('patch'):
+        if subrepos:
+            raise util.Abort(_('--patch cannot be used with --subrepos'))
+        if node2 is None:
+            raise util.Abort(_('--patch requires two revisions'))
+    else:
         mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher,
                                                    listsubrepos=subrepos)[:3])
         if do3way:
@@ -163,7 +168,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
     try:
-        if True:
+        if not opts.get('patch'):
             # Always make a copy of node1a (and node1b, if applicable)
             dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
             dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot,
@@ -217,6 +222,18 @@ def dodiff(ui, repo, cmdline, pats, opts):
                         dir1b = os.devnull
                 dir2 = os.path.join(dir2root, dir2, common_file)
                 label2 = common_file + rev2
+        else:
+            # XXX: export doesn't support -I/-X like extdiff does
+            template = 'hg-%h.patch'
+            cmdutil.export(repo, [repo[node1a].rev(), repo[node2].rev()],
+                           template=repo.vfs.reljoin(tmproot, template))
+            label1a = cmdutil.makefilename(repo, template, node1a)
+            label2 = cmdutil.makefilename(repo, template, node2)
+            dir1a = repo.vfs.reljoin(tmproot, label1a)
+            dir2 = repo.vfs.reljoin(tmproot, label2)
+            dir1b = None
+            label1b = None
+            fns_and_mtime = []
 
         # Function to quote file/dir names in the argument string.
         # When not operating in 3-way mode, an empty string is
@@ -260,6 +277,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
      _('pass option to comparison program'), _('OPT')),
     ('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV')),
+    ('', 'patch', None, _('compare patches for two revisions'))
     ] + commands.walkopts + commands.subrepoopts,
     _('hg extdiff [OPT]... [FILE]...'),
     inferrepo=True)
