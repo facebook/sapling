@@ -992,7 +992,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
         os.unlink(tmpname)
 
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
-           opts=None):
+           opts=None, match=None):
     '''export changesets as hg patches.'''
 
     total = len(revs)
@@ -1043,7 +1043,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         write(ctx.description().rstrip())
         write("\n\n")
 
-        for chunk, label in patch.diffui(repo, prev, node, opts=opts):
+        for chunk, label in patch.diffui(repo, prev, node, match, opts=opts):
             write(chunk, label=label)
 
         if shouldclose:

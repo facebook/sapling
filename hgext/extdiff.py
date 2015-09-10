@@ -223,10 +223,10 @@ def dodiff(ui, repo, cmdline, pats, opts):
                 dir2 = os.path.join(dir2root, dir2, common_file)
                 label2 = common_file + rev2
         else:
-            # XXX: export doesn't support -I/-X like extdiff does
             template = 'hg-%h.patch'
             cmdutil.export(repo, [repo[node1a].rev(), repo[node2].rev()],
-                           template=repo.vfs.reljoin(tmproot, template))
+                           template=repo.vfs.reljoin(tmproot, template),
+                           match=matcher)
             label1a = cmdutil.makefilename(repo, template, node1a)
             label2 = cmdutil.makefilename(repo, template, node2)
             dir1a = repo.vfs.reljoin(tmproot, label1a)
