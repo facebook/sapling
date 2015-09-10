@@ -9,31 +9,26 @@
   > badext2 =
   > EOF
 
-  $ hg -q help help
+  $ hg -q help help 2>&1 |grep extension
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   *** failed to import extension badext2: No module named badext2
-  hg help [-ec] [TOPIC]
-  
-  show help for a given topic or a help overview
 
 show traceback
 
-  $ hg -q help help --traceback 2>&1 | grep -v '^  '
+  $ hg -q help help --traceback 2>&1 | egrep ' extension|^Exception|Traceback|ImportError'
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
   *** failed to import extension badext2: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named badext2
-  hg help [-ec] [TOPIC]
-  
-  show help for a given topic or a help overview
 
 show traceback for ImportError of hgext.name if debug is set
 (note that --debug option isn't applied yet when loading extensions)
 
-  $ hg help help --traceback --config ui.debug=True 2>&1 \
-  > | grep -v '^  ' | head -n10
+  $ (hg -q help help --traceback --config ui.debug=True 2>&1) \
+  > | grep -v '^ ' \
+  > | egrep 'extension..[^p]|^Exception|Traceback|ImportError|not import'
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
@@ -43,4 +38,3 @@ show traceback for ImportError of hgext.name if debug is set
   *** failed to import extension badext2: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named badext2
-  hg help [-ec] [TOPIC]
