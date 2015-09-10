@@ -146,72 +146,77 @@ def dodiff(ui, repo, cmdline, pats, opts):
     subrepos=opts.get('subrepos')
 
     matcher = scmutil.match(repo[node2], pats, opts)
-    mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher,
-                                               listsubrepos=subrepos)[:3])
-    if do3way:
-        mod_b, add_b, rem_b = map(set, repo.status(node1b, node2, matcher,
+
+    if True:
+        mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher,
                                                    listsubrepos=subrepos)[:3])
-    else:
-        mod_b, add_b, rem_b = set(), set(), set()
-    modadd = mod_a | add_a | mod_b | add_b
-    common = modadd | rem_a | rem_b
-    if not common:
-        return 0
+        if do3way:
+            mod_b, add_b, rem_b = map(set,
+                                      repo.status(node1b, node2, matcher,
+                                                  listsubrepos=subrepos)[:3])
+        else:
+            mod_b, add_b, rem_b = set(), set(), set()
+        modadd = mod_a | add_a | mod_b | add_b
+        common = modadd | rem_a | rem_b
+        if not common:
+            return 0
 
     tmproot = tempfile.mkdtemp(prefix='extdiff.')
     try:
-        # Always make a copy of node1a (and node1b, if applicable)
-        dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
-        dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot, subrepos)[0]
-        rev1a = '@%d' % repo[node1a].rev()
-        if do3way:
-            dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
-            dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot,
+        if True:
+            # Always make a copy of node1a (and node1b, if applicable)
+            dir1a_files = mod_a | rem_a | ((mod_b | add_b) - add_a)
+            dir1a = snapshot(ui, repo, dir1a_files, node1a, tmproot,
                              subrepos)[0]
-            rev1b = '@%d' % repo[node1b].rev()
-        else:
-            dir1b = None
-            rev1b = ''
-
-        fns_and_mtime = []
-
-        # If node2 in not the wc or there is >1 change, copy it
-        dir2root = ''
-        rev2 = ''
-        if node2:
-            dir2 = snapshot(ui, repo, modadd, node2, tmproot, subrepos)[0]
-            rev2 = '@%d' % repo[node2].rev()
-        elif len(common) > 1:
-            #we only actually need to get the files to copy back to
-            #the working dir in this case (because the other cases
-            #are: diffing 2 revisions or single file -- in which case
-            #the file is already directly passed to the diff tool).
-            dir2, fns_and_mtime = snapshot(ui, repo, modadd, None, tmproot,
-                                           subrepos)
-        else:
-            # This lets the diff tool open the changed file directly
-            dir2 = ''
-            dir2root = repo.root
-
-        label1a = rev1a
-        label1b = rev1b
-        label2 = rev2
-
-        # If only one change, diff the files instead of the directories
-        # Handle bogus modifies correctly by checking if the files exist
-        if len(common) == 1:
-            common_file = util.localpath(common.pop())
-            dir1a = os.path.join(tmproot, dir1a, common_file)
-            label1a = common_file + rev1a
-            if not os.path.isfile(dir1a):
-                dir1a = os.devnull
+            rev1a = '@%d' % repo[node1a].rev()
             if do3way:
-                dir1b = os.path.join(tmproot, dir1b, common_file)
-                label1b = common_file + rev1b
-                if not os.path.isfile(dir1b):
-                    dir1b = os.devnull
-            dir2 = os.path.join(dir2root, dir2, common_file)
-            label2 = common_file + rev2
+                dir1b_files = mod_b | rem_b | ((mod_a | add_a) - add_b)
+                dir1b = snapshot(ui, repo, dir1b_files, node1b, tmproot,
+                                 subrepos)[0]
+                rev1b = '@%d' % repo[node1b].rev()
+            else:
+                dir1b = None
+                rev1b = ''
+
+            fns_and_mtime = []
+
+            # If node2 in not the wc or there is >1 change, copy it
+            dir2root = ''
+            rev2 = ''
+            if node2:
+                dir2 = snapshot(ui, repo, modadd, node2, tmproot, subrepos)[0]
+                rev2 = '@%d' % repo[node2].rev()
+            elif len(common) > 1:
+                #we only actually need to get the files to copy back to
+                #the working dir in this case (because the other cases
+                #are: diffing 2 revisions or single file -- in which case
+                #the file is already directly passed to the diff tool).
+                dir2, fns_and_mtime = snapshot(ui, repo, modadd, None, tmproot,
+                                               subrepos)
+            else:
+                # This lets the diff tool open the changed file directly
+                dir2 = ''
+                dir2root = repo.root
+
+            label1a = rev1a
+            label1b = rev1b
+            label2 = rev2
+
+            # If only one change, diff the files instead of the directories
+            # Handle bogus modifies correctly by checking if the files exist
+            if len(common) == 1:
+                common_file = util.localpath(common.pop())
+                dir1a = os.path.join(tmproot, dir1a, common_file)
+                label1a = common_file + rev1a
+                if not os.path.isfile(dir1a):
+                    dir1a = os.devnull
+                if do3way:
+                    dir1b = os.path.join(tmproot, dir1b, common_file)
+                    label1b = common_file + rev1b
+                    if not os.path.isfile(dir1b):
+                        dir1b = os.devnull
+                dir2 = os.path.join(dir2root, dir2, common_file)
+                label2 = common_file + rev2
 
         # Function to quote file/dir names in the argument string.
         # When not operating in 3-way mode, an empty string is
