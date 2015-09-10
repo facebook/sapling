@@ -244,7 +244,7 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
                 c = program[pos]
                 decode = lambda x: x
             else:
-                decode = lambda x: x.decode('string-escape')
+                decode = parser.unescapestr
             pos += 1
             s = pos
             while pos < l: # find closing quote

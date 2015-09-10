@@ -353,6 +353,9 @@ quoting needed
   $ log 'date('
   hg: parse error at 5: not a prefix: end
   [255]
+  $ log 'date("\xy")'
+  hg: parse error: invalid \x escape
+  [255]
   $ log 'date(tip)'
   abort: invalid date: 'tip'
   [255]
