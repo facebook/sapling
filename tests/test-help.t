@@ -1220,6 +1220,14 @@ Test dynamic list of merge tools only shows up once
         partially merged file. Markers will have two sections, one for each side
         of merge.
   
+      ":merge-local"
+        Like :merge, but resolve all conflicts non-interactively in favor of the
+        local changes.
+  
+      ":merge-other"
+        Like :merge, but resolve all conflicts non-interactively in favor of the
+        other changes.
+  
       ":merge3"
         Uses the internal non-interactive simple merge algorithm for merging
         files. It will fail if there are any conflicts and leave markers in the

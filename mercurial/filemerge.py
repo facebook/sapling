@@ -286,6 +286,38 @@ def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
         labels.append('base')
     return _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels)
 
+def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                labels=None, localorother=None):
+    """
+    Generic driver for _imergelocal and _imergeother
+    """
+    assert localorother is not None
+    tool, toolpath, binary, symlink = toolconf
+    if symlink:
+        repo.ui.warn(_('warning: :merge-%s cannot merge symlinks '
+                       'for %s\n') % (localorother, fcd.path()))
+        return False, 1
+    a, b, c, back = files
+    r = simplemerge.simplemerge(repo.ui, a, b, c, label=labels,
+                                localorother=localorother)
+    return True, r
+
+@internaltool('merge-local', True)
+def _imergelocal(*args, **kwargs):
+    """
+    Like :merge, but resolve all conflicts non-interactively in favor
+    of the local changes."""
+    success, status = _imergeauto(localorother='local', *args, **kwargs)
+    return success, status
+
+@internaltool('merge-other', True)
+def _imergeother(*args, **kwargs):
+    """
+    Like :merge, but resolve all conflicts non-interactively in favor
+    of the other changes."""
+    success, status = _imergeauto(localorother='other', *args, **kwargs)
+    return success, status
+
 @internaltool('tagmerge', True,
               _("automatic tag merging of %s failed! "
                 "(use 'hg resolve --tool :merge' or another merge "

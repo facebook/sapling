@@ -232,3 +232,65 @@ internal:merge3
   5
   >>>>>>> other
   Hop we are done.
+
+Add some unconflicting changes on each head, to make sure we really
+are merging, unlike :local and :other
+
+  $ hg up -C
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ printf "\n\nEnd of file\n" >> a
+  $ hg ci -m "Add some stuff at the end"
+  $ hg up -r 1
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ printf "Start of file\n\n\n" > tmp
+  $ cat a >> tmp
+  $ mv tmp a
+  $ hg ci -m "Add some stuff at the beginning"
+
+Now test :merge-other and :merge-local
+
+  $ hg merge
+  merging a
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ hg resolve --tool :merge-other a
+  merging a
+  (no more unresolved files)
+  $ cat a
+  Start of file
+  
+  
+  Small Mathematical Series.
+  1
+  2
+  3
+  6
+  8
+  Hop we are done.
+  
+  
+  End of file
+
+  $ hg up -C
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg merge --tool :merge-local
+  merging a
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat a
+  Start of file
+  
+  
+  Small Mathematical Series.
+  1
+  2
+  3
+  4
+  5
+  Hop we are done.
+  
+  
+  End of file
