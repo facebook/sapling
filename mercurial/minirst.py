@@ -722,6 +722,20 @@ def getsections(blocks):
                 nest += i
             level = nest.index(i) + 1
             nest = nest[:level]
+            for i in range(1, len(secs) + 1):
+                sec = secs[-i]
+                if sec[1] < level:
+                    break
+                siblings = [a for a in sec[2] if a['type'] == 'definition']
+                if siblings:
+                    siblingindent = siblings[-1]['indent']
+                    indent = b['indent']
+                    if siblingindent < indent:
+                        level += 1
+                        break
+                    elif siblingindent == indent:
+                        level = sec[1]
+                        break
             secs.append((getname(b), level, [b]))
         else:
             if not secs:

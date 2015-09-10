@@ -936,6 +936,12 @@ Help subsection:
   $ hg help config.charsets |grep "Email example:" > /dev/null
   [1]
 
+Show nested definitions
+("profiling.type"[break]"ls"[break]"stat"[break])
+
+  $ hg help config.type | egrep '^$'|wc -l
+  \s*3 (re)
+
 Last item in help config.*:
 
   $ hg help config.`hg help config|grep '^    "'| \
