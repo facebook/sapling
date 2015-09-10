@@ -12,7 +12,7 @@ setup(
 This extension adds support for remote filelogs in Mercurial where all the file history is stored remotely.
     """.strip(),
     keywords='hg shallow mercurial remote filelog',
-    license='Not determined yet',
+    license='GPLv2+',
     packages=['remotefilelog'],
     install_requires=['lz4'],
     ext_modules = []
