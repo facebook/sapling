@@ -287,17 +287,23 @@ hide outer repo
   $ echo "debugextension = $debugpath" >> $HGRCPATH
 
   $ hg help debugextension
-  debugextension extension - only debugcommands
+  hg debugextensions
   
-  no commands defined
+  show information about active extensions
+  
+  options:
+  
+  (some details hidden, use --verbose to show complete help)
 
 
   $ hg --verbose help debugextension
-  debugextension extension - only debugcommands
+  hg debugextensions
   
-  list of commands:
+  show information about active extensions
   
-   foo           yet another foo command
+  options:
+  
+   -T --template TEMPLATE display with template (EXPERIMENTAL)
   
   global options ([+] can be repeated):
   
@@ -326,12 +332,13 @@ hide outer repo
 
 
   $ hg --debug help debugextension
-  debugextension extension - only debugcommands
+  hg debugextensions
   
-  list of commands:
+  show information about active extensions
   
-   debugfoobar   yet another debug command
-   foo           yet another foo command
+  options:
+  
+   -T --template TEMPLATE display with template (EXPERIMENTAL)
   
   global options ([+] can be repeated):
   
@@ -545,20 +552,7 @@ Test help topic with same name as extension
 
 Issue811: Problem loading extensions twice (by site and by user)
 
-  $ debugpath=`pwd`/debugissue811.py
-  $ cat > debugissue811.py <<EOF
-  > '''show all loaded extensions
-  > '''
-  > from mercurial import cmdutil, commands, extensions
-  > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
-  > @command('debugextensions', [], 'hg debugextensions', norepo=True)
-  > def debugextensions(ui):
-  >     "yet another debug command"
-  >     ui.write("%s\n" % '\n'.join([x for x, y in extensions.extensions()]))
-  > EOF
   $ cat <<EOF >> $HGRCPATH
-  > debugissue811 = $debugpath
   > mq =
   > strip =
   > hgext.mq =
@@ -569,9 +563,8 @@ Show extensions:
 (note that mq force load strip, also checking it's not loaded twice)
 
   $ hg debugextensions
-  debugissue811
-  strip
   mq
+  strip
 
 For extensions, which name matches one of its commands, help
 message should ask '-v -e' to get list of built-in aliases

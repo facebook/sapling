@@ -775,6 +775,8 @@ Test list of internal help commands
                  show the contents of the current dirstate
    debugdiscovery
                  runs the changeset discovery protocol in isolation
+   debugextensions
+                 show information about active extensions
    debugfileset  parse and apply a fileset specification
    debugfsinfo   show information detected about current filesystem
    debuggetbundle
