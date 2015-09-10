@@ -49,6 +49,9 @@ Test operators and basic patterns
   $ fileset 'a* - a1'
   a2
   $ fileset 'a_b'
+  $ fileset '"\xy"'
+  hg: parse error: invalid \x escape
+  [255]
 
 Test files status
 
