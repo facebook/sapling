@@ -969,9 +969,12 @@ class ui(object):
 
         service should be a readily-identifiable subsystem, which will
         allow filtering.
-        message should be a newline-terminated string to log.
+
+        *msg should be a newline-terminated format string to log, and
+        then any values to %-format into that format string.
+
+        **opts currently has no defined meanings.
         '''
-        pass
 
     def label(self, msg, label):
         '''style msg based on supplied label
