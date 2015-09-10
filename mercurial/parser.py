@@ -122,6 +122,13 @@ def buildargsdict(trees, funcname, keys, keyvaluenode, keynode):
         args[k] = x[2]
     return args
 
+def unescapestr(s):
+    try:
+        return s.decode("string_escape")
+    except ValueError as e:
+        # mangle Python's exception into our format
+        raise error.ParseError(str(e).lower())
+
 def _prettyformat(tree, leafnodes, level, lines):
     if not isinstance(tree, tuple) or tree[0] in leafnodes:
         lines.append((level, str(tree)))
