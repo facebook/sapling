@@ -10,7 +10,7 @@ import contextlib
 import os
 from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
 from mercurial.templatefilters import websub
-from common import get_stat, ErrorResponse, permhooks, caching
+from common import ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
