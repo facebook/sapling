@@ -568,7 +568,7 @@ def revset(context, mapping, args):
             revs = list([str(r) for r in revs])
             revsetcache[raw] = revs
 
-    return templatekw.showlist("revision", revs, **mapping)
+    return templatekw.showrevslist("revision", revs, **mapping)
 
 def rstdoc(context, mapping, args):
     """:rstdoc(text, style): Format ReStructuredText."""

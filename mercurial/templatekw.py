@@ -409,6 +409,14 @@ def showrev(repo, ctx, templ, **args):
     """:rev: Integer. The repository-local changeset revision number."""
     return scmutil.intrev(ctx.rev())
 
+def showrevslist(name, revs, **args):
+    """helper to generate a list of revisions in which a mapped template will
+    be evaluated"""
+    repo = args['ctx'].repo()
+    f = _showlist(name, revs, **args)
+    return _hybrid(f, revs,
+                   lambda x: {name: x, 'ctx': repo[x], 'revcache': {}})
+
 def showsubrepos(**args):
     """:subrepos: List of strings. Updated subrepositories in the changeset."""
     ctx = args['ctx']

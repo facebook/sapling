@@ -3234,6 +3234,23 @@ Test revset function
   $ hg log --template '{revset("TIP"|lower)}\n' -l1
   2
 
+ a list template is evaluated for each item of revset
+
+  $ hg log -T '{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\n'
+  2 p: 1:bcc7ff960b8e
+  1 p: 0:f7769ec2ab97
+  0 p: 
+
+ therefore, 'revcache' should be recreated for each rev
+
+  $ hg log -T '{rev} {file_adds}\np {revset("p1(%s)", rev) % "{file_adds}"}\n'
+  2 aa b
+  p 
+  1 
+  p a
+  0 a
+  p 
+
 Test active bookmark templating
 
   $ hg book foo
