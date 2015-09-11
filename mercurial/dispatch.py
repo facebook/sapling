@@ -335,7 +335,7 @@ def _runcatch(req):
         compare = myver.split('+')[0]
         ct = tuplever(compare)
         worst = None, ct, ''
-        if True:
+        if ui.config('ui', 'supportcontact', None) is None:
             for name, mod in extensions.extensions():
                 testedwith = getattr(mod, 'testedwith', '')
                 report = getattr(mod, 'buglink', _('the extension author.'))
@@ -367,9 +367,11 @@ def _runcatch(req):
                          '** If that fixes the bug please report it to %s\n')
                        % (name, testedwith, name, report))
         else:
+            bugtracker = ui.config('ui', 'supportcontact', None)
+            if bugtracker is None:
+                bugtracker = _("http://mercurial.selenic.com/wiki/BugTracker")
             warning = (_("** unknown exception encountered, "
-                         "please report by visiting\n") +
-                       _("** http://mercurial.selenic.com/wiki/BugTracker\n"))
+                         "please report by visiting\n** ") + bugtracker + '\n')
         warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
                     (_("** Mercurial Distributed SCM (version %s)\n") % myver) +
                     (_("** Extensions loaded: %s\n") %

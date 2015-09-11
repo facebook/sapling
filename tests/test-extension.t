@@ -943,6 +943,15 @@ Older extension is tested with current version, the other only with newer:
   ** Mercurial Distributed SCM (version 1.9.3)
   ** Extensions loaded: throw, older
 
+Ability to point to a different point
+  $ hg --config extensions.throw=throw.py --config extensions.older=older.py \
+  >   --config ui.supportcontact='Your Local Goat Lenders' throw 2>&1 | egrep '^\*\*'
+  ** unknown exception encountered, please report by visiting
+  ** Your Local Goat Lenders
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: throw, older
+
 Declare the version as supporting this hg version, show regular bts link:
   $ hgver=`$PYTHON -c 'from mercurial import util; print util.version().split("+")[0]'`
   $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
