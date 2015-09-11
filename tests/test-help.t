@@ -988,6 +988,28 @@ Test help hooks
       helphook1
       helphook2
 
+Test -e / -c / -k combinations
+
+  $ hg help -c progress
+  abort: no such help topic: progress
+  (try "hg help --keyword progress")
+  [255]
+  $ hg help -e progress |head -1
+  progress extension - show progress bars for some actions (DEPRECATED)
+  $ hg help -c -k dates |egrep '^(Topics|Extensions|Commands):'
+  Commands:
+  $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'
+  Extensions:
+  $ hg help -e -c -k date |egrep '^(Topics|Extensions|Commands):'
+  Extensions:
+  Commands:
+  $ hg help -c commit > /dev/null
+  $ hg help -e -c commit > /dev/null
+  $ hg help -e commit > /dev/null
+  abort: no such help topic: commit
+  (try "hg help --keyword commit")
+  [255]
+
 Test keyword search help
 
   $ cat > prefixedname.py <<EOF

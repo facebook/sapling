@@ -3942,9 +3942,9 @@ def heads(ui, repo, *branchrevs, **opts):
 @command('help',
     [('e', 'extension', None, _('show only help for extensions')),
      ('c', 'command', None, _('show only help for commands')),
-     ('k', 'keyword', '', _('show topics matching keyword')),
+     ('k', 'keyword', None, _('show topics matching keyword')),
      ],
-    _('[-ec] [TOPIC]'),
+    _('[-eck] [TOPIC]'),
     norepo=True)
 def help_(ui, name=None, **opts):
     """show help for a given topic or a help overview
