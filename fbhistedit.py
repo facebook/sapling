@@ -10,6 +10,8 @@ Adds a s/stop verb to histedit to stop after a commit was picked.
 """
 
 import os
+from pipes import quote
+
 from mercurial import cmdutil
 from mercurial import error
 from mercurial import extensions
@@ -57,11 +59,15 @@ def defineactions():
 
             try:
                 ctx = repo[ctxnode]
-                rc = util.system(self.command, environ={'HGNODE': ctx.hex()},
-                                 cwd=self.cwd)
-            except OSError as os:
+                shell = os.environ.get('SHELL', None)
+                cmd = self.command
+                if shell and self.repo.ui.config('fbhistedit', 'exec_in_user_shell'):
+                    cmd = "%s -c -i %s" % (shell, quote(cmd))
+                rc = util.system(cmd,  environ={'HGNODE': ctx.hex()},
+                                    cwd=self.cwd)
+            except OSError as ose:
                 raise error.InterventionRequired(
-                    _("Cannot execute command '%s': %s") % (cmd, os))
+                    _("Cannot execute command '%s': %s") % (self.command, ose))
             finally:
                 # relock the repository
                 state.wlock = repo.wlock()
