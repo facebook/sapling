@@ -1255,7 +1255,7 @@ class revlog(object):
         return True
 
     def _addrevision(self, node, text, transaction, link, p1, p2, flags,
-                     cachedelta, ifh, dfh):
+                     cachedelta, ifh, dfh, alwayscache=False):
         """internal function to add revisions to the log
 
         see addrevision for argument descriptions.
@@ -1391,6 +1391,9 @@ class revlog(object):
         entry = self._io.packentry(e, self.node, self.version, curr)
         self._writeentry(transaction, ifh, dfh, entry, data, link, offset)
 
+        if alwayscache and text is None:
+            text = buildtext()
+
         if type(text) == str: # only accept immutable objects
             self._cache = (node, curr, text)
         self._basecache = (curr, chainbase)
@@ -1494,15 +1497,16 @@ class revlog(object):
                 if self._peek_iscensored(baserev, delta, flush):
                     flags |= REVIDX_ISCENSORED
 
+                # We assume consumers of addrevisioncb will want to retrieve
+                # the added revision, which will require a call to
+                # revision(). revision() will fast path if there is a cache
+                # hit. So, we tell _addrevision() to always cache in this case.
                 chain = self._addrevision(node, None, transaction, link,
                                           p1, p2, flags, (baserev, delta),
-                                          ifh, dfh)
+                                          ifh, dfh,
+                                          alwayscache=bool(addrevisioncb))
 
                 if addrevisioncb:
-                    # Data for added revision can't be read unless flushed
-                    # because _loadchunk always opensa new file handle and
-                    # there is no guarantee data was actually written yet.
-                    flush()
                     addrevisioncb(self, chain)
 
                 if not dfh and not self._inline:
