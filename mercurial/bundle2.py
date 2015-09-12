@@ -1174,7 +1174,7 @@ def handlechangegroup(op, inpart):
     unpackerversion = inpart.params.get('version', '01')
     # We should raise an appropriate exception here
     unpacker = changegroup.packermap[unpackerversion][1]
-    cg = unpacker(inpart, 'UN')
+    cg = unpacker(inpart, None)
     # the source and url passed here are overwritten by the one contained in
     # the transaction.hookargs argument. So 'bundle2' is a placeholder
     nbchangesets = None
