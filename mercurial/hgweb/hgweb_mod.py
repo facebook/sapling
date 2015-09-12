@@ -235,11 +235,11 @@ class hgweb(object):
         if self._repos:
             cached = self._repos.pop()
             r, created = cached.fetch()
-            if created:
-                r = self._webifyrepo(r)
         else:
             cached = self._lastrepo.copy()
             r, created = cached.fetch()
+        if created:
+            r = self._webifyrepo(r)
 
         self._lastrepo = cached
         self.mtime = cached.mtime

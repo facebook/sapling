@@ -887,8 +887,13 @@ class cachedlocalrepo(object):
         return tuple(state), maxmtime
 
     def copy(self):
-        """Obtain a copy of this class instance."""
-        c = cachedlocalrepo(self._repo)
+        """Obtain a copy of this class instance.
+
+        A new localrepository instance is obtained. The new instance should be
+        completely independent of the original.
+        """
+        repo = repository(self._repo.baseui, self._repo.origroot)
+        c = cachedlocalrepo(repo)
         c._state = self._state
         c.mtime = self.mtime
         return c
