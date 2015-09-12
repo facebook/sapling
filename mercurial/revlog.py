@@ -238,14 +238,14 @@ class revlog(object):
             raise RevlogError(_('revlog chunk cache size %r is not a power '
                                 'of 2') % self._chunkcachesize)
 
-        i = ''
+        indexdata = ''
         self._initempty = True
         try:
             f = self.opener(self.indexfile)
-            i = f.read()
+            indexdata = f.read()
             f.close()
-            if len(i) > 0:
-                v = struct.unpack(versionformat, i[:4])[0]
+            if len(indexdata) > 0:
+                v = struct.unpack(versionformat, indexdata[:4])[0]
                 self._initempty = False
         except IOError as inst:
             if inst.errno != errno.ENOENT:
@@ -270,7 +270,7 @@ class revlog(object):
         if self.version == REVLOGV0:
             self._io = revlogoldio()
         try:
-            d = self._io.parseindex(i, self._inline)
+            d = self._io.parseindex(indexdata, self._inline)
         except (ValueError, IndexError):
             raise RevlogError(_("index %s is corrupted") % (self.indexfile))
         self.index, nodemap, self._chunkcache = d
