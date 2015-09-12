@@ -58,7 +58,8 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > }
   > 
   > i = hgweb('.')
-  > i(env, startrsp)
+  > for c in i(env, startrsp):
+  >     pass
   > print '---- ERRORS'
   > print errors.getvalue()
   > print '---- OS.ENVIRON wsgi variables'
