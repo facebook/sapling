@@ -80,11 +80,11 @@ def combineresults(results):
     return result
 
 bundletypes = {
-    "": ("", 'UN'),       # only when using unbundle on ssh and old http servers
+    "": ("", 'None'),     # only when using unbundle on ssh and old http servers
                           # since the unification ssh accepts a header but there
                           # is no capability signaling it.
     "HG20": (), # special-cased below
-    "HG10UN": ("HG10UN", 'UN'),
+    "HG10UN": ("HG10UN", None),
     "HG10BZ": ("HG10", 'BZ'),
     "HG10GZ": ("HG10GZ", 'GZ'),
 }
