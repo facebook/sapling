@@ -570,7 +570,7 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
 
 def getsubset(repo, outgoing, bundler, source, fastpath=False, version='01'):
     gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return packermap[version][1](util.chunkbuffer(gengroup), 'UN')
+    return packermap[version][1](util.chunkbuffer(gengroup), None)
 
 def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are
