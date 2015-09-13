@@ -520,16 +520,9 @@ class obsstore(object):
     def __init__(self, svfs, defaultformat=_fm1version, readonly=False):
         # caches for various obsolescence related cache
         self.caches = {}
-        self._all = []
         self.svfs = svfs
-        data = svfs.tryread('obsstore')
         self._version = defaultformat
         self._readonly = readonly
-        if data:
-            self._version, markers = _readmarkers(data)
-            markers = list(markers)
-            _checkinvalidmarkers(markers)
-            self._all = markers
 
     def __iter__(self):
         return iter(self._all)
@@ -615,6 +608,16 @@ class obsstore(object):
         Returns the number of new markers added."""
         version, markers = _readmarkers(data)
         return self.add(transaction, markers)
+
+    @propertycache
+    def _all(self):
+        data = self.svfs.tryread('obsstore')
+        if not data:
+            return []
+        self._version, markers = _readmarkers(data)
+        markers = list(markers)
+        _checkinvalidmarkers(markers)
+        return markers
 
     @propertycache
     def successors(self):
