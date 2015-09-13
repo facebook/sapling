@@ -107,6 +107,9 @@ a { text-decoration:none; }
 .minusline { color: #dc143c; } /* crimson */
 .atline { color: purple; }
 
+.diffstat-table {
+  margin-top: 1em;
+}
 .diffstat-file {
   white-space: nowrap;
   font-size: 90%;
@@ -199,8 +202,6 @@ h3 {
 .bigtable .description { }
 .bigtable .description .base { font-size: 70%; float: right; line-height: 1.66; }
 .bigtable .node { width: 5em; font-family: monospace;}
-.bigtable .lineno { width: 2em; text-align: right;}
-.bigtable .lineno a { color: #999; font-size: smaller; font-family: monospace;}
 .bigtable .permissions { width: 8em; text-align: left;}
 .bigtable .size { width: 5em; text-align: right; }
 .bigtable .annotate { text-align: right; }
@@ -218,11 +219,57 @@ h3 {
 .source a { color: #999; font-size: smaller; font-family: monospace;}
 .bottomline { border-bottom: 1px solid #999; }
 
-.sourcelines > div {
+.sourcelines {
+  font-size: 90%;
+  position: relative;
+  counter-reset: lineno;
+}
+
+.wrap > span {
+    white-space: pre-wrap;
+}
+
+.linewraptoggle {
+    float: right;
+}
+
+.diffblocks { counter-reset: lineno; }
+.diffblocks > div { counter-increment: lineno; }
+
+.sourcelines > span {
   display: inline-block;
+  box-sizing: border-box;
   width: 100%;
-  padding: 1px 0px;
+  padding: 1px 0px 1px 5em;
   counter-increment: lineno;
+}
+
+.sourcelines > span:before {
+  -moz-user-select: -moz-none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  display: inline-block;
+  margin-left: -5em;
+  width: 4em;
+  font-size: smaller;
+  color: #999;
+  text-align: right;
+  content: counters(lineno, ".");
+  float: left;
+}
+
+.sourcelines > span:target, tr:target td {
+  background-color: #bfdfff;
+}
+
+.sourcelines > a {
+    display: inline-block;
+    position: absolute;
+    left: 0px;
+    width: 4em;
+    height: 1em;
 }
 
 .fileline { font-family: monospace; }

@@ -376,8 +376,8 @@ Set up the repo
    annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
-  <a href="/annotate/43c799df6e75/foo?style=coal#1"
-  <a href="/annotate/a7c1559b7bba/foo?style=coal#2"
+  <a href="/annotate/43c799df6e75/foo?style=coal#l1"
+  <a href="/annotate/a7c1559b7bba/foo?style=coal#l2"
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=coal' | egrep $REVLINKS
   <li><a href="/shortlog/xyzzy?style=coal">log</a></li>
