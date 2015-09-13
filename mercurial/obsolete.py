@@ -1045,16 +1045,6 @@ def successorssets(repo, initialnode, cache=None):
                 cache[current] = final
     return cache[initialnode]
 
-def _knownrevs(repo, nodes):
-    """yield revision numbers of known nodes passed in parameters
-
-    Unknown revisions are silently ignored."""
-    torev = repo.changelog.nodemap.get
-    for n in nodes:
-        rev = torev(n)
-        if rev is not None:
-            yield rev
-
 # mapping of 'set-name' -> <function to compute this set>
 cachefuncs = {}
 def cachefor(name):
