@@ -67,7 +67,7 @@ The header is followed by the markers. Marker format depend of the version. See
 comment associated with each format for details.
 
 """
-import struct
+import errno, struct
 import util, base85, node, parsers
 import phases
 from i18n import _
@@ -531,6 +531,15 @@ class obsstore(object):
         return len(self._all)
 
     def __nonzero__(self):
+        if not self._cached('_all'):
+            try:
+                return self.svfs.stat('obsstore').st_size > 1
+            except OSError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
+                # just build an empty _all list if no obsstore exists, which
+                # avoids further stat() syscalls
+                pass
         return bool(self._all)
 
     def create(self, transaction, prec, succs=(), flag=0, parents=None,
