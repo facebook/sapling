@@ -527,7 +527,9 @@ class obsstore(object):
         self._readonly = readonly
         if data:
             self._version, markers = _readmarkers(data)
-            self._addmarkers(markers)
+            markers = list(markers)
+            _checkinvalidmarkers(markers)
+            self._all = markers
 
     def __iter__(self):
         return iter(self._all)
