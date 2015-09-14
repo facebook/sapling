@@ -17,7 +17,7 @@ Depends:
  ${python:Depends},
  mercurial,
  python-lz4
-Architecture: any
+Architecture: all
 Description: allows Mercurial to clone shallow copies of a repository and
  load files on demand.
  .
