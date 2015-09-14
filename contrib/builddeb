@@ -10,7 +10,7 @@ fi
 cp -r contrib/debian debian
 trap "rm -r '$PWD/debian'" EXIT
 
-version=$(hg log -r . -T'{latesttag}-{latesttagdistance}-{node|short}')
+version=$(hg log -r . -T'{latesttag}+{latesttagdistance}-{node|short}')
 
 control=debian/control
 changelog=debian/changelog
