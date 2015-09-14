@@ -533,7 +533,6 @@ def wraprepo(repo):
             try:
                 commitsize = 0
                 insertsize = 0
-                uncommittedcount = 0
                 args = []
                 values = []
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -559,7 +558,6 @@ def wraprepo(repo):
                         size = len(datachunk)
                         commitsize += size
                         insertsize += size
-                        uncommittedcount += 1
 
                         chunk += 1
                         start = end
@@ -577,14 +575,12 @@ def wraprepo(repo):
                         if commitsize > maxcommitsize:
                             self.sqlconn.commit()
                             commitsize = 0
-                            uncommittedcount = 0
 
                 if args:
                     insert(args, values)
 
-                if uncommittedcount:
-                    # commit at the end just to make sure we're clean
-                    self.sqlconn.commit()
+                # commit at the end just to make sure we're clean
+                self.sqlconn.commit()
 
                 cursor.execute(
                     "DELETE revision_references FROM revision_references " +
