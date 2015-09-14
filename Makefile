@@ -122,6 +122,10 @@ testpy-%:
 check-code:
 	hg manifest | xargs python contrib/check-code.py
 
+format-c:
+	clang-format --style file -i \
+	  `hg files 'set:(**.c or **.h) and not "listfile:contrib/clang-format-blacklist"'`
+
 update-pot: i18n/hg.pot
 
 i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
