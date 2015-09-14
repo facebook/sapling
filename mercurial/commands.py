@@ -5025,8 +5025,7 @@ def phase(ui, repo, *revs, **opts):
 
         public < draft < secret
 
-    Returns 0 on success, 1 if no phases were changed or some could not
-    be changed.
+    Returns 0 on success, 1 if some phases could not be changed.
 
     (For more information about the phases concept, see :hg:`help phases`.)
     """
@@ -5095,7 +5094,6 @@ def phase(ui, repo, *revs, **opts):
                 ui.note(msg)
         else:
             ui.warn(_('no phases changed\n'))
-            ret = 1
     return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout):

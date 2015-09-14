@@ -322,7 +322,6 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ...     runcommand(server, ['phase', '-r', '.'])
   *** runcommand phase -r . -p
   no phases changed
-   [1]
   *** runcommand commit -Am.
   *** runcommand rollback
   repository tip rolled back to revision 3 (undo commit)
