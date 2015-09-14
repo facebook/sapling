@@ -41,3 +41,71 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking commit editor...
   checking username...
   no problems detected
+
+  $ cat >> wixxml.py << EOF
+  > import os, subprocess, sys
+  > import xml.etree.ElementTree as ET
+  > 
+  > # MSYS mangles the path if it expands $TESTDIR
+  > testdir = os.environ['TESTDIR']
+  > ns = {'wix' : 'http://schemas.microsoft.com/wix/2006/wi'}
+  > 
+  > def directory(node, relpath):
+  >     '''generator of files in the xml node, rooted at relpath'''
+  >     dirs = node.findall('./wix:Directory', ns)
+  > 
+  >     for d in dirs:
+  >         for subfile in directory(d, relpath + d.attrib['Name'] + '/'):
+  >             yield subfile
+  > 
+  >     files = node.findall('./wix:Component/wix:File', ns)
+  > 
+  >     for f in files:
+  >         yield relpath + f.attrib['Name']
+  > 
+  > def hgdirectory(relpath):
+  >     '''generator of tracked files, rooted at relpath'''
+  >     hgdir = "%s/../mercurial" % (testdir)
+  >     args = ['hg', '--cwd', hgdir, 'files', '--rev', '.', relpath]
+  >     proc = subprocess.Popen(args, stdout=subprocess.PIPE,
+  >                             stderr=subprocess.PIPE)
+  >     output = proc.communicate()[0]
+  > 
+  >     slash = '/'
+  >     for line in output.splitlines():
+  >         if os.name == 'nt':
+  >             yield line.replace(os.sep, slash)
+  >         else:
+  >             yield line
+  > 
+  > tracked = [f for f in hgdirectory(sys.argv[1])]
+  > 
+  > xml = ET.parse("%s/../contrib/wix/%s.wxs" % (testdir, sys.argv[1]))
+  > root = xml.getroot()
+  > dir = root.find('.//wix:DirectoryRef', ns)
+  > 
+  > installed = [f for f in directory(dir, '')]
+  > 
+  > print('Not installed:')
+  > for f in sorted(set(tracked) - set(installed)):
+  >     print('  %s' % f)
+  > 
+  > print('Not tracked:')
+  > for f in sorted(set(installed) - set(tracked)):
+  >     print('  %s' % f)
+  > EOF
+
+  $ python wixxml.py help
+  Not installed:
+    help/common.txt
+    help/hg.1.txt
+    help/hgignore.5.txt
+    help/hgrc.5.txt
+    help/internals/bundles.txt
+    help/internals/changegroups.txt
+  Not tracked:
+
+  $ python wixxml.py templates
+  Not installed:
+    templates/map-cmdline.status
+  Not tracked:
