@@ -415,6 +415,30 @@ check that local configs for the cached repo aren't inherited when -R is used:
   *** runcommand branches
   default                        1:731265503d86
 
+in-memory cache must be reloaded if transaction is aborted. otherwise
+changelog and manifest would have invalid node:
+
+  $ echo a >> a
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def txabort(server):
+  ...     readchannel(server)
+  ...     runcommand(server, ['commit', '--config', 'hooks.pretxncommit=false',
+  ...                         '-mfoo'])
+  ...     runcommand(server, ['verify'])
+  *** runcommand commit --config hooks.pretxncommit=false -mfoo
+  transaction abort!
+  rollback completed
+  abort: pretxncommit hook exited with status 1
+   [255]
+  *** runcommand verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  1 files, 2 changesets, 2 total revisions
+  $ hg revert --no-backup -aq
+
   $ cat >> .hg/hgrc << EOF
   > [experimental]
   > evolution=createmarkers

@@ -1021,6 +1021,9 @@ class localrepository(object):
             reporef().hook('txnabort', throw=False, txnname=desc,
                            **tr2.hookargs)
         tr.addabort('txnabort-hook', txnaborthook)
+        # avoid eager cache invalidation. in-memory data should be identical
+        # to stored data if transaction has no error.
+        tr.addpostclose('refresh-filecachestats', self._refreshfilecachestats)
         self._transref = weakref.ref(tr)
         return tr
 
@@ -1198,7 +1201,7 @@ class localrepository(object):
         self.invalidate()
         self.invalidatedirstate()
 
-    def _refreshfilecachestats(self):
+    def _refreshfilecachestats(self, tr):
         """Reload stats of cached files so that they are flagged as valid"""
         for k, ce in self._filecache.items():
             if k == 'dirstate' or k not in self.__dict__:
@@ -1247,7 +1250,7 @@ class localrepository(object):
             l.lock()
             return l
 
-        l = self._lock(self.svfs, "lock", wait, self._refreshfilecachestats,
+        l = self._lock(self.svfs, "lock", wait, None,
                        self.invalidate, _('repository %s') % self.origroot)
         self._lockref = weakref.ref(l)
         return l
