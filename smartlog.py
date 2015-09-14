@@ -9,7 +9,7 @@ from mercurial import extensions, util, cmdutil, graphmod, templatekw, scmutil
 from mercurial import bookmarks, commands, error, revset
 from mercurial.extensions import wrapfunction
 from hgext import pager
-from mercurial.node import hex, nullrev
+from mercurial.node import hex, short, nullrev
 from mercurial.i18n import _
 import errno, os, re
 
@@ -478,6 +478,13 @@ Excludes:
         showparents = [ctx.node() for ctx in repo[None].parents()]
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
                      graphmod.asciiedges, None, None)
+
+        with open(repo.join('completionhints'), 'w+') as f:
+            for rev in revdag:
+                commit_hash = rev[2].node()
+                # Skip fakectxt nodes
+                if commit_hash != '...':
+                    f.write(short(commit_hash) + '\n');
     finally:
         enabled = False
 
