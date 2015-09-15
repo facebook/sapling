@@ -26,6 +26,7 @@ import os, errno
 revtodo = -1
 nullmerge = -2
 revignored = -3
+revprecursor = -4
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -333,7 +334,20 @@ def rebase(ui, repo, **opts):
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
 
-            result = buildstate(repo, dest, rebaseset, collapsef)
+            obsoletenotrebased = {}
+            if ui.configbool('experimental', 'rebaseskipobsolete'):
+                rebasesetrevs = set(rebaseset)
+                obsoletenotrebased = _computeobsoletenotrebased(repo,
+                                                                rebasesetrevs,
+                                                                dest)
+
+                # - plain prune (no successor) changesets are rebased
+                # - split changesets are not rebased if at least one of the
+                # changeset resulting from the split is an ancestor of dest
+                rebaseset = rebasesetrevs - set(obsoletenotrebased)
+            result = buildstate(repo, dest, rebaseset, collapsef,
+                                obsoletenotrebased)
+
             if not result:
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
@@ -439,6 +453,12 @@ def rebase(ui, repo, **opts):
                 ui.debug('ignoring null merge rebase of %s\n' % rev)
             elif state[rev] == revignored:
                 ui.status(_('not rebasing ignored %s\n') % desc)
+            elif state[rev] == revprecursor:
+                targetctx = repo[obsoletenotrebased[rev]]
+                desctarget = '%d:%s "%s"' % (targetctx.rev(), targetctx,
+                             targetctx.description().split('\n', 1)[0])
+                msg = _('note: not rebasing %s, already in destination as %s\n')
+                ui.status(msg % (desc, desctarget))
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[state[rev]]))
@@ -620,7 +640,7 @@ def defineparents(repo, rev, target, state, targetancestors):
     elif p1n in state:
         if state[p1n] == nullmerge:
             p1 = target
-        elif state[p1n] == revignored:
+        elif state[p1n] in (revignored, revprecursor):
             p1 = nearestrebased(repo, p1n, state)
             if p1 is None:
                 p1 = target
@@ -636,7 +656,7 @@ def defineparents(repo, rev, target, state, targetancestors):
         if p2n in state:
             if p1 == target: # p1n in targetancestors or external
                 p1 = state[p2n]
-            elif state[p2n] == revignored:
+            elif state[p2n] in (revignored, revprecursor):
                 p2 = nearestrebased(repo, p2n, state)
                 if p2 is None:
                     # no ancestors rebased yet, detach
@@ -824,7 +844,8 @@ def restorestatus(repo):
                 activebookmark = l
             else:
                 oldrev, newrev = l.split(':')
-                if newrev in (str(nullmerge), str(revignored)):
+                if newrev in (str(nullmerge), str(revignored),
+                              str(revprecursor)):
                     state[repo[oldrev].rev()] = int(newrev)
                 elif newrev == nullid:
                     state[repo[oldrev].rev()] = revtodo
@@ -912,7 +933,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
     repo.ui.warn(_('rebase aborted\n'))
     return 0
 
-def buildstate(repo, dest, rebaseset, collapse):
+def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     '''Define which revisions are going to be rebased and where
 
     repo: repo
@@ -999,6 +1020,8 @@ def buildstate(repo, dest, rebaseset, collapse):
         rebasedomain = set(repo.revs('%ld::%ld', rebaseset, rebaseset))
         for ignored in set(rebasedomain) - set(rebaseset):
             state[ignored] = revignored
+    for r in obsoletenotrebased:
+        state[r] = revprecursor
     return repo['.'].rev(), dest.rev(), state
 
 def clearrebased(ui, repo, state, skipped, collapsedas=None):
@@ -1106,6 +1129,32 @@ def _rebasedvisible(orig, repo):
     blockers = orig(repo)
     blockers.update(getattr(repo, '_rebaseset', ()))
     return blockers
+
+def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
+    """return a mapping obsolete => successor for all obsolete nodes to be
+    rebased that have a successors in the destination"""
+    obsoletenotrebased = {}
+
+    # Build a mapping succesor => obsolete nodes for the obsolete
+    # nodes to be rebased
+    allsuccessors = {}
+    for r in rebasesetrevs:
+        n = repo[r]
+        if n.obsolete():
+            node = repo.changelog.node(r)
+            for s in obsolete.allsuccessors(repo.obsstore, [node]):
+                allsuccessors[repo.changelog.rev(s)] = repo.changelog.rev(node)
+
+    if allsuccessors:
+        # Look for successors of obsolete nodes to be rebased among
+        # the ancestors of dest
+        ancs = repo.changelog.ancestors([repo[dest].rev()],
+                                        stoprev=min(allsuccessors),
+                                        inclusive=True)
+        for s in allsuccessors:
+            if s in ancs:
+                obsoletenotrebased[allsuccessors[s]] = s
+    return obsoletenotrebased
 
 def summaryhook(ui, repo):
     if not os.path.exists(repo.join('rebasestate')):
