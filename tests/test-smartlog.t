@@ -7,7 +7,13 @@ Build up a repo
 
   $ hg init repo
   $ cd repo
+
+Confirm smartlog doesn't error on an empty repo
+  $ hg smartlog
+
+Continue repo setup
   $ hg book master
+  $ hg sl -r 'smartlog() + master'
   $ touch a1 && hg add a1 && hg ci -ma1
   $ touch a2 && hg add a2 && hg ci -ma2
   $ hg book feature1

@@ -322,7 +322,11 @@ def smartlogrevset(repo, subset, x):
     masterrevset = _masterrevset(repo.ui, repo, masterstring)
     masterrev = _masterrev(repo, masterrevset)
 
-    masterbranch = branchinfo(masterrev)[0]
+    # Check for empty repo
+    if len(repo) == 0:
+        masterbranch = None
+    else:
+        masterbranch = branchinfo(masterrev)[0]
 
     for branch in branches:
         if branch != masterbranch:
