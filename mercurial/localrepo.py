@@ -1198,6 +1198,13 @@ class localrepository(object):
         self.invalidate()
         self.invalidatedirstate()
 
+    def _refreshfilecachestats(self):
+        """Reload stats of cached files so that they are flagged as valid"""
+        for k, ce in self._filecache.items():
+            if k == 'dirstate' or k not in self.__dict__:
+                continue
+            ce.refresh()
+
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn, desc=desc)
@@ -1240,13 +1247,7 @@ class localrepository(object):
             l.lock()
             return l
 
-        def unlock():
-            for k, ce in self._filecache.items():
-                if k == 'dirstate' or k not in self.__dict__:
-                    continue
-                ce.refresh()
-
-        l = self._lock(self.svfs, "lock", wait, unlock,
+        l = self._lock(self.svfs, "lock", wait, self._refreshfilecachestats,
                        self.invalidate, _('repository %s') % self.origroot)
         self._lockref = weakref.ref(l)
         return l
