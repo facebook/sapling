@@ -72,25 +72,6 @@ def uisetup(ui):
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
 
-# copied from graphmod or cmdutil or somewhere...
-def grandparent(cl, lowestrev, roots, head):
-    """Return all ancestors of head in roots whose revision is
-    greater or equal to lowestrev.
-    """
-    pending = set([head])
-    seen = set()
-    kept = set()
-    llowestrev = max(nullrev, lowestrev)
-    while pending:
-        r = pending.pop()
-        if r >= llowestrev and r not in seen:
-            if r in roots:
-                kept.add(r)
-            else:
-                pending.update([p for p in cl.parentrevs(r)])
-            seen.add(r)
-    return sorted(kept)
-
 def sortnodes(nodes, parentfunc, masters):
     """Topologically sorts the nodes, using the parentfunc to find
     the parents of nodes.  Given a topological tie between children,
@@ -146,8 +127,6 @@ def sortnodes(nodes, parentfunc, masters):
     return results
 
 def getdag(ui, repo, revs, master):
-    cl = repo.changelog
-    lowestrev = min(revs)
 
     # Fake ctx that we stick in the dag so we can special case it later
     class fakectx(object):
@@ -187,7 +166,9 @@ def getdag(ui, repo, revs, master):
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                gp = gpcache[mpar] = grandparent(cl, lowestrev, revs, mpar)
+                gp = gpcache[mpar] = revset.reachableroots(repo,
+                                                           revset.baseset(revs),
+                                                           [mpar])
             if not gp:
                 parents.append(mpar)
             else:
