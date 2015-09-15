@@ -876,7 +876,6 @@ def successorssets(repo, initialnode, cache=None):
     dictionary is updated in place. The caller is responsible for its life
     span. Code that makes multiple calls to `successorssets` *must* use this
     cache mechanism or suffer terrible performance.
-
     """
 
     succmarkers = repo.obsstore.successors
