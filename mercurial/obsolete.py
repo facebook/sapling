@@ -841,7 +841,7 @@ def foreground(repo, nodes):
 
 
 def successorssets(repo, initialnode, cache=None):
-    """Return all set of successors of initial nodes
+    """Return set of all latest successors of initial nodes
 
     The successors set of a changeset A are the group of revisions that succeed
     A. It succeeds A as a consistent whole, each revision being only a partial
