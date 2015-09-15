@@ -71,13 +71,21 @@ class cacheconnection(object):
         # if the process is still open, close the pipes
         if self.pipeo:
             if self.subprocess and self.subprocess.poll() == None:
-                self.pipei.write("exit\n")
-                self.pipei.close()
-                self.pipeo.close()
-                self.pipee.close()
+                if self.pipei:
+                    try:
+                        self.pipei.write("exit\n")
+                        self.pipei.close()
+                    except:
+                        pass
+                    self.pipei = None
+                if self.pipeo:
+                    self.pipeo.close()
+                    self.pipeo = None
+                if self.pipee:
+                    self.pipee.close()
+                    self.pipee = None
                 self.subprocess.wait()
             self.subprocess = None
-            self.pipeo = self.pipei = self.pipee = None
 
     def request(self, request, flush=True):
         if self.connected:
