@@ -2349,11 +2349,13 @@ class nocompress(object):
         return ""
 
 compressors = {
-    'UN': nocompress,
+    None: nocompress,
     # lambda to prevent early import
     'BZ': lambda: bz2.BZ2Compressor(),
     'GZ': lambda: zlib.compressobj(),
     }
+# also support the old form by courtesies
+compressors['UN'] = compressors[None]
 
 def _makedecompressor(decompcls):
     def generator(f):
@@ -2371,10 +2373,12 @@ def _bz2():
     d.decompress('BZ')
     return d
 
-decompressors = {'UN': lambda fh: fh,
+decompressors = {None: lambda fh: fh,
                  'BZ': _makedecompressor(_bz2),
                  'GZ': _makedecompressor(lambda: zlib.decompressobj()),
                  }
+# also support the old form by courtesies
+decompressors['UN'] = decompressors[None]
 
 # convenient shortcut
 dst = debugstacktrace

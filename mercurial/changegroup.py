@@ -158,6 +158,8 @@ class cg1unpacker(object):
     deltaheadersize = struct.calcsize(deltaheader)
     version = '01'
     def __init__(self, fh, alg):
+        if alg == 'UN':
+            alg = None # get more modern without breaking too much
         if not alg in util.decompressors:
             raise util.Abort(_('unknown stream compression type: %s')
                              % alg)
@@ -165,7 +167,7 @@ class cg1unpacker(object):
         self._type = alg
         self.callback = None
     def compressed(self):
-        return self._type != 'UN'
+        return self._type is not None
     def read(self, l):
         return self._stream.read(l)
     def seek(self, pos):
