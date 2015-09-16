@@ -13,22 +13,31 @@
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/
 
-There is a single configuration option::
+There are two configuration options::
 
   [web]
-  pygments_style = <style>
-
-The default is 'colorful'.
+  pygments_style = <style> (default: colorful)
+  highlightfiles = <fileset> (default: size('<5M'))
 """
 
 import highlight
 from mercurial.hgweb import webcommands, webutil, common
-from mercurial import extensions, encoding
+from mercurial import extensions, encoding, fileset
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'internal'
+
+def checkfctx(fctx, expr):
+    ctx = fctx.changectx()
+    tree = fileset.parse(expr)
+    mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
+    repo = ctx.repo()
+    # To allow matching file names in the fileset in hgweb directory mode.
+    # See issue4568.
+    object.__setattr__(repo, 'getcwd', lambda: repo.root)
+    return fctx.path() in fileset.getset(mctx, tree)
 
 def filerevision_highlight(orig, web, req, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
@@ -41,7 +50,9 @@ def filerevision_highlight(orig, web, req, tmpl, fctx):
     # pygmentize a html file
     if 'html' in mt:
         style = web.config('web', 'pygments_style', 'colorful')
-        highlight.pygmentize('fileline', fctx, style, tmpl)
+        expr = web.config('web', 'highlightfiles', "size('<5M')")
+        if checkfctx(fctx, expr):
+            highlight.pygmentize('fileline', fctx, style, tmpl)
     return orig(web, req, tmpl, fctx)
 
 def annotate_highlight(orig, web, req, tmpl):
@@ -49,7 +60,9 @@ def annotate_highlight(orig, web, req, tmpl):
     if 'html' in mt:
         fctx = webutil.filectx(web.repo, req)
         style = web.config('web', 'pygments_style', 'colorful')
-        highlight.pygmentize('annotateline', fctx, style, tmpl)
+        expr = web.config('web', 'highlightfiles', "size('<5M')")
+        if checkfctx(fctx, expr):
+            highlight.pygmentize('annotateline', fctx, style, tmpl)
     return orig(web, req, tmpl)
 
 def generate_css(web, req, tmpl):

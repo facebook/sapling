@@ -5,6 +5,7 @@
   > highlight =
   > [web]
   > pygments_style = friendly
+  > highlightfiles = **.py and size('<100KB')
   > EOF
   $ hg init test
   $ cd test
@@ -586,6 +587,28 @@ hgweb highlightcss fruity
   /* pygments_style = fruity */
   
   $ rm out
+
+errors encountered
+
+  $ cat errors.log
+  $ killdaemons.py
+
+only highlight C source files
+
+  $ cat > .hg/hgrc <<EOF
+  > [web]
+  > highlightfiles = **.c
+  > EOF
+
+hg serve again
+
+  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid -A access.log -E errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
+test that fileset in highlightfiles works and primes.py is not highlighted
+
+  $ get-with-headers.py localhost:$HGPORT 'file/tip/primes.py' | grep 'id="l11"'
+  <span id="l11">def primes():</span><a href="#l11"></a>
 
 errors encountered
 
