@@ -119,7 +119,7 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             bundle = bundle2.bundle20(ui)
             part = bundle.newpart('changegroup', data=cg.getchunks())
             part.addparam('version', cg.version)
-            z = util.compressors['UN']()
+            z = util.compressors[None]()
             chunkiter = bundle.getchunks()
         else:
             if cg.version != '01':
