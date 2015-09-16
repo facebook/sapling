@@ -7,12 +7,10 @@
 
 from __future__ import absolute_import
 
-import bz2
 import os
 import struct
 import tempfile
 import weakref
-import zlib
 
 from .i18n import _
 from .node import (
@@ -81,20 +79,14 @@ def combineresults(results):
         result = -1 + changedheads
     return result
 
-class nocompress(object):
-    def compress(self, x):
-        return x
-    def flush(self):
-        return ""
-
 bundletypes = {
-    "": ("", nocompress), # only when using unbundle on ssh and old http servers
+    "": ("", 'UN'),       # only when using unbundle on ssh and old http servers
                           # since the unification ssh accepts a header but there
                           # is no capability signaling it.
     "HG20": (), # special-cased below
-    "HG10UN": ("HG10UN", nocompress),
-    "HG10BZ": ("HG10", lambda: bz2.BZ2Compressor()),
-    "HG10GZ": ("HG10GZ", lambda: zlib.compressobj()),
+    "HG10UN": ("HG10UN", 'UN'),
+    "HG10BZ": ("HG10", 'BZ'),
+    "HG10GZ": ("HG10GZ", 'GZ'),
 }
 
 # hgweb uses this list to communicate its preferred type
@@ -127,15 +119,18 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             bundle = bundle2.bundle20(ui)
             part = bundle.newpart('changegroup', data=cg.getchunks())
             part.addparam('version', cg.version)
-            z = nocompress()
+            z = util.compressors['UN']()
             chunkiter = bundle.getchunks()
         else:
             if cg.version != '01':
                 raise util.Abort(_('old bundle types only supports v1 '
                                    'changegroups'))
-            header, compressor = bundletypes[bundletype]
+            header, comp = bundletypes[bundletype]
             fh.write(header)
-            z = compressor()
+            if comp not in util.compressors:
+                raise util.Abort(_('unknown stream compression type: %s')
+                                 % comp)
+            z = util.compressors[comp]()
             chunkiter = cg.getchunks()
 
         # parse the changegroup data, otherwise we will block
@@ -158,30 +153,15 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
             else:
                 os.unlink(cleanup)
 
-def decompressor(fh, alg):
-    if alg == 'UN':
-        return fh
-    elif alg == 'GZ':
-        def generator(f):
-            zd = zlib.decompressobj()
-            for chunk in util.filechunkiter(f):
-                yield zd.decompress(chunk)
-    elif alg == 'BZ':
-        def generator(f):
-            zd = bz2.BZ2Decompressor()
-            zd.decompress("BZ")
-            for chunk in util.filechunkiter(f, 4096):
-                yield zd.decompress(chunk)
-    else:
-        raise util.Abort("unknown bundle compression '%s'" % alg)
-    return util.chunkbuffer(generator(fh))
-
 class cg1unpacker(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = '01'
     def __init__(self, fh, alg):
-        self._stream = decompressor(fh, alg)
+        if not alg in util.decompressors:
+            raise util.Abort(_('unknown stream compression type: %s')
+                             % alg)
+        self._stream = util.decompressors[alg](fh)
         self._type = alg
         self.callback = None
     def compressed(self):

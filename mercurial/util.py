@@ -21,6 +21,8 @@ import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
 import imp, socket, urllib
 import gc
+import bz2
+import zlib
 
 if os.name == 'nt':
     import windows as platform
@@ -2337,6 +2339,42 @@ def finddirs(path):
     while pos != -1:
         yield path[:pos]
         pos = path.rfind('/', 0, pos)
+
+# compression utility
+
+class nocompress(object):
+    def compress(self, x):
+        return x
+    def flush(self):
+        return ""
+
+compressors = {
+    'UN': nocompress,
+    # lambda to prevent early import
+    'BZ': lambda: bz2.BZ2Compressor(),
+    'GZ': lambda: zlib.compressobj(),
+    }
+
+def _makedecompressor(decompcls):
+    def generator(f):
+        d = decompcls()
+        for chunk in filechunkiter(f):
+            yield d.decompress(chunk)
+    def func(fh):
+        return chunkbuffer(generator(fh))
+    return func
+
+def _bz2():
+    d = bz2.BZ2Decompressor()
+    # Bzip2 stream start with BZ, but we stripped it.
+    # we put it back for good measure.
+    d.decompress('BZ')
+    return d
+
+decompressors = {'UN': lambda fh: fh,
+                 'BZ': _makedecompressor(_bz2),
+                 'GZ': _makedecompressor(lambda: zlib.decompressobj()),
+                 }
 
 # convenient shortcut
 dst = debugstacktrace
