@@ -795,25 +795,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.debug(" %s: %s -> k\n" % (f, msg))
         # no progress
 
-    # merge
-    for f, args, msg in actions['m']:
-        repo.ui.debug(" %s: %s -> m\n" % (f, msg))
-        z += 1
-        progress(_updating, z, item=f, total=numupdates, unit=_files)
-        if f == '.hgsubstate': # subrepo states need updating
-            subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
-                             overwrite)
-            continue
-        audit(f)
-        r = ms.resolve(f, wctx, labels=labels)
-        if r is not None and r > 0:
-            unresolved += 1
-        else:
-            if r is None:
-                updated += 1
-            else:
-                merged += 1
-
     # directory rename, move local
     for f, args, msg in actions['dm']:
         repo.ui.debug(" %s: %s -> dm\n" % (f, msg))
@@ -845,6 +826,25 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         audit(f)
         util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
         updated += 1
+
+    # merge
+    for f, args, msg in actions['m']:
+        repo.ui.debug(" %s: %s -> m\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        if f == '.hgsubstate': # subrepo states need updating
+            subrepo.submerge(repo, wctx, mctx, wctx.ancestor(mctx),
+                             overwrite)
+            continue
+        audit(f)
+        r = ms.resolve(f, wctx, labels=labels)
+        if r is not None and r > 0:
+            unresolved += 1
+        else:
+            if r is None:
+                updated += 1
+            else:
+                merged += 1
 
     ms.commit()
     progress(_updating, None, total=numupdates, unit=_files)
