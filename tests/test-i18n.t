@@ -1,8 +1,6 @@
-#require gettext
-
 (Translations are optional)
 
-#if no-outer-repo
+#if gettext no-outer-repo
 
 Test that translations are compiled and installed correctly.
 
@@ -27,6 +25,8 @@ Different encoding:
 
 #endif
 
+#if gettext
+
 Test keyword search in translated help text:
 
   $ HGENCODING=UTF-8 LANGUAGE=de hg help -k blättern
@@ -37,6 +37,8 @@ Test keyword search in translated help text:
   Erweiterungen:
   
    pager Verwendet einen externen Pager zum Bl\xc3\xa4ttern in der Ausgabe von Befehlen (esc)
+
+#endif
 
 Check Mercurial specific translation problems in each *.po files, and
 tool itself by doctest
