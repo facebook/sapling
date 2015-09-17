@@ -16,7 +16,7 @@ http://mercurial.selenic.com/wiki/RebaseExtension
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
-from mercurial import copies, repoview
+from mercurial import copies, repoview, revset
 from mercurial.commands import templateopts
 from mercurial.node import nullrev, nullid, hex, short
 from mercurial.lock import release
@@ -53,6 +53,21 @@ def _makeextrafn(copiers):
         for c in copiers:
             c(ctx, extra)
     return extrafn
+
+def _rebasedefaultdest(repo, subset, x):
+    # ``_rebasedefaultdest()``
+
+    # default destination for rebase.
+    # # XXX: Currently private because I expect the signature to change.
+    # # XXX: - taking rev as arguments,
+    # # XXX: - bailing out in case of ambiguity vs returning all data.
+    # # XXX: - probably merging with the merge destination.
+    # i18n: "_rebasedefaultdest" is a keyword
+    revset.getargs(x, 0, 0, _("_rebasedefaultdest takes no arguments"))
+    # Destination defaults to the latest revision in the
+    # current branch
+    branch = repo[None].branch()
+    return subset & revset.baseset([repo[branch].rev()])
 
 @command('rebase',
     [('s', 'source', '',
@@ -252,12 +267,8 @@ def rebase(ui, repo, **opts):
             cmdutil.bailifchanged(repo)
 
             if not destf:
-                # Destination defaults to the latest revision in the
-                # current branch
-                branch = repo[None].branch()
-                dest = repo[branch]
-            else:
-                dest = scmutil.revsingle(repo, destf)
+                destf = '_rebasedefaultdest()'
+            dest = scmutil.revsingle(repo, destf)
 
             if revf:
                 rebaseset = scmutil.revrange(repo, revf)
@@ -1126,3 +1137,4 @@ def uisetup(ui):
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
     # ensure rebased rev are not hidden
     extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
+    revset.symbols['_rebasedefaultdest'] = _rebasedefaultdest
