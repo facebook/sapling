@@ -9367,7 +9367,7 @@ msgid "VALUE"
 msgstr ""
 
 msgid "DEPRECATED"
-msgstr ""
+msgstr "FORÆLDET"
 
 msgid ""
 "\n"
