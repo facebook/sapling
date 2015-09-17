@@ -8259,7 +8259,7 @@ msgid "VALUE"
 msgstr "VALOARE"
 
 msgid "DEPRECATED"
-msgstr ""
+msgstr "ÎNVECHIT"
 
 msgid ""
 "\n"
