@@ -586,6 +586,12 @@ pull --update works the same as pull && update
   updating bookmark Y
   updating bookmark Z
   (run 'hg heads' to see heads, 'hg merge' to merge)
+
+(# tests strange but with --date crashing when bookmark have to move)
+
+  $ hg -R ../cloned-bookmarks-manual-update update -d 1986
+  abort: revision matching date not found
+  [255]
   $ hg -R ../cloned-bookmarks-manual-update update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

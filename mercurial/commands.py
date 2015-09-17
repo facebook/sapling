@@ -6480,6 +6480,11 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     try:
         cmdutil.clearunfinished(repo)
 
+        if date:
+            if rev is not None:
+                raise util.Abort(_("you can't specify a revision and a date"))
+            rev = cmdutil.finddate(ui, repo, date)
+
         # with no argument, we also move the active bookmark, if any
         rev, movemarkfrom = bookmarks.calculateupdate(ui, repo, rev)
 
@@ -6489,11 +6494,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
         if check and clean:
             raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
-
-        if date:
-            if rev is not None:
-                raise util.Abort(_("you can't specify a revision and a date"))
-            rev = cmdutil.finddate(ui, repo, date)
 
         if check:
             cmdutil.bailifchanged(repo, merge=False)
