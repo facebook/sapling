@@ -7506,7 +7506,7 @@ msgid "VALUE"
 msgstr ""
 
 msgid "DEPRECATED"
-msgstr ""
+msgstr "DEPRECATO"
 
 msgid ""
 "\n"
