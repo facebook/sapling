@@ -113,18 +113,7 @@ class lock(object):
                 return None
             raise
 
-    def testlock(self):
-        """return id of locker if lock is valid, else None.
-
-        If old-style lock, we cannot tell what machine locker is on.
-        with new-style lock, if locker is on this machine, we can
-        see if locker is alive.  If locker is on this machine but
-        not alive, we can safely break lock.
-
-        The lock file is only deleted when None is returned.
-
-        """
-        locker = self._readlock()
+    def _testlock(self, locker):
         if locker is None:
             return None
         try:
@@ -147,6 +136,20 @@ class lock(object):
             l.release()
         except error.LockError:
             return locker
+
+    def testlock(self):
+        """return id of locker if lock is valid, else None.
+
+        If old-style lock, we cannot tell what machine locker is on.
+        with new-style lock, if locker is on this machine, we can
+        see if locker is alive.  If locker is on this machine but
+        not alive, we can safely break lock.
+
+        The lock file is only deleted when None is returned.
+
+        """
+        locker = self._readlock()
+        return self._testlock(locker)
 
     def release(self):
         """release the lock and execute callback function if any
