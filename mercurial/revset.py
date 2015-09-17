@@ -463,6 +463,67 @@ def func(repo, subset, a, b):
 
 # functions
 
+def _mergedefaultdest(repo, subset, x):
+    # ``_mergedefaultdest()``
+
+    # default destination for merge.
+    # # XXX: Currently private because I expect the signature to change.
+    # # XXX: - taking rev as arguments,
+    # # XXX: - bailing out in case of ambiguity vs returning all data.
+    getargs(x, 0, 0, _("_mergedefaultdest takes no arguments"))
+    if repo._activebookmark:
+        bmheads = repo.bookmarkheads(repo._activebookmark)
+        curhead = repo[repo._activebookmark].node()
+        if len(bmheads) == 2:
+            if curhead == bmheads[0]:
+                node = bmheads[1]
+            else:
+                node = bmheads[0]
+        elif len(bmheads) > 2:
+            raise util.Abort(_("multiple matching bookmarks to merge - "
+                "please merge with an explicit rev or bookmark"),
+                hint=_("run 'hg heads' to see all heads"))
+        elif len(bmheads) <= 1:
+            raise util.Abort(_("no matching bookmark to merge - "
+                "please merge with an explicit rev or bookmark"),
+                hint=_("run 'hg heads' to see all heads"))
+    else:
+        branch = repo[None].branch()
+        bheads = repo.branchheads(branch)
+        nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
+
+        if len(nbhs) > 2:
+            raise util.Abort(_("branch '%s' has %d heads - "
+                               "please merge with an explicit rev")
+                             % (branch, len(bheads)),
+                             hint=_("run 'hg heads .' to see heads"))
+
+        parent = repo.dirstate.p1()
+        if len(nbhs) <= 1:
+            if len(bheads) > 1:
+                raise util.Abort(_("heads are bookmarked - "
+                                   "please merge with an explicit rev"),
+                                 hint=_("run 'hg heads' to see all heads"))
+            if len(repo.heads()) > 1:
+                raise util.Abort(_("branch '%s' has one head - "
+                                   "please merge with an explicit rev")
+                                 % branch,
+                                 hint=_("run 'hg heads' to see all heads"))
+            msg, hint = _('nothing to merge'), None
+            if parent != repo.lookup(branch):
+                hint = _("use 'hg update' instead")
+            raise util.Abort(msg, hint=hint)
+
+        if parent not in bheads:
+            raise util.Abort(_('working directory not at a head revision'),
+                             hint=_("use 'hg update' or merge with an "
+                                    "explicit revision"))
+        if parent == nbhs[0]:
+            node = nbhs[-1]
+        else:
+            node = nbhs[0]
+    return subset & baseset([repo[node].rev()])
+
 def adds(repo, subset, x):
     """``adds(pattern)``
     Changesets that add a file matching pattern.
@@ -2100,6 +2161,7 @@ def _hexlist(repo, subset, x):
     return baseset([r for r in ls if r in s])
 
 symbols = {
+    "_mergedefaultdest": _mergedefaultdest,
     "adds": adds,
     "all": getall,
     "ancestor": ancestor,
