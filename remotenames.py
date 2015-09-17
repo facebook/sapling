@@ -106,7 +106,8 @@ def exclone(orig, ui, *args, **opts):
         wlock = repo.wlock()
         try:
             try:
-                repo.vfs.unlink('bookmarks')
+                vfs = shareawarevfs(repo)
+                vfs.unlink('bookmarks')
             except OSError, inst:
                 if inst.errno != errno.ENOENT:
                     raise
@@ -661,7 +662,8 @@ def exbranches(orig, ui, repo, *args, **opts):
 def _readtracking(repo):
     tracking = {}
     try:
-        for line in repo.vfs.read('bookmarks.tracking').strip().split('\n'):
+        vfs = shareawarevfs(repo)
+        for line in vfs.read('bookmarks.tracking').strip().split('\n'):
             try:
                 book, track = line.strip().split(' ')
                 tracking[book] = track
@@ -676,7 +678,8 @@ def _writetracking(repo, tracking):
     data = ''
     for book, track in tracking.iteritems():
         data += '%s %s\n' % (book, track)
-    repo.vfs.write('bookmarks.tracking', data)
+    vfs = shareawarevfs(repo)
+    vfs.write('bookmarks.tracking', data)
 
 def _removetracking(repo, bookmarks):
     tracking = _readtracking(repo)
@@ -949,16 +952,16 @@ def shareawarevfs(repo):
         return repo.vfs
 
 def readremotenames(repo):
-    rfile = shareawarevfs(repo).join('remotenames')
+    vfs = shareawarevfs(repo)
     # exit early if there is nothing to do
-    if not os.path.exists(rfile):
+    if not vfs.exists('remotenames'):
         return
 
     # needed to heuristically determine if a file is in the old format
     branches = repo.names['branches'].listnames(repo)
     bookmarks = repo.names['bookmarks'].listnames(repo)
 
-    f = open(rfile)
+    f = vfs('remotenames')
     for line in f:
         nametype = None
         line = line.strip()
@@ -1043,16 +1046,17 @@ def transition(repo, ui):
         ui.warn(message + '\n')
 
 def saveremotenames(repo, remote, branches={}, bookmarks={}):
+    vfs = shareawarevfs(repo)
     wlock = repo.wlock()
     try:
         # delete old files
         try:
-            repo.vfs.unlink('remotedistance')
+            vfs.unlink('remotedistance')
         except OSError, inst:
             if inst.errno != errno.ENOENT:
                 raise
 
-        if not shareawarevfs(repo).exists('remotenames'):
+        if not vfs.exists('remotenames'):
             transition(repo, repo.ui)
 
         # while we're removing old paths, also update _remotenames
@@ -1064,7 +1068,7 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
 
-        f = shareawarevfs(repo)('remotenames', 'w')
+        f = vfs('remotenames', 'w')
 
         # only update the given 'remote'; iterate over old data and re-save it
         for node, nametype, oldremote, rname in olddata:
@@ -1111,7 +1115,8 @@ def calculatenamedistance(repo, fromname, toname):
 
 def writedistancecache(repo, distance):
     try:
-        f = repo.vfs('cache/distance', 'w')
+        vfs = shareawarevfs(repo)
+        f = vfs('cache/distance', 'w')
         for k, v in distance.iteritems():
             f.write('%s %d %d\n' % (k, v[0], v[1]))
     except (IOError, OSError):
@@ -1120,7 +1125,8 @@ def writedistancecache(repo, distance):
 def readdistancecache(repo):
     distances = {}
     try:
-        for line in repo.vfs.read('cache/distance').splitlines():
+        vfs = shareawarevfs(repo)
+        for line in vfs.read('cache/distance').splitlines():
             line = line.rsplit(' ', 2)
             try:
                 d = (int(line[1]), int(line[2]))
@@ -1136,16 +1142,17 @@ def readdistancecache(repo):
 def invalidatedistancecache(repo):
     """Try to invalidate any existing distance caches"""
     error = False
+    vfs = shareawarevfs(repo)
     try:
-        if repo.vfs.isdir('cache/distance'):
-            shutil.rmtree(repo.vfs.join('cache/distance'))
+        if vfs.isdir('cache/distance'):
+            shutil.rmtree(vfs.join('cache/distance'))
         else:
-            repo.vfs.unlink('cache/distance')
+            vfs.unlink('cache/distance')
     except (OSError, IOError), inst:
         if inst.errno != errno.ENOENT:
             error = True
     try:
-        repo.vfs.unlink('cache/distance.current')
+        vfs.unlink('cache/distance.current')
     except (OSError, IOError), inst:
         if inst.errno != errno.ENOENT:
             error = True
@@ -1190,8 +1197,9 @@ def precachedistance(repo):
                 # and we'll pick the first one for now
                 bmark = repo[revs[0]].bookmarks()[0]
                 distance = len(repo.revs('only(%d, .)' % revs[0]))
-                repo.vfs.write('cache/distance.current',
-                               '%s %d' % (bmark, distance))
+                vfs = shareawarevfs(repo)
+                vfs.write('cache/distance.current',
+                          '%s %d' % (bmark, distance))
 
     finally:
         wlock.release()
