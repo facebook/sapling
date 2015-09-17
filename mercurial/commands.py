@@ -4785,7 +4785,7 @@ def merge(ui, repo, node=None, **opts):
                 "please merge with an explicit rev or bookmark"),
                 hint=_("run 'hg heads' to see all heads"))
 
-    if not node and not repo._activebookmark:
+    elif not node:
         branch = repo[None].branch()
         bheads = repo.branchheads(branch)
         nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
