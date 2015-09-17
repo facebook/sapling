@@ -826,7 +826,7 @@ msgid "Bugzilla error: %s"
 msgstr "Bugzilla-fel: %s"
 
 msgid "command to display child changesets (DEPRECATED)"
-msgstr "kommando för att visa barnändringar (FÖRLEGAD)"
+msgstr "kommando för att visa barnändringar (FÖRÅLDRAD)"
 
 msgid ""
 "This extension is deprecated. You should use :hg:`log -r\n"
@@ -2741,7 +2741,7 @@ msgstr ""
 "följ ändringshistorik, eller filhistorik över kopieringar och namnbyten"
 
 msgid "only follow the first parent of merge changesets (DEPRECATED)"
-msgstr "följ bara den första föräldern vid sammanfogningar (FÖRLEGAD)"
+msgstr "följ bara den första föräldern vid sammanfogningar (FÖRÅLDRAD)"
 
 msgid "show revisions matching date spec"
 msgstr "visa revisioner som matchar datumspecen"
@@ -2759,7 +2759,7 @@ msgid "include revisions where files were removed"
 msgstr "inkludera revisioner där filer togs bort"
 
 msgid "show only merges (DEPRECATED)"
-msgstr "visa bara sammanfogningar (FÖRLEGAD)"
+msgstr "visa bara sammanfogningar (FÖRÅLDRAD)"
 
 msgid "USER"
 msgstr "ANVÄNDARE"
@@ -2768,7 +2768,7 @@ msgid "revisions committed by user"
 msgstr "revisioner arkiverade av användare"
 
 msgid "show only changesets within the given named branch (DEPRECATED)"
-msgstr "visa bara ändringar i den namngivna grenen (FÖRLEGAD)"
+msgstr "visa bara ändringar i den namngivna grenen (FÖRÅLDRAD)"
 
 msgid "BRANCH"
 msgstr "GREN"
@@ -2780,7 +2780,7 @@ msgid "do not display revision or any of its ancestors"
 msgstr "visa inte revision eller någon av dess föräldrar"
 
 msgid "show hidden changesets (DEPRECATED)"
-msgstr "visa dolda ändringar (FÖRLEGAD)"
+msgstr "visa dolda ändringar (FÖRÅLDRAD)"
 
 msgid "[OPTION]... [FILE]"
 msgstr "[FLAGGA]... [FIL]"
@@ -5011,7 +5011,7 @@ msgid "print the name of the preceding applied patch"
 msgstr "skriv ut namnet på föregående applicerade patch"
 
 msgid "import uncommitted changes (DEPRECATED)"
-msgstr "importera icke arkiverade ändringar (FÖRLEGAD)"
+msgstr "importera icke arkiverade ändringar (FÖRÅLDRAD)"
 
 msgid "add \"From: <current user>\" to patch"
 msgstr "lägg till \"From: <denna användare>\" i patch"
@@ -5306,7 +5306,7 @@ msgid "pop all patches"
 msgstr "poppa alla patchar"
 
 msgid "queue name to pop (DEPRECATED)"
-msgstr "könamn att poppa (FÖRLEGAD)"
+msgstr "könamn att poppa (FÖRÅLDRAD)"
 
 msgid "forget any local changes to patched files"
 msgstr ""
@@ -5404,7 +5404,7 @@ msgid ""
 "not descendants of REV (DEPRECATED)"
 msgstr ""
 "bunta bara ändringar med lokala revisionsnummer större än REV som inte är "
-"ättling till REV (FÖRLEGAD)"
+"ättling till REV (FÖRÅLDRAD)"
 
 msgid "no backups"
 msgstr "inga säkerhetskopior"
@@ -6537,7 +6537,7 @@ msgid "keep original branch names"
 msgstr ""
 
 msgid "(DEPRECATED)"
-msgstr "(FÖRLEGAD)"
+msgstr "(FÖRÅLDRAD)"
 
 msgid "specify merge tool"
 msgstr "ange sammanfogningsverktyg"
@@ -8088,7 +8088,7 @@ msgid "annotate the specified revision"
 msgstr "annotera den angivna revisionen"
 
 msgid "follow copies/renames and list the filename (DEPRECATED)"
-msgstr "följ kopieringar/namnbyten och visa filnamnet (FÖRLEGAD)"
+msgstr "följ kopieringar/namnbyten och visa filnamnet (FÖRÅLDRAD)"
 
 msgid "don't follow copies and renames"
 msgstr "följ inte kopieringar och namnbyten"
@@ -8247,7 +8247,7 @@ msgid "merge with old dirstate parent after backout"
 msgstr "sammanfoga med gamla dirstate-föräldern efter återkallning"
 
 msgid "parent to choose when backing out merge (DEPRECATED)"
-msgstr "förälder att välja när en sammanfogning återkallas (FÖRLEGAD)"
+msgstr "förälder att välja när en sammanfogning återkallas (FÖRÅLDRAD)"
 
 msgid "revision to backout"
 msgstr "revision att återkalla"
@@ -10105,7 +10105,7 @@ msgid "show topological heads only"
 msgstr "visa bara topologiska huvuden"
 
 msgid "show active branchheads only (DEPRECATED)"
-msgstr "visa bara aktiva grenhuvuden (FÖRLEGAD)"
+msgstr "visa bara aktiva grenhuvuden (FÖRÅLDRAD)"
 
 msgid "show normal and closed branch heads"
 msgstr "visa normala och stängda grenhuvuden"
@@ -11764,7 +11764,7 @@ msgid "name of the hgweb config file (see \"hg help hgweb\")"
 msgstr "namn på webdir-konfigurationsfil (se \"hg help hgweb\")"
 
 msgid "name of the hgweb config file (DEPRECATED)"
-msgstr "namn på webdir-konfigurationsfil (FÖRLEGAD)"
+msgstr "namn på webdir-konfigurationsfil (FÖRÅLDRAD)"
 
 msgid "for remote clients"
 msgstr "för fjärrklienter"
@@ -13116,7 +13116,7 @@ msgid "VALUE"
 msgstr "VÄRDE"
 
 msgid "DEPRECATED"
-msgstr "FÖRLEGAD"
+msgstr "FÖRÅLDRAD"
 
 msgid ""
 "\n"
