@@ -4014,7 +4014,7 @@ msgid "keep patch file"
 msgstr "garder le fichier du patch"
 
 msgid "stop managing a revision (DEPRECATED)"
-msgstr "arrêter de gérer une révision"
+msgstr ""
 
 msgid "hg qdelete [-k] [-r REV]... [PATCH]..."
 msgstr "hg qdelete [-k] [-r REV]... [PATCH]..."
