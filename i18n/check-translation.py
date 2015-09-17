@@ -5,7 +5,14 @@
 import polib
 import re
 
+scanners = []
 checkers = []
+
+def scanner():
+    def decorator(func):
+        scanners.append(func)
+        return func
+    return decorator
 
 def levelchecker(level, msgidpat):
     def decorator(func):
@@ -60,6 +67,40 @@ def promptchoice(pe):
         yield "msgstr has invalid choice missing '&'"
     if [c for c, i in indices if len(c) == i + 1]:
         yield "msgstr has invalid '&' followed by none"
+
+deprecatedpe = None
+@scanner()
+def deprecatedsetup(pofile):
+    pes = [p for p in pofile if p.msgid == 'DEPRECATED']
+    if len(pes):
+        global deprecatedpe
+        deprecatedpe = pes[0]
+
+@fatalchecker('(DEPRECATED)')
+def deprecated(pe):
+    """Check for DEPRECATED
+    >>> ped = polib.POEntry(
+    ...     msgid = 'DEPRECATED',
+    ...     msgstr= 'DETACERPED')
+    >>> deprecatedsetup([ped])
+    >>> pe = polib.POEntry(
+    ...     msgid = 'Something (DEPRECATED)',
+    ...     msgstr= 'something (DETACERPED)')
+    >>> match(deprecated, pe)
+    True
+    >>> pe = polib.POEntry(
+    ...     msgid = 'Something (DEPRECATED)',
+    ...     msgstr= 'something')
+    >>> match(deprecated, pe)
+    True
+    >>> for e in deprecated(pe): print e
+    msgstr inconsistently translated (DEPRECATED)
+    """
+    global deprecatedpe
+    if not '(DEPRECATED)' in pe.msgstr:
+        if not (deprecatedpe and deprecatedpe.msgstr
+                and deprecatedpe.msgstr in pe.msgstr):
+            yield "msgstr inconsistently translated (DEPRECATED)"
 
 ####################
 
@@ -117,6 +158,8 @@ def check(pofile, fatal=True, warning=False):
         return []
 
     detected = []
+    for checker in scanners:
+        checker(pofile)
     for pe in pofile.translated_entries():
         errors = []
         for checker, level in targetcheckers:
