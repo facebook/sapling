@@ -1,7 +1,5 @@
-default = 'shortlog'
+%include paper/map
 
-mimetype = 'text/html; charset={encoding}'
-header = header.tmpl
 footer = ../paper/footer.tmpl
 search = ../paper/search.tmpl
 
@@ -13,23 +11,6 @@ graph = ../paper/graph.tmpl
 help = ../paper/help.tmpl
 helptopics = ../paper/helptopics.tmpl
 
-helpentry = '
-  <tr><td>
-    <a href="{url|urlescape}help/{topic|escape}{sessionvars%urlparameter}">
-      {topic|escape}
-    </a>
-  </td><td>
-    {summary|escape}
-  </td></tr>'
-
-naventry = '<a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
-navshortentry = '<a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
-navgraphentry = '<a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
-filenaventry = '<a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
-filedifflink = '<a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
-filenodelink = '<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
-filenolink = '{file|escape} '
-fileellipses = '...'
 diffstatlink = ../paper/diffstat.tmpl
 diffstatnolink = ../paper/diffstat.tmpl
 changelogentry = ../paper/shortlogentry.tmpl
@@ -37,216 +18,17 @@ searchentry = ../paper/shortlogentry.tmpl
 changeset = ../paper/changeset.tmpl
 manifest = ../paper/manifest.tmpl
 
-nav = '{before%naventry} {after%naventry}'
-navshort = '{before%navshortentry}{after%navshortentry}'
-navgraph = '{before%navgraphentry}{after%navgraphentry}'
-filenav = '{before%filenaventry}{after%filenaventry}'
-
-direntry = '
-  <tr class="fileline">
-    <td class="name">
-      <a href="{url|urlescape}file/{symrev}{path|urlescape}{sessionvars%urlparameter}">
-        <img src="{staticurl|urlescape}coal-folder.png" alt="dir."/> {basename|escape}/
-      </a>
-      <a href="{url|urlescape}file/{symrev}{path|urlescape}/{emptydirs|urlescape}{sessionvars%urlparameter}">
-        {emptydirs|escape}
-      </a>
-    </td>
-    <td class="size"></td>
-    <td class="permissions">drwxr-xr-x</td>
-  </tr>'
-
-fileentry = '
-  <tr class="fileline">
-    <td class="filename">
-      <a href="{url|urlescape}file/{symrev}/{file|urlescape}{sessionvars%urlparameter}">
-        <img src="{staticurl|urlescape}coal-file.png" alt="file"/> {basename|escape}
-      </a>
-    </td>
-    <td class="size">{size}</td>
-    <td class="permissions">{permissions|permissions}</td>
-  </tr>'
-
 filerevision = ../paper/filerevision.tmpl
 fileannotate = ../paper/fileannotate.tmpl
 filediff = ../paper/filediff.tmpl
 filecomparison = ../paper/filecomparison.tmpl
 filelog = ../paper/filelog.tmpl
-fileline = '
-  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 filelogentry = ../paper/filelogentry.tmpl
 
-annotateline = '
-  <tr id="{lineid}">
-    <td class="annotate">
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
-         title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
-    </td>
-    <td class="source"><a href="#{lineid}">{linenumber}</a> {line|escape}</td>
-  </tr>'
-
-diffblock = '<div class="bottomline inc-lineno"><pre class="sourcelines wrap">{lines}</pre></div>'
-difflineplus = '
-  <span id="{lineid}" class="plusline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
-difflineminus = '
-  <span id="{lineid}" class="minusline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
-difflineat = '
-  <span id="{lineid}" class="atline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
-diffline = '
-  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
-
-comparisonblock ='
-  <tbody class="block">
-  {lines}
-  </tbody>'
-comparisonline = '
-  <tr id="{lineid}">
-    <td class="source {type}"><a href="#{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
-    <td class="source {type}"><a href="#{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
-  </tr>'
-
-changelogparent = '
-  <tr>
-    <th class="parent">parent {rev}:</th>
-    <td class="parent"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
-
-changesetparent = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a> '
-
-changesetparentdiff = '
-  {changesetparent}
-  {ifeq(node, basenode, '(current diff)', '({difffrom})')}'
-
-difffrom = '<a href="{url|urlescape}rev/{node|short}:{originalnode|short}{sessionvars%urlparameter}">diff</a>'
-
-filerevparent = '<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rename%filerename}{node|short}</a> '
-filerevchild = '<a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a> '
-
-filerename = '{file|escape}@'
-filelogrename = '
-  <span class="base">
-    base
-    <a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
-      {file|escape}@{node|short}
-    </a>
-  </span>'
-fileannotateparent = '
-  <tr>
-    <td class="metatag">parent:</td>
-    <td>
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
-        {rename%filerename}{node|short}
-      </a>
-    </td>
-  </tr>'
-changesetchild = ' <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
-changelogchild = '
-  <tr>
-    <th class="child">child</th>
-    <td class="child">
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
-fileannotatechild = '
-  <tr>
-    <td class="metatag">child:</td>
-    <td>
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
 tags = ../paper/tags.tmpl
-tagentry = '
-  <tr class="tagEntry">
-    <td>
-      <a href="{url|urlescape}rev/{tag|revescape}{sessionvars%urlparameter}">
-        {tag|escape}
-      </a>
-    </td>
-    <td class="node">
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
 bookmarks = ../paper/bookmarks.tmpl
-bookmarkentry = '
-  <tr class="tagEntry">
-    <td>
-      <a href="{url|urlescape}rev/{bookmark|revescape}{sessionvars%urlparameter}">
-        {bookmark|escape}
-      </a>
-    </td>
-    <td class="node">
-      <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
 branches = ../paper/branches.tmpl
-branchentry = '
-  <tr class="tagEntry">
-    <td>
-      <a href="{url|urlescape}shortlog/{branch|revescape}{sessionvars%urlparameter}" class="{status}">
-        {branch|escape}
-      </a>
-    </td>
-    <td class="node">
-      <a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}" class="{status}">
-        {node|short}
-      </a>
-    </td>
-  </tr>'
-changelogtag = '<span class="tag">{name|escape}</span> '
-changesettag = '<span class="tag">{tag|escape}</span> '
-changesetbookmark = '<span class="tag">{bookmark|escape}</span> '
-changelogbranchhead = '<span class="branchhead">{name|escape}</span> '
-changelogbranchname = '<span class="branchname">{name|escape}</span> '
 
-filediffparent = '
-  <tr>
-    <th class="parent">parent {rev}:</th>
-    <td class="parent"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
-filelogparent = '
-  <tr>
-    <th>parent {rev}:</th>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
-filediffchild = '
-  <tr>
-    <th class="child">child {rev}:</th>
-    <td class="child"><a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>
-  </td>
-  </tr>'
-filelogchild = '
-  <tr>
-    <th>child {rev}:</th>
-    <td><a href="{url|urlescape}file/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{node|short}</a></td>
-  </tr>'
-
-indexentry = '
-  <tr>
-    <td><a href="{url|urlescape}{sessionvars%urlparameter}">{name|escape}</a></td>
-    <td>{description}</td>
-    <td>{contact|obfuscate}</td>
-    <td class="age">{lastchange|rfc822date}</td>
-    <td class="indexlinks">{archives%indexarchiveentry}</td>
-  </tr>\n'
-indexarchiveentry = '<a href="{url|urlescape}archive/{node|short}{extension|urlescape}">&nbsp;&darr;{type|escape}</a>'
 index = ../paper/index.tmpl
-archiveentry = '
-  <li>
-    <a href="{url|urlescape}archive/{symrev}{extension|urlescape}{ifeq(path,'/','',path|urlescape)}">{type|escape}</a>
-  </li>'
 notfound = ../paper/notfound.tmpl
 error = ../paper/error.tmpl
-urlparameter = '{separator}{name}={value|urlescape}'
-hiddenformentry = '<input type="hidden" name="{name}" value="{value|escape}" />'
-breadcrumb = '&gt; <a href="{url|urlescape}">{name|escape}</a> '
-
-searchhint = 'Find changesets by keywords (author, files, the commit message), revision
-  number or hash, or <a href="{url|urlescape}help/revsets">revset expression</a>.'
