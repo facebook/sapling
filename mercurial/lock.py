@@ -100,6 +100,19 @@ class lock(object):
                     raise error.LockUnavailable(why.errno, why.strerror,
                                                 why.filename, self.desc)
 
+    def _readlock(self):
+        """read lock and return its value
+
+        Returns None if no lock exists, pid for old-style locks, and host:pid
+        for new-style locks.
+        """
+        try:
+            return self.vfs.readlock(self.f)
+        except (OSError, IOError) as why:
+            if why.errno == errno.ENOENT:
+                return None
+            raise
+
     def testlock(self):
         """return id of locker if lock is valid, else None.
 
@@ -111,12 +124,9 @@ class lock(object):
         The lock file is only deleted when None is returned.
 
         """
-        try:
-            locker = self.vfs.readlock(self.f)
-        except (OSError, IOError) as why:
-            if why.errno == errno.ENOENT:
-                return None
-            raise
+        locker = self._readlock()
+        if locker is None:
+            return None
         try:
             host, pid = locker.split(":", 1)
         except ValueError:
