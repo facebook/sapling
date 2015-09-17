@@ -8063,7 +8063,7 @@ msgid "show topological heads only"
 msgstr "afișează doar capetele topologice"
 
 msgid "show active branchheads only (DEPRECATED)"
-msgstr "afișează doar capetele de ramură active [ÎNVECHIT]"
+msgstr "afișează doar capetele de ramură active (ÎNVECHIT)"
 
 msgid "show normal and closed branch heads"
 msgstr "afișează capetele de ramură normale și închise"
