@@ -335,26 +335,27 @@ def _runcatch(req):
         compare = myver.split('+')[0]
         ct = tuplever(compare)
         worst = None, ct, ''
-        for name, mod in extensions.extensions():
-            testedwith = getattr(mod, 'testedwith', '')
-            report = getattr(mod, 'buglink', _('the extension author.'))
-            if not testedwith.strip():
-                # We found an untested extension. It's likely the culprit.
-                worst = name, 'unknown', report
-                break
+        if True:
+            for name, mod in extensions.extensions():
+                testedwith = getattr(mod, 'testedwith', '')
+                report = getattr(mod, 'buglink', _('the extension author.'))
+                if not testedwith.strip():
+                    # We found an untested extension. It's likely the culprit.
+                    worst = name, 'unknown', report
+                    break
 
-            # Never blame on extensions bundled with Mercurial.
-            if testedwith == 'internal':
-                continue
+                # Never blame on extensions bundled with Mercurial.
+                if testedwith == 'internal':
+                    continue
 
-            tested = [tuplever(t) for t in testedwith.split()]
-            if ct in tested:
-                continue
+                tested = [tuplever(t) for t in testedwith.split()]
+                if ct in tested:
+                    continue
 
-            lower = [t for t in tested if t < ct]
-            nearest = max(lower or tested)
-            if worst[0] is None or nearest < worst[1]:
-                worst = name, nearest, report
+                lower = [t for t in tested if t < ct]
+                nearest = max(lower or tested)
+                if worst[0] is None or nearest < worst[1]:
+                    worst = name, nearest, report
         if worst[0] is not None:
             name, testedwith, report = worst
             if not isinstance(testedwith, str):
