@@ -96,11 +96,10 @@ def deprecated(pe):
     >>> for e in deprecated(pe): print e
     msgstr inconsistently translated (DEPRECATED)
     """
-    global deprecatedpe
-    if not '(DEPRECATED)' in pe.msgstr:
-        if not (deprecatedpe and deprecatedpe.msgstr
-                and deprecatedpe.msgstr in pe.msgstr):
-            yield "msgstr inconsistently translated (DEPRECATED)"
+    if not ('(DEPRECATED)' in pe.msgstr or
+            (deprecatedpe and deprecatedpe.msgstr and
+             deprecatedpe.msgstr in pe.msgstr)):
+        yield "msgstr inconsistently translated (DEPRECATED)"
 
 ####################
 
