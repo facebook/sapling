@@ -21,6 +21,7 @@ This extension changes defaults to be more user friendly.
 from mercurial import util, cmdutil, commands, hg, scmutil
 from mercurial import bookmarks
 from mercurial.extensions import wrapcommand, _order
+import mercurial.extensions
 from mercurial.i18n import _
 from hgext import rebase
 import errno, os, stat, subprocess
@@ -64,8 +65,10 @@ def tweakorder():
     As of this writing, the extensions that we should load before are
     remotenames and directaccess (NB: directaccess messes with order as well).
     """
-    _order.remove('tweakdefaults')
-    _order.insert(0, 'tweakdefaults')
+    order = mercurial.extensions._order
+    order.remove('tweakdefaults')
+    order.insert(0, 'tweakdefaults')
+    mercurial.extensions._order = order
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
