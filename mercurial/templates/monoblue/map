@@ -247,6 +247,7 @@ shortlogentry = '
 filelogentry = '
   <tr class="parity{parity}">
     <td class="nowrap age">{date|rfc822date}</td>
+    <td>{author|person}</td>
     <td>
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">
         {desc|strip|firstline|escape|nonempty}
