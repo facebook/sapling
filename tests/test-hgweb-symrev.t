@@ -801,9 +801,13 @@ Set up the repo
           <li><a href="/comparison/xyzzy/foo?style=monoblue">comparison</a></li>
           <li><a href="/rss-log/tip/foo">rss</a></li>
   <a href="/rev/a7c1559b7bba?style=monoblue">
-  <a href="/file/a7c1559b7bba/foo?style=monoblue">file</a>&nbsp;|&nbsp;<a href="/diff/a7c1559b7bba/foo?style=monoblue">diff</a>&nbsp;|&nbsp;<a href="/annotate/a7c1559b7bba/foo?style=monoblue">annotate</a>
+  <a href="/file/a7c1559b7bba/foo?style=monoblue">file</a> |
+  <a href="/diff/a7c1559b7bba/foo?style=monoblue">diff</a> |
+  <a href="/annotate/a7c1559b7bba/foo?style=monoblue">annotate</a>
   <a href="/rev/43c799df6e75?style=monoblue">
-  <a href="/file/43c799df6e75/foo?style=monoblue">file</a>&nbsp;|&nbsp;<a href="/diff/43c799df6e75/foo?style=monoblue">diff</a>&nbsp;|&nbsp;<a href="/annotate/43c799df6e75/foo?style=monoblue">annotate</a>
+  <a href="/file/43c799df6e75/foo?style=monoblue">file</a> |
+  <a href="/diff/43c799df6e75/foo?style=monoblue">diff</a> |
+  <a href="/annotate/43c799df6e75/foo?style=monoblue">annotate</a>
       <a href="/log/43c799df6e75/foo?style=monoblue">(0)</a><a href="/log/tip/foo?style=monoblue">tip</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'annotate/xyzzy/foo?style=monoblue' | egrep $REVLINKS
