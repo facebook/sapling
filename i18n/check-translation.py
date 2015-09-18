@@ -85,9 +85,16 @@ def deprecated(pe):
     >>> deprecatedsetup([ped])
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED)',
+    ...     msgstr= 'something (DEPRECATED)')
+    >>> match(deprecated, pe)
+    True
+    >>> for e in deprecated(pe): print e
+    >>> pe = polib.POEntry(
+    ...     msgid = 'Something (DEPRECATED)',
     ...     msgstr= 'something (DETACERPED)')
     >>> match(deprecated, pe)
     True
+    >>> for e in deprecated(pe): print e
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED)',
     ...     msgstr= 'something')
