@@ -208,7 +208,6 @@ Crazy filenames
   subdir1/subf1:str1sub
 
 Test tweaked branch command
-
   $ hg branch
   default
   $ hg branch foo
@@ -220,3 +219,27 @@ Test tweaked branch command
   (branches are permanent and global, did you want a bookmark?)
   $ hg branch -C
   reset working directory to branch default
+
+Test that status is default relative
+  $ mkdir foo
+  $ cd foo
+  $ hg status
+  A ../-v
+  A ../f1
+  A ../file with space
+  A ../subdir1/subf1
+  $ hg status --root-relative
+  A dir1/-v
+  A dir1/f1
+  A dir1/file with space
+  A dir1/subdir1/subf1
+  $ hg status .
+  $ hg status ../subdir1
+  A ../subdir1/subf1
+
+Don't break automation
+  $ HGPLAIN=1 hg status
+  A dir1/-v
+  A dir1/f1
+  A dir1/file with space
+  A dir1/subdir1/subf1

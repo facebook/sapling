@@ -55,6 +55,11 @@ def extsetup(ui):
     options = entry[1]
     options.append(('', 'new', None, _('allow branch creation')))
 
+    entry = wrapcommand(commands.table, 'status', statuscmd)
+    options = entry[1]
+    options.append(
+        ('', 'root-relative', None, _('show status relative to root')))
+
 def tweakorder():
     """
     Tweakdefaults generally should load first; other extensions may modify
@@ -230,6 +235,18 @@ def branchcmd(orig, ui, repo, label=None, **opts):
     raise util.Abort(
             _('do not use branches; use bookmarks instead'),
             hint=_('use --new if you are certain you want a branch'))
+
+def statuscmd(orig, ui, repo, *pats, **opts):
+    """
+    Make status relative by default for interactive usage
+    """
+    if opts.get('root_relative'):
+        del opts['root_relative']
+    elif os.environ.get('HGPLAIN'): # don't break automation
+        pass
+    elif not pats:
+        pats = ['re:']
+    return orig(ui, repo, *pats, **opts)
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):
