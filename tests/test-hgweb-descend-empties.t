@@ -156,7 +156,8 @@ manifest with descending (coal)
   <head>
   <link rel="icon" href="/static/hgicon.png" type="image/png" />
   <meta name="robots" content="index, nofollow" />
-  <link rel="stylesheet" href="/static/style-coal.css" type="text/css" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <link rel="stylesheet" href="/static/style-extra-coal.css" type="text/css" />
   <script type="text/javascript" src="/static/mercurial.js"></script>
   
   <title>test: c9f45f7a1659 /</title>
