@@ -21,7 +21,6 @@ from .node import (
 )
 from . import (
     copies,
-    error as errormod,
     filemerge,
     obsolete,
     subrepo,
@@ -985,42 +984,10 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             pas = [repo[ancestor]]
 
         if node is None:
-            # Here is where we should consider bookmarks, divergent bookmarks,
-            # foreground changesets (successors), and tip of current branch;
-            # but currently we are only checking the branch tips.
-            try:
-                node = repo.branchtip(wc.branch())
-            except errormod.RepoLookupError:
-                if wc.branch() == 'default': # no default branch!
-                    node = repo.lookup('tip') # update to tip
-                else:
-                    raise util.Abort(_("branch %s not found") % wc.branch())
-
-            if p1.obsolete() and not p1.children():
-                # allow updating to successors
-                successors = obsolete.successorssets(repo, p1.node())
-
-                # behavior of certain cases is as follows,
-                #
-                # divergent changesets: update to highest rev, similar to what
-                #     is currently done when there are more than one head
-                #     (i.e. 'tip')
-                #
-                # replaced changesets: same as divergent except we know there
-                # is no conflict
-                #
-                # pruned changeset: no update is done; though, we could
-                #     consider updating to the first non-obsolete parent,
-                #     similar to what is current done for 'hg prune'
-
-                if successors:
-                    # flatten the list here handles both divergent (len > 1)
-                    # and the usual case (len = 1)
-                    successors = [n for sub in successors for n in sub]
-
-                    # get the max revision for the given successors set,
-                    # i.e. the 'tip' of a set
-                    node = repo.revs('max(%ln)', successors).first()
+            nodes = list(repo.set('_updatedefaultdest()'))
+            if nodes:
+                node = nodes[0].node()
+                if p1.obsolete() and not p1.children():
                     pas = [p1]
 
         overwrite = force and not branchmerge
