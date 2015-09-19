@@ -125,19 +125,73 @@ def resolvedots(url):
     Fix references that include .. entries.
     Scans a URL for .. type entries and resolves them but will not allow any
     number of ..s to take us out of domain so http://.. will raise an exception.
+    
+    Tests, (Don't know how to construct a round trip for this so doctest):
+    >>> # Relative URL within servers svn area
+    >>> resolvedots(
+    ...    "http://some.svn.server/svn/some_repo/../other_repo")
+    'http://some.svn.server/svn/other_repo'
+    >>> # Complex One
+    >>> resolvedots(
+    ...    "http://some.svn.server/svn/repo/../other/repo/../../other_repo")
+    'http://some.svn.server/svn/other_repo'
+    >>> # Another Complex One
+    >>> resolvedots(
+    ...    "http://some.svn.server/svn/repo/dir/subdir/../../../other_repo/dir")
+    'http://some.svn.server/svn/other_repo/dir'
+    >>> # Last Complex One - SVN Allows this & seen it used even if it is BAD!
+    >>> resolvedots(
+    ...    "http://svn.server/svn/my_repo/dir/subdir/../../other_dir")
+    'http://svn.server/svn/my_repo/other_dir'
+    >>> # Outside the SVN Area might be OK
+    >>> resolvedots(
+    ...    "http://svn.server/svn/some_repo/../../other_svn_repo")
+    'http://svn.server/other_svn_repo'
+    >>> # Complex One
+    >>> resolvedots(
+    ...    "http://some.svn.server/svn/repo/../other/repo/../../other_repo")
+    'http://some.svn.server/svn/other_repo'
+    >>> # On another server is not a relative URL should give an exception
+    >>> resolvedots(
+    ...    "http://some.svn.server/svn/some_repo/../../../other_server")
+    Traceback (most recent call last):
+        ...
+    RelativeSourceError: Relative URL cannot be to another server
     """
     orig = url.split('/')
     fixed = []
     for item in orig:
         if item != '..':
             fixed.append(item)
-        elif len(fixed) > 2:  # Don't allow things to go out of domain
+        elif len(fixed) > 3:  # Don't allow things to go out of domain
             fixed.pop()
         else:
-            raise RelativeSourceError()
+            raise RelativeSourceError(
+                'Relative URL cannot be to another server')
     return '/'.join(fixed)
 
+
+
 def resolvesource(ui, svnroot, source):
+    """ Resolve the source as either matching the scheme re or by resolving
+    relative URLs which start with ^ and my include relative .. references.
+    
+    >>> root = 'http://some.svn.server/svn/some_repo'
+    >>> resolvesource(None, root, 'http://other.svn.server')
+    'http://other.svn.server'
+    >>> resolvesource(None, root, 'ssh://other.svn.server')
+    'ssh://other.svn.server'
+    >>> resolvesource(None, root, '^/other_repo')
+    'http://some.svn.server/svn/some_repo/other_repo'
+    >>> resolvesource(None, root, '^/sub_repo')
+    'http://some.svn.server/svn/some_repo/sub_repo'
+    >>> resolvesource(None, root, '^/../other_repo')
+    'http://some.svn.server/svn/other_repo'
+    >>> resolvesource(None, root, '^/../../../server/other_repo')
+    Traceback (most recent call last):
+        ...
+    RelativeSourceError: Relative URL cannot be to another server
+    """
     if re_scheme.search(source):
         return source
     if source.startswith('^/'):
@@ -457,3 +511,7 @@ class svnsubrepo(subrepo.svnsubrepo):
         if self._state[1] == 'HEAD':
             return 'HEAD'
         return super(svnsubrepo, self).basestate()
+    
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
