@@ -205,6 +205,9 @@ class hgweb(object):
         r.baseui.setconfig('ui', 'report_untrusted', 'off', 'hgweb')
         r.ui.setconfig('ui', 'nontty', 'true', 'hgweb')
         r.baseui.setconfig('ui', 'nontty', 'true', 'hgweb')
+        # resolve file patterns relative to repo root
+        r.ui.setconfig('ui', 'forcecwd', r.root, 'hgweb')
+        r.baseui.setconfig('ui', 'forcecwd', r.root, 'hgweb')
         # displaying bundling progress bar while serving feel wrong and may
         # break some wsgi implementation.
         r.ui.setconfig('progress', 'disable', 'true', 'hgweb')

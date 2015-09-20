@@ -2050,6 +2050,35 @@ Static files
   	top: -1px;
   }
 
+Stop and restart the server at the directory different from the repository
+root. Even in such case, file patterns should be resolved relative to the
+repository root. (issue4568)
+
+  $ killdaemons.py
+  $ hg serve --config server.preferuncompressed=True -n test \
+  > -p $HGPORT -d --pid-file=`pwd`/hg.pid -E `pwd`/errors.log \
+  > --cwd .. -R `pwd`
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ get-with-headers.py 127.0.0.1:$HGPORT 'log?rev=adds("foo")&style=raw'
+  200 Script output follows
+  
+  
+  # HG changesets search
+  # Node ID cad8025a2e87f88c06259790adfa15acb4080123
+  # Query "adds("foo")"
+  # Mode revset expression search
+  
+  changeset:   2ef0ac749a14e4f57a5a822464a0902c6f7f448f
+  revision:    0
+  user:        test
+  date:        Thu, 01 Jan 1970 00:00:00 +0000
+  summary:     base
+  tag:         1.0
+  bookmark:    anotherthing
+  
+  
+
 Stop and restart with HGENCODING=cp932 and preferuncompressed
 
   $ killdaemons.py
