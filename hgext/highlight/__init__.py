@@ -33,10 +33,6 @@ def checkfctx(fctx, expr):
     ctx = fctx.changectx()
     tree = fileset.parse(expr)
     mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
-    repo = ctx.repo()
-    # To allow matching file names in the fileset in hgweb directory mode.
-    # See issue4568.
-    object.__setattr__(repo, 'getcwd', lambda: repo.root)
     return fctx.path() in fileset.getset(mctx, tree)
 
 def filerevision_highlight(orig, web, req, tmpl, fctx):
