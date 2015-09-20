@@ -464,12 +464,16 @@ Excludes:
         cmdutil.displaygraph(ui, revdag, displayer, showparents,
                      graphmod.asciiedges, None, None)
 
-        with open(repo.join('completionhints'), 'w+') as f:
-            for rev in revdag:
-                commit_hash = rev[2].node()
-                # Skip fakectxt nodes
-                if commit_hash != '...':
-                    f.write(short(commit_hash) + '\n');
+        try:
+            with open(repo.join('completionhints'), 'w+') as f:
+                for rev in revdag:
+                    commit_hash = rev[2].node()
+                    # Skip fakectxt nodes
+                    if commit_hash != '...':
+                        f.write(short(commit_hash) + '\n');
+        except IOError:
+            # No write access. No big deal.
+            pass
     finally:
         enabled = False
 
