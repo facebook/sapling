@@ -220,6 +220,12 @@ class dirstate(object):
         return os.getcwd()
 
     def getcwd(self):
+        '''Return the path from which a canonical path is calculated.
+
+        This path should be used to resolve file patterns or to convert
+        canonical paths back to file paths for display. It shouldn't be
+        used to get real file paths. Use vfs functions instead.
+        '''
         cwd = self._cwd
         if cwd == self._root:
             return ''
