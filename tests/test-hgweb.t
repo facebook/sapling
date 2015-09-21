@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 5401
+  content-length: 6242
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; }
@@ -374,9 +374,9 @@ static file
   a.list:hover { text-decoration:underline; color:#880000; }
   table { padding:8px 4px; }
   th { padding:2px 5px; font-size:12px; text-align:left; }
-  tr.light:hover, .parity0:hover { background-color:#edece6; }
-  tr.dark, .parity1 { background-color:#f6f6f0; }
-  tr.dark:hover, .parity1:hover { background-color:#edece6; }
+  tr.light:hover, .parity0:hover, pre.sourcelines.stripes > :nth-child(4n+1):hover { background-color:#edece6; }
+  tr.dark, .parity1, pre.sourcelines.stripes > :nth-child(4n+3) { background-color:#f6f6f0; }
+  tr.dark:hover, .parity1:hover, pre.sourcelines.stripes > :nth-child(4n+3):hover { background-color:#edece6; }
   td { padding:2px 5px; font-size:12px; vertical-align:top; }
   td.closed { background-color: #99f; }
   td.link { padding:2px 5px; font-family:sans-serif; font-size:10px; }
@@ -432,6 +432,37 @@ static file
   span.difflineplus { color:#008800; }
   span.difflineminus { color:#cc0000; }
   span.difflineat { color:#990099; }
+  div.diffblocks { counter-reset: lineno; }
+  div.diffblock { counter-increment: lineno; }
+  pre.sourcelines { position: relative; counter-reset: lineno; }
+  pre.sourcelines > span {
+  	display: inline-block;
+  	box-sizing: border-box;
+  	width: 100%;
+  	padding: 0 0 0 5em;
+  	counter-increment: lineno;
+  }
+  pre.sourcelines > span:before {
+  	-moz-user-select: -moz-none;
+  	-khtml-user-select: none;
+  	-webkit-user-select: none;
+  	-ms-user-select: none;
+  	user-select: none;
+  	display: inline-block;
+  	margin-left: -5em;
+  	width: 4em;
+  	color: #999;
+  	text-align: right;
+  	content: counters(lineno,".");
+  	float: left;
+  }
+  pre.sourcelines > a {
+  	display: inline-block;
+  	position: absolute;
+  	left: 0px;
+  	width: 4em;
+  	height: 1em;
+  }
   
   /* Graph */
   div#wrapper {

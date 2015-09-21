@@ -93,9 +93,7 @@ filediff = filediff.tmpl
 filecomparison = filecomparison.tmpl
 filelog = filelog.tmpl
 fileline = '
-  <div style="font-family:monospace" class="parity{parity}">
-    <pre><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</pre>
-  </div>'
+  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 annotateline = '
   <tr style="font-family:monospace" class="parity{parity}">
     <td class="linenr" style="text-align: right;">
@@ -105,10 +103,14 @@ annotateline = '
     <td><pre><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a></pre></td>
     <td><pre>{line|escape}</pre></td>
   </tr>'
-difflineplus = '<span class="difflineplus"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
-difflineminus = '<span class="difflineminus"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
-difflineat = '<span class="difflineat"><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}</span>'
-diffline = '<a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a> {line|escape}'
+difflineplus = '
+  <span id="{lineid}" class="difflineplus">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+difflineminus = '
+  <span id="{lineid}" class="difflineminus">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+difflineat = '
+  <span id="{lineid}" class="difflineat">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
+diffline = '
+  <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 
 comparisonblock ='
   <tbody class="block">
@@ -223,7 +225,7 @@ branchentry = '
       <a href="{url|urlescape}file/{node|short}{sessionvars%urlparameter}">files</a>
     </td>
   </tr>'
-diffblock = '<pre>{lines}</pre>'
+diffblock = '<div class="diffblock"><pre class="sourcelines">{lines}</pre></div>'
 filediffparent = '
   <tr>
     <td>parent {rev}</td>
