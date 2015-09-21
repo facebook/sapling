@@ -1387,10 +1387,14 @@ def maxrev(repo, subset, x):
     Changeset with highest revision number in set.
     """
     os = getset(repo, fullreposet(repo), x)
-    if os:
+    try:
         m = os.max()
         if m in subset:
             return baseset([m])
+    except ValueError:
+        # os.max() throws a ValueError when the collection is empty.
+        # Same as python's max().
+        pass
     return baseset()
 
 def merge(repo, subset, x):
@@ -1426,10 +1430,14 @@ def minrev(repo, subset, x):
     Changeset with lowest revision number in set.
     """
     os = getset(repo, fullreposet(repo), x)
-    if os:
+    try:
         m = os.min()
         if m in subset:
             return baseset([m])
+    except ValueError:
+        # os.min() throws a ValueError when the collection is empty.
+        # Same as python's min().
+        pass
     return baseset()
 
 def modifies(repo, subset, x):
