@@ -1513,9 +1513,9 @@ User interface controls.
     Name of style to use for command output.
 
 ``supportcontact``
-    Location pointed at in Mercurial traceback for reporting crash. Use this if
-    you are a large organisation with it's own Mercurial deployement process and
-    crash reports should be addressed to your internal support.
+    A URL where users should report a Mercurial traceback. Use this if you are a
+    large organisation with its own Mercurial deployment process and crash
+    reports should be addressed to your internal support.
 
 ``timeout``
     The timeout used when a lock is held (in seconds), a negative value
