@@ -22,7 +22,7 @@ repositories. The three namespaces are:
 
   * hoistedbookmarks: a "short name" interface for hoisting a single peer's
     remote bookmarks into the top-level namespace, allowing workflows to stay
-    the same when refering to bookmarks on the chosen peer (defualt: 'default')
+    the same when referring to bookmarks on the chosen peer (default: 'default')
 
 For example, when you pull from a repository listed in .hg/hgrc's ``[paths]``
 section, you get output similar to the following::
@@ -104,7 +104,7 @@ behavior is clear with the following example::
   (use 'hg push -B feature' to create a new remote bookmark)
 
 This behavior change is intended to prevent accidentally pushing an unnamed
-('anonymous') head to a remote repository. To enforece this style of workflow,
+('anonymous') head to a remote repository. To enforce this style of workflow,
 read about the ``forceto`` configuration option below.
 
 -------------------
@@ -112,9 +112,9 @@ Cloning and Pulling
 -------------------
 
 As mentioned above under the ``Behavior Changes`` section, pulls by default
-will not sync bookmarks between the two repositories. This is also the case
-with cloning. In effect, bookmarks in the ``remotenames`` world are no longer
-a shared namespace among peers; rather, they are distinct namespaces that
+will not sync normal bookmarks between the two repositories. This is also the
+case with cloning. In effect, bookmarks in the ``remotenames`` world are no
+longer a shared namespace among peers; rather, they are distinct namespaces that
 need to be manually and explicitly synchronized among peers during pull
 operations. During push operations, the manual synchronization can be achieved
 with the ``--to`` option described in the previous section.
@@ -133,6 +133,7 @@ When pushing changes to another repository, ``remotenames`` introduces a new
 flag, ``--to`` (``-t``) which drastically changes the behavior of ``push``
 to be more friendly in a ``remotenames`` world. The ``--to`` flag requires
 the name of the remote bookmark to push (without any ``remote/`` prefix).
+For more on ``hg push`` behaviour, see the Tracking section.
 When ``--to`` is specified, the default push rev (``-r``) will be ``.``.
 Another rev may be specified, but only one rev may be specified or the push
 will abort. The specified rev, and it's ancestors, will be pushed to the
@@ -152,7 +153,7 @@ will abort if any of the following flags are specified:
  * ``--branch`` / ``-b``
  * ``--delete`` / ``-d``
 
-There is a new config option to enforece using ``--to`` if that is apropriate
+There is a new config option to enforce using ``--to`` if that is appropriate
 in your chosen workflow. To enable it, set the option ``forceto``::
 
   [remotenames]
@@ -295,6 +296,8 @@ Tracking sets up several default behaviors:
   in the Introduction above, for example, the ``feature`` bookmark is 2 behind
   and 2 ahead of the @ bookmark. Distance is covered in more detail in the
   next section.
+
+To see a listing of what a bookmark is tracking, use ``hg bookmarks -v``.
 
 --------
 Distance
