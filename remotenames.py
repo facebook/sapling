@@ -548,7 +548,41 @@ def _pushrevs(repo, ui, rev):
 def expullcmd(orig, ui, repo, source="default", **opts):
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
     source = revrenames.get(source, source)
-    return orig(ui, repo, source, **opts)
+
+    if not opts.get('rebase'):
+        orig(ui, repo, source, **opts)
+        return
+
+    active = bmactive(repo)
+    trackinginfo = _readtracking(repo)
+    activeistracking = active and trackinginfo.get(active, None)
+
+    try:
+        rebasemodule = extensions.find('rebase')
+    except KeyError:
+        rebasemodule = None
+
+    if _tracking(ui) and activeistracking and rebasemodule:
+        if opts.get('update'):
+            del opts['update']
+            ui.warn('--update and --rebase are not compatible, ignoring '
+                        'the update flag\n')
+
+        # Let `pull` do its thing without `rebase.py->pullrebase()`
+        del opts['rebase']
+
+        revsprepull = len(repo)
+        orig(ui, repo, source, **opts)
+        revspostpull = len(repo)
+
+        #Only rebase if we have something to rebase
+        if revsprepull < revspostpull:
+            rebase = rebasemodule.rebase
+            # Rebase with a destination but without any arguments has our
+            # desired behaviour
+            rebase(ui, repo, dest=trackinginfo[active])
+    else:
+        orig(ui, repo, source, **opts)
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method

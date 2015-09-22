@@ -215,7 +215,7 @@ Finally, there is an ``alias.default`` setting:
 
   [remotenames]
   alias.default = True
-  
+
 Setting this will drop the remotebranch name ``smf/default`` into just ``smf``.
 It is another way to reduce the nubmer of times that ``default`` shows up in
 the UI.
@@ -286,6 +286,9 @@ Tracking sets up several default behaviors:
   Note that in this usage, the tracked name does not have to be a remote
   bookmark: bookmarks can track other local bookmarks, and rebase will use
   that as a default rebase destination.
+
+* When pulling with the ``--rebase`` flag from an active bookmark that's
+  tracking a remote bookmark, local changes are rebased on that remote bookmark.
 
 * Finally, tracking allows a distance calculation, so you know how far ahead
   and behind a given bookmark is from the name it is tracking. In the diagram

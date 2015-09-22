@@ -60,9 +60,9 @@ Pull remote changes and rebase local changes with tracked bookmark onto them
   $ printdag
   @  localcommit | bmtrackingremote |
   |
-  o  untrackedremotecommit |  |
-  |
-  | o  trackedremotecommit |  | default/bookmarkonremote
+  | o  untrackedremotecommit |  |
+  | |
+  o |  trackedremotecommit |  | default/bookmarkonremote
   |/
   o  root |  |
   
