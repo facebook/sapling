@@ -1,0 +1,5 @@
+# This config file points Mercurial at the system-wide certificate
+# store from the ca-certificates package.
+
+[web]
+cacerts = /etc/ssl/certs/ca-certificates.crt
