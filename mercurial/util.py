@@ -730,7 +730,7 @@ def _sethgexecutable(path):
     global _hgexecutable
     _hgexecutable = path
 
-def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
+def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
 
@@ -739,6 +739,8 @@ def system(cmd, environ={}, cwd=None, onerr=None, errprefix=None, out=None):
 
     if out is specified, it is assumed to be a file-like object that has a
     write() method. stdout and stderr will be redirected to out.'''
+    if environ is None:
+        environ = {}
     try:
         sys.stdout.flush()
     except Exception:
@@ -1414,7 +1416,7 @@ def strdate(string, format, defaults=[]):
         unixtime = localunixtime + offset
     return unixtime, offset
 
-def parsedate(date, formats=None, bias={}):
+def parsedate(date, formats=None, bias=None):
     """parse a localized date/time and return a (unixtime, offset) tuple.
 
     The date may be a "unixtime offset" string or in one of the specified
@@ -1434,6 +1436,8 @@ def parsedate(date, formats=None, bias={}):
     >>> tz == strtz
     True
     """
+    if bias is None:
+        bias = {}
     if not date:
         return 0, 0
     if isinstance(date, tuple) and len(date) == 2:
