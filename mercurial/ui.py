@@ -834,7 +834,9 @@ class ui(object):
         if self.debugflag:
             opts['label'] = opts.get('label', '') + ' ui.debug'
             self.write(*msg, **opts)
-    def edit(self, text, user, extra={}, editform=None):
+    def edit(self, text, user, extra=None, editform=None):
+        if extra is None:
+            extra = {}
         (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
                                       text=True)
         try:
@@ -866,7 +868,7 @@ class ui(object):
 
         return t
 
-    def system(self, cmd, environ={}, cwd=None, onerr=None, errprefix=None):
+    def system(self, cmd, environ=None, cwd=None, onerr=None, errprefix=None):
         '''execute shell command with appropriate output stream. command
         output will be redirected if fout is not stdout.
         '''
