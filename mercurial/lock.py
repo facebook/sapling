@@ -38,16 +38,20 @@ class lock(object):
 
     _host = None
 
-    def __init__(self, vfs, file, timeout=-1, releasefn=None, desc=None):
+    def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
+                 desc=None):
         self.vfs = vfs
         self.f = file
         self.held = 0
         self.timeout = timeout
         self.releasefn = releasefn
+        self.acquirefn = acquirefn
         self.desc = desc
         self.postrelease  = []
         self.pid = os.getpid()
         self.delay = self.lock()
+        if self.acquirefn:
+            self.acquirefn()
 
     def __del__(self):
         if self.held:

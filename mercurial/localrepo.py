@@ -1210,7 +1210,8 @@ class localrepository(object):
 
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
         try:
-            l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn, desc=desc)
+            l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn,
+                             acquirefn=acquirefn, desc=desc)
         except error.LockHeld as inst:
             if not wait:
                 raise
@@ -1219,10 +1220,9 @@ class localrepository(object):
             # default to 600 seconds timeout
             l = lockmod.lock(vfs, lockname,
                              int(self.ui.config("ui", "timeout", "600")),
-                             releasefn=releasefn, desc=desc)
+                             releasefn=releasefn, acquirefn=acquirefn,
+                             desc=desc)
             self.ui.warn(_("got lock after %s seconds\n") % l.delay)
-        if acquirefn:
-            acquirefn()
         return l
 
     def _afterlock(self, callback):
