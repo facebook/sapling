@@ -27,4 +27,6 @@ override_dh_install:
 		-name '*.so' ! -type d -delete , \
 		-type d -empty -delete
 	cp contrib/hg-ssh $(CURDIR)/debian/mercurial-common/usr/bin
+	mkdir -p $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
+	cp contrib/debian/*.rc $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
 	rm $(CURDIR)/debian/mercurial-common/usr/bin/hg
