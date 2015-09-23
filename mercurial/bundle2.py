@@ -530,14 +530,8 @@ class bundle20(object):
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
-
-        outdebug(self.ui, 'start of parts')
-        for part in self._parts:
-            outdebug(self.ui, 'bundle part: "%s"' % part.type)
-            for chunk in part.getchunks(ui=self.ui):
-                yield chunk
-        outdebug(self.ui, 'end of bundle')
-        yield _pack(_fpartheadersize, 0)
+        for chunk in self._getcorechunk():
+            yield chunk
 
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
@@ -549,6 +543,19 @@ class bundle20(object):
                 par = '%s=%s' % (par, value)
             blocks.append(par)
         return ' '.join(blocks)
+
+    def _getcorechunk(self):
+        """yield chunk for the core part of the bundle
+
+        (all but headers and parameters)"""
+        outdebug(self.ui, 'start of parts')
+        for part in self._parts:
+            outdebug(self.ui, 'bundle part: "%s"' % part.type)
+            for chunk in part.getchunks(ui=self.ui):
+                yield chunk
+        outdebug(self.ui, 'end of bundle')
+        yield _pack(_fpartheadersize, 0)
+
 
     def salvageoutput(self):
         """return a list with a copy of all output parts in the bundle
