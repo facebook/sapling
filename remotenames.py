@@ -254,7 +254,7 @@ def reposetup(ui, repo):
                     repo._remotenames.node2hoists(hoist).get(node, []))
             repo.names.addnamespace(hoistednamens)
 
-    if ui.configbool('remotenames', 'branches', True):
+    if _branchesenabled(ui):
         remotebranchns = ns(
             'remotebranches',
             templatename='remotebranches',
@@ -271,6 +271,8 @@ def _tracking(ui):
     # omg default true
     return ui.configbool('remotenames', 'tracking', True)
 
+def _branchesenabled(ui):
+    return ui.configbool('remotenames', 'branches', True)
 
 def exrebasecmd(orig, ui, repo, **opts):
     dest = opts['dest']
@@ -1068,11 +1070,14 @@ def loadremotenames(repo):
         except error.RepoLookupError:
             continue
 
-        # only mark as remote if the head changeset isn't marked closed
-        if not ctx.extra().get('close'):
-            nodes = rn[nametype].get(name, [])
-            nodes.append(ctx.node())
-            rn[nametype][name] = nodes
+        # Skip closed branches
+        if (nametype == 'branches' and _branchesenabled(repo.ui) and
+                ctx.closesbranch()):
+            continue
+
+        nodes = rn[nametype].get(name, [])
+        nodes.append(ctx.node())
+        rn[nametype][name] = nodes
 
 def transition(repo, ui):
     """
