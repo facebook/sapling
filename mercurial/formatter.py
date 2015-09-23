@@ -48,11 +48,15 @@ class baseformatter(object):
         self._item.update(data)
     def write(self, fields, deftext, *fielddata, **opts):
         '''do default text output while assigning data to item'''
-        for k, v in zip(fields.split(), fielddata):
+        fieldkeys = fields.split()
+        assert len(fieldkeys) == len(fielddata)
+        for k, v in zip(fieldkeys, fielddata):
             self._item[k] = v
     def condwrite(self, cond, fields, deftext, *fielddata, **opts):
         '''do conditional write (primarily for plain formatter)'''
-        for k, v in zip(fields.split(), fielddata):
+        fieldkeys = fields.split()
+        assert len(fieldkeys) == len(fielddata)
+        for k, v in zip(fieldkeys, fielddata):
             self._item[k] = v
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
