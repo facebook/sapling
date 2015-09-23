@@ -28,7 +28,7 @@ Clone primary repo
      summary:     file0
   
 
-Share to secondary repo  
+Share to secondary repo
   $ cd ..
   $ hg share -B primary secondary
   updating working directory
