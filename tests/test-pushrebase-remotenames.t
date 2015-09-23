@@ -7,6 +7,8 @@
   > pushrebase = $TESTDIR/../pushrebase.py
   > [remotenames]
   > allownonfastforward=True
+  > [experimental]
+  > bundle2-exp=True
   > EOF
 
 Set up server repository
@@ -77,11 +79,11 @@ Test pushing a new bookmark
   $ hg -R client push --to newbook -f
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
+  exporting bookmark newbook
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 0 changes to 1 files (+1 heads)
-  exporting bookmark newbook
   $ hg -R server book
    * master                    2:796d44dcaae0
      newbook                   3:5c3cfb78df2f

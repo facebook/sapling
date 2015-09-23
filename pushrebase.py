@@ -418,6 +418,10 @@ def bundle2rebase(op, part):
             mapping[oldnode] = newnode
             added.append(newnode)
 
+            if 'node' not in tr.hookargs:
+                tr.hookargs['node'] = hex(newnode)
+            hookargs['node'] = hex(newnode)
+
         _buildobsolete(replacements, bundle, op.repo)
     finally:
         try:
