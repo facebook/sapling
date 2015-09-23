@@ -79,7 +79,8 @@ Create an extension to test bundle2 API
   >           ('', 'pushrace', False, 'includes a check:head part with unknown nodes'),
   >           ('', 'genraise', False, 'includes a part that raise an exception during generation'),
   >           ('', 'timeout', False, 'emulate a timeout during bundle generation'),
-  >           ('r', 'rev', [], 'includes those changeset in the bundle'),],
+  >           ('r', 'rev', [], 'includes those changeset in the bundle'),
+  >           ('', 'compress', '', 'compress the stream'),],
   >          '[OUTPUTFILE]')
   > def cmdbundle2(ui, repo, path=None, **opts):
   >     """write a bundle2 container on standard output"""
@@ -90,6 +91,9 @@ Create an extension to test bundle2 API
   >             bundler.addparam(*p)
   >         except ValueError, exc:
   >             raise util.Abort('%s' % exc)
+  > 
+  >     if opts['compress']:
+  >         bundler.setcompression(opts['compress'])
   > 
   >     if opts['reply']:
   >         capsstring = 'ping-pong\nelephants=babar,celeste\ncity%3D%21=celeste%2Cville'
@@ -1044,5 +1048,176 @@ And its handling on the other size raise a clean exception
   abort: unexpected error: Someone set up us the bomb!
   [255]
 
+Test compression
+================
+
+Simple case where it just work: GZ
+----------------------------------
+
+  $ hg bundle2 --compress GZ --rev '8+7+5+4' ../rev.hg2.bz
+  $ f --hexdump ../rev.hg2.bz
+  
+  0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
+  0010: 69 6f 6e 3d 47 5a 78 9c 95 94 7d 68 95 55 1c c7 |ion=GZx...}h.U..|
+  0020: 9f 3b 31 e8 ce fa c3 65 be a0 a4 b4 52 b9 29 e7 |.;1....e....R.).|
+  0030: f5 79 ce 89 fa 63 ed 5e 77 8b 9c c3 3f 2a 1c 68 |.y...c.^w...?*.h|
+  0040: cf 79 9b dd 6a ae b0 28 74 b8 e5 96 5b bb 86 61 |.y..j..(t...[..a|
+  0050: a3 15 6e 3a 71 c8 6a e8 a5 da 95 64 28 22 ce 69 |..n:q.j....d(".i|
+  0060: cd 06 59 34 28 2b 51 2a 58 c3 17 56 2a 9a 9d 67 |..Y4(+Q*X..V*..g|
+  0070: dc c6 35 9e c4 1d f8 9e 87 f3 9c f3 3b bf 0f bf |..5.........;...|
+  0080: 97 e3 38 ce f4 42 b9 d6 af ae d2 55 af ae 7b ad |..8..B.....U..{.|
+  0090: c6 c9 8d bb 8a ec b4 07 ed 7f fd ed d3 53 be 4e |.............S.N|
+  00a0: f4 0e af 59 52 73 ea 50 d7 96 9e ba d4 9a 1f 87 |...YRs.P........|
+  00b0: 9b 9f 1d e8 7a 6a 79 e9 cb 7f cf eb fe 7e d3 82 |....zjy......~..|
+  00c0: ce 2f 36 38 21 23 cc 36 b7 b5 38 90 ab a1 21 92 |./68!#.6..8...!.|
+  00d0: 78 5a 0a 8a b1 31 0a 48 a6 29 92 4a 32 e6 1b e1 |xZ...1.H.).J2...|
+  00e0: 4a 85 b9 46 40 46 ed 61 63 b5 d6 aa 20 1e ac 5e |J..F@F.ac... ..^|
+  00f0: b0 0a ae 8a c4 03 c6 d6 f9 a3 7b eb fb 4e de 7f |..........{..N..|
+  0100: e4 97 55 5f 15 76 96 d2 5d bf 9d 3f 38 18 29 4c |..U_.v..]..?8.)L|
+  0110: 0f b7 5d 6e 9b b3 aa 7e c6 d5 15 5b f7 7c 52 f1 |..]n...~...[.|R.|
+  0120: 7c 73 18 63 98 6d 3e 23 51 5a 6a 2e 19 72 8d cb ||s.c.m>#QZj..r..|
+  0130: 09 07 14 78 82 33 e9 62 86 7d 0c 00 17 88 53 86 |...x.3.b.}....S.|
+  0140: 3d 75 0b 63 e2 16 c6 84 9d 76 8f 76 7a cb de fc |=u.c.....v.vz...|
+  0150: a8 a3 f0 46 d3 a5 f6 c7 96 b6 9f 60 3b 57 ae 28 |...F.......`;W.(|
+  0160: ce b2 8d e9 f4 3e 6f 66 53 dd e5 6b ad 67 be f9 |.....>ofS..k.g..|
+  0170: 72 ee 5f 8d 61 3c 61 b6 f9 8c d8 a5 82 63 45 3d |r._.a<a......cE=|
+  0180: a3 0c 61 90 68 24 28 87 50 b9 c2 97 c6 20 01 11 |..a.h$(.P.... ..|
+  0190: 80 84 10 98 cf e8 e4 13 96 05 51 2c 38 f3 c4 ec |..........Q,8...|
+  01a0: ea 43 e7 96 5e 6a c8 be 11 dd 32 78 a2 fa dd 8f |.C..^j....2x....|
+  01b0: b3 61 84 61 51 0c b3 cd 27 64 42 6b c2 b4 92 1e |.a.aQ...'dBk....|
+  01c0: 86 8c 12 68 24 00 10 db 7f 50 00 c6 91 e7 fa 4c |...h$....P.....L|
+  01d0: 22 22 cc bf 84 81 0a 92 c1 aa 2a c7 1b 49 e6 ee |""........*..I..|
+  01e0: 6b a9 7e e0 e9 b2 91 5e 7c 73 68 e0 fc 23 3f 34 |k.~....^|sh..#?4|
+  01f0: ed cf 0e f2 b3 d3 4c d7 ae 59 33 6f 8c 3d b8 63 |......L..Y3o.=.c|
+  0200: 21 2b e8 3d e0 6f 9d 3a b7 f9 dc 24 2a b2 3e a7 |!+.=.o.:...$*.>.|
+  0210: 58 dc 91 d8 40 e9 23 8e 88 84 ae 0f b9 00 2e b5 |X...@.#.........|
+  0220: 74 36 f3 40 53 40 34 15 c0 d7 12 8d e7 bb 65 f9 |t6.@S@4.......e.|
+  0230: c8 ef 03 0f ff f9 fe b6 8a 0d 6d fd ec 51 70 f7 |..........m..Qp.|
+  0240: a7 ad 9b 6b 9d da 74 7b 53 43 d1 43 63 fd 19 f9 |...k..t{SC.Cc...|
+  0250: ca 67 95 e5 ef c4 e6 6c 9e 44 e1 c5 ac 7a 82 6f |.g.....l.D...z.o|
+  0260: c2 e1 d2 b5 2d 81 29 f0 5d 09 6c 6f 10 ae 88 cf |....-.).].lo....|
+  0270: 25 05 d0 93 06 78 80 60 43 2d 10 1b 47 71 2b b7 |%....x.`C-..Gq+.|
+  0280: 7f bb e9 a7 e4 7d 67 7b df 9b f7 62 cf cd d8 f4 |.....}g{...b....|
+  0290: 48 bc 64 51 57 43 ff ea 8b 0b ae 74 64 53 07 86 |H.dQWC.....tdS..|
+  02a0: fa 66 3c 5e f7 e1 af a7 c2 90 ff a7 be 9e c9 29 |.f<^...........)|
+  02b0: b6 cc 41 48 18 69 94 8b 7c 04 7d 8c 98 a7 95 50 |..AH.i..|.}....P|
+  02c0: 44 d9 d0 20 c8 14 30 14 51 ad 6c 16 03 94 0f 5a |D.. ..0.Q.l....Z|
+  02d0: 46 93 7f 1c 87 8d 25 d7 9d a2 d1 92 4c f3 c2 54 |F.....%.....L..T|
+  02e0: ba f8 70 18 ca 24 0a 29 96 43 71 f2 93 95 74 18 |..p..$.).Cq...t.|
+  02f0: b5 65 c4 b8 f6 6c 5c 34 20 1e d5 0c 21 c0 b1 90 |.e...l\4 ...!...|
+  0300: 9e 12 40 b9 18 fa 5a 00 41 a2 39 d3 a9 c1 73 21 |..@...Z.A.9...s!|
+  0310: 8e 5e 3c b9 b8 f8 48 6a 76 46 a7 1a b6 dd 5b 51 |.^<...HjvF....[Q|
+  0320: 5e 19 1d 59 12 c6 32 89 02 9a c0 8f 4f b8 0a ba |^..Y..2.....O...|
+  0330: 5e ec 58 37 44 a3 2f dd 33 ed c9 d3 dd c7 22 1b |^.X7D./.3.....".|
+  0340: 2f d4 94 8e 95 3f 77 a7 ae 6e f3 32 8d bb 4a 4c |/....?w..n.2..JL|
+  0350: b8 0a 5a 43 34 3a b3 3a d6 77 ff 5c b6 fa ad f9 |..ZC4:.:.w.\....|
+  0360: db fb 6a 33 df c1 7d 99 cf ef d4 d5 6d da 77 7c |..j3..}.....m.w||
+  0370: 3b 19 fd af c5 3f f1 60 c3 17                   |;....?.`..|
+  $ hg debugbundle ../rev.hg2.bz
+  Stream params: {'Compression': 'GZ'}
+  changegroup -- '{}'
+      32af7686d403cf45b5d95f2d70cebea587ac806a
+      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
+      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
+      02de42196ebee42ef284b6780a87cdc96e8eaab6
+  $ hg unbundle ../rev.hg2.bz
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 3 files
+Simple case where it just work: BZ
+----------------------------------
+
+  $ hg bundle2 --compress BZ --rev '8+7+5+4' ../rev.hg2.bz
+  $ f --hexdump ../rev.hg2.bz
+  
+  0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
+  0010: 69 6f 6e 3d 42 5a 42 5a 68 39 31 41 59 26 53 59 |ion=BZBZh91AY&SY|
+  0020: a3 4b 18 3d 00 00 1a 7f ff ff bf 5f f6 ef ef 7f |.K.=......._....|
+  0030: f6 3f f7 d1 d9 ff ff f7 6e ff ff 6e f7 f6 bd df |.?......n..n....|
+  0040: b5 ab ff cf 67 f6 e7 7b f7 c0 02 d7 33 82 8b 51 |....g..{....3..Q|
+  0050: 04 a5 53 d5 3d 27 a0 99 18 4d 0d 34 00 d1 a1 e8 |..S.='...M.4....|
+  0060: 80 c8 7a 87 a9 a3 43 6a 3d 46 86 26 80 34 3d 40 |..z...Cj=F.&.4=@|
+  0070: c8 c9 b5 34 f4 8f 48 0f 51 ea 34 34 fd 4d aa 19 |...4..H.Q.44.M..|
+  0080: 03 40 0c 08 da 86 43 d4 f5 0f 42 1e a0 f3 54 33 |.@....C...B...T3|
+  0090: 54 d3 13 4d 03 40 32 00 00 32 03 26 80 0d 00 0d |T..M.@2..2.&....|
+  00a0: 00 68 c8 c8 03 20 32 30 98 8c 80 00 00 03 4d 00 |.h... 20......M.|
+  00b0: c8 00 00 0d 00 00 22 99 a1 34 c2 64 a6 d5 34 1a |......"..4.d..4.|
+  00c0: 00 00 06 86 83 4d 07 a8 d1 a0 68 01 a0 00 00 00 |.....M....h.....|
+  00d0: 00 0d 06 80 00 00 00 0d 00 03 40 00 00 04 a4 a1 |..........@.....|
+  00e0: 4d a9 89 89 b4 9a 32 0c 43 46 86 87 a9 8d 41 9a |M.....2.CF....A.|
+  00f0: 98 46 9a 0d 31 32 1a 34 0d 0c 8d a2 0c 98 4d 06 |.F..12.4......M.|
+  0100: 8c 40 c2 60 8d 0d 0c 20 c9 89 fa a0 d0 d3 21 a1 |.@.`... ......!.|
+  0110: ea 34 d3 68 9e a6 d1 74 05 33 cb 66 96 93 28 64 |.4.h...t.3.f..(d|
+  0120: 40 91 22 ac 55 9b ea 40 7b 38 94 e2 f8 06 00 cb |@.".U..@{8......|
+  0130: 28 02 00 4d ab 40 24 10 43 18 cf 64 b4 06 83 0c |(..M.@$.C..d....|
+  0140: 34 6c b4 a3 d4 0a 0a e4 a8 5c 4e 23 c0 c9 7a 31 |4l.......\N#..z1|
+  0150: 97 87 77 7a 64 88 80 8e 60 97 20 93 0f 8e eb c4 |..wzd...`. .....|
+  0160: 62 a4 44 a3 52 20 b2 99 a9 2e e1 d7 29 4a 54 ac |b.D.R ......)JT.|
+  0170: 44 7a bb cc 04 3d e0 aa bd 6a 33 5e 9b a2 57 36 |Dz...=...j3^..W6|
+  0180: fa cb 45 bb 6d 3e c1 d9 d9 f5 83 69 8a d0 e0 e2 |..E.m>.....i....|
+  0190: e7 ae 90 55 24 da 3f ab 78 c0 4c b4 56 a3 9e a4 |...U$.?.x.L.V...|
+  01a0: af 9c 65 74 86 ec 6d dc 62 dc 33 ca c8 50 dd 9d |..et..m.b.3..P..|
+  01b0: 98 8e 9e 59 20 f3 f0 42 91 4a 09 f5 75 8d 3d a5 |...Y ..B.J..u.=.|
+  01c0: a5 15 cb 8d 10 63 b0 c2 2e b2 81 f7 c1 76 0e 53 |.....c.......v.S|
+  01d0: 6c 0e 46 73 b5 ae 67 f9 4c 0b 45 6b a8 32 2a 2f |l.Fs..g.L.Ek.2*/|
+  01e0: a2 54 a4 44 05 20 a1 38 d1 a4 c6 09 a8 2b 08 99 |.T.D. .8.....+..|
+  01f0: a4 14 ae 8d a3 e3 aa 34 27 d8 44 ca c3 5d 21 8b |.......4'.D..]!.|
+  0200: 1a 1e 97 29 71 2b 09 4a 4a 55 55 94 58 65 b2 bc |...)q+.JJUU.Xe..|
+  0210: f3 a5 90 26 36 76 67 7a 51 98 d6 8a 4a 99 50 b5 |...&6vgzQ...J.P.|
+  0220: 99 8f 94 21 17 a9 8b f3 ad 4c 33 d4 2e 40 c8 0c |...!.....L3..@..|
+  0230: 3b 90 53 39 db 48 02 34 83 48 d6 b3 99 13 d2 58 |;.S9.H.4.H.....X|
+  0240: 65 8e 71 ac a9 06 95 f2 c4 8e b4 08 6b d3 0c ae |e.q.........k...|
+  0250: d9 90 56 71 43 a7 a2 62 16 3e 50 63 d3 57 3c 2d |..VqC..b.>Pc.W<-|
+  0260: 9f 0f 34 05 08 d8 a6 4b 59 31 54 66 3a 45 0c 8a |..4....KY1Tf:E..|
+  0270: c7 90 3a f0 6a 83 1b f5 ca fb 80 2b 50 06 fb 51 |..:.j......+P..Q|
+  0280: 7e a6 a4 d4 81 44 82 21 54 00 5b 1a 30 83 62 a3 |~....D.!T.[.0.b.|
+  0290: 18 b6 24 19 1e 45 df 4d 5c db a6 af 5b ac 90 fa |..$..E.M\...[...|
+  02a0: 3e ed f9 ec 4c ba 36 ee d8 60 20 a7 c7 3b cb d1 |>...L.6..` ..;..|
+  02b0: 90 43 7d 27 16 50 5d ad f4 14 07 0b 90 5c cc 6b |.C}'.P]......\.k|
+  02c0: 8d 3f a6 88 f4 34 37 a8 cf 14 63 36 19 f7 3e 28 |.?...47...c6..>(|
+  02d0: de 99 e8 16 a4 9d 0d 40 a1 a7 24 52 14 a6 72 62 |.......@..$R..rb|
+  02e0: 59 5a ca 2d e5 51 90 78 88 d9 c6 c7 21 d0 f7 46 |YZ.-.Q.x....!..F|
+  02f0: b2 04 46 44 4e 20 9c 12 b1 03 4e 25 e0 a9 0c 58 |..FDN ....N%...X|
+  0300: 5b 1d 3c 93 20 01 51 de a9 1c 69 23 32 46 14 b4 |[.<. .Q...i#2F..|
+  0310: 90 db 17 98 98 50 03 90 29 aa 40 b0 13 d8 43 d2 |.....P..).@...C.|
+  0320: 5f c5 9d eb f3 f2 ad 41 e8 7a a9 ed a1 58 84 a6 |_......A.z...X..|
+  0330: 42 bf d6 fc 24 82 c1 20 32 26 4a 15 a6 1d 29 7f |B...$.. 2&J...).|
+  0340: 7e f4 3d 07 bc 62 9a 5b ec 44 3d 72 1d 41 8b 5c |~.=..b.[.D=r.A.\|
+  0350: 80 de 0e 62 9a 2e f8 83 00 d5 07 a0 9c c6 74 98 |...b..........t.|
+  0360: 11 b2 5e a9 38 02 03 ee fd 86 5c f4 86 b3 ae da |..^.8.....\.....|
+  0370: 05 94 01 c5 c6 ea 18 e6 ba 2a ba b3 04 5c 96 89 |.........*...\..|
+  0380: 72 63 5b 10 11 f6 67 34 98 cb e4 c0 4e fa e6 99 |rc[...g4....N...|
+  0390: 19 6e 50 e8 26 8d 0c 17 e0 be ef e1 8e 02 6f 32 |.nP.&.........o2|
+  03a0: 82 dc 26 f8 a1 08 f3 8a 0d f3 c4 75 00 48 73 b8 |..&........u.Hs.|
+  03b0: be 3b 0d 7f d0 fd c7 78 96 ec e0 03 80 68 4d 8d |.;.....x.....hM.|
+  03c0: 43 8c d7 68 58 f9 50 f0 18 cb 21 58 1b 60 cd 1f |C..hX.P...!X.`..|
+  03d0: 84 36 2e 16 1f 0a f7 4e 8f eb df 01 2d c2 79 0b |.6.....N....-.y.|
+  03e0: f7 24 ea 0d e8 59 86 51 6e 1c 30 a3 ad 2f ee 8c |.$...Y.Qn.0../..|
+  03f0: 90 c8 84 d5 e8 34 c1 95 b2 c9 f6 4d 87 1c 7d 19 |.....4.....M..}.|
+  0400: d6 41 58 56 7a e0 6c ba 10 c7 e8 33 39 36 96 e7 |.AXVz.l....396..|
+  0410: d2 f9 59 9a 08 95 48 38 e7 0b b7 0a 24 67 c4 39 |..Y...H8....$g.9|
+  0420: 8b 43 88 57 9c 01 f5 61 b5 e1 27 41 7e af 83 fe |.C.W...a..'A~...|
+  0430: 2e e4 8a 70 a1 21 46 96 30 7a                   |...p.!F.0z|
+  $ hg debugbundle ../rev.hg2.bz
+  Stream params: {'Compression': 'BZ'}
+  changegroup -- '{}'
+      32af7686d403cf45b5d95f2d70cebea587ac806a
+      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
+      eea13746799a9e0bfd88f29d3c2e9dc9389f524f
+      02de42196ebee42ef284b6780a87cdc96e8eaab6
+  $ hg unbundle ../rev.hg2.bz
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 3 files
+
+unknown compression while unbundling
+-----------------------------
+
+  $ hg bundle2 --param Compression=FooBarUnknown --rev '8+7+5+4' ../rev.hg2.bz
+  $ cat ../rev.hg2.bz | hg statbundle2
+  abort: unknown parameters: Stream Parameter - Compression='FooBarUnknown'
+  [255]
 
   $ cd ..

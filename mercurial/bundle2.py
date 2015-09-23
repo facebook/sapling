@@ -479,6 +479,15 @@ class bundle20(object):
         self._params = []
         self._parts = []
         self.capabilities = dict(capabilities)
+        self._compressor = util.compressors[None]()
+
+    def setcompression(self, alg):
+        """setup core part compression to <alg>"""
+        if alg is None:
+            return
+        assert not any(n.lower() == 'Compression' for n, v in self._params)
+        self.addparam('Compression', alg)
+        self._compressor = util.compressors[alg]()
 
     @property
     def nbparts(self):
@@ -530,8 +539,10 @@ class bundle20(object):
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
+        # starting compression
         for chunk in self._getcorechunk():
-            yield chunk
+            yield self._compressor.compress(chunk)
+        yield self._compressor.flush()
 
     def _paramchunk(self):
         """return a encoded version of all stream parameters"""
@@ -633,6 +644,7 @@ class unbundle20(unpackermixin):
     def __init__(self, ui, fp):
         """If header is specified, we do not read it out of the stream."""
         self.ui = ui
+        self._decompressor = util.decompressors[None]
         super(unbundle20, self).__init__(fp)
 
     @util.propertycache
@@ -682,6 +694,8 @@ class unbundle20(unpackermixin):
         """yield all parts contained in the stream"""
         # make sure param have been loaded
         self.params
+        # From there, payload need to be decompressed
+        self._fp = self._decompressor(self._fp)
         indebug(self.ui, 'start extraction of bundle2 parts')
         headerblock = self._readpartheader()
         while headerblock is not None:
@@ -718,6 +732,14 @@ def b2streamparamhandler(name):
         b2streamparamsmap[name] = func
         return func
     return decorator
+
+@b2streamparamhandler('compression')
+def processcompression(unbundler, param, value):
+    """read compression parameter and install payload decompression"""
+    if value not in util.decompressors:
+        raise error.BundleUnknownFeatureError(params=(param,),
+                                              values=(value,))
+    unbundler._decompressor = util.decompressors[value]
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
