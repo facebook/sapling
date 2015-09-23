@@ -142,15 +142,26 @@ class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
 
 class BundleUnknownFeatureError(BundleValueError):
-    def __init__(self, parttype=None, params=()):
+    def __init__(self, parttype=None, params=(), values=()):
         self.parttype = parttype
         self.params = params
+        self.values = values
         if self.parttype is None:
             msg = 'Stream Parameter'
         else:
             msg = parttype
-        if self.params:
-            msg = '%s - %s' % (msg, ', '.join(self.params))
+        entries = self.params
+        if self.params and self.values:
+            assert len(self.params) == len(self.values)
+            entries = []
+            for idx, par in enumerate(self.params):
+                val = self.values[idx]
+                if val is None:
+                    entries.append(val)
+                else:
+                    entries.append("%s=%r" % (par, val))
+        if entries:
+            msg = '%s - %s' % (msg, ', '.join(entries))
         ValueError.__init__(self, msg)
 
 class ReadOnlyPartError(RuntimeError):
