@@ -163,6 +163,8 @@ class cg1unpacker(object):
         if not alg in util.decompressors:
             raise util.Abort(_('unknown stream compression type: %s')
                              % alg)
+        if alg == 'BZ':
+            alg = '_truncatedBZ'
         self._stream = util.decompressors[alg](fh)
         self._type = alg
         self.callback = None

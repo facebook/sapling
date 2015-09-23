@@ -2378,7 +2378,8 @@ def _bz2():
     return d
 
 decompressors = {None: lambda fh: fh,
-                 'BZ': _makedecompressor(_bz2),
+                 '_truncatedBZ': _makedecompressor(_bz2),
+                 'BZ': _makedecompressor(lambda: bz2.BZ2Decompressor()),
                  'GZ': _makedecompressor(lambda: zlib.decompressobj()),
                  }
 # also support the old form by courtesies
