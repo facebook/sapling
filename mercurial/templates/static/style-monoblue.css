@@ -255,32 +255,56 @@ div.diff pre span {
   font-family: monospace;
   white-space: pre;
   font-size: 1.2em;
-  padding: 3px 0;
 }
+div.diffblocks { counter-reset: lineno; }
+div.diffblock { counter-increment: lineno; }
 span.difflineplus { color:#008800; }
 span.difflineminus { color:#cc0000; }
 span.difflineat { color:#990099; }
+
+pre.sourcelines { position: relative; counter-reset: lineno; }
+pre.sourcelines > span {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 0 0 5em;
+    font-size: 1.2em;
+    counter-increment: lineno;
+}
+div.source > pre.sourcelines > span {
+    padding: 1px 1px 1px 5em;
+}
+pre.sourcelines > span:before {
+    -moz-user-select: -moz-none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    display: inline-block;
+    margin-left: -5em;
+    width: 4em;
+    color: #999;
+    text-align: right;
+    content: counters(lineno,".");
+    float: left;
+}
+pre.sourcelines > a {
+    display: inline-block;
+    position: absolute;
+    left: 0px;
+    width: 4em;
+    height: 1em;
+}
+pre.sourcelines.stripes > :nth-child(4n+1) { background-color: #F1F6F7; }
+pre.sourcelines.stripes > :nth-child(4n+3) { background-color: #FFFFFF; }
+pre.sourcelines.stripes > :nth-child(4n+1):hover,
+pre.sourcelines.stripes > :nth-child(4n+3):hover { background-color: #D5E1E6; }
 
 td.source {
   white-space: pre;
   margin: 10px 30px 0;
   font-size: 1.2em;
   font-family: monospace;
-}
-  div.source div.parity0,
-  div.source div.parity1 {
-    padding: 1px;
-    font-size: 1.2em;
-  }
-  div.source div.parity0 {
-    background: #F1F6F7;
-  }
-  div.source div.parity1 {
-    background: #FFFFFF;
-  }
-div.parity0:hover,
-div.parity1:hover {
-  background: #D5E1E6;
 }
 .linenr {
   color: #999;
