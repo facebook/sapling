@@ -661,13 +661,15 @@ class unbundle20(unpackermixin):
             raise ValueError('empty parameter name')
         if name[0] not in string.letters:
             raise ValueError('non letter first character: %r' % name)
-        # Some logic will be later added here to try to process the option for
-        # a dict of known parameter.
-        if name[0].islower():
-            indebug(self.ui, "ignoring unknown parameter %r" % name)
+        try:
+            handler = b2streamparamsmap[name.lower()]
+        except KeyError:
+            if name[0].islower():
+                indebug(self.ui, "ignoring unknown parameter %r" % name)
+            else:
+                raise error.BundleUnknownFeatureError(params=(name,))
         else:
-            raise error.BundleUnknownFeatureError(params=(name,))
-
+            handler(self, name, value)
 
     def iterparts(self):
         """yield all parts contained in the stream"""
@@ -699,6 +701,16 @@ class unbundle20(unpackermixin):
         return False
 
 formatmap = {'20': unbundle20}
+
+b2streamparamsmap = {}
+
+def b2streamparamhandler(name):
+    """register a handler for a stream level parameter"""
+    def decorator(func):
+        assert name not in formatmap
+        b2streamparamsmap[name] = func
+        return func
+    return decorator
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
