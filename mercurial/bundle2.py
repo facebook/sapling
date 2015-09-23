@@ -376,17 +376,17 @@ def _processpart(op, part):
             handler = parthandlermapping.get(part.type)
             if handler is None:
                 status = 'unsupported-type'
-                raise error.UnsupportedPartError(parttype=part.type)
+                raise error.BundleUnknownFeatureError(parttype=part.type)
             indebug(op.ui, 'found a handler for part %r' % part.type)
             unknownparams = part.mandatorykeys - handler.params
             if unknownparams:
                 unknownparams = list(unknownparams)
                 unknownparams.sort()
                 status = 'unsupported-params (%s)' % unknownparams
-                raise error.UnsupportedPartError(parttype=part.type,
-                                               params=unknownparams)
+                raise error.BundleUnknownFeatureError(parttype=part.type,
+                                                      params=unknownparams)
             status = 'supported'
-        except error.UnsupportedPartError as exc:
+        except error.BundleUnknownFeatureError as exc:
             if part.mandatory: # mandatory parts
                 raise
             indebug(op.ui, 'ignoring unsupported advisory part %s' % exc)
@@ -666,7 +666,7 @@ class unbundle20(unpackermixin):
         if name[0].islower():
             indebug(self.ui, "ignoring unknown parameter %r" % name)
         else:
-            raise error.UnsupportedPartError(params=(name,))
+            raise error.BundleUnknownFeatureError(params=(name,))
 
 
     def iterparts(self):
@@ -1329,7 +1329,7 @@ def handleerrorunsupportedcontent(op, inpart):
     if params is not None:
         kwargs['params'] = params.split('\0')
 
-    raise error.UnsupportedPartError(**kwargs)
+    raise error.BundleUnknownFeatureError(**kwargs)
 
 @parthandler('error:pushraced', ('message',))
 def handleerrorpushraced(op, inpart):

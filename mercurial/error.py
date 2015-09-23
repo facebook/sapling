@@ -141,7 +141,7 @@ class PushRaced(RuntimeError):
 class BundleValueError(ValueError):
     """error raised when bundle2 cannot be processed"""
 
-class UnsupportedPartError(BundleValueError):
+class BundleUnknownFeatureError(BundleValueError):
     def __init__(self, parttype=None, params=()):
         self.parttype = parttype
         self.params = params
