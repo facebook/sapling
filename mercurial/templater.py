@@ -792,11 +792,13 @@ class engine(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
-    def __init__(self, loader, filters=None, defaults={}):
+    def __init__(self, loader, filters=None, defaults=None):
         self._loader = loader
         if filters is None:
             filters = {}
         self._filters = filters
+        if defaults is None:
+            defaults = {}
         self._defaults = defaults
         self._cache = {}
 
