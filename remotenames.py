@@ -221,22 +221,21 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
+    repo._remotenames = remotenames()
     loadremotenames(repo)
     ns = namespaces.namespace
 
     if ui.configbool('remotenames', 'bookmarks', True):
-        mark2nodes = repo._remotenames.get('bookmarks')
-        node2marks = {}
-        for name, node in mark2nodes.iteritems():
-            node2marks.setdefault(node[0], []).append(name)
         remotebookmarkns = ns(
             'remotebookmarks',
             templatename='remotebookmarks',
             logname='bookmark',
             colorname='remotebookmark',
-            listnames=lambda repo: mark2nodes.keys(),
-            namemap=lambda repo, name: mark2nodes.get(name),
-            nodemap=lambda repo, node: node2marks.get(node, []))
+            listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
+            namemap=lambda repo, name:
+                repo._remotenames.mark2nodes().get(name, None),
+            nodemap=lambda repo, node:
+                repo._remotenames.node2marks().get(node, []))
         repo.names.addnamespace(remotebookmarkns)
 
         # hoisting only works if there are remote bookmarks
@@ -247,7 +246,7 @@ def reposetup(ui, repo):
         if hoist:
             hoist2nodes = {}
             node2hoists = {}
-            for name, node in mark2nodes.iteritems():
+            for name, node in repo._remotenames.mark2nodes().iteritems():
                 if name.startswith(hoist):
                     name = name[len(hoist):]
                     hoist2nodes[name] = node
@@ -1060,12 +1059,11 @@ def readremotenames(repo):
     f.close()
 
 def loadremotenames(repo):
-    remotenames = {
-        'bookmarks': {},
-        'branches': {},
-    }
 
     alias_default = repo.ui.configbool('remotenames', 'alias.default')
+    rn = repo._remotenames
+    # About to repopulate remotenames, clear them out
+    rn.clearnames()
 
     for node, nametype, remote, rname in readremotenames(repo):
         # handle alias_default here
@@ -1082,12 +1080,9 @@ def loadremotenames(repo):
 
         # only mark as remote if the head changeset isn't marked closed
         if not ctx.extra().get('close'):
-            nodes = remotenames[nametype].get(name, [])
+            nodes = rn[nametype].get(name, [])
             nodes.append(ctx.node())
-            remotenames[nametype][name] = nodes
-
-
-    repo._remotenames = remotenames
+            rn[nametype][name] = nodes
 
 def transition(repo, ui):
     """
