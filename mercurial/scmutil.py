@@ -753,7 +753,7 @@ def expandpats(pats):
         ret.append(kindpat)
     return ret
 
-def matchandpats(ctx, pats=[], opts={}, globbed=False, default='relpath',
+def matchandpats(ctx, pats=(), opts={}, globbed=False, default='relpath',
                  badfn=None):
     '''Return a matcher and the patterns that were used.
     The matcher will warn about bad matches, unless an alternate badfn callback
