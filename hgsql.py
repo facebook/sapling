@@ -199,10 +199,13 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
         connected = True
 
     locked = False
-    startlock = time.time()
     if sqllock and not writelock in repo.heldlocks:
-            repo.sqllock(writelock)
-            locked = True
+        startwait = time.time()
+        repo.sqllock(writelock)
+        locked = True
+        repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
+                    time.time() - startwait)
+    startlock = time.time()
 
     result = None
     success = False
