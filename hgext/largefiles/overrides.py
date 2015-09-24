@@ -1172,8 +1172,10 @@ def overridesummary(orig, ui, repo, *pats, **opts):
     finally:
         repo.lfstatus = False
 
-def scmutiladdremove(orig, repo, matcher, prefix, opts={}, dry_run=None,
+def scmutiladdremove(orig, repo, matcher, prefix, opts=None, dry_run=None,
                      similarity=None):
+    if opts is None:
+        opts = {}
     if not lfutil.islfilesrepo(repo):
         return orig(repo, matcher, prefix, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
