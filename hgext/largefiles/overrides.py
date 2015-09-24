@@ -617,8 +617,10 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         wlock = repo.wlock()
 
         manifest = repo[None].manifest()
-        def overridematch(ctx, pats=(), opts={}, globbed=False,
+        def overridematch(ctx, pats=(), opts=None, globbed=False,
                 default='relpath', badfn=None):
+            if opts is None:
+                opts = {}
             newpats = []
             # The patterns were previously mangled to add the standin
             # directory; we need to remove that now
