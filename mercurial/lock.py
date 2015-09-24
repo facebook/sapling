@@ -204,10 +204,11 @@ class lock(object):
                 if self.releasefn:
                     self.releasefn()
             finally:
-                try:
-                    self.vfs.unlink(self.f)
-                except OSError:
-                    pass
+                if not self._parentheld:
+                    try:
+                        self.vfs.unlink(self.f)
+                    except OSError:
+                        pass
             for callback in self.postrelease:
                 callback()
 
