@@ -2763,7 +2763,9 @@ def buildcommittext(repo, ctx, subs, extramsg):
 
     return "\n".join(edittext)
 
-def commitstatus(repo, node, branch, bheads=None, opts={}):
+def commitstatus(repo, node, branch, bheads=None, opts=None):
+    if opts is None:
+        opts = {}
     ctx = repo[node]
     parents = ctx.parents()
 
