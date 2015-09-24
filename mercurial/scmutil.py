@@ -791,7 +791,9 @@ def matchfiles(repo, files, badfn=None):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files, badfn=badfn)
 
-def addremove(repo, matcher, prefix, opts={}, dry_run=None, similarity=None):
+def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
+    if opts is None:
+        opts = {}
     m = matcher
     if dry_run is None:
         dry_run = opts.get('dry_run')
