@@ -483,7 +483,7 @@ class queue(object):
         self.guardsdirty = False
         self.activeguards = None
 
-    def diffopts(self, opts={}, patchfn=None):
+    def diffopts(self, opts=None, patchfn=None):
         diffopts = patchmod.diffopts(self.ui, opts)
         if self.gitmode == 'auto':
             diffopts.upgrade = True
