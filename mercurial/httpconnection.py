@@ -107,7 +107,9 @@ class HTTPResponse(httpclient.HTTPResponse):
 
 class HTTPConnection(httpclient.HTTPConnection):
     response_class = HTTPResponse
-    def request(self, method, uri, body=None, headers={}):
+    def request(self, method, uri, body=None, headers=None):
+        if headers is None:
+            headers = {}
         if isinstance(body, httpsendfile):
             body.seek(0)
         httpclient.HTTPConnection.request(self, method, uri, body=body,
