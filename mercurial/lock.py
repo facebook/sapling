@@ -180,6 +180,14 @@ class lock(object):
         self._inherited = True
         return lockname
 
+    def reacquire(self):
+        if not self._inherited:
+            raise error.LockInheritanceContractViolation(
+                'reacquire can only be called after prepinherit')
+        if self.acquirefn:
+            self.acquirefn()
+        self._inherited = False
+
     def release(self):
         """release the lock and execute callback function if any
 
