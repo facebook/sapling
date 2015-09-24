@@ -292,3 +292,17 @@ Test loading with hggit
    -u --untrack        remove tracking for this bookmark
    -a --all            show both remote and local bookmarks
       --remote         show only remote bookmarks
+
+Test branches marked as closed are not loaded
+  $ cd ../alpha
+  $ hg branch
+  stable
+  $ hg commit --close-branch -m 'close this branch'
+
+  $ cd ../beta
+  $ hg branches --remote
+  default/stable                 2:95cb4ab9fe1d
+  default/default                1:7c3bad9141dc
+  $ hg pull -q
+  $ hg branches --remote
+  default/default                1:7c3bad9141dc
