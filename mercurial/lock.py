@@ -158,6 +158,28 @@ class lock(object):
         locker = self._readlock()
         return self._testlock(locker)
 
+    def prepinherit(self):
+        """prepare for the lock to be inherited by a Mercurial subprocess
+
+        Returns a string that will be recognized by the lock in the
+        subprocess. Communicating this string to the subprocess needs to be done
+        separately -- typically by an environment variable.
+        """
+        if not self.held:
+            raise error.LockInheritanceContractViolation(
+                'prepinherit can only be called while lock is held')
+        if self._inherited:
+            raise error.LockInheritanceContractViolation(
+                'prepinherit cannot be called while lock is already inherited')
+        if self.releasefn:
+            self.releasefn()
+        if self._parentheld:
+            lockname = self.parentlock
+        else:
+            lockname = '%s:%s' % (lock._host, self.pid)
+        self._inherited = True
+        return lockname
+
     def release(self):
         """release the lock and execute callback function if any
 
