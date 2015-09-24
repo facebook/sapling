@@ -114,6 +114,10 @@ class LockHeld(LockError):
 class LockUnavailable(LockError):
     pass
 
+# LockError is for errors while acquiring the lock -- this is unrelated
+class LockInheritanceContractViolation(AssertionError):
+    pass
+
 class ResponseError(Exception):
     """Raised to print an error with part of output and exit."""
 
