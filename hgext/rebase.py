@@ -431,7 +431,8 @@ def rebase(ui, repo, **opts):
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
-                                           editor=editor)
+                                           editor=editor,
+                                           keepbranches=keepbranchesf)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.beginparentchange()
@@ -481,7 +482,8 @@ def rebase(ui, repo, **opts):
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             newnode = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
-                                   extrafn=extrafn, editor=editor)
+                                   extrafn=extrafn, editor=editor,
+                                   keepbranches=keepbranchesf)
             if newnode is None:
                 newrev = target
             else:
@@ -561,7 +563,8 @@ def externalparent(repo, state, targetancestors):
                      (max(targetancestors),
                       ', '.join(str(p) for p in sorted(parents))))
 
-def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
+def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
+                 keepbranches=False):
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
@@ -571,6 +574,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         ctx = repo[rev]
         if commitmsg is None:
             commitmsg = ctx.description()
+        keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
         extra = {'rebase_source': ctx.hex()}
         if extrafn:
             extrafn(ctx, extra)
@@ -579,6 +583,8 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
         try:
             targetphase = max(ctx.phase(), phases.draft)
             repo.ui.setconfig('phases', 'new-commit', targetphase, 'rebase')
+            if keepbranch:
+                repo.ui.setconfig('ui', 'allowemptycommit', True)
             # Commit might fail if unresolved files exist
             newnode = repo.commit(text=commitmsg, user=ctx.user(),
                                   date=ctx.date(), extra=extra, editor=editor)

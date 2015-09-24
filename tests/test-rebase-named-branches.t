@@ -97,7 +97,6 @@ Branch name containing a dash (issue3181)
   
   $ hg rebase -s dev-one -d 0 --keepbranches
   rebasing 5:643fc9128048 "dev-one named branch"
-  note: rebase of 5:643fc9128048 created no changes to commit
   rebasing 6:24de4aff8e28 "F"
   rebasing 7:4b988a958030 "G"
   rebasing 8:31d0e4ba75e6 "H"
@@ -105,13 +104,15 @@ Branch name containing a dash (issue3181)
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-c4ee9ef5-backup.hg (glob)
 
   $ hg tglog
-  @  8: 'dev-two named branch' dev-two
+  @  9: 'dev-two named branch' dev-two
   |
-  o  7: 'H'
+  o  8: 'H'
   |
-  | o  6: 'G'
+  | o  7: 'G'
   |/|
-  o |  5: 'F'
+  o |  6: 'F'
+  | |
+  o |  5: 'dev-one named branch' dev-one
   | |
   | o  4: 'E'
   |/
@@ -125,20 +126,23 @@ Branch name containing a dash (issue3181)
   
   $ hg update 3
   3 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  $ hg branch dev-one
+  $ hg branch -f dev-one
   marked working directory as branch dev-one
   $ hg ci -m 'dev-one named branch'
+  created new head
 
   $ hg tglog
-  @  9: 'dev-one named branch' dev-one
+  @  10: 'dev-one named branch' dev-one
   |
-  | o  8: 'dev-two named branch' dev-two
+  | o  9: 'dev-two named branch' dev-two
   | |
-  | o  7: 'H'
+  | o  8: 'H'
   | |
-  | | o  6: 'G'
+  | | o  7: 'G'
   | |/|
-  | o |  5: 'F'
+  | o |  6: 'F'
+  | | |
+  | o |  5: 'dev-one named branch' dev-one
   | | |
   | | o  4: 'E'
   | |/
@@ -151,11 +155,13 @@ Branch name containing a dash (issue3181)
   o  0: 'A'
   
   $ hg rebase -b 'max(branch("dev-two"))' -d dev-one --keepbranches
-  rebasing 5:77854864208c "F"
-  rebasing 6:63b4f9c788a1 "G"
-  rebasing 7:87861e68abd3 "H"
-  rebasing 8:ec00d4e0efca "dev-two named branch"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/77854864208c-74d59436-backup.hg (glob)
+  rebasing 5:bc8139ee757c "dev-one named branch"
+  note: rebase of 5:bc8139ee757c created no changes to commit
+  rebasing 6:42aa3cf0fa7a "F"
+  rebasing 7:1a1e6f72ec38 "G"
+  rebasing 8:904590360559 "H"
+  rebasing 9:59c2e59309fe "dev-two named branch"
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/bc8139ee757c-f11c1080-backup.hg (glob)
 
   $ hg tglog
   o  9: 'dev-two named branch' dev-two
@@ -180,21 +186,22 @@ Branch name containing a dash (issue3181)
   
   $ hg rebase -s 'max(branch("dev-one"))' -d 0 --keepbranches
   rebasing 5:643fc9128048 "dev-one named branch"
-  note: rebase of 5:643fc9128048 created no changes to commit
-  rebasing 6:05584c618d45 "F"
-  rebasing 7:471695f5257d "G"
-  rebasing 8:8382a539a2df "H"
-  rebasing 9:11f718458b32 "dev-two named branch" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-177f3c5c-backup.hg (glob)
+  rebasing 6:679f28760620 "F"
+  rebasing 7:549f007a9f5f "G"
+  rebasing 8:12b2bc666e20 "H"
+  rebasing 9:71325f8bc082 "dev-two named branch" (tip)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/643fc9128048-6cdd1a52-backup.hg (glob)
 
   $ hg tglog
-  o  8: 'dev-two named branch' dev-two
+  o  9: 'dev-two named branch' dev-two
   |
-  o  7: 'H'
+  o  8: 'H'
   |
-  | o  6: 'G'
+  | o  7: 'G'
   |/|
-  o |  5: 'F'
+  o |  6: 'F'
+  | |
+  @ |  5: 'dev-one named branch' dev-one
   | |
   | o  4: 'E'
   |/
@@ -204,61 +211,66 @@ Branch name containing a dash (issue3181)
   | |
   | o  1: 'B'
   |/
-  @  0: 'A'
+  o  0: 'A'
   
+  $ hg up -r 0 > /dev/null
 
 Rebasing descendant onto ancestor across different named branches
 
-  $ hg rebase -s 1 -d 8 --keepbranches
+  $ hg rebase -s 1 -d 9 --keepbranches
   rebasing 1:42ccdea3bb16 "B"
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/42ccdea3bb16-3cb021d3-backup.hg (glob)
 
   $ hg tglog
-  o  8: 'D'
+  o  9: 'D'
   |
-  o  7: 'C'
+  o  8: 'C'
   |
-  o  6: 'B'
+  o  7: 'B'
   |
-  o  5: 'dev-two named branch' dev-two
+  o  6: 'dev-two named branch' dev-two
   |
-  o  4: 'H'
+  o  5: 'H'
   |
-  | o  3: 'G'
+  | o  4: 'G'
   |/|
-  o |  2: 'F'
+  o |  3: 'F'
+  | |
+  o |  2: 'dev-one named branch' dev-one
   | |
   | o  1: 'E'
   |/
   @  0: 'A'
   
-  $ hg rebase -s 4 -d 5
+  $ hg rebase -s 5 -d 6
   abort: source is ancestor of destination
   [255]
 
-  $ hg rebase -s 5 -d 4
-  rebasing 5:32d3b0de7f37 "dev-two named branch"
-  rebasing 6:580fcd9fd48f "B"
-  rebasing 7:32aba0402ed2 "C"
-  rebasing 8:e4787b575338 "D" (tip)
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32d3b0de7f37-c37815ca-backup.hg (glob)
+  $ hg rebase -s 6 -d 5
+  rebasing 6:3944801ae4ea "dev-two named branch"
+  rebasing 7:3bdb949809d9 "B"
+  rebasing 8:a0d543090fa4 "C"
+  rebasing 9:e9f862ce8bad "D" (tip)
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/3944801ae4ea-fb46ed74-backup.hg (glob)
 
   $ hg tglog
-  o  8: 'D'
+  o  9: 'D'
   |
-  o  7: 'C'
+  o  8: 'C'
   |
-  o  6: 'B'
+  o  7: 'B'
   |
-  o  5: 'dev-two named branch'
+  o  6: 'dev-two named branch'
   |
-  o  4: 'H'
+  o  5: 'H'
   |
-  | o  3: 'G'
+  | o  4: 'G'
   |/|
-  o |  2: 'F'
+  o |  3: 'F'
+  | |
+  o |  2: 'dev-one named branch' dev-one
   | |
   | o  1: 'E'
   |/
@@ -272,13 +284,13 @@ Reopen branch by rebase
   $ hg ci -m 'create b'
   $ hg ci -m 'close b' --close
   $ hg rebase -b 8 -d b
-  reopening closed branch head ea9de14a36c6
-  rebasing 4:86693275b2ef "H"
-  rebasing 5:2149726d0970 "dev-two named branch"
-  rebasing 6:81e55225e95d "B"
-  rebasing 7:09eda3dc3195 "C"
-  rebasing 8:31298fc9d159 "D"
-  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/86693275b2ef-f9fcf4e2-backup.hg (glob)
+  reopening closed branch head 2b586e70108d
+  rebasing 5:8e279d293175 "H"
+  rebasing 6:c57724c84928 "dev-two named branch"
+  rebasing 7:160b0930ccc6 "B"
+  rebasing 8:810110211f50 "C"
+  rebasing 9:e522577ccdbd "D"
+  saved backup bundle to $TESTTMP/a1/.hg/strip-backup/8e279d293175-b023e27c-backup.hg (glob)
 
   $ cd ..
 
