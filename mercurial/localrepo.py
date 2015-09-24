@@ -540,7 +540,7 @@ class localrepository(object):
         return hook.hook(self.ui, self, name, throw, **args)
 
     @unfilteredmethod
-    def _tag(self, names, node, message, local, user, date, extra={},
+    def _tag(self, names, node, message, local, user, date, extra=None,
              editor=False):
         if isinstance(names, str):
             names = (names,)
