@@ -753,13 +753,15 @@ def expandpats(pats):
         ret.append(kindpat)
     return ret
 
-def matchandpats(ctx, pats=(), opts={}, globbed=False, default='relpath',
+def matchandpats(ctx, pats=(), opts=None, globbed=False, default='relpath',
                  badfn=None):
     '''Return a matcher and the patterns that were used.
     The matcher will warn about bad matches, unless an alternate badfn callback
     is provided.'''
     if pats == ("",):
         pats = []
+    if opts is None:
+        opts = {}
     if not globbed and default == 'relpath':
         pats = expandpats(pats or [])
 
