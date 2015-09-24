@@ -595,7 +595,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                             status = _("updating to bookmark @\n")
                         else:
                             status = (_("updating to bookmark @ on branch %s\n")
-                                       % bn)
+                                      % bn)
                     except KeyError:
                         try:
                             uprev = destrepo.branchtip('default')
