@@ -833,12 +833,14 @@ class TemplateNotFound(util.Abort):
 
 class templater(object):
 
-    def __init__(self, mapfile, filters={}, defaults={}, cache={},
+    def __init__(self, mapfile, filters=None, defaults={}, cache={},
                  minchunk=1024, maxchunk=65536):
         '''set up template engine.
         mapfile is name of file to read map definitions from.
         filters is dict of functions. each transforms a value into another.
         defaults is dict of default map definitions.'''
+        if filters is None:
+            filters = {}
         self.mapfile = mapfile or 'template'
         self.cache = cache.copy()
         self.map = {}
