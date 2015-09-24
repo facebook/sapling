@@ -50,7 +50,7 @@ def composenormalfilematcher(match, manifest, exclude=None):
 
 def installnormalfilesmatchfn(manifest):
     '''installmatchfn with a matchfn that ignores all largefiles'''
-    def overridematch(ctx, pats=[], opts={}, globbed=False,
+    def overridematch(ctx, pats=(), opts={}, globbed=False,
             default='relpath', badfn=None):
         match = oldmatch(ctx, pats, opts, globbed, default, badfn=badfn)
         return composenormalfilematcher(match, manifest)
