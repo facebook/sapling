@@ -289,7 +289,7 @@ def overridedirty(orig, repo, ignoreupdate=False):
         repo._repo.lfstatus = False
 
 def overridelog(orig, ui, repo, *pats, **opts):
-    def overridematchandpats(ctx, pats=[], opts={}, globbed=False,
+    def overridematchandpats(ctx, pats=(), opts={}, globbed=False,
             default='relpath', badfn=None):
         """Matcher that merges root directory with .hglf, suitable for log.
         It is still possible to match .hglf directly.
