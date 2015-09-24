@@ -728,7 +728,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
 
         oldstandins = lfutil.getstandinsstate(repo)
 
-        def overridematch(mctx, pats=[], opts={}, globbed=False,
+        def overridematch(mctx, pats=(), opts={}, globbed=False,
                 default='relpath', badfn=None):
             match = oldmatch(mctx, pats, opts, globbed, default, badfn=badfn)
             m = copy.copy(match)
