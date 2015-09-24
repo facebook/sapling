@@ -62,6 +62,14 @@ except ImportError:
     # The ignore module disappeared in Mercurial 3.5
     ignoremod = False
 
+baseset = set
+try:
+    baseset = revset.baseset
+except AttributeError:
+    # baseset was added in hg 3.0
+    pass
+
+
 demandimport.ignore.extend([
     'collections',
 ])
@@ -338,7 +346,8 @@ def revset_fromgit(repo, subset, x):
     revset.getargs(x, 0, 0, "fromgit takes no arguments")
     git = repo.githandler
     node = repo.changelog.node
-    return [r for r in subset if git.map_git_get(hex(node(r))) is not None]
+    return baseset(r for r in subset
+                   if git.map_git_get(hex(node(r))) is not None)
 
 def revset_gitnode(repo, subset, x):
     '''``gitnode(hash)``
@@ -355,7 +364,7 @@ def revset_gitnode(repo, subset, x):
         if gitnode is None:
             return False
         return rev in [gitnode, gitnode[:12]]
-    return [r for r in subset if matches(r)]
+    return baseset(r for r in subset if matches(r))
 
 def gitnodekw(**args):
     """:gitnode: String.  The Git changeset identification hash, as a 40 hexadecimal digit string."""
