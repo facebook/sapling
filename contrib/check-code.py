@@ -291,6 +291,8 @@ pypats = [
     (r'os\.path\.join\(.*, *(""|\'\')\)',
      "use pathutil.normasprefix(path) instead of os.path.join(path, '')"),
     (r'\s0[0-7]+\b', 'legacy octal syntax; use "0o" prefix instead of "0"'),
+    # XXX only catch mutable arguments on the first line of the definition
+    (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
   ],
   # warnings
   [
