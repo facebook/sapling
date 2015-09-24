@@ -1299,7 +1299,11 @@ class GitHandler(object):
                         bms[head + suffix] = hgsha
 
             if heads:
-                bms.write()
+                wlock = self.repo.wlock()
+                try:
+                    bms.write()
+                finally:
+                    wlock.release()
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
