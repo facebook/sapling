@@ -642,10 +642,12 @@ class message(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
 
-def findoutgoing(ui, repo, remote=None, force=False, opts={}):
+def findoutgoing(ui, repo, remote=None, force=False, opts=None):
     """utility function to find the first outgoing changeset
 
     Used by initialization code"""
+    if opts is None:
+        opts = {}
     dest = ui.expandpath(remote or 'default-push', remote or 'default')
     dest, revs = hg.parseurl(dest, None)[:2]
     ui.status(_('comparing with %s\n') % util.hidepassword(dest))
