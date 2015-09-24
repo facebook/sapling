@@ -117,8 +117,10 @@ class transplanter(object):
                 return True
         return False
 
-    def apply(self, repo, source, revmap, merges, opts={}):
+    def apply(self, repo, source, revmap, merges, opts=None):
         '''apply the revisions in revmap one by one in revision order'''
+        if opts is None:
+            opts = {}
         revs = sorted(revmap)
         p1, p2 = repo.dirstate.parents()
         pulls = []
