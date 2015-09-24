@@ -778,7 +778,8 @@ def matchandpats(ctx, pats=(), opts=None, globbed=False, default='relpath',
         pats = []
     return m, pats
 
-def match(ctx, pats=(), opts={}, globbed=False, default='relpath', badfn=None):
+def match(ctx, pats=(), opts=None, globbed=False, default='relpath',
+          badfn=None):
     '''Return a matcher that will warn about bad matches.'''
     return matchandpats(ctx, pats, opts, globbed, default, badfn=badfn)[0]
 
