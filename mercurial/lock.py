@@ -39,7 +39,7 @@ class lock(object):
     _host = None
 
     def __init__(self, vfs, file, timeout=-1, releasefn=None, acquirefn=None,
-                 desc=None):
+                 desc=None, parentlock=None):
         self.vfs = vfs
         self.f = file
         self.held = 0
@@ -47,6 +47,9 @@ class lock(object):
         self.releasefn = releasefn
         self.acquirefn = acquirefn
         self.desc = desc
+        self.parentlock = parentlock
+        self._parentheld = False
+        self._inherited = False
         self.postrelease  = []
         self.pid = os.getpid()
         self.delay = self.lock()
