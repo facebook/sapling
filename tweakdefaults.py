@@ -60,6 +60,9 @@ def extsetup(ui):
     options.append(
         ('', 'root-relative', None, _('show status relative to root')))
 
+    wrapcommand(commands.table, 'tag', tagcmd)
+    wrapcommand(commands.table, 'tags', tagscmd)
+
 def tweakorder():
     """
     Tweakdefaults generally should load first; other extensions may modify
@@ -255,6 +258,24 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == 're:'):
         pats = ['']
     return orig(ui, repo, *pats, **opts)
+
+def tagcmd(orig, ui, repo, name1, *names, **opts):
+    """
+    Disabling tags unless allowed
+    """
+    message = ui.config('tweakdefaults', 'tagmessage',
+            'new tags are disabled in this repository')
+    if ui.configbool('tweakdefaults', 'allowtags'):
+        return orig(ui, repo, name1, *names, **opts)
+    else:
+        raise util.Abort(message)
+
+def tagscmd(orig, ui, repo, **opts):
+    message = ui.config('tweakdefaults', 'tagsmessage', '')
+    if message:
+        ui.warn(message + '\n')
+    return orig(ui, repo, **opts)
+
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):

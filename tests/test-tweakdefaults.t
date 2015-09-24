@@ -243,3 +243,15 @@ Don't break automation
   A dir1/f1
   A dir1/file with space
   A dir1/subdir1/subf1
+
+Test tweaked tag command
+  $ hg tag --config tweakdefaults.allowtags=true foo
+  $ hg tag foo
+  abort: new tags are disabled in this repository
+  [255]
+  $ hg tag --config tweakdefaults.tagmessage='testing' foo
+  abort: testing
+  [255]
+
+  $ hg tags --config tweakdefaults.tagsmessage='testing' | head -n0
+  testing
