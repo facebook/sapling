@@ -1,6 +1,19 @@
 The Mercurial system uses a set of configuration files to control
 aspects of its behavior.
 
+Troubleshooting
+===============
+
+If you're having problems with your configuration,
+:hg:`config --debug` can help you understand what is introducing
+a setting into your environment.
+
+See :hg:`help config.syntax` and :hg:`help config.files`
+for information about how and where to override things.
+
+Format
+======
+
 The configuration files use a simple ini-file format. A configuration
 file consists of sections, led by a ``[section]`` header and followed
 by ``name = value`` entries::
