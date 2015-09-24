@@ -1378,13 +1378,15 @@ class localrepository(object):
 
     @unfilteredmethod
     def commit(self, text="", user=None, date=None, match=None, force=False,
-               editor=False, extra={}):
+               editor=False, extra=None):
         """Add a new revision to current repository.
 
         Revision information is gathered from the working directory,
         match can be used to filter the committed files. If editor is
         supplied, it is called to get a commit message.
         """
+        if extra is None:
+            extra = {}
 
         def fail(f, msg):
             raise util.Abort('%s: %s' % (f, msg))
