@@ -278,6 +278,11 @@ Test extension help:
        transplant    command to transplant changesets from another branch
        win32mbcs     allow the use of MBCS paths with problematic encodings
        zeroconf      discover and advertise repositories on the local network
+
+Verify that extension keywords appear in help templates
+
+  $ hg help --config extensions.transplant= templating|grep transplant > /dev/null
+
 Test short command list with verbose option
 
   $ hg -v help shortlist
