@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 6242
+  content-length: 6264
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; }
@@ -441,6 +441,7 @@ static file
   	width: 100%;
   	padding: 0 0 0 5em;
   	counter-increment: lineno;
+  	vertical-align: top;
   }
   pre.sourcelines > span:before {
   	-moz-user-select: -moz-none;

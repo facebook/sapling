@@ -270,6 +270,7 @@ pre.sourcelines > span {
     padding: 0 0 0 5em;
     font-size: 1.2em;
     counter-increment: lineno;
+    vertical-align: top;
 }
 div.source > pre.sourcelines > span {
     padding: 1px 1px 1px 5em;
