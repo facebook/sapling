@@ -152,6 +152,71 @@ def exconvertbookmarks(orig, source):
 
     return bookmarks
 
+
+class remotenames(dict):
+    """This class encapsulates all the remotenames state. It also contains
+    methods to access that state in convenient ways.
+    """
+
+    def __init__(self, *args):
+        dict.__init__(self, *args)
+        self.clearnames()
+
+    def clearnames(self):
+        """Clear all remote names state"""
+
+        self['bookmarks'] = {}
+        self['branches'] = {}
+        self._invalidatecache()
+
+    def _invalidatecache(self):
+        self._node2marks = None
+        self._hoist2nodes = None
+        self._node2hoists = None
+        self._node2branch = None
+
+    def mark2nodes(self):
+        return self['bookmarks']
+
+    def node2marks(self):
+        if not self._node2marks:
+            self._node2marks = {}
+            for name, node in self.mark2nodes().iteritems():
+                self._node2marks.setdefault(node[0], []).append(name)
+        return self._node2marks
+
+    def hoist2nodes(self, hoist):
+        if not self._hoist2nodes:
+            self._hoist2nodes = {}
+            hoist += '/'
+            for name, node in self.mark2nodes().iteritems():
+                if name.startswith(hoist):
+                    name = name[len(hoist):]
+                    self._hoist2nodes[name] = node
+        return self._hoist2nodes
+
+    def node2hoists(self, hoist):
+        if not self._node2hoists:
+            self._node2hoists = {}
+            hoist += '/'
+            for name, node in self.mark2nodes().iteritems():
+                if name.startswith(hoist):
+                    name = name[len(hoist):]
+                    self._node2hoists.setdefault(node[0], []).append(name)
+        return self._node2hoists
+
+    def branch2nodes(self):
+        return self['branches']
+
+    def node2branch(self):
+        if not self._node2branch:
+            self._node2branch = {}
+            for name, nodes in self.branch2nodes().iteritems():
+                for node in nodes:
+                    self._node2branch[node] = [name]
+        return self._node2branch
+
+
 def reposetup(ui, repo):
     if not repo.local():
         return
