@@ -292,8 +292,7 @@ def _runcatch(req):
             ui.warn(_("abort: error: %s\n") % reason)
         elif (util.safehasattr(inst, "args")
               and inst.args and inst.args[0] == errno.EPIPE):
-            if ui.debugflag:
-                ui.warn(_("broken pipe\n"))
+            pass
         elif getattr(inst, "strerror", None):
             if getattr(inst, "filename", None):
                 ui.warn(_("abort: %s: %s\n") % (inst.strerror, inst.filename))
@@ -310,10 +309,7 @@ def _runcatch(req):
         try:
             ui.warn(_("interrupted!\n"))
         except IOError as inst:
-            if inst.errno == errno.EPIPE:
-                if ui.debugflag:
-                    ui.warn(_("\nbroken pipe\n"))
-            else:
+            if inst.errno != errno.EPIPE:
                 raise
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
