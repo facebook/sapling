@@ -54,6 +54,7 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, 'branch', branchcmd)
     options = entry[1]
     options.append(('', 'new', None, _('allow branch creation')))
+    wrapcommand(commands.table, 'branches', branchescmd)
 
     entry = wrapcommand(commands.table, 'status', statuscmd)
     options = entry[1]
@@ -231,13 +232,25 @@ def log(orig, ui, repo, *pats, **opts):
     return orig(ui, repo, *pats, **opts)
 
 def branchcmd(orig, ui, repo, label=None, **opts):
-    if label is None or opts.get('new'):
+    message = ui.config('tweakdefaults', 'branchmessage',
+            _('new named branches are disabled in this repository'))
+    enabled = ui.configbool('tweakdefaults', 'allowbranch', True)
+    if (enabled and opts.get('new')) or label is None:
         if 'new' in opts:
             del opts['new']
         return orig(ui, repo, label, **opts)
-    raise util.Abort(
+    elif enabled:
+	    raise util.Abort(
             _('do not use branches; use bookmarks instead'),
             hint=_('use --new if you are certain you want a branch'))
+    else:
+        raise util.Abort(message)
+
+def branchescmd(orig, ui, repo, active, closed, **opts):
+    message = ui.config('tweakdefaults', 'branchesmessage')
+    if message:
+        ui.warn(message + '\n')
+    return orig(ui, repo, active, closed, **opts)
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """

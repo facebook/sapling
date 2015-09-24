@@ -210,6 +210,19 @@ Crazy filenames
 Test tweaked branch command
   $ hg branch
   default
+  $ hg branch foo --config tweakdefaults.allowbranch=false
+  abort: new named branches are disabled in this repository
+  [255]
+  $ hg branch -C
+  reset working directory to branch default
+
+  $ hg branch --config tweakdefaults.allowbranch=false --config tweakdefaults.branchmessage='testing' foo
+  abort: testing
+  [255]
+  $ hg branch --config tweakdefaults.allowbranch=false --new foo
+  abort: new named branches are disabled in this repository
+  [255]
+
   $ hg branch foo
   abort: do not use branches; use bookmarks instead
   (use --new if you are certain you want a branch)
@@ -217,8 +230,9 @@ Test tweaked branch command
   $ hg branch --new foo
   marked working directory as branch foo
   (branches are permanent and global, did you want a bookmark?)
-  $ hg branch -C
-  reset working directory to branch default
+  $ hg branches --config tweakdefaults.branchesmessage='testing'| head -n0
+  testing
+
 
 Test that status is default relative
   $ mkdir foo
