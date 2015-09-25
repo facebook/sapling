@@ -476,11 +476,11 @@ class treemanifest(object):
         return (not self._files and (not self._dirs or
                 all(m._isempty() for m in self._dirs.values())))
 
-    def __str__(self):
-        return ('<treemanifest dir=%s, node=%s, loaded=%s, dirty=%s>' %
+    def __repr__(self):
+        return ('<treemanifest dir=%s, node=%s, loaded=%s, dirty=%s at 0x%x>' %
                 (self._dir, revlog.hex(self._node),
                  bool(self._load is _noop),
-                 self._dirty))
+                 self._dirty, id(self)))
 
     def dir(self):
         '''The directory that this tree manifest represents, including a
