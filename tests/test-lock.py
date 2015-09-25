@@ -13,13 +13,12 @@ from mercurial import (
 testlockname = 'testlock'
 
 class teststate(object):
-    def __init__(self, testcase):
+    def __init__(self, testcase, dir):
         self._testcase = testcase
         self._acquirecalled = False
         self._releasecalled = False
         self._postreleasecalled = False
-        d = tempfile.mkdtemp(dir=os.getcwd())
-        self.vfs = scmutil.vfs(d, audit=False)
+        self.vfs = scmutil.vfs(dir, audit=False)
 
     def makelock(self, *args, **kwargs):
         l = lock.lock(self.vfs, testlockname, releasefn=self.releasefn,
@@ -86,7 +85,7 @@ class teststate(object):
 
 class testlock(unittest.TestCase):
     def testlock(self):
-        state = teststate(self)
+        state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
         lock = state.makelock()
         state.assertacquirecalled(True)
         lock.release()
@@ -95,7 +94,7 @@ class testlock(unittest.TestCase):
         state.assertlockexists(False)
 
     def testrecursivelock(self):
-        state = teststate(self)
+        state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
         lock = state.makelock()
         state.assertacquirecalled(True)
 
@@ -115,7 +114,7 @@ class testlock(unittest.TestCase):
         state.assertlockexists(False)
 
     def testlockfork(self):
-        state = teststate(self)
+        state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
         lock = state.makelock()
         state.assertacquirecalled(True)
         lock.lock()
