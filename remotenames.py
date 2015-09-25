@@ -241,24 +241,17 @@ def reposetup(ui, repo):
         # hoisting only works if there are remote bookmarks
         hoist = ui.config('remotenames', 'hoist', 'default')
         if hoist:
-            hoist += '/'
-
-        if hoist:
-            hoist2nodes = {}
-            node2hoists = {}
-            for name, node in repo._remotenames.mark2nodes().iteritems():
-                if name.startswith(hoist):
-                    name = name[len(hoist):]
-                    hoist2nodes[name] = node
-                    node2hoists.setdefault(node[0], []).append(name)
             hoistednamens = ns(
                 'hoistednames',
                 templatename='hoistednames',
                 logname='hoistedname',
                 colorname='hoistedname',
-                listnames=lambda repo: hoist2nodes.keys(),
-                namemap=lambda repo, name: hoist2nodes.get(name),
-                nodemap=lambda repo, node: node2hoists.get(node, []))
+                listnames = lambda repo:
+                    repo._remotenames.hoist2nodes(hoist).keys(),
+                namemap = lambda repo, name:
+                    repo._remotenames.hoist2nodes(hoist).get(name, None),
+                nodemap = lambda repo, node:
+                    repo._remotenames.node2hoists(hoist).get(node, []))
             repo.names.addnamespace(hoistednamens)
 
     if ui.configbool('remotenames', 'branches', True):
