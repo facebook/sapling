@@ -244,8 +244,16 @@ def statuscmd(orig, ui, repo, *pats, **opts):
         del opts['root_relative']
     elif os.environ.get('HGPLAIN'): # don't break automation
         pass
-    elif not pats:
-        pats = ['re:']
+    # Here's an ugly hack! If users are passing "re:" to make status relative,
+    # hgwatchman will never refresh the full state and status will become and
+    # remain slow after a restart or 24 hours. Here, we check for this and
+    # replace 're:' with '' which has the same semantic effect but works for
+    # hgwatchman (because match.always() == True), if and only if 're:' is the
+    # only pattern passed.
+    #
+    # Also set pats to [''] if pats is empty because that makes status relative.
+    elif not pats or (len(pats) == 1 and pats[0] == 're:'):
+        pats = ['']
     return orig(ui, repo, *pats, **opts)
 
 ### bookmarks api compatibility layer ###
