@@ -80,9 +80,9 @@ class teststate(object):
 
     def _toexists(self, exists):
         if exists:
-            return 'exists'
+            return 'exist'
         else:
-            return 'not exists'
+            return 'not exist'
 
 class testlock(unittest.TestCase):
     def testlock(self):
