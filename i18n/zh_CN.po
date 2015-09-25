@@ -5091,7 +5091,7 @@ msgstr "HG: 请输入提交日志。以 'HG:' 开始的行会被删除。"
 msgid "HG: Leave message empty to abort commit."
 msgstr ""
 
-#, fuzzy, python-format
+#, fuzzy, python-format, broken
 msgid "HG: user: %s"
 msgstr "用户: %s\n"
 
@@ -5102,7 +5102,7 @@ msgstr ""
 msgid "HG: branch '%s'"
 msgstr ""
 
-#, fuzzy, python-format
+#, fuzzy, python-format, broken
 msgid "HG: subrepo %s"
 msgstr "已删除"
 
@@ -5114,11 +5114,11 @@ msgstr ""
 msgid "HG: changed %s"
 msgstr ""
 
-#, fuzzy, python-format
+#, fuzzy, python-format, broken
 msgid "HG: removed %s"
 msgstr "已删除"
 
-#, fuzzy
+#, fuzzy, broken
 msgid "HG: no files changed"
 msgstr "正在增加文件改变\n"
 
