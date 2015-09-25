@@ -205,7 +205,7 @@ Aborting lock does not prevent fncache writes
   > from mercurial import commands, util
   > from mercurial.extensions import wrapfunction
   > 
-  > def lockexception(orig, vfs, lockname, wait, releasefn, acquirefn, desc):
+  > def lockexception(orig, vfs, lockname, wait, releasefn, acquirefn, desc, parentenvvar=None):
   >     def releasewrap():
   >         raise util.Abort("forced lock failure")
   >     return orig(vfs, lockname, wait, releasewrap, acquirefn, desc)

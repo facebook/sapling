@@ -1296,7 +1296,7 @@ class localrepository(object):
 
         l = self._lock(self.vfs, "wlock", wait, unlock,
                        self.invalidatedirstate, _('working directory of %s') %
-                       self.origroot)
+                       self.origroot, parentenvvar='HG_WLOCK_LOCKER')
         self._wlockref = weakref.ref(l)
         return l
 
