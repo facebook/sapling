@@ -1211,10 +1211,15 @@ class localrepository(object):
                 continue
             ce.refresh()
 
-    def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc):
+    def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc,
+              parentenvvar=None):
+        parentlock = None
+        if parentenvvar is not None:
+            parentlock = os.environ.get(parentenvvar)
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn,
-                             acquirefn=acquirefn, desc=desc)
+                             acquirefn=acquirefn, desc=desc,
+                             parentlock=parentlock)
         except error.LockHeld as inst:
             if not wait:
                 raise
