@@ -22,16 +22,18 @@ class lockwrapper(lock.lock):
         return os.getpid() + self._pidoffset
 
 class teststate(object):
-    def __init__(self, testcase, dir):
+    def __init__(self, testcase, dir, pidoffset=0):
         self._testcase = testcase
         self._acquirecalled = False
         self._releasecalled = False
         self._postreleasecalled = False
         self.vfs = scmutil.vfs(dir, audit=False)
+        self._pidoffset = pidoffset
 
     def makelock(self, *args, **kwargs):
-        l = lock.lock(self.vfs, testlockname, releasefn=self.releasefn,
-                      acquirefn=self.acquirefn, *args, **kwargs)
+        l = lockwrapper(self._pidoffset, self.vfs, testlockname,
+                        releasefn=self.releasefn, acquirefn=self.acquirefn,
+                        *args, **kwargs)
         l.postrelease.append(self.postreleasefn)
         return l
 
