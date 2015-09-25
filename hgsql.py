@@ -281,7 +281,7 @@ def wraprepo(repo):
                                (escapedname, self.locktimeout))
             result = self.sqlconn.store_result().fetch_row()[0][0]
             if result != 1:
-                raise Exception("unable to obtain %s lock" % escapedname)
+                raise util.Abort("timed out waiting for mysql repo lock (%s)" % escapedname)
             self.heldlocks.add(name)
 
         def hassqllock(self, name):
