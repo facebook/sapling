@@ -51,7 +51,7 @@ class lock(object):
         self._parentheld = False
         self._inherited = False
         self.postrelease  = []
-        self.pid = os.getpid()
+        self.pid = self._getpid()
         self.delay = self.lock()
         if self.acquirefn:
             self.acquirefn()
@@ -67,6 +67,10 @@ class lock(object):
             self.held = 1
 
         self.release()
+
+    def _getpid(self):
+        # wrapper around os.getpid() to make testing easier
+        return os.getpid()
 
     def lock(self):
         timeout = self.timeout
@@ -197,7 +201,7 @@ class lock(object):
             self.held -= 1
         elif self.held == 1:
             self.held = 0
-            if os.getpid() != self.pid:
+            if self._getpid() != self.pid:
                 # we forked, and are not the parent
                 return
             try:
