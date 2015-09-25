@@ -2742,23 +2742,23 @@ def buildcommittext(repo, ctx, subs, extramsg):
         edittext.append(ctx.description())
     edittext.append("")
     edittext.append("") # Empty line between message and comments.
-    edittext.append(_("HG: Enter commit message."
+    edittext.append("HG: %s" % _("Enter commit message."
                       "  Lines beginning with 'HG:' are removed."))
     edittext.append("HG: %s" % extramsg)
     edittext.append("HG: --")
-    edittext.append(_("HG: user: %s") % ctx.user())
+    edittext.append("HG: %s" % (_("user: %s") % ctx.user()))
     if ctx.p2():
-        edittext.append(_("HG: branch merge"))
+        edittext.append("HG: %s" % _("branch merge"))
     if ctx.branch():
-        edittext.append(_("HG: branch '%s'") % ctx.branch())
+        edittext.append("HG: %s" % (_("branch '%s'") % ctx.branch()))
     if bookmarks.isactivewdirparent(repo):
-        edittext.append(_("HG: bookmark '%s'") % repo._activebookmark)
-    edittext.extend([_("HG: subrepo %s") % s for s in subs])
-    edittext.extend([_("HG: added %s") % f for f in added])
-    edittext.extend([_("HG: changed %s") % f for f in modified])
-    edittext.extend([_("HG: removed %s") % f for f in removed])
+        edittext.append("HG: %s" % (_("bookmark '%s'") % repo._activebookmark))
+    edittext.extend(["HG: %s" % (_("subrepo %s") % s) for s in subs])
+    edittext.extend(["HG: %s" % (_("added %s") % f) for f in added])
+    edittext.extend(["HG: %s" % (_("changed %s") % f) for f in modified])
+    edittext.extend(["HG: %s" % (_("removed %s") % f) for f in removed])
     if not added and not modified and not removed:
-        edittext.append(_("HG: no files changed"))
+        edittext.append("HG: %s" % _("no files changed"))
     edittext.append("")
 
     return "\n".join(edittext)
