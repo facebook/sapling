@@ -615,14 +615,14 @@ class treemanifest(object):
         copy = treemanifest(self._dir)
         copy._node = self._node
         copy._dirty = self._dirty
-        def _load():
+        def _load_for_copy():
             self._load()
             for d in self._dirs:
                 copy._dirs[d] = self._dirs[d].copy()
             copy._files = dict.copy(self._files)
             copy._flags = dict.copy(self._flags)
             copy._load = _noop
-        copy._load = _load
+        copy._load = _load_for_copy
         if self._load == _noop:
             # Chaining _load if it's _noop is functionally correct, but the
             # chain may end up excessively long (stack overflow), and
@@ -834,13 +834,13 @@ class treemanifest(object):
         return _text(sorted(dirs + files), usemanifestv2)
 
     def read(self, gettext, readsubtree):
-        def _load():
+        def _load_for_read():
             # Mark as loaded already here, so __setitem__ and setflag() don't
             # cause infinite loops when they try to load.
             self._load = _noop
             self.parse(gettext(), readsubtree)
             self._dirty = False
-        self._load = _load
+        self._load = _load_for_read
 
     def writesubtrees(self, m1, m2, writesubtree):
         self._load() # for consistency; should never have any effect here
