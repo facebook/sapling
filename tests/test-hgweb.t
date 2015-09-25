@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 6264
+  content-length: 6379
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; }
@@ -463,6 +463,11 @@ static file
   	left: 0px;
   	width: 4em;
   	height: 1em;
+  }
+  tr:target td,
+  pre.sourcelines > span:target,
+  pre.sourcelines.stripes > span:target {
+  	background-color: #bfdfff;
   }
   
   /* Graph */

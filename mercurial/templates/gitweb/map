@@ -95,12 +95,12 @@ filelog = filelog.tmpl
 fileline = '
   <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 annotateline = '
-  <tr style="font-family:monospace" class="parity{parity}">
+  <tr id="{lineid}" style="font-family:monospace" class="parity{parity}">
     <td class="linenr" style="text-align: right;">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
-    <td><pre><a class="linenr" href="#{lineid}" id="{lineid}">{linenumber}</a></pre></td>
+    <td><pre><a class="linenr" href="#{lineid}">{linenumber}</a></pre></td>
     <td><pre>{line|escape}</pre></td>
   </tr>'
 difflineplus = '
@@ -117,9 +117,9 @@ comparisonblock ='
   {lines}
   </tbody>'
 comparisonline = '
-  <tr style="font-family:monospace">
-    <td class="{type}"><pre><a class="linenr" href="#{lineid}" id="{lineid}">{leftlinenumber}</a> {leftline|escape}</pre></td>
-    <td class="{type}"><pre><a class="linenr" href="#{lineid}" id="{lineid}">{rightlinenumber}</a> {rightline|escape}</pre></td>
+  <tr id="{lineid}" style="font-family:monospace">
+    <td class="{type}"><pre><a class="linenr" href="#{lineid}">{leftlinenumber}</a> {leftline|escape}</pre></td>
+    <td class="{type}"><pre><a class="linenr" href="#{lineid}">{rightlinenumber}</a> {rightline|escape}</pre></td>
   </tr>'
 
 changelogparent = '

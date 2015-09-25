@@ -119,6 +119,11 @@ pre.sourcelines > a {
 	width: 4em;
 	height: 1em;
 }
+tr:target td,
+pre.sourcelines > span:target,
+pre.sourcelines.stripes > span:target {
+	background-color: #bfdfff;
+}
 
 /* Graph */
 div#wrapper {

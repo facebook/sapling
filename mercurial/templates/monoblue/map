@@ -91,13 +91,13 @@ filelog = filelog.tmpl
 fileline = '
   <span id="{lineid}">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'
 annotateline = '
-  <tr class="parity{parity}">
+  <tr id="{lineid}" class="parity{parity}">
     <td class="linenr">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
     </td>
     <td class="lineno">
-      <a href="#{lineid}" id="{lineid}">{linenumber}</a>
+      <a href="#{lineid}">{linenumber}</a>
     </td>
     <td class="source">{line|escape}</td>
   </tr>'
@@ -115,9 +115,9 @@ comparisonblock ='
   {lines}
   </tbody>'
 comparisonline = '
-  <tr>
-    <td class="source {type}"><a class="linenr" href="#{lineid}" id="{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
-    <td class="source {type}"><a class="linenr" href="#{lineid}" id="{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
+  <tr id="{lineid}">
+    <td class="source {type}"><a class="linenr" href="#{lineid}">{leftlinenumber}</a> {leftline|escape}</td>
+    <td class="source {type}"><a class="linenr" href="#{lineid}">{rightlinenumber}</a> {rightline|escape}</td>
   </tr>'
 
 changesetlink = '<a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">{node|short}</a>'
