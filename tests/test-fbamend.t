@@ -5,6 +5,7 @@ Test functionality is present
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTTMP/fbamend.py
+  > rebase=
   > EOF
 
   $ hg help commit | grep -- --fixup

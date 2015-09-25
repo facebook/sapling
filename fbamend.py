@@ -18,7 +18,6 @@ This extension is incompatible with changeset evolution. The command will
 automatically disable itself if changeset evolution is enabled.
 """
 
-from hgext import rebase
 from mercurial import util, cmdutil, phases, commands, bookmarks, repair
 from mercurial import merge, extensions
 from mercurial.node import hex
@@ -31,12 +30,21 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
+rebasemod = None
+
 amendopts = [
     ('', 'rebase', None, _('rebases children commits after the amend')),
     ('', 'fixup', None, _('rebase children commits from a previous amend')),
 ]
 
 def uisetup(ui):
+    global rebasemod
+    try:
+        rebasemod = extensions.find('rebase')
+    except KeyError:
+        ui.warn("no rebase extension detected - disabling fbamend")
+        return
+
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])
@@ -199,7 +207,7 @@ def fixupamend(ui, repo):
         }
 
         if opts['rev'] and opts['rev'][0]:
-            rebase.rebase(ui, repo, **opts)
+            rebasemod.rebase(ui, repo, **opts)
 
         for bookmark in oldbookmarks:
             repo._bookmarks.pop(bookmark)
