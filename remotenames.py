@@ -255,19 +255,16 @@ def reposetup(ui, repo):
             repo.names.addnamespace(hoistednamens)
 
     if ui.configbool('remotenames', 'branches', True):
-        branch2nodes = repo._remotenames.get('branches')
-        node2branch = {}
-        for name, nodes in branch2nodes.iteritems():
-            for node in nodes:
-                node2branch[node] = [name]
         remotebranchns = ns(
             'remotebranches',
             templatename='remotebranches',
             logname='branch',
             colorname='remotebranch',
-            listnames=lambda repo: branch2nodes.keys(),
-            namemap=lambda repo, name: branch2nodes.get(name),
-            nodemap=lambda repo, node: node2branch.get(node, []))
+            listnames=lambda repo: repo._remotenames.branch2nodes().keys(),
+            namemap=lambda repo, name:
+                repo._remotenames.branch2nodes().get(name, None),
+            nodemap=lambda repo, node:
+                repo._remotenames.node2branch().get(node, []))
         repo.names.addnamespace(remotebranchns)
 
 def _tracking(ui):
