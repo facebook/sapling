@@ -413,6 +413,9 @@ def wraprepo(repo):
                 # We circumvent the changelog and manifest when we add entries to
                 # the revlogs. So clear all the caches.
                 self.invalidate()
+                self._filecache.pop('changelog', None)
+                self._filecache.pop('manifest', None)
+                self._filecache.pop('_phasecache', None)
 
                 heads = set(self.heads())
                 heads.discard(nullid)
