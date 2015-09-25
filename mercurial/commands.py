@@ -5459,7 +5459,7 @@ def resolve(ui, repo, *pats, **opts):
         raise util.Abort(_("can't specify --all and patterns"))
     if not (all or pats or show or mark or unmark):
         raise util.Abort(_('no files or directories specified'),
-                         hint=('use --all to remerge all files'))
+                         hint=('use --all to re-merge all unresolved files'))
 
     if show:
         fm = ui.formatter('resolve', opts)

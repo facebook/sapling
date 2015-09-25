@@ -129,7 +129,7 @@ get back to conflicting state
 resolve without arguments should suggest --all
   $ hg resolve
   abort: no files or directories specified
-  (use --all to remerge all files)
+  (use --all to re-merge all unresolved files)
   [255]
 
 resolve --all should re-merge all unresolved files
