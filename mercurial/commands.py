@@ -4020,7 +4020,11 @@ def help_(ui, name=None, **opts):
 
     formatted, pruned = minirst.format(text, textwidth, keep=keep,
                                        section=section)
-    if section and not formatted:
+
+    # We could have been given a weird ".foo" section without a name
+    # to look for, or we could have simply failed to found "foo.bar"
+    # because bar isn't a section of foo
+    if section and not (formatted and name):
         raise util.Abort(_("help section not found"))
 
     if 'verbose' in pruned:

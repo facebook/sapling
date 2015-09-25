@@ -253,7 +253,7 @@ def _runcatch(req):
             # check if the command is in a disabled extension
             # (but don't check for extensions themselves)
             commands.help_(ui, inst.args[0], unknowncmd=True)
-        except error.UnknownCommand:
+        except (error.UnknownCommand, util.Abort):
             suggested = False
             if len(inst.args) == 2:
                 sim = _getsimilar(inst.args[1], inst.args[0])

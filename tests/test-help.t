@@ -616,6 +616,23 @@ Test command without options
   [255]
 
 
+Make sure that we don't run afoul of the help system thinking that
+this is a section and erroring out weirdly.
+
+  $ hg .log
+  hg: unknown command '.log'
+  (did you mean one of log?)
+  [255]
+
+  $ hg log.
+  hg: unknown command 'log.'
+  (did you mean one of log?)
+  [255]
+  $ hg pu.lh
+  hg: unknown command 'pu.lh'
+  (did you mean one of pull, push?)
+  [255]
+
   $ cat > helpext.py <<EOF
   > import os
   > from mercurial import cmdutil, commands
