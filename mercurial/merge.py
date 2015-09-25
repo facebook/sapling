@@ -42,7 +42,7 @@ class mergestate(object):
 
     it is stored on disk when needed. Two file are used, one with an old
     format, one with a new format. Both contains similar data, but the new
-    format can store new kind of field.
+    format can store new kinds of field.
 
     Current new format is a list of arbitrary record of the form:
 
