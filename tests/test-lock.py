@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 
+import copy
 import os
 import silenttestrunner
 import tempfile
+import types
 import unittest
 
 from mercurial import (
@@ -11,6 +13,12 @@ from mercurial import (
 )
 
 testlockname = 'testlock'
+
+# work around http://bugs.python.org/issue1515
+if types.MethodType not in copy._deepcopy_dispatch:
+    def _deepcopy_method(x, memo):
+        return type(x)(x.im_func, copy.deepcopy(x.im_self, memo), x.im_class)
+    copy._deepcopy_dispatch[types.MethodType] = _deepcopy_method
 
 class lockwrapper(lock.lock):
     def __init__(self, pidoffset, *args, **kwargs):
@@ -128,16 +136,16 @@ class testlock(unittest.TestCase):
         state = teststate(self, tempfile.mkdtemp(dir=os.getcwd()))
         lock = state.makelock()
         state.assertacquirecalled(True)
-        lock.lock()
+
         # fake a fork
-        lock.pid += 1
-        lock.release()
+        forklock = copy.deepcopy(lock)
+        forklock._pidoffset = 1
+        forklock.release()
         state.assertreleasecalled(False)
         state.assertpostreleasecalled(False)
         state.assertlockexists(True)
 
         # release the actual lock
-        lock.pid -= 1
         lock.release()
         state.assertreleasecalled(True)
         state.assertpostreleasecalled(True)
