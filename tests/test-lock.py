@@ -12,6 +12,15 @@ from mercurial import (
 
 testlockname = 'testlock'
 
+class lockwrapper(lock.lock):
+    def __init__(self, pidoffset, *args, **kwargs):
+        # lock.lock.__init__() calls lock(), so the pidoffset assignment needs
+        # to be earlier
+        self._pidoffset = pidoffset
+        super(lockwrapper, self).__init__(*args, **kwargs)
+    def _getpid(self):
+        return os.getpid() + self._pidoffset
+
 class teststate(object):
     def __init__(self, testcase, dir):
         self._testcase = testcase
