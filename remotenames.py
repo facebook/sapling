@@ -1095,7 +1095,7 @@ def transition(repo, ui):
     if message:
         ui.warn(message + '\n')
 
-def saveremotenames(repo, remote, branches={}, bookmarks={}):
+def saveremotenames(repo, remotepath, branches={}, bookmarks={}):
     vfs = shareawarevfs(repo)
     wlock = repo.wlock()
     try:
@@ -1114,18 +1114,21 @@ def saveremotenames(repo, remote, branches={}, bookmarks={}):
 
         f = vfs('remotenames', 'w')
 
-        # only update the given 'remote'; iterate over old data and re-save it
+        # only update the given 'remote path'; iterate over
+        # old data and re-save it
         for node, nametype, oldremote, rname in olddata:
-            if oldremote != remote:
+            if oldremote != remotepath:
                 n = joinremotename(oldremote, rname)
                 f.write('%s %s %s\n' % (node, nametype, n))
 
         for branch, nodes in branches.iteritems():
             for n in nodes:
-                rname = joinremotename(remote, branch)
+                rname = joinremotename(remotepath, branch)
                 f.write('%s branches %s\n' % (hex(n), rname))
+
         for bookmark, n in bookmarks.iteritems():
-            f.write('%s bookmarks %s\n' % (n, joinremotename(remote, bookmark)))
+            f.write('%s bookmarks %s\n' %
+                    (n, joinremotename(remotepath, bookmark)))
         f.close()
 
         # Old paths have been deleted, refresh remotenames
