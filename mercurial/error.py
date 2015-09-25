@@ -115,7 +115,7 @@ class LockUnavailable(LockError):
     pass
 
 # LockError is for errors while acquiring the lock -- this is unrelated
-class LockInheritanceContractViolation(AssertionError):
+class LockInheritanceContractViolation(RuntimeError):
     pass
 
 class ResponseError(Exception):
