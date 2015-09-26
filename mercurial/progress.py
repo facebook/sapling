@@ -166,6 +166,9 @@ class progbar(object):
         if not shouldprint(self.ui):
             return
         sys.stderr.write('\r%s\r' % (' ' * self.width()))
+        if self.printed:
+            # force immediate re-paint of progress bar
+            self.lastprint = 0
 
     def complete(self):
         if not shouldprint(self.ui):
