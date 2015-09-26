@@ -199,8 +199,8 @@ class HgEditor(svnwrap.Editor):
         self._openpaths = {}
         self._deleted = set()
         self._getctx = hgutil.lrucachefunc(self.repo.changectx)
-        # A stack of opened directory (baton, path) pairs.
-        self._opendirs = []
+        # A map from directory baton to path
+        self._opendirs = {}
         self._missing = set()
 
     def _openfile(self, path, data, isexec, islink, copypath, create=False):
@@ -220,16 +220,13 @@ class HgEditor(svnwrap.Editor):
     def _opendir(self, path):
         self._filecounter += 1
         baton = 'f%d-%s' % (self._filecounter, path)
-        self._opendirs.append((baton, path))
+        self._opendirs[baton] = path
         return baton
 
     def _checkparentdir(self, baton):
-        if not self._opendirs:
+        if not self._opendirs or baton not in self._opendirs:
             raise EditingError('trying to operate on an already closed '
                 'directory: %s' % baton)
-        if self._opendirs[-1][0] != baton:
-            raise EditingError('can only operate on the most recently '
-                'opened directory: %s != %s' % (self._opendirs[-1][0], baton))
 
     def _deletefile(self, path):
         if self.meta.is_path_valid(path):
@@ -532,7 +529,7 @@ class HgEditor(svnwrap.Editor):
         self._checkparentdir(dir_baton)
         if len(self._opendirs) == 1:
             return
-        path = self._opendirs[-1][1]
+        path = self._opendirs[dir_baton]
         if name == 'svn:externals':
             self.current.externals[path] = value
 
@@ -556,7 +553,7 @@ class HgEditor(svnwrap.Editor):
     @svnwrap.ieditor
     def close_directory(self, dir_baton, dir_pool=None):
         self._checkparentdir(dir_baton)
-        self._opendirs.pop()
+        del self._opendirs[dir_baton]
 
     @svnwrap.ieditor
     def apply_textdelta(self, file_baton, base_checksum, pool=None):
@@ -620,7 +617,7 @@ class HgEditor(svnwrap.Editor):
 
         if self._opendirs:
             raise EditingError('directory %s was not closed'
-                % self._opendirs[-1][1])
+                % self._opendirs.keys()[-1])
 
         # Resolve by changelog entries to avoid extra reads
         nodes = {}
