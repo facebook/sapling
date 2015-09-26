@@ -646,8 +646,8 @@ this is a section and erroring out weirdly.
   >     ('', 'newline', '', 'line1\nline2')],
   >     'hg nohelp',
   >     norepo=True)
-  > @command('debugoptDEP', [('', 'dopt', None, 'option is DEPRECATED')])
-  > @command('debugoptEXP', [('', 'eopt', None, 'option is EXPERIMENTAL')])
+  > @command('debugoptDEP', [('', 'dopt', None, 'option is (DEPRECATED)')])
+  > @command('debugoptEXP', [('', 'eopt', None, 'option is (EXPERIMENTAL)')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 
@@ -868,9 +868,9 @@ test deprecated and experimental options are hidden in command help
 
 test deprecated and experimental options is shown with -v
   $ hg help -v debugoptDEP | grep dopt
-    --dopt option is DEPRECATED
+    --dopt option is (DEPRECATED)
   $ hg help -v debugoptEXP | grep eopt
-    --eopt option is EXPERIMENTAL
+    --eopt option is (EXPERIMENTAL)
 
 #if gettext
 test deprecated option is hidden with translation with untranslated description

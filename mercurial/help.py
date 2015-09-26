@@ -15,10 +15,12 @@ import cmdutil
 import hgweb.webcommands as webcommands
 
 _exclkeywords = [
-    "DEPRECATED",
-    "EXPERIMENTAL",
-    _("DEPRECATED"),
-    _("EXPERIMENTAL"),
+    "(DEPRECATED)",
+    "(EXPERIMENTAL)",
+    # i18n: "(DEPRECATED)" is a keyword, must be translated consistently
+    _("(DEPRECATED)"),
+    # i18n: "(EXPERIMENTAL)" is a keyword, must be translated consistently
+    _("(EXPERIMENTAL)"),
     ]
 
 def listexts(header, exts, indent=1, showdeprecated=False):
@@ -339,7 +341,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             if not ui.debugflag and f.startswith("debug") and name != "debug":
                 continue
             doc = e[0].__doc__
-            if doc and 'DEPRECATED' in doc and not ui.verbose:
+            if doc and '(DEPRECATED)' in doc and not ui.verbose:
                 continue
             doc = gettext(doc)
             if not doc:

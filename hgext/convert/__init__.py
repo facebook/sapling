@@ -25,7 +25,7 @@ testedwith = 'internal'
 
 @command('convert',
     [('', 'authors', '',
-      _('username mapping filename (DEPRECATED, use --authormap instead)'),
+      _('username mapping filename (DEPRECATED) (use --authormap instead)'),
       _('FILE')),
     ('s', 'source-type', '', _('source repository type'), _('TYPE')),
     ('d', 'dest-type', '', _('destination repository type'), _('TYPE')),
