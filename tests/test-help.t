@@ -980,6 +980,12 @@ Test templating help
       firstline     Any text. Returns the first line of text.
       nonempty      Any text. Returns '(none)' if the string is empty.
 
+Test deprecated items
+
+  $ hg help -v templating | grep currentbookmark
+      currentbookmark
+  $ hg help templating | (grep currentbookmark || true)
+
 Test help hooks
 
   $ cat > helphook1.py <<EOF

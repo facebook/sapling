@@ -191,7 +191,8 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     entries = []
     for name in sorted(items):
         text = (items[name].__doc__ or '').rstrip()
-        if not text:
+        if (not text
+            or not ui.verbose and any(w in text for w in _exclkeywords)):
             continue
         text = gettext(text)
         if dedent:
