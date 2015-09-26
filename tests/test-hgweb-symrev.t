@@ -649,11 +649,11 @@ Set up the repo
   <a href="/rev/43c799df6e75?style=monoblue">
   <a href="/rev/43c799df6e75?style=monoblue">changeset</a> |
   <a href="/file/43c799df6e75?style=monoblue">files</a>
-  <td><a href="/rev/a7c1559b7bba?style=monoblue">xyzzy</a></td>
+  <td><a href="/rev/xyzzy?style=monoblue">xyzzy</a></td>
   <a href="/rev/a7c1559b7bba?style=monoblue">changeset</a> |
   <a href="/log/a7c1559b7bba?style=monoblue">changelog</a> |
   <a href="/file/a7c1559b7bba?style=monoblue">files</a>
-  <td><a href="/shortlog/9d8c40cba617?style=monoblue">9d8c40cba617</a></td>
+  <td class="open"><a href="/shortlog/default?style=monoblue">default</a></td>
   <a href="/rev/9d8c40cba617?style=monoblue">changeset</a> |
   <a href="/log/9d8c40cba617?style=monoblue">changelog</a> |
   <a href="/file/9d8c40cba617?style=monoblue">files</a>
@@ -689,19 +689,19 @@ Set up the repo
           | <a href="/graph/43c799df6e75?style=monoblue">(0)</a> <a href="/graph/tip?style=monoblue">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'tags?style=monoblue' | egrep $REVLINKS
-  <td><a href="/rev/9d8c40cba617?style=monoblue">tip</a></td>
+  <td><a href="/rev/tip?style=monoblue">tip</a></td>
   <a href="/rev/9d8c40cba617?style=monoblue">changeset</a> |
   <a href="/log/9d8c40cba617?style=monoblue">changelog</a> |
   <a href="/file/9d8c40cba617?style=monoblue">files</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'bookmarks?style=monoblue' | egrep $REVLINKS
-  <td><a href="/rev/a7c1559b7bba?style=monoblue">xyzzy</a></td>
+  <td><a href="/rev/xyzzy?style=monoblue">xyzzy</a></td>
   <a href="/rev/a7c1559b7bba?style=monoblue">changeset</a> |
   <a href="/log/a7c1559b7bba?style=monoblue">changelog</a> |
   <a href="/file/a7c1559b7bba?style=monoblue">files</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'branches?style=monoblue' | egrep $REVLINKS
-  <td><a href="/shortlog/9d8c40cba617?style=monoblue">9d8c40cba617</a></td>
+  <td class="open"><a href="/shortlog/default?style=monoblue">default</a></td>
   <a href="/rev/9d8c40cba617?style=monoblue">changeset</a> |
   <a href="/log/9d8c40cba617?style=monoblue">changelog</a> |
   <a href="/file/9d8c40cba617?style=monoblue">files</a>
