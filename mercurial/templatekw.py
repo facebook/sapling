@@ -505,10 +505,5 @@ keywords = {
     'tags': showtags,
 }
 
-dockeywords = {
-}
-dockeywords.update(keywords)
-del dockeywords['branches']
-
 # tell hggettext to extract docstrings from these functions:
-i18nfunctions = dockeywords.values()
+i18nfunctions = keywords.values()
