@@ -205,7 +205,7 @@ def showbranch(**args):
 def showbranches(**args):
     """:branches: List of strings. The name of the branch on which the
     changeset was committed. Will be empty if the branch name was
-    default.
+    default. (DEPRECATED)
     """
     branch = args['ctx'].branch()
     if branch != 'default':
