@@ -7,6 +7,10 @@
   $ SVNREPOURL=file://`$PYTHON -c "import urllib, sys; sys.stdout.write(urllib.quote(sys.argv[1]))" "$SVNREPOPATH"`
 #endif
 
+  $ filter_svn_output () {
+  >     egrep -v 'Committing|Transmitting|Updating' || true
+  > }
+
 create subversion repo
 
   $ WCROOT="`pwd`/svn-wc"
@@ -24,21 +28,12 @@ create subversion repo
   $ svn add externals
   A         externals
   A         externals/other (glob)
-  $ svn ci -m 'Add alpha'
-  Adding         externals
-  Adding         externals/other (glob)
-  Adding         src
-  Adding         src/alpha (glob)
-  Transmitting file data ..
-  Committed revision 1.
+  $ svn ci -qm 'Add alpha'
   $ svn up -q
   $ echo "externals -r1 $SVNREPOURL/externals" > extdef
   $ svn propset -F extdef svn:externals src
   property 'svn:externals' set on 'src'
-  $ svn ci -m 'Setting externals'
-  Sending        src
-  
-  Committed revision 2.
+  $ svn ci -qm 'Setting externals'
   $ cd ..
 
 create hg repo
@@ -98,10 +93,9 @@ change file in svn and hg, commit
   commit: 1 modified, 1 subrepos
   update: (current)
   phases: 2 draft
-  $ hg commit --subrepos -m 'Message!' | grep -v Updating
+  $ hg commit --subrepos -m 'Message!' | filter_svn_output
   committing subrepository s
   Sending*s/alpha (glob)
-  Transmitting file data .
   Committed revision 3.
   
   Fetching external item into '*s/externals'* (glob)
@@ -128,9 +122,7 @@ missing svn file, commit should fail
 add an unrelated revision in svn and update the subrepo to without
 bringing any changes.
 
-  $ svn mkdir "$SVNREPOURL/unrelated" -m 'create unrelated'
-  
-  Committed revision 4.
+  $ svn mkdir "$SVNREPOURL/unrelated" -qm 'create unrelated'
   $ svn up -q s
   $ hg sum
   parent: 2:* tip (glob)
@@ -153,10 +145,7 @@ add a commit from svn
   $ echo xyz >> alpha
   $ svn propset svn:mime-type 'text/xml' alpha
   property 'svn:mime-type' set on 'alpha'
-  $ svn ci -m 'amend a from svn'
-  Sending        *alpha (glob)
-  Transmitting file data .
-  Committed revision 5.
+  $ svn ci -qm 'amend a from svn'
   $ cd ../../sub/t
 
 this commit from hg will fail
@@ -429,11 +418,7 @@ are unknown directories being replaced by tracked ones (happens with rebase).
   $ svn add dir
   A         dir
   A         dir/epsilon.py (glob)
-  $ svn ci -m 'Add dir/epsilon.py'
-  Adding         *dir (glob)
-  Adding         *dir/epsilon.py (glob)
-  Transmitting file data .
-  Committed revision 6.
+  $ svn ci -qm 'Add dir/epsilon.py'
   $ cd ../..
   $ hg init rebaserepo
   $ cd rebaserepo
@@ -495,41 +480,26 @@ This is surprising, but is also correct based on the current code:
 Point to a Subversion branch which has since been deleted and recreated
 First, create that condition in the repository.
 
-  $ hg ci --subrepos -m cleanup | grep -v Updating
+  $ hg ci --subrepos -m cleanup | filter_svn_output
   committing subrepository obstruct
   Sending        obstruct/other (glob)
-  Transmitting file data .
   Committed revision 7.
   At revision 7.
-  $ svn mkdir -m "baseline" $SVNREPOURL/trunk
-  
-  Committed revision 8.
-  $ svn copy -m "initial branch" $SVNREPOURL/trunk $SVNREPOURL/branch
-  
-  Committed revision 9.
+  $ svn mkdir -qm "baseline" $SVNREPOURL/trunk
+  $ svn copy -qm "initial branch" $SVNREPOURL/trunk $SVNREPOURL/branch
   $ svn co --quiet "$SVNREPOURL"/branch tempwc
   $ cd tempwc
   $ echo "something old" > somethingold
   $ svn add somethingold
   A         somethingold
-  $ svn ci -m 'Something old'
-  Adding         somethingold
-  Transmitting file data .
-  Committed revision 10.
-  $ svn rm -m "remove branch" $SVNREPOURL/branch
-  
-  Committed revision 11.
-  $ svn copy -m "recreate branch" $SVNREPOURL/trunk $SVNREPOURL/branch
-  
-  Committed revision 12.
+  $ svn ci -qm 'Something old'
+  $ svn rm -qm "remove branch" $SVNREPOURL/branch
+  $ svn copy -qm "recreate branch" $SVNREPOURL/trunk $SVNREPOURL/branch
   $ svn up -q
   $ echo "something new" > somethingnew
   $ svn add somethingnew
   A         somethingnew
-  $ svn ci -m 'Something new'
-  Adding         somethingnew
-  Transmitting file data .
-  Committed revision 13.
+  $ svn ci -qm 'Something new'
   $ cd ..
   $ rm -rf tempwc
   $ svn co "$SVNREPOURL/branch"@10 recreated
@@ -610,15 +580,8 @@ well.
   A         trunk/subdir (glob)
   A         trunk/subdir/a (glob)
   A         branches
-  $ svn ci -m addsubdir
-  Adding         branches
-  Adding         trunk/subdir (glob)
-  Adding         trunk/subdir/a (glob)
-  Transmitting file data .
-  Committed revision 14.
-  $ svn cp -m branchtrunk $SVNREPOURL/trunk $SVNREPOURL/branches/somebranch
-  
-  Committed revision 15.
+  $ svn ci -qm addsubdir
+  $ svn cp -qm branchtrunk $SVNREPOURL/trunk $SVNREPOURL/branches/somebranch
   $ cd ..
 
   $ hg init repo2
@@ -652,14 +615,7 @@ Test sanitizing ".hg/hgrc" in subrepo
   A         sub
   A         sub/.hg (glob)
   A         sub/.hg/hgrc (glob)
-  $ svn ci -m 'add .hg/hgrc to be sanitized at hg update'
-  Adding         .hg
-  Adding         .hg/hgrc (glob)
-  Adding         sub
-  Adding         sub/.hg (glob)
-  Adding         sub/.hg/hgrc (glob)
-  Transmitting file data ..
-  Committed revision 16.
+  $ svn ci -qm 'add .hg/hgrc to be sanitized at hg update'
   $ svn up -q
   $ cd ..
   $ hg commit -S -m 'commit with svn revision including .hg/hgrc'

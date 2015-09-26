@@ -27,10 +27,7 @@ handle svn subrepos safely
 #endif
 
   $ mkdir -p svn-project-2499/trunk
-  $ svn import -m 'init project' svn-project-2499 "$SVNREPOURL"
-  Adding         svn-project-2499/trunk (glob)
-  
-  Committed revision 1.
+  $ svn import -qm 'init project' svn-project-2499 "$SVNREPOURL"
 
 qnew on repo w/svn subrepo
   $ mkrepo repo-2499-svn-subrepo
