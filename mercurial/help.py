@@ -144,7 +144,7 @@ def loaddoc(topic):
         path = os.path.join(docdir, topic + ".txt")
         doc = gettext(util.readfile(path))
         for rewriter in helphooks.get(topic, []):
-            doc = rewriter(topic, doc)
+            doc = rewriter(ui, topic, doc)
         return doc
 
     return loader
@@ -184,7 +184,7 @@ helphooks = {}
 def addtopichook(topic, rewriter):
     helphooks.setdefault(topic, []).append(rewriter)
 
-def makeitemsdoc(topic, doc, marker, items, dedent=False):
+def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
     """Extract docstring from the items key to function mapping, build a
     single documentation block and use it to overwrite the marker in doc.
     """
@@ -211,8 +211,8 @@ def makeitemsdoc(topic, doc, marker, items, dedent=False):
     return doc.replace(marker, entries)
 
 def addtopicsymbols(topic, marker, symbols, dedent=False):
-    def add(topic, doc):
-        return makeitemsdoc(topic, doc, marker, symbols, dedent=dedent)
+    def add(ui, topic, doc):
+        return makeitemsdoc(ui, topic, doc, marker, symbols, dedent=dedent)
     addtopichook(topic, add)
 
 addtopicsymbols('filesets', '.. predicatesmarker', fileset.symbols)

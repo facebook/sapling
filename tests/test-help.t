@@ -985,7 +985,7 @@ Test help hooks
   $ cat > helphook1.py <<EOF
   > from mercurial import help
   > 
-  > def rewrite(topic, doc):
+  > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook1\n'
   > 
   > def extsetup(ui):
@@ -994,7 +994,7 @@ Test help hooks
   $ cat > helphook2.py <<EOF
   > from mercurial import help
   > 
-  > def rewrite(topic, doc):
+  > def rewrite(ui, topic, doc):
   >     return doc + '\nhelphook2\n'
   > 
   > def extsetup(ui):
