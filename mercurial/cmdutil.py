@@ -1428,24 +1428,8 @@ class changeset_templater(changeset_printer):
 
     def _show(self, ctx, copies, matchfn, props):
         '''show a single changeset or file revision'''
-
-        showlist = templatekw.showlist
-
-        # showparents() behavior depends on ui trace level which
-        # causes unexpected behaviors at templating level and makes
-        # it harder to extract it in a standalone function. Its
-        # behavior cannot be changed so leave it here for now.
-        def showparents(**args):
-            ctx = args['ctx']
-            parents = [[('rev', p.rev()),
-                        ('node', p.hex()),
-                        ('phase', p.phasestr())]
-                       for p in scmutil.meaningfulparents(self.repo, ctx)]
-            return showlist('parent', parents, **args)
-
         props = props.copy()
         props.update(templatekw.keywords)
-        props['parents'] = showparents
         props['templ'] = self.t
         props['ctx'] = ctx
         props['repo'] = self.repo

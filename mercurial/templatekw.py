@@ -397,11 +397,17 @@ def showp2node(repo, ctx, templ, **args):
     parent, all digits are 0."""
     return ctx.p2().hex()
 
-def _showparents(**args):
+def showparents(**args):
     """:parents: List of strings. The parents of the changeset in "rev:node"
     format. If the changeset has only one "natural" parent (the predecessor
     revision) nothing is shown."""
-    pass
+    repo = args['repo']
+    ctx = args['ctx']
+    parents = [[('rev', p.rev()),
+                ('node', p.hex()),
+                ('phase', p.phasestr())]
+               for p in scmutil.meaningfulparents(repo, ctx)]
+    return showlist('parent', parents, **args)
 
 def showphase(repo, ctx, templ, **args):
     """:phase: String. The changeset phase name."""
@@ -491,6 +497,7 @@ keywords = {
     'p1node': showp1node,
     'p2rev': showp2rev,
     'p2node': showp2node,
+    'parents': showparents,
     'phase': showphase,
     'phaseidx': showphaseidx,
     'rev': showrev,
@@ -499,7 +506,6 @@ keywords = {
 }
 
 dockeywords = {
-    'parents': _showparents,
 }
 dockeywords.update(keywords)
 del dockeywords['branches']
