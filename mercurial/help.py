@@ -34,8 +34,8 @@ def listexts(header, exts, indent=1, showdeprecated=False):
             rst.append('%s:%s: %s\n' % (' ' * indent, name, desc))
     return rst
 
-def extshelp():
-    rst = loaddoc('extensions')().splitlines(True)
+def extshelp(ui):
+    rst = loaddoc('extensions')(ui).splitlines(True)
     rst.extend(listexts(
         _('enabled extensions:'), extensions.enabled(), showdeprecated=True))
     rst.extend(listexts(_('disabled extensions:'), extensions.disabled()))
@@ -83,7 +83,7 @@ def indicateomitted(rst, omitted, notomitted=None):
     if notomitted:
         rst.append('\n\n.. container:: notomitted\n\n    %s\n\n' % notomitted)
 
-def topicmatch(kw):
+def topicmatch(ui, kw):
     """Return help topics matching kw.
 
     Returns {'section': [(name, summary), ...], ...} where section is
@@ -101,7 +101,7 @@ def topicmatch(kw):
         # Old extensions may use a str as doc.
         if (sum(map(lowercontains, names))
             or lowercontains(header)
-            or (callable(doc) and lowercontains(doc()))):
+            or (callable(doc) and lowercontains(doc(ui)))):
             results['topics'].append((names[0], header))
     import commands # avoid cycle
     for cmd, entry in commands.table.iteritems():
@@ -139,7 +139,7 @@ def topicmatch(kw):
 def loaddoc(topic):
     """Return a delayed loader for help/topic.txt."""
 
-    def loader():
+    def loader(ui):
         docdir = os.path.join(util.datapath, 'help')
         path = os.path.join(docdir, topic + ".txt")
         doc = gettext(util.readfile(path))
@@ -415,7 +415,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         if not doc:
             rst.append("    %s\n" % _("(no help text available)"))
         if callable(doc):
-            rst += ["    %s\n" % l for l in doc().splitlines()]
+            rst += ["    %s\n" % l for l in doc(ui).splitlines()]
 
         if not ui.verbose:
             omitted = _('(some details hidden, use --verbose'
@@ -482,7 +482,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
     rst = []
     kw = opts.get('keyword')
     if kw:
-        matches = topicmatch(name)
+        matches = topicmatch(ui, name)
         helpareas = []
         if opts.get('extension'):
             helpareas += [('extensions', _('Extensions'))]

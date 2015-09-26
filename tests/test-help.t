@@ -1105,7 +1105,7 @@ Test omit indicating for help
   > def extsetup(ui):
   >     help.helptable.append((["topic-containing-verbose"],
   >                            "This is the topic to test omit indicating.",
-  >                            lambda : testtopic))
+  >                            lambda ui: testtopic))
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "addverboseitems = `pwd`/addverboseitems.py" >> $HGRCPATH

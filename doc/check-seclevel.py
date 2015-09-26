@@ -79,7 +79,7 @@ def checkhghelps(ui):
     errorcnt = 0
     for names, sec, doc in helptable:
         if callable(doc):
-            doc = doc()
+            doc = doc(ui)
         errorcnt += checkseclevel(ui, doc,
                                   '%s help topic' % names[0],
                                   initlevel_topic)

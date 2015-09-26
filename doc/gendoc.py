@@ -138,7 +138,7 @@ def helpprinter(ui, helptable, sectionfunc, include=[], exclude=[]):
         if sectionfunc:
             ui.write(sectionfunc(sec))
         if callable(doc):
-            doc = doc()
+            doc = doc(ui)
         ui.write(doc)
         ui.write("\n")
 
