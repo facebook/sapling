@@ -422,11 +422,11 @@ Set up the repo
   <a class="list" href="/rev/43c799df6e75?style=gitweb">
   <a href="/rev/43c799df6e75?style=gitweb">changeset</a> |
   <a href="/file/43c799df6e75?style=gitweb">files</a>
-  <td><a class="list" href="/rev/a7c1559b7bba?style=gitweb"><b>xyzzy</b></a></td>
+  <td><a class="list" href="/rev/xyzzy?style=gitweb"><b>xyzzy</b></a></td>
   <a href="/rev/a7c1559b7bba?style=gitweb">changeset</a> |
   <a href="/log/a7c1559b7bba?style=gitweb">changelog</a> |
   <a href="/file/a7c1559b7bba?style=gitweb">files</a>
-  <td><a class="list" href="/shortlog/9d8c40cba617?style=gitweb"><b>9d8c40cba617</b></a></td>
+  <td class="open"><a class="list" href="/shortlog/default?style=gitweb"><b>default</b></a></td>
   <a href="/changeset/9d8c40cba617?style=gitweb">changeset</a> |
   <a href="/log/9d8c40cba617?style=gitweb">changelog</a> |
   <a href="/file/9d8c40cba617?style=gitweb">files</a>
@@ -469,19 +469,19 @@ Set up the repo
   | <a href="/graph/43c799df6e75?style=gitweb">(0)</a> <a href="/graph/tip?style=gitweb">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'tags?style=gitweb' | egrep $REVLINKS
-  <td><a class="list" href="/rev/9d8c40cba617?style=gitweb"><b>tip</b></a></td>
+  <td><a class="list" href="/rev/tip?style=gitweb"><b>tip</b></a></td>
   <a href="/rev/9d8c40cba617?style=gitweb">changeset</a> |
   <a href="/log/9d8c40cba617?style=gitweb">changelog</a> |
   <a href="/file/9d8c40cba617?style=gitweb">files</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'bookmarks?style=gitweb' | egrep $REVLINKS
-  <td><a class="list" href="/rev/a7c1559b7bba?style=gitweb"><b>xyzzy</b></a></td>
+  <td><a class="list" href="/rev/xyzzy?style=gitweb"><b>xyzzy</b></a></td>
   <a href="/rev/a7c1559b7bba?style=gitweb">changeset</a> |
   <a href="/log/a7c1559b7bba?style=gitweb">changelog</a> |
   <a href="/file/a7c1559b7bba?style=gitweb">files</a>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'branches?style=gitweb' | egrep $REVLINKS
-  <td><a class="list" href="/shortlog/9d8c40cba617?style=gitweb"><b>9d8c40cba617</b></a></td>
+  <td class="open"><a class="list" href="/shortlog/default?style=gitweb"><b>default</b></a></td>
   <a href="/changeset/9d8c40cba617?style=gitweb">changeset</a> |
   <a href="/log/9d8c40cba617?style=gitweb">changelog</a> |
   <a href="/file/9d8c40cba617?style=gitweb">files</a>

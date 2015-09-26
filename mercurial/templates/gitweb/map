@@ -195,7 +195,7 @@ tags = tags.tmpl
 tagentry = '
   <tr class="parity{parity}">
     <td class="age"><i class="age">{date|rfc822date}</i></td>
-    <td><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}"><b>{tag|escape}</b></a></td>
+    <td><a class="list" href="{url|urlescape}rev/{tag|revescape}{sessionvars%urlparameter}"><b>{tag|escape}</b></a></td>
     <td class="link">
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
       <a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
@@ -206,7 +206,7 @@ bookmarks = bookmarks.tmpl
 bookmarkentry = '
   <tr class="parity{parity}">
     <td class="age"><i class="age">{date|rfc822date}</i></td>
-    <td><a class="list" href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}"><b>{bookmark|escape}</b></a></td>
+    <td><a class="list" href="{url|urlescape}rev/{bookmark|revescape}{sessionvars%urlparameter}"><b>{bookmark|escape}</b></a></td>
     <td class="link">
       <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a> |
       <a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
@@ -217,8 +217,7 @@ branches = branches.tmpl
 branchentry = '
   <tr class="parity{parity}">
     <td class="age"><i class="age">{date|rfc822date}</i></td>
-    <td><a class="list" href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}"><b>{node|short}</b></a></td>
-    <td class="{status}">{branch|escape}</td>
+    <td class="{status}"><a class="list" href="{url|urlescape}shortlog/{branch|revescape}{sessionvars%urlparameter}"><b>{branch|escape}</b></a></td>
     <td class="link">
       <a href="{url|urlescape}changeset/{node|short}{sessionvars%urlparameter}">changeset</a> |
       <a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">changelog</a> |
