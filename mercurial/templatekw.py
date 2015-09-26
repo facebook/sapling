@@ -397,6 +397,12 @@ def showp2node(repo, ctx, templ, **args):
     parent, all digits are 0."""
     return ctx.p2().hex()
 
+def _showparents(**args):
+    """:parents: List of strings. The parents of the changeset in "rev:node"
+    format. If the changeset has only one "natural" parent (the predecessor
+    revision) nothing is shown."""
+    pass
+
 def showphase(repo, ctx, templ, **args):
     """:phase: String. The changeset phase name."""
     return ctx.phasestr()
@@ -491,12 +497,6 @@ keywords = {
     'subrepos': showsubrepos,
     'tags': showtags,
 }
-
-def _showparents(**args):
-    """:parents: List of strings. The parents of the changeset in "rev:node"
-    format. If the changeset has only one "natural" parent (the predecessor
-    revision) nothing is shown."""
-    pass
 
 dockeywords = {
     'parents': _showparents,
