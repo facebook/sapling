@@ -29,7 +29,7 @@ def listexts(header, exts, indent=1, showdeprecated=False):
     if exts:
         rst.append('\n%s\n\n' % header)
         for name, desc in sorted(exts.iteritems()):
-            if '(DEPRECATED)' in desc and not showdeprecated:
+            if not showdeprecated and any(w in desc for w in _exclkeywords):
                 continue
             rst.append('%s:%s: %s\n' % (' ' * indent, name, desc))
     return rst
@@ -341,7 +341,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             if not ui.debugflag and f.startswith("debug") and name != "debug":
                 continue
             doc = e[0].__doc__
-            if doc and '(DEPRECATED)' in doc and not ui.verbose:
+            if not ui.verbose and doc and any(w in doc for w in _exclkeywords):
                 continue
             doc = gettext(doc)
             if not doc:
