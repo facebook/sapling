@@ -1726,7 +1726,7 @@ Overviews
   </form>
   <div class="page_nav">
   <a href="/summary?style=gitweb">summary</a> |
-  <a href="/shortlog?style=gitweb">shortlog</a> |
+  <a href="/shortlog/tip?style=gitweb">shortlog</a> |
   <a href="/log/tip?style=gitweb">changelog</a> |
   graph |
   <a href="/tags?style=gitweb">tags</a> |
