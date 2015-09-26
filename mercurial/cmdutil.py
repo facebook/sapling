@@ -1195,7 +1195,7 @@ class changeset_printer(object):
             # i18n: column positioning for "hg log"
             self.ui.write(_("phase:       %s\n") % ctx.phasestr(),
                           label='log.phase')
-        for pctx in self._meaningful_parentrevs(ctx):
+        for pctx in scmutil.meaningfulparents(self.repo, ctx):
             label = 'log.parent changeset.%s' % pctx.phasestr()
             # i18n: column positioning for "hg log"
             self.ui.write(_("parent:      %d:%s\n")
@@ -1278,22 +1278,6 @@ class changeset_printer(object):
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
                                match=matchfn, stat=False)
             self.ui.write("\n")
-
-    def _meaningful_parentrevs(self, ctx):
-        """Return list of meaningful (or all if debug) parentrevs for rev.
-
-        For merges (two non-nullrev revisions) both parents are meaningful.
-        Otherwise the first parent revision is considered meaningful if it
-        is not the preceding revision.
-        """
-        parents = ctx.parents()
-        if len(parents) > 1:
-            return parents
-        if self.ui.debugflag:
-            return [parents[0], self.repo['null']]
-        if parents[0].rev() >= scmutil.intrev(ctx.rev()) - 1:
-            return []
-        return parents
 
 class jsonchangeset(changeset_printer):
     '''format changeset information.'''
@@ -1456,7 +1440,7 @@ class changeset_templater(changeset_printer):
             parents = [[('rev', p.rev()),
                         ('node', p.hex()),
                         ('phase', p.phasestr())]
-                       for p in self._meaningful_parentrevs(ctx)]
+                       for p in scmutil.meaningfulparents(self.repo, ctx)]
             return showlist('parent', parents, **args)
 
         props = props.copy()

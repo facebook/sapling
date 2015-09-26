@@ -734,6 +734,22 @@ def revrange(repo, revs):
     m = revset.matchany(repo.ui, allspecs, repo)
     return m(repo)
 
+def meaningfulparents(repo, ctx):
+    """Return list of meaningful (or all if debug) parentrevs for rev.
+
+    For merges (two non-nullrev revisions) both parents are meaningful.
+    Otherwise the first parent revision is considered meaningful if it
+    is not the preceding revision.
+    """
+    parents = ctx.parents()
+    if len(parents) > 1:
+        return parents
+    if repo.ui.debugflag:
+        return [parents[0], repo['null']]
+    if parents[0].rev() >= intrev(ctx.rev()) - 1:
+        return []
+    return parents
+
 def expandpats(pats):
     '''Expand bare globs when running on windows.
     On posix we assume it already has already been done by sh.'''
