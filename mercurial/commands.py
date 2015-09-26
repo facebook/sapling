@@ -6388,6 +6388,12 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 try:
                     op = bundle2.processbundle(repo, gen, lambda: tr)
                     tr.close()
+                except error.UnsupportedPartError as exc:
+                    raise util.Abort(_('%s: unknown bundle feature, %s')
+                                     % (fname, exc),
+                                     hint=_("see https://mercurial.selenic.com/"
+                                            "wiki/BundleFeature for more "
+                                            "information"))
                 finally:
                     if tr:
                         tr.release()
