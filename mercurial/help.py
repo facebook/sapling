@@ -14,6 +14,13 @@ import encoding, util, minirst
 import cmdutil
 import hgweb.webcommands as webcommands
 
+_exclkeywords = [
+    "DEPRECATED",
+    "EXPERIMENTAL",
+    _("DEPRECATED"),
+    _("EXPERIMENTAL"),
+    ]
+
 def listexts(header, exts, indent=1, showdeprecated=False):
     '''return a text listing of the given extensions'''
     rst = []
@@ -43,9 +50,7 @@ def optrst(header, options, verbose):
             shortopt, longopt, default, desc = option
             optlabel = _("VALUE") # default label
 
-        if not verbose and ("DEPRECATED" in desc or _("DEPRECATED") in desc or
-                            "EXPERIMENTAL" in desc or
-                            _("EXPERIMENTAL") in desc):
+        if not verbose and any(w in desc for w in _exclkeywords):
             continue
 
         so = ''
