@@ -1433,7 +1433,6 @@ class revlog(object):
             if data[0]:
                 dfh.write(data[0])
             dfh.write(data[1])
-            dfh.flush()
             ifh.write(entry)
         else:
             offset += curr * self._io.size
