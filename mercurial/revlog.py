@@ -1125,6 +1125,12 @@ class revlog(object):
                 % (self.indexfile, revornode))
 
     def checkinlinesize(self, tr, fp=None):
+        """Check if the revlog is too big for inline and convert if so.
+
+        This should be called after revisions are added to the revlog. If the
+        revlog has grown too large to be an inline revlog, it will convert it
+        to use multiple index and data files.
+        """
         if not self._inline or (self.start(-2) + self.length(-2)) < _maxinline:
             return
 
