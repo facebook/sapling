@@ -14,15 +14,7 @@ from mercurial.commands import table
 from mercurial.help import helptable
 from mercurial import extensions
 from mercurial import minirst
-
-_verbose = False
-
-def verbose(msg):
-    if _verbose:
-        print msg
-
-def error(msg):
-    sys.stderr.write('%s\n' % msg)
+from mercurial import ui as uimod
 
 level2mark = ['"', '=', '-', '.', '#']
 reservedmarks = ['"']
@@ -37,12 +29,12 @@ initlevel_cmd = 1
 initlevel_ext = 1
 initlevel_ext_cmd = 3
 
-def showavailables(initlevel):
-    error('    available marks and order of them in this help: %s' %
-          (', '.join(['%r' % (m * 4) for m in level2mark[initlevel + 1:]])))
+def showavailables(ui, initlevel):
+    ui.warn(('    available marks and order of them in this help: %s\n') %
+            (', '.join(['%r' % (m * 4) for m in level2mark[initlevel + 1:]])))
 
-def checkseclevel(doc, name, initlevel):
-    verbose('checking "%s"' % name)
+def checkseclevel(ui, doc, name, initlevel):
+    ui.note(('checking "%s"\n') % name)
     blocks, pruned = minirst.parse(doc, 0, ['verbose'])
     errorcnt = 0
     curlevel = initlevel
@@ -52,66 +44,66 @@ def checkseclevel(doc, name, initlevel):
         mark = block['underline']
         title = block['lines'][0]
         if (mark not in mark2level) or (mark2level[mark] <= initlevel):
-            error('invalid section mark %r for "%s" of %s' %
-                  (mark * 4, title, name))
-            showavailables(initlevel)
+            ui.warn(('invalid section mark %r for "%s" of %s\n') %
+                    (mark * 4, title, name))
+            showavailables(ui, initlevel)
             errorcnt += 1
             continue
         nextlevel = mark2level[mark]
         if curlevel < nextlevel and curlevel + 1 != nextlevel:
-            error('gap of section level at "%s" of %s' %
-                  (title, name))
-            showavailables(initlevel)
+            ui.warn(('gap of section level at "%s" of %s\n') %
+                    (title, name))
+            showavailables(ui, initlevel)
             errorcnt += 1
             continue
-        verbose('appropriate section level for "%s %s"' %
+        ui.note(('appropriate section level for "%s %s"\n') %
                 (mark * (nextlevel * 2), title))
         curlevel = nextlevel
 
     return errorcnt
 
-def checkcmdtable(cmdtable, namefmt, initlevel):
+def checkcmdtable(ui, cmdtable, namefmt, initlevel):
     errorcnt = 0
     for k, entry in cmdtable.items():
         name = k.split("|")[0].lstrip("^")
         if not entry[0].__doc__:
-            verbose('skip checking %s: no help document' %
+            ui.note(('skip checking %s: no help document\n') %
                     (namefmt % name))
             continue
-        errorcnt += checkseclevel(entry[0].__doc__,
+        errorcnt += checkseclevel(ui, entry[0].__doc__,
                                   namefmt % name,
                                   initlevel)
     return errorcnt
 
-def checkhghelps():
+def checkhghelps(ui):
     errorcnt = 0
     for names, sec, doc in helptable:
         if callable(doc):
             doc = doc()
-        errorcnt += checkseclevel(doc,
+        errorcnt += checkseclevel(ui, doc,
                                   '%s help topic' % names[0],
                                   initlevel_topic)
 
-    errorcnt += checkcmdtable(table, '%s command', initlevel_cmd)
+    errorcnt += checkcmdtable(ui, table, '%s command', initlevel_cmd)
 
     for name in sorted(extensions.enabled().keys() +
                        extensions.disabled().keys()):
         mod = extensions.load(None, name, None)
         if not mod.__doc__:
-            verbose('skip checking %s extension: no help document' % name)
+            ui.note(('skip checking %s extension: no help document\n') % name)
             continue
-        errorcnt += checkseclevel(mod.__doc__,
+        errorcnt += checkseclevel(ui, mod.__doc__,
                                   '%s extension' % name,
                                   initlevel_ext)
 
         cmdtable = getattr(mod, 'cmdtable', None)
         if cmdtable:
-            errorcnt += checkcmdtable(cmdtable,
+            errorcnt += checkcmdtable(ui, cmdtable,
                                       '%s command of ' + name + ' extension',
                                       initlevel_ext_cmd)
     return errorcnt
 
-def checkfile(filename, initlevel):
+def checkfile(ui, filename, initlevel):
     if filename == '-':
         filename = 'stdin'
         doc = sys.stdin.read()
@@ -122,9 +114,9 @@ def checkfile(filename, initlevel):
         finally:
             fp.close()
 
-    verbose('checking input from %s with initlevel %d' %
+    ui.note(('checking input from %s with initlevel %d\n') %
             (filename, initlevel))
-    return checkseclevel(doc, 'input from %s' % filename, initlevel)
+    return checkseclevel(ui, doc, 'input from %s' % filename, initlevel)
 
 def main():
     optparser = optparse.OptionParser("""%prog [options]
@@ -159,14 +151,14 @@ option.
 
     (options, args) = optparser.parse_args()
 
-    global _verbose
-    _verbose = options.verbose
+    ui = uimod.ui()
+    ui.setconfig('ui', 'verbose', options.verbose, '--verbose')
 
     if options.file:
-        if checkfile(options.file, options.initlevel):
+        if checkfile(ui, options.file, options.initlevel):
             sys.exit(1)
     else:
-        if checkhghelps():
+        if checkhghelps(ui):
             sys.exit(1)
 
 if __name__ == "__main__":
