@@ -1289,10 +1289,6 @@ class revlog(object):
         def buildtext():
             if btext[0] is not None:
                 return btext[0]
-            # flush any pending writes here so we can read it in revision
-            if dfh:
-                dfh.flush()
-            ifh.flush()
             baserev = cachedelta[0]
             delta = cachedelta[1]
             # special case deltas which replace entire base; no need to decode
@@ -1303,7 +1299,11 @@ class revlog(object):
                                                        len(delta) - hlen):
                 btext[0] = delta[hlen:]
             else:
-                basetext = self.revision(self.node(baserev))
+                if self._inline:
+                    fh = ifh
+                else:
+                    fh = dfh
+                basetext = self.revision(self.node(baserev), _df=fh)
                 btext[0] = mdiff.patch(basetext, delta)
             try:
                 self.checkhash(btext[0], p1, p2, node)
@@ -1327,7 +1327,11 @@ class revlog(object):
                     header = mdiff.replacediffheader(self.rawsize(rev), len(t))
                     delta = header + t
                 else:
-                    ptext = self.revision(self.node(rev))
+                    if self._inline:
+                        fh = ifh
+                    else:
+                        fh = dfh
+                    ptext = self.revision(self.node(rev), _df=fh)
                     delta = mdiff.textdiff(ptext, t)
             data = self.compress(delta)
             l = len(data[1]) + len(data[0])
