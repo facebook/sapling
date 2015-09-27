@@ -501,3 +501,83 @@ Test that hooks are fired with the correct variables
       HG_BUNDLE2   = 1
       HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
       HG_SOURCE    = push
+  $ cd ../
+
+Copied from mercuriat test-bundle2-format.t
+  $ cat > bundle2.py << EOF
+  > """A small extension to test bundle2 implementation"""
+  > 
+  > import sys, os
+  > from mercurial import cmdutil
+  > from mercurial import util
+  > from mercurial import bundle2
+  > from mercurial import error
+  > 
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > @command('bundle2', [], '[OUTPUTFILE]')
+  > def cmdbundle2(ui, repo, path=None, **opts):
+  >     """write a bundle2 container on standard output"""
+  >     bundler = bundle2.bundle20(ui)
+  > 
+  >     part = bundler.newpart('check:heads')
+  >     part.data = '01234567890123456789'
+  > 
+  >     if path is None:
+  >        file = sys.stdout
+  >     else:
+  >         file = open(path, 'wb')
+  > 
+  >     try:
+  >         for chunk in bundler.getchunks():
+  >             file.write(chunk)
+  >     except RuntimeError, exc:
+  >         raise util.Abort(exc)
+  > @command('unbundle2', [], '')
+  > def cmdunbundle2(ui, repo, replypath=None):
+  >     """process a bundle2 stream from stdin on the current repo"""
+  >     try:
+  >         tr = None
+  >         lock = repo.lock()
+  >         tr = repo.transaction('processbundle')
+  >         try:
+  >             unbundler = bundle2.getunbundler(ui, sys.stdin)
+  >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
+  >             tr.close()
+  >         except error.BundleValueError, exc:
+  >             raise util.Abort('missing support for %s' % exc)
+  >         except error.PushRaced, exc:
+  >             raise util.Abort('push race: %s' % exc)
+  >     finally:
+  >         if tr is not None:
+  >             tr.release()
+  >         lock.release()
+  >         remains = sys.stdin.read()
+  >         ui.write('%i unread bytes\n' % len(remains))
+  >     if op.records['song']:
+  >         totalverses = sum(r['verses'] for r in op.records['song'])
+  >         ui.write('%i total verses sung\n' % totalverses)
+  >     for rec in op.records['changegroup']:
+  >         ui.write('addchangegroup return: %i\n' % rec['return'])
+  >     if op.reply is not None and replypath is not None:
+  >         file = open(replypath, 'wb')
+  >         for chunk in op.reply.getchunks():
+  >             file.write(chunk)
+  > EOF
+  $ cat >> $HGRCPATH << EOF
+  > [extensions]
+  > bundle2=$TESTTMP/bundle2.py
+  > [experimental]
+  > EOF
+
+Now create and unbundle a bundle with a conflicting check:heads part
+  $ hg init -q headcheck
+  $ cd headcheck
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ hg bundle2 checkhead.hg2
+  $ hg unbundle2 < checkhead.hg2
+  0 unread bytes
