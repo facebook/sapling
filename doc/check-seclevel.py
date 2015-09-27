@@ -126,7 +126,7 @@ def checkfile(filename, initlevel):
             (filename, initlevel))
     return checkseclevel(doc, 'input from %s' % filename, initlevel)
 
-if __name__ == "__main__":
+def main():
     optparser = optparse.OptionParser("""%prog [options]
 
 This checks all help documents of Mercurial (topics, commands,
@@ -159,6 +159,7 @@ option.
 
     (options, args) = optparser.parse_args()
 
+    global _verbose
     _verbose = options.verbose
 
     if options.file:
@@ -167,3 +168,6 @@ option.
     else:
         if checkhghelps():
             sys.exit(1)
+
+if __name__ == "__main__":
+    main()
