@@ -932,11 +932,23 @@ class revlog(object):
         else:
             self._chunkcache = offset, data
 
-    def _loadchunk(self, offset, length):
-        if self._inline:
-            df = self.opener(self.indexfile)
+    def _loadchunk(self, offset, length, df=None):
+        """Load a chunk/segment from the revlog.
+
+        Accepts absolute offset, length to read, and an optional existing
+        file handle to read from.
+
+        If an existing file handle is passed, it will be seeked and the
+        original seek position will NOT be restored.
+        """
+        if df is not None:
+            closehandle = False
         else:
-            df = self.opener(self.datafile)
+            if self._inline:
+                df = self.opener(self.indexfile)
+            else:
+                df = self.opener(self.datafile)
+            closehandle = True
 
         # Cache data both forward and backward around the requested
         # data, in a fixed size window. This helps speed up operations
@@ -947,13 +959,14 @@ class revlog(object):
                       - realoffset)
         df.seek(realoffset)
         d = df.read(reallength)
-        df.close()
+        if closehandle:
+            df.close()
         self._addchunk(realoffset, d)
         if offset != realoffset or reallength != length:
             return util.buffer(d, offset - realoffset, length)
         return d
 
-    def _getchunk(self, offset, length):
+    def _getchunk(self, offset, length, df=None):
         o, d = self._chunkcache
         l = len(d)
 
@@ -965,21 +978,21 @@ class revlog(object):
                 return d # avoid a copy
             return util.buffer(d, cachestart, cacheend - cachestart)
 
-        return self._loadchunk(offset, length)
+        return self._loadchunk(offset, length, df=df)
 
-    def _chunkraw(self, startrev, endrev):
+    def _chunkraw(self, startrev, endrev, df=None):
         start = self.start(startrev)
         end = self.end(endrev)
         if self._inline:
             start += (startrev + 1) * self._io.size
             end += (endrev + 1) * self._io.size
         length = end - start
-        return self._getchunk(start, length)
+        return self._getchunk(start, length, df=df)
 
-    def _chunk(self, rev):
-        return decompress(self._chunkraw(rev, rev))
+    def _chunk(self, rev, df=None):
+        return decompress(self._chunkraw(rev, rev, df=df))
 
-    def _chunks(self, revs):
+    def _chunks(self, revs, df=None):
         '''faster version of [self._chunk(rev) for rev in revs]
 
         Assumes that revs is in ascending order.'''
@@ -999,14 +1012,14 @@ class revlog(object):
             while True:
                 # ensure that the cache doesn't change out from under us
                 _cache = self._chunkcache
-                self._chunkraw(revs[0], revs[-1])
+                self._chunkraw(revs[0], revs[-1], df=df)
                 if _cache == self._chunkcache:
                     break
             offset, data = _cache
         except OverflowError:
             # issue4215 - we can't cache a run of chunks greater than
             # 2G on Windows
-            return [self._chunk(rev) for rev in revs]
+            return [self._chunk(rev, df=df) for rev in revs]
 
         for rev in revs:
             chunkstart = start(rev)
@@ -1038,9 +1051,12 @@ class revlog(object):
         return mdiff.textdiff(self.revision(rev1),
                               self.revision(rev2))
 
-    def revision(self, nodeorrev):
+    def revision(self, nodeorrev, _df=None):
         """return an uncompressed revision of a given node or revision
         number.
+
+        _df is an existing file handle to read from. It is meant to only be
+        used internally.
         """
         if isinstance(nodeorrev, int):
             rev = nodeorrev
@@ -1091,7 +1107,7 @@ class revlog(object):
         # drop cache to save memory
         self._cache = None
 
-        bins = self._chunks(chain)
+        bins = self._chunks(chain, df=_df)
         if text is None:
             text = str(bins[0])
             bins = bins[1:]
