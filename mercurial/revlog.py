@@ -1218,7 +1218,7 @@ class revlog(object):
 
         dfh = None
         if not self._inline:
-            dfh = self.opener(self.datafile, "a")
+            dfh = self.opener(self.datafile, "a+")
         ifh = self.opener(self.indexfile, "a+")
         try:
             return self._addrevision(node, text, transaction, link, p1, p2,
@@ -1467,7 +1467,7 @@ class revlog(object):
         else:
             transaction.add(self.indexfile, isize, r)
             transaction.add(self.datafile, end)
-            dfh = self.opener(self.datafile, "a")
+            dfh = self.opener(self.datafile, "a+")
         def flush():
             if dfh:
                 dfh.flush()
@@ -1535,8 +1535,8 @@ class revlog(object):
                     # addrevision switched from inline to conventional
                     # reopen the index
                     ifh.close()
-                    dfh = self.opener(self.datafile, "a")
-                    ifh = self.opener(self.indexfile, "a")
+                    dfh = self.opener(self.datafile, "a+")
+                    ifh = self.opener(self.indexfile, "a+")
         finally:
             if dfh:
                 dfh.close()
