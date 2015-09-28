@@ -61,6 +61,20 @@ def extsetup(ui):
     bundle2.parthandlermapping['pushkey'] = newpushkeyhandler
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
+    wrapfunction(exchange, 'unbundle', unbundle)
+
+def unbundle(orig, repo, cg, heads, source, url):
+    # Preload the manifests that the client says we'll need. This happens
+    # outside the lock, thus cutting down on our lock time and increasing commit
+    # throughput.
+    if util.safehasattr(cg, 'params'):
+        preloadmfs = cg.params.get('preloadmanifests')
+        if preloadmfs:
+            for mfnode in preloadmfs.split(','):
+                repo.manifest.read(bin(mfnode))
+
+    return orig(repo, cg, heads, source, url)
+
 def validaterevset(repo, revset):
     "Abort if this is a rebasable revset, return None otherwise"
     if not repo.revs(revset):
@@ -186,6 +200,14 @@ def partgen(pushop, bundler):
                                pushop.newbranch)
 
     bundler.addpart(rebasepart)
+
+    # Tell the server which manifests to load before taking the lock.
+    # This helps shorten the duration of the lock, which increases our potential
+    # commit rate.
+    missing = pushop.outgoing.missing
+    roots = pushop.repo.set('parents(%ln) - %ln', missing, missing)
+    preloadnodes = [hex(r.manifestnode()) for r in roots]
+    bundler.addparam("preloadmanifests", ','.join(preloadnodes))
 
     def handlereply(op):
         # server either succeeds or aborts; no code to read
