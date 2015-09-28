@@ -195,7 +195,15 @@ class bundlemanifest(bundlerevlog, manifest.manifest):
                               linkmapper)
 
     def baserevision(self, nodeorrev):
-        return manifest.manifest.revision(self, nodeorrev)
+        node = nodeorrev
+        if isinstance(node, int):
+            node = self.node(node)
+
+        if node in self._mancache:
+            result = self._mancache[node][0].text()
+        else:
+            result = manifest.manifest.revision(self, nodeorrev)
+        return result
 
 class bundlefilelog(bundlerevlog, filelog.filelog):
     def __init__(self, opener, path, bundle, linkmapper):
