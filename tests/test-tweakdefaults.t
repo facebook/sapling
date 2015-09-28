@@ -245,11 +245,11 @@ Don't break automation
   A dir1/subdir1/subf1
 
 Test tweaked tag command
-  $ hg tag --config tweakdefaults.allowtags=true foo
   $ hg tag foo
+  $ hg tag --config tweakdefaults.allowtags=false foo
   abort: new tags are disabled in this repository
   [255]
-  $ hg tag --config tweakdefaults.tagmessage='testing' foo
+  $ hg tag --config tweakdefaults.allowtags=false --config tweakdefaults.tagmessage='testing' foo
   abort: testing
   [255]
 

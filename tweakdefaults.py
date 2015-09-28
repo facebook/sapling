@@ -261,11 +261,11 @@ def statuscmd(orig, ui, repo, *pats, **opts):
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
     """
-    Disabling tags unless allowed
+    Allowing to disable tags 
     """
     message = ui.config('tweakdefaults', 'tagmessage',
-            'new tags are disabled in this repository')
-    if ui.configbool('tweakdefaults', 'allowtags'):
+            _('new tags are disabled in this repository'))
+    if ui.configbool('tweakdefaults', 'allowtags', True):
         return orig(ui, repo, name1, *names, **opts)
     else:
         raise util.Abort(message)
