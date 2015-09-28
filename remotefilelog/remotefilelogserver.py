@@ -199,13 +199,17 @@ def _loadfileblob(repo, cachepath, path, node):
             dirname = os.path.dirname(filecachepath)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
+            f = None
             try:
-                with open(filecachepath, "w") as f:
-                    f.write(text)
-            except IOError:
+                f = util.atomictempfile(filecachepath, "w")
+                f.write(text)
+            except (IOError, OSError):
                 # Don't abort if the user only has permission to read,
                 # and not write.
                 pass
+            finally:
+                if f:
+                    f.close()
         finally:
             os.umask(oldumask)
     else:
