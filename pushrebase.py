@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, tempfile, sys, operator, resource
+import errno, os, tempfile, sys, operator, resource, collections
 
 try:
     import json
@@ -389,6 +389,16 @@ def bundle2rebase(op, part):
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+
+        # Preload the caches with data we already have. We need to make copies
+        # here so that original repo caches don't get tainted with bundle
+        # specific data.
+        newmancache = bundle.manifest._mancache
+        oldmancache = op.repo.manifest._mancache
+        newmancache._cache = oldmancache._cache.copy()
+        newmancache._order = collections.deque(oldmancache._order)
+        bundle.manifest._cache = op.repo.manifest._cache
+
         if onto == None:
             maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))
             if not maxcommonanc:
