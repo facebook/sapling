@@ -15,9 +15,17 @@ testedwith = 'internal'
 
 def extsetup(ui):
     wrapfunction(tags, '_readtagcache', _readtagcache)
+    wrapfunction(merge, '_checkcollision', _checkcollision)
 
 def _readtagcache(orig, ui, repo):
+    """Disables reading tags if the repo is known to not contain any."""
     if ui.configbool('perftweaks', 'disabletags'):
         return (None, None, None, {}, False)
 
     return orig(ui, repo)
+
+def _checkcollision(orig, repo, wmf, actions):
+    """Disables case collision checking since it is known to be very slow."""
+    if ui.configbool('perftweaks', 'disablecasecheck'):
+        return
+    orig(repo, wmf, actions)
