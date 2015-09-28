@@ -27,6 +27,74 @@ unlink = win32.unlink
 
 umask = 0o022
 
+class mixedfilemodewrapper(object):
+    """Wraps a file handle when it is opened in read/write mode.
+
+    fopen() and fdopen() on Windows have a specific-to-Windows requirement
+    that files opened with mode r+, w+, or a+ make a call to a file positioning
+    function when switching between reads and writes. Without this extra call,
+    Python will raise a not very intuitive "IOError: [Errno 0] Error."
+
+    This class wraps posixfile instances when the file is opened in read/write
+    mode and automatically adds checks or inserts appropriate file positioning
+    calls when necessary.
+    """
+    OPNONE = 0
+    OPREAD = 1
+    OPWRITE = 2
+
+    def __init__(self, fp):
+        object.__setattr__(self, '_fp', fp)
+        object.__setattr__(self, '_lastop', 0)
+
+    def __getattr__(self, name):
+        return getattr(self._fp, name)
+
+    def __setattr__(self, name, value):
+        return self._fp.__setattr__(name, value)
+
+    def _noopseek(self):
+        self._fp.seek(0, os.SEEK_CUR)
+
+    def seek(self, *args, **kwargs):
+        object.__setattr__(self, '_lastop', self.OPNONE)
+        return self._fp.seek(*args, **kwargs)
+
+    def write(self, d):
+        if self._lastop == self.OPREAD:
+            self._noopseek()
+
+        object.__setattr__(self, '_lastop', self.OPWRITE)
+        return self._fp.write(d)
+
+    def writelines(self, *args, **kwargs):
+        if self._lastop == self.OPREAD:
+            self._noopeseek()
+
+        object.__setattr__(self, '_lastop', self.OPWRITE)
+        return self._fp.writelines(*args, **kwargs)
+
+    def read(self, *args, **kwargs):
+        if self._lastop == self.OPWRITE:
+            self._noopseek()
+
+        object.__setattr__(self, '_lastop', self.OPREAD)
+        return self._fp.read(*args, **kwargs)
+
+    def readline(self, *args, **kwargs):
+        if self._lastop == self.OPWRITE:
+            self._noopseek()
+
+        object.__setattr__(self, '_lastop', self.OPREAD)
+        return self._fp.readline(*args, **kwargs)
+
+    def readlines(self, *args, **kwargs):
+        if self._lastop == self.OPWRITE:
+            self._noopseek()
+
+        object.__setattr__(self, '_lastop', self.OPREAD)
+        return self._fp.readlines(*args, **kwargs)
+
 def posixfile(name, mode='r', buffering=-1):
     '''Open a file with even more POSIX-like semantics'''
     try:
@@ -36,6 +104,9 @@ def posixfile(name, mode='r', buffering=-1):
         # make it consistent with other platforms, which position at EOF.
         if 'a' in mode:
             fp.seek(0, os.SEEK_END)
+
+        if '+' in mode:
+            return mixedfilemodewrapper(fp)
 
         return fp
     except WindowsError as err:
