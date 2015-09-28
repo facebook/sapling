@@ -249,8 +249,9 @@ Empty bundle
 
 Test bundling
 
-  $ hg bundle2
-  HG20\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ hg bundle2 | f --hexdump
+  
+  0000: 48 47 32 30 00 00 00 00 00 00 00 00             |HG20........|
 
 Test timeouts during bundling
   $ hg bundle2 --timeout --debug --config devel.bundle2.debug=yes
@@ -299,8 +300,10 @@ Simplest possible parameters form
 
 Test generation simple option
 
-  $ hg bundle2 --param 'caution'
-  HG20\x00\x00\x00\x07caution\x00\x00\x00\x00 (no-eol) (esc)
+  $ hg bundle2 --param 'caution' | f --hexdump
+  
+  0000: 48 47 32 30 00 00 00 07 63 61 75 74 69 6f 6e 00 |HG20....caution.|
+  0010: 00 00 00                                        |...|
 
 Test unbundling
 
@@ -311,8 +314,10 @@ Test unbundling
 
 Test generation multiple option
 
-  $ hg bundle2 --param 'caution' --param 'meal'
-  HG20\x00\x00\x00\x0ccaution meal\x00\x00\x00\x00 (no-eol) (esc)
+  $ hg bundle2 --param 'caution' --param 'meal' | f --hexdump
+  
+  0000: 48 47 32 30 00 00 00 0c 63 61 75 74 69 6f 6e 20 |HG20....caution |
+  0010: 6d 65 61 6c 00 00 00 00                         |meal....|
 
 Test unbundling
 
@@ -327,8 +332,11 @@ advisory parameters, with value
 
 Test generation
 
-  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants'
-  HG20\x00\x00\x00\x1ccaution meal=vegan elephants\x00\x00\x00\x00 (no-eol) (esc)
+  $ hg bundle2 --param 'caution' --param 'meal=vegan' --param 'elephants' | f --hexdump
+  
+  0000: 48 47 32 30 00 00 00 1c 63 61 75 74 69 6f 6e 20 |HG20....caution |
+  0010: 6d 65 61 6c 3d 76 65 67 61 6e 20 65 6c 65 70 68 |meal=vegan eleph|
+  0020: 61 6e 74 73 00 00 00 00                         |ants....|
 
 Test unbundling
 
@@ -345,8 +353,12 @@ parameter with special char in value
 
 Test generation
 
-  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple
-  HG20\x00\x00\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00\x00\x00 (no-eol) (esc)
+  $ hg bundle2 --param 'e|! 7/=babar%#==tutu' --param simple | f --hexdump
+  
+  0000: 48 47 32 30 00 00 00 29 65 25 37 43 25 32 31 25 |HG20...)e%7C%21%|
+  0010: 32 30 37 2f 3d 62 61 62 61 72 25 32 35 25 32 33 |207/=babar%25%23|
+  0020: 25 33 44 25 33 44 74 75 74 75 20 73 69 6d 70 6c |%3D%3Dtutu simpl|
+  0030: 65 00 00 00 00                                  |e....|
 
 Test unbundling
 
@@ -378,8 +390,12 @@ bundling debug
 
 file content is ok
 
-  $ cat ../out.hg2
-  HG20\x00\x00\x00)e%7C%21%207/=babar%25%23%3D%3Dtutu simple\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../out.hg2
+  ../out.hg2:
+  0000: 48 47 32 30 00 00 00 29 65 25 37 43 25 32 31 25 |HG20...)e%7C%21%|
+  0010: 32 30 37 2f 3d 62 61 62 61 72 25 32 35 25 32 33 |207/=babar%25%23|
+  0020: 25 33 44 25 33 44 74 75 74 75 20 73 69 6d 70 6c |%3D%3Dtutu simpl|
+  0030: 65 00 00 00 00                                  |e....|
 
 unbundling debug
 
@@ -461,12 +477,34 @@ Test part
   bundle2-output: closing payload chunk
   bundle2-output: end of bundle
 
-  $ cat ../parts.hg2
-  HG20\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
-  test:empty\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11 (esc)
-  test:empty\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x10	test:song\x00\x00\x00\x02\x00\x00\x00\x00\x00\xb2Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko (esc)
-  Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-  Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.\x00\x00\x00\x00\x00\x00\x00\x16\x0ftest:debugreply\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00+	test:math\x00\x00\x00\x04\x02\x01\x02\x04\x01\x04\x07\x03pi3.14e2.72cookingraw\x00\x00\x00\x0242\x00\x00\x00\x00\x00\x00\x00\x1d	test:song\x00\x00\x00\x05\x01\x00\x0b\x00randomparam\x00\x00\x00\x00\x00\x00\x00\x10	test:ping\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../parts.hg2
+  ../parts.hg2:
+  0000: 48 47 32 30 00 00 00 00 00 00 00 11 0a 74 65 73 |HG20.........tes|
+  0010: 74 3a 65 6d 70 74 79 00 00 00 00 00 00 00 00 00 |t:empty.........|
+  0020: 00 00 00 00 11 0a 74 65 73 74 3a 65 6d 70 74 79 |......test:empty|
+  0030: 00 00 00 01 00 00 00 00 00 00 00 00 00 10 09 74 |...............t|
+  0040: 65 73 74 3a 73 6f 6e 67 00 00 00 02 00 00 00 00 |est:song........|
+  0050: 00 b2 50 61 74 61 6c 69 20 44 69 72 61 70 61 74 |..Patali Dirapat|
+  0060: 61 2c 20 43 72 6f 6d 64 61 20 43 72 6f 6d 64 61 |a, Cromda Cromda|
+  0070: 20 52 69 70 61 6c 6f 2c 20 50 61 74 61 20 50 61 | Ripalo, Pata Pa|
+  0080: 74 61 2c 20 4b 6f 20 4b 6f 20 4b 6f 0a 42 6f 6b |ta, Ko Ko Ko.Bok|
+  0090: 6f 72 6f 20 44 69 70 6f 75 6c 69 74 6f 2c 20 52 |oro Dipoulito, R|
+  00a0: 6f 6e 64 69 20 52 6f 6e 64 69 20 50 65 70 69 6e |ondi Rondi Pepin|
+  00b0: 6f 2c 20 50 61 74 61 20 50 61 74 61 2c 20 4b 6f |o, Pata Pata, Ko|
+  00c0: 20 4b 6f 20 4b 6f 0a 45 6d 61 6e 61 20 4b 61 72 | Ko Ko.Emana Kar|
+  00d0: 61 73 73 6f 6c 69 2c 20 4c 6f 75 63 72 61 20 4c |assoli, Loucra L|
+  00e0: 6f 75 63 72 61 20 50 6f 6e 70 6f 6e 74 6f 2c 20 |oucra Ponponto, |
+  00f0: 50 61 74 61 20 50 61 74 61 2c 20 4b 6f 20 4b 6f |Pata Pata, Ko Ko|
+  0100: 20 4b 6f 2e 00 00 00 00 00 00 00 16 0f 74 65 73 | Ko..........tes|
+  0110: 74 3a 64 65 62 75 67 72 65 70 6c 79 00 00 00 03 |t:debugreply....|
+  0120: 00 00 00 00 00 00 00 00 00 2b 09 74 65 73 74 3a |.........+.test:|
+  0130: 6d 61 74 68 00 00 00 04 02 01 02 04 01 04 07 03 |math............|
+  0140: 70 69 33 2e 31 34 65 32 2e 37 32 63 6f 6f 6b 69 |pi3.14e2.72cooki|
+  0150: 6e 67 72 61 77 00 00 00 02 34 32 00 00 00 00 00 |ngraw....42.....|
+  0160: 00 00 1d 09 74 65 73 74 3a 73 6f 6e 67 00 00 00 |....test:song...|
+  0170: 05 01 00 0b 00 72 61 6e 64 6f 6d 70 61 72 61 6d |.....randomparam|
+  0180: 00 00 00 00 00 00 00 10 09 74 65 73 74 3a 70 69 |.........test:pi|
+  0190: 6e 67 00 00 00 06 00 00 00 00 00 00 00 00 00 00 |ng..............|
 
 
   $ hg statbundle2 < ../parts.hg2
@@ -687,21 +725,49 @@ unbundle with a reply
 
 The reply is a bundle
 
-  $ cat ../reply.hg2
-  HG20\x00\x00\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x00\x00\x01\x0b\x01in-reply-to3\x00\x00\x00\xd9The choir starts singing: (esc)
-      Patali Dirapata, Cromda Cromda Ripalo, Pata Pata, Ko Ko Ko
-      Bokoro Dipoulito, Rondi Rondi Pepino, Pata Pata, Ko Ko Ko
-      Emana Karassoli, Loucra Loucra Ponponto, Pata Pata, Ko Ko Ko.
-  \x00\x00\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to4\x00\x00\x00\xc9debugreply: capabilities: (esc)
-  debugreply:     'city=!'
-  debugreply:         'celeste,ville'
-  debugreply:     'elephants'
-  debugreply:         'babar'
-  debugreply:         'celeste'
-  debugreply:     'ping-pong'
-  \x00\x00\x00\x00\x00\x00\x00\x1e	test:pong\x00\x00\x00\x02\x01\x00\x0b\x01in-reply-to7\x00\x00\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x03\x00\x01\x0b\x01in-reply-to7\x00\x00\x00=received ping request (id 7) (esc)
-  replying to ping request (id 7)
-  \x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../reply.hg2
+  ../reply.hg2:
+  0000: 48 47 32 30 00 00 00 00 00 00 00 1b 06 6f 75 74 |HG20.........out|
+  0010: 70 75 74 00 00 00 00 00 01 0b 01 69 6e 2d 72 65 |put........in-re|
+  0020: 70 6c 79 2d 74 6f 33 00 00 00 d9 54 68 65 20 63 |ply-to3....The c|
+  0030: 68 6f 69 72 20 73 74 61 72 74 73 20 73 69 6e 67 |hoir starts sing|
+  0040: 69 6e 67 3a 0a 20 20 20 20 50 61 74 61 6c 69 20 |ing:.    Patali |
+  0050: 44 69 72 61 70 61 74 61 2c 20 43 72 6f 6d 64 61 |Dirapata, Cromda|
+  0060: 20 43 72 6f 6d 64 61 20 52 69 70 61 6c 6f 2c 20 | Cromda Ripalo, |
+  0070: 50 61 74 61 20 50 61 74 61 2c 20 4b 6f 20 4b 6f |Pata Pata, Ko Ko|
+  0080: 20 4b 6f 0a 20 20 20 20 42 6f 6b 6f 72 6f 20 44 | Ko.    Bokoro D|
+  0090: 69 70 6f 75 6c 69 74 6f 2c 20 52 6f 6e 64 69 20 |ipoulito, Rondi |
+  00a0: 52 6f 6e 64 69 20 50 65 70 69 6e 6f 2c 20 50 61 |Rondi Pepino, Pa|
+  00b0: 74 61 20 50 61 74 61 2c 20 4b 6f 20 4b 6f 20 4b |ta Pata, Ko Ko K|
+  00c0: 6f 0a 20 20 20 20 45 6d 61 6e 61 20 4b 61 72 61 |o.    Emana Kara|
+  00d0: 73 73 6f 6c 69 2c 20 4c 6f 75 63 72 61 20 4c 6f |ssoli, Loucra Lo|
+  00e0: 75 63 72 61 20 50 6f 6e 70 6f 6e 74 6f 2c 20 50 |ucra Ponponto, P|
+  00f0: 61 74 61 20 50 61 74 61 2c 20 4b 6f 20 4b 6f 20 |ata Pata, Ko Ko |
+  0100: 4b 6f 2e 0a 00 00 00 00 00 00 00 1b 06 6f 75 74 |Ko...........out|
+  0110: 70 75 74 00 00 00 01 00 01 0b 01 69 6e 2d 72 65 |put........in-re|
+  0120: 70 6c 79 2d 74 6f 34 00 00 00 c9 64 65 62 75 67 |ply-to4....debug|
+  0130: 72 65 70 6c 79 3a 20 63 61 70 61 62 69 6c 69 74 |reply: capabilit|
+  0140: 69 65 73 3a 0a 64 65 62 75 67 72 65 70 6c 79 3a |ies:.debugreply:|
+  0150: 20 20 20 20 20 27 63 69 74 79 3d 21 27 0a 64 65 |     'city=!'.de|
+  0160: 62 75 67 72 65 70 6c 79 3a 20 20 20 20 20 20 20 |bugreply:       |
+  0170: 20 20 27 63 65 6c 65 73 74 65 2c 76 69 6c 6c 65 |  'celeste,ville|
+  0180: 27 0a 64 65 62 75 67 72 65 70 6c 79 3a 20 20 20 |'.debugreply:   |
+  0190: 20 20 27 65 6c 65 70 68 61 6e 74 73 27 0a 64 65 |  'elephants'.de|
+  01a0: 62 75 67 72 65 70 6c 79 3a 20 20 20 20 20 20 20 |bugreply:       |
+  01b0: 20 20 27 62 61 62 61 72 27 0a 64 65 62 75 67 72 |  'babar'.debugr|
+  01c0: 65 70 6c 79 3a 20 20 20 20 20 20 20 20 20 27 63 |eply:         'c|
+  01d0: 65 6c 65 73 74 65 27 0a 64 65 62 75 67 72 65 70 |eleste'.debugrep|
+  01e0: 6c 79 3a 20 20 20 20 20 27 70 69 6e 67 2d 70 6f |ly:     'ping-po|
+  01f0: 6e 67 27 0a 00 00 00 00 00 00 00 1e 09 74 65 73 |ng'..........tes|
+  0200: 74 3a 70 6f 6e 67 00 00 00 02 01 00 0b 01 69 6e |t:pong........in|
+  0210: 2d 72 65 70 6c 79 2d 74 6f 37 00 00 00 00 00 00 |-reply-to7......|
+  0220: 00 1b 06 6f 75 74 70 75 74 00 00 00 03 00 01 0b |...output.......|
+  0230: 01 69 6e 2d 72 65 70 6c 79 2d 74 6f 37 00 00 00 |.in-reply-to7...|
+  0240: 3d 72 65 63 65 69 76 65 64 20 70 69 6e 67 20 72 |=received ping r|
+  0250: 65 71 75 65 73 74 20 28 69 64 20 37 29 0a 72 65 |equest (id 7).re|
+  0260: 70 6c 79 69 6e 67 20 74 6f 20 70 69 6e 67 20 72 |plying to ping r|
+  0270: 65 71 75 65 73 74 20 28 69 64 20 37 29 0a 00 00 |equest (id 7)...|
+  0280: 00 00 00 00 00 00                               |......|
 
 The reply is valid
 
@@ -812,29 +878,108 @@ Support for changegroup
   bundle2-output: closing payload chunk
   bundle2-output: end of bundle
 
-  $ cat ../rev.hg2
-  HG20\x00\x00\x00\x00\x00\x00\x00\x12\x0bchangegroup\x00\x00\x00\x00\x00\x00\x00\x00\x06\x13\x00\x00\x00\xa42\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j_\xdd\xd9\x89W\xc8\xa5JMCm\xfe\x1d\xa9\xd8\x7f!\xa1\xb9{\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)6e1f4c47ecb533ffd0c8e52cdc88afb6cd39e20c (esc)
-  \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02D (esc)
-  \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01D\x00\x00\x00\xa4\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xcd\x01\x0b\x8c\xd9\x98\xf3\x98\x1aZ\x81\x15\xf9O\x8d\xa4\xabP`\x89\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)4dece9c826f69490507b98c6383a3009b295837d (esc)
-  \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x02E (esc)
-  \x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01E\x00\x00\x00\xa2\xee\xa17Fy\x9a\x9e\x0b\xfd\x88\xf2\x9d<.\x9d\xc98\x9fRO$\xb68|\x8c\x8c\xae7\x17\x88\x80\xf3\xfa\x95\xde\xd3\xcb\x1c\xf7\x85\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\xee\xa17Fy\x9a\x9e\x0b\xfd\x88\xf2\x9d<.\x9d\xc98\x9fRO\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)365b93d57fdf4814e2b5911d6bacff2b12014441 (esc)
-  \x00\x00\x00f\x00\x00\x00h\x00\x00\x00\x00\x00\x00\x00i\x00\x00\x00j\x00\x00\x00\x01G\x00\x00\x00\xa4\x02\xdeB\x19n\xbe\xe4.\xf2\x84\xb6x (esc)
-  \x87\xcd\xc9n\x8e\xaa\xb6$\xb68|\x8c\x8c\xae7\x17\x88\x80\xf3\xfa\x95\xde\xd3\xcb\x1c\xf7\x85\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xdeB\x19n\xbe\xe4.\xf2\x84\xb6x (esc)
-  \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00)\x00\x00\x00)8bee48edc7318541fc0013ee41b089276a8c24bf (esc)
-  \x00\x00\x00f\x00\x00\x00f\x00\x00\x00\x02H (esc)
-  \x00\x00\x00g\x00\x00\x00h\x00\x00\x00\x01H\x00\x00\x00\x00\x00\x00\x00\x8bn\x1fLG\xec\xb53\xff\xd0\xc8\xe5,\xdc\x88\xaf\xb6\xcd9\xe2\x0cf\xa5\xa0\x18\x17\xfd\xf5#\x9c'8\x02\xb5\xb7a\x8d\x05\x1c\x89\xe4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x81\x00\x00\x00\x81\x00\x00\x00+D\x00c3f1ca2924c16a19b0656a84900e504e5b0aec2d (esc)
-  \x00\x00\x00\x8bM\xec\xe9\xc8&\xf6\x94\x90P{\x98\xc68:0	\xb2\x95\x83}\x00}\x8c\x9d\x88\x84\x13%\xf5\xc6\xb0cq\xb3[N\x8a+\x1a\x83\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00+\x00\x00\x00\xac\x00\x00\x00+E\x009c6fd0350a6c0d0c49d4a9c5017cf07043f54e58 (esc)
-  \x00\x00\x00\x8b6[\x93\xd5\x7f\xdfH\x14\xe2\xb5\x91\x1dk\xac\xff+\x12\x01DA(\xa5\x84\xc6^\xf1!\xf8\x9e\xb6j\xb7\xd0\xbc\x15=\x80\x99\xe7\xceM\xec\xe9\xc8&\xf6\x94\x90P{\x98\xc68:0	\xb2\x95\x83}\xee\xa17Fy\x9a\x9e\x0b\xfd\x88\xf2\x9d<.\x9d\xc98\x9fRO\x00\x00\x00V\x00\x00\x00V\x00\x00\x00+F\x0022bfcfd62a21a3287edbd4d656218d0f525ed76a (esc)
-  \x00\x00\x00\x97\x8b\xeeH\xed\xc71\x85A\xfc\x00\x13\xeeA\xb0\x89'j\x8c$\xbf(\xa5\x84\xc6^\xf1!\xf8\x9e\xb6j\xb7\xd0\xbc\x15=\x80\x99\xe7\xce\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xdeB\x19n\xbe\xe4.\xf2\x84\xb6x (esc)
-  \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00+\x00\x00\x00V\x00\x00\x00\x00\x00\x00\x00\x81\x00\x00\x00\x81\x00\x00\x00+H\x008500189e74a9e0475e822093bc7db0d631aeb0b4 (esc)
-  \x00\x00\x00\x00\x00\x00\x00\x05D\x00\x00\x00b\xc3\xf1\xca)$\xc1j\x19\xb0ej\x84\x90\x0ePN[ (esc)
-  \xec-\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x002\xafv\x86\xd4\x03\xcfE\xb5\xd9_-p\xce\xbe\xa5\x87\xac\x80j\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02D (esc)
-  \x00\x00\x00\x00\x00\x00\x00\x05E\x00\x00\x00b\x9co\xd05 (esc)
-  l\r (no-eol) (esc)
-  \x0cI\xd4\xa9\xc5\x01|\xf0pC\xf5NX\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x95 \xee\xa7\x81\xbc\xca\x16\xc1\xe1Z\xcc\x0b\xa1C5\xa0\xe8\xe5\xba\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02E (esc)
-  \x00\x00\x00\x00\x00\x00\x00\x05H\x00\x00\x00b\x85\x00\x18\x9et\xa9\xe0G^\x82 \x93\xbc}\xb0\xd61\xae\xb0\xb4\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\xdeB\x19n\xbe\xe4.\xf2\x84\xb6x (esc)
-  \x87\xcd\xc9n\x8e\xaa\xb6\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02H (esc)
-  \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../rev.hg2
+  ../rev.hg2:
+  0000: 48 47 32 30 00 00 00 00 00 00 00 12 0b 63 68 61 |HG20.........cha|
+  0010: 6e 67 65 67 72 6f 75 70 00 00 00 00 00 00 00 00 |ngegroup........|
+  0020: 06 13 00 00 00 a4 32 af 76 86 d4 03 cf 45 b5 d9 |......2.v....E..|
+  0030: 5f 2d 70 ce be a5 87 ac 80 6a 5f dd d9 89 57 c8 |_-p......j_...W.|
+  0040: a5 4a 4d 43 6d fe 1d a9 d8 7f 21 a1 b9 7b 00 00 |.JMCm.....!..{..|
+  0050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0060: 00 00 32 af 76 86 d4 03 cf 45 b5 d9 5f 2d 70 ce |..2.v....E.._-p.|
+  0070: be a5 87 ac 80 6a 00 00 00 00 00 00 00 29 00 00 |.....j.......)..|
+  0080: 00 29 36 65 31 66 34 63 34 37 65 63 62 35 33 33 |.)6e1f4c47ecb533|
+  0090: 66 66 64 30 63 38 65 35 32 63 64 63 38 38 61 66 |ffd0c8e52cdc88af|
+  00a0: 62 36 63 64 33 39 65 32 30 63 0a 00 00 00 66 00 |b6cd39e20c....f.|
+  00b0: 00 00 68 00 00 00 02 44 0a 00 00 00 69 00 00 00 |..h....D....i...|
+  00c0: 6a 00 00 00 01 44 00 00 00 a4 95 20 ee a7 81 bc |j....D..... ....|
+  00d0: ca 16 c1 e1 5a cc 0b a1 43 35 a0 e8 e5 ba cd 01 |....Z...C5......|
+  00e0: 0b 8c d9 98 f3 98 1a 5a 81 15 f9 4f 8d a4 ab 50 |.......Z...O...P|
+  00f0: 60 89 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |`...............|
+  0100: 00 00 00 00 00 00 95 20 ee a7 81 bc ca 16 c1 e1 |....... ........|
+  0110: 5a cc 0b a1 43 35 a0 e8 e5 ba 00 00 00 00 00 00 |Z...C5..........|
+  0120: 00 29 00 00 00 29 34 64 65 63 65 39 63 38 32 36 |.)...)4dece9c826|
+  0130: 66 36 39 34 39 30 35 30 37 62 39 38 63 36 33 38 |f69490507b98c638|
+  0140: 33 61 33 30 30 39 62 32 39 35 38 33 37 64 0a 00 |3a3009b295837d..|
+  0150: 00 00 66 00 00 00 68 00 00 00 02 45 0a 00 00 00 |..f...h....E....|
+  0160: 69 00 00 00 6a 00 00 00 01 45 00 00 00 a2 ee a1 |i...j....E......|
+  0170: 37 46 79 9a 9e 0b fd 88 f2 9d 3c 2e 9d c9 38 9f |7Fy.......<...8.|
+  0180: 52 4f 24 b6 38 7c 8c 8c ae 37 17 88 80 f3 fa 95 |RO$.8|...7......|
+  0190: de d3 cb 1c f7 85 95 20 ee a7 81 bc ca 16 c1 e1 |....... ........|
+  01a0: 5a cc 0b a1 43 35 a0 e8 e5 ba ee a1 37 46 79 9a |Z...C5......7Fy.|
+  01b0: 9e 0b fd 88 f2 9d 3c 2e 9d c9 38 9f 52 4f 00 00 |......<...8.RO..|
+  01c0: 00 00 00 00 00 29 00 00 00 29 33 36 35 62 39 33 |.....)...)365b93|
+  01d0: 64 35 37 66 64 66 34 38 31 34 65 32 62 35 39 31 |d57fdf4814e2b591|
+  01e0: 31 64 36 62 61 63 66 66 32 62 31 32 30 31 34 34 |1d6bacff2b120144|
+  01f0: 34 31 0a 00 00 00 66 00 00 00 68 00 00 00 00 00 |41....f...h.....|
+  0200: 00 00 69 00 00 00 6a 00 00 00 01 47 00 00 00 a4 |..i...j....G....|
+  0210: 02 de 42 19 6e be e4 2e f2 84 b6 78 0a 87 cd c9 |..B.n......x....|
+  0220: 6e 8e aa b6 24 b6 38 7c 8c 8c ae 37 17 88 80 f3 |n...$.8|...7....|
+  0230: fa 95 de d3 cb 1c f7 85 00 00 00 00 00 00 00 00 |................|
+  0240: 00 00 00 00 00 00 00 00 00 00 00 00 02 de 42 19 |..............B.|
+  0250: 6e be e4 2e f2 84 b6 78 0a 87 cd c9 6e 8e aa b6 |n......x....n...|
+  0260: 00 00 00 00 00 00 00 29 00 00 00 29 38 62 65 65 |.......)...)8bee|
+  0270: 34 38 65 64 63 37 33 31 38 35 34 31 66 63 30 30 |48edc7318541fc00|
+  0280: 31 33 65 65 34 31 62 30 38 39 32 37 36 61 38 63 |13ee41b089276a8c|
+  0290: 32 34 62 66 0a 00 00 00 66 00 00 00 66 00 00 00 |24bf....f...f...|
+  02a0: 02 48 0a 00 00 00 67 00 00 00 68 00 00 00 01 48 |.H....g...h....H|
+  02b0: 00 00 00 00 00 00 00 8b 6e 1f 4c 47 ec b5 33 ff |........n.LG..3.|
+  02c0: d0 c8 e5 2c dc 88 af b6 cd 39 e2 0c 66 a5 a0 18 |...,.....9..f...|
+  02d0: 17 fd f5 23 9c 27 38 02 b5 b7 61 8d 05 1c 89 e4 |...#.'8...a.....|
+  02e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  02f0: 00 00 00 00 32 af 76 86 d4 03 cf 45 b5 d9 5f 2d |....2.v....E.._-|
+  0300: 70 ce be a5 87 ac 80 6a 00 00 00 81 00 00 00 81 |p......j........|
+  0310: 00 00 00 2b 44 00 63 33 66 31 63 61 32 39 32 34 |...+D.c3f1ca2924|
+  0320: 63 31 36 61 31 39 62 30 36 35 36 61 38 34 39 30 |c16a19b0656a8490|
+  0330: 30 65 35 30 34 65 35 62 30 61 65 63 32 64 0a 00 |0e504e5b0aec2d..|
+  0340: 00 00 8b 4d ec e9 c8 26 f6 94 90 50 7b 98 c6 38 |...M...&...P{..8|
+  0350: 3a 30 09 b2 95 83 7d 00 7d 8c 9d 88 84 13 25 f5 |:0....}.}.....%.|
+  0360: c6 b0 63 71 b3 5b 4e 8a 2b 1a 83 00 00 00 00 00 |..cq.[N.+.......|
+  0370: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 95 |................|
+  0380: 20 ee a7 81 bc ca 16 c1 e1 5a cc 0b a1 43 35 a0 | ........Z...C5.|
+  0390: e8 e5 ba 00 00 00 2b 00 00 00 ac 00 00 00 2b 45 |......+.......+E|
+  03a0: 00 39 63 36 66 64 30 33 35 30 61 36 63 30 64 30 |.9c6fd0350a6c0d0|
+  03b0: 63 34 39 64 34 61 39 63 35 30 31 37 63 66 30 37 |c49d4a9c5017cf07|
+  03c0: 30 34 33 66 35 34 65 35 38 0a 00 00 00 8b 36 5b |043f54e58.....6[|
+  03d0: 93 d5 7f df 48 14 e2 b5 91 1d 6b ac ff 2b 12 01 |....H.....k..+..|
+  03e0: 44 41 28 a5 84 c6 5e f1 21 f8 9e b6 6a b7 d0 bc |DA(...^.!...j...|
+  03f0: 15 3d 80 99 e7 ce 4d ec e9 c8 26 f6 94 90 50 7b |.=....M...&...P{|
+  0400: 98 c6 38 3a 30 09 b2 95 83 7d ee a1 37 46 79 9a |..8:0....}..7Fy.|
+  0410: 9e 0b fd 88 f2 9d 3c 2e 9d c9 38 9f 52 4f 00 00 |......<...8.RO..|
+  0420: 00 56 00 00 00 56 00 00 00 2b 46 00 32 32 62 66 |.V...V...+F.22bf|
+  0430: 63 66 64 36 32 61 32 31 61 33 32 38 37 65 64 62 |cfd62a21a3287edb|
+  0440: 64 34 64 36 35 36 32 31 38 64 30 66 35 32 35 65 |d4d656218d0f525e|
+  0450: 64 37 36 61 0a 00 00 00 97 8b ee 48 ed c7 31 85 |d76a.......H..1.|
+  0460: 41 fc 00 13 ee 41 b0 89 27 6a 8c 24 bf 28 a5 84 |A....A..'j.$.(..|
+  0470: c6 5e f1 21 f8 9e b6 6a b7 d0 bc 15 3d 80 99 e7 |.^.!...j....=...|
+  0480: ce 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0490: 00 00 00 00 00 02 de 42 19 6e be e4 2e f2 84 b6 |.......B.n......|
+  04a0: 78 0a 87 cd c9 6e 8e aa b6 00 00 00 2b 00 00 00 |x....n......+...|
+  04b0: 56 00 00 00 00 00 00 00 81 00 00 00 81 00 00 00 |V...............|
+  04c0: 2b 48 00 38 35 30 30 31 38 39 65 37 34 61 39 65 |+H.8500189e74a9e|
+  04d0: 30 34 37 35 65 38 32 32 30 39 33 62 63 37 64 62 |0475e822093bc7db|
+  04e0: 30 64 36 33 31 61 65 62 30 62 34 0a 00 00 00 00 |0d631aeb0b4.....|
+  04f0: 00 00 00 05 44 00 00 00 62 c3 f1 ca 29 24 c1 6a |....D...b...)$.j|
+  0500: 19 b0 65 6a 84 90 0e 50 4e 5b 0a ec 2d 00 00 00 |..ej...PN[..-...|
+  0510: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0520: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0530: 00 00 00 00 00 32 af 76 86 d4 03 cf 45 b5 d9 5f |.....2.v....E.._|
+  0540: 2d 70 ce be a5 87 ac 80 6a 00 00 00 00 00 00 00 |-p......j.......|
+  0550: 00 00 00 00 02 44 0a 00 00 00 00 00 00 00 05 45 |.....D.........E|
+  0560: 00 00 00 62 9c 6f d0 35 0a 6c 0d 0c 49 d4 a9 c5 |...b.o.5.l..I...|
+  0570: 01 7c f0 70 43 f5 4e 58 00 00 00 00 00 00 00 00 |.|.pC.NX........|
+  0580: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0590: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  05a0: 95 20 ee a7 81 bc ca 16 c1 e1 5a cc 0b a1 43 35 |. ........Z...C5|
+  05b0: a0 e8 e5 ba 00 00 00 00 00 00 00 00 00 00 00 02 |................|
+  05c0: 45 0a 00 00 00 00 00 00 00 05 48 00 00 00 62 85 |E.........H...b.|
+  05d0: 00 18 9e 74 a9 e0 47 5e 82 20 93 bc 7d b0 d6 31 |...t..G^. ..}..1|
+  05e0: ae b0 b4 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  05f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0600: 00 00 00 00 00 00 00 00 00 00 00 02 de 42 19 6e |.............B.n|
+  0610: be e4 2e f2 84 b6 78 0a 87 cd c9 6e 8e aa b6 00 |......x....n....|
+  0620: 00 00 00 00 00 00 00 00 00 00 02 48 0a 00 00 00 |...........H....|
+  0630: 00 00 00 00 00 00 00 00 00 00 00 00 00          |.............|
 
   $ hg debugbundle ../rev.hg2
   Stream params: {}
@@ -856,12 +1001,21 @@ with reply
   0 unread bytes
   addchangegroup return: 1
 
-  $ cat ../rev-reply.hg2
-  HG20\x00\x00\x00\x00\x00\x00\x00/\x11reply:changegroup\x00\x00\x00\x00\x00\x02\x0b\x01\x06\x01in-reply-to1return1\x00\x00\x00\x00\x00\x00\x00\x1b\x06output\x00\x00\x00\x01\x00\x01\x0b\x01in-reply-to1\x00\x00\x00dadding changesets (esc)
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 3 files
-  \x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../rev-reply.hg2
+  ../rev-reply.hg2:
+  0000: 48 47 32 30 00 00 00 00 00 00 00 2f 11 72 65 70 |HG20......./.rep|
+  0010: 6c 79 3a 63 68 61 6e 67 65 67 72 6f 75 70 00 00 |ly:changegroup..|
+  0020: 00 00 00 02 0b 01 06 01 69 6e 2d 72 65 70 6c 79 |........in-reply|
+  0030: 2d 74 6f 31 72 65 74 75 72 6e 31 00 00 00 00 00 |-to1return1.....|
+  0040: 00 00 1b 06 6f 75 74 70 75 74 00 00 00 01 00 01 |....output......|
+  0050: 0b 01 69 6e 2d 72 65 70 6c 79 2d 74 6f 31 00 00 |..in-reply-to1..|
+  0060: 00 64 61 64 64 69 6e 67 20 63 68 61 6e 67 65 73 |.dadding changes|
+  0070: 65 74 73 0a 61 64 64 69 6e 67 20 6d 61 6e 69 66 |ets.adding manif|
+  0080: 65 73 74 73 0a 61 64 64 69 6e 67 20 66 69 6c 65 |ests.adding file|
+  0090: 20 63 68 61 6e 67 65 73 0a 61 64 64 65 64 20 30 | changes.added 0|
+  00a0: 20 63 68 61 6e 67 65 73 65 74 73 20 77 69 74 68 | changesets with|
+  00b0: 20 30 20 63 68 61 6e 67 65 73 20 74 6f 20 33 20 | 0 changes to 3 |
+  00c0: 66 69 6c 65 73 0a 00 00 00 00 00 00 00 00       |files.........|
 
 Check handling of exception during generation.
 ----------------------------------------------
@@ -872,9 +1026,16 @@ Check handling of exception during generation.
 
 Should still be a valid bundle
 
-  $ cat ../genfailed.hg2
-  HG20\x00\x00\x00\x00\x00\x00\x00\r (no-eol) (esc)
-  \x06output\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00H\x0berror:abort\x00\x00\x00\x00\x01\x00\x07-messageunexpected error: Someone set up us the bomb!\x00\x00\x00\x00\x00\x00\x00\x00 (no-eol) (esc)
+  $ f --hexdump ../genfailed.hg2
+  ../genfailed.hg2:
+  0000: 48 47 32 30 00 00 00 00 00 00 00 0d 06 6f 75 74 |HG20.........out|
+  0010: 70 75 74 00 00 00 00 00 00 ff ff ff ff 00 00 00 |put.............|
+  0020: 48 0b 65 72 72 6f 72 3a 61 62 6f 72 74 00 00 00 |H.error:abort...|
+  0030: 00 01 00 07 2d 6d 65 73 73 61 67 65 75 6e 65 78 |....-messageunex|
+  0040: 70 65 63 74 65 64 20 65 72 72 6f 72 3a 20 53 6f |pected error: So|
+  0050: 6d 65 6f 6e 65 20 73 65 74 20 75 70 20 75 73 20 |meone set up us |
+  0060: 74 68 65 20 62 6f 6d 62 21 00 00 00 00 00 00 00 |the bomb!.......|
+  0070: 00                                              |.|
 
 And its handling on the other size raise a clean exception
 
