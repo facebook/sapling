@@ -16,6 +16,8 @@ import sys
 from .i18n import _
 from . import error, util
 
+hassni = getattr(ssl, 'HAS_SNI', False)
+
 _canloaddefaultcerts = False
 try:
     ssl_context = ssl.SSLContext
