@@ -156,7 +156,8 @@ def exconvertbookmarks(orig, source):
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
     methods to access that state in convenient ways. Remotenames are lazy
-    loaded.
+    loaded. Whenever client code needs to ensure the freshest copy of
+    remotenames, use the `clearnames` method to force an eventual load.
     """
 
     def __init__(self, repo, *args):
@@ -178,7 +179,7 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
-    def loadremotenames(self):
+    def _loadremotenames(self):
 
         repo = self._repo
         alias_default = repo.ui.configbool('remotenames', 'alias.default')
@@ -211,7 +212,7 @@ class remotenames(dict):
 
     def _loadremotenameslazily(self):
         if not self._loadednames:
-            self.loadremotenames()
+            self._loadremotenames()
             self._loadednames = True
 
     def mark2nodes(self):
@@ -1186,7 +1187,7 @@ def saveremotenames(repo, remotepath, branches={}, bookmarks={}):
         f.close()
 
         # Old paths have been deleted, refresh remotenames
-        repo._remotenames.loadremotenames()
+        repo._remotenames.clearnames()
 
     finally:
         wlock.release()
@@ -1277,7 +1278,7 @@ def precachedistance(repo):
         precachecurrent = False
     """
     # to avoid stale namespaces, let's reload
-    repo._remotenames.loadremotenames()
+    repo._remotenames.clearnames()
 
     wlock = repo.wlock()
     try:
