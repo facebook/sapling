@@ -21,6 +21,7 @@ from .node import (
 )
 from . import (
     copies,
+    destutil,
     filemerge,
     obsolete,
     subrepo,
@@ -994,9 +995,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             pas = [repo[ancestor]]
 
         if node is None:
-            nodes = list(repo.set('_updatedefaultdest()'))
-            if nodes:
-                node = nodes[0].node()
+            node = repo[destutil.destupdate(repo)].node()
 
         overwrite = force and not branchmerge
 
