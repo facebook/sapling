@@ -356,6 +356,10 @@ def wraprepo(repo):
                 return
             ui.debug("syncing with mysql\n")
 
+            # Save a copy of the old manifest cache so we can put it back
+            # afterwards.
+            oldmancache = self.manifest._mancache
+
             try:
                 lock = self.lock(wait=waitforlock)
             except error.LockHeld:
@@ -415,6 +419,9 @@ def wraprepo(repo):
                 self._filecache.pop('changelog', None)
                 self._filecache.pop('manifest', None)
                 self._filecache.pop('_phasecache', None)
+
+                # Refill the cache
+                self.manifest._mancache = oldmancache
 
                 heads = set(self.heads())
                 heads.discard(nullid)
