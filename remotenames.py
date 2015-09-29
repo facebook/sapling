@@ -1328,7 +1328,8 @@ def remotenamesrevset(repo, subset, x):
         for name in ns.listnames(repo):
             remoterevs.update(ns.nodes(repo, name))
 
-    return revset.baseset(sorted(cl.rev(n) for n in remoterevs))
+    results = (cl.rev(n) for n in remoterevs if n in repo)
+    return subset & revset.baseset(sorted(results))
 
 revset.symbols.update({'upstream': upstream,
                        'pushed': pushed,
