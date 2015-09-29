@@ -155,11 +155,13 @@ def exconvertbookmarks(orig, source):
 
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
-    methods to access that state in convenient ways.
+    methods to access that state in convenient ways. Mark2nodes uses lazy
+    loading.
     """
 
-    def __init__(self, *args):
+    def __init__(self, repo, *args):
         dict.__init__(self, *args)
+        self._repo = repo
         self.clearnames()
 
     def clearnames(self):
@@ -168,6 +170,7 @@ class remotenames(dict):
         self['bookmarks'] = {}
         self['branches'] = {}
         self._invalidatecache()
+        self._loadednames = False
 
     def _invalidatecache(self):
         self._node2marks = None
@@ -176,20 +179,25 @@ class remotenames(dict):
         self._node2branch = None
 
     def mark2nodes(self):
+        if not self._loadednames:
+            loadremotenames(self._repo)
+            self._loadednames = True
         return self['bookmarks']
 
     def node2marks(self):
         if not self._node2marks:
+            mark2nodes = self.mark2nodes()
             self._node2marks = {}
-            for name, node in self.mark2nodes().iteritems():
+            for name, node in mark2nodes.iteritems():
                 self._node2marks.setdefault(node[0], []).append(name)
         return self._node2marks
 
     def hoist2nodes(self, hoist):
         if not self._hoist2nodes:
+            mark2nodes = self.mark2nodes()
             self._hoist2nodes = {}
             hoist += '/'
-            for name, node in self.mark2nodes().iteritems():
+            for name, node in mark2nodes.iteritems():
                 if name.startswith(hoist):
                     name = name[len(hoist):]
                     self._hoist2nodes[name] = node
@@ -197,9 +205,10 @@ class remotenames(dict):
 
     def node2hoists(self, hoist):
         if not self._node2hoists:
+            mark2nodes = self.mark2nodes()
             self._node2hoists = {}
             hoist += '/'
-            for name, node in self.mark2nodes().iteritems():
+            for name, node in mark2nodes.iteritems():
                 if name.startswith(hoist):
                     name = name[len(hoist):]
                     self._node2hoists.setdefault(node[0], []).append(name)
@@ -221,7 +230,7 @@ def reposetup(ui, repo):
     if not repo.local():
         return
 
-    repo._remotenames = remotenames()
+    repo._remotenames = remotenames(repo)
     loadremotenames(repo)
     ns = namespaces.namespace
 
