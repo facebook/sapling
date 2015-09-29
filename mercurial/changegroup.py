@@ -92,7 +92,7 @@ bundletypes = {
 # hgweb uses this list to communicate its preferred type
 bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
 
-def writebundle(ui, cg, filename, bundletype, vfs=None):
+def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
     """Write a bundle file and return its filename.
 
     Existing files will not be overwritten.
@@ -117,11 +117,14 @@ def writebundle(ui, cg, filename, bundletype, vfs=None):
         if bundletype == "HG20":
             from . import bundle2
             bundle = bundle2.bundle20(ui)
+            bundle.setcompression(compression)
             part = bundle.newpart('changegroup', data=cg.getchunks())
             part.addparam('version', cg.version)
             z = util.compressors[None]()
             chunkiter = bundle.getchunks()
         else:
+            # compression argument is only for the bundle2 case
+            assert compression is None
             if cg.version != '01':
                 raise util.Abort(_('old bundle types only supports v1 '
                                    'changegroups'))
