@@ -15,6 +15,7 @@ except ImportError:
 from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
 from mercurial import obsolete, pushkey, phases, extensions
+from mercurial import bookmarks, lock as lockmod
 from mercurial.extensions import wrapcommand, wrapfunction, _order
 from mercurial.bundlerepo import bundlerepository
 from mercurial.node import nullid, hex, bin
@@ -66,6 +67,10 @@ def extsetup(ui):
     def handlecheckheads(op, inpart):
         pass
 
+    # similarly, for bookmarks, we don't want to abort if the client thinks
+    # the bookmark is coming from a different place than it really is
+    wrapfunction(bookmarks, 'pushbookmark', _pushbookmark)
+
     origpushkeyhandler = bundle2.parthandlermapping['pushkey']
     newpushkeyhandler = lambda *args, **kwargs: \
         bundle2pushkey(origpushkeyhandler, *args, **kwargs)
@@ -74,6 +79,21 @@ def extsetup(ui):
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
     wrapfunction(exchange, 'unbundle', unbundle)
+
+def _pushbookmark(orig, repo, key, old, new):
+    w = l = tr = None
+    try:
+        w = repo.wlock()
+        l = repo.lock()
+        tr = repo.transaction('pushrebasebookmarks')
+        marks = repo._bookmarks
+        existing = hex(marks.get(key, ''))
+        old = existing
+        ret = orig(repo, key, old, new)
+        tr.close()
+        return ret
+    finally:
+        lockmod.release(tr, l, w)
 
 def unbundle(orig, repo, cg, heads, source, url):
     # Preload the manifests that the client says we'll need. This happens

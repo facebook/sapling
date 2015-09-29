@@ -113,3 +113,38 @@ Test doing a non-fastforward bookmark move
   |/
   o  0 "initial"
   
+
+Test a push that comes with out-of-date bookmark discovery
+
+  $ cat >> $TESTTMP/move.py <<EOF
+  > def movebookmark(ui, repo, **kwargs):
+  >     bm = repo._bookmarks
+  >     node = bm['newbook']
+  >     bm['newbook'] = repo[node].p1().node()
+  >     bm.write()
+  >     print "hook: moved bookmark back"
+  > EOF
+  $ cat >> server/.hg/hgrc <<EOF
+  > [hooks]
+  > pretxnopen.movebook = python:$TESTTMP/move.py:movebookmark
+  > EOF
+  $ hg -R client update newbook^
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo c >> client/c
+  $ hg -R client commit -qAm 'cc'
+  $ hg -R client push --to newbook
+  pushing rev 7be15e64df47 to destination ssh://user@dummy/server bookmark newbook
+  searching for changes
+  remote: hook: moved bookmark back
+  updating bookmark newbook
+  $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
+  o  4 "cc" newbook
+  |
+  | o  3 "client's commit"
+  | |
+  +---o  2 "client's commit" master
+  | |
+  @ |  1 "master's commit"
+  |/
+  o  0 "initial"
+  
