@@ -61,6 +61,8 @@ class mergestate(object):
     L: the node of the "local" part of the merge (hexified version)
     O: the node of the "other" part of the merge (hexified version)
     F: a file to be merged entry
+    D: a file that the external merge driver will merge internally
+       (experimental)
     m: the external merge driver defined for this merge plus its run state
        (experimental)
 
@@ -125,7 +127,7 @@ class mergestate(object):
                         _("merge driver changed since merge started"),
                         hint=_("revert merge driver change or abort merge"))
                 self._mdstate = mdstate
-            elif rtype == 'F':
+            elif rtype in 'FD':
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
@@ -254,7 +256,10 @@ class mergestate(object):
                 records.append(('m', '\0'.join([
                     self.mergedriver, self._mdstate])))
             for d, v in self._state.iteritems():
-                records.append(('F', '\0'.join([d] + v)))
+                if v[0] == 'd':
+                    records.append(('D', '\0'.join([d] + v)))
+                else:
+                    records.append(('F', '\0'.join([d] + v)))
             self._writerecords(records)
             self._dirty = False
 
