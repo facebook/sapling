@@ -11,7 +11,7 @@ from . import (
     obsolete,
 )
 
-def destupdate(repo, clean=False):
+def destupdate(repo, clean=False, check=False):
     """destination for bare update operation
     """
     # Here is where we should consider bookmarks, divergent bookmarks, and tip
@@ -71,7 +71,7 @@ def destupdate(repo, clean=False):
                     hint = _("commit and merge, or update --clean to"
                              " discard changes")
                     raise error.Abort(msg, hint=hint)
-                else:  # destination is not a descendant.
+                elif not check:  # destination is not a descendant.
                     msg = _("not a linear update")
                     hint = _("merge or update --check to force update")
                     raise error.Abort(msg, hint=hint)

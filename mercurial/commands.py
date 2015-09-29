@@ -6595,10 +6595,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
         if check:
             cmdutil.bailifchanged(repo, merge=False)
-            if rev is None:
-                rev = repo[repo[None].branch()].rev()
-        elif rev is None:
-            rev = destutil.destupdate(repo, clean=clean)
+        if rev is None:
+            rev = destutil.destupdate(repo, clean=clean, check=check)
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
