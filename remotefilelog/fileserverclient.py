@@ -353,12 +353,27 @@ class fileserverclient(object):
         if missingids:
             global fetches, fetched, fetchcost
             fetches += 1
+
+            # We want to be able to detect excess individual file downloads, so
+            # let's log that information for debugging.
+            if fetches >= 15 and fetches < 18:
+                if fetches == 15:
+                    fetchwarning = self.ui.config('remotefilelog',
+                                                  'fetchwarning')
+                    if fetchwarning:
+                        self.ui.warn(fetchwarning + '\n')
+                self.logstacktrace()
             fetched += len(missingids)
             start = time.time()
             missingids = self.request(missingids)
             if missingids:
                 raise util.Abort(_("unable to download %d files") % len(missingids))
             fetchcost += time.time() - start
+
+    def logstacktrace(self):
+        import traceback
+        self.ui.log('remotefilelog', 'excess remotefilelog fetching:\n%s',
+                    ''.join(traceback.format_stack()))
 
 class localcache(object):
     def __init__(self, repo):
