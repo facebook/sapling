@@ -107,7 +107,7 @@ Test that strip bundle use bundle2
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/aggressive/.hg/strip-backup/1c5d4dc9a8b8-6c68e60c-backup.hg (glob)
   $ hg debugbundle .hg/strip-backup/*
-  Stream params: {}
+  Stream params: {'Compression': 'BZ'}
   changegroup -- "{'version': '02'}"
       1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9
 

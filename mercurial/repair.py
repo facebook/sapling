@@ -38,13 +38,17 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     totalhash = util.sha1(''.join(allhashes)).hexdigest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
 
+    comp = None
     if cgversion != '01':
         bundletype = "HG20"
+        if compress:
+            comp = 'BZ'
     elif compress:
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
-    return changegroup.writebundle(repo.ui, cg, name, bundletype, vfs)
+    return changegroup.writebundle(repo.ui, cg, name, bundletype, vfs,
+                                   compression=comp)
 
 def _collectfiles(repo, striprev):
     """find out the filelogs affected by the strip"""
