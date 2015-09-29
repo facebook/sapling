@@ -776,7 +776,9 @@ class cg2packer(cg1packer):
         return struct.pack(self.deltaheader, node, p1n, p2n, basenode, linknode)
 
 packermap = {'01': (cg1packer, cg1unpacker),
-             '02': (cg2packer, cg2unpacker)}
+             # cg2 adds support for exchanging generaldelta
+             '02': (cg2packer, cg2unpacker),
+}
 
 def _changegroupinfo(repo, nodes, source):
     if repo.ui.verbose or source == 'bundle':
