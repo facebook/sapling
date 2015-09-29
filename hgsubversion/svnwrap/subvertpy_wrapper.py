@@ -187,7 +187,7 @@ class SubversionRepo(object):
     to ensure that the API is the same as for the SWIG wrapper.
     """
     def __init__(self, url='', username='', password='', head=None,
-                 password_stores=None, meta=None):
+                 password_stores=None):
         parsed = common.parse_url(url, username, password)
         # --username and --password override URL credentials
         self.username = parsed[0]
@@ -210,9 +210,6 @@ class SubversionRepo(object):
         self.subdir = urllib.unquote(self.subdir)
         self.hasdiff3 = True
         self.autoprops_config = common.AutoPropsConfig()
-
-        # store the svn meta object for use with branch skipping
-        self.meta = meta
 
     def init_ra_and_client(self):
         """
