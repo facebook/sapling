@@ -178,12 +178,12 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
-    def loadremotenames(self, repo):
+    def loadremotenames(self):
 
+        repo = self._repo
         alias_default = repo.ui.configbool('remotenames', 'alias.default')
-        rn = repo._remotenames
         # About to repopulate remotenames, clear them out
-        rn.clearnames()
+        self.clearnames()
 
         for node, nametype, remote, rname in readremotenames(repo):
             # handle alias_default here
@@ -204,14 +204,14 @@ class remotenames(dict):
                     repo[binnode].closesbranch()):
                 continue
 
-            nodes = rn[nametype].get(name, [])
+            nodes = self[nametype].get(name, [])
             nodes.append(binnode)
-            rn[nametype][name] = nodes
+            self[nametype][name] = nodes
 
 
     def _loadremotenameslazily(self):
         if not self._loadednames:
-            self.loadremotenames(self._repo)
+            self.loadremotenames()
             self._loadednames = True
 
     def mark2nodes(self):
@@ -267,7 +267,6 @@ def reposetup(ui, repo):
         return
 
     repo._remotenames = remotenames(repo)
-    repo._remotenames.loadremotenames(repo)
     ns = namespaces.namespace
 
     if ui.configbool('remotenames', 'bookmarks', True):
@@ -1187,7 +1186,7 @@ def saveremotenames(repo, remotepath, branches={}, bookmarks={}):
         f.close()
 
         # Old paths have been deleted, refresh remotenames
-        repo._remotenames.loadremotenames(repo)
+        repo._remotenames.loadremotenames()
 
     finally:
         wlock.release()
@@ -1278,7 +1277,7 @@ def precachedistance(repo):
         precachecurrent = False
     """
     # to avoid stale namespaces, let's reload
-    repo._remotenames.loadremotenames(repo)
+    repo._remotenames.loadremotenames()
 
     wlock = repo.wlock()
     try:
