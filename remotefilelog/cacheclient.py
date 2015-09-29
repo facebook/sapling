@@ -151,12 +151,12 @@ def main(argv=None):
     remotefilelog uses this cacheclient by setting it in the repo config:
 
     [remotefilelog]
-    cacheprocess = cacheclient <ip address> <memcache prefix>
+    cacheprocess = cacheclient <ip address:port> <memcache prefix>
 
     When memcache requests need to be made, it will execute this process
     with the following arguments:
 
-    cacheclient <ip address> <memcache prefix><internal prefix> <cache path>
+    cacheclient <ip address:port> <memcache prefix><internal prefix> <cache path>
 
     Communication happens via stdin and stdout. To make a get request,
     the following is written to stdin:
