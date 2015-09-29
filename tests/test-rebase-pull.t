@@ -185,7 +185,7 @@ pull --rebase works with bundle2 turned on
   o  0: 'C1'
   
   $ cd ../c
-  $ hg pull --rebase --config experimental.bundle2-exp=True --config experimental.strip-bundle2-version=02
+  $ hg pull --rebase
   pulling from $TESTTMP/a (glob)
   searching for changes
   adding changesets

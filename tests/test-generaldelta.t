@@ -102,4 +102,13 @@ Test format.aggressivemergedeltas
        1        59      59     -1       1 315c023f341d 000000000000 000000000000
        2       118      62      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
 
+Test that strip bundle use bundle2
+  $ hg --config extensions.strip= strip .
+  0 files updated, 0 files merged, 5 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/aggressive/.hg/strip-backup/1c5d4dc9a8b8-6c68e60c-backup.hg (glob)
+  $ hg debugbundle .hg/strip-backup/*
+  Stream params: {}
+  changegroup -- "{'version': '02'}"
+      1c5d4dc9a8b8d6e1750966d343e94db665e7a1e9
+
   $ cd ..

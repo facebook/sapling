@@ -21,18 +21,9 @@ from . import (
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    usebundle2 = (repo.ui.configbool('experimental', 'bundle2-exp', True) and
-                  repo.ui.config('experimental', 'strip-bundle2-version'))
-    if usebundle2:
-        cgversion = repo.ui.config('experimental', 'strip-bundle2-version')
-        if cgversion not in changegroup.packermap:
-            repo.ui.warn(_('unknown strip-bundle2-version value %r; '
-                            'should be one of %r\n') %
-                         (cgversion, sorted(changegroup.packermap.keys()),))
-            cgversion = '01'
-            usebundle2 = False
-    else:
-        cgversion = '01'
+    cgversion = '01'
+    if 'generaldelta' in repo.requirements:
+        cgversion = '02'
 
     cg = changegroup.changegroupsubset(repo, bases, heads, 'strip',
                                        version=cgversion)
@@ -47,7 +38,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
     totalhash = util.sha1(''.join(allhashes)).hexdigest()
     name = "%s/%s-%s-%s.hg" % (backupdir, short(node), totalhash[:8], suffix)
 
-    if usebundle2:
+    if cgversion != '01':
         bundletype = "HG20"
     elif compress:
         bundletype = "HG10BZ"
