@@ -155,8 +155,8 @@ def exconvertbookmarks(orig, source):
 
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
-    methods to access that state in convenient ways. Mark2nodes uses lazy
-    loading.
+    methods to access that state in convenient ways. Remotenames are lazy
+    loaded.
     """
 
     def __init__(self, repo, *args):
@@ -178,10 +178,13 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
-    def mark2nodes(self):
+    def _loadremotenameslazily(self):
         if not self._loadednames:
             loadremotenames(self._repo)
             self._loadednames = True
+
+    def mark2nodes(self):
+        self._loadremotenameslazily()
         return self['bookmarks']
 
     def node2marks(self):
@@ -215,12 +218,14 @@ class remotenames(dict):
         return self._node2hoists
 
     def branch2nodes(self):
+        self._loadremotenameslazily()
         return self['branches']
 
     def node2branch(self):
         if not self._node2branch:
+            branch2nodes = self.branch2nodes()
             self._node2branch = {}
-            for name, nodes in self.branch2nodes().iteritems():
+            for name, nodes in branch2nodes.iteritems():
                 for node in nodes:
                     self._node2branch[node] = [name]
         return self._node2branch
