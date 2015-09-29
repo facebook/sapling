@@ -366,6 +366,49 @@ check that local configs for the cached repo aren't inherited when -R is used:
   *** runcommand status -i -u
   I ignored-file
 
+cache of non-public revisions should be invalidated on repository change
+(issue4855):
+
+  >>> import os
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def phasesetscacheaftercommit(server):
+  ...     readchannel(server)
+  ...     # load _phasecache._phaserevs and _phasesets
+  ...     runcommand(server, ['log', '-qr', 'draft()'])
+  ...     # create draft commits by another process
+  ...     for i in xrange(5, 7):
+  ...         os.system('echo a >> a')
+  ...         os.system('hg commit -Aqm%d' % i)
+  ...     # new commits should be listed as draft revisions
+  ...     runcommand(server, ['log', '-qr', 'draft()'])
+  *** runcommand log -qr draft()
+  4:7966c8e3734d
+  *** runcommand log -qr draft()
+  4:7966c8e3734d
+  5:41f6602d1c4f
+  6:10501e202c35
+
+  >>> import os
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def phasesetscacheafterstrip(server):
+  ...     readchannel(server)
+  ...     # load _phasecache._phaserevs and _phasesets
+  ...     runcommand(server, ['log', '-qr', 'draft()'])
+  ...     # strip cached revisions by another process
+  ...     os.system('hg --config extensions.strip= strip -q 5')
+  ...     # shouldn't abort by "unknown revision '6'"
+  ...     runcommand(server, ['log', '-qr', 'draft()'])
+  *** runcommand log -qr draft()
+  4:7966c8e3734d
+  5:41f6602d1c4f
+  6:10501e202c35
+  *** runcommand log -qr draft()
+  4:7966c8e3734d
+
+cache of phase roots should be invalidated on strip (issue3827):
+
   >>> import os
   >>> from hgclient import readchannel, sep, runcommand, check
   >>> @check
