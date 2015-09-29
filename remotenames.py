@@ -178,9 +178,40 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
+    def loadremotenames(self, repo):
+
+        alias_default = repo.ui.configbool('remotenames', 'alias.default')
+        rn = repo._remotenames
+        # About to repopulate remotenames, clear them out
+        rn.clearnames()
+
+        for node, nametype, remote, rname in readremotenames(repo):
+            # handle alias_default here
+            if remote != "default" and rname == "default" and alias_default:
+                name = remote
+            else:
+                name = joinremotename(remote, rname)
+
+            binnode = bin(node)
+            # if the node doesn't exist, skip it
+            try:
+                repo.changelog.rev(binnode)
+            except LookupError:
+                continue
+
+            # Skip closed branches
+            if (nametype == 'branches' and _branchesenabled(repo.ui) and
+                    repo[binnode].closesbranch()):
+                continue
+
+            nodes = rn[nametype].get(name, [])
+            nodes.append(binnode)
+            rn[nametype][name] = nodes
+
+
     def _loadremotenameslazily(self):
         if not self._loadednames:
-            loadremotenames(self._repo)
+            self.loadremotenames(self._repo)
             self._loadednames = True
 
     def mark2nodes(self):
@@ -236,7 +267,7 @@ def reposetup(ui, repo):
         return
 
     repo._remotenames = remotenames(repo)
-    loadremotenames(repo)
+    repo._remotenames.loadremotenames(repo)
     ns = namespaces.namespace
 
     if ui.configbool('remotenames', 'bookmarks', True):
@@ -1098,36 +1129,6 @@ def readremotenames(repo):
 
     f.close()
 
-def loadremotenames(repo):
-
-    alias_default = repo.ui.configbool('remotenames', 'alias.default')
-    rn = repo._remotenames
-    # About to repopulate remotenames, clear them out
-    rn.clearnames()
-
-    for node, nametype, remote, rname in readremotenames(repo):
-        # handle alias_default here
-        if remote != "default" and rname == "default" and alias_default:
-            name = remote
-        else:
-            name = joinremotename(remote, rname)
-
-        binnode = bin(node)
-        # if the node doesn't exist, skip it
-        try:
-            repo.changelog.rev(binnode)
-        except LookupError:
-            continue
-
-        # Skip closed branches
-        if (nametype == 'branches' and _branchesenabled(repo.ui) and
-                repo[binnode].closesbranch()):
-            continue
-
-        nodes = rn[nametype].get(name, [])
-        nodes.append(binnode)
-        rn[nametype][name] = nodes
-
 def transition(repo, ui):
     """
     Help with transitioning to using a remotenames workflow.
@@ -1186,7 +1187,7 @@ def saveremotenames(repo, remotepath, branches={}, bookmarks={}):
         f.close()
 
         # Old paths have been deleted, refresh remotenames
-        loadremotenames(repo)
+        repo._remotenames.loadremotenames(repo)
 
     finally:
         wlock.release()
@@ -1277,7 +1278,7 @@ def precachedistance(repo):
         precachecurrent = False
     """
     # to avoid stale namespaces, let's reload
-    loadremotenames(repo)
+    repo._remotenames.loadremotenames(repo)
 
     wlock = repo.wlock()
     try:
