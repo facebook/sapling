@@ -34,7 +34,7 @@ from mercurial import templatekw
 from mercurial import url
 from mercurial import util
 from mercurial.i18n import _
-from mercurial.node import hex, short
+from mercurial.node import hex, short, bin
 from hgext import schemes
 from hgext.convert import hg as converthg
 
@@ -1098,19 +1098,20 @@ def loadremotenames(repo):
         else:
             name = joinremotename(remote, rname)
 
+        binnode = bin(node)
         # if the node doesn't exist, skip it
         try:
-            ctx = repo[node]
-        except error.RepoLookupError:
+            repo.changelog.rev(binnode)
+        except LookupError:
             continue
 
         # Skip closed branches
         if (nametype == 'branches' and _branchesenabled(repo.ui) and
-                ctx.closesbranch()):
+                repo[binnode].closesbranch()):
             continue
 
         nodes = rn[nametype].get(name, [])
-        nodes.append(ctx.node())
+        nodes.append(binnode)
         rn[nametype][name] = nodes
 
 def transition(repo, ui):
