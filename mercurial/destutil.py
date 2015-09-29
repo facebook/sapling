@@ -7,25 +7,39 @@
 
 from .i18n import _
 from . import (
+    bookmarks,
     error,
     obsolete,
 )
 
 def destupdate(repo, clean=False, check=False):
     """destination for bare update operation
+
+    return (rev, movemark, activemark)
+
+    - rev: the revision to update to,
+    - movemark: node to move the active bookmark from
+                (cf bookmark.calculate update),
+    - activemark: a bookmark to activate at the end of the update.
     """
-    # Here is where we should consider bookmarks, divergent bookmarks, and tip
-    # of current branch; but currently we are only checking the branch tips.
     node = None
     wc = repo[None]
     p1 = wc.p1()
-    try:
-        node = repo.branchtip(wc.branch())
-    except error.RepoLookupError:
-        if wc.branch() == 'default': # no default branch!
-            node = repo.lookup('tip') # update to tip
-        else:
-            raise error.Abort(_("branch %s not found") % wc.branch())
+    activemark = None
+
+    # we also move the active bookmark, if any
+    node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
+    if node is not None:
+        activemark = node
+
+    if node is None:
+        try:
+            node = repo.branchtip(wc.branch())
+        except error.RepoLookupError:
+            if wc.branch() == 'default': # no default branch!
+                node = repo.lookup('tip') # update to tip
+            else:
+                raise error.Abort(_("branch %s not found") % wc.branch())
 
     if p1.obsolete() and not p1.children():
         # allow updating to successors
@@ -76,4 +90,4 @@ def destupdate(repo, clean=False, check=False):
                     hint = _("merge or update --check to force update")
                     raise error.Abort(msg, hint=hint)
 
-    return rev
+    return rev, movemark, activemark

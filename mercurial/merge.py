@@ -1027,7 +1027,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             pas = [repo[ancestor]]
 
         if node is None:
-            node = repo[destutil.destupdate(repo)].node()
+            rev, _mark, _act = destutil.destupdate(repo)
+            node = repo[rev].node()
 
         overwrite = force and not branchmerge
 

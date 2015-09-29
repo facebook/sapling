@@ -6573,6 +6573,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     Returns 0 on success, 1 if there are unresolved files.
     """
+    movemarkfrom = None
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
@@ -6588,9 +6589,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
                 raise error.Abort(_("you can't specify a revision and a date"))
             rev = cmdutil.finddate(ui, repo, date)
 
-        # with no argument, we also move the active bookmark, if any
-        rev, movemarkfrom = bookmarks.calculateupdate(ui, repo, rev)
-
         # if we defined a bookmark, we have to remember the original name
         brev = rev
         rev = scmutil.revsingle(repo, rev, rev).rev()
@@ -6602,7 +6600,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         if check:
             cmdutil.bailifchanged(repo, merge=False)
         if rev is None:
-            rev = destutil.destupdate(repo, clean=clean, check=check)
+            updata =  destutil.destupdate(repo, clean=clean, check=check)
+            rev, movemarkfrom, brev = updata
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
