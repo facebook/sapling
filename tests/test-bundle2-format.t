@@ -1056,7 +1056,7 @@ Simple case where it just work: GZ
 
   $ hg bundle2 --compress GZ --rev '8+7+5+4' ../rev.hg2.bz
   $ f --hexdump ../rev.hg2.bz
-  
+  ../rev.hg2.bz:
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
   0010: 69 6f 6e 3d 47 5a 78 9c 95 94 7d 68 95 55 1c c7 |ion=GZx...}h.U..|
   0020: 9f 3b 31 e8 ce fa c3 65 be a0 a4 b4 52 b9 29 e7 |.;1....e....R.).|
@@ -1130,7 +1130,7 @@ Simple case where it just work: BZ
 
   $ hg bundle2 --compress BZ --rev '8+7+5+4' ../rev.hg2.bz
   $ f --hexdump ../rev.hg2.bz
-  
+  ../rev.hg2.bz:
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
   0010: 69 6f 6e 3d 42 5a 42 5a 68 39 31 41 59 26 53 59 |ion=BZBZh91AY&SY|
   0020: a3 4b 18 3d 00 00 1a 7f ff ff bf 5f f6 ef ef 7f |.K.=......._....|
