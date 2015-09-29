@@ -68,7 +68,6 @@ def uisetup(ui):
     wrapfunction(exchange, 'push', push)
 
     # Enable SQL for remote commands that write to the repository
-    wrapfunction(wireproto, 'unbundle', unbundle)
     wireproto.commands['unbundle'] = (wireproto.unbundle, 'heads')
     wrapfunction(exchange, 'unbundle', unbundle)
 
