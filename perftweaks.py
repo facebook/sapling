@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 """extension for tweaking Mercurial features to improve performance."""
 
-from mercurial import tags
+from mercurial import tags, merge
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.i18n import _
 import os
