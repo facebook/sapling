@@ -434,7 +434,7 @@ class localrepository(object):
                 heads.append(n)
         return heads
 
-    # _phaserevs and _phasesets depend on changelog. what wee need is to
+    # _phaserevs and _phasesets depend on changelog. what we need is to
     # call _phasecache.invalidate() if '00changelog.i' was changed, but it
     # can't be easily expressed in filecache mechanism.
     @storecache('phaseroots', '00changelog.i')
