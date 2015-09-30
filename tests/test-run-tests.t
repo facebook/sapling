@@ -393,6 +393,14 @@ No Diff
   python hash seed: * (glob)
   [1]
 
+test --tmpdir support
+  $ run-tests.py --with-hg=`which hg` --tmpdir=$TESTTMP/keep test-success.t
+  
+  Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t
+  Keeping threadtmp dir: $TESTTMP/keep/child1 
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
 test for --time
 ==================
 

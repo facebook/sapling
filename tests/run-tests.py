@@ -665,7 +665,10 @@ class Test(unittest.TestCase):
             killdaemons(entry)
         self._daemonpids = []
 
-        if not self._keeptmpdir:
+        if self._keeptmpdir:
+            log('\nKeeping testtmp dir: %s\nKeeping threadtmp dir: %s' %
+                (self._testtmp, self._threadtmp))
+        else:
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
 
