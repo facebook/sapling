@@ -639,7 +639,7 @@ class cg1packer(object):
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
-        def lookupmf(x):
+        def lookupmflinknode(x):
             clnode = mfs[x]
             if not fastpathlinkrev:
                 mdata = ml.readfast(x)
@@ -655,7 +655,8 @@ class cg1packer(object):
 
         mfnodes = self.prune(ml, mfs, commonrevs)
         size = 0
-        for chunk in self.group(mfnodes, ml, lookupmf, units=_('manifests')):
+        for chunk in self.group(
+                mfnodes, ml, lookupmflinknode, units=_('manifests')):
             size += len(chunk)
             yield chunk
         self._verbosenote(_('%8.i (manifests)\n') % size)
