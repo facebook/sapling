@@ -44,10 +44,10 @@
 
     <!--Property Id='ARPCOMMENTS'>any comments</Property-->
     <Property Id='ARPCONTACT'>mercurial@selenic.com</Property>
-    <Property Id='ARPHELPLINK'>http://mercurial.selenic.com/wiki/</Property>
-    <Property Id='ARPURLINFOABOUT'>http://mercurial.selenic.com/about/</Property>
-    <Property Id='ARPURLUPDATEINFO'>http://mercurial.selenic.com/downloads/</Property>
-    <Property Id='ARPHELPTELEPHONE'>http://mercurial.selenic.com/wiki/Support</Property>
+    <Property Id='ARPHELPLINK'>https://mercurial-scm.org/wiki/</Property>
+    <Property Id='ARPURLINFOABOUT'>https://mercurial-scm.org/about/</Property>
+    <Property Id='ARPURLUPDATEINFO'>https://mercurial-scm.org/downloads/</Property>
+    <Property Id='ARPHELPTELEPHONE'>https://mercurial-scm.org/wiki/Support</Property>
     <Property Id='ARPPRODUCTICON'>hgIcon.ico</Property>
 
     <Property Id='INSTALLEDMERCURIALPRODUCTS' Secure='yes'></Property>

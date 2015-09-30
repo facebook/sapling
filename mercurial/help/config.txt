@@ -1749,7 +1749,7 @@ The full set of options is:
     If unset, ``hglogo.png`` will be used.
 
 ``logourl``
-    Base URL to use for logos. If unset, ``http://mercurial.selenic.com/``
+    Base URL to use for logos. If unset, ``https://mercurial-scm.org/``
     will be used.
 
 ``maxchanges``

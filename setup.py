@@ -602,8 +602,8 @@ setup(name='mercurial',
       version=setupversion,
       author='Matt Mackall and many others',
       author_email='mercurial@selenic.com',
-      url='http://mercurial.selenic.com/',
-      download_url='http://mercurial.selenic.com/release/',
+      url='https://mercurial-scm.org/',
+      download_url='https://mercurial-scm.org/release/',
       description=('Fast scalable distributed SCM (revision control, version '
                    'control) system'),
       long_description=('Mercurial is a distributed SCM tool written in Python.'

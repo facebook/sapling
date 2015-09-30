@@ -1,6 +1,6 @@
 # Copyright (C) 2006 - Marco Barisione <marco@barisione.org>
 #
-# This is a small extension for Mercurial (http://mercurial.selenic.com/)
+# This is a small extension for Mercurial (https://mercurial-scm.org/)
 # that removes files not known to mercurial
 #
 # This program was inspired by the "cvspurge" script contained in CVS

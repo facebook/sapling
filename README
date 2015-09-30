@@ -16,5 +16,5 @@ Running without installing:
  $ make local      # build for inplace usage
  $ ./hg --version  # should show the latest version
 
-See http://mercurial.selenic.com/ for detailed installation
+See https://mercurial-scm.org/ for detailed installation
 instructions, platform-specific notes, and Mercurial user information.

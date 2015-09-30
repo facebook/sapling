@@ -99,8 +99,8 @@ def test_url():
 
     >>> url('://192.0.2.16:80/')
     <url path: '://192.0.2.16:80/'>
-    >>> url('http://mercurial.selenic.com')
-    <url scheme: 'http', host: 'mercurial.selenic.com'>
+    >>> url('https://mercurial-scm.org')
+    <url scheme: 'https', host: 'mercurial-scm.org'>
     >>> url('/foo')
     <url path: '/foo'>
     >>> url('bundle:/foo')
@@ -174,7 +174,7 @@ def test_url():
 
     Non-localhost file URL:
 
-    >>> u = url('file://mercurial.selenic.com/foo')
+    >>> u = url('file://mercurial-scm.org/foo')
     Traceback (most recent call last):
       File "<stdin>", line 1, in ?
     Abort: file:// URLs can only refer to localhost

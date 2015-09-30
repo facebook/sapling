@@ -35,5 +35,5 @@ Basic install:
 A proto(2) file is included in this directory as an example of how a
 binary distribution could be packaged, ostensibly with contrib(1).
 
-See http://mercurial.selenic.com/ for detailed installation
+See https://mercurial-scm.org/ for detailed installation
 instructions, platform-specific notes, and Mercurial user information.

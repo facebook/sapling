@@ -36,9 +36,9 @@ InfoAfterFile=contrib/win32/postinstall.txt
 LicenseFile=COPYING
 ShowLanguageDialog=yes
 AppPublisher=Matt Mackall and others
-AppPublisherURL=http://mercurial.selenic.com/
-AppSupportURL=http://mercurial.selenic.com/
-AppUpdatesURL=http://mercurial.selenic.com/
+AppPublisherURL=https://mercurial-scm.org/
+AppSupportURL=https://mercurial-scm.org/
+AppUpdatesURL=https://mercurial-scm.org/
 AppID={{4B95A5F1-EF59-4B08-BED8-C891C46121B3}
 AppContact=mercurial@selenic.com
 DefaultDirName={pf}\Mercurial
@@ -90,7 +90,7 @@ Source: CONTRIBUTORS; DestDir: {app}; DestName: Contributors.txt
 Source: COPYING; DestDir: {app}; DestName: Copying.txt
 
 [INI]
-Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: http://mercurial.selenic.com/
+Filename: {app}\Mercurial.url; Section: InternetShortcut; Key: URL; String: https://mercurial-scm.org/
 Filename: {app}\default.d\editor.rc; Section: ui; Key: editor; String: notepad
 
 [UninstallDelete]

@@ -104,7 +104,7 @@ Written by Matt Mackall <mpm@selenic.com>
 
 Resources
 """""""""
-Main Web Site: http://mercurial.selenic.com/
+Main Web Site: https://mercurial-scm.org/
 
 Source code repository: http://selenic.com/hg
 

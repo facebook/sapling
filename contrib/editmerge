@@ -16,7 +16,7 @@ getlines() {
   grep -n "<<<<<<" $FILE | cut -f1 -d:
 }
 
-# editor preference loosely based on http://mercurial.selenic.com/wiki/editor
+# editor preference loosely based on https://mercurial-scm.org/wiki/editor
 # hg showconfig is at the bottom though, since it's slow to run (0.15 seconds)
 ED=$HGEDITOR
 if [ "$ED" = "" ] ; then

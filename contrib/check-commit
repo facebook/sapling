@@ -13,7 +13,7 @@
 #
 # $ BYPASS= hg commit
 #
-# See also: http://mercurial.selenic.com/wiki/ContributingChanges
+# See also: https://mercurial-scm.org/wiki/ContributingChanges
 
 import re, sys, os
 

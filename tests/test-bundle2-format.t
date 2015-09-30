@@ -1221,7 +1221,7 @@ unknown compression while unbundling
   [255]
   $ hg unbundle ../rev.hg2.bz
   abort: ../rev.hg2.bz: unknown bundle feature, Stream Parameter - Compression='FooBarUnknown'
-  (see https://mercurial.selenic.com/wiki/BundleFeature for more information)
+  (see https://mercurial-scm.org/wiki/BundleFeature for more information)
   [255]
 
   $ cd ..

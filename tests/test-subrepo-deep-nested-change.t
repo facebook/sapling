@@ -466,7 +466,7 @@ Find an exact largefile match in a largefiles subrepo
 The local repo enables largefiles if a largefiles repo is cloned
   $ hg showconfig extensions
   abort: repository requires features unknown to this Mercurial: largefiles!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ hg --config extensions.largefiles= clone -qU . ../lfclone
   $ cat ../lfclone/.hg/hgrc

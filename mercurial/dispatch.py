@@ -365,7 +365,7 @@ def _runcatch(req):
         else:
             bugtracker = ui.config('ui', 'supportcontact', None)
             if bugtracker is None:
-                bugtracker = _("http://mercurial.selenic.com/wiki/BugTracker")
+                bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
             warning = (_("** unknown exception encountered, "
                          "please report by visiting\n** ") + bugtracker + '\n')
         warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +

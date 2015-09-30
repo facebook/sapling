@@ -15,7 +15,7 @@
 # audience not running a version control system.
 #
 # For in-depth discussion refer to
-# <http://mercurial.selenic.com/wiki/KeywordPlan>.
+# <https://mercurial-scm.org/wiki/KeywordPlan>.
 #
 # Keyword expansion is based on Mercurial's changeset template mappings.
 #

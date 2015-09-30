@@ -6391,7 +6391,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 except error.BundleUnknownFeatureError as exc:
                     raise util.Abort(_('%s: unknown bundle feature, %s')
                                      % (fname, exc),
-                                     hint=_("see https://mercurial.selenic.com/"
+                                     hint=_("see https://mercurial-scm.org/"
                                             "wiki/BundleFeature for more "
                                             "information"))
                 finally:
@@ -6536,7 +6536,7 @@ def verify(ui, repo):
     the changelog, manifest, and tracked files, as well as the
     integrity of their crosslinks and indices.
 
-    Please see http://mercurial.selenic.com/wiki/RepositoryCorruption
+    Please see https://mercurial-scm.org/wiki/RepositoryCorruption
     for more information about recovery from corruption of the
     repository.
 
@@ -6550,7 +6550,7 @@ def version_(ui):
     ui.write(_("Mercurial Distributed SCM (version %s)\n")
              % util.version())
     ui.status(_(
-        "(see http://mercurial.selenic.com for more information)\n"
+        "(see https://mercurial-scm.org for more information)\n"
         "\nCopyright (C) 2005-2015 Matt Mackall and others\n"
         "This is free software; see the source for copying conditions. "
         "There is NO\nwarranty; "

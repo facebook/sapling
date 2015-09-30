@@ -995,7 +995,7 @@ def filterpatch(ui, headers, operation=None):
                     ui.write("\n")
                     continue
                 # Patch comment based on the Git one (based on comment at end of
-                # http://mercurial.selenic.com/wiki/RecordExtension)
+                # https://mercurial-scm.org/wiki/RecordExtension)
                 phelp = '---' + _("""
 To remove '-' lines, make them ' ' lines (context).
 To remove '+' lines, delete them.

@@ -25,7 +25,7 @@ Version: snapshot
 Release: 0
 License: GPLv2+
 Group: Development/Tools
-URL: http://mercurial.selenic.com/
+URL: https://mercurial-scm.org/
 Source0: %{name}-%{version}-%{release}.tar.gz
 %if "%{?withpython}"
 Source1: %{pythonname}.tgz

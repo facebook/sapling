@@ -117,7 +117,7 @@ Make sure we do not obscure unknown requires file entries (issue2649)
   $ echo fake >> .hg/requires
   $ hg commit -m bla
   abort: repository requires features unknown to this Mercurial: fake!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
   $ cd ..

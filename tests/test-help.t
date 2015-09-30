@@ -411,7 +411,7 @@ Test help option with version option
 
   $ hg add -h --version
   Mercurial Distributed SCM (version *) (glob)
-  (see http://mercurial.selenic.com for more information)
+  (see https://mercurial-scm.org for more information)
   
   Copyright (C) 2005-2015 Matt Mackall and others
   This is free software; see the source for copying conditions. There is NO
@@ -457,7 +457,7 @@ Test command without options
       manifest, and tracked files, as well as the integrity of their crosslinks
       and indices.
   
-      Please see http://mercurial.selenic.com/wiki/RepositoryCorruption for more
+      Please see https://mercurial-scm.org/wiki/RepositoryCorruption for more
       information about recovery from corruption of the repository.
   
       Returns 0 on success, 1 if errors are encountered.
@@ -1377,7 +1377,7 @@ Dish up an empty repo; serve it cold.
   <div class="container">
   <div class="menu">
   <div class="logo">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
@@ -1935,7 +1935,7 @@ Dish up an empty repo; serve it cold.
   <div class="container">
   <div class="menu">
   <div class="logo">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
@@ -2095,7 +2095,7 @@ Dish up an empty repo; serve it cold.
   <div class="container">
   <div class="menu">
   <div class="logo">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>
@@ -2288,7 +2288,7 @@ Dish up an empty repo; serve it cold.
   <div class="container">
   <div class="menu">
   <div class="logo">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" alt="mercurial" /></a>
   </div>
   <ul>

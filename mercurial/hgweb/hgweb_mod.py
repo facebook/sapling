@@ -126,7 +126,7 @@ class requestcontext(object):
         port = req.env['SERVER_PORT']
         port = port != default_port and (':' + port) or ''
         urlbase = '%s://%s%s' % (proto, req.env['SERVER_NAME'], port)
-        logourl = self.config('web', 'logourl', 'http://mercurial.selenic.com/')
+        logourl = self.config('web', 'logourl', 'https://mercurial-scm.org/')
         logoimg = self.config('web', 'logoimg', 'hglogo.png')
         staticurl = self.config('web', 'staticurl') or req.url + 'static/'
         if not staticurl.endswith('/'):

@@ -3,5 +3,5 @@ To run the tests, do:
 cd tests/
 python run-tests.py
 
-See http://mercurial.selenic.com/wiki/WritingTests for
+See https://mercurial-scm.org/wiki/WritingTests for
 more information on writing tests.

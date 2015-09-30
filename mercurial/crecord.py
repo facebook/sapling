@@ -1462,7 +1462,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 self.ui.write("\n")
                 return None
             # patch comment based on the git one (based on comment at end of
-            # http://mercurial.selenic.com/wiki/recordextension)
+            # https://mercurial-scm.org/wiki/recordextension)
             phelp = '---' + _("""
     to remove '-' lines, make them ' ' lines (context).
     to remove '+' lines, delete them.

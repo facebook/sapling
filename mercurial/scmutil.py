@@ -975,7 +975,7 @@ def readrequires(opener, supported):
         raise error.RequirementError(
             _("repository requires features unknown to this Mercurial: %s")
             % " ".join(missings),
-            hint=_("see http://mercurial.selenic.com/wiki/MissingRequirement"
+            hint=_("see https://mercurial-scm.org/wiki/MissingRequirement"
                    " for more information"))
     return requirements
 

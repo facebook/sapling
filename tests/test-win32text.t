@@ -370,7 +370,7 @@ and now for something completely different
 Trigger deprecation warning:
 
   $ hg id -t
-  win32text is deprecated: http://mercurial.selenic.com/wiki/Win32TextExtension
+  win32text is deprecated: https://mercurial-scm.org/wiki/Win32TextExtension
   tip
 
 Disable warning:

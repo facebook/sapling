@@ -6,4 +6,4 @@ file that comes with this package.
 
 Also check the release notes at:
 
- http://mercurial.selenic.com/wiki/WhatsNew
+ https://mercurial-scm.org/wiki/WhatsNew

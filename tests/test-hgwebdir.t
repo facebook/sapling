@@ -201,7 +201,7 @@ should succeed, slashy names
   
   <div class="container">
   <div class="menu">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">
@@ -701,7 +701,7 @@ should succeed, slashy names
   
   <div class="container">
   <div class="menu">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">
@@ -1152,7 +1152,7 @@ test inexistent and inaccessible repo should be ignored silently
   
   <div class="container">
   <div class="menu">
-  <a href="http://mercurial.selenic.com/">
+  <a href="https://mercurial-scm.org/">
   <img src="/static/hglogo.png" width=75 height=90 border=0 alt="mercurial" /></a>
   </div>
   <div class="main">

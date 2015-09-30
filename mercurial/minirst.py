@@ -14,7 +14,7 @@ It cheats in a major way: nested blocks are not really nested. They
 are just indented blocks that look like they are nested. This relies
 on the user to keep the right indentation for the blocks.
 
-Remember to update http://mercurial.selenic.com/wiki/HelpStyleGuide
+Remember to update https://mercurial-scm.org/wiki/HelpStyleGuide
 when adding support for new constructs.
 """
 

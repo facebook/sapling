@@ -934,7 +934,7 @@ enabling largefiles extension.
   $TESTTMP/individualenabling/enabledlocally (glob)
   $ hg -R notenabledlocally root
   abort: repository requires features unknown to this Mercurial: largefiles!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
   $ hg init push-dst
@@ -951,7 +951,7 @@ enabling largefiles extension.
 
   $ hg clone enabledlocally clone-dst
   abort: repository requires features unknown to this Mercurial: largefiles!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
   $ test -d clone-dst
   [1]
