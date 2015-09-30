@@ -2735,6 +2735,9 @@ def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     t.show(ctx, extramsg=extramsg)
     return ui.popbuffer()
 
+def hgprefix(msg):
+    return "\n".join(["HG: %s" % a for a in msg.split("\n") if a])
+
 def buildcommittext(repo, ctx, subs, extramsg):
     edittext = []
     modified, added, removed = ctx.modified(), ctx.added(), ctx.removed()
@@ -2742,23 +2745,23 @@ def buildcommittext(repo, ctx, subs, extramsg):
         edittext.append(ctx.description())
     edittext.append("")
     edittext.append("") # Empty line between message and comments.
-    edittext.append("HG: %s" % _("Enter commit message."
-                      "  Lines beginning with 'HG:' are removed."))
-    edittext.append("HG: %s" % extramsg)
+    edittext.append(hgprefix(_("Enter commit message."
+                      "  Lines beginning with 'HG:' are removed.")))
+    edittext.append(hgprefix(extramsg))
     edittext.append("HG: --")
-    edittext.append("HG: %s" % (_("user: %s") % ctx.user()))
+    edittext.append(hgprefix(_("user: %s") % ctx.user()))
     if ctx.p2():
-        edittext.append("HG: %s" % _("branch merge"))
+        edittext.append(hgprefix(_("branch merge")))
     if ctx.branch():
-        edittext.append("HG: %s" % (_("branch '%s'") % ctx.branch()))
+        edittext.append(hgprefix(_("branch '%s'") % ctx.branch()))
     if bookmarks.isactivewdirparent(repo):
-        edittext.append("HG: %s" % (_("bookmark '%s'") % repo._activebookmark))
-    edittext.extend(["HG: %s" % (_("subrepo %s") % s) for s in subs])
-    edittext.extend(["HG: %s" % (_("added %s") % f) for f in added])
-    edittext.extend(["HG: %s" % (_("changed %s") % f) for f in modified])
-    edittext.extend(["HG: %s" % (_("removed %s") % f) for f in removed])
+        edittext.append(hgprefix(_("bookmark '%s'") % repo._activebookmark))
+    edittext.extend([hgprefix(_("subrepo %s") % s) for s in subs])
+    edittext.extend([hgprefix(_("added %s") % f) for f in added])
+    edittext.extend([hgprefix(_("changed %s") % f) for f in modified])
+    edittext.extend([hgprefix(_("removed %s") % f) for f in removed])
     if not added and not modified and not removed:
-        edittext.append("HG: %s" % _("no files changed"))
+        edittext.append(hgprefix(_("no files changed")))
     edittext.append("")
 
     return "\n".join(edittext)
