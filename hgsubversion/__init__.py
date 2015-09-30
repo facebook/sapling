@@ -159,7 +159,8 @@ def extsetup(ui):
     entries = (
         (['subversion'],
          "Working with Subversion Repositories",
-         lambda: open(os.path.join(helpdir, 'subversion.rst')).read()),
+         # Mercurial >= 3.6: doc(ui)
+         lambda *args: open(os.path.join(helpdir, 'subversion.rst')).read()),
     )
 
     help.helptable.extend(entries)
