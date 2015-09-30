@@ -1,5 +1,5 @@
-http://mercurial.selenic.com/bts/issue660 and:
-http://mercurial.selenic.com/bts/issue322
+https://bz.mercurial-scm.org/660 and:
+https://bz.mercurial-scm.org/322
 
   $ hg init
   $ echo a > a

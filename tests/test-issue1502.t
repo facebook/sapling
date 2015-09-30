@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue1502
+https://bz.mercurial-scm.org/1502
 
 Initialize repository
 

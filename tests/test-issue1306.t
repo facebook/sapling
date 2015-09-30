@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue1306
+https://bz.mercurial-scm.org/1306
 
 Initialize remote repo with branches:
 

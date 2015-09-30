@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue672
+https://bz.mercurial-scm.org/672
 
 # 0-2-4
 #  \ \ \

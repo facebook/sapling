@@ -1,7 +1,7 @@
 #require cvs
 
-This is http://mercurial.selenic.com/bts/issue1148
-and http://mercurial.selenic.com/bts/issue1447
+This is https://bz.mercurial-scm.org/1148
+and https://bz.mercurial-scm.org/1447
 
   $ cvscall()
   > {

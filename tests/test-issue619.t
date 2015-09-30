@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue619
+https://bz.mercurial-scm.org/619
 
   $ hg init
   $ echo a > a

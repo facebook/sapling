@@ -1,6 +1,6 @@
 #require eol-in-paths
 
-http://mercurial.selenic.com/bts/issue352
+https://bz.mercurial-scm.org/352
 
 test issue352
 
@@ -51,7 +51,7 @@ test issue352
   abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
 
-http://mercurial.selenic.com/bts/issue2036
+https://bz.mercurial-scm.org/2036
 
   $ cd ..
 

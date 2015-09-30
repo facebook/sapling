@@ -437,7 +437,7 @@ recurse infinitely (issue2528)
   abort: empty destination path is not valid
   [255]
 
-test for http://mercurial.selenic.com/bts/issue216
+test for https://bz.mercurial-scm.org/216
 
 Unbundle incremental bundles into fresh empty in one go
 
@@ -551,7 +551,7 @@ test to bundle revisions on the newly created branch (issue3828):
 
   $ cd ..
 
-test for http://mercurial.selenic.com/bts/issue1144
+test for https://bz.mercurial-scm.org/1144
 
 test that verify bundle does not traceback
 

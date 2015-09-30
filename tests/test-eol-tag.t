@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue2493
+https://bz.mercurial-scm.org/2493
 
 Testing tagging with the EOL extension
 

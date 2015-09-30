@@ -1,4 +1,4 @@
-http://mercurial.selenic.com/bts/issue2137
+https://bz.mercurial-scm.org/2137
 
 Setup:
 
