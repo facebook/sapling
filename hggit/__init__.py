@@ -158,7 +158,8 @@ def extsetup(ui):
     })
     helpdir = os.path.join(os.path.dirname(__file__), 'help')
     entry = (['git'], _("Working with Git Repositories"),
-             lambda: open(os.path.join(helpdir, 'git.rst')).read())
+             # Mercurial >= 3.6: doc(ui)
+             lambda *args: open(os.path.join(helpdir, 'git.rst')).read())
     insort(help.helptable, entry)
 
 def reposetup(ui, repo):
