@@ -16,7 +16,7 @@ from mercurial import bundle2, cmdutil, hg, scmutil, exchange, commands
 from mercurial import util, error, discovery, changegroup, context, revset
 from mercurial import obsolete, pushkey, phases, extensions
 from mercurial import bookmarks, lock as lockmod
-from mercurial.extensions import wrapcommand, wrapfunction, _order
+from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.bundlerepo import bundlerepository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
@@ -35,8 +35,10 @@ configonto = 'server-rebase-onto'
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
     # sure we load after it so that we wrap it.
-    _order.remove('pushrebase')
-    _order.append('pushrebase')
+    order = extensions._order
+    order.remove('pushrebase')
+    order.append('pushrebase')
+    extensions._order = order
 
 def extsetup(ui):
     entry = wrapcommand(commands.table, 'push', _push)
