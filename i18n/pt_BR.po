@@ -16140,6 +16140,15 @@ msgstr ""
 "    em arquivos não resolvidos.\n"
 "    "
 
+#, python-format
+msgid "%s: unknown bundle feature, %s"
+msgstr "%s: característica de bundle %s desconhecida"
+
+msgid ""
+"see https://mercurial.selenic.com/wiki/BundleFeature for more information"
+msgstr ""
+"veja http://mercurial.selenic.com/wiki/BundleFeature para mais informações"
+
 msgid "discard uncommitted changes (no backup)"
 msgstr "descarta mudanças não consolidadas (sem backup)"
 
