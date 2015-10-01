@@ -15,6 +15,8 @@ of largefiles.
   > minsize=2
   > patterns=glob:**.dat
   > usercache=${USERCACHE}
+  > [web]
+  > allow_archive = zip
   > [hooks]
   > precommit=sh -c "echo \\"Invoking status precommit hook\\"; hg status"
   > EOF
@@ -214,6 +216,17 @@ Clone over http, no largefiles pulled on clone.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+
+Archive contains largefiles
+  >>> import urllib2, os
+  >>> u = 'http://localhost:%s/archive/default.zip' % os.environ['HGPORT2']
+  >>> with open('archive.zip', 'w') as f:
+  ...     f.write(urllib2.urlopen(u).read())
+  $ unzip -t archive.zip
+  Archive:  archive.zip
+      testing: empty-default/.hg_archival.txt   OK
+      testing: empty-default/f1         OK
+  No errors detected in compressed data of archive.zip.
 
 test 'verify' with remotestore:
 

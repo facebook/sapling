@@ -894,9 +894,19 @@ def overridearchivecmd(orig, ui, repo, dest, **opts):
     finally:
         repo.unfiltered().lfstatus = False
 
+def hgwebarchive(orig, web, req, tmpl):
+    web.repo.lfstatus = True
+
+    try:
+        return orig(web, req, tmpl)
+    finally:
+        web.repo.lfstatus = False
+
 def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
             prefix='', mtime=None, subrepos=None):
-    if not repo.lfstatus:
+    # For some reason setting repo.lfstatus in hgwebarchive only changes the
+    # unfiltered repo's attr, so check that as well.
+    if not repo.lfstatus and not repo.unfiltered().lfstatus:
         return orig(repo, dest, node, kind, decode, matchfn, prefix, mtime,
                     subrepos)
 
