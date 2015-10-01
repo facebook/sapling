@@ -76,8 +76,6 @@ def extsetup(ui):
 
     wrapfunction(exchange, 'unbundle', unbundle)
 
-
-
 def _pushbookmark(orig, repo, key, old, new):
     w = l = tr = None
     try:

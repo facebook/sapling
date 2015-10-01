@@ -116,35 +116,63 @@ Test doing a non-fastforward bookmark move
 
 Test a push that comes with out-of-date bookmark discovery
 
+  $ hg -R server strip -q 0 --config extensions.strip=
+  $ hg -R client strip -q 0 --config extensions.strip=
+  $ rm server/.hg/bookmarks*
+  $ rm client/.hg/bookmarks*
+  $ echo a >> server/a
+  $ hg -R server commit -qAm 'aa'
+  $ hg -R server bookmark bm -i
+  $ echo b >> server/b
+  $ hg -R server commit -qAm 'bb'
+  $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
+  @  1 "bb"
+  |
+  o  0 "aa" bm
+  
+
   $ cat >> $TESTTMP/move.py <<EOF
   > def movebookmark(ui, repo, **kwargs):
   >     bm = repo._bookmarks
-  >     node = bm['newbook']
-  >     bm['newbook'] = repo[node].p1().node()
+  >     bm['bm'] = repo[1].node()
   >     bm.write()
-  >     print "hook: moved bookmark back"
+  >     print "moved bookmark to rev 1"
   > EOF
   $ cat >> server/.hg/hgrc <<EOF
   > [hooks]
   > pretxnopen.movebook = python:$TESTTMP/move.py:movebookmark
   > EOF
-  $ hg -R client update newbook^
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R client pull -q -r 0
+  $ hg -R client update -q 0
   $ echo c >> client/c
   $ hg -R client commit -qAm 'cc'
-  $ hg -R client push --to newbook
-  pushing rev 7be15e64df47 to destination ssh://user@dummy/server bookmark newbook
-  searching for changes
-  remote: hook: moved bookmark back
-  updating bookmark newbook
-  $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
-  o  4 "cc" newbook
+  $ hg -R client log -G -T '{rev} "{desc}" {bookmarks}'
+  @  1 "cc"
   |
-  | o  3 "client's commit"
-  | |
-  +---o  2 "client's commit" master
-  | |
-  @ |  1 "master's commit"
+  o  0 "aa"
+  
+  $ hg -R client push --to bm
+  pushing rev 5db65b93a12b to destination ssh://user@dummy/server bookmark bm
+  searching for changes
+  remote: moved bookmark to rev 1
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 2 files (+1 heads)
+  updating bookmark bm
+  $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
+  o  2 "cc" bm
+  |
+  @  1 "bb"
+  |
+  o  0 "aa"
+  
+  $ hg -R client log -G -T '{rev} "{desc}" {bookmarks}'
+  o  3 "cc"
+  |
+  o  2 "bb"
+  |
+  | @  1 "cc"
   |/
-  o  0 "initial"
+  o  0 "aa"
   
