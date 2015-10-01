@@ -2,7 +2,7 @@
   $ echo "gitlookup = $TESTDIR/../gitlookup.py" >> $HGRCPATH
   $ echo "gitrevset = $TESTDIR/../gitrevset.py" >> $HGRCPATH
   $ echo '[ui]' >> $HGRCPATH
-  $ echo 'ssh = python "$TESTDIR/dummyssh"' >> $HGRCPATH
+  $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
 
 Set up the hg-git files
   $ hg init repo1

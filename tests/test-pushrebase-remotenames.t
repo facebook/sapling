@@ -1,7 +1,7 @@
   $ $PYTHON -c 'import remotenames' || exit 80
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = python "$RUNTESTDIR/dummyssh"
   > [extensions]
   > remotenames =
   > pushrebase = $TESTDIR/../pushrebase.py

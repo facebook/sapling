@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [ui]
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = python "$RUNTESTDIR/dummyssh"
   > username = nobody <no.reply@fb.com>
   > [extensions]
   > strip =
@@ -482,31 +482,28 @@ Test that hooks are fired with the correct variables
   $ cd hookserver
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
-  > changegroup = python "$TESTDIR/printenv.py" changegroup
-  > incoming = python "$TESTDIR/printenv.py" incoming
-  > outgoing = python "$TESTDIR/printenv.py" outgoing
-  > prechangegroup = python "$TESTDIR/printenv.py" prechangegroup
-  > preoutgoing = python "$TESTDIR/printenv.py" preoutgoing
-  > pretxnchangegroup = python "$TESTDIR/printenv.py" pretxnchangegroup
-  > txnclose = python "$TESTDIR/printenv.py" txnclose
-  > pretxnclose = python "$TESTDIR/printenv.py" pretxnclose
+  > changegroup = python "$RUNTESTDIR/printenv.py" changegroup
+  > incoming = python "$RUNTESTDIR/printenv.py" incoming
+  > outgoing = python "$RUNTESTDIR/printenv.py" outgoing
+  > prechangegroup = python "$RUNTESTDIR/printenv.py" prechangegroup
+  > preoutgoing = python "$RUNTESTDIR/printenv.py" preoutgoing
+  > pretxnchangegroup = python "$RUNTESTDIR/printenv.py" pretxnchangegroup
+  > txnclose = python "$RUNTESTDIR/printenv.py" txnclose
+  > pretxnclose = python "$RUNTESTDIR/printenv.py" pretxnclose
   > [extensions]
   > pushrebase = $TESTDIR/../pushrebase.py
   > EOF
   $ touch file && hg ci -Aqm initial
-  pretxnclose hook:
-  txnclose hook:
+  pretxnclose hook: HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
+  txnclose hook: HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   $ hg bookmark master
-  pretxnclose hook:
-  txnclose hook:
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_PENDING=$TESTTMP/hookserver HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=bookmark (glob)
   $ cd ../
 
   $ hg clone hookserver hookclient
-  preoutgoing hook:
-      HG_SOURCE    = clone
-  outgoing hook:
-      HG_NODE      = 0000000000000000000000000000000000000000
-      HG_SOURCE    = clone
+  preoutgoing hook: HG_SOURCE=clone
+  outgoing hook: HG_NODE=0000000000000000000000000000000000000000 HG_SOURCE=clone
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd hookclient
@@ -518,27 +515,10 @@ Test that hooks are fired with the correct variables
   $ hg push --to master
   pushing to $TESTTMP/hookserver
   searching for changes
-  prechangegroup hook:
-      HG_BUNDLE2   = 1
-      HG_SOURCE    = push
-  pretxnchangegroup hook:
-      HG_BUNDLE2   = 1
-      HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
-      HG_SOURCE    = push
-  pretxnclose hook:
-      HG_BUNDLE2   = 1
-      HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
-      HG_SOURCE    = push
-  txnclose hook:
-      HG_BUNDLE2   = 1
-      HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
-      HG_SOURCE    = push
-  changegroup hook:
-      HG_BUNDLE2   = 1
-      HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
-      HG_SOURCE    = push
-  incoming hook:
-      HG_BUNDLE2   = 1
-      HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
-      HG_SOURCE    = push
+  prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  pretxnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  txnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  changegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  incoming hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   $ cd ../
