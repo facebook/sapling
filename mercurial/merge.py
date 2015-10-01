@@ -61,6 +61,14 @@ class mergestate(object):
     L: the node of the "local" part of the merge (hexified version)
     O: the node of the "other" part of the merge (hexified version)
     F: a file to be merged entry
+    m: the external merge driver defined for this merge plus its run state
+       (experimental)
+
+    Merge driver run states (experimental):
+    u: driver-resolved files unmarked -- needs to be run next time we're about
+       to resolve or commit
+    m: driver-resolved files marked -- only needs to be run before commit
+    s: success/skipped -- does not need to be run any more
     '''
     statepathv1 = 'merge/state'
     statepathv2 = 'merge/state2'
@@ -77,6 +85,7 @@ class mergestate(object):
         if node:
             self._local = node
             self._other = other
+        self._mdstate = 'u'
         shutil.rmtree(self._repo.join('merge'), True)
         self._dirty = False
 
@@ -89,12 +98,33 @@ class mergestate(object):
         self._state = {}
         self._local = None
         self._other = None
+        self._mdstate = 'u'
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
                 self._local = bin(record)
             elif rtype == 'O':
                 self._other = bin(record)
+            elif rtype == 'm':
+                bits = record.split('\0', 1)
+                mdstate = bits[1]
+                if len(mdstate) != 1 or mdstate not in 'ums':
+                    # the merge driver should be idempotent, so just rerun it
+                    mdstate = 'u'
+
+                # protect against the following:
+                # - A configures a malicious merge driver in their hgrc, then
+                #   pauses the merge
+                # - A edits their hgrc to remove references to the merge driver
+                # - A gives a copy of their entire repo, including .hg, to B
+                # - B inspects .hgrc and finds it to be clean
+                # - B then continues the merge and the malicious merge driver
+                #  gets invoked
+                if self.mergedriver != bits[0]:
+                    raise error.ConfigError(
+                        _("merge driver changed since merge started"),
+                        hint=_("revert merge driver change or abort merge"))
+                self._mdstate = mdstate
             elif rtype == 'F':
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
@@ -198,6 +228,10 @@ class mergestate(object):
                 raise
         return records
 
+    @util.propertycache
+    def mergedriver(self):
+        return self._repo.ui.config('experimental', 'mergedriver')
+
     def active(self):
         """Whether mergestate is active.
 
@@ -216,6 +250,9 @@ class mergestate(object):
             records = []
             records.append(('L', hex(self._local)))
             records.append(('O', hex(self._other)))
+            if self.mergedriver:
+                records.append(('m', '\0'.join([
+                    self.mergedriver, self._mdstate])))
             for d, v in self._state.iteritems():
                 records.append(('F', '\0'.join([d] + v)))
             self._writerecords(records)
