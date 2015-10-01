@@ -2510,6 +2510,9 @@ def debugmergestate(ui, repo, *args):
                 ui.write(('local: %s\n') % record)
             elif rtype == 'O':
                 ui.write(('other: %s\n') % record)
+            elif rtype == 'm':
+                driver, mdstate = record.split('\0', 1)
+                ui.write(('merge driver: %s (state "%s")\n') % (driver, mdstate))
             elif rtype == 'F':
                 r = record.split('\0')
                 f, state, hash, lfile, afile, anode, ofile = r[0:7]
@@ -2532,7 +2535,7 @@ def debugmergestate(ui, repo, *args):
     # sort so that reasonable information is on top
     v1records = ms._readrecordsv1()
     v2records = ms._readrecordsv2()
-    order = 'LO'
+    order = 'LOm'
     def key(r):
         idx = order.find(r[0])
         if idx == -1:
