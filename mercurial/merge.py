@@ -331,7 +331,7 @@ class mergestate(object):
 
     def _resolve(self, preresolve, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
-        if self[dfile] == 'r':
+        if self[dfile] in 'rd':
             return True, 0
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
