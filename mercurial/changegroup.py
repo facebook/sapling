@@ -591,6 +591,16 @@ class cg1packer(object):
         rr, rl = revlog.rev, revlog.linkrev
         return [n for n in missing if rl(rr(n)) not in commonrevs]
 
+    def _packmanifests(self, mfnodes, lookuplinknode):
+        """Pack flat manifests into a changegroup stream."""
+        ml = self._repo.manifest
+        size = 0
+        for chunk in self.group(
+                mfnodes, ml, lookuplinknode, units=_('manifests')):
+            size += len(chunk)
+            yield chunk
+        self._verbosenote(_('%8.i (manifests)\n') % size)
+
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
@@ -654,12 +664,8 @@ class cg1packer(object):
             return clnode
 
         mfnodes = self.prune(ml, mfs, commonrevs)
-        size = 0
-        for chunk in self.group(
-                mfnodes, ml, lookupmflinknode, units=_('manifests')):
-            size += len(chunk)
-            yield chunk
-        self._verbosenote(_('%8.i (manifests)\n') % size)
+        for x in self._packmanifests(mfnodes, lookupmflinknode):
+            yield x
 
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
