@@ -87,13 +87,53 @@ Stack of non-conflicting commits should be accepted
   |
   o  initial [public:2bb9d20e471c]
   
-  $ hg push --to default
+  $ hg push --to default --config devel.bundle2.debug=1 --debug | tee stuff | grep -v bundle2-
   pushing to ssh://user@dummy/server
+  running python "/data/users/rmcelroy/hgdev/fb-hgext/tests/dummyssh" user@dummy 'hg -R server serve --stdio'
+  sending hello command
+  sending between command
+  remote: 362
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream bundle2=HG20%0Ab2x%253Arebase%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+  remote: 1
+  query 1; heads
+  sending batch command
   searching for changes
+  taking quick initial sample
+  query 2; still undecided: 2, sample size is: 2
+  sending known command
+  2 total queries
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 58 bytes
+  checking for updated bookmarks
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 0 bytes
+  validated revset for rebase
+  2 changesets found
+  list of changesets:
+  46a2df24e27273bb06dbf28b085fcc2e911bf986
+  0e3997dc073308e42715a44d345466690abfd09a
+  sending unbundle command
   adding changesets
+  add changeset add0c792bfce
+  add changeset 6a6d9484552c
+  add changeset 4cfedb0dc25f
   adding manifests
   adding file changes
+  adding a revisions
+  adding b revisions
   added 3 changesets with 1 changes to 2 files (+1 heads)
+  preparing listkeys for "phases"
+  sending listkeys command
+  received listkey for "phases": 15 bytes
+  updating the branch cache
+
+Check that we did not generate any check:heads parts
+
+  $ grep check:heads stuff
+  [1]
+  $ rm stuff
 
   $ cd ../server
   $ hg update default
@@ -502,82 +542,3 @@ Test that hooks are fired with the correct variables
       HG_NODE      = 4fcee35c508c1019667f72cae9b843efa8908701
       HG_SOURCE    = push
   $ cd ../
-
-Copied from mercuriat test-bundle2-format.t
-  $ cat > bundle2.py << EOF
-  > """A small extension to test bundle2 implementation"""
-  > 
-  > import sys, os
-  > from mercurial import cmdutil
-  > from mercurial import util
-  > from mercurial import bundle2
-  > from mercurial import error
-  > 
-  > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
-  > 
-  > @command('bundle2', [], '[OUTPUTFILE]')
-  > def cmdbundle2(ui, repo, path=None, **opts):
-  >     """write a bundle2 container on standard output"""
-  >     bundler = bundle2.bundle20(ui)
-  > 
-  >     part = bundler.newpart('check:heads')
-  >     part.data = '01234567890123456789'
-  > 
-  >     if path is None:
-  >        file = sys.stdout
-  >     else:
-  >         file = open(path, 'wb')
-  > 
-  >     try:
-  >         for chunk in bundler.getchunks():
-  >             file.write(chunk)
-  >     except RuntimeError, exc:
-  >         raise util.Abort(exc)
-  > @command('unbundle2', [], '')
-  > def cmdunbundle2(ui, repo, replypath=None):
-  >     """process a bundle2 stream from stdin on the current repo"""
-  >     try:
-  >         tr = None
-  >         lock = repo.lock()
-  >         tr = repo.transaction('processbundle')
-  >         try:
-  >             unbundler = bundle2.getunbundler(ui, sys.stdin)
-  >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
-  >             tr.close()
-  >         except error.BundleValueError, exc:
-  >             raise util.Abort('missing support for %s' % exc)
-  >         except error.PushRaced, exc:
-  >             raise util.Abort('push race: %s' % exc)
-  >     finally:
-  >         if tr is not None:
-  >             tr.release()
-  >         lock.release()
-  >         remains = sys.stdin.read()
-  >         ui.write('%i unread bytes\n' % len(remains))
-  >     if op.records['song']:
-  >         totalverses = sum(r['verses'] for r in op.records['song'])
-  >         ui.write('%i total verses sung\n' % totalverses)
-  >     for rec in op.records['changegroup']:
-  >         ui.write('addchangegroup return: %i\n' % rec['return'])
-  >     if op.reply is not None and replypath is not None:
-  >         file = open(replypath, 'wb')
-  >         for chunk in op.reply.getchunks():
-  >             file.write(chunk)
-  > EOF
-  $ cat >> $HGRCPATH << EOF
-  > [extensions]
-  > bundle2=$TESTTMP/bundle2.py
-  > [experimental]
-  > EOF
-
-Now create and unbundle a bundle with a conflicting check:heads part
-  $ hg init -q headcheck
-  $ cd headcheck
-  $ cat >> .hg/hgrc <<EOF
-  > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
-  > EOF
-  $ hg bundle2 checkhead.hg2
-  $ hg unbundle2 < checkhead.hg2
-  0 unread bytes

@@ -61,11 +61,7 @@ def extsetup(ui):
     # to allow concurrent pushes, so the heads may have very well changed.
     # So let's not do this check.
     wrapfunction(exchange, 'check_heads', _exchangecheckheads)
-    origcheckheads = bundle2.parthandlermapping['check:heads']
-    del bundle2.parthandlermapping['check:heads']
-    @bundle2.parthandler('check:heads')
-    def handlecheckheads(op, inpart):
-        pass
+    wrapfunction(exchange, '_pushb2ctxcheckheads', _skipcheckheads)
 
     # similarly, for bookmarks, we don't want to abort if the client thinks
     # the bookmark is coming from a different place than it really is
@@ -79,6 +75,8 @@ def extsetup(ui):
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
     wrapfunction(exchange, 'unbundle', unbundle)
+
+
 
 def _pushbookmark(orig, repo, key, old, new):
     w = l = tr = None
@@ -162,6 +160,10 @@ def _exchangecheckheads(orig, repo, *args, **kwargs):
     if not onto:
         # Only do this work if it's not a rebasing push
         return orig(repo, *args, **kwargs)
+
+def _skipcheckheads(orig, pushop, bundler):
+    if not pushop.ui.config(experimental, configonto): # no check if we rebase
+        return orig(pushop, bundler)
 
 def _push(orig, ui, repo, *args, **opts):
     oldonto = ui.backupconfig(experimental, configonto)
