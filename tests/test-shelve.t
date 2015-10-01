@@ -954,3 +954,49 @@ shelve --patch and shelve --stat should work with a single valid shelfname
   abort: cannot find shelf nonexistentshelf
   [255]
 
+  $ cd ..
+
+Shelve from general delta repo uses bundle2 on disk
+--------------------------------------------------
+
+no general delta
+
+  $ hg clone --pull repo bundle1 --config format.generaldelta=0
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 8 changes to 6 files
+  updating to branch default
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd bundle1
+  $ echo babar > jungle
+  $ hg add jungle
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg debugbundle .hg/shelved/*.hg
+  7e30d8ac6f23cfc84330fd7e698730374615d21a
+  $ cd ..
+
+with general delta
+
+  $ hg clone --pull repo bundle2 --config format.generaldelta=1
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 5 changesets with 8 changes to 6 files
+  updating to branch default
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd bundle2
+  $ echo babar > jungle
+  $ hg add jungle
+  $ hg shelve
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg debugbundle .hg/shelved/*.hg
+  Stream params: {'Compression': 'BZ'}
+  changegroup -- "{'version': '02'}"
+      7e30d8ac6f23cfc84330fd7e698730374615d21a
+  $ cd ..

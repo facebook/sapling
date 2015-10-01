@@ -106,8 +106,18 @@ class shelvedfile(object):
         return bundlerepo.bundlerepository(self.repo.baseui, self.repo.root,
                                            self.vfs.join(self.fname))
     def writebundle(self, bases, node):
-        cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve')
-        changegroup.writebundle(self.ui, cg, self.fname, 'HG10BZ', self.vfs)
+        btype = 'HG10BZ'
+        cgversion = '01'
+        compression = None
+        if 'generaldelta' in self.repo.requirements:
+            btype = 'HG20'
+            cgversion = '02'
+            compression = 'BZ'
+
+        cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve',
+                                           version=cgversion)
+        changegroup.writebundle(self.ui, cg, self.fname, btype, self.vfs,
+                                compression=compression)
 
 class shelvedstate(object):
     """Handle persistence during unshelving operations.
