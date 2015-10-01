@@ -105,7 +105,8 @@ class shelvedfile(object):
     def bundlerepo(self):
         return bundlerepo.bundlerepository(self.repo.baseui, self.repo.root,
                                            self.vfs.join(self.fname))
-    def writebundle(self, cg):
+    def writebundle(self, bases, node):
+        cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve')
         changegroup.writebundle(self.ui, cg, self.fname, 'HG10BZ', self.vfs)
 
 class shelvedstate(object):
@@ -291,8 +292,7 @@ def createcmd(ui, repo, pats, opts):
             return 1
 
         bases = list(publicancestors(repo[node]))
-        cg = changegroup.changegroupsubset(repo, bases, [node], 'shelve')
-        shelvedfile(repo, name, 'hg').writebundle(cg)
+        shelvedfile(repo, name, 'hg').writebundle(bases, node)
         cmdutil.export(repo, [node],
                        fp=shelvedfile(repo, name, 'patch').opener('wb'),
                        opts=mdiff.diffopts(git=True))
