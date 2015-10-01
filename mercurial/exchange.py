@@ -475,6 +475,14 @@ def b2partsgenerator(stepname, idx=None):
         return func
     return dec
 
+def _pushb2ctxcheckheads(pushop, bundler):
+    """Generate race condition checking parts
+
+    Exists as an indepedent function to aid extensions
+    """
+    if not pushop.force:
+        bundler.newpart('check:heads', data=iter(pushop.remoteheads))
+
 @b2partsgenerator('changeset')
 def _pushb2ctx(pushop, bundler):
     """handle changegroup push through bundle2
@@ -490,8 +498,9 @@ def _pushb2ctx(pushop, bundler):
     pushop.repo.prepushoutgoinghooks(pushop.repo,
                                      pushop.remote,
                                      pushop.outgoing)
-    if not pushop.force:
-        bundler.newpart('check:heads', data=iter(pushop.remoteheads))
+
+    _pushb2ctxcheckheads(pushop, bundler)
+
     b2caps = bundle2.bundle2caps(pushop.remote)
     version = None
     cgversions = b2caps.get('changegroup')
