@@ -2512,8 +2512,9 @@ def debugmergestate(ui, repo, *args):
                 ui.write(('other: %s\n') % record)
             elif rtype == 'm':
                 driver, mdstate = record.split('\0', 1)
-                ui.write(('merge driver: %s (state "%s")\n') % (driver, mdstate))
-            elif rtype == 'F':
+                ui.write(('merge driver: %s (state "%s")\n')
+                         % (driver, mdstate))
+            elif rtype in 'FD':
                 r = record.split('\0')
                 f, state, hash, lfile, afile, anode, ofile = r[0:7]
                 if version == 1:
