@@ -356,6 +356,48 @@ test bundle and description:
   Q70eyNw=
   --===*=-- (glob)
 
+with a specific bundle type
+(binary part must be different)
+
+  $ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
+  >  -c bar -s test -r tip -b --desc description \
+  > --config patchbomb.bundletype=gzip | $FILTERBOUNDARY
+  searching for changes
+  1 changesets found
+  
+  displaying test ...
+  Content-Type: multipart/mixed; boundary="===*==" (glob)
+  MIME-Version: 1.0
+  Subject: test
+  Message-Id: <patchbomb.180@*> (glob)
+  User-Agent: Mercurial-patchbomb/* (glob)
+  Date: Thu, 01 Jan 1970 00:03:00 +0000
+  From: quux
+  To: foo
+  Cc: bar
+  
+  --===*= (glob)
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  
+  a multiline
+  
+  description
+  
+  --===*= (glob)
+  Content-Type: application/x-mercurial-bundle
+  MIME-Version: 1.0
+  Content-Disposition: attachment; filename="bundle.hg"
+  Content-Transfer-Encoding: base64
+  
+  SEcxMEdaeJxjYGBY8V9n/iLGbtFfJZuNk/euDCpWfrRy/vTrevFCx1/4t7J5LdeL0ix0Opx3kwEL
+  wKYXKqUJwqnG5sYWSWmmJsaWlqYWaRaWJpaWiWamZpYWRgZGxolJiabmSQbmZqlcQMV6QGwCxGzG
+  CgZcySARUyA2A2LGZKiZ3Y+Lu786z4z4MWXmsrAZCsqrl1az5y21PMcjpbThzWeXGT+/nutbmvvz
+  zXYS3BoGxdrJDIYmlimJJiZpRokmqYYmaSYWFknmSSkmhqbmliamiZYWxuYmBhbJBgZcUBNZQe5K
+  Epm7xF/LT+RLx/a9juFTomaYO/Rgsx4rwBN+IMCUDLOKAQBrsmti
+  --===============*==-- (glob)
+
 utf-8 patch:
   $ $PYTHON -c 'fp = open("utf", "wb"); fp.write("h\xC3\xB6mma!\n"); fp.close();'
   $ hg commit -A -d '4 0' -m 'utf-8 content'

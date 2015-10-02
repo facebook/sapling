@@ -223,6 +223,9 @@ def _getbundle(repo, dest, **opts):
     ui = repo.ui
     tmpdir = tempfile.mkdtemp(prefix='hg-email-bundle-')
     tmpfn = os.path.join(tmpdir, 'bundle')
+    btype = ui.config('patchbomb', 'bundletype')
+    if btype:
+        opts['type'] = btype
     try:
         commands.bundle(ui, repo, tmpfn, dest, **opts)
         fp = open(tmpfn, 'rb')
@@ -434,7 +437,8 @@ def patchbomb(ui, repo, *revs, **opts):
 
     With -b/--bundle, changesets are selected as for --outgoing, but a
     single email containing a binary Mercurial bundle as an attachment
-    will be sent.
+    will be sent. Use the ``patchbomb.bundletype`` config option to
+    control the bundle type as with :hg:`bundle --type`.
 
     With -m/--mbox, instead of previewing each patchbomb message in a
     pager or sending the messages directly, it will create a UNIX
