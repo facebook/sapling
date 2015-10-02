@@ -926,6 +926,21 @@ class transactionmanager(object):
             self._tr.release()
 
 def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None):
+    """Fetch repository data from a remote.
+
+    This is the main function used to retrieve data from a remote repository.
+
+    ``repo`` is the local repository to clone into.
+    ``remote`` is a peer instance.
+    ``heads`` is an iterable of revisions we want to pull. ``None`` (the
+    default) means to pull everything from the remote.
+    ``bookmarks`` is an iterable of bookmarks requesting to be pulled. By
+    default, all remote bookmarks are pulled.
+    ``opargs`` are additional keyword arguments to pass to ``pulloperation``
+    initialization.
+
+    Returns the ``pulloperation`` created for this pull.
+    """
     if opargs is None:
         opargs = {}
     pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
