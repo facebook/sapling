@@ -63,10 +63,6 @@ def extsetup(ui):
     wrapfunction(exchange, 'check_heads', _exchangecheckheads)
     wrapfunction(exchange, '_pushb2ctxcheckheads', _skipcheckheads)
 
-    # similarly, for bookmarks, we don't want to abort if the client thinks
-    # the bookmark is coming from a different place than it really is
-    wrapfunction(bookmarks, 'pushbookmark', _pushbookmark)
-
     origpushkeyhandler = bundle2.parthandlermapping['pushkey']
     newpushkeyhandler = lambda *args, **kwargs: \
         bundle2pushkey(origpushkeyhandler, *args, **kwargs)
@@ -75,21 +71,6 @@ def extsetup(ui):
     bundle2.parthandlermapping['b2x:pushkey'] = newpushkeyhandler
 
     wrapfunction(exchange, 'unbundle', unbundle)
-
-def _pushbookmark(orig, repo, key, old, new):
-    w = l = tr = None
-    try:
-        w = repo.wlock()
-        l = repo.lock()
-        tr = repo.transaction('pushrebasebookmarks')
-        marks = repo._bookmarks
-        existing = hex(marks.get(key, ''))
-        old = existing
-        ret = orig(repo, key, old, new)
-        tr.close()
-        return ret
-    finally:
-        lockmod.release(tr, l, w)
 
 def unbundle(orig, repo, cg, heads, source, url):
     # Preload the manifests that the client says we'll need. This happens
@@ -531,5 +512,21 @@ def bundle2pushkey(orig, op, part):
     if namespace == 'bookmarks':
         new = pushkey.decode(part.params['new'])
         part.params['new'] = pushkey.encode(replacements.get(new, new))
+        serverbin = op.repo._bookmarks.get(part.params['key'])
+        clienthex = pushkey.decode(part.params['old'])
+
+        if serverbin and clienthex:
+            cl = op.repo.changelog
+            revserver = cl.rev(serverbin)
+            revclient = cl.rev(bin(clienthex))
+            if revclient in cl.ancestors([revserver]):
+                # if the client's bookmark origin is an lagging behind the
+                # server's location for that bookmark (usual for pushrebase)
+                # then update the old location to match the real location
+                #
+                # TODO: We would prefer to only do this for pushrebase pushes
+                # but that isn't straightforward so we just do it always here.
+                # This forbids moving bookmarks backwards from clients.
+                part.params['old'] = pushkey.encode(hex(serverbin))
 
     return orig(op, part)

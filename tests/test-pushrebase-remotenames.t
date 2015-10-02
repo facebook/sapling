@@ -176,3 +176,28 @@ Test a push that comes with out-of-date bookmark discovery
   |/
   o  0 "aa"
   
+
+Test that we still don't allow non-ff bm changes
+
+  $ echo d > client/d
+  $ hg -R client commit -qAm "dd"
+  $ hg -R client log -G -T '{rev} "{desc}" {bookmarks}'
+  @  4 "dd"
+  |
+  | o  3 "cc"
+  | |
+  | o  2 "bb"
+  | |
+  o |  1 "cc"
+  |/
+  o  0 "aa"
+  
+
+  $ hg -R client push --to bm
+  pushing rev efec53e7b035 to destination ssh://user@dummy/server bookmark bm
+  searching for changes
+  remote: moved bookmark to rev 1
+  remote: transaction abort!
+  remote: rollback completed
+  abort: updating bookmark bm failed!
+  [255]
