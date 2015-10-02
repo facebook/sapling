@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile, cStringIO, shutil
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import repair, graphmod, revset, phases, obsolete, pathutil
+import repair, graphmod, revset, phases, obsolete, pathutil, changegroup
 import changelog
 import bookmarks
 import encoding
@@ -3330,3 +3330,20 @@ class dirstateguard(object):
                        % self._filename)
                 raise util.Abort(msg)
             self._abort()
+
+def parsebundletype(bundletype):
+    """return the internal bundle type to use from a user input
+
+    This is parsing user specified bundle type as accepted in:
+
+        'hg bundle --type TYPE'.
+    """
+    btypes = {'none': 'HG10UN',
+              'bzip2': 'HG10BZ',
+              'gzip': 'HG10GZ',
+              'bundle2': 'HG20'}
+    bundletype = btypes.get(bundletype)
+    if bundletype not in changegroup.bundletypes:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+    return bundletype
+

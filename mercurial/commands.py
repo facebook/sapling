@@ -1238,13 +1238,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         revs = scmutil.revrange(repo, opts['rev'])
 
     bundletype = opts.get('type', 'bzip2').lower()
-    btypes = {'none': 'HG10UN',
-              'bzip2': 'HG10BZ',
-              'gzip': 'HG10GZ',
-              'bundle2': 'HG20'}
-    bundletype = btypes.get(bundletype)
-    if bundletype not in changegroup.bundletypes:
-        raise util.Abort(_('unknown bundle type specified with --type'))
+    bundletype = cmdutil.parsebundletype(bundletype)
 
     if opts.get('all'):
         base = ['null']
