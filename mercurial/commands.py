@@ -486,6 +486,23 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
 
     .. container:: verbose
 
+      Examples:
+
+      - Reverse the effect of the parent of the working directory.
+        This backout will be committed immediately::
+
+          hg backout -r .
+
+      - Reverse the effect of previous bad revision 23::
+
+          hg backout -r 23
+          hg commit -m "Backout revision 23"
+
+      - Reverse the effect of previous bad revision 23 and
+        commit the backout immediately::
+
+          hg backout -r 23 --commit
+
       By default, the pending changeset will have one parent,
       maintaining a linear history. With --merge, the pending
       changeset will instead have two parents: the old parent of the
