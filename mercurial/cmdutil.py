@@ -3374,6 +3374,8 @@ def parsebundletype(repo, spec):
 
     if version is None:
         version = '01'
+        if 'generaldelta' in repo.requirements:
+            version = '02'
     else:
         try:
             version = _bundleversionspecs[version]

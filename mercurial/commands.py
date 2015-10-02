@@ -1223,7 +1223,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     specify a compression, a bundle version or both using a dash
     (comp-version). The available compression methods are: none, bzip2,
     and gzip (by default, bundles are compressed using bzip2). The
-    available format are: v1, v2 (default to v1).
+    available format are: v1, v2 (default to most suitable).
 
     The bundle file can then be transferred using conventional means
     and applied to another repository with the unbundle or pull
