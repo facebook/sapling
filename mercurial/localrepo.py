@@ -19,6 +19,7 @@ from lock import release
 import weakref, errno, os, time, inspect, random
 import branchmap, pathutil
 import namespaces
+import streamclone
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
@@ -1808,59 +1809,8 @@ class localrepository(object):
         elif resp != 0:
             raise util.Abort(_('the server sent an unknown error code'))
 
-        self.applystreamclone(remotereqs, rbranchmap, fp)
+        streamclone.applyremotedata(self, remotereqs, rbranchmap, fp)
         return len(self.heads()) + 1
-
-    def applystreamclone(self, remotereqs, remotebranchmap, fp):
-        """Apply stream clone data to this repository.
-
-        "remotereqs" is a set of requirements to handle the incoming data.
-        "remotebranchmap" is the result of a branchmap lookup on the remote. It
-        can be None.
-        "fp" is a file object containing the raw stream data, suitable for
-        feeding into exchange.consumestreamclone.
-        """
-        lock = self.lock()
-        try:
-            exchange.consumestreamclone(self, fp)
-
-            # new requirements = old non-format requirements +
-            #                    new format-related remote requirements
-            # requirements from the streamed-in repository
-            self.requirements = remotereqs | (
-                    self.requirements - self.supportedformats)
-            self._applyopenerreqs()
-            self._writerequirements()
-
-            if remotebranchmap:
-                rbheads = []
-                closed = []
-                for bheads in remotebranchmap.itervalues():
-                    rbheads.extend(bheads)
-                    for h in bheads:
-                        r = self.changelog.rev(h)
-                        b, c = self.changelog.branchinfo(r)
-                        if c:
-                            closed.append(h)
-
-                if rbheads:
-                    rtiprev = max((int(self.changelog.rev(node))
-                            for node in rbheads))
-                    cache = branchmap.branchcache(remotebranchmap,
-                                                  self[rtiprev].node(),
-                                                  rtiprev,
-                                                  closednodes=closed)
-                    # Try to stick it as low as possible
-                    # filter above served are unlikely to be fetch from a clone
-                    for candidate in ('base', 'immutable', 'served'):
-                        rview = self.filtered(candidate)
-                        if cache.validfor(rview):
-                            self._branchcaches[candidate] = cache
-                            cache.write(rview)
-                            break
-            self.invalidate()
-        finally:
-            lock.release()
 
     def clone(self, remote, heads=[], stream=None):
         '''clone remote repository.
