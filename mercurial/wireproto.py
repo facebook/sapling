@@ -26,6 +26,7 @@ from . import (
     exchange,
     peer,
     pushkey as pushkeymod,
+    streamclone,
     util,
 )
 
@@ -720,7 +721,7 @@ def stream(repo, proto):
     try:
         # LockError may be raised before the first result is yielded. Don't
         # emit output until we're sure we got the lock successfully.
-        it = exchange.generatestreamclone(repo)
+        it = streamclone.generatev1(repo)
         return streamres(getstream(it))
     except error.LockError:
         return '2\n'
