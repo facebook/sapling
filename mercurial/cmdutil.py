@@ -10,7 +10,7 @@ from i18n import _
 import os, sys, errno, re, tempfile, cStringIO, shutil
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
-import repair, graphmod, revset, phases, obsolete, pathutil, changegroup
+import repair, graphmod, revset, phases, obsolete, pathutil
 import changelog
 import bookmarks
 import encoding
@@ -3331,19 +3331,50 @@ class dirstateguard(object):
                 raise util.Abort(msg)
             self._abort()
 
-def parsebundletype(bundletype):
+_bundlecompspecs = {'none': None,
+                    'bzip2': 'BZ',
+                    'gzip': 'GZ',
+                   }
+
+_bundleversionspecs = {'v1': '01',
+                       'v2': '02',
+                       'bundle2': '02', #legacy
+                      }
+
+def parsebundletype(repo, spec):
     """return the internal bundle type to use from a user input
 
     This is parsing user specified bundle type as accepted in:
 
         'hg bundle --type TYPE'.
-    """
-    btypes = {'none': 'HG10UN',
-              'bzip2': 'HG10BZ',
-              'gzip': 'HG10GZ',
-              'bundle2': 'HG20'}
-    bundletype = btypes.get(bundletype)
-    if bundletype not in changegroup.bundletypes:
-        raise util.Abort(_('unknown bundle type specified with --type'))
-    return bundletype
 
+    It accept format in the form [compression][-version]|[version]
+    """
+    comp, version = None, None
+
+    if '-' in spec:
+        comp, version = spec.split('-', 1)
+    elif spec in _bundlecompspecs:
+        comp = spec
+    elif spec in _bundleversionspecs:
+        version = spec
+    else:
+        raise util.Abort(_('unknown bundle type specified with --type'))
+
+    if comp is None:
+        comp = 'BZ'
+    else:
+        try:
+            comp = _bundlecompspecs[comp]
+        except KeyError:
+            raise util.Abort(_('unknown bundle type specified with --type'))
+
+    if version is None:
+        version = '01'
+    else:
+        try:
+            version = _bundleversionspecs[version]
+        except KeyError:
+            raise util.Abort(_('unknown bundle type specified with --type'))
+
+    return version, comp

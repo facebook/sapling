@@ -29,7 +29,7 @@ bundle w/o type option
 
 test bundle types
 
-  $ for t in "None" "bzip2" "gzip"; do
+  $ for t in "None" "bzip2" "gzip" "none-v2" "v2" "v1" "gzip-v1"; do
   >   echo % test bundle type $t
   >   hg init t$t
   >   cd t1
@@ -53,6 +53,34 @@ test bundle types
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   
   % test bundle type gzip
+  searching for changes
+  1 changesets found
+  HG10GZ
+  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
+  % test bundle type none-v2
+  searching for changes
+  1 changesets found
+  HG20\x00\x00 (esc)
+  Stream params: {}
+  changegroup -- "{'version': '01'}"
+      c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
+  % test bundle type v2
+  searching for changes
+  1 changesets found
+  HG20\x00\x00 (esc)
+  Stream params: {'Compression': 'BZ'}
+  changegroup -- "{'version': '01'}"
+      c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
+  % test bundle type v1
+  searching for changes
+  1 changesets found
+  HG10BZ
+  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
+  % test bundle type gzip-v1
   searching for changes
   1 changesets found
   HG10GZ

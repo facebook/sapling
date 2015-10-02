@@ -1219,9 +1219,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
     parameters. To create a bundle containing all changesets, use
     -a/--all (or --base null).
 
-    You can change compression method with the -t/--type option.
-    The available compression methods are: none, bzip2, and
-    gzip (by default, bundles are compressed using bzip2).
+    You can change bundle format with the -t/--type option. You can
+    specify a compression, a bundle version or both using a dash
+    (comp-version). The available compression methods are: none, bzip2,
+    and gzip (by default, bundles are compressed using bzip2). The
+    available format are: v1, v2 (default to v1).
 
     The bundle file can then be transferred using conventional means
     and applied to another repository with the unbundle or pull
@@ -1238,7 +1240,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         revs = scmutil.revrange(repo, opts['rev'])
 
     bundletype = opts.get('type', 'bzip2').lower()
-    bundletype = cmdutil.parsebundletype(bundletype)
+    cgversion, bcompression = cmdutil.parsebundletype(repo, bundletype)
 
     if opts.get('all'):
         base = ['null']
@@ -1253,7 +1255,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
         cg = changegroup.getchangegroup(repo, 'bundle', heads=heads,
-                                         common=common, bundlecaps=bundlecaps)
+                                         common=common, bundlecaps=bundlecaps,
+                                         version=cgversion)
         outgoing = None
     else:
         dest = ui.expandpath(dest or 'default-push', dest or 'default')
@@ -1266,12 +1269,22 @@ def bundle(ui, repo, fname, dest=None, **opts):
                                                 force=opts.get('force'),
                                                 portable=True)
         cg = changegroup.getlocalchangegroup(repo, 'bundle', outgoing,
-                                             bundlecaps)
+                                                bundlecaps, version=cgversion)
     if not cg:
         scmutil.nochangesfound(ui, repo, outgoing and outgoing.excluded)
         return 1
 
-    changegroup.writebundle(ui, cg, fname, bundletype)
+    if cgversion == '01': #bundle1
+        if bcompression is None:
+            bcompression = 'UN'
+        bversion = 'HG10' + bcompression
+        bcompression = None
+    else:
+        assert cgversion == '02'
+        bversion = 'HG20'
+
+
+    changegroup.writebundle(ui, cg, fname, bversion, compression=bcompression)
 
 @command('cat',
     [('o', 'output', '',
