@@ -42,7 +42,7 @@
     location: */hgext/rebase.pyc (glob)
     tested with: internal
 
-  $ hg debugextensions -Tjson
+  $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
   [
    {
     "buglink": "",
