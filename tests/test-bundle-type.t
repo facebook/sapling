@@ -36,50 +36,28 @@ test bundle types
   >   hg bundle -t $t ../b$t ../t$t
   >   cut -b 1-6 ../b$t | head -n 1
   >   cd ../t$t
-  >   hg pull ../b$t
-  >   hg up
-  >   hg log | grep summary
+  >   hg debugbundle ../b$t
+  >   echo
   >   cd ..
   > done
   % test bundle type None
   searching for changes
   1 changesets found
   HG10UN
-  pulling from ../bNone
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  summary:     a
+  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
   % test bundle type bzip2
   searching for changes
   1 changesets found
   HG10BZ
-  pulling from ../bbzip2
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  summary:     a
+  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
   % test bundle type gzip
   searching for changes
   1 changesets found
   HG10GZ
-  pulling from ../bgzip
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  (run 'hg update' to get a working copy)
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  summary:     a
+  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  
 
 test garbage file
 
