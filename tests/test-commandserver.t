@@ -378,7 +378,10 @@ cache of non-public revisions should be invalidated on repository change
   ...     runcommand(server, ['log', '-qr', 'draft()'])
   ...     # create draft commits by another process
   ...     for i in xrange(5, 7):
-  ...         os.system('echo a >> a')
+  ...         f = open('a', 'ab')
+  ...         f.seek(0, os.SEEK_END)
+  ...         f.write('a\n')
+  ...         f.close()
   ...         os.system('hg commit -Aqm%d' % i)
   ...     # new commits should be listed as draft revisions
   ...     runcommand(server, ['log', '-qr', 'draft()'])
