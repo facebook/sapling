@@ -38,7 +38,10 @@ Test bisect state
   $ hg status
   
   # The repository is in an unfinished *bisect* state.
+
+Test hg status is normal after bisect reset
   $ hg bisect --reset
+  $ hg status
 
 Test graft state
   $ hg up -q -r 0
@@ -59,8 +62,13 @@ Test graft state
   ? a.orig
   
   # The repository is in an unfinished *graft* state.
+  # Unresolved merge conflicts:
+  # 
+  #     a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
 
-Get out of graft state
+Test hg status is normal after graft abort
   $ hg up --clean -q
   $ hg status
   ? a.orig
@@ -71,7 +79,7 @@ Test unshelve state
   $ echo "shelve=" >> $HGRCPATH
   $ hg reset .^ -q
   reseting without an active bookmark
-  devel-warn: transaction with no lock at: /data/users/cdelahousse/hg-repo/mercurial/repair.py:161 (strip)
+  devel-warn: transaction with no lock at: * (strip) (glob)
   $ hg shelve -q
   $ hg up -r 2977a57 -q
   $ hg unshelve -q
@@ -85,10 +93,18 @@ Test unshelve state
   ? a.orig
   
   # The repository is in an unfinished *unshelve* state.
+  # Unresolved merge conflicts:
+  # 
+  #     a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+
+Test hg status is normal after unshelve abort
   $ hg unshelve --abort
   rebase aborted
   unshelve of 'default' aborted
-
+  $ hg status
+  ? a.orig
   $ rm a.orig
 
 Test rebase state
@@ -106,3 +122,29 @@ Test rebase state
   ? a.orig
   
   # The repository is in an unfinished *rebase* state.
+  # Unresolved merge conflicts:
+  # 
+  #     a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+
+Test status in rebase state with resolved files
+  $ hg resolve --mark a
+  (no more unresolved files)
+  $ hg status
+  M a
+  ? a.orig
+  
+  # The repository is in an unfinished *rebase* state.
+  # No unresolved merge conflicts.
+  # To continue:                hg rebase --continue
+  # To abort:                   hg rebase --abort
+
+Test hg status is normal after rebase abort
+  $ hg rebase --abort -q
+  rebase aborted
+  $ hg status
+  ? a.orig
+  $ rm a.orig

@@ -13,6 +13,56 @@ the state of the repo
 from mercurial import  commands
 from mercurial.extensions import wrapcommand
 from mercurial.i18n import _
+from mercurial import merge as mergemod
+from mercurial import scmutil
+
+
+def prefixlines(raw):
+    '''Surround lineswith a comment char and a new line'''
+    lines = raw.splitlines()
+    commentedlines = ['# %s' % line for line in lines]
+    return '\n'.join(commentedlines) + '\n'
+
+
+def conflictsmsg(repo, ui):
+    mergestate = mergemod.mergestate(repo)
+    if not mergestate.active():
+        return
+
+    m = scmutil.match(repo[None])
+    unresolvedlist = [f for f in mergestate if m(f) and mergestate[f] == 'u']
+    if unresolvedlist:
+        mergeliststr = '\n'.join(['    %s' % path for path in unresolvedlist])
+        msg = _('''Unresolved merge conflicts:
+
+%s
+
+To mark files as resolved:  hg resolve --mark FILE''') % mergeliststr
+    else:
+        msg = _('No unresolved merge conflicts.')
+
+    ui.warn(prefixlines(msg))
+
+def helpmessage(ui, continuecmd, abortcmd):
+    msg = _('To continue:                %s\n'
+            'To abort:                   %s') % (continuecmd, abortcmd)
+    ui.warn(prefixlines(msg))
+
+def rebasemsg(ui):
+    return helpmessage(ui, 'hg rebase --continue', 'hg rebase --abort')
+
+STATES = (
+    # (state, file path indicating states, helpful message function)
+    ('histedit', 'histedit-state', None),
+    ('bisect', 'bisect.state', None),
+    ('graft', 'graftstate', None),
+    ('unshelve', 'unshelverebasestate', None),
+    ('rebase', 'rebasestate', rebasemsg),
+    # The merge state is part of a list that will be iterated over. It needs to
+    # be last because some of the other unfinished states may also be in a merge
+    # state (eg.  histedit, graft, etc). We want those to have priority.
+    ('merge', 'merge', None),
+)
 
 def extsetup(ui):
     if ui.configbool('morestatus', 'show', False) and not ui.plain():
@@ -24,26 +74,25 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     being mid histediting, mid bisecting, grafting, merging, etc.
     Output is to stderr to avoid breaking scripts.
     """
-    def repoisin(operation):
-        msg = '\n# The repository is in an unfinished *%s* state.\n'
-        return ui.warn(_(msg % operation))
 
     ret = orig(ui, repo, *pats, **opts)
 
-    if repo.vfs.exists('histedit-state'):
-        repoisin('histedit')
-    elif repo.vfs.exists('bisect.state'):
-        repoisin('bisect')
-    elif repo.vfs.exists('graftstate'):
-        repoisin('graft')
-    elif repo.vfs.exists('unshelverebasestate'):
-        repoisin('unshelve')
-    elif repo.vfs.exists('rebasestate'):
-        repoisin('rebase')
-    elif repo.vfs.exists('merge'):
-        repoisin('merge')
+    statetuple = getrepostate(repo)
+    if statetuple:
+        state, statefile, helpfulmsg = statetuple
+        statemsg = _('The repository is in an unfinished *%s* state.') % state
+        ui.warn('\n' + prefixlines(statemsg))
+        conflictsmsg(repo, ui)
+        if helpfulmsg:
+            helpfulmsg(ui)
 
     # TODO(cdelahousse): check to see if current bookmark needs updating. See
     # scmprompt.
 
     return ret
+
+def getrepostate(repo):
+    for state, statefilepath, msgfn in STATES:
+        if repo.vfs.exists(statefilepath):
+            return (state, statefilepath, msgfn)
+
