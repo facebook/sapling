@@ -615,14 +615,15 @@ def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
     bundler = packermap[version][0](repo, bundlecaps)
     return getsubsetraw(repo, outgoing, bundler, source)
 
-def getlocalchangegroup(repo, source, outgoing, bundlecaps=None):
+def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
+                        version='01'):
     """Like getbundle, but taking a discovery.outgoing as an argument.
 
     This is only implemented for local repos and reuses potentially
     precomputed sets in outgoing."""
     if not outgoing.missing:
         return None
-    bundler = cg1packer(repo, bundlecaps)
+    bundler = packermap[version][0](repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
 def computeoutgoing(repo, heads, common):
