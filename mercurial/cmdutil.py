@@ -3349,6 +3349,9 @@ def parsebundletype(repo, spec):
         'hg bundle --type TYPE'.
 
     It accept format in the form [compression][-version]|[version]
+
+    Consensus about extensions of the format for various bundle2 feature
+    is to prefix any feature with "+". eg "+treemanifest" or "gzip+phases"
     """
     comp, version = None, None
 
