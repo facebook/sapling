@@ -7,10 +7,37 @@
 
 from __future__ import absolute_import
 
+from .i18n import _
 from . import (
     branchmap,
+    error,
     exchange,
+    util,
 )
+
+def streamin(repo, remote, remotereqs):
+    # Save remote branchmap. We will use it later
+    # to speed up branchcache creation
+    rbranchmap = None
+    if remote.capable("branchmap"):
+        rbranchmap = remote.branchmap()
+
+    fp = remote.stream_out()
+    l = fp.readline()
+    try:
+        resp = int(l)
+    except ValueError:
+        raise error.ResponseError(
+            _('unexpected response from remote server:'), l)
+    if resp == 1:
+        raise util.Abort(_('operation forbidden by server'))
+    elif resp == 2:
+        raise util.Abort(_('locking the remote repository failed'))
+    elif resp != 0:
+        raise util.Abort(_('the server sent an unknown error code'))
+
+    applyremotedata(repo, remotereqs, rbranchmap, fp)
+    return len(repo.heads()) + 1
 
 def applyremotedata(repo, remotereqs, remotebranchmap, fp):
     """Apply stream clone data to a repository.

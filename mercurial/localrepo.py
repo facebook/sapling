@@ -1788,30 +1788,6 @@ class localrepository(object):
         """
         return util.hooks()
 
-    def stream_in(self, remote, remotereqs):
-        # Save remote branchmap. We will use it later
-        # to speed up branchcache creation
-        rbranchmap = None
-        if remote.capable("branchmap"):
-            rbranchmap = remote.branchmap()
-
-        fp = remote.stream_out()
-        l = fp.readline()
-        try:
-            resp = int(l)
-        except ValueError:
-            raise error.ResponseError(
-                _('unexpected response from remote server:'), l)
-        if resp == 1:
-            raise util.Abort(_('operation forbidden by server'))
-        elif resp == 2:
-            raise util.Abort(_('locking the remote repository failed'))
-        elif resp != 0:
-            raise util.Abort(_('the server sent an unknown error code'))
-
-        streamclone.applyremotedata(self, remotereqs, rbranchmap, fp)
-        return len(self.heads()) + 1
-
     def clone(self, remote, heads=[], stream=None):
         '''clone remote repository.
 
@@ -1834,7 +1810,7 @@ class localrepository(object):
         if stream and not heads:
             # 'stream' means remote revlog format is revlogv1 only
             if remote.capable('stream'):
-                self.stream_in(remote, set(('revlogv1',)))
+                streamclone.streamin(self, remote, set(('revlogv1',)))
             else:
                 # otherwise, 'streamreqs' contains the remote revlog format
                 streamreqs = remote.capable('streamreqs')
@@ -1842,7 +1818,7 @@ class localrepository(object):
                     streamreqs = set(streamreqs.split(','))
                     # if we support it, stream in and adjust our requirements
                     if not streamreqs - self.supportedformats:
-                        self.stream_in(remote, streamreqs)
+                        streamclone.streamin(self, remote, streamreqs)
 
         # internal config: ui.quietbookmarkmove
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
