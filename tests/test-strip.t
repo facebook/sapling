@@ -807,7 +807,7 @@ Error during post-close callback of the strip transaction
   > EOF
   $ hg strip tip --config extensions.crash=$TESTTMP/crashstrip.py
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg (glob)
-  strip failed, full bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg'
+  strip failed, full bundle stored in '$TESTTMP/issue4736/.hg/strip-backup/5c51d8d6557d-70daef06-backup.hg' (glob)
   abort: boom
   [255]
 
