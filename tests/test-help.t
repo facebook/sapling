@@ -810,6 +810,8 @@ Test list of internal help commands
    debuginstall  test Mercurial installation
    debugknown    test whether node ids are known to a repo
    debuglocks    show or modify state of locks
+   debugmergestate
+                 print merge state
    debugnamecomplete
                  complete "names" - tags, open branch names, bookmark names
    debugobsolete

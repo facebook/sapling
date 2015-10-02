@@ -91,6 +91,7 @@ Show debug commands if there are no other candidates
   debugknown
   debuglabelcomplete
   debuglocks
+  debugmergestate
   debugnamecomplete
   debugobsolete
   debugpathcomplete
@@ -251,6 +252,7 @@ Show all commands + options
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock
+  debugmergestate: 
   debugnamecomplete: 
   debugobsolete: flags, record-parents, rev, date, user
   debugpathcomplete: full, normal, added, removed

@@ -2476,6 +2476,71 @@ def debuglabelcomplete(ui, repo, *args):
     '''backwards compatibility with old bash completion scripts (DEPRECATED)'''
     debugnamecomplete(ui, repo, *args)
 
+@command('debugmergestate', [], '')
+def debugmergestate(ui, repo, *args):
+    """print merge state
+
+    Use --verbose to print out information about whether v1 or v2 merge state
+    was chosen."""
+    def printrecords(version):
+        ui.write(('* version %s records\n') % version)
+        if version == 1:
+            records = v1records
+        else:
+            records = v2records
+
+        for rtype, record in records:
+            # pretty print some record types
+            if rtype == 'L':
+                ui.write(('local: %s\n') % record)
+            elif rtype == 'O':
+                ui.write(('other: %s\n') % record)
+            elif rtype == 'F':
+                r = record.split('\0')
+                f, state, hash, lfile, afile, anode, ofile = r[0:7]
+                if version == 1:
+                    onode = 'not stored in v1 format'
+                    flags = r[7]
+                else:
+                    onode, flags = r[7:9]
+                ui.write(('file: %s (state "%s", hash %s)\n')
+                         % (f, state, hash))
+                ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
+                ui.write(('  ancestor path: %s (node %s)\n') % (afile, anode))
+                ui.write(('  other path: %s (node %s)\n') % (ofile, onode))
+            else:
+                ui.write(('unrecognized entry: %s\t%s\n')
+                         % (rtype, record.replace('\0', '\t')))
+
+    ms = mergemod.mergestate(repo)
+
+    # sort so that reasonable information is on top
+    v1records = ms._readrecordsv1()
+    v2records = ms._readrecordsv2()
+    order = 'LO'
+    def key(r):
+        idx = order.find(r[0])
+        if idx == -1:
+            return (1, r[1])
+        else:
+            return (0, idx)
+    v1records.sort(key=key)
+    v2records.sort(key=key)
+
+    if not v1records and not v2records:
+        ui.write(('no merge state found\n'))
+    elif not v2records:
+        ui.note(('no version 2 merge state\n'))
+        printrecords(1)
+    elif ms._v1v2match(v1records, v2records):
+        ui.note(('v1 and v2 states match: using v2\n'))
+        printrecords(2)
+    else:
+        ui.note(('v1 and v2 states mismatch: using v1\n'))
+        printrecords(1)
+        if ui.verbose:
+            printrecords(2)
+
 @command('debugnamecomplete', [], _('NAME...'))
 def debugnamecomplete(ui, repo, *args):
     '''complete "names" - tags, open branch names, bookmark names'''
