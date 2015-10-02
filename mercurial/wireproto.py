@@ -564,7 +564,7 @@ def _capabilities(repo, proto):
     """
     # copy to prevent modification of the global list
     caps = list(wireprotocaps)
-    if _allowstream(repo.ui):
+    if streamclone.allowservergeneration(repo.ui):
         if repo.ui.configbool('server', 'preferuncompressed', False):
             caps.append('stream-preferred')
         requiredformats = repo.requirements & repo.supportedformats
@@ -701,16 +701,13 @@ def pushkey(repo, proto, namespace, key, old, new):
                      encoding.tolocal(old), new)
     return '%s\n' % int(r)
 
-def _allowstream(ui):
-    return ui.configbool('server', 'uncompressed', True, untrusted=True)
-
 @wireprotocommand('stream_out')
 def stream(repo, proto):
     '''If the server supports streaming clone, it advertises the "stream"
     capability with a value representing the version and flags of the repo
     it is serving. Client checks to see if it understands the format.
     '''
-    if not _allowstream(repo.ui):
+    if not streamclone.allowservergeneration(repo.ui):
         return '1\n'
 
     def getstream(it):

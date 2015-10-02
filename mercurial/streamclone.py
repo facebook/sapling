@@ -17,6 +17,10 @@ from . import (
     util,
 )
 
+def allowservergeneration(ui):
+    """Whether streaming clones are allowed from the server."""
+    return ui.configbool('server', 'uncompressed', True, untrusted=True)
+
 # This is it's own function so extensions can override it.
 def _walkstreamfiles(repo):
     return repo.store.walk()
