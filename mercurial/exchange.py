@@ -11,6 +11,7 @@ import errno, urllib
 import util, scmutil, changegroup, base85, error
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 import lock as lockmod
+import streamclone
 import tags
 
 def readbundle(ui, fh, fname, vfs=None):
@@ -963,6 +964,9 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
     lock = pullop.repo.lock()
     try:
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
+        streamclone.maybeperformstreamclone(pullop.repo, pullop.remote,
+                                            pullop.heads,
+                                            pullop.streamclonerequested)
         _pulldiscovery(pullop)
         if _canusebundle2(pullop):
             _pullbundle2(pullop)

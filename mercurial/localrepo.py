@@ -19,7 +19,6 @@ from lock import release
 import weakref, errno, os, time, inspect, random
 import branchmap, pathutil
 import namespaces
-import streamclone
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
@@ -1794,8 +1793,6 @@ class localrepository(object):
         keyword arguments:
         heads: list of revs to clone (forces use of pull)
         stream: use streaming clone if possible'''
-        streamclone.maybeperformstreamclone(self, remote, heads, stream)
-
         # internal config: ui.quietbookmarkmove
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
         try:
