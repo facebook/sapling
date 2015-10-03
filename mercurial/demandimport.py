@@ -143,6 +143,16 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         # The modern Mercurial convention is to use absolute_import everywhere,
         # so modern Mercurial code will have level >= 0.
 
+        def processfromitem(mod, attr, **kwargs):
+            """Process an imported symbol in the import statement.
+
+            If the symbol doesn't exist in the parent module, it must be a
+            module. We set missing modules up as _demandmod instances.
+            """
+            if getattr(mod, attr, nothing) is nothing:
+                setattr(mod, attr,
+                        _demandmod(attr, mod.__dict__, locals, **kwargs))
+
         if level >= 0:
             # Mercurial's enforced import style does not use
             # "from a import b,c,d" or "from .a import b,c,d" syntax. In
@@ -154,12 +164,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
                                     fromlist, level)
 
             mod = _hgextimport(_origimport, name, globals, locals, level=level)
+
             for x in fromlist:
-                # Missing symbols mean they weren't defined in the module
-                # itself which means they are sub-modules.
-                if getattr(mod, x, nothing) is nothing:
-                    setattr(mod, x,
-                            _demandmod(x, mod.__dict__, locals, level=level))
+                processfromitem(mod, x, level=level)
 
             return mod
 
@@ -172,10 +179,10 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
                 setattr(mod, comp,
                         _demandmod(comp, mod.__dict__, mod.__dict__))
             mod = getattr(mod, comp)
+
         for x in fromlist:
-            # set requested submodules for demand load
-            if getattr(mod, x, nothing) is nothing:
-                setattr(mod, x, _demandmod(x, mod.__dict__, locals))
+            processfromitem(mod, x)
+
         return mod
 
 ignore = [
