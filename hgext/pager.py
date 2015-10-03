@@ -70,8 +70,14 @@ def _runpager(ui, p):
                              close_fds=util.closefds, stdin=subprocess.PIPE,
                              stdout=sys.stdout, stderr=sys.stderr)
 
+    # back up original file objects and descriptors
+    olduifout = ui.fout
+    oldstdout = sys.stdout
     stdoutfd = os.dup(sys.stdout.fileno())
     stderrfd = os.dup(sys.stderr.fileno())
+
+    # create new line-buffered stdout so that output can show up immediately
+    ui.fout = sys.stdout = newstdout = os.fdopen(sys.stdout.fileno(), 'wb', 1)
     os.dup2(pager.stdin.fileno(), sys.stdout.fileno())
     if ui._isatty(sys.stderr):
         os.dup2(pager.stdin.fileno(), sys.stderr.fileno())
@@ -81,6 +87,12 @@ def _runpager(ui, p):
         if util.safehasattr(signal, "SIGINT"):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
         pager.stdin.close()
+        ui.fout = olduifout
+        sys.stdout = oldstdout
+        # close new stdout while it's associated with pager; otherwise stdout
+        # fd would be closed when newstdout is deleted
+        newstdout.close()
+        # restore original fds: stdout is open again
         os.dup2(stdoutfd, sys.stdout.fileno())
         os.dup2(stderrfd, sys.stderr.fileno())
         pager.wait()
