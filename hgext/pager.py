@@ -70,8 +70,8 @@ def _runpager(ui, p):
                              close_fds=util.closefds, stdin=subprocess.PIPE,
                              stdout=sys.stdout, stderr=sys.stderr)
 
-    stdout = os.dup(sys.stdout.fileno())
-    stderr = os.dup(sys.stderr.fileno())
+    stdoutfd = os.dup(sys.stdout.fileno())
+    stderrfd = os.dup(sys.stderr.fileno())
     os.dup2(pager.stdin.fileno(), sys.stdout.fileno())
     if ui._isatty(sys.stderr):
         os.dup2(pager.stdin.fileno(), sys.stderr.fileno())
@@ -81,8 +81,8 @@ def _runpager(ui, p):
         if util.safehasattr(signal, "SIGINT"):
             signal.signal(signal.SIGINT, signal.SIG_IGN)
         pager.stdin.close()
-        os.dup2(stdout, sys.stdout.fileno())
-        os.dup2(stderr, sys.stderr.fileno())
+        os.dup2(stdoutfd, sys.stdout.fileno())
+        os.dup2(stderrfd, sys.stderr.fileno())
         pager.wait()
 
 def uisetup(ui):
