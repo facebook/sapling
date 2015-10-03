@@ -253,31 +253,8 @@ def applyremotedata(repo, remotereqs, remotebranchmap, fp):
         repo._writerequirements()
 
         if remotebranchmap:
-            rbheads = []
-            closed = []
-            for bheads in remotebranchmap.itervalues():
-                rbheads.extend(bheads)
-                for h in bheads:
-                    r = repo.changelog.rev(h)
-                    b, c = repo.changelog.branchinfo(r)
-                    if c:
-                        closed.append(h)
+            branchmap.replacecache(repo, remotebranchmap)
 
-            if rbheads:
-                rtiprev = max((int(repo.changelog.rev(node))
-                        for node in rbheads))
-                cache = branchmap.branchcache(remotebranchmap,
-                                              repo[rtiprev].node(),
-                                              rtiprev,
-                                              closednodes=closed)
-                # Try to stick it as low as possible
-                # filter above served are unlikely to be fetch from a clone
-                for candidate in ('base', 'immutable', 'served'):
-                    rview = repo.filtered(candidate)
-                    if cache.validfor(rview):
-                        repo._branchcaches[candidate] = cache
-                        cache.write(rview)
-                        break
         repo.invalidate()
     finally:
         lock.release()

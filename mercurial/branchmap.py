@@ -116,6 +116,38 @@ def updatecache(repo):
     assert partial.validfor(repo), filtername
     repo._branchcaches[repo.filtername] = partial
 
+def replacecache(repo, bm):
+    """Replace the branchmap cache for a repo with a branch mapping.
+
+    This is likely only called during clone with a branch map from a remote.
+    """
+    rbheads = []
+    closed = []
+    for bheads in bm.itervalues():
+        rbheads.extend(bheads)
+        for h in bheads:
+            r = repo.changelog.rev(h)
+            b, c = repo.changelog.branchinfo(r)
+            if c:
+                closed.append(h)
+
+    if rbheads:
+        rtiprev = max((int(repo.changelog.rev(node))
+                for node in rbheads))
+        cache = branchcache(bm,
+                            repo[rtiprev].node(),
+                            rtiprev,
+                            closednodes=closed)
+
+        # Try to stick it as low as possible
+        # filter above served are unlikely to be fetch from a clone
+        for candidate in ('base', 'immutable', 'served'):
+            rview = repo.filtered(candidate)
+            if cache.validfor(rview):
+                repo._branchcaches[candidate] = cache
+                cache.write(rview)
+                break
+
 class branchcache(dict):
     """A dict like object that hold branches heads cache.
 
