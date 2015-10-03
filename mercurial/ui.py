@@ -994,7 +994,7 @@ class ui(object):
         """issue a developer warning message"""
         msg = 'devel-warn: ' + msg
         if self.tracebackflag:
-            util.debugstacktrace(msg, 2)
+            util.debugstacktrace(msg, 2, self.ferr, self.fout)
         else:
             curframe = inspect.currentframe()
             calframe = inspect.getouterframes(curframe, 2)
