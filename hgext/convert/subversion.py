@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import os
 import re
-import sys
 import tempfile
 import xml.dom.minidom
 
@@ -164,8 +163,8 @@ def debugsvnlog(ui, **opts):
         raise error.Abort(_('debugsvnlog could not load Subversion python '
                            'bindings'))
 
-    args = decodeargs(sys.stdin.read())
-    get_log_child(sys.stdout, *args)
+    args = decodeargs(ui.fin.read())
+    get_log_child(ui.fout, *args)
 
 class logstream(object):
     """Interruptible revision log iterator."""
