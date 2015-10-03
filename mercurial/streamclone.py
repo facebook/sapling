@@ -17,31 +17,58 @@ from . import (
     util,
 )
 
+def canperformstreamclone(repo, remote, heads, streamrequested=None):
+    """Whether it is possible to perform a streaming clone as part of pull.
+
+    Returns a tuple of (supported, requirements). ``supported`` is True if
+    streaming clone is supported and False otherwise. ``requirements`` is
+    a set of repo requirements from the remote, or ``None`` if stream clone
+    isn't supported.
+    """
+    # Streaming clone only works if all data is being requested.
+    if heads:
+        return False, None
+
+    # If we don't have a preference, let the server decide for us. This
+    # likely only comes into play in LANs.
+    if streamrequested is None:
+        # The server can advertise whether to prefer streaming clone.
+        streamrequested = remote.capable('stream-preferred')
+
+    if not streamrequested:
+        return False, None
+
+    # In order for stream clone to work, the client has to support all the
+    # requirements advertised by the server.
+    #
+    # The server advertises its requirements via the "stream" and "streamreqs"
+    # capability. "stream" (a value-less capability) is advertised if and only
+    # if the only requirement is "revlogv1." Else, the "streamreqs" capability
+    # is advertised and contains a comma-delimited list of requirements.
+    requirements = set()
+    if remote.capable('stream'):
+        requirements.add('revlogv1')
+    else:
+        streamreqs = remote.capable('streamreqs')
+        # This is weird and shouldn't happen with modern servers.
+        if not streamreqs:
+            return False, None
+
+        streamreqs = set(streamreqs.split(','))
+        # Server requires something we don't support. Bail.
+        if streamreqs - repo.supportedformats:
+            return False, None
+        requirements = streamreqs
+
+    return True, requirements
+
 def maybeperformstreamclone(repo, remote, heads, stream):
-    # now, all clients that can request uncompressed clones can
-    # read repo formats supported by all servers that can serve
-    # them.
+    supported, requirements = canperformstreamclone(repo, remote, heads,
+                                                     streamrequested=stream)
+    if not supported:
+        return
 
-    # if revlog format changes, client will have to check version
-    # and format flags on "stream" capability, and use
-    # uncompressed only if compatible.
-
-    if stream is None:
-        # if the server explicitly prefers to stream (for fast LANs)
-        stream = remote.capable('stream-preferred')
-
-    if stream and not heads:
-        # 'stream' means remote revlog format is revlogv1 only
-        if remote.capable('stream'):
-            streamin(repo, remote, set(('revlogv1',)))
-        else:
-            # otherwise, 'streamreqs' contains the remote revlog format
-            streamreqs = remote.capable('streamreqs')
-            if streamreqs:
-                streamreqs = set(streamreqs.split(','))
-                # if we support it, stream in and adjust our requirements
-                if not streamreqs - repo.supportedformats:
-                    streamin(repo, remote, streamreqs)
+    streamin(repo, remote, requirements)
 
 def allowservergeneration(ui):
     """Whether streaming clones are allowed from the server."""
