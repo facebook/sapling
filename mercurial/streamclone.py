@@ -77,7 +77,27 @@ def maybeperformstreamclone(pullop):
     if not supported:
         return
 
-    streamin(repo, remote, requirements)
+    # Save remote branchmap. We will use it later to speed up branchcache
+    # creation.
+    rbranchmap = None
+    if remote.capable('branchmap'):
+        rbranchmap = remote.branchmap()
+
+    fp = remote.stream_out()
+    l = fp.readline()
+    try:
+        resp = int(l)
+    except ValueError:
+        raise error.ResponseError(
+            _('unexpected response from remote server:'), l)
+    if resp == 1:
+        raise util.Abort(_('operation forbidden by server'))
+    elif resp == 2:
+        raise util.Abort(_('locking the remote repository failed'))
+    elif resp != 0:
+        raise util.Abort(_('the server sent an unknown error code'))
+
+    applyremotedata(repo, requirements, rbranchmap, fp)
 
 def allowservergeneration(ui):
     """Whether streaming clones are allowed from the server."""
@@ -210,30 +230,6 @@ def consumev1(repo, fp):
                         util.bytecount(total_bytes / elapsed)))
     finally:
         lock.release()
-
-def streamin(repo, remote, remotereqs):
-    # Save remote branchmap. We will use it later
-    # to speed up branchcache creation
-    rbranchmap = None
-    if remote.capable("branchmap"):
-        rbranchmap = remote.branchmap()
-
-    fp = remote.stream_out()
-    l = fp.readline()
-    try:
-        resp = int(l)
-    except ValueError:
-        raise error.ResponseError(
-            _('unexpected response from remote server:'), l)
-    if resp == 1:
-        raise util.Abort(_('operation forbidden by server'))
-    elif resp == 2:
-        raise util.Abort(_('locking the remote repository failed'))
-    elif resp != 0:
-        raise util.Abort(_('the server sent an unknown error code'))
-
-    applyremotedata(repo, remotereqs, rbranchmap, fp)
-    return len(repo.heads()) + 1
 
 def applyremotedata(repo, remotereqs, remotebranchmap, fp):
     """Apply stream clone data to a repository.
