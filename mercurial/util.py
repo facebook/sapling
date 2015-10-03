@@ -730,6 +730,10 @@ def _sethgexecutable(path):
     global _hgexecutable
     _hgexecutable = path
 
+def _isstdout(f):
+    fileno = getattr(f, 'fileno', None)
+    return fileno and fileno() == sys.__stdout__.fileno()
+
 def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
     '''enhanced shell command execution.
     run with environment maybe modified, maybe in different dir.
@@ -765,7 +769,7 @@ def system(cmd, environ=None, cwd=None, onerr=None, errprefix=None, out=None):
         env = dict(os.environ)
         env.update((k, py2shell(v)) for k, v in environ.iteritems())
         env['HG'] = hgexecutable()
-        if out is None or out == sys.__stdout__:
+        if out is None or _isstdout(out):
             rc = subprocess.call(cmd, shell=True, close_fds=closefds,
                                  env=env, cwd=cwd)
         else:
