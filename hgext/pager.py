@@ -65,7 +65,7 @@ from mercurial.i18n import _
 # leave the attribute unspecified.
 testedwith = 'internal'
 
-def _pagersubprocess(ui, p):
+def _runpager(ui, p):
     pager = subprocess.Popen(p, shell=True, bufsize=-1,
                              close_fds=util.closefds, stdin=subprocess.PIPE,
                              stdout=sys.stdout, stderr=sys.stderr)
@@ -84,9 +84,6 @@ def _pagersubprocess(ui, p):
         os.dup2(stdout, sys.stdout.fileno())
         os.dup2(stderr, sys.stderr.fileno())
         pager.wait()
-
-def _runpager(ui, p):
-    _pagersubprocess(ui, p)
 
 def uisetup(ui):
     if '--debugger' in sys.argv or not ui.formatted():
