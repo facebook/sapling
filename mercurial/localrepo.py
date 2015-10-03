@@ -1800,10 +1800,11 @@ class localrepository(object):
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
         try:
             self.ui.setconfig('ui', 'quietbookmarkmove', True, 'clone')
-            ret = exchange.pull(self, remote, heads).cgresult
+            pullop = exchange.pull(self, remote, heads,
+                                   streamclonerequested=stream)
+            return pullop.cgresult
         finally:
             self.ui.restoreconfig(quiet)
-        return ret
 
     def pushkey(self, namespace, key, old, new):
         try:

@@ -846,7 +846,7 @@ class pulloperation(object):
     """
 
     def __init__(self, repo, remote, heads=None, force=False, bookmarks=(),
-                 remotebookmarks=None):
+                 remotebookmarks=None, streamclonerequested=None):
         # repo we pull into
         self.repo = repo
         # repo we pull from
@@ -857,6 +857,8 @@ class pulloperation(object):
         self.explicitbookmarks = bookmarks
         # do we force pull?
         self.force = force
+        # whether a streaming clone was requested
+        self.streamclonerequested = streamclonerequested
         # transaction manager
         self.trmanager = None
         # set of common changeset between local and remote before pull
@@ -924,7 +926,8 @@ class transactionmanager(object):
         if self._tr is not None:
             self._tr.release()
 
-def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None):
+def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
+         streamclonerequested=None):
     """Fetch repository data from a remote.
 
     This is the main function used to retrieve data from a remote repository.
@@ -937,13 +940,18 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None):
     default, all remote bookmarks are pulled.
     ``opargs`` are additional keyword arguments to pass to ``pulloperation``
     initialization.
+    ``streamclonerequested`` is a boolean indicating whether a "streaming
+    clone" is requested. A "streaming clone" is essentially a raw file copy
+    of revlogs from the server. This only works when the local repository is
+    empty. The default value of ``None`` means to respect the server
+    configuration for preferring stream clones.
 
     Returns the ``pulloperation`` created for this pull.
     """
     if opargs is None:
         opargs = {}
     pullop = pulloperation(repo, remote, heads, force, bookmarks=bookmarks,
-                           **opargs)
+                           streamclonerequested=streamclonerequested, **opargs)
     if pullop.remote.local():
         missing = set(pullop.remote.requirements) - pullop.repo.supported
         if missing:
