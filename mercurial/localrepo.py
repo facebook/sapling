@@ -1794,31 +1794,7 @@ class localrepository(object):
         keyword arguments:
         heads: list of revs to clone (forces use of pull)
         stream: use streaming clone if possible'''
-
-        # now, all clients that can request uncompressed clones can
-        # read repo formats supported by all servers that can serve
-        # them.
-
-        # if revlog format changes, client will have to check version
-        # and format flags on "stream" capability, and use
-        # uncompressed only if compatible.
-
-        if stream is None:
-            # if the server explicitly prefers to stream (for fast LANs)
-            stream = remote.capable('stream-preferred')
-
-        if stream and not heads:
-            # 'stream' means remote revlog format is revlogv1 only
-            if remote.capable('stream'):
-                streamclone.streamin(self, remote, set(('revlogv1',)))
-            else:
-                # otherwise, 'streamreqs' contains the remote revlog format
-                streamreqs = remote.capable('streamreqs')
-                if streamreqs:
-                    streamreqs = set(streamreqs.split(','))
-                    # if we support it, stream in and adjust our requirements
-                    if not streamreqs - self.supportedformats:
-                        streamclone.streamin(self, remote, streamreqs)
+        streamclone.maybeperformstreamclone(self, remote, heads, stream)
 
         # internal config: ui.quietbookmarkmove
         quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
