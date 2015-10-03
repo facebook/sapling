@@ -25,6 +25,10 @@ def canperformstreamclone(repo, remote, heads, streamrequested=None):
     a set of repo requirements from the remote, or ``None`` if stream clone
     isn't supported.
     """
+    # Streaming clone only works on empty repositories.
+    if len(repo):
+        return False, None
+
     # Streaming clone only works if all data is being requested.
     if heads:
         return False, None
