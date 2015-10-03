@@ -164,8 +164,6 @@ def debugsvnlog(ui, **opts):
         raise error.Abort(_('debugsvnlog could not load Subversion python '
                            'bindings'))
 
-    util.setbinary(sys.stdin)
-    util.setbinary(sys.stdout)
     args = decodeargs(sys.stdin.read())
     get_log_child(sys.stdout, *args)
 
