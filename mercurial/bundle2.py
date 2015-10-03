@@ -656,6 +656,7 @@ class unbundle20(unpackermixin):
         """If header is specified, we do not read it out of the stream."""
         self.ui = ui
         self._decompressor = util.decompressors[None]
+        self._compressed = None
         super(unbundle20, self).__init__(fp)
 
     @util.propertycache
@@ -778,7 +779,8 @@ class unbundle20(unpackermixin):
         return None
 
     def compressed(self):
-        return False
+        self.params # load params
+        return self._compressed
 
 formatmap = {'20': unbundle20}
 
@@ -799,6 +801,8 @@ def processcompression(unbundler, param, value):
         raise error.BundleUnknownFeatureError(params=(param,),
                                               values=(value,))
     unbundler._decompressor = util.decompressors[value]
+    if value is not None:
+        unbundler._compressed = True
 
 class bundlepart(object):
     """A bundle2 part contains application level payload
