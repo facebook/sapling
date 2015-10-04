@@ -623,6 +623,7 @@ def reposetup(ui, repo):
 
         def rollback(self, dryrun=False, force=False):
             wlock = self.wlock()
+            origrestrict = kwt.restrict
             try:
                 if not dryrun:
                     changed = self['.'].files()
@@ -630,10 +631,12 @@ def reposetup(ui, repo):
                 if not dryrun:
                     ctx = self['.']
                     modified, added = _preselect(ctx.status(), changed)
+                    kwt.restrict = False
                     kwt.overwrite(ctx, modified, True, True)
                     kwt.overwrite(ctx, added, True, False)
                 return ret
             finally:
+                kwt.restrict = origrestrict
                 wlock.release()
 
     # monkeypatches
