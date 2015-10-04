@@ -894,6 +894,10 @@ class pulloperation(object):
             return self.heads
 
     @util.propertycache
+    def canusebundle2(self):
+        return _canusebundle2(self)
+
+    @util.propertycache
     def remotebundle2caps(self):
         return bundle2.bundle2caps(self.remote)
 
@@ -970,7 +974,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         streamclone.maybeperformlegacystreamclone(pullop)
         _pulldiscovery(pullop)
-        if _canusebundle2(pullop):
+        if pullop.canusebundle2:
             _pullbundle2(pullop)
         _pullchangeset(pullop)
         _pullphase(pullop)
@@ -1021,7 +1025,7 @@ def _pullbookmarkbundle1(pullop):
     discovery to reduce the chance and impact of race conditions."""
     if pullop.remotebookmarks is not None:
         return
-    if _canusebundle2(pullop) and 'listkeys' in pullop.remotebundle2caps:
+    if pullop.canusebundle2 and 'listkeys' in pullop.remotebundle2caps:
         # all known bundle2 servers now support listkeys, but lets be nice with
         # new implementation.
         return
