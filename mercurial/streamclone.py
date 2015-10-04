@@ -113,6 +113,8 @@ def maybeperformlegacystreamclone(pullop):
     if remote.capable('branchmap'):
         rbranchmap = remote.branchmap()
 
+    repo.ui.status(_('streaming all changes\n'))
+
     fp = remote.stream_out()
     l = fp.readline()
     try:
@@ -245,7 +247,6 @@ def consumev1(repo, fp, filecount, bytecount):
     """
     lock = repo.lock()
     try:
-        repo.ui.status(_('streaming all changes\n'))
         repo.ui.status(_('%d files to transfer, %s of data\n') %
                        (filecount, util.bytecount(bytecount)))
         handled_bytes = 0
