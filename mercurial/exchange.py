@@ -1075,6 +1075,9 @@ def _pullbundle2(pullop):
 
     For now, the only supported data are changegroup."""
     kwargs = {'bundlecaps': caps20to10(pullop.repo)}
+
+    streaming, streamreqs = streamclone.canperformstreamclone(pullop)
+
     # pulling changegroup
     pullop.stepsdone.add('changegroup')
 
@@ -1087,7 +1090,9 @@ def _pullbundle2(pullop):
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
             kwargs['listkeys'].append('bookmarks')
-    if not pullop.fetch:
+    if streaming:
+        pullop.repo.ui.status(_('streaming all changes\n'))
+    elif not pullop.fetch:
         pullop.repo.ui.status(_("no changes found\n"))
         pullop.cgresult = 0
     else:
