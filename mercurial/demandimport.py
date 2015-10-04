@@ -73,14 +73,26 @@ class _demandmod(object):
             head = name
             after = []
         object.__setattr__(self, "_data",
-                           (head, globals, locals, after, level))
+                           (head, globals, locals, after, level, set()))
         object.__setattr__(self, "_module", None)
     def _extend(self, name):
         """add to the list of submodules to load"""
         self._data[3].append(name)
+
+    def _addref(self, name):
+        """Record that the named module ``name`` imports this module.
+
+        References to this proxy class having the name of this module will be
+        replaced at module load time. We assume the symbol inside the importing
+        module is identical to the "head" name of this module. We don't
+        actually know if "as X" syntax is being used to change the symbol name
+        because this information isn't exposed to __import__.
+        """
+        self._data[5].add(name)
+
     def _load(self):
         if not self._module:
-            head, globals, locals, after, level = self._data
+            head, globals, locals, after, level, modrefs = self._data
             mod = _hgextimport(_import, head, globals, locals, None, level)
             # load submodules
             def subload(mod, p):
@@ -95,9 +107,15 @@ class _demandmod(object):
             for x in after:
                 subload(mod, x)
 
-            # are we in the locals dictionary still?
+            # Replace references to this proxy instance with the actual module.
             if locals and locals.get(head) == self:
                 locals[head] = mod
+
+            for modname in modrefs:
+                modref = sys.modules.get(modname, None)
+                if modref and getattr(modref, head, None) == self:
+                    setattr(modref, head, mod)
+
             object.__setattr__(self, "_module", mod)
 
     def __repr__(self):
@@ -107,7 +125,7 @@ class _demandmod(object):
     def __call__(self, *args, **kwargs):
         raise TypeError("%s object is not callable" % repr(self))
     def __getattribute__(self, attr):
-        if attr in ('_data', '_extend', '_load', '_module'):
+        if attr in ('_data', '_extend', '_load', '_module', '_addref'):
             return object.__getattribute__(self, attr)
         self._load()
         return getattr(self._module, attr)
@@ -143,6 +161,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         # The modern Mercurial convention is to use absolute_import everywhere,
         # so modern Mercurial code will have level >= 0.
 
+        # The name of the module the import statement is located in.
+        globalname = globals.get('__name__')
+
         def processfromitem(mod, attr, **kwargs):
             """Process an imported symbol in the import statement.
 
@@ -153,6 +174,12 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             if symbol is nothing:
                 symbol = _demandmod(attr, mod.__dict__, locals, **kwargs)
                 setattr(mod, attr, symbol)
+
+            # Record the importing module references this symbol so we can
+            # replace the symbol with the actual module instance at load
+            # time.
+            if globalname and isinstance(symbol, _demandmod):
+                symbol._addref(globalname)
 
         if level >= 0:
             # Mercurial's enforced import style does not use
