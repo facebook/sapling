@@ -19,6 +19,7 @@ import error, osutil, encoding, parsers
 import errno, shutil, sys, tempfile, traceback
 import re as remod
 import os, time, datetime, calendar, textwrap, signal, collections
+import stat
 import imp, socket, urllib
 import gc
 import bz2
@@ -953,7 +954,18 @@ def fstat(fp):
         return os.stat(fp.name)
 
 def statmtimesec(st):
-    return int(st.st_mtime)
+    """Get mtime as integer of seconds
+
+    'int(st.st_mtime)' cannot be used because st.st_mtime is computed as
+    'sec + 1e-9 * nsec' and double-precision floating-point type is too narrow
+    to represent nanoseconds. If 'nsec' is close to 1 sec, 'int(st.st_mtime)'
+    can be 'sec + 1'. (issue4836)
+    """
+    try:
+        return st[stat.ST_MTIME]
+    except TypeError:
+        # osutil.stat doesn't allow index access and its st_mtime is int
+        return st.st_mtime
 
 # File system features
 
