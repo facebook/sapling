@@ -17,7 +17,7 @@ from . import (
     util,
 )
 
-def canperformstreamclone(repo, remote, heads, streamrequested=None):
+def canperformstreamclone(pullop):
     """Whether it is possible to perform a streaming clone as part of pull.
 
     Returns a tuple of (supported, requirements). ``supported`` is True if
@@ -25,13 +25,18 @@ def canperformstreamclone(repo, remote, heads, streamrequested=None):
     a set of repo requirements from the remote, or ``None`` if stream clone
     isn't supported.
     """
+    repo = pullop.repo
+    remote = pullop.remote
+
     # Streaming clone only works on empty repositories.
     if len(repo):
         return False, None
 
     # Streaming clone only works if all data is being requested.
-    if heads:
+    if pullop.heads:
         return False, None
+
+    streamrequested = pullop.streamclonerequested
 
     # If we don't have a preference, let the server decide for us. This
     # likely only comes into play in LANs.
@@ -75,15 +80,13 @@ def maybeperformlegacystreamclone(pullop):
     A legacy stream clone will not be performed if a bundle2 stream clone is
     supported.
     """
-    repo = pullop.repo
-    remote = pullop.remote
-
-    r = canperformstreamclone(repo, remote, pullop.heads,
-                              streamrequested=pullop.streamclonerequested)
-    supported, requirements = r
+    supported, requirements = canperformstreamclone(pullop)
 
     if not supported:
         return
+
+    repo = pullop.repo
+    remote = pullop.remote
 
     # Save remote branchmap. We will use it later to speed up branchcache
     # creation.
