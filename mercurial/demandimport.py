@@ -149,9 +149,10 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             If the symbol doesn't exist in the parent module, it must be a
             module. We set missing modules up as _demandmod instances.
             """
-            if getattr(mod, attr, nothing) is nothing:
-                setattr(mod, attr,
-                        _demandmod(attr, mod.__dict__, locals, **kwargs))
+            symbol = getattr(mod, attr, nothing)
+            if symbol is nothing:
+                symbol = _demandmod(attr, mod.__dict__, locals, **kwargs)
+                setattr(mod, attr, symbol)
 
         if level >= 0:
             # Mercurial's enforced import style does not use
