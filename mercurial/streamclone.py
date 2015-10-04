@@ -66,7 +66,15 @@ def canperformstreamclone(repo, remote, heads, streamrequested=None):
 
     return True, requirements
 
-def maybeperformstreamclone(pullop):
+def maybeperformlegacystreamclone(pullop):
+    """Possibly perform a legacy stream clone operation.
+
+    Legacy stream clones are performed as part of pull but before all other
+    operations.
+
+    A legacy stream clone will not be performed if a bundle2 stream clone is
+    supported.
+    """
     repo = pullop.repo
     remote = pullop.remote
 
