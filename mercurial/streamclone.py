@@ -97,7 +97,24 @@ def maybeperformstreamclone(pullop):
     elif resp != 0:
         raise util.Abort(_('the server sent an unknown error code'))
 
-    applyremotedata(repo, requirements, rbranchmap, fp)
+    lock = repo.lock()
+    try:
+        consumev1(repo, fp)
+
+        # new requirements = old non-format requirements +
+        #                    new format-related remote requirements
+        # requirements from the streamed-in repository
+        repo.requirements = requirements | (
+                repo.requirements - repo.supportedformats)
+        repo._applyopenerreqs()
+        repo._writerequirements()
+
+        if rbranchmap:
+            branchmap.replacecache(repo, rbranchmap)
+
+        repo.invalidate()
+    finally:
+        lock.release()
 
 def allowservergeneration(ui):
     """Whether streaming clones are allowed from the server."""
@@ -228,33 +245,5 @@ def consumev1(repo, fp):
         repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(total_bytes), elapsed,
                         util.bytecount(total_bytes / elapsed)))
-    finally:
-        lock.release()
-
-def applyremotedata(repo, remotereqs, remotebranchmap, fp):
-    """Apply stream clone data to a repository.
-
-    "remotereqs" is a set of requirements to handle the incoming data.
-    "remotebranchmap" is the result of a branchmap lookup on the remote. It
-    can be None.
-    "fp" is a file object containing the raw stream data, suitable for
-    feeding into consumev1().
-    """
-    lock = repo.lock()
-    try:
-        consumev1(repo, fp)
-
-        # new requirements = old non-format requirements +
-        #                    new format-related remote requirements
-        # requirements from the streamed-in repository
-        repo.requirements = remotereqs | (
-                repo.requirements - repo.supportedformats)
-        repo._applyopenerreqs()
-        repo._writerequirements()
-
-        if remotebranchmap:
-            branchmap.replacecache(repo, remotebranchmap)
-
-        repo.invalidate()
     finally:
         lock.release()
