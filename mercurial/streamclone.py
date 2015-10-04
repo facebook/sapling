@@ -66,9 +66,14 @@ def canperformstreamclone(repo, remote, heads, streamrequested=None):
 
     return True, requirements
 
-def maybeperformstreamclone(repo, remote, heads, stream):
-    supported, requirements = canperformstreamclone(repo, remote, heads,
-                                                     streamrequested=stream)
+def maybeperformstreamclone(pullop):
+    repo = pullop.repo
+    remote = pullop.remote
+
+    r = canperformstreamclone(repo, remote, pullop.heads,
+                              streamrequested=pullop.streamclonerequested)
+    supported, requirements = r
+
     if not supported:
         return
 

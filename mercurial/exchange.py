@@ -964,9 +964,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
     lock = pullop.repo.lock()
     try:
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
-        streamclone.maybeperformstreamclone(pullop.repo, pullop.remote,
-                                            pullop.heads,
-                                            pullop.streamclonerequested)
+        streamclone.maybeperformstreamclone(pullop)
         _pulldiscovery(pullop)
         if _canusebundle2(pullop):
             _pullbundle2(pullop)
