@@ -952,6 +952,9 @@ def fstat(fp):
     except AttributeError:
         return os.stat(fp.name)
 
+def statmtimesec(st):
+    return int(st.st_mtime)
+
 # File system features
 
 def checkcase(path):

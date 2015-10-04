@@ -428,7 +428,7 @@ class dirstate(object):
     def normal(self, f):
         '''Mark a file normal and clean.'''
         s = os.lstat(self._join(f))
-        mtime = int(s.st_mtime)
+        mtime = util.statmtimesec(s)
         self._addpath(f, 'n', s.st_mode,
                       s.st_size & _rangemask, mtime & _rangemask)
         if f in self._copymap:
@@ -998,7 +998,7 @@ class dirstate(object):
             if not st and state in "nma":
                 dadd(fn)
             elif state == 'n':
-                mtime = int(st.st_mtime)
+                mtime = util.statmtimesec(st)
                 if (size >= 0 and
                     ((size != st.st_size and size != st.st_size & _rangemask)
                      or ((mode ^ st.st_mode) & 0o100 and checkexec))
