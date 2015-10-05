@@ -718,7 +718,7 @@ def stream(repo, proto):
     try:
         # LockError may be raised before the first result is yielded. Don't
         # emit output until we're sure we got the lock successfully.
-        it = streamclone.generatev1(repo)
+        it = streamclone.generatev1wireproto(repo)
         return streamres(getstream(it))
     except error.LockError:
         return '2\n'

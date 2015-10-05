@@ -164,13 +164,12 @@ def _walkstreamfiles(repo):
 def generatev1(repo):
     """Emit content for version 1 of a streaming clone.
 
-    This is a generator of raw chunks that constitute a streaming clone.
+    This returns a 3-tuple of (file count, byte size, data iterator).
 
-    The stream begins with a line of 2 space-delimited integers containing the
-    number of entries and total bytes size.
+    The data iterator consists of N entries for each file being transferred.
+    Each file entry starts as a line with the file name and integer size
+    delimited by a null byte.
 
-    Next, are N entries for each file being transferred. Each file entry starts
-    as a line with the file name and integer size delimited by a null byte.
     The raw file data follows. Following the raw file data is the next file
     entry, or EOF.
 
@@ -196,31 +195,44 @@ def generatev1(repo):
 
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
-    yield '%d %d\n' % (len(entries), total_bytes)
 
     svfs = repo.svfs
     oldaudit = svfs.mustaudit
     debugflag = repo.ui.debugflag
     svfs.mustaudit = False
 
-    try:
-        for name, size in entries:
-            if debugflag:
-                repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
-            # partially encode name over the wire for backwards compat
-            yield '%s\0%d\n' % (store.encodedir(name), size)
-            if size <= 65536:
-                fp = svfs(name)
-                try:
-                    data = fp.read(size)
-                finally:
-                    fp.close()
-                yield data
-            else:
-                for chunk in util.filechunkiter(svfs(name), limit=size):
-                    yield chunk
-    finally:
-        svfs.mustaudit = oldaudit
+    def emitrevlogdata():
+        try:
+            for name, size in entries:
+                if debugflag:
+                    repo.ui.debug('sending %s (%d bytes)\n' % (name, size))
+                # partially encode name over the wire for backwards compat
+                yield '%s\0%d\n' % (store.encodedir(name), size)
+                if size <= 65536:
+                    fp = svfs(name)
+                    try:
+                        data = fp.read(size)
+                    finally:
+                        fp.close()
+                    yield data
+                else:
+                    for chunk in util.filechunkiter(svfs(name), limit=size):
+                        yield chunk
+        finally:
+            svfs.mustaudit = oldaudit
+
+    return len(entries), total_bytes, emitrevlogdata()
+
+def generatev1wireproto(repo):
+    """Emit content for version 1 of streaming clone suitable for the wire.
+
+    This is the data output from ``generatev1()`` with a header line
+    indicating file count and byte size.
+    """
+    filecount, bytecount, it = generatev1(repo)
+    yield '%d %d\n' % (filecount, bytecount)
+    for chunk in it:
+        yield chunk
 
 def consumev1(repo, fp, filecount, bytecount):
     """Apply the contents from version 1 of a streaming clone file handle.
