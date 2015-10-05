@@ -127,9 +127,16 @@ def maybeperformlegacystreamclone(pullop):
     elif resp != 0:
         raise util.Abort(_('the server sent an unknown error code'))
 
+    l = fp.readline()
+    try:
+        filecount, bytecount = map(int, l.split(' ', 1))
+    except (ValueError, TypeError):
+        raise error.ResponseError(
+            _('unexpected response from remote server:'), l)
+
     lock = repo.lock()
     try:
-        consumev1(repo, fp)
+        consumev1(repo, fp, filecount, bytecount)
 
         # new requirements = old non-format requirements +
         #                    new format-related remote requirements
@@ -215,7 +222,7 @@ def generatev1(repo):
     finally:
         svfs.mustaudit = oldaudit
 
-def consumev1(repo, fp):
+def consumev1(repo, fp, filecount, bytecount):
     """Apply the contents from version 1 of a streaming clone file handle.
 
     This takes the output from "streamout" and applies it to the specified
@@ -227,21 +234,15 @@ def consumev1(repo, fp):
     lock = repo.lock()
     try:
         repo.ui.status(_('streaming all changes\n'))
-        l = fp.readline()
-        try:
-            total_files, total_bytes = map(int, l.split(' ', 1))
-        except (ValueError, TypeError):
-            raise error.ResponseError(
-                _('unexpected response from remote server:'), l)
         repo.ui.status(_('%d files to transfer, %s of data\n') %
-                       (total_files, util.bytecount(total_bytes)))
+                       (filecount, util.bytecount(bytecount)))
         handled_bytes = 0
-        repo.ui.progress(_('clone'), 0, total=total_bytes)
+        repo.ui.progress(_('clone'), 0, total=bytecount)
         start = time.time()
 
         tr = repo.transaction(_('clone'))
         try:
-            for i in xrange(total_files):
+            for i in xrange(filecount):
                 # XXX doesn't support '\n' or '\r' in filenames
                 l = fp.readline()
                 try:
@@ -257,8 +258,7 @@ def consumev1(repo, fp):
                 ofp = repo.svfs(store.decodedir(name), 'w')
                 for chunk in util.filechunkiter(fp, limit=size):
                     handled_bytes += len(chunk)
-                    repo.ui.progress(_('clone'), handled_bytes,
-                                     total=total_bytes)
+                    repo.ui.progress(_('clone'), handled_bytes, total=bytecount)
                     ofp.write(chunk)
                 ofp.close()
             tr.close()
@@ -273,7 +273,7 @@ def consumev1(repo, fp):
             elapsed = 0.001
         repo.ui.progress(_('clone'), None)
         repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
-                       (util.bytecount(total_bytes), elapsed,
-                        util.bytecount(total_bytes / elapsed)))
+                       (util.bytecount(bytecount), elapsed,
+                        util.bytecount(bytecount / elapsed)))
     finally:
         lock.release()
