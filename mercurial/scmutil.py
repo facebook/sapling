@@ -1148,3 +1148,13 @@ class filecache(object):
             del obj.__dict__[self.name]
         except KeyError:
             raise AttributeError(self.name)
+
+def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
+    if lock is None:
+        raise error.LockInheritanceContractViolation(
+            'lock can only be inherited while held')
+    if environ is None:
+        environ = {}
+    with lock.inherit() as locker:
+        environ[envvar] = locker
+        return repo.ui.system(cmd, environ=environ, *args, **kwargs)
