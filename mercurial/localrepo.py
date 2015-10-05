@@ -1214,6 +1214,8 @@ class localrepository(object):
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc,
               parentenvvar=None):
         parentlock = None
+        # the contents of parentenvvar are used by the underlying lock to
+        # determine whether it can be inherited
         if parentenvvar is not None:
             parentlock = os.environ.get(parentenvvar)
         try:
