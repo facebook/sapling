@@ -1300,6 +1300,15 @@ class localrepository(object):
         self._wlockref = weakref.ref(l)
         return l
 
+    def _currentlock(self, lockref):
+        """Returns the lock if it's held, or None if it's not."""
+        if lockref is None:
+            return None
+        l = lockref()
+        if l is None or not l.held:
+            return None
+        return l
+
     def _filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
