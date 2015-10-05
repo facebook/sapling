@@ -12,7 +12,6 @@ import re
 
 from .i18n import _
 from . import (
-    destutil,
     encoding,
     error,
     hbisect,
@@ -524,17 +523,6 @@ def _mergedefaultdest(repo, subset, x):
         else:
             node = nbhs[0]
     return subset & baseset([repo[node].rev()])
-
-def _updatedefaultdest(repo, subset, x):
-    # ``_updatedefaultdest()``
-
-    # default destination for update.
-    # # XXX: Currently private because I expect the signature to change.
-    # # XXX: - taking rev as arguments,
-    # # XXX: - bailing out in case of ambiguity vs returning all data.
-    getargs(x, 0, 0, _("_updatedefaultdest takes no arguments"))
-    rev = destutil.destupdate(repo)
-    return subset & baseset([rev])
 
 def adds(repo, subset, x):
     """``adds(pattern)``
@@ -2146,7 +2134,6 @@ def _hexlist(repo, subset, x):
 
 symbols = {
     "_mergedefaultdest": _mergedefaultdest,
-    "_updatedefaultdest": _updatedefaultdest,
     "adds": adds,
     "all": getall,
     "ancestor": ancestor,
