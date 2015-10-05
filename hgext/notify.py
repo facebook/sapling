@@ -406,6 +406,8 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
             return
         count += 1
         n.diff(ctx)
+        if not author:
+            author = ctx.user()
 
     data += ui.popbuffer()
     fromauthor = ui.config('notify', 'fromauthor')
