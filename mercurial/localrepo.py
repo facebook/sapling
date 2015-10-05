@@ -1309,6 +1309,10 @@ class localrepository(object):
             return None
         return l
 
+    def currentwlock(self):
+        """Returns the wlock if it's held, or None if it's not."""
+        return self._currentlock(self._wlockref)
+
     def _filecommit(self, fctx, manifest1, manifest2, linkrev, tr, changelist):
         """
         commit an individual file as part of a larger transaction
