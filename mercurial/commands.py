@@ -497,6 +497,9 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
+    See :hg:`help revert` for a way to restore files to the state
+    of another revision.
+
     Returns 0 on success, 1 if nothing to backout or there are unresolved
     files.
     '''
