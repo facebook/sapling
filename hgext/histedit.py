@@ -812,26 +812,35 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.write()
         return
     elif goal == 'abort':
-        state.read()
-        tmpnodes, leafs = newnodestoabort(state)
-        ui.debug('restore wc to old parent %s\n' % node.short(state.topmost))
+        try:
+            state.read()
+            tmpnodes, leafs = newnodestoabort(state)
+            ui.debug('restore wc to old parent %s\n'
+                    % node.short(state.topmost))
 
-        # Recover our old commits if necessary
-        if not state.topmost in repo and state.backupfile:
-            backupfile = repo.join(state.backupfile)
-            f = hg.openpath(ui, backupfile)
-            gen = exchange.readbundle(ui, f, backupfile)
-            changegroup.addchangegroup(repo, gen, 'histedit',
-                                       'bundle:' + backupfile)
-            os.remove(backupfile)
+            # Recover our old commits if necessary
+            if not state.topmost in repo and state.backupfile:
+                backupfile = repo.join(state.backupfile)
+                f = hg.openpath(ui, backupfile)
+                gen = exchange.readbundle(ui, f, backupfile)
+                changegroup.addchangegroup(repo, gen, 'histedit',
+                                        'bundle:' + backupfile)
+                os.remove(backupfile)
 
-        # check whether we should update away
-        if repo.unfiltered().revs('parents() and (%n  or %ln::)',
-                                  state.parentctxnode, leafs | tmpnodes):
-            hg.clean(repo, state.topmost)
-        cleanupnode(ui, repo, 'created', tmpnodes)
-        cleanupnode(ui, repo, 'temp', leafs)
-        state.clear()
+            # check whether we should update away
+            if repo.unfiltered().revs('parents() and (%n  or %ln::)',
+                                    state.parentctxnode, leafs | tmpnodes):
+                hg.clean(repo, state.topmost)
+            cleanupnode(ui, repo, 'created', tmpnodes)
+            cleanupnode(ui, repo, 'temp', leafs)
+        except Exception:
+            if state.inprogress():
+                ui.warn(_('warning: encountered an exception during histedit '
+                    '--abort; the repository may not have been completely '
+                    'cleaned up\n'))
+            raise
+        finally:
+                state.clear()
         return
     else:
         cmdutil.checkunfinished(repo)

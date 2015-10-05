@@ -324,3 +324,25 @@ Test --continue with --keep
   |
   o  0:6058cbb6cfd7 one
   
+
+Test that abort fails gracefully on exception
+----------------------------------------------
+  $ hg histedit . -q --commands - << EOF
+  > edit 8fda0c726bf2 6 x
+  > EOF
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+  [1]
+Corrupt histedit state file
+  $ sed 's/8fda0c726bf2/123456789012/' .hg/histedit-state > ../corrupt-histedit
+  $ mv ../corrupt-histedit .hg/histedit-state
+  $ hg histedit --abort
+  warning: encountered an exception during histedit --abort; the repository may not have been completely cleaned up
+  abort: No such file or directory: * (glob)
+  [255]
+Histedit state has been exited
+  $ hg summary -q
+  parent: 5:63379946892c 
+  commit: 1 added, 1 unknown (new branch head)
+  update: 4 new changesets (update)
+
