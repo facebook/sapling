@@ -893,6 +893,10 @@ class pulloperation(object):
             # sync on this subset
             return self.heads
 
+    @util.propertycache
+    def remotebundle2caps(self):
+        return bundle2.bundle2caps(self.remote)
+
     def gettransaction(self):
         # deprecated; talk to trmanager directly
         return self.trmanager.transaction()
@@ -1017,8 +1021,7 @@ def _pullbookmarkbundle1(pullop):
     discovery to reduce the chance and impact of race conditions."""
     if pullop.remotebookmarks is not None:
         return
-    if (_canusebundle2(pullop)
-            and 'listkeys' in bundle2.bundle2caps(pullop.remote)):
+    if _canusebundle2(pullop) and 'listkeys' in pullop.remotebundle2caps:
         # all known bundle2 servers now support listkeys, but lets be nice with
         # new implementation.
         return
@@ -1067,7 +1070,6 @@ def _pullbundle2(pullop):
     """pull data using bundle2
 
     For now, the only supported data are changegroup."""
-    remotecaps = bundle2.bundle2caps(pullop.remote)
     kwargs = {'bundlecaps': caps20to10(pullop.repo)}
     # pulling changegroup
     pullop.stepsdone.add('changegroup')
@@ -1075,7 +1077,7 @@ def _pullbundle2(pullop):
     kwargs['common'] = pullop.common
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
-    if 'listkeys' in remotecaps:
+    if 'listkeys' in pullop.remotebundle2caps:
         kwargs['listkeys'] = ['phase']
         if pullop.remotebookmarks is None:
             # make sure to always includes bookmark data when migrating
@@ -1088,7 +1090,7 @@ def _pullbundle2(pullop):
         if pullop.heads is None and list(pullop.common) == [nullid]:
             pullop.repo.ui.status(_("requesting all changes\n"))
     if obsolete.isenabled(pullop.repo, obsolete.exchangeopt):
-        remoteversions = bundle2.obsmarkersversion(remotecaps)
+        remoteversions = bundle2.obsmarkersversion(pullop.remotebundle2caps)
         if obsolete.commonversion(remoteversions) is not None:
             kwargs['obsmarkers'] = True
             pullop.stepsdone.add('obsmarkers')
