@@ -5573,6 +5573,9 @@ def revert(ui, repo, *pats, **opts):
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
+    See :hg:`help backout` for a way to reverse the effect of an
+    earlier changeset.
+
     Returns 0 on success.
     """
 
