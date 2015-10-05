@@ -17,8 +17,12 @@ from . import (
     util,
 )
 
-def canperformstreamclone(pullop):
+def canperformstreamclone(pullop, bailifbundle2supported=False):
     """Whether it is possible to perform a streaming clone as part of pull.
+
+    ``bailifbundle2supported`` will cause the function to return False if
+    bundle2 stream clones are supported. It should only be called by the
+    legacy stream clone code path.
 
     Returns a tuple of (supported, requirements). ``supported`` is True if
     streaming clone is supported and False otherwise. ``requirements`` is
@@ -27,6 +31,21 @@ def canperformstreamclone(pullop):
     """
     repo = pullop.repo
     remote = pullop.remote
+
+    bundle2supported = False
+    if pullop.canusebundle2:
+        if 'v1' in pullop.remotebundle2caps.get('stream', []):
+            bundle2supported = True
+        # else
+            # Server doesn't support bundle2 stream clone or doesn't support
+            # the versions we support. Fall back and possibly allow legacy.
+
+    # Ensures legacy code path uses available bundle2.
+    if bailifbundle2supported and bundle2supported:
+        return False, None
+    # Ensures bundle2 doesn't try to do a stream clone if it isn't supported.
+    #elif not bailifbundle2supported and not bundle2supported:
+    #    return False, None
 
     # Streaming clone only works on empty repositories.
     if len(repo):
