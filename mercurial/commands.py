@@ -5196,7 +5196,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
                 updata =  destutil.destupdate(repo)
                 checkout, movemarkfrom, brev = updata
             ret = hg.update(repo, checkout)
-        except error.Abort as inst:
+        except error.UpdateAbort as inst:
             ui.warn(_("not updating: %s\n") % str(inst))
             if inst.hint:
                 ui.warn(_("(%s)\n") % inst.hint)

@@ -84,10 +84,10 @@ def destupdate(repo, clean=False, check=False):
                     msg = _("uncommitted changes")
                     hint = _("commit and merge, or update --clean to"
                              " discard changes")
-                    raise error.Abort(msg, hint=hint)
+                    raise error.UpdateAbort(msg, hint=hint)
                 elif not check:  # destination is not a descendant.
                     msg = _("not a linear update")
                     hint = _("merge or update --check to force update")
-                    raise error.Abort(msg, hint=hint)
+                    raise error.UpdateAbort(msg, hint=hint)
 
     return rev, movemark, activemark

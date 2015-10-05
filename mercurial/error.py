@@ -66,6 +66,9 @@ class HookAbort(Abort):
 class ConfigError(Abort):
     """Exception raised when parsing config files"""
 
+class UpdateAbort(Abort):
+    """Raised when an update is aborted for destination issue"""
+
 class OutOfBandError(Exception):
     """Exception raised when a remote repo reports failure"""
 
