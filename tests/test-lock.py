@@ -169,7 +169,7 @@ class testlock(unittest.TestCase):
 
             childlock.release()
             childstate.assertreleasecalled(True)
-            childstate.assertpostreleasecalled(True)
+            childstate.assertpostreleasecalled(False)
             childstate.assertlockexists(True)
 
             parentstate.resetacquirefn()
@@ -208,7 +208,7 @@ class testlock(unittest.TestCase):
 
                 lock2.release()
                 state2.assertreleasecalled(True)
-                state2.assertpostreleasecalled(True)
+                state2.assertpostreleasecalled(False)
                 state2.assertlockexists(True)
 
                 state1.resetacquirefn()
@@ -217,7 +217,7 @@ class testlock(unittest.TestCase):
 
             lock1.release()
             state1.assertreleasecalled(True)
-            state1.assertpostreleasecalled(True)
+            state1.assertpostreleasecalled(False)
             state1.assertlockexists(True)
 
         lock0.release()
@@ -245,7 +245,7 @@ class testlock(unittest.TestCase):
             # release the child lock
             childlock.release()
             childstate.assertreleasecalled(True)
-            childstate.assertpostreleasecalled(True)
+            childstate.assertpostreleasecalled(False)
             childstate.assertlockexists(True)
 
         parentlock.release()

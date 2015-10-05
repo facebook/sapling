@@ -221,8 +221,11 @@ class lock(object):
                         self.vfs.unlink(self.f)
                     except OSError:
                         pass
-            for callback in self.postrelease:
-                callback()
+            # The postrelease functions typically assume the lock is not held
+            # at all.
+            if not self._parentheld:
+                for callback in self.postrelease:
+                    callback()
 
 def release(*locks):
     for lock in locks:
