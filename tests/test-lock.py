@@ -158,23 +158,22 @@ class testlock(unittest.TestCase):
         parentstate.assertacquirecalled(True)
 
         # set up lock inheritance
-        lockname = parentlock.prepinherit()
-        parentstate.assertreleasecalled(True)
-        parentstate.assertpostreleasecalled(False)
-        parentstate.assertlockexists(True)
+        with parentlock.inherit() as lockname:
+            parentstate.assertreleasecalled(True)
+            parentstate.assertpostreleasecalled(False)
+            parentstate.assertlockexists(True)
 
-        childstate = teststate(self, d, pidoffset=1)
-        childlock = childstate.makelock(parentlock=lockname)
-        childstate.assertacquirecalled(True)
+            childstate = teststate(self, d, pidoffset=1)
+            childlock = childstate.makelock(parentlock=lockname)
+            childstate.assertacquirecalled(True)
 
-        # release the child lock -- the lock file should still exist on disk
-        childlock.release()
-        childstate.assertreleasecalled(True)
-        childstate.assertpostreleasecalled(True)
-        childstate.assertlockexists(True)
+            childlock.release()
+            childstate.assertreleasecalled(True)
+            childstate.assertpostreleasecalled(True)
+            childstate.assertlockexists(True)
 
-        parentstate.resetacquirefn()
-        parentlock.reacquire()
+            parentstate.resetacquirefn()
+
         parentstate.assertacquirecalled(True)
 
         parentlock.release()
@@ -188,39 +187,39 @@ class testlock(unittest.TestCase):
         lock0 = state0.makelock()
         state0.assertacquirecalled(True)
 
-        lock0name = lock0.prepinherit()
-        state0.assertreleasecalled(True)
-        state0.assertpostreleasecalled(False)
-        state0.assertlockexists(True)
+        with lock0.inherit() as lock0name:
+            state0.assertreleasecalled(True)
+            state0.assertpostreleasecalled(False)
+            state0.assertlockexists(True)
 
-        state1 = teststate(self, d, pidoffset=1)
-        lock1 = state1.makelock(parentlock=lock0name)
-        state1.assertacquirecalled(True)
+            state1 = teststate(self, d, pidoffset=1)
+            lock1 = state1.makelock(parentlock=lock0name)
+            state1.assertacquirecalled(True)
 
-        # from within lock1, acquire another lock
-        lock1name = lock1.prepinherit()
-        # since the file on disk is lock0's this should have the same name
-        self.assertEqual(lock0name, lock1name)
+            # from within lock1, acquire another lock
+            with lock1.inherit() as lock1name:
+                # since the file on disk is lock0's this should have the same
+                # name
+                self.assertEqual(lock0name, lock1name)
 
-        state2 = teststate(self, d, pidoffset=2)
-        lock2 = state2.makelock(parentlock=lock1name)
-        state2.assertacquirecalled(True)
+                state2 = teststate(self, d, pidoffset=2)
+                lock2 = state2.makelock(parentlock=lock1name)
+                state2.assertacquirecalled(True)
 
-        lock2.release()
-        state2.assertreleasecalled(True)
-        state2.assertpostreleasecalled(True)
-        state2.assertlockexists(True)
+                lock2.release()
+                state2.assertreleasecalled(True)
+                state2.assertpostreleasecalled(True)
+                state2.assertlockexists(True)
 
-        state1.resetacquirefn()
-        lock1.reacquire()
-        state1.assertacquirecalled(True)
+                state1.resetacquirefn()
 
-        lock1.release()
-        state1.assertreleasecalled(True)
-        state1.assertpostreleasecalled(True)
-        state1.assertlockexists(True)
+            state1.assertacquirecalled(True)
 
-        lock0.reacquire()
+            lock1.release()
+            state1.assertreleasecalled(True)
+            state1.assertpostreleasecalled(True)
+            state1.assertlockexists(True)
+
         lock0.release()
 
     def testinheritlockfork(self):
@@ -230,26 +229,25 @@ class testlock(unittest.TestCase):
         parentstate.assertacquirecalled(True)
 
         # set up lock inheritance
-        lockname = parentlock.prepinherit()
-        childstate = teststate(self, d, pidoffset=1)
-        childlock = childstate.makelock(parentlock=lockname)
-        childstate.assertacquirecalled(True)
+        with parentlock.inherit() as lockname:
+            childstate = teststate(self, d, pidoffset=1)
+            childlock = childstate.makelock(parentlock=lockname)
+            childstate.assertacquirecalled(True)
 
-        # fork the child lock
-        forkchildlock = copy.deepcopy(childlock)
-        forkchildlock._pidoffset += 1
-        forkchildlock.release()
-        childstate.assertreleasecalled(False)
-        childstate.assertpostreleasecalled(False)
-        childstate.assertlockexists(True)
+            # fork the child lock
+            forkchildlock = copy.deepcopy(childlock)
+            forkchildlock._pidoffset += 1
+            forkchildlock.release()
+            childstate.assertreleasecalled(False)
+            childstate.assertpostreleasecalled(False)
+            childstate.assertlockexists(True)
 
-        # release the child lock
-        childlock.release()
-        childstate.assertreleasecalled(True)
-        childstate.assertpostreleasecalled(True)
-        childstate.assertlockexists(True)
+            # release the child lock
+            childlock.release()
+            childstate.assertreleasecalled(True)
+            childstate.assertpostreleasecalled(True)
+            childstate.assertlockexists(True)
 
-        parentlock.reacquire()
         parentlock.release()
 
 if __name__ == '__main__':
