@@ -657,14 +657,22 @@ class unbundle20(unpackermixin):
             raise error.BundleValueError('negative bundle param size: %i'
                                          % paramssize)
         if paramssize:
-            for p in self._readexact(paramssize).split(' '):
-                p = p.split('=', 1)
-                p = [urllib.unquote(i) for i in p]
-                if len(p) < 2:
-                    p.append(None)
-                self._processparam(*p)
-                params[p[0]] = p[1]
+            params = self._readexact(paramssize)
+            params = self._processallparams(params)
         return params
+
+    def _processallparams(self, paramsblock):
+        """"""
+        params = {}
+        for p in paramsblock.split(' '):
+            p = p.split('=', 1)
+            p = [urllib.unquote(i) for i in p]
+            if len(p) < 2:
+                p.append(None)
+            self._processparam(*p)
+            params[p[0]] = p[1]
+        return params
+
 
     def _processparam(self, name, value):
         """process a parameter, applying its effect if needed
