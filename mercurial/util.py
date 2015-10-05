@@ -1292,10 +1292,13 @@ class chunkbuffer(object):
         Returns less than L bytes if the iterator runs dry.
 
         If size parameter is omitted, read everything"""
+        if l is None:
+            return ''.join(self.iter)
+
         left = l
         buf = []
         queue = self._queue
-        while left is None or left > 0:
+        while left > 0:
             # refill the queue
             if not queue:
                 target = 2**18
@@ -1308,9 +1311,8 @@ class chunkbuffer(object):
                     break
 
             chunk = queue.popleft()
-            if left is not None:
-                left -= len(chunk)
-            if left is not None and left < 0:
+            left -= len(chunk)
+            if left < 0:
                 queue.appendleft(chunk[left:])
                 buf.append(chunk[:left])
             else:
