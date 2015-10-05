@@ -455,7 +455,19 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if bundlename or not localrepo:
         # create a bundle (uncompressed if other repo is not local)
 
-        if True:
+        canbundle2 = (ui.configbool('experimental', 'bundle2-exp', True)
+                      and other.capable('getbundle')
+                      and other.capable('bundle2'))
+        if canbundle2:
+            kwargs = {}
+            kwargs['common'] = common
+            kwargs['heads'] = rheads
+            kwargs['bundlecaps'] = exchange.caps20to10(repo)
+            kwargs['cg'] = True
+            b2 = other.getbundle('incoming', **kwargs)
+            fname = bundle = changegroup.writechunks(ui, b2._forwardchunks(),
+                                                     bundlename)
+        else:
             if other.capable('getbundle'):
                 cg = other.getbundle('incoming', common=common, heads=rheads)
             elif onlyheads is None and not other.capable('changegroupsubset'):
