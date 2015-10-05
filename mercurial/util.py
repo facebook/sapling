@@ -1310,13 +1310,20 @@ class chunkbuffer(object):
                 if not queue:
                     break
 
-            chunk = queue.popleft()
-            left -= len(chunk)
-            if left < 0:
+            chunk = queue[0]
+            chunkl = len(chunk)
+
+            # Use full chunk.
+            if left >= chunkl:
+                left -= chunkl
+                queue.popleft()
+                buf.append(chunk)
+            # Partial chunk needed.
+            else:
+                left -= chunkl
+                queue.popleft()
                 queue.appendleft(chunk[left:])
                 buf.append(chunk[:left])
-            else:
-                buf.append(chunk)
 
         return ''.join(buf)
 
