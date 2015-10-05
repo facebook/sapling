@@ -20,7 +20,7 @@ import merge as mergemod
 import minirst, revset, fileset
 import dagparser, context, simplemerge, graphmod, copies
 import random, operator
-import setdiscovery, treediscovery, dagutil, pvec, localrepo
+import setdiscovery, treediscovery, dagutil, pvec, localrepo, destutil
 import phases, obsolete, exchange, bundle2, repair, lock as lockmod
 import ui as uimod
 
@@ -6597,6 +6597,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
             cmdutil.bailifchanged(repo, merge=False)
             if rev is None:
                 rev = repo[repo[None].branch()].rev()
+        elif rev is None:
+            rev = destutil.destupdate(repo, clean=clean)
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 

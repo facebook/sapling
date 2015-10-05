@@ -11,7 +11,7 @@ from . import (
     obsolete,
 )
 
-def destupdate(repo):
+def destupdate(repo, clean=False):
     """destination for bare update operation
     """
     # Here is where we should consider bookmarks, divergent bookmarks, and tip
@@ -52,4 +52,28 @@ def destupdate(repo):
             # get the max revision for the given successors set,
             # i.e. the 'tip' of a set
             node = repo.revs('max(%ln)', successors).first()
-    return repo[node].rev()
+    rev = repo[node].rev()
+
+    if not clean:
+        # Check that the update is linear.
+        #
+        # Mercurial do not allow update-merge for non linear pattern
+        # (that would be technically possible but was considered too confusing
+        # for user a long time ago)
+        #
+        # See mercurial.merge.update for details
+        if p1.rev() not in repo.changelog.ancestors([rev], inclusive=True):
+            dirty = wc.dirty(missing=True)
+            foreground = obsolete.foreground(repo, [p1.node()])
+            if not repo[rev].node() in foreground:
+                if dirty:
+                    msg = _("uncommitted changes")
+                    hint = _("commit and merge, or update --clean to"
+                             " discard changes")
+                    raise error.Abort(msg, hint=hint)
+                else:  # destination is not a descendant.
+                    msg = _("not a linear update")
+                    hint = _("merge or update --check to force update")
+                    raise error.Abort(msg, hint=hint)
+
+    return rev
