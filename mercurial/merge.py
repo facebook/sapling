@@ -997,8 +997,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             nodes = list(repo.set('_updatedefaultdest()'))
             if nodes:
                 node = nodes[0].node()
-                if p1.obsolete() and not p1.children():
-                    pas = [p1]
 
         overwrite = force and not branchmerge
 
