@@ -455,19 +455,21 @@ def getremotechanges(ui, repo, other, onlyheads=None, bundlename=None,
     if bundlename or not localrepo:
         # create a bundle (uncompressed if other repo is not local)
 
-        if other.capable('getbundle'):
-            cg = other.getbundle('incoming', common=common, heads=rheads)
-        elif onlyheads is None and not other.capable('changegroupsubset'):
-            # compat with older servers when pulling all remote heads
-            cg = other.changegroup(incoming, "incoming")
-            rheads = None
-        else:
-            cg = other.changegroupsubset(incoming, rheads, 'incoming')
-        if localrepo:
-            bundletype = "HG10BZ"
-        else:
-            bundletype = "HG10UN"
-        fname = bundle = changegroup.writebundle(ui, cg, bundlename, bundletype)
+        if True:
+            if other.capable('getbundle'):
+                cg = other.getbundle('incoming', common=common, heads=rheads)
+            elif onlyheads is None and not other.capable('changegroupsubset'):
+                # compat with older servers when pulling all remote heads
+                cg = other.changegroup(incoming, "incoming")
+                rheads = None
+            else:
+                cg = other.changegroupsubset(incoming, rheads, 'incoming')
+            if localrepo:
+                bundletype = "HG10BZ"
+            else:
+                bundletype = "HG10UN"
+            fname = bundle = changegroup.writebundle(ui, cg, bundlename,
+                                                     bundletype)
         # keep written bundle?
         if bundlename:
             bundle = None
