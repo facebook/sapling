@@ -312,6 +312,9 @@ class histeditstate(object):
     def clear(self):
         self.repo.vfs.unlink('histedit-state')
 
+    def inprogress(self):
+        return self.repo.vfs.exists('histedit-state')
+
 class histeditaction(object):
     def __init__(self, state, node):
         self.state = state
