@@ -6475,7 +6475,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 finally:
                     if tr:
                         tr.release()
-                changes = [r.get('result', 0)
+                changes = [r.get('return', 0)
                            for r in op.records['changegroup']]
                 modheads = changegroup.combineresults(changes)
             else:

@@ -997,6 +997,7 @@ Support for changegroup
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
+  (run 'hg update' to get a working copy)
 
 with reply
 
@@ -1125,6 +1126,7 @@ Simple case where it just work: GZ
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
+  (run 'hg update' to get a working copy)
 Simple case where it just work: BZ
 ----------------------------------
 
@@ -1211,6 +1213,7 @@ Simple case where it just work: BZ
   adding manifests
   adding file changes
   added 0 changesets with 0 changes to 3 files
+  (run 'hg update' to get a working copy)
 
 unknown compression while unbundling
 -----------------------------
