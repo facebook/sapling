@@ -1158,3 +1158,12 @@ def _locksub(repo, lock, envvar, cmd, environ=None, *args, **kwargs):
     with lock.inherit() as locker:
         environ[envvar] = locker
         return repo.ui.system(cmd, environ=environ, *args, **kwargs)
+
+def wlocksub(repo, cmd, *args, **kwargs):
+    """run cmd as a subprocess that allows inheriting repo's wlock
+
+    This can only be called while the wlock is held. This takes all the
+    arguments that ui.system does, and returns the exit code of the
+    subprocess."""
+    return _locksub(repo, repo.currentwlock(), 'HG_WLOCK_LOCKER', cmd, *args,
+                    **kwargs)
