@@ -1441,7 +1441,8 @@ def unbundle(repo, cg, heads, source, url):
     If the push was raced as PushRaced exception is raised."""
     r = 0
     # need a transaction when processing a bundle2 stream
-    wlock = lock = tr = None
+    # [wlock, lock, tr] - needs to be an array so nested functions can modify it
+    lockandtr = [None, None, None]
     recordout = None
     # quick fix for output mismatch with bundle2 in 3.4
     captureoutput = repo.ui.configbool('experimental', 'bundle2-output-capture',
@@ -1454,13 +1455,22 @@ def unbundle(repo, cg, heads, source, url):
         if util.safehasattr(cg, 'params'):
             r = None
             try:
-                wlock = repo.wlock()
-                lock = repo.lock()
-                tr = repo.transaction(source)
-                tr.hookargs['source'] = source
-                tr.hookargs['url'] = url
-                tr.hookargs['bundle2'] = '1'
-                op = bundle2.bundleoperation(repo, lambda: tr,
+                def gettransaction():
+                    if not lockandtr[2]:
+                        lockandtr[0] = repo.wlock()
+                        lockandtr[1] = repo.lock()
+                        lockandtr[2] = repo.transaction(source)
+                        lockandtr[2].hookargs['source'] = source
+                        lockandtr[2].hookargs['url'] = url
+                        lockandtr[2].hookargs['bundle2'] = '1'
+                    return lockandtr[2]
+
+                # Do greedy locking by default until we're satisfied with lazy
+                # locking.
+                if not repo.ui.configbool('experimental', 'bundle2lazylocking'):
+                    gettransaction()
+
+                op = bundle2.bundleoperation(repo, gettransaction,
                                              captureoutput=captureoutput)
                 try:
                     op = bundle2.processbundle(repo, cg, op=op)
@@ -1470,7 +1480,8 @@ def unbundle(repo, cg, heads, source, url):
                         repo.ui.pushbuffer(error=True, subproc=True)
                         def recordout(output):
                             r.newpart('output', data=output, mandatory=False)
-                tr.close()
+                if lockandtr[2] is not None:
+                    lockandtr[2].close()
             except BaseException as exc:
                 exc.duringunbundle2 = True
                 if captureoutput and r is not None:
@@ -1481,10 +1492,10 @@ def unbundle(repo, cg, heads, source, url):
                         parts.append(part)
                 raise
         else:
-            lock = repo.lock()
+            lockandtr[1] = repo.lock()
             r = changegroup.addchangegroup(repo, cg, source, url)
     finally:
-        lockmod.release(tr, lock, wlock)
+        lockmod.release(lockandtr[2], lockandtr[1], lockandtr[0])
         if recordout is not None:
             recordout(repo.ui.popbuffer())
     return r
