@@ -271,15 +271,11 @@ def extract(ui, fileobj):
         data['branch'] = branch
         return data
 
+    p1 = p2 = None
     if parents:
         p1 = parents.pop(0)
-    else:
-        p1 = None
-
-    if parents:
-        p2 = parents.pop(0)
-    else:
-        p2 = None
+        if parents:
+            p2 = parents.pop(0)
 
     data['filename'] = tmpname
     data['message'] = message
