@@ -310,7 +310,8 @@ class histeditstate(object):
         return parentctxnode, rules, keep, topmost, replacements, backupfile
 
     def clear(self):
-        self.repo.vfs.unlink('histedit-state')
+        if self.inprogress():
+            self.repo.vfs.unlink('histedit-state')
 
     def inprogress(self):
         return self.repo.vfs.exists('histedit-state')
