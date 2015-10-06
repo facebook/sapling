@@ -205,10 +205,10 @@ Aborting lock does not prevent fncache writes
   > from mercurial import commands, util
   > from mercurial.extensions import wrapfunction
   > 
-  > def lockexception(orig, vfs, lockname, wait, releasefn, acquirefn, desc, parentenvvar=None):
+  > def lockexception(orig, vfs, lockname, wait, releasefn, *args, **kwargs):
   >     def releasewrap():
   >         raise util.Abort("forced lock failure")
-  >     return orig(vfs, lockname, wait, releasewrap, acquirefn, desc)
+  >     return orig(vfs, lockname, wait, releasewrap, *args, **kwargs)
   > 
   > def reposetup(ui, repo):
   >     wrapfunction(repo, '_lock', lockexception)
