@@ -63,6 +63,8 @@ def extsetup(ui):
     options.append(
         ('', 'root-relative', None, _('show status relative to root')))
 
+    wrapcommand(commands.table, 'rollback', rollbackcmd)
+
     wrapcommand(commands.table, 'tag', tagcmd)
     wrapcommand(commands.table, 'tags', tagscmd)
 
@@ -284,6 +286,18 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     elif not pats or (len(pats) == 1 and pats[0] == 're:'):
         pats = ['']
     return orig(ui, repo, *pats, **opts)
+
+def rollbackcmd(orig, ui, repo, **opts):
+    """
+    Allowing to disable the rollback command
+    """
+    if ui.configbool('tweakdefaults', 'allowrollback', True):
+        return orig(ui, repo, **opts)
+    else:
+        message = ui.config('tweakdefaults', 'rollbackmessage',
+            _('the use of rollback is disabled'))
+        hint = ui.config('tweakdefaults', 'rollbackhint', None)
+        raise util.Abort(message, hint=hint)
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
     """
