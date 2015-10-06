@@ -357,15 +357,20 @@ def showlatesttagdistance(repo, ctx, templ, cache, **args):
 def showchangessincelatesttag(repo, ctx, templ, cache, **args):
     """:changessincelatesttag: Integer. All ancestors not in the latest tag."""
     latesttag = getlatesttags(repo, ctx, cache)[2][0]
+
+    return _showchangessincetag(repo, ctx, tag=latesttag, **args)
+
+def _showchangessincetag(repo, ctx, **args):
     offset = 0
     revs = [ctx.rev()]
+    tag = args['tag']
 
     # The only() revset doesn't currently support wdir()
     if ctx.rev() is None:
         offset = 1
         revs = [p.rev() for p in ctx.parents()]
 
-    return len(repo.revs('only(%ld, %s)', revs, latesttag)) + offset
+    return len(repo.revs('only(%ld, %s)', revs, tag)) + offset
 
 def showmanifest(**args):
     repo, ctx, templ = args['repo'], args['ctx'], args['templ']
