@@ -233,6 +233,18 @@ Test tweaked branch command
   $ hg branches --config tweakdefaults.branchesmessage='testing'| head -n0
   testing
 
+Test tweaked merge command
+  $ hg merge | head -n1
+  abort: no matching bookmark to merge - please merge with an explicit rev or bookmark
+  (run 'hg heads' to see all heads)
+
+  $ hg merge --config tweakdefaults.allowmerge=false
+  abort: merging is not supported for this repository -- use rebase instead
+  [255]
+
+  $ hg merge --config tweakdefaults.mergemessage='testing' --config tweakdefaults.allowmerge=false
+  abort: testing
+  [255]
 
 Test that status is default relative
   $ mkdir foo

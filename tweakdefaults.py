@@ -56,6 +56,8 @@ def extsetup(ui):
     options.append(('', 'new', None, _('allow branch creation')))
     wrapcommand(commands.table, 'branches', branchescmd)
 
+    wrapcommand(commands.table, 'merge', mergecmd)
+
     entry = wrapcommand(commands.table, 'status', statuscmd)
     options = entry[1]
     options.append(
@@ -251,6 +253,17 @@ def branchescmd(orig, ui, repo, active, closed, **opts):
     if message:
         ui.warn(message + '\n')
     return orig(ui, repo, active, closed, **opts)
+
+def mergecmd(orig, ui, repo, node=None, **opts):
+    """
+    Allowing to disable merges
+    """
+    message = ui.config('tweakdefaults', 'mergemessage', 
+        _('merging is not supported for this repository -- use rebase instead'))
+    if ui.configbool('tweakdefaults','allowmerge', True):
+        return orig(ui, repo, node, **opts)
+    else:
+        raise util.Abort(message)
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """
