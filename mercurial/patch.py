@@ -262,16 +262,15 @@ def extract(ui, fileobj):
     data['message'] = message
     data['user'] = user
     tmpfp.close()
-    if not diffs_seen:
-        os.unlink(tmpname)
-        return data
-
     if parents:
         data['p1'] = parents.pop(0)
         if parents:
             data['p2'] = parents.pop(0)
 
-    data['filename'] = tmpname
+    if diffs_seen:
+        data['filename'] = tmpname
+    else:
+        os.unlink(tmpname)
     return data
 
 class patchmeta(object):
