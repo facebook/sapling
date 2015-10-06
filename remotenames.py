@@ -873,6 +873,11 @@ def exbookmarks(orig, ui, repo, *args, **opts):
     untrack = opts.get('untrack')
 
     disallowed = set(ui.configlist('remotenames', 'disallowedbookmarks'))
+    # Adds local bookmark if one of the options is called and args is empty
+    if not args and (track or untrack):
+        book = bookmarks.readactive(repo)
+        if book:
+            args = (book,)
 
     if not delete:
         for name in args:
