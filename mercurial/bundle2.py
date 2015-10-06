@@ -1374,6 +1374,9 @@ def handlecheckheads(op, inpart):
         heads.append(h)
         h = inpart.read(20)
     assert not h
+    # Trigger a transaction so that we are guaranteed to have the lock now.
+    if op.ui.configbool('experimental', 'bundle2lazylocking'):
+        op.gettransaction()
     if heads != op.repo.heads():
         raise error.PushRaced('repository changed while pushing - '
                               'please try again')
@@ -1442,6 +1445,10 @@ def handlepushkey(op, inpart):
     key = dec(inpart.params['key'])
     old = dec(inpart.params['old'])
     new = dec(inpart.params['new'])
+    # Grab the transaction to ensure that we have the lock before performing the
+    # pushkey.
+    if op.ui.configbool('experimental', 'bundle2lazylocking'):
+        op.gettransaction()
     ret = op.repo.pushkey(namespace, key, old, new)
     record = {'namespace': namespace,
               'key': key,
@@ -1497,6 +1504,9 @@ def handlehgtagsfnodes(op, inpart):
 
     Payload is pairs of 20 byte changeset nodes and filenodes.
     """
+    # Grab the transaction so we ensure that we have the lock at this point.
+    if op.ui.configbool('experimental', 'bundle2lazylocking'):
+        op.gettransaction()
     cache = tags.hgtagsfnodescache(op.repo.unfiltered())
 
     count = 0
