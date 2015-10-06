@@ -271,19 +271,16 @@ def extract(ui, fileobj):
         data['branch'] = branch
         return data
 
-    p1 = p2 = None
     if parents:
-        p1 = parents.pop(0)
+        data['p1'] = parents.pop(0)
         if parents:
-            p2 = parents.pop(0)
+            data['p2'] = parents.pop(0)
 
     data['filename'] = tmpname
     data['user'] = user
     data['date'] = date
     data['branch'] = branch
     data['nodeid'] = nodeid
-    data['p1'] = p1
-    data['p2'] = p2
     return data
 
 class patchmeta(object):
