@@ -188,7 +188,6 @@ def extract(ui, fileobj):
             subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'
 
         # should try to parse msg['Date']
-        date = None
         nodeid = None
         parents = []
 
@@ -233,7 +232,7 @@ def extract(ui, fileobj):
                             user = line[7:]
                             ui.debug('From: %s\n' % user)
                         elif line.startswith("# Date "):
-                            date = line[7:]
+                            data['date'] = line[7:]
                         elif line.startswith("# Branch "):
                             data['branch'] = line[9:]
                         elif line.startswith("# Node ID "):
@@ -266,7 +265,6 @@ def extract(ui, fileobj):
     tmpfp.close()
     if not diffs_seen:
         os.unlink(tmpname)
-        data['date'] = date
         return data
 
     if parents:
@@ -275,7 +273,6 @@ def extract(ui, fileobj):
             data['p2'] = parents.pop(0)
 
     data['filename'] = tmpname
-    data['date'] = date
     data['nodeid'] = nodeid
     return data
 
