@@ -73,6 +73,24 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'internal'
 
+def _addpullheader(seq, ctx):
+    """Add a header pointing to a public URL where the changeset is available
+    """
+    repo = ctx.repo()
+    # experimental config: patchbomb.publicurl
+    # waiting for some logic that check that the changeset are available on the
+    # destination before patchbombing anything.
+    pullurl = repo.ui.config('patchbomb', 'publicurl')
+    if pullurl is not None:
+        return ('Available At %s\n'
+                '#              hg pull %s -r %s' % (pullurl, pullurl, ctx))
+    return None
+
+def uisetup(ui):
+    cmdutil.extraexport.append('pullurl')
+    cmdutil.extraexportmap['pullurl'] = _addpullheader
+
+
 def prompt(ui, prompt, default=None, rest=':'):
     if default:
         prompt += ' [%s]' % default

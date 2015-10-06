@@ -2800,3 +2800,18 @@ single rev
    d
   +d
   
+Test pull url header
+=================================
+
+  $ echo 'intro=auto' >> $HGRCPATH
+  $ echo 'publicurl=http://example.com/myrepo/' >> $HGRCPATH
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep '^#'
+  # HG changeset patch
+  # User test
+  # Date 5 0
+  #      Thu Jan 01 00:00:05 1970 +0000
+  # Branch test
+  # Node ID 3b6f1ec9dde933a40a115a7990f8b320477231af
+  # Parent  2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
+  # Available At http://example.com/myrepo/
+  #              hg pull http://example.com/myrepo/ -r 3b6f1ec9dde9
