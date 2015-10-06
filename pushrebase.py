@@ -74,6 +74,15 @@ def extsetup(ui):
 
     wrapfunction(exchange, 'unbundle', unbundle)
 
+    wrapfunction(hg, '_peerorrepo', _peerorrepo)
+
+def _peerorrepo(orig, ui, path, create=False):
+    # Force hooks to use a bundle repo
+    bundlepath = os.environ.get("HG_HOOK_BUNDLEPATH")
+    if bundlepath:
+        return orig(ui, bundlepath, create=create)
+    return orig(ui, path, create)
+
 def unbundle(orig, repo, cg, heads, source, url):
     # Preload the manifests that the client says we'll need. This happens
     # outside the lock, thus cutting down on our lock time and increasing commit
@@ -405,23 +414,23 @@ def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
     params = part.params
-    tr = op.gettransaction()
-    hookargs = dict(tr.hookargs)
 
     bundlefile = None
-    try:
-        onto = scmutil.revsingle(op.repo, params['onto'])
-    except error.RepoLookupError:
-        # Probably a new bookmark. onto == None means don't do rebasing
-        onto = None
-
-    if not params['newhead']:
-        if not op.repo.revs('%r and head()', params['onto']):
-            raise util.Abort(_('rebase would produce a new head on server'))
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
         bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+
+        # Allow running hooks on the new commits before we take the lock
+        prelockrebaseargs = dict()
+        prelockrebaseargs['source'] = 'push'
+        prelockrebaseargs['bundle2'] = '1'
+        prelockrebaseargs['node'] = scmutil.revsingle(bundle, 'min(bundle())').hex()
+        prelockrebaseargs['hook_bundlepath'] = bundlefile
+        op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
+
+        tr = op.gettransaction()
+        hookargs = dict(tr.hookargs)
 
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
@@ -431,6 +440,16 @@ def bundle2rebase(op, part):
         newmancache._cache = oldmancache._cache.copy()
         newmancache._order = collections.deque(oldmancache._order)
         bundle.manifest._cache = op.repo.manifest._cache
+
+        try:
+            onto = scmutil.revsingle(op.repo, params['onto'])
+        except error.RepoLookupError:
+            # Probably a new bookmark. onto == None means don't do rebasing
+            onto = None
+
+        if not params['newhead']:
+            if not op.repo.revs('%r and head()', params['onto']):
+                raise util.Abort(_('rebase would produce a new head on server'))
 
         if onto == None:
             maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))

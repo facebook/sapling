@@ -476,6 +476,57 @@ Test pushing bookmark with no new commit
 
   $ cd ..
 
+Test that the prepushrebase hook can run against the bundle repo
+
+  $ cat >> $TESTTMP/prerebase.sh <<EOF
+  > hg log -r tip
+  > echo "Checking if lock exists (it should not):"
+  > ls -l .hg/store/lock
+  > EOF
+  $ chmod a+x $TESTTMP/prerebase.sh
+  $ hg init prepushrebaseserver
+  $ cd prepushrebaseserver
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > prepushrebase = $TESTTMP/prerebase.sh
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > [experimental]
+  > bundle2lazylocking = True
+  > EOF
+  $ touch a && hg add a && hg commit -qm a
+  $ hg book master
+  $ cd ..
+
+  $ hg clone ssh://user@dummy/prepushrebaseserver prepushrebaseclient
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd prepushrebaseclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ touch b && hg add b && hg commit -qm b
+  $ hg push --to master
+  pushing to ssh://user@dummy/prepushrebaseserver
+  searching for changes
+  remote: changeset:   1:0e067c57feba
+  remote: tag:         tip
+  remote: user:        test
+  remote: date:        Thu Jan 01 00:00:00 1970 +0000
+  remote: summary:     b
+  remote: 
+  remote: Checking if lock exists (it should not):
+  remote: ls: cannot access .hg/store/lock: No such file or directory
+  remote: warning: prepushrebase hook exited with status 2
+
+  $ cd ..
+
 Test that hooks are fired with the correct variables
 
   $ hg init hookserver
@@ -490,6 +541,7 @@ Test that hooks are fired with the correct variables
   > pretxnchangegroup = python "$RUNTESTDIR/printenv.py" pretxnchangegroup
   > txnclose = python "$RUNTESTDIR/printenv.py" txnclose
   > pretxnclose = python "$RUNTESTDIR/printenv.py" pretxnclose
+  > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > [extensions]
   > pushrebase = $TESTDIR/../pushrebase.py
   > EOF
@@ -515,6 +567,7 @@ Test that hooks are fired with the correct variables
   $ hg push --to master
   pushing to $TESTTMP/hookserver
   searching for changes
+  prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pretxnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
