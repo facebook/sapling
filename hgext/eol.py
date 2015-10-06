@@ -333,7 +333,7 @@ def reposetup(ui, repo):
                     # so ignore the error.
                     pass
 
-        def commitctx(self, ctx, error=False):
+        def commitctx(self, ctx, haserror=False):
             for f in sorted(ctx.added() + ctx.modified()):
                 if not self._eolfile(f):
                     continue
@@ -349,6 +349,6 @@ def reposetup(ui, repo):
                 if inconsistenteol(data):
                     raise util.Abort(_("inconsistent newline style "
                                        "in %s\n") % f)
-            return super(eolrepo, self).commitctx(ctx, error)
+            return super(eolrepo, self).commitctx(ctx, haserror)
     repo.__class__ = eolrepo
     repo._hgcleardirstate()
