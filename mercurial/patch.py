@@ -155,6 +155,7 @@ def split(stream):
 # list of pairs ("header to match", "data key")
 patchheadermap = [('Date', 'date'),
                   ('Branch', 'branch'),
+                  ('Node ID', 'nodeid'),
                  ]
 
 def extract(ui, fileobj):
@@ -236,8 +237,6 @@ def extract(ui, fileobj):
                         if line.startswith('# User '):
                             data['user'] = line[7:]
                             ui.debug('From: %s\n' % data['user'])
-                        elif line.startswith("# Node ID "):
-                            data['nodeid'] = line[10:]
                         elif line.startswith("# Parent "):
                             parents.append(line[9:].lstrip())
                         elif line.startswith("# "):
