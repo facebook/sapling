@@ -26,10 +26,10 @@ def wraprepo(repo):
                      repo.ui.config("remotefilelog", "fallbackrepo",
                        repo.ui.config("paths", "default")))
 
-        def sparsematch(self, *revs):
+        def sparsematch(self, *revs, **kwargs):
             baseinstance = super(shallowrepository, self)
             if util.safehasattr(baseinstance, 'sparsematch'):
-                return baseinstance.sparsematch(*revs)
+                return baseinstance.sparsematch(*revs, **kwargs)
 
             return None
 
