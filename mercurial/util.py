@@ -1286,6 +1286,7 @@ class chunkbuffer(object):
                     yield chunk
         self.iter = splitbig(in_iter)
         self._queue = collections.deque()
+        self._chunkoffset = 0
 
     def read(self, l=None):
         """Read L bytes of data from the iterator of chunks of data.
@@ -1310,20 +1311,40 @@ class chunkbuffer(object):
                 if not queue:
                     break
 
+            # The easy way to do this would be to queue.popleft(), modify the
+            # chunk (if necessary), then queue.appendleft(). However, for cases
+            # where we read partial chunk content, this incurs 2 dequeue
+            # mutations and creates a new str for the remaining chunk in the
+            # queue. Our code below avoids this overhead.
+
             chunk = queue[0]
             chunkl = len(chunk)
+            offset = self._chunkoffset
 
             # Use full chunk.
-            if left >= chunkl:
+            if offset == 0 and left >= chunkl:
                 left -= chunkl
                 queue.popleft()
                 buf.append(chunk)
+                # self._chunkoffset remains at 0.
+                continue
+
+            chunkremaining = chunkl - offset
+
+            # Use all of unconsumed part of chunk.
+            if left >= chunkremaining:
+                left -= chunkremaining
+                queue.popleft()
+                # offset == 0 is enabled by block above, so this won't merely
+                # copy via ``chunk[0:]``.
+                buf.append(chunk[offset:])
+                self._chunkoffset = 0
+
             # Partial chunk needed.
             else:
-                left -= chunkl
-                queue.popleft()
-                queue.appendleft(chunk[left:])
-                buf.append(chunk[:left])
+                buf.append(chunk[offset:offset + left])
+                self._chunkoffset += left
+                left -= chunkremaining
 
         return ''.join(buf)
 
