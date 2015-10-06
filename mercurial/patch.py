@@ -190,7 +190,6 @@ def extract(ui, fileobj):
         # should try to parse msg['Date']
         date = None
         nodeid = None
-        branch = None
         parents = []
 
         if subject:
@@ -236,7 +235,7 @@ def extract(ui, fileobj):
                         elif line.startswith("# Date "):
                             date = line[7:]
                         elif line.startswith("# Branch "):
-                            branch = line[9:]
+                            data['branch'] = line[9:]
                         elif line.startswith("# Node ID "):
                             nodeid = line[10:]
                         elif line.startswith("# Parent "):
@@ -268,7 +267,6 @@ def extract(ui, fileobj):
         os.unlink(tmpname)
         data['user'] = user
         data['date'] = date
-        data['branch'] = branch
         return data
 
     if parents:
@@ -279,7 +277,6 @@ def extract(ui, fileobj):
     data['filename'] = tmpname
     data['user'] = user
     data['date'] = date
-    data['branch'] = branch
     data['nodeid'] = nodeid
     return data
 
