@@ -262,10 +262,10 @@ def extract(ui, fileobj):
 
     if subject and not message.startswith(subject):
         message = '%s\n%s' % (subject, message)
+    data['message'] = message
     tmpfp.close()
     if not diffs_seen:
         os.unlink(tmpname)
-        data['message'] = message
         data['user'] = user
         data['date'] = date
         data['branch'] = branch
@@ -278,7 +278,6 @@ def extract(ui, fileobj):
             p2 = parents.pop(0)
 
     data['filename'] = tmpname
-    data['message'] = message
     data['user'] = user
     data['date'] = date
     data['branch'] = branch
