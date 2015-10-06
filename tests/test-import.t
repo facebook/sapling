@@ -1505,3 +1505,43 @@ Importing multiple failing patches:
   $ hg status -c .
   C a
   C b
+
+Importing some extra header
+===========================
+
+  $ cat > $TESTTMP/parseextra.py <<EOF
+  > import mercurial.patch
+  > import mercurial.cmdutil
+  > 
+  > def processfoo(repo, data, extra, opts):
+  >     if 'foo' in data:
+  >         extra['foo'] = data['foo']
+  > 
+  > mercurial.patch.patchheadermap.append(('Foo', 'foo'))
+  > mercurial.cmdutil.extrapreimport.append('foo')
+  > mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
+  > EOF
+  $ printf "[extensions]\nparseextra=$TESTTMP/parseextra.py" >> $HGRCPATH
+  $ hg up -C tip
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat > $TESTTMP/foo.patch <<EOF
+  > # HG changeset patch
+  > # User Rataxes
+  > # Date 0 0
+  > #      Thu Jan 01 00:00:00 1970 +0000
+  > # Foo bar
+  > height
+  > 
+  > --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  > +++ b/a	Wed Oct 07 09:17:44 2015 +0000
+  > @@ -5,3 +5,4 @@
+  >  five
+  >  six
+  >  seven
+  > +heigt
+  > EOF
+  $ hg import $TESTTMP/foo.patch
+  applying $TESTTMP/foo.patch
+  $ hg log --debug -r . | grep extra
+  extra:       branch=default
+  extra:       foo=bar

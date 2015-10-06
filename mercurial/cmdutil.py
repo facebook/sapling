@@ -831,6 +831,22 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if runfn:
         return runfn()
 
+## facility to let extension process additional data into an import patch
+# list of identifier to be executed in order
+extrapreimport = []  # run before commit
+# mapping from identifier to actual import function
+#
+# 'preimport' are run before the commit is made and are provided the following
+# arguments:
+# - repo: the localrepository instance,
+# - patchdata: data extracted from patch header (cf m.patch.patchheadermap),
+# - extra: the future extra dictionnary of the changeset, please mutate it,
+# - opts: the import options.
+# XXX ideally, we would just pass an ctx ready to be computed, that would allow
+# mutation of in memory commit and more. Feel free to rework the code to get
+# there.
+extrapreimportmap = {}
+
 def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     """Utility function used by commands.import to import a single patch
 
@@ -949,12 +965,15 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 else:
                     editor = getcommiteditor(editform=editform, **opts)
                 allowemptyback = repo.ui.backupconfig('ui', 'allowemptycommit')
+                extra = {}
+                for idfunc in extrapreimport:
+                    extrapreimportmap[idfunc](repo, extractdata, extra, opts)
                 try:
                     if partial:
                         repo.ui.setconfig('ui', 'allowemptycommit', True)
                     n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
-                                    editor=editor)
+                                    editor=editor, extra=extra)
                 finally:
                     repo.ui.restoreconfig(allowemptyback)
             dsguard.close()
