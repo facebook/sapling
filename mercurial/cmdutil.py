@@ -991,6 +991,14 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
         lockmod.release(dsguard)
         os.unlink(tmpname)
 
+# facility to let extensions include additional data in an exported patch
+# list of identifiers to be executed in order
+extraexport = []
+# mapping from identifier to actual export function
+# function as to return a string to be added to the header or None
+# it is given two arguments (sequencenumber, changectx)
+extraexportmap = {}
+
 def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
            opts=None, match=None):
     '''export changesets as hg patches.'''
@@ -1040,6 +1048,11 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
         write("# Parent  %s\n" % hex(prev))
         if len(parents) > 1:
             write("# Parent  %s\n" % hex(parents[1]))
+
+        for headerid in extraexport:
+            header = extraexportmap[headerid](seqno, ctx)
+            if header is not None:
+                write('# %s\n' % header)
         write(ctx.description().rstrip())
         write("\n\n")
 
