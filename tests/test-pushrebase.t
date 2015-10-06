@@ -89,7 +89,7 @@ Stack of non-conflicting commits should be accepted
   
   $ hg push --to default --config devel.bundle2.debug=1 --debug | tee stuff | grep -v bundle2-
   pushing to ssh://user@dummy/server
-  running python "/data/users/rmcelroy/hgdev/fb-hgext/tests/dummyssh" user@dummy 'hg -R server serve --stdio'
+  running python * user@dummy 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
   remote: 362
