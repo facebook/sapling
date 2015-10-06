@@ -850,8 +850,15 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     """
     # avoid cycle context -> subrepo -> cmdutil
     import context
-    tmpname, message, user, date, branch, nodeid, p1, p2 = \
-        patch.extract(ui, hunk)
+    extractdata = patch.extract(ui, hunk)
+    tmpname = extractdata.get('filename')
+    message = extractdata.get('message')
+    user = extractdata.get('user')
+    date = extractdata.get('date')
+    branch = extractdata.get('branch')
+    nodeid = extractdata.get('nodeid')
+    p1 = extractdata.get('p1')
+    p2 = extractdata.get('p2')
 
     update = not opts.get('bypass')
     strip = opts["strip"]

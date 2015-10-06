@@ -156,8 +156,16 @@ def extract(ui, fileobj):
 
     patch can be a normal patch or contained in an email message.
 
-    return tuple (filename, message, user, date, branch, node, p1, p2).
-    Any item in the returned tuple can be None. If filename is None,
+    return a dictionnary. Standard keys are:
+      - filename,
+      - message,
+      - user,
+      - date,
+      - branch,
+      - node,
+      - p1,
+      - p2.
+    Any item can be missing from the dictionary. If filename is mising,
     fileobj did not contain a patch. Caller must unlink filename when done.'''
 
     # attempt to detect the start of a patch
@@ -167,6 +175,7 @@ def extract(ui, fileobj):
                         r'---[ \t].*?^\+\+\+[ \t]|'
                         r'\*\*\*[ \t].*?^---[ \t])', re.MULTILINE|re.DOTALL)
 
+    data = {}
     fd, tmpname = tempfile.mkstemp(prefix='hg-patch-')
     tmpfp = os.fdopen(fd, 'w')
     try:
@@ -256,7 +265,11 @@ def extract(ui, fileobj):
     tmpfp.close()
     if not diffs_seen:
         os.unlink(tmpname)
-        return None, message, user, date, branch, None, None, None
+        data['message'] = message
+        data['user'] = user
+        data['date'] = date
+        data['branch'] = branch
+        return data
 
     if parents:
         p1 = parents.pop(0)
@@ -268,7 +281,15 @@ def extract(ui, fileobj):
     else:
         p2 = None
 
-    return tmpname, message, user, date, branch, nodeid, p1, p2
+    data['filename'] = tmpname
+    data['message'] = message
+    data['user'] = user
+    data['date'] = date
+    data['branch'] = branch
+    data['nodeid'] = nodeid
+    data['p1'] = p1
+    data['p2'] = p2
+    return data
 
 class patchmeta(object):
     """Patched file metadata
