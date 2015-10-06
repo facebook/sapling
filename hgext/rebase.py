@@ -217,7 +217,7 @@ def rebase(ui, repo, **opts):
         keepopen = opts.get('keepopen', False)
 
         if opts.get('interactive'):
-            help = "hg help histedit"
+            help = "hg help -e histedit"
             msg = _("interactive history editing is supported by the "
                     "'histedit' extension (see \"%s\")") % help
             raise util.Abort(msg)
