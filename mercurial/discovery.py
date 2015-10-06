@@ -284,7 +284,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
     # 3. Check for new heads.
     # If there are more heads after the push than before, a suitable
     # error message, depending on unsynced status, is displayed.
-    error = None
+    errormsg = None
     # If there is no obsstore, allfuturecommon won't be used, so no
     # need to compute it.
     if repo.obsstore:
@@ -354,9 +354,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
         if remoteheads is None:
             if len(newhs) > 1:
                 dhs = list(newhs)
-                if error is None:
-                    error = (_("push creates new branch '%s' "
-                               "with multiple heads") % (branch))
+                if errormsg is None:
+                    errormsg = (_("push creates new branch '%s' "
+                                  "with multiple heads") % (branch))
                     hint = _("merge or"
                              " see \"hg help push\" for details about"
                              " pushing new heads")
@@ -364,17 +364,17 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             # remove bookmarked or existing remote heads from the new heads list
             dhs = sorted(newhs - bookmarkedheads - oldhs)
         if dhs:
-            if error is None:
+            if errormsg is None:
                 if branch not in ('default', None):
-                    error = _("push creates new remote head %s "
-                              "on branch '%s'!") % (short(dhs[0]), branch)
+                    errormsg = _("push creates new remote head %s "
+                                 "on branch '%s'!") % (short(dhs[0]), branch)
                 elif repo[dhs[0]].bookmarks():
-                    error = _("push creates new remote head %s "
-                              "with bookmark '%s'!") % (
-                              short(dhs[0]), repo[dhs[0]].bookmarks()[0])
+                    errormsg = _("push creates new remote head %s "
+                                 "with bookmark '%s'!") % (
+                                 short(dhs[0]), repo[dhs[0]].bookmarks()[0])
                 else:
-                    error = _("push creates new remote head %s!"
-                              ) % short(dhs[0])
+                    errormsg = _("push creates new remote head %s!"
+                                 ) % short(dhs[0])
                 if unsyncedheads:
                     hint = _("pull and merge or"
                              " see \"hg help push\" for details about"
@@ -389,5 +389,5 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                 repo.ui.note(_("new remote heads on branch '%s':\n") % branch)
             for h in dhs:
                 repo.ui.note((" %s\n") % short(h))
-    if error:
-        raise util.Abort(error, hint=hint)
+    if errormsg:
+        raise util.Abort(errormsg, hint=hint)
