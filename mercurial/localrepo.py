@@ -1212,7 +1212,7 @@ class localrepository(object):
             ce.refresh()
 
     def _lock(self, vfs, lockname, wait, releasefn, acquirefn, desc,
-              parentenvvar=None):
+              inheritchecker=None, parentenvvar=None):
         parentlock = None
         # the contents of parentenvvar are used by the underlying lock to
         # determine whether it can be inherited
@@ -1221,6 +1221,7 @@ class localrepository(object):
         try:
             l = lockmod.lock(vfs, lockname, 0, releasefn=releasefn,
                              acquirefn=acquirefn, desc=desc,
+                             inheritchecker=inheritchecker,
                              parentlock=parentlock)
         except error.LockHeld as inst:
             if not wait:
@@ -1265,6 +1266,11 @@ class localrepository(object):
         self._lockref = weakref.ref(l)
         return l
 
+    def _wlockchecktransaction(self):
+        if self.currenttransaction() is not None:
+            raise error.LockInheritanceContractViolation(
+                'wlock cannot be inherited in the middle of a transaction')
+
     def wlock(self, wait=True):
         '''Lock the non-store parts of the repository (everything under
         .hg except .hg/store) and return a weak reference to the lock.
@@ -1296,7 +1302,9 @@ class localrepository(object):
 
         l = self._lock(self.vfs, "wlock", wait, unlock,
                        self.invalidatedirstate, _('working directory of %s') %
-                       self.origroot, parentenvvar='HG_WLOCK_LOCKER')
+                       self.origroot,
+                       inheritchecker=self._wlockchecktransaction,
+                       parentenvvar='HG_WLOCK_LOCKER')
         self._wlockref = weakref.ref(l)
         return l
 
