@@ -182,8 +182,8 @@ def extract(ui, fileobj):
         msg = email.Parser.Parser().parse(fileobj)
 
         subject = msg['Subject']
-        user = msg['From']
-        if not subject and not user:
+        data['user'] = msg['From']
+        if not subject and not data['user']:
             # Not an email, restore parsed headers if any
             subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'
 
@@ -197,8 +197,8 @@ def extract(ui, fileobj):
                     subject = subject[pend + 1:].lstrip()
             subject = re.sub(r'\n[ \t]+', ' ', subject)
             ui.debug('Subject: %s\n' % subject)
-        if user:
-            ui.debug('From: %s\n' % user)
+        if data['user']:
+            ui.debug('From: %s\n' % data['user'])
         diffs_seen = 0
         ok_types = ('text/plain', 'text/x-diff', 'text/x-patch')
         message = ''
@@ -228,8 +228,8 @@ def extract(ui, fileobj):
                         subject = None
                     elif hgpatchheader:
                         if line.startswith('# User '):
-                            user = line[7:]
-                            ui.debug('From: %s\n' % user)
+                            data['user'] = line[7:]
+                            ui.debug('From: %s\n' % data['user'])
                         elif line.startswith("# Date "):
                             data['date'] = line[7:]
                         elif line.startswith("# Branch "):
@@ -260,7 +260,6 @@ def extract(ui, fileobj):
     if subject and not message.startswith(subject):
         message = '%s\n%s' % (subject, message)
     data['message'] = message
-    data['user'] = user
     tmpfp.close()
     if parents:
         data['p1'] = parents.pop(0)
