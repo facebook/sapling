@@ -152,6 +152,34 @@ def exconvertbookmarks(orig, source):
 
     return bookmarks
 
+def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
+    book = kwargs.get('bookmark')
+    if book:
+        del kwargs['bookmark']
+        if book in repo._bookmarks:
+            raise util.Abort("bookmark '%s' already exists" % book)
+        ret = orig(ui, repo, node=node, rev=rev, **kwargs)
+        commands.bookmark(ui, repo, book)
+
+        if not _tracking(ui):
+            return ret
+
+        oldtracking = _readtracking(repo)
+        tracking = dict(oldtracking)
+
+        if node:
+            tracking[book] = node
+        elif rev:
+            tracking[book] = rev
+
+        if tracking != oldtracking:
+            _writetracking(repo, tracking)
+            # update the cache
+            precachedistance(repo)
+        return ret
+    if 'bookmark' in kwargs:
+        del kwargs['bookmark']
+    return orig(ui, repo, node=node, rev=rev, **kwargs)
 
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
@@ -431,6 +459,9 @@ def extsetup(ui):
 
     entry = extensions.wrapcommand(commands.table, 'clone', exclonecmd)
     entry[1].append(('', 'mirror', None, 'sync all bookmarks'))
+
+    entry = extensions.wrapcommand(commands.table, 'update', updatecmd)
+    entry[1].append(('B', 'bookmark', '', 'create new bookmark'))
 
     exchange.pushdiscoverymapping['bookmarks'] = expushdiscoverybookmarks
 
