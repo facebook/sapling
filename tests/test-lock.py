@@ -8,6 +8,7 @@ import types
 import unittest
 
 from mercurial import (
+    error,
     lock,
     scmutil,
 )
@@ -249,6 +250,22 @@ class testlock(unittest.TestCase):
             childstate.assertlockexists(True)
 
         parentlock.release()
+
+    def testinheritcheck(self):
+        d = tempfile.mkdtemp(dir=os.getcwd())
+        state = teststate(self, d)
+        def check():
+            raise error.LockInheritanceContractViolation('check failed')
+        lock = state.makelock(inheritchecker=check)
+        state.assertacquirecalled(True)
+
+        def tryinherit():
+            with lock.inherit() as lockname:
+                pass
+
+        self.assertRaises(error.LockInheritanceContractViolation, tryinherit)
+
+        lock.release()
 
 if __name__ == '__main__':
     silenttestrunner.main(__name__)
