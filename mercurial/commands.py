@@ -5185,8 +5185,12 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
-        checkout, movemarkfrom = bookmarks.calculateupdate(ui, repo, checkout)
         try:
+            brev = checkout
+            movemarkfrom = None
+            if not checkout:
+                updata =  destutil.destupdate(repo)
+                checkout, movemarkfrom, brev = updata
             ret = hg.update(repo, checkout)
         except error.Abort as inst:
             ui.warn(_("not updating: %s\n") % str(inst))
