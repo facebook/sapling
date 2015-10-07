@@ -441,62 +441,98 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     fcd = local file context for current/destination file
     """
 
-    def temp(prefix, ctx):
-        pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
-        (fd, name) = tempfile.mkstemp(prefix=pre)
-        data = repo.wwritedata(ctx.path(), ctx.data())
-        f = os.fdopen(fd, "wb")
-        f.write(data)
-        f.close()
-        return name
+    if True:
+        def temp(prefix, ctx):
+            pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
+            (fd, name) = tempfile.mkstemp(prefix=pre)
+            data = repo.wwritedata(ctx.path(), ctx.data())
+            f = os.fdopen(fd, "wb")
+            f.write(data)
+            f.close()
+            return name
 
-    if not fco.cmp(fcd): # files identical?
-        return None
+        if not fco.cmp(fcd): # files identical?
+            return None
 
-    ui = repo.ui
-    fd = fcd.path()
-    binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
-    symlink = 'l' in fcd.flags() + fco.flags()
-    tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
-    ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
-               (tool, fd, binary, symlink))
+        ui = repo.ui
+        fd = fcd.path()
+        binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
+        symlink = 'l' in fcd.flags() + fco.flags()
+        tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
+        ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
+                   (tool, fd, binary, symlink))
 
-    if tool in internals:
-        func = internals[tool]
-        trymerge = func.trymerge
-        onfailure = func.onfailure
-    else:
-        func = _xmerge
-        trymerge = True
-        onfailure = _("merging %s failed!\n")
+        if tool in internals:
+            func = internals[tool]
+            trymerge = func.trymerge
+            onfailure = func.onfailure
+        else:
+            func = _xmerge
+            trymerge = True
+            onfailure = _("merging %s failed!\n")
 
-    toolconf = tool, toolpath, binary, symlink
+        toolconf = tool, toolpath, binary, symlink
 
-    if not trymerge:
-        return func(repo, mynode, orig, fcd, fco, fca, toolconf)
+        if not trymerge:
+            return func(repo, mynode, orig, fcd, fco, fca, toolconf)
 
-    a = repo.wjoin(fd)
-    b = temp("base", fca)
-    c = temp("other", fco)
-    back = a + ".orig"
-    util.copyfile(a, back)
+        a = repo.wjoin(fd)
+        b = temp("base", fca)
+        c = temp("other", fco)
+        back = a + ".orig"
+        util.copyfile(a, back)
 
-    if orig != fco.path():
-        ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
-    else:
-        ui.status(_("merging %s\n") % fd)
+        if orig != fco.path():
+            ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
+        else:
+            ui.status(_("merging %s\n") % fd)
 
-    ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
+        ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
-    markerstyle = ui.config('ui', 'mergemarkers', 'basic')
-    if not labels:
-        labels = _defaultconflictlabels
-    if markerstyle != 'basic':
-        labels = _formatlabels(repo, fcd, fco, fca, labels)
+        markerstyle = ui.config('ui', 'mergemarkers', 'basic')
+        if not labels:
+            labels = _defaultconflictlabels
+        if markerstyle != 'basic':
+            labels = _formatlabels(repo, fcd, fco, fca, labels)
 
-    needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                        (a, b, c, back), labels=labels)
-    if not needcheck:
+        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
+                            (a, b, c, back), labels=labels)
+        if not needcheck:
+            if r:
+                if onfailure:
+                    ui.warn(onfailure % fd)
+            else:
+                util.unlink(back)
+
+            util.unlink(b)
+            util.unlink(c)
+            return r
+
+        if not r and (_toolbool(ui, tool, "checkconflicts") or
+                      'conflicts' in _toollist(ui, tool, "check")):
+            if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(),
+                         re.MULTILINE):
+                r = 1
+
+        checked = False
+        if 'prompt' in _toollist(ui, tool, "check"):
+            checked = True
+            if ui.promptchoice(_("was merge of '%s' successful (yn)?"
+                                 "$$ &Yes $$ &No") % fd, 1):
+                r = 1
+
+        if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
+                                      'changed' in
+                                      _toollist(ui, tool, "check")):
+            if filecmp.cmp(a, back):
+                if ui.promptchoice(_(" output file %s appears unchanged\n"
+                                     "was merge successful (yn)?"
+                                     "$$ &Yes $$ &No") % fd, 1):
+                    r = 1
+
+        if _toolbool(ui, tool, "fixeol"):
+            _matcheol(a, back)
+
         if r:
             if onfailure:
                 ui.warn(onfailure % fd)
@@ -506,40 +542,6 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         util.unlink(b)
         util.unlink(c)
         return r
-
-    if not r and (_toolbool(ui, tool, "checkconflicts") or
-                  'conflicts' in _toollist(ui, tool, "check")):
-        if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(),
-                     re.MULTILINE):
-            r = 1
-
-    checked = False
-    if 'prompt' in _toollist(ui, tool, "check"):
-        checked = True
-        if ui.promptchoice(_("was merge of '%s' successful (yn)?"
-                             "$$ &Yes $$ &No") % fd, 1):
-            r = 1
-
-    if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
-                                  'changed' in _toollist(ui, tool, "check")):
-        if filecmp.cmp(a, back):
-            if ui.promptchoice(_(" output file %s appears unchanged\n"
-                                 "was merge successful (yn)?"
-                                 "$$ &Yes $$ &No") % fd, 1):
-                r = 1
-
-    if _toolbool(ui, tool, "fixeol"):
-        _matcheol(a, back)
-
-    if r:
-        if onfailure:
-            ui.warn(onfailure % fd)
-    else:
-        util.unlink(back)
-
-    util.unlink(b)
-    util.unlink(c)
-    return r
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()
