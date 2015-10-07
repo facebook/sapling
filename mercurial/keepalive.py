@@ -451,9 +451,9 @@ class HTTPResponse(httplib.HTTPResponse):
 
         return ''.join(parts)
 
-    def readline(self, limit=-1):
+    def readline(self):
         i = self._rbuf.find('\n')
-        while i < 0 and not (0 < limit <= len(self._rbuf)):
+        while i < 0:
             new = self._raw_read(self._rbufsize)
             if not new:
                 break
@@ -465,8 +465,6 @@ class HTTPResponse(httplib.HTTPResponse):
             i = len(self._rbuf)
         else:
             i = i + 1
-        if 0 <= limit < len(self._rbuf):
-            i = limit
         data, self._rbuf = self._rbuf[:i], self._rbuf[i:]
         return data
 
