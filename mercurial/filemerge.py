@@ -279,7 +279,8 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
 @internaltool('merge3', True,
               _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"))
+                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              precheck=_symlinkcheck)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
