@@ -622,6 +622,9 @@ class dirstate(object):
             time.sleep(delaywrite)
 
         st = self._opener(self._filename, "w", atomictemp=True)
+        self._writedirstate(st)
+
+    def _writedirstate(self, st):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime
