@@ -151,6 +151,10 @@ def split(stream):
     # if we are here, we have a very plain patch
     return remainder(cur)
 
+## Some facility for extensible patch parsing:
+# list of pairs ("header to match", "data key")
+patchheadermap = []
+
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
 
@@ -238,7 +242,12 @@ def extract(ui, fileobj):
                             data['nodeid'] = line[10:]
                         elif line.startswith("# Parent "):
                             parents.append(line[9:].lstrip())
-                        elif not line.startswith("# "):
+                        elif line.startswith("# "):
+                            for header, key in patchheadermap:
+                                prefix = '# %s ' % header
+                                if line.startswith(prefix):
+                                    data[key] = line[len(prefix):]
+                        else:
                             hgpatchheader = False
                     elif line == '---':
                         ignoretext = True
