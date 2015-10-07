@@ -188,7 +188,6 @@ def extract(ui, fileobj):
             subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'
 
         # should try to parse msg['Date']
-        nodeid = None
         parents = []
 
         if subject:
@@ -236,7 +235,7 @@ def extract(ui, fileobj):
                         elif line.startswith("# Branch "):
                             data['branch'] = line[9:]
                         elif line.startswith("# Node ID "):
-                            nodeid = line[10:]
+                            data['nodeid'] = line[10:]
                         elif line.startswith("# Parent "):
                             parents.append(line[9:].lstrip())
                         elif not line.startswith("# "):
@@ -273,7 +272,6 @@ def extract(ui, fileobj):
             data['p2'] = parents.pop(0)
 
     data['filename'] = tmpname
-    data['nodeid'] = nodeid
     return data
 
 class patchmeta(object):
