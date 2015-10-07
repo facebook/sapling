@@ -38,7 +38,7 @@ internals = {}
 # Merge tools to document.
 internalsdoc = {}
 
-def internaltool(name, trymerge, onfailure=None):
+def internaltool(name, trymerge, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
         fullname = ':' + name
@@ -48,6 +48,7 @@ def internaltool(name, trymerge, onfailure=None):
         internalsdoc[fullname] = func
         func.trymerge = trymerge
         func.onfailure = onfailure
+        func.precheck = precheck
         return func
     return decorator
 
