@@ -467,10 +467,12 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
             func = internals[tool]
             trymerge = func.trymerge
             onfailure = func.onfailure
+            precheck = func.precheck
         else:
             func = _xmerge
             trymerge = True
             onfailure = _("merging %s failed!\n")
+            precheck = None
 
         toolconf = tool, toolpath, binary, symlink
 
@@ -490,14 +492,22 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
 
         ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
-        markerstyle = ui.config('ui', 'mergemarkers', 'basic')
-        if not labels:
-            labels = _defaultconflictlabels
-        if markerstyle != 'basic':
-            labels = _formatlabels(repo, fcd, fco, fca, labels)
+        r = 0
+        if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
+                                     toolconf):
+            r = 1
+            needcheck = False
 
-        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                            (a, b, c, back), labels=labels)
+        if not r:  # precheck passed
+            markerstyle = ui.config('ui', 'mergemarkers', 'basic')
+            if not labels:
+                labels = _defaultconflictlabels
+            if markerstyle != 'basic':
+                labels = _formatlabels(repo, fcd, fco, fca, labels)
+
+            needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
+                                (a, b, c, back), labels=labels)
+
         if not needcheck:
             if r:
                 if onfailure:
