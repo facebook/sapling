@@ -3448,6 +3448,11 @@ Test word for invalid numbers
   hg: parse error: word expects an integer index
   [255]
 
+Test word for out of range
+
+  $ hg log -R a --template "{word(10000, desc)}"
+  $ hg log -R a --template "{word(-10000, desc)}"
+
 Test indent and not adding to empty lines
 
   $ hg log -T "-----\n{indent(desc, '>> ', ' > ')}\n" -r 0:1 -R a

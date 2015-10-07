@@ -713,7 +713,7 @@ def word(context, mapping, args):
         splitter = None
 
     tokens = text.split(splitter)
-    if num >= len(tokens):
+    if num >= len(tokens) or num < -len(tokens):
         return ''
     else:
         return tokens[num]
