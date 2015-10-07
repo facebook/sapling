@@ -36,7 +36,7 @@ Symlink is local parent, executable is other:
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    preserving a for resolve of a
    a: versions differ -> m
-  picked tool 'internal:merge' for a (binary False symlink True)
+  picked tool ':merge' for a (binary False symlink True)
   merging a
   my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
   warning: internal :merge cannot merge symlinks for a
@@ -69,7 +69,7 @@ Symlink is other parent, executable is local:
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m
-  picked tool 'internal:merge' for a (binary False symlink True)
+  picked tool ':merge' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
   warning: internal :merge cannot merge symlinks for a

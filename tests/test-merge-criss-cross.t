@@ -83,7 +83,7 @@ Criss cross merging
    f1: remote is newer -> g
   getting f1
    f2: versions differ -> m
-  picked tool 'internal:dump' for f2 (binary False symlink False)
+  picked tool ':dump' for f2 (binary False symlink False)
   merging f2
   my f2@3b08d01b0ab5+ other f2@adfe50279922 ancestor f2@40494bf2444c
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved

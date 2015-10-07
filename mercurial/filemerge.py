@@ -465,6 +465,9 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
         symlink = 'l' in fcd.flags() + fco.flags()
         tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
+        if tool in internals and tool.startswith('internal:'):
+            # normalize to new-style names (':merge' etc)
+            tool = tool[len('internal'):]
         ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
                    (tool, fd, binary, symlink))
 

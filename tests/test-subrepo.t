@@ -297,7 +297,7 @@ merge tests
    ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
    preserving t for resolve of t
    t: versions differ -> m
-  picked tool 'internal:merge' for t (binary False symlink False)
+  picked tool ':merge' for t (binary False symlink False)
   merging t
   my t@20a0db6fbf6c+ other t@7af322bc1198 ancestor t@6747d179aa9a
   warning: conflicts during merge.

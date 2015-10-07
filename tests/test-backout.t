@@ -620,7 +620,7 @@ Test usage of `hg resolve` in case of conflict
   update: (current)
   phases: 3 draft
   $ hg resolve --all --debug
-  picked tool 'internal:merge' for foo (binary False symlink False)
+  picked tool ':merge' for foo (binary False symlink False)
   merging foo
   my foo@b71750c4b0fd+ other foo@a30dd8addae3 ancestor foo@913609522437
    premerge successful
