@@ -242,11 +242,6 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file. Markers will have two sections, one for each side
     of merge, unless mode equals 'union' which suppresses the markers."""
-    tool, toolpath, binary, symlink = toolconf
-    if symlink:
-        repo.ui.warn(_('warning: internal :merge cannot merge symlinks '
-                       'for %s\n') % fcd.path())
-        return False, 1
     r = _premerge(repo, toolconf, files, labels=labels)
     if r:
         a, b, c, back = files
@@ -259,7 +254,8 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
 
 @internaltool('union', True,
               _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"))
+                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              precheck=_symlinkcheck)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -270,7 +266,8 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
 @internaltool('merge', True,
               _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"))
+                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              precheck=_symlinkcheck)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
