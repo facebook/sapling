@@ -534,8 +534,12 @@ shelve should still work even if mq is disabled
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg --config extensions.mq=! shelve --list
   test            (*)    changes to 'create conflict' (glob)
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
   $ hg --config extensions.mq=! unshelve
   unshelving change 'test'
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
 
 shelve should leave dirstate clean (issue4055)
 
@@ -796,6 +800,8 @@ Recreate some conflict again
   $ hg up test
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark test)
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
   $ hg unshelve
   unshelving change 'default'
   rebasing shelved changes
@@ -805,6 +811,8 @@ Recreate some conflict again
   merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
+  $ hg bookmark
+     test                      4:33f7f61e6c5e
 
 Test that resolving all conflicts in one direction (so that the rebase
 is a no-op), works (issue4398)
@@ -817,6 +825,8 @@ is a no-op), works (issue4398)
   rebasing 5:4b555fdb4e96 "changes to 'second'" (tip)
   note: rebase of 5:4b555fdb4e96 created no changes to commit
   unshelve of 'default' complete
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
   $ hg diff
   $ hg status
   ? a/a.orig
@@ -900,12 +910,16 @@ Test interactive shelve
   $ hg st
   M a/a
   ? foo/foo
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
   $ hg unshelve
   unshelving change 'test'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
   rebasing shelved changes
   rebasing 6:65b5d1c34c34 "changes to 'create conflict'" (tip)
   merging a/a
+  $ hg bookmark
+   * test                      4:33f7f61e6c5e
   $ cat a/a
   a
   a
@@ -917,6 +931,7 @@ shelve --patch and shelve --stat should work with a single valid shelfname
 
   $ hg up --clean .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark test)
   $ hg shelve --list
   $ echo 'patch a' > shelf-patch-a
   $ hg add shelf-patch-a

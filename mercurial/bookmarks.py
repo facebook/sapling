@@ -95,6 +95,14 @@ class bmstore(dict):
             l = repo._wlockref and repo._wlockref()
             if l is None or not l.held:
                 repo.ui.develwarn('bookmarks write with no wlock')
+
+        tr = repo.currenttransaction()
+        if tr:
+            self.recordchange(tr)
+            # invalidatevolatilesets() is omitted because this doesn't
+            # write changes out actually
+            return
+
         self._writerepo(repo)
         repo.invalidatevolatilesets()
 
