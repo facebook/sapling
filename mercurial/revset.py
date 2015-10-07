@@ -734,9 +734,12 @@ def branch(repo, subset, x):
         kind, pattern, matcher = util.stringmatcher(b)
         if kind == 'literal':
             # note: falls through to the revspec case if no branch with
-            # this name exists
+            # this name exists and pattern kind is not specified explicitly
             if pattern in repo.branchmap():
                 return subset.filter(lambda r: matcher(getbi(r)[0]))
+            if b.startswith('literal:'):
+                raise error.RepoLookupError(_("branch '%s' does not exist")
+                                            % pattern)
         else:
             return subset.filter(lambda r: matcher(getbi(r)[0]))
 

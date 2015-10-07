@@ -1328,6 +1328,9 @@ we can use patterns when searching for tags
   $ log 'branch(unknown)'
   abort: unknown revision 'unknown'!
   [255]
+  $ log 'branch("literal:unknown")'
+  abort: branch 'unknown' does not exist!
+  [255]
   $ log 'branch("re:unknown")'
   $ log 'present(branch("unknown"))'
   $ log 'present(branch("re:unknown"))'
