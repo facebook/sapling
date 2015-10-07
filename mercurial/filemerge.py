@@ -38,6 +38,11 @@ internals = {}
 # Merge tools to document.
 internalsdoc = {}
 
+# internal tool merge types
+nomerge = None
+mergeonly = 'mergeonly'  # just the full merge, no premerge
+fullmerge = 'fullmerge'  # both premerge and merge
+
 def internaltool(name, trymerge, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
