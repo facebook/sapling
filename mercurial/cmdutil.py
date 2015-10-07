@@ -834,6 +834,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
 ## facility to let extension process additional data into an import patch
 # list of identifier to be executed in order
 extrapreimport = []  # run before commit
+extrapostimport = [] # run after commit
 # mapping from identifier to actual import function
 #
 # 'preimport' are run before the commit is made and are provided the following
@@ -846,6 +847,10 @@ extrapreimport = []  # run before commit
 # mutation of in memory commit and more. Feel free to rework the code to get
 # there.
 extrapreimportmap = {}
+# 'postimport' are run after the commit is made and are provided the following
+# argument:
+# - ctx: the changectx created by import.
+extrapostimportmap = {}
 
 def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     """Utility function used by commands.import to import a single patch
@@ -974,6 +979,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     n = repo.commit(message, opts.get('user') or user,
                                     opts.get('date') or date, match=m,
                                     editor=editor, extra=extra)
+                    for idfunc in extrapostimport:
+                        extrapostimportmap[idfunc](repo[n])
                 finally:
                     repo.ui.restoreconfig(allowemptyback)
             dsguard.close()

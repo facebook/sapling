@@ -1516,10 +1516,15 @@ Importing some extra header
   > def processfoo(repo, data, extra, opts):
   >     if 'foo' in data:
   >         extra['foo'] = data['foo']
+  > def postimport(ctx):
+  >     if 'foo' in ctx.extra():
+  >         ctx.repo().ui.write('imported-foo: %s\n' % ctx.extra()['foo'])
   > 
   > mercurial.patch.patchheadermap.append(('Foo', 'foo'))
   > mercurial.cmdutil.extrapreimport.append('foo')
   > mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
+  > mercurial.cmdutil.extrapostimport.append('foo')
+  > mercurial.cmdutil.extrapostimportmap['foo'] = postimport
   > EOF
   $ printf "[extensions]\nparseextra=$TESTTMP/parseextra.py" >> $HGRCPATH
   $ hg up -C tip
@@ -1542,6 +1547,7 @@ Importing some extra header
   > EOF
   $ hg import $TESTTMP/foo.patch
   applying $TESTTMP/foo.patch
+  imported-foo: bar
   $ hg log --debug -r . | grep extra
   extra:       branch=default
   extra:       foo=bar
