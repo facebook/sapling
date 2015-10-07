@@ -340,10 +340,10 @@ def createcmd(ui, repo, pats, opts):
             desc = util.ellipsis(desc, ui.termwidth())
         ui.status(_('shelved as %s\n') % name)
         hg.update(repo, parent.node())
+
+        _aborttransaction(repo)
     finally:
-        if tr:
-            tr.abort()
-        lockmod.release(lock, wlock)
+        lockmod.release(tr, lock, wlock)
 
 def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
