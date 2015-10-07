@@ -734,6 +734,8 @@ def unshelve(ui, repo, *shelved, **opts):
         repo.unfiltered().changelog.strip(oldtiprev, tr)
 
         unshelvecleanup(ui, repo, basename, opts)
+
+        _aborttransaction(repo)
     finally:
         ui.quiet = oldquiet
         if tr:
