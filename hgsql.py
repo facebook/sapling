@@ -177,6 +177,53 @@ def _localphasemove(orig, pushop, *args, **kwargs):
     else:
         return orig(pushop, *args, **kwargs)
 
+class sqlcontext(object):
+    def __init__(self, repo, takelock=False, waitforlock=False):
+        self.repo = repo
+        self.takelock = takelock
+        self.waitforlock = waitforlock
+        self._connected = False
+        self._locked = False
+        self._used = False
+        self._startlocktime = 0
+
+    def __enter__(self):
+        if self._used:
+            raise Exception("error: using sqlcontext twice")
+        self._used = True
+
+        repo = self.repo
+        if not repo.sqlconn:
+            repo.sqlconnect()
+            self._connected = True
+
+        if self.takelock and not writelock in repo.heldlocks:
+            startwait = time.time()
+            repo.sqllock(writelock)
+            self._locked = True
+            repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
+                        time.time() - startwait)
+        self._startlocktime = time.time()
+
+        if self._connected:
+            repo.syncdb(waitforlock=self.waitforlock)
+
+    def __exit__(self, type, value, traceback):
+        try:
+            repo = self.repo
+            if self._locked:
+                repo.ui.log("sqllock", "held sql lock for %s seconds\n",
+                            time.time() - self._startlocktime)
+                repo.sqlunlock(writelock)
+
+            if self._connected:
+                repo.sqlclose()
+        except (_mysql_exceptions.ProgrammingError,
+                _mysql_exceptions.OperationalError):
+            # Only raise sql exceptions if the wrapped code threw no exception
+            if type is None:
+                raise
+
 def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
     If a locks are specified, those locks are held for the duration of the
@@ -192,45 +239,8 @@ def executewithsql(repo, action, sqllock=False, *args, **kwargs):
             waitforlock = kwargs['waitforlock']
         del kwargs['waitforlock']
 
-    connected = False
-    if not repo.sqlconn:
-        repo.sqlconnect()
-        connected = True
-
-    locked = False
-    if sqllock and not writelock in repo.heldlocks:
-        startwait = time.time()
-        repo.sqllock(writelock)
-        locked = True
-        repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
-                    time.time() - startwait)
-    startlock = time.time()
-
-    result = None
-    success = False
-    try:
-        if connected:
-            repo.syncdb(waitforlock=waitforlock)
-        result = action(*args, **kwargs)
-        success = True
-    finally:
-        try:
-            # Release the locks in the reverse order they were obtained
-            if locked:
-                repo.ui.log("sqllock", "held sql lock for %s seconds\n",
-                            time.time() - startlock)
-                repo.sqlunlock(writelock)
-            if connected:
-                repo.sqlclose()
-        except (_mysql_exceptions.ProgrammingError,
-                _mysql_exceptions.OperationalError):
-            if success:
-                raise
-            # If the action caused an exception, hide sql cleanup exceptions,
-            # so the real exception is propagated up.
-            pass
-
-    return result
+    with sqlcontext(repo, takelock=sqllock, waitforlock=waitforlock):
+        return action(*args, **kwargs)
 
 def wraprepo(repo):
     class sqllocalrepo(repo.__class__):
