@@ -452,21 +452,39 @@ class HTTPResponse(httplib.HTTPResponse):
         return ''.join(parts)
 
     def readline(self):
+        # Fast path for a line is already available in read buffer.
         i = self._rbuf.find('\n')
-        while i < 0:
-            new = self._raw_read(self._rbufsize)
+        if i >= 0:
+            i += 1
+            line = self._rbuf[:i]
+            self._rbuf = self._rbuf[i:]
+            return line
+
+        # No newline in local buffer. Read until we find one.
+        chunks = [self._rbuf]
+        i = -1
+        readsize = self._rbufsize
+        while True:
+            new = self._raw_read(readsize)
             if not new:
                 break
+
+            chunks.append(new)
             i = new.find('\n')
             if i >= 0:
-                i = i + len(self._rbuf)
-            self._rbuf = self._rbuf + new
-        if i < 0:
-            i = len(self._rbuf)
-        else:
-            i = i + 1
-        data, self._rbuf = self._rbuf[:i], self._rbuf[i:]
-        return data
+                break
+
+        # We either have exhausted the stream or have a newline in chunks[-1].
+
+        # EOF
+        if i == -1:
+            self._rbuf = ''
+            return ''.join(chunks)
+
+        i += 1
+        self._rbuf = chunks[-1][i:]
+        chunks[-1] = chunks[-1][:i]
+        return ''.join(chunks)
 
     def readlines(self, sizehint=0):
         total = 0
