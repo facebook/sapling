@@ -333,13 +333,29 @@ convert again
 testing debugcvsps
 
   $ cd src
-  $ hg debugcvsps --fuzz=2
+  $ hg debugcvsps --fuzz=2 -x >/dev/null
+
+commit a new revision changing a and removing b/c
+
+  $ cvscall -q update -A
+  U a
+  U b/c
+  $ sleep 1
+  $ echo h >> a
+  $ cvscall -Q remove -f b/c
+  $ cvscall -q commit -mci | grep '<--'
+  $TESTTMP/cvsrepo/src/a,v  <--  a
+  $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
+
+update and verify the cvsps cache
+
+  $ hg debugcvsps --fuzz=2 -u
   collecting CVS rlog
-  11 log entries
-  cvslog hook: 11 entries
+  13 log entries
+  cvslog hook: 13 entries
   creating changesets
-  10 changeset entries
-  cvschangesets hook: 10 changesets
+  11 changeset entries
+  cvschangesets hook: 11 changesets
   ---------------------
   PatchSet 1 
   Date: * (glob)
@@ -465,6 +481,19 @@ testing debugcvsps
   
   Members: 
   	b/c:1.1.2.1->1.1.2.2 
+  
+  ---------------------
+  PatchSet 11 
+  Date: * (glob)
+  Author: * (glob)
+  Branch: HEAD
+  Tag: (none) 
+  Log:
+  ci
+  
+  Members: 
+  	a:1.2->1.3 
+  	b/c:1.3->1.4(DEAD) 
   
 
   $ cd ..

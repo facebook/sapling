@@ -207,6 +207,7 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
     # state machine begins here
     tags = {}     # dictionary of revisions on current file with their tags
     branchmap = {} # mapping between branch names and revision numbers
+    rcsmap = {}
     state = 0
     store = False # set when a new record can be appended
 
@@ -439,6 +440,8 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
             log.append(e)
 
+            rcsmap[e.rcs.replace('/Attic/', '/')] = e.rcs
+
             if len(log) % 100 == 0:
                 ui.status(util.ellipsis('%d %s' % (len(log), e.file), 80)+'\n')
 
@@ -446,6 +449,13 @@ def createlog(ui, directory=None, root="", rlog=True, cache=None):
 
     # find parent revisions of individual files
     versions = {}
+    for e in sorted(oldlog, key=lambda x: (x.rcs, x.revision)):
+        rcs = e.rcs.replace('/Attic/', '/')
+        if rcs in rcsmap:
+            e.rcs = rcsmap[rcs]
+        branch = e.revision[:-1]
+        versions[(e.rcs, branch)] = e.revision
+
     for e in log:
         branch = e.revision[:-1]
         p = versions.get((e.rcs, branch), None)
