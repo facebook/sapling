@@ -135,6 +135,9 @@ bookmarks revset
   $ hg log -r 'bookmark(unknown)'
   abort: bookmark 'unknown' does not exist!
   [255]
+  $ hg log -r 'bookmark("literal:unknown")'
+  abort: bookmark 'unknown' does not exist!
+  [255]
   $ hg log -r 'bookmark("re:unknown")'
   abort: no bookmarks exist that match 'unknown'!
   [255]

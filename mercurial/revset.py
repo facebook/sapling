@@ -696,7 +696,7 @@ def bookmark(repo, subset, x):
             bmrev = repo._bookmarks.get(pattern, None)
             if not bmrev:
                 raise error.RepoLookupError(_("bookmark '%s' does not exist")
-                                            % bm)
+                                            % pattern)
             bms.add(repo[bmrev].rev())
         else:
             matchrevs = set()
