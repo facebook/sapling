@@ -153,7 +153,7 @@ def split(stream):
 
 ## Some facility for extensible patch parsing:
 # list of pairs ("header to match", "data key")
-patchheadermap = []
+patchheadermap = [('Date', 'date')]
 
 def extract(ui, fileobj):
     '''extract patch from data read from fileobj.
@@ -234,8 +234,6 @@ def extract(ui, fileobj):
                         if line.startswith('# User '):
                             data['user'] = line[7:]
                             ui.debug('From: %s\n' % data['user'])
-                        elif line.startswith("# Date "):
-                            data['date'] = line[7:]
                         elif line.startswith("# Branch "):
                             data['branch'] = line[9:]
                         elif line.startswith("# Node ID "):
