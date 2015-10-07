@@ -43,7 +43,7 @@ nomerge = None
 mergeonly = 'mergeonly'  # just the full merge, no premerge
 fullmerge = 'fullmerge'  # both premerge and merge
 
-def internaltool(name, trymerge, onfailure=None, precheck=None):
+def internaltool(name, mergetype, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
     def decorator(func):
         fullname = ':' + name
@@ -51,7 +51,7 @@ def internaltool(name, trymerge, onfailure=None, precheck=None):
         internals[fullname] = func
         internals['internal:' + name] = func
         internalsdoc[fullname] = func
-        func.trymerge = trymerge
+        func.mergetype = mergetype
         func.onfailure = onfailure
         func.precheck = precheck
         return func
@@ -165,7 +165,7 @@ def _matcheol(file, origfile):
             if newdata != data:
                 util.writefile(file, newdata)
 
-@internaltool('prompt', False)
+@internaltool('prompt', nomerge)
 def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Asks the user which of the local or the other version to keep as
     the merged version."""
@@ -179,18 +179,18 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     else:
         return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
 
-@internaltool('local', False)
+@internaltool('local', nomerge)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the local version of files as the merged version."""
     return 0
 
-@internaltool('other', False)
+@internaltool('other', nomerge)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the other version of files as the merged version."""
     repo.wwrite(fcd.path(), fco.data(), fco.flags())
     return 0
 
-@internaltool('fail', False)
+@internaltool('fail', nomerge)
 def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
     """
     Rather than attempting to merge files that were modified on both
@@ -257,7 +257,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
         return True, r
     return False, 0
 
-@internaltool('union', True,
+@internaltool('union', fullmerge,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
@@ -269,7 +269,7 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf,
                   files, labels, 'union')
 
-@internaltool('merge', True,
+@internaltool('merge', fullmerge,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
@@ -282,7 +282,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return _merge(repo, mynode, orig, fcd, fco, fca, toolconf,
                   files, labels, 'merge')
 
-@internaltool('merge3', True,
+@internaltool('merge3', fullmerge,
               _("merging %s incomplete! "
                 "(edit conflicts, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
@@ -314,7 +314,7 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
                                 localorother=localorother)
     return True, r
 
-@internaltool('merge-local', True)
+@internaltool('merge-local', mergeonly)
 def _imergelocal(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
@@ -322,7 +322,7 @@ def _imergelocal(*args, **kwargs):
     success, status = _imergeauto(localorother='local', *args, **kwargs)
     return success, status
 
-@internaltool('merge-other', True)
+@internaltool('merge-other', mergeonly)
 def _imergeother(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
@@ -330,7 +330,7 @@ def _imergeother(*args, **kwargs):
     success, status = _imergeauto(localorother='other', *args, **kwargs)
     return success, status
 
-@internaltool('tagmerge', True,
+@internaltool('tagmerge', mergeonly,
               _("automatic tag merging of %s failed! "
                 "(use 'hg resolve --tool :merge' or another merge "
                 "tool of your choice)\n"))
@@ -340,7 +340,7 @@ def _itagmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     return tagmerge.merge(repo, fcd, fco, fca)
 
-@internaltool('dump', True)
+@internaltool('dump', fullmerge)
 def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Creates three versions of the files to merge, containing the
@@ -479,18 +479,18 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
 
         if tool in internals:
             func = internals[tool]
-            trymerge = func.trymerge
+            mergetype = func.mergetype
             onfailure = func.onfailure
             precheck = func.precheck
         else:
             func = _xmerge
-            trymerge = True
+            mergetype = fullmerge
             onfailure = _("merging %s failed!\n")
             precheck = None
 
         toolconf = tool, toolpath, binary, symlink
 
-        if not trymerge:
+        if mergetype == nomerge:
             return func(repo, mynode, orig, fcd, fco, fca, toolconf)
 
         a = repo.wjoin(fd)
