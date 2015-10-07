@@ -231,8 +231,8 @@ def _premerge(repo, toolconf, files, labels=None):
 def _symlinkcheck(repo, mynode, orig, fcd, fco, fca, toolconf):
     tool, toolpath, binary, symlink = toolconf
     if symlink:
-        repo.ui.warn(_('warning: internal :merge cannot merge symlinks '
-                       'for %s\n') % fcd.path())
+        repo.ui.warn(_('warning: internal %s cannot merge symlinks '
+                       'for %s\n') % (tool, fcd.path()))
         return False
     return True
 

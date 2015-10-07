@@ -62,17 +62,17 @@ Symlink is other parent, executable is local:
   $ hg update -C 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg merge --debug
+  $ hg merge --debug --tool :union
     searching for copies back to rev 1
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
    a: versions differ -> m
-  picked tool ':merge' for a (binary False symlink True)
+  picked tool ':union' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: internal :merge cannot merge symlinks for a
+  warning: internal :union cannot merge symlinks for a
   merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
