@@ -399,10 +399,8 @@ class HTTPResponse(httplib.HTTPResponse):
     # stolen from Python SVN #68532 to fix issue1088
     def _read_chunked(self, amt):
         chunk_left = self.chunk_left
-        value = ''
+        parts = []
 
-        # XXX This accumulates chunks by repeated string concatenation,
-        # which is not efficient as the number or size of chunks gets big.
         while True:
             if chunk_left is None:
                 line = self.fp.readline()
@@ -415,22 +413,22 @@ class HTTPResponse(httplib.HTTPResponse):
                     # close the connection as protocol synchronization is
                     # probably lost
                     self.close()
-                    raise httplib.IncompleteRead(value)
+                    raise httplib.IncompleteRead(''.join(parts))
                 if chunk_left == 0:
                     break
             if amt is None:
-                value += self._safe_read(chunk_left)
+                parts.append(self._safe_read(chunk_left))
             elif amt < chunk_left:
-                value += self._safe_read(amt)
+                parts.append(self._safe_read(amt))
                 self.chunk_left = chunk_left - amt
-                return value
+                return ''.join(parts)
             elif amt == chunk_left:
-                value += self._safe_read(amt)
+                parts.append(self._safe_read(amt))
                 self._safe_read(2)  # toss the CRLF at the end of the chunk
                 self.chunk_left = None
-                return value
+                return ''.join(parts)
             else:
-                value += self._safe_read(chunk_left)
+                parts.append(self._safe_read(chunk_left))
                 amt -= chunk_left
 
             # we read the whole chunk, get another
@@ -451,7 +449,7 @@ class HTTPResponse(httplib.HTTPResponse):
         # we read everything; close the "file"
         self.close()
 
-        return value
+        return ''.join(parts)
 
     def readline(self, limit=-1):
         i = self._rbuf.find('\n')
