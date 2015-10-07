@@ -228,6 +228,14 @@ def _premerge(repo, toolconf, files, labels=None):
             util.copyfile(back, a) # restore from backup and try again
     return 1 # continue merging
 
+def _symlinkcheck(repo, mynode, orig, fcd, fco, fca, toolconf):
+    tool, toolpath, binary, symlink = toolconf
+    if symlink:
+        repo.ui.warn(_('warning: internal :merge cannot merge symlinks '
+                       'for %s\n') % fcd.path())
+        return False
+    return True
+
 def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     """
     Uses the internal non-interactive simple merge algorithm for merging
