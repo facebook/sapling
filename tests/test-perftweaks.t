@@ -32,3 +32,20 @@ Test disabling the tag cache
   $ hg blackbox | grep tag
   *> tags (glob)
   *> tags --config perftweaks.disabletags=True exited 0 after * seconds (glob)
+
+  $ cd ..
+
+Test disabling the case conflict check (only fails on case sensitive systems)
+  $ hg init casecheck
+  $ cd casecheck
+  $ cat >> .hg/hgrc <<EOF
+  > [perftweaks]
+  > disablecasecheck=True
+  > EOF
+  $ touch a
+  $ hg add a
+  $ hg commit -m a
+  $ touch A
+  $ hg add A
+  warning: possible case-folding collision for A
+  $ hg commit -m A

@@ -26,6 +26,6 @@ def _readtagcache(orig, ui, repo):
 
 def _checkcollision(orig, repo, wmf, actions):
     """Disables case collision checking since it is known to be very slow."""
-    if ui.configbool('perftweaks', 'disablecasecheck'):
+    if repo.ui.configbool('perftweaks', 'disablecasecheck'):
         return
     orig(repo, wmf, actions)
