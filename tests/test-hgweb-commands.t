@@ -1944,8 +1944,8 @@ Static files
   .age { white-space:nowrap; }
   .date { white-space:nowrap; }
   .indexlinks { white-space:nowrap; }
-  .parity0 { background-color: #ddd; }
-  .parity1 { background-color: #eee; }
+  .parity0 { background-color: #ddd; color: #000; }
+  .parity1 { background-color: #eee; color: #000; }
   .lineno { width: 60px; color: #aaa; font-size: smaller;
             text-align: right; }
   .plusline { color: green; }
