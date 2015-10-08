@@ -498,6 +498,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         c = temp("other", fco)
         back = a + ".orig"
         util.copyfile(a, back)
+        files = (a, b, c, back)
 
         if orig != fco.path():
             ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
@@ -520,7 +521,7 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
                 labels = _formatlabels(repo, fcd, fco, fca, labels)
 
             needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                                (a, b, c, back), labels=labels)
+                                files, labels=labels)
 
         if not needcheck:
             if r:
