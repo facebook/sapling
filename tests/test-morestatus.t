@@ -40,6 +40,9 @@ Test bisect state
   $ hg status
   
   # The repository is in an unfinished *bisect* state.
+  # To mark the commit good:       hg bisect --good
+  # To mark the commit bad:        hg bisect --bad
+  # To abort:                      hg bisect --reset
 
 Test hg status is normal after bisect reset
   $ hg bisect --reset

@@ -66,10 +66,16 @@ def mergemsg(ui):
     helpmessage(ui, 'hg commit', 'hg update --clean .    (warning: this will '
             'erase all uncommitted changed)')
 
+def bisectmsg(ui):
+    msg = _('To mark the commit good:       hg bisect --good\n'
+            'To mark the commit bad:        hg bisect --bad\n'
+            'To abort:                      hg bisect --reset\n')
+    ui.warn(prefixlines(msg))
+
 STATES = (
     # (state, file path indicating states, helpful message function)
     ('histedit', 'histedit-state', histeditmsg),
-    ('bisect', 'bisect.state', None),
+    ('bisect', 'bisect.state', bisectmsg),
     ('graft', 'graftstate', graftmsg),
     ('unshelve', 'unshelverebasestate', unshelvemsg),
     ('rebase', 'rebasestate', rebasemsg),
