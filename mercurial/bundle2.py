@@ -641,6 +641,8 @@ class unbundle20(unpackermixin):
     This class is fed with a binary stream and yields parts through its
     `iterparts` methods."""
 
+    _magicstring = 'HG20'
+
     def __init__(self, ui, fp):
         """If header is specified, we do not read it out of the stream."""
         self.ui = ui
@@ -697,6 +699,46 @@ class unbundle20(unpackermixin):
                 raise error.BundleUnknownFeatureError(params=(name,))
         else:
             handler(self, name, value)
+
+    def _forwardchunks(self):
+        """utility to transfer a bundle2 as binary
+
+        This is made necessary by the fact the 'getbundle' command over 'ssh'
+        have no way to know then the reply end, relying on the bundle to be
+        interpreted to know its end. This is terrible and we are sorry, but we
+        needed to move forward to get general delta enabled.
+        """
+        yield self._magicstring
+        assert 'params' not in vars(self)
+        paramssize = self._unpack(_fstreamparamsize)[0]
+        if paramssize < 0:
+            raise error.BundleValueError('negative bundle param size: %i'
+                                         % paramssize)
+        yield _pack(_fstreamparamsize, paramssize)
+        if paramssize:
+            params = self._readexact(paramssize)
+            self._processallparams(params)
+            yield params
+            assert self._decompressor is util.decompressors[None]
+        # From there, payload might need to be decompressed
+        self._fp = self._decompressor(self._fp)
+        emptycount = 0
+        while emptycount < 2:
+            # so we can brainlessly loop
+            assert _fpartheadersize == _fpayloadsize
+            size = self._unpack(_fpartheadersize)[0]
+            yield _pack(_fpartheadersize, size)
+            if size:
+                emptycount = 0
+            else:
+                emptycount += 1
+                continue
+            if size == flaginterrupt:
+                continue
+            elif size < 0:
+                raise error.BundleValueError('negative chunk size: %i')
+            yield self._readexact(size)
+
 
     def iterparts(self):
         """yield all parts contained in the stream"""
