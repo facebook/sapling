@@ -2507,10 +2507,9 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     base = old.p1()
     createmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
-    wlock = dsguard = lock = newid = None
+    wlock = lock = newid = None
     try:
         wlock = repo.wlock()
-        dsguard = dirstateguard(repo, 'amend')
         lock = repo.lock()
         tr = repo.transaction('amend')
         try:
@@ -2682,7 +2681,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             tr.close()
         finally:
             tr.release()
-        dsguard.close()
         if not createmarkers and newid != old.node():
             # Strip the intermediate commit (if there was one) and the amended
             # commit
@@ -2691,7 +2689,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             ui.note(_('stripping amended changeset %s\n') % old)
             repair.strip(ui, repo, old.node(), topic='amend-backup')
     finally:
-        lockmod.release(lock, dsguard, wlock)
+        lockmod.release(lock, wlock)
     return newid
 
 def commiteditor(repo, ctx, subs, editform=''):
