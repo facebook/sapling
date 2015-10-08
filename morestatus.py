@@ -49,19 +49,34 @@ def helpmessage(ui, continuecmd, abortcmd):
     ui.warn(prefixlines(msg))
 
 def rebasemsg(ui):
-    return helpmessage(ui, 'hg rebase --continue', 'hg rebase --abort')
+    helpmessage(ui, 'hg rebase --continue', 'hg rebase --abort')
+
+def histeditmsg(ui):
+    helpmessage(ui, 'hg histedit --continue', 'hg histedit --abort')
+
+def unshelvemsg(ui):
+    helpmessage(ui, 'hg unshelve --continue', 'hg unshelve --abort')
+
+def graftmsg(ui):
+     # tweakdefaults requires `update` to have a rev hence the `.`
+    helpmessage(ui, 'hg graft --continue', 'hg update .')
+
+def mergemsg(ui):
+     # tweakdefaults requires `update` to have a rev hence the `.`
+    helpmessage(ui, 'hg commit', 'hg update --clean .    (warning: this will '
+            'erase all uncommitted changed)')
 
 STATES = (
     # (state, file path indicating states, helpful message function)
-    ('histedit', 'histedit-state', None),
+    ('histedit', 'histedit-state', histeditmsg),
     ('bisect', 'bisect.state', None),
-    ('graft', 'graftstate', None),
-    ('unshelve', 'unshelverebasestate', None),
+    ('graft', 'graftstate', graftmsg),
+    ('unshelve', 'unshelverebasestate', unshelvemsg),
     ('rebase', 'rebasestate', rebasemsg),
     # The merge state is part of a list that will be iterated over. It needs to
     # be last because some of the other unfinished states may also be in a merge
     # state (eg.  histedit, graft, etc). We want those to have priority.
-    ('merge', 'merge', None),
+    ('merge', 'merge', mergemsg),
 )
 
 def extsetup(ui):

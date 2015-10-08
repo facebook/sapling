@@ -24,6 +24,8 @@ Test status on histedit stop
   $ hg status
   
   # The repository is in an unfinished *histedit* state.
+  # To continue:                hg histedit --continue
+  # To abort:                   hg histedit --abort
 
 Test disabling output. Nothing should be shown
   $ hg status --config morestatus.show=False
@@ -67,6 +69,8 @@ Test graft state
   #     a
   # 
   # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg graft --continue
+  # To abort:                   hg update .
 
 Test hg status is normal after graft abort
   $ hg up --clean -q
@@ -98,6 +102,8 @@ Test unshelve state
   #     a
   # 
   # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg unshelve --continue
+  # To abort:                   hg unshelve --abort
 
 Test hg status is normal after unshelve abort
   $ hg unshelve --abort
@@ -145,6 +151,30 @@ Test status in rebase state with resolved files
 Test hg status is normal after rebase abort
   $ hg rebase --abort -q
   rebase aborted
+  $ hg status
+  ? a.orig
+  $ rm a.orig
+
+Test merge state
+  $ hg merge -q
+  warning: conflicts during merge.
+  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  [1]
+  $ hg status
+  M a
+  ? a.orig
+  
+  # The repository is in an unfinished *merge* state.
+  # Unresolved merge conflicts:
+  # 
+  #     a
+  # 
+  # To mark files as resolved:  hg resolve --mark FILE
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
+
+Test hg status is normal after merge abort
+  $ hg update --clean -q
   $ hg status
   ? a.orig
   $ rm a.orig
