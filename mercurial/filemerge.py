@@ -448,65 +448,64 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     Returns whether the merge is complete, and the return value of the merge.
     """
 
-    if True:
-        def temp(prefix, ctx):
-            pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
-            (fd, name) = tempfile.mkstemp(prefix=pre)
-            data = repo.wwritedata(ctx.path(), ctx.data())
-            f = os.fdopen(fd, "wb")
-            f.write(data)
-            f.close()
-            return name
+    def temp(prefix, ctx):
+        pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
+        (fd, name) = tempfile.mkstemp(prefix=pre)
+        data = repo.wwritedata(ctx.path(), ctx.data())
+        f = os.fdopen(fd, "wb")
+        f.write(data)
+        f.close()
+        return name
 
-        if not fco.cmp(fcd): # files identical?
-            return True, None
+    if not fco.cmp(fcd): # files identical?
+        return True, None
 
-        ui = repo.ui
-        fd = fcd.path()
-        binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
-        symlink = 'l' in fcd.flags() + fco.flags()
-        tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
-        if tool in internals and tool.startswith('internal:'):
-            # normalize to new-style names (':merge' etc)
-            tool = tool[len('internal'):]
-        ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
-                   (tool, fd, binary, symlink))
+    ui = repo.ui
+    fd = fcd.path()
+    binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
+    symlink = 'l' in fcd.flags() + fco.flags()
+    tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
+    if tool in internals and tool.startswith('internal:'):
+        # normalize to new-style names (':merge' etc)
+        tool = tool[len('internal'):]
+    ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
+               (tool, fd, binary, symlink))
 
-        if tool in internals:
-            func = internals[tool]
-            mergetype = func.mergetype
-            onfailure = func.onfailure
-            precheck = func.precheck
-        else:
-            func = _xmerge
-            mergetype = fullmerge
-            onfailure = _("merging %s failed!\n")
-            precheck = None
+    if tool in internals:
+        func = internals[tool]
+        mergetype = func.mergetype
+        onfailure = func.onfailure
+        precheck = func.precheck
+    else:
+        func = _xmerge
+        mergetype = fullmerge
+        onfailure = _("merging %s failed!\n")
+        precheck = None
 
-        toolconf = tool, toolpath, binary, symlink
+    toolconf = tool, toolpath, binary, symlink
 
-        if mergetype == nomerge:
-            return True, func(repo, mynode, orig, fcd, fco, fca, toolconf)
+    if mergetype == nomerge:
+        return True, func(repo, mynode, orig, fcd, fco, fca, toolconf)
 
-        if orig != fco.path():
-            ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
-        else:
-            ui.status(_("merging %s\n") % fd)
+    if orig != fco.path():
+        ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
+    else:
+        ui.status(_("merging %s\n") % fd)
 
-        ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
+    ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
-        if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
-                                     toolconf):
-            if onfailure:
-                ui.warn(onfailure % fd)
-            return True, 1
+    if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
+                                 toolconf):
+        if onfailure:
+            ui.warn(onfailure % fd)
+        return True, 1
 
-        a = repo.wjoin(fd)
-        b = temp("base", fca)
-        c = temp("other", fco)
-        back = a + ".orig"
-        util.copyfile(a, back)
-        files = (a, b, c, back)
+    a = repo.wjoin(fd)
+    b = temp("base", fca)
+    c = temp("other", fco)
+    back = a + ".orig"
+    util.copyfile(a, back)
+    files = (a, b, c, back)
 
     r = 1
     try:
