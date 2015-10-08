@@ -547,14 +547,14 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
         bheads = repo.branchheads(branch)
         rctx = scmutil.revsingle(repo, hex(parent))
         if not opts.get('merge') and op1 != node:
+            dsguard = cmdutil.dirstateguard(repo, 'backout')
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                              'backout')
-                repo.dirstate.beginparentchange()
                 stats = mergemod.update(repo, parent, True, True, False,
                                         node, False)
                 repo.setparents(op1, op2)
-                repo.dirstate.endparentchange()
+                dsguard.close()
                 hg._showstats(repo, stats)
                 if stats[3]:
                     repo.ui.status(_("use 'hg resolve' to retry unresolved "
@@ -567,6 +567,7 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
                     return 0
             finally:
                 ui.setconfig('ui', 'forcemerge', '', '')
+                lockmod.release(dsguard)
         else:
             hg.clean(repo, node, show_stats=False)
             repo.dirstate.setbranch(branch)
