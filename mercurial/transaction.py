@@ -89,7 +89,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
 
 class transaction(object):
     def __init__(self, report, opener, vfsmap, journalname, undoname=None,
-                 after=None, createmode=None, validator=None):
+                 after=None, createmode=None, validator=None, releasefn=None):
         """Begin a new transaction
 
         Begins a new transaction that allows rolling back writes in the event of
@@ -97,6 +97,7 @@ class transaction(object):
 
         * `after`: called after the transaction has been committed
         * `createmode`: the mode of the journal file that will be created
+        * `releasefn`: called after releasing (with transaction and result)
         """
         self.count = 1
         self.usages = 1
@@ -119,6 +120,11 @@ class transaction(object):
         if validator is None:
             validator = lambda tr: None
         self.validator = validator
+        # A callback to do something just after releasing transaction.
+        if releasefn is None:
+            releasefn = lambda tr, success: None
+        self.releasefn = releasefn
+
         # a dict of arguments to be passed to hooks
         self.hookargs = {}
         self.file = opener.open(self.journal, "w")
@@ -442,6 +448,9 @@ class transaction(object):
                                     % (vfs.join(b), inst))
         self._backupentries = []
         self.journal = None
+
+        self.releasefn(self, True) # notify success of closing transaction
+
         # run post close action
         categories = sorted(self._postclosecallback)
         for cat in categories:
@@ -506,7 +515,7 @@ class transaction(object):
                 self.report(_("rollback failed - please run hg recover\n"))
         finally:
             self.journal = None
-
+            self.releasefn(self, False) # notify failure of transaction
 
 def rollback(opener, vfsmap, file, report):
     """Rolls back the transaction contained in the given file
