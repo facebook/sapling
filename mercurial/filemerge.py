@@ -346,16 +346,14 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     ``a.txt``, these files will accordingly be named ``a.txt.local``,
     ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
     same directory as ``a.txt``."""
-    r = 1
-    if r:
-        a, b, c, back = files
+    a, b, c, back = files
 
-        fd = fcd.path()
+    fd = fcd.path()
 
-        util.copyfile(a, a + ".local")
-        repo.wwrite(fd + ".other", fco.data(), fco.flags())
-        repo.wwrite(fd + ".base", fca.data(), fca.flags())
-    return False, r
+    util.copyfile(a, a + ".local")
+    repo.wwrite(fd + ".other", fco.data(), fco.flags())
+    repo.wwrite(fd + ".base", fca.data(), fca.flags())
+    return False, 1
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     r = 1
