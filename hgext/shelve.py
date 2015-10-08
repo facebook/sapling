@@ -209,9 +209,6 @@ def _aborttransaction(repo):
         tr = repo.currenttransaction()
         tr.abort()
 
-        # TODO: this should be done via transaction.abort()
-        repo.dirstate.invalidate() # prevent wlock from writing changes out
-
         # restore to backuped dirstate
         repo.vfs.rename(dirstatebackup, 'dirstate')
         dirstatebackup = None

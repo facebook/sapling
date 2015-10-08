@@ -997,13 +997,26 @@ class localrepository(object):
             pending = lambda: tr.writepending() and self.root or ""
             reporef().hook('pretxnclose', throw=True, pending=pending,
                            txnname=desc, **tr.hookargs)
+        def releasefn(tr, success):
+            repo = reporef()
+            if success:
+                repo.dirstate.write()
+            else:
+                # prevent in-memory changes from being written out at
+                # the end of outer wlock scope or so
+                repo.dirstate.invalidate()
+
+                # discard all changes (including ones already written
+                # out) in this transaction
+                repo.vfs.rename('journal.dirstate', 'dirstate')
 
         tr = transaction.transaction(rp, self.svfs, vfsmap,
                                      "journal",
                                      "undo",
                                      aftertrans(renames),
                                      self.store.createmode,
-                                     validator=validate)
+                                     validator=validate,
+                                     releasefn=releasefn)
 
         tr.hookargs['txnid'] = txnid
         # note: writing the fncache only during finalize mean that the file is
