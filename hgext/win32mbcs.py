@@ -47,7 +47,7 @@ It is useful for the users who want to commit with UTF-8 log message.
 
 import os, sys
 from mercurial.i18n import _
-from mercurial import util, encoding
+from mercurial import error, encoding
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -105,7 +105,7 @@ def basewrapper(func, argtype, enc, dec, args, kwds):
         # return value.
         return enc(func(*dec(args), **dec(kwds)))
     except UnicodeError:
-        raise util.Abort(_("[win32mbcs] filename conversion failed with"
+        raise error.Abort(_("[win32mbcs] filename conversion failed with"
                          " %s encoding\n") % (_encoding))
 
 def wrapper(func, args, kwds):

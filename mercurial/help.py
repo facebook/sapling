@@ -502,7 +502,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         if not rst:
             msg = _('no matches')
             hint = _('try "hg help" for a list of topics')
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
     elif name and name != 'shortlist':
         queries = []
         if unknowncmd:
@@ -525,7 +525,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             else:
                 msg = _('no such help topic: %s') % name
                 hint = _('try "hg help --keyword %s"') % name
-                raise util.Abort(msg, hint=hint)
+                raise error.Abort(msg, hint=hint)
     else:
         # program name
         if not ui.quiet:

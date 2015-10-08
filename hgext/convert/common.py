@@ -7,7 +7,7 @@
 
 import base64, errno, subprocess, os, datetime, re
 import cPickle as pickle
-from mercurial import phases, util
+from mercurial import phases, util, error
 from mercurial.i18n import _
 
 propertycache = util.propertycache
@@ -32,7 +32,7 @@ def checktool(exe, name=None, abort=True):
     name = name or exe
     if not util.findexe(exe):
         if abort:
-            exc = util.Abort
+            exc = error.Abort
         else:
             exc = MissingTool
         raise exc(_('cannot find required "%s" tool') % name)
@@ -73,7 +73,7 @@ class converter_source(object):
             such format for their revision numbering
         """
         if not re.match(r'[0-9a-fA-F]{40,40}$', revstr):
-            raise util.Abort(_('%s entry %s is not a valid revision'
+            raise error.Abort(_('%s entry %s is not a valid revision'
                                ' identifier') % (mapname, revstr))
 
     def before(self):
@@ -369,7 +369,7 @@ class commandline(object):
                 self.ui.warn(_('%s error:\n') % self.command)
                 self.ui.warn(output)
             msg = util.explainexit(status)[0]
-            raise util.Abort('%s %s' % (self.command, msg))
+            raise error.Abort('%s %s' % (self.command, msg))
 
     def run0(self, cmd, *args, **kwargs):
         output, status = self.run(cmd, *args, **kwargs)
@@ -446,7 +446,7 @@ class mapfile(dict):
             try:
                 key, value = line.rsplit(' ', 1)
             except ValueError:
-                raise util.Abort(
+                raise error.Abort(
                     _('syntax error in %s(%d): key/value pair expected')
                     % (self.path, i + 1))
             if key not in self:
@@ -459,7 +459,7 @@ class mapfile(dict):
             try:
                 self.fp = open(self.path, 'a')
             except IOError as err:
-                raise util.Abort(_('could not open map file %r: %s') %
+                raise error.Abort(_('could not open map file %r: %s') %
                                  (self.path, err.strerror))
         self.fp.write('%s %s\n' % (key, value))
         self.fp.flush()

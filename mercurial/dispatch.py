@@ -100,7 +100,7 @@ def dispatch(req):
             req.ui.fout = req.fout
         if req.ferr:
             req.ui.ferr = req.ferr
-    except util.Abort as inst:
+    except error.Abort as inst:
         ferr.write(_("abort: %s\n") % inst)
         if inst.hint:
             ferr.write(_("(%s)\n") % inst.hint)
@@ -253,7 +253,7 @@ def _runcatch(req):
             # check if the command is in a disabled extension
             # (but don't check for extensions themselves)
             commands.help_(ui, inst.args[0], unknowncmd=True)
-        except (error.UnknownCommand, util.Abort):
+        except (error.UnknownCommand, error.Abort):
             suggested = False
             if len(inst.args) == 2:
                 sim = _getsimilar(inst.args[1], inst.args[0])
@@ -266,7 +266,7 @@ def _runcatch(req):
     except error.InterventionRequired as inst:
         ui.warn("%s\n" % inst)
         return 1
-    except util.Abort as inst:
+    except error.Abort as inst:
         ui.warn(_("abort: %s\n") % inst)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
@@ -398,7 +398,7 @@ def aliasargs(fn, givenargs):
             nums.append(num)
             if num < len(givenargs):
                 return givenargs[num]
-            raise util.Abort(_('too few arguments for command alias'))
+            raise error.Abort(_('too few arguments for command alias'))
         cmd = re.sub(r'\$(\d+|\$)', replacer, cmd)
         givenargs = [x for i, x in enumerate(givenargs)
                      if i not in nums]
@@ -525,7 +525,7 @@ class cmdalias(object):
                     hint = _("'%s' is provided by '%s' extension") % (cmd, ext)
                 except error.UnknownCommand:
                     pass
-            raise util.Abort(self.badalias, hint=hint)
+            raise error.Abort(self.badalias, hint=hint)
         if self.shadows:
             ui.debug("alias '%s' shadows command '%s'\n" %
                      (self.name, self.cmdname))
@@ -614,7 +614,7 @@ def _parseconfig(ui, config):
             ui.setconfig(section, name, value, '--config')
             configs.append((section, name, value))
         except (IndexError, ValueError):
-            raise util.Abort(_('malformed --config option: %r '
+            raise error.Abort(_('malformed --config option: %r '
                                '(use --config section.name=value)') % cfg)
 
     return configs
@@ -690,7 +690,7 @@ def _getlocal(ui, rpath):
     try:
         wd = os.getcwd()
     except OSError as e:
-        raise util.Abort(_("error getting current working directory: %s") %
+        raise error.Abort(_("error getting current working directory: %s") %
                          e.strerror)
     path = cmdutil.findrepo(wd) or ""
     if not path:
@@ -813,11 +813,11 @@ def _dispatch(req):
     cmd, func, args, options, cmdoptions = _parse(lui, args)
 
     if options["config"]:
-        raise util.Abort(_("option --config may not be abbreviated!"))
+        raise error.Abort(_("option --config may not be abbreviated!"))
     if options["cwd"]:
-        raise util.Abort(_("option --cwd may not be abbreviated!"))
+        raise error.Abort(_("option --cwd may not be abbreviated!"))
     if options["repository"]:
-        raise util.Abort(_(
+        raise error.Abort(_(
             "option -R has to be separated from other options (e.g. not -qR) "
             "and --repository may only be abbreviated as --repo!"))
 
@@ -884,7 +884,7 @@ def _dispatch(req):
             try:
                 repo = hg.repository(ui, path=path)
                 if not repo.local():
-                    raise util.Abort(_("repository '%s' is not local") % path)
+                    raise error.Abort(_("repository '%s' is not local") % path)
                 repo.ui.setconfig("bundle", "mainreporoot", repo.root, 'repo')
             except error.RequirementError:
                 raise
@@ -936,7 +936,7 @@ def lsprofile(ui, func, fp):
     try:
         from . import lsprof
     except ImportError:
-        raise util.Abort(_(
+        raise error.Abort(_(
             'lsprof not available - install from '
             'http://codespeak.net/svn/user/arigo/hack/misc/lsprof/'))
     p = lsprof.Profiler()
@@ -960,7 +960,7 @@ def flameprofile(ui, func, fp):
     try:
         from flamegraph import flamegraph
     except ImportError:
-        raise util.Abort(_(
+        raise error.Abort(_(
             'flamegraph not available - install from '
             'https://github.com/evanhempel/python-flamegraph'))
     # developer config: profiling.freq
@@ -985,7 +985,7 @@ def statprofile(ui, func, fp):
     try:
         import statprof
     except ImportError:
-        raise util.Abort(_(
+        raise error.Abort(_(
             'statprof not available - install using "easy_install statprof"'))
 
     freq = ui.configint('profiling', 'freq', default=1000)

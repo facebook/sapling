@@ -225,7 +225,7 @@ class histeditstate(object):
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            raise util.Abort(_('no histedit in progress'))
+            raise error.Abort(_('no histedit in progress'))
 
         try:
             data = pickle.load(fp)
@@ -331,7 +331,7 @@ class histeditaction(object):
         try:
             node = repo[rulehash].node()
         except error.RepoError:
-            raise util.Abort(_('unknown changeset %s listed') % rulehash[:12])
+            raise error.Abort(_('unknown changeset %s listed') % rulehash[:12])
         return cls(state, node)
 
     def run(self):
@@ -439,7 +439,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
         return None
     for c in ctxs:
         if not c.mutable():
-            raise util.Abort(
+            raise error.Abort(
                 _("cannot fold into public change %s") % node.short(c.node()))
     base = first.parents()[0]
 
@@ -664,12 +664,12 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
 
     outgoing = discovery.findcommonoutgoing(repo, other, revs, force=force)
     if not outgoing.missing:
-        raise util.Abort(_('no outgoing ancestors'))
+        raise error.Abort(_('no outgoing ancestors'))
     roots = list(repo.revs("roots(%ln)", outgoing.missing))
     if 1 < len(roots):
         msg = _('there are ambiguous outgoing revisions')
         hint = _('see "hg help histedit" for more detail')
-        raise util.Abort(msg, hint=hint)
+        raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
 actiontable = {'p': pick,
@@ -736,7 +736,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     # blanket if mq patches are applied somewhere
     mq = getattr(repo, 'mq', None)
     if mq and mq.applied:
-        raise util.Abort(_('source has mq patches applied'))
+        raise error.Abort(_('source has mq patches applied'))
 
     # basic argument incompatibility processing
     outg = opts.get('outgoing')
@@ -748,29 +748,29 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     revs = opts.get('rev', [])
     goal = 'new' # This invocation goal, in new, continue, abort
     if force and not outg:
-        raise util.Abort(_('--force only allowed with --outgoing'))
+        raise error.Abort(_('--force only allowed with --outgoing'))
     if cont:
         if any((outg, abort, revs, freeargs, rules, editplan)):
-            raise util.Abort(_('no arguments allowed with --continue'))
+            raise error.Abort(_('no arguments allowed with --continue'))
         goal = 'continue'
     elif abort:
         if any((outg, revs, freeargs, rules, editplan)):
-            raise util.Abort(_('no arguments allowed with --abort'))
+            raise error.Abort(_('no arguments allowed with --abort'))
         goal = 'abort'
     elif editplan:
         if any((outg, revs, freeargs)):
-            raise util.Abort(_('only --commands argument allowed with '
+            raise error.Abort(_('only --commands argument allowed with '
                                '--edit-plan'))
         goal = 'edit-plan'
     else:
         if os.path.exists(os.path.join(repo.path, 'histedit-state')):
-            raise util.Abort(_('history edit already in progress, try '
+            raise error.Abort(_('history edit already in progress, try '
                                '--continue or --abort'))
         if outg:
             if revs:
-                raise util.Abort(_('no revisions allowed with --outgoing'))
+                raise error.Abort(_('no revisions allowed with --outgoing'))
             if len(freeargs) > 1:
-                raise util.Abort(
+                raise error.Abort(
                     _('only one repo argument allowed with --outgoing'))
         else:
             revs.extend(freeargs)
@@ -780,7 +780,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 if histeditdefault:
                     revs.append(histeditdefault)
             if len(revs) != 1:
-                raise util.Abort(
+                raise error.Abort(
                     _('histedit requires exactly one ancestor revision'))
 
 
@@ -856,13 +856,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         else:
             rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
             if len(rr) != 1:
-                raise util.Abort(_('The specified revisions must have '
+                raise error.Abort(_('The specified revisions must have '
                     'exactly one common root'))
             root = rr[0].node()
 
         revs = between(repo, root, topmost, state.keep)
         if not revs:
-            raise util.Abort(_('%s is not an ancestor of working directory') %
+            raise error.Abort(_('%s is not an ancestor of working directory') %
                              node.short(root))
 
         ctxs = [repo[r] for r in revs]
@@ -960,7 +960,7 @@ def bootstrapcontinue(ui, state, opts):
             actobj.continuedirty()
             s = repo.status()
             if s.modified or s.added or s.removed or s.deleted:
-                raise util.Abort(_("working copy still dirty"))
+                raise error.Abort(_("working copy still dirty"))
 
         parentctx, replacements = actobj.continueclean()
 
@@ -977,12 +977,12 @@ def between(repo, old, new, keep):
     if ctxs and not keep:
         if (not obsolete.isenabled(repo, obsolete.allowunstableopt) and
             repo.revs('(%ld::) - (%ld)', ctxs, ctxs)):
-            raise util.Abort(_('cannot edit history that would orphan nodes'))
+            raise error.Abort(_('cannot edit history that would orphan nodes'))
         if repo.revs('(%ld) and merge()', ctxs):
-            raise util.Abort(_('cannot edit history that contains merges'))
+            raise error.Abort(_('cannot edit history that contains merges'))
         root = ctxs[0] # list is already sorted by repo.set
         if not root.mutable():
-            raise util.Abort(_('cannot edit public changeset: %s') % root,
+            raise error.Abort(_('cannot edit public changeset: %s') % root,
                              hint=_('see "hg help phases" for details'))
     return [c.node() for c in ctxs]
 
@@ -1033,26 +1033,26 @@ def verifyrules(rules, repo, ctxs):
     seen = set()
     for r in rules:
         if ' ' not in r:
-            raise util.Abort(_('malformed line "%s"') % r)
+            raise error.Abort(_('malformed line "%s"') % r)
         action, rest = r.split(' ', 1)
         ha = rest.strip().split(' ', 1)[0]
         try:
             ha = repo[ha].hex()
         except error.RepoError:
-            raise util.Abort(_('unknown changeset %s listed') % ha[:12])
+            raise error.Abort(_('unknown changeset %s listed') % ha[:12])
         if ha not in expected:
-            raise util.Abort(
+            raise error.Abort(
                 _('may not use changesets other than the ones listed'))
         if ha in seen:
-            raise util.Abort(_('duplicated command for changeset %s') %
+            raise error.Abort(_('duplicated command for changeset %s') %
                     ha[:12])
         seen.add(ha)
         if action not in actiontable or action.startswith('_'):
-            raise util.Abort(_('unknown action "%s"') % action)
+            raise error.Abort(_('unknown action "%s"') % action)
         parsed.append([action, ha])
     missing = sorted(expected - seen)  # sort to stabilize output
     if missing:
-        raise util.Abort(_('missing rules for changeset %s') %
+        raise error.Abort(_('missing rules for changeset %s') %
                 missing[0][:12],
                 hint=_('do you want to use the drop action?'))
     return parsed
@@ -1208,7 +1208,7 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
         strip_nodes = set([repo[n].node() for n in nodelist])
         common_nodes = histedit_nodes & strip_nodes
         if common_nodes:
-            raise util.Abort(_("histedit in progress, can't strip %s")
+            raise error.Abort(_("histedit in progress, can't strip %s")
                              % ', '.join(node.short(x) for x in common_nodes))
     return orig(ui, repo, nodelist, *args, **kwargs)
 

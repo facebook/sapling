@@ -5,7 +5,7 @@ demandimport.enable()
 
 import sys
 from mercurial.i18n import _
-from mercurial import simplemerge, fancyopts, util, ui
+from mercurial import error, simplemerge, fancyopts, util, ui
 
 options = [('L', 'label', [], _('labels to use on conflict markers')),
            ('a', 'text', None, _('treat all files as text')),
@@ -59,7 +59,7 @@ except ParseError, e:
     sys.stdout.write("%s: %s\n" % (sys.argv[0], e))
     showhelp()
     sys.exit(1)
-except util.Abort, e:
+except error.Abort, e:
     sys.stderr.write("abort: %s\n" % e)
     sys.exit(255)
 except KeyboardInterrupt:

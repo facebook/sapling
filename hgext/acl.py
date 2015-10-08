@@ -192,7 +192,7 @@ In the examples below, we will:
 '''
 
 from mercurial.i18n import _
-from mercurial import util, match
+from mercurial import util, match, error
 import getpass, urllib
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
@@ -213,7 +213,7 @@ def _getusers(ui, group):
     try:
         return util.groupmembers(group)
     except KeyError:
-        raise util.Abort(_("group '%s' is undefined") % group)
+        raise error.Abort(_("group '%s' is undefined") % group)
 
 def _usermatch(ui, user, usersorgroups):
 
@@ -268,7 +268,7 @@ def buildmatch(ui, repo, user, key):
 
 def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if hooktype not in ['pretxnchangegroup', 'pretxncommit']:
-        raise util.Abort(_('config error - hook type "%s" cannot stop '
+        raise error.Abort(_('config error - hook type "%s" cannot stop '
                            'incoming changesets nor commits') % hooktype)
     if (hooktype == 'pretxnchangegroup' and
         source not in ui.config('acl', 'sources', 'serve').split()):
@@ -301,11 +301,11 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
         ctx = repo[rev]
         branch = ctx.branch()
         if denybranches and denybranches(branch):
-            raise util.Abort(_('acl: user "%s" denied on branch "%s"'
+            raise error.Abort(_('acl: user "%s" denied on branch "%s"'
                                ' (changeset "%s")')
                                % (user, branch, ctx))
         if allowbranches and not allowbranches(branch):
-            raise util.Abort(_('acl: user "%s" not allowed on branch "%s"'
+            raise error.Abort(_('acl: user "%s" not allowed on branch "%s"'
                                ' (changeset "%s")')
                                % (user, branch, ctx))
         ui.debug('acl: branch access granted: "%s" on branch "%s"\n'
@@ -313,9 +313,9 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
 
         for f in ctx.files():
             if deny and deny(f):
-                raise util.Abort(_('acl: user "%s" denied on "%s"'
+                raise error.Abort(_('acl: user "%s" denied on "%s"'
                 ' (changeset "%s")') % (user, f, ctx))
             if allow and not allow(f):
-                raise util.Abort(_('acl: user "%s" not allowed on "%s"'
+                raise error.Abort(_('acl: user "%s" not allowed on "%s"'
                 ' (changeset "%s")') % (user, f, ctx))
         ui.debug('acl: path access granted: "%s"\n' % ctx)

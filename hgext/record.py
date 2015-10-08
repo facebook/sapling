@@ -9,7 +9,7 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, commands, extensions
-from mercurial import util
+from mercurial import error
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -54,7 +54,7 @@ def record(ui, repo, *pats, **opts):
     This command is not available when committing a merge.'''
 
     if not ui.interactive():
-        raise util.Abort(_('running non-interactively, use %s instead') %
+        raise error.Abort(_('running non-interactively, use %s instead') %
                          'commit')
 
     opts["interactive"] = True
@@ -99,7 +99,7 @@ def _qrecord(cmdsuggest, ui, repo, patch, *pats, **opts):
     try:
         mq = extensions.find('mq')
     except KeyError:
-        raise util.Abort(_("'mq' extension not loaded"))
+        raise error.Abort(_("'mq' extension not loaded"))
 
     repo.mq.checkpatchname(patch)
 

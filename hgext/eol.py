@@ -247,7 +247,7 @@ def _checkhook(ui, repo, node, headsonly):
         for node, target, f in failed:
             msgs.append(_("  %s in %s should not have %s line endings") %
                         (f, node, eols[target]))
-        raise util.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
+        raise error.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
 
 def checkallhook(ui, repo, node, hooktype, **kwargs):
     """verify that files have expected EOLs"""
@@ -347,7 +347,7 @@ def reposetup(ui, repo):
                     # have all non-binary files taken care of.
                     continue
                 if inconsistenteol(data):
-                    raise util.Abort(_("inconsistent newline style "
+                    raise error.Abort(_("inconsistent newline style "
                                        "in %s\n") % f)
             return super(eolrepo, self).commitctx(ctx, haserror)
     repo.__class__ = eolrepo

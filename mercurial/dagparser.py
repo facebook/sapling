@@ -11,7 +11,7 @@ import re
 import string
 
 from .i18n import _
-from . import util
+from . import error
 
 def parsedag(desc):
     '''parses a DAG from a concise textual description; generates events
@@ -269,7 +269,7 @@ def parsedag(desc):
                 s += c
                 i += 1
                 c = nextch()
-            raise util.Abort(_('invalid character in dag description: '
+            raise error.Abort(_('invalid character in dag description: '
                                '%s...') % s)
 
 def dagtextlines(events,
@@ -298,13 +298,13 @@ def dagtextlines(events,
 
                 # sanity check
                 if r != wantr:
-                    raise util.Abort(_("expected id %i, got %i") % (wantr, r))
+                    raise error.Abort(_("expected id %i, got %i") % (wantr, r))
                 if not ps:
                     ps = [-1]
                 else:
                     for p in ps:
                         if p >= r:
-                            raise util.Abort(_("parent id %i is larger than "
+                            raise error.Abort(_("parent id %i is larger than "
                                                "current id %i") % (p, r))
                 wantr += 1
 
@@ -366,7 +366,7 @@ def dagtextlines(events,
                     yield '#' + data
                     yield '\n'
                 else:
-                    raise util.Abort(_("invalid event type in dag: %s")
+                    raise error.Abort(_("invalid event type in dag: %s")
                                      % str((type, data)))
         if run:
             yield '+' + str(run)

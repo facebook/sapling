@@ -85,7 +85,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             msg = _('running non-interactively, use %s instead') % cmdsuggest
         else:
             msg = _('running non-interactively')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
 
     # make sure username is set before going interactive
     if not opts.get('user'):
@@ -109,7 +109,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         checkunfinished(repo, commit=True)
         merge = len(repo[None].parents()) > 1
         if merge:
-            raise util.Abort(_('cannot partially commit a merge '
+            raise error.Abort(_('cannot partially commit a merge '
                                '(use "hg commit" instead)'))
 
         status = repo.status(match=match)
@@ -123,7 +123,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         try:
             chunks = filterfn(ui, originalchunks)
         except patch.PatchError as err:
-            raise util.Abort(_('error parsing patch: %s') % err)
+            raise error.Abort(_('error parsing patch: %s') % err)
 
         # We need to keep a backup of files that have been newly added and
         # modified during the recording process because there is a previous
@@ -193,7 +193,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                     ui.debug(fp.getvalue())
                     patch.internalpatch(ui, repo, fp, 1, eolmode=None)
                 except patch.PatchError as err:
-                    raise util.Abort(str(err))
+                    raise error.Abort(str(err))
             del fp
 
             # 4. We prepared working directory according to filtered
@@ -305,10 +305,10 @@ def findrepo(p):
 
 def bailifchanged(repo, merge=True):
     if merge and repo.dirstate.p2() != nullid:
-        raise util.Abort(_('outstanding uncommitted merge'))
+        raise error.Abort(_('outstanding uncommitted merge'))
     modified, added, removed, deleted = repo.status()[:4]
     if modified or added or removed or deleted:
-        raise util.Abort(_('uncommitted changes'))
+        raise error.Abort(_('uncommitted changes'))
     ctx = repo[None]
     for s in sorted(ctx.substate):
         ctx.sub(s).bailifchanged()
@@ -319,7 +319,7 @@ def logmessage(ui, opts):
     logfile = opts.get('logfile')
 
     if message and logfile:
-        raise util.Abort(_('options --message and --logfile are mutually '
+        raise error.Abort(_('options --message and --logfile are mutually '
                            'exclusive'))
     if not message and logfile:
         try:
@@ -328,7 +328,7 @@ def logmessage(ui, opts):
             else:
                 message = '\n'.join(util.readfile(logfile).splitlines())
         except IOError as inst:
-            raise util.Abort(_("can't read commit message '%s': %s") %
+            raise error.Abort(_("can't read commit message '%s': %s") %
                              (logfile, inst.strerror))
     return message
 
@@ -387,9 +387,9 @@ def loglimit(opts):
         try:
             limit = int(limit)
         except ValueError:
-            raise util.Abort(_('limit must be a positive integer'))
+            raise error.Abort(_('limit must be a positive integer'))
         if limit <= 0:
-            raise util.Abort(_('limit must be positive'))
+            raise error.Abort(_('limit must be positive'))
     else:
         limit = None
     return limit
@@ -437,7 +437,7 @@ def makefilename(repo, pat, node, desc=None,
             i += 1
         return ''.join(newname)
     except KeyError as inst:
-        raise util.Abort(_("invalid format spec '%%%s' in output filename") %
+        raise error.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
 def makefileobj(repo, pat, node=None, desc=None, total=None,
@@ -495,7 +495,7 @@ def openrevlog(repo, cmd, file_, opts):
             msg = _('cannot specify --changelog or --manifest or --dir '
                     'without a repository')
     if msg:
-        raise util.Abort(msg)
+        raise error.Abort(msg)
 
     r = None
     if repo:
@@ -503,7 +503,7 @@ def openrevlog(repo, cmd, file_, opts):
             r = repo.unfiltered().changelog
         elif dir:
             if 'treemanifest' not in repo.requirements:
-                raise util.Abort(_("--dir can only be used on repos with "
+                raise error.Abort(_("--dir can only be used on repos with "
                                    "treemanifest enabled"))
             dirlog = repo.dirlog(file_)
             if len(dirlog):
@@ -518,7 +518,7 @@ def openrevlog(repo, cmd, file_, opts):
         if not file_:
             raise error.CommandError(cmd, _('invalid arguments'))
         if not os.path.isfile(file_):
-            raise util.Abort(_("revlog '%s' not found") % file_)
+            raise error.Abort(_("revlog '%s' not found") % file_)
         r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False),
                           file_[:-2] + ".i")
     return r
@@ -716,17 +716,17 @@ def copy(ui, repo, pats, opts, rename=False):
 
     pats = scmutil.expandpats(pats)
     if not pats:
-        raise util.Abort(_('no source or destination specified'))
+        raise error.Abort(_('no source or destination specified'))
     if len(pats) == 1:
-        raise util.Abort(_('no destination specified'))
+        raise error.Abort(_('no destination specified'))
     dest = pats.pop()
     destdirexists = os.path.isdir(dest) and not os.path.islink(dest)
     if not destdirexists:
         if len(pats) > 1 or matchmod.patkind(pats[0]):
-            raise util.Abort(_('with multiple sources, destination must be an '
+            raise error.Abort(_('with multiple sources, destination must be an '
                                'existing directory'))
         if util.endswithsep(dest):
-            raise util.Abort(_('destination %s is not a directory') % dest)
+            raise error.Abort(_('destination %s is not a directory') % dest)
 
     tfn = targetpathfn
     if after:
@@ -738,7 +738,7 @@ def copy(ui, repo, pats, opts, rename=False):
             continue
         copylist.append((tfn(pat, dest, srcs), srcs))
     if not copylist:
-        raise util.Abort(_('no files to copy'))
+        raise error.Abort(_('no files to copy'))
 
     errors = 0
     for targetpath, srcs in copylist:
@@ -786,7 +786,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
                 return not os.path.exists(lockpath)
             pid = util.rundetached(runargs, condfn)
             if pid < 0:
-                raise util.Abort(_('child process failed to start'))
+                raise error.Abort(_('child process failed to start'))
             writepid(pid)
         finally:
             try:
@@ -908,7 +908,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             parents.append(repo[nullid])
         if opts.get('exact'):
             if not nodeid or not p1:
-                raise util.Abort(_('not a Mercurial patch'))
+                raise error.Abort(_('not a Mercurial patch'))
             p1 = repo[p1]
             p2 = repo[p2 or nullid]
         elif p2:
@@ -946,7 +946,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                             files=files, eolmode=None, similarity=sim / 100.0)
             except patch.PatchError as e:
                 if not partial:
-                    raise util.Abort(str(e))
+                    raise error.Abort(str(e))
                 if partial:
                     rejects = True
 
@@ -993,7 +993,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     patch.patchrepo(ui, repo, p1, store, tmpname, strip, prefix,
                                     files, eolmode=None)
                 except patch.PatchError as e:
-                    raise util.Abort(str(e))
+                    raise error.Abort(str(e))
                 if opts.get('exact'):
                     editor = None
                 else:
@@ -1012,7 +1012,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             # and branch bits
             ui.warn(_("warning: can't check exact import with --no-commit\n"))
         elif opts.get('exact') and hex(n) != nodeid:
-            raise util.Abort(_('patch is damaged or loses information'))
+            raise error.Abort(_('patch is damaged or loses information'))
         if n:
             # i18n: refers to a short changeset id
             msg = _('created %s') % short(n)
@@ -1500,9 +1500,9 @@ class changeset_templater(changeset_printer):
                         self.t(self._parts['footer'], **props))
         except KeyError as inst:
             msg = _("%s: no key named '%s'")
-            raise util.Abort(msg % (self.t.mapfile, inst.args[0]))
+            raise error.Abort(msg % (self.t.mapfile, inst.args[0]))
         except SyntaxError as inst:
-            raise util.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
+            raise error.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
 def gettemplate(ui, tmpl, style):
     """
@@ -1563,7 +1563,7 @@ def show_changeset(ui, repo, opts, buffered=False):
         t = changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile,
                                 buffered)
     except SyntaxError as inst:
-        raise util.Abort(inst.args[0])
+        raise error.Abort(inst.args[0])
     return t
 
 def showmarker(ui, marker):
@@ -1603,7 +1603,7 @@ def finddate(ui, repo, date):
                       (rev, util.datestr(results[rev])))
             return str(rev)
 
-    raise util.Abort(_("revision matching date not found"))
+    raise error.Abort(_("revision matching date not found"))
 
 def increasingwindows(windowsize=8, sizelimit=512):
     while True:
@@ -1658,7 +1658,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
         for filename in match.files():
             if follow:
                 if filename not in pctx:
-                    raise util.Abort(_('cannot follow file not in parent '
+                    raise error.Abort(_('cannot follow file not in parent '
                                        'revision: "%s"') % filename)
                 yield filename, pctx[filename].filenode()
             else:
@@ -1673,7 +1673,7 @@ def walkfilerevs(repo, match, follow, revs, fncache):
                 # A zero count may be a directory or deleted file, so
                 # try to find matching entries on the slow path.
                 if follow:
-                    raise util.Abort(
+                    raise error.Abort(
                         _('cannot follow nonexistent file: "%s"') % file_)
                 raise FileWalkError("Cannot walk via filelog")
             else:
@@ -1804,7 +1804,7 @@ def walkchangerevs(repo, match, opts, prepare):
         # changed files
 
         if follow:
-            raise util.Abort(_('can only follow copies/renames for explicit '
+            raise error.Abort(_('can only follow copies/renames for explicit '
                                'filenames'))
 
         # The slow path checks files modified in every changeset.
@@ -1976,14 +1976,14 @@ def _makelogrevset(repo, pats, opts, revs):
                     slowpath = True
                     continue
                 else:
-                    raise util.Abort(_('cannot follow file not in parent '
+                    raise error.Abort(_('cannot follow file not in parent '
                                        'revision: "%s"') % f)
             filelog = repo.file(f)
             if not filelog:
                 # A zero count may be a directory or deleted file, so
                 # try to find matching entries on the slow path.
                 if follow:
-                    raise util.Abort(
+                    raise error.Abort(
                         _('cannot follow nonexistent file: "%s"') % f)
                 slowpath = True
 
@@ -2207,7 +2207,7 @@ def graphlog(ui, repo, *pats, **opts):
 def checkunsupportedgraphflags(pats, opts):
     for op in ["newest_first"]:
         if op in opts and opts[op]:
-            raise util.Abort(_("-G/--graph option is incompatible with --%s")
+            raise error.Abort(_("-G/--graph option is incompatible with --%s")
                              % op.replace("_", "-"))
 
 def graphrevs(repo, nodes, opts):
@@ -2485,7 +2485,7 @@ def commit(ui, repo, commitfunc, pats, opts):
     # that doesn't support addremove
     if opts.get('addremove'):
         if scmutil.addremove(repo, matcher, "", opts) != 0:
-            raise util.Abort(
+            raise error.Abort(
                 _("failed to mark all new/missing files as added/removed"))
 
     return commitfunc(ui, repo, message, matcher, opts)
@@ -2719,7 +2719,7 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     if finishdesc:
         text = finishdesc(text)
     if not text.strip():
-        raise util.Abort(_("empty commit message"))
+        raise error.Abort(_("empty commit message"))
 
     return text
 
@@ -2730,7 +2730,7 @@ def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     try:
         t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
     except SyntaxError as inst:
-        raise util.Abort(inst.args[0])
+        raise error.Abort(inst.args[0])
 
     for k, v in repo.ui.configitems('committemplate'):
         if k != 'changeset':
@@ -3097,7 +3097,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 try:
                     wctx.sub(sub).revert(ctx.substate[sub], *pats, **opts)
                 except KeyError:
-                    raise util.Abort("subrepository '%s' does not exist in %s!"
+                    raise error.Abort("subrepository '%s' does not exist in %s!"
                                       % (sub, short(ctx.node())))
     finally:
         wlock.release()
@@ -3168,7 +3168,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
                 chunks = patch.reversehunks(chunks)
 
         except patch.PatchError as err:
-            raise util.Abort(_('error parsing patch: %s') % err)
+            raise error.Abort(_('error parsing patch: %s') % err)
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
         # Apply changes
@@ -3181,7 +3181,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
             try:
                 patch.internalpatch(repo.ui, repo, fp, 1, eolmode=None)
             except patch.PatchError as err:
-                raise util.Abort(str(err))
+                raise error.Abort(str(err))
         del fp
     else:
         for f in actions['revert'][0]:
@@ -3302,7 +3302,7 @@ def checkunfinished(repo, commit=False):
         if commit and allowcommit:
             continue
         if repo.vfs.exists(f):
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
 
 def clearunfinished(repo):
     '''Check for unfinished operations (as above), and clear the ones
@@ -3310,7 +3310,7 @@ def clearunfinished(repo):
     '''
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if not clearable and repo.vfs.exists(f):
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
     for f, clearable, allowcommit, msg, hint in unfinishedstates:
         if clearable and repo.vfs.exists(f):
             util.unlink(repo.join(f))
@@ -3349,7 +3349,7 @@ class dirstateguard(object):
         if not self._active: # already inactivated
             msg = (_("can't close already inactivated backup: %s")
                    % self._filename)
-            raise util.Abort(msg)
+            raise error.Abort(msg)
 
         self._repo.vfs.unlink(self._filename)
         self._active = False
@@ -3368,7 +3368,7 @@ class dirstateguard(object):
             if not self._active: # already inactivated
                 msg = (_("can't release already inactivated backup: %s")
                        % self._filename)
-                raise util.Abort(msg)
+                raise error.Abort(msg)
             self._abort()
 
 _bundlecompspecs = {'none': None,
@@ -3402,7 +3402,7 @@ def parsebundletype(repo, spec):
     elif spec in _bundleversionspecs:
         version = spec
     else:
-        raise util.Abort(_('unknown bundle type specified with --type'))
+        raise error.Abort(_('unknown bundle type specified with --type'))
 
     if comp is None:
         comp = 'BZ'
@@ -3410,7 +3410,7 @@ def parsebundletype(repo, spec):
         try:
             comp = _bundlecompspecs[comp]
         except KeyError:
-            raise util.Abort(_('unknown bundle type specified with --type'))
+            raise error.Abort(_('unknown bundle type specified with --type'))
 
     if version is None:
         version = '01'
@@ -3420,6 +3420,6 @@ def parsebundletype(repo, spec):
         try:
             version = _bundleversionspecs[version]
         except KeyError:
-            raise util.Abort(_('unknown bundle type specified with --type'))
+            raise error.Abort(_('unknown bundle type specified with --type'))
 
     return version, comp

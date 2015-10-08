@@ -282,7 +282,7 @@ class bundlerepository(localrepo.localrepository):
                             in changegroup.packermap)]
 
             if not cgparts:
-                raise util.Abort('No changegroups found')
+                raise error.Abort('No changegroups found')
             version = cgparts[0].params.get('version', '01')
             cgparts = [p for p in cgparts
                        if p.params.get('version', '01') == version]
@@ -374,7 +374,7 @@ class bundlerepository(localrepo.localrepository):
 
 def instance(ui, path, create):
     if create:
-        raise util.Abort(_('cannot create new bundle repository'))
+        raise error.Abort(_('cannot create new bundle repository'))
     # internal config: bundle.mainreporoot
     parentpath = ui.config("bundle", "mainreporoot", "")
     if not parentpath:

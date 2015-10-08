@@ -43,47 +43,47 @@ testedwith = 'internal'
     _('-r REV [-t TEXT] [FILE]'))
 def censor(ui, repo, path, rev='', tombstone='', **opts):
     if not path:
-        raise util.Abort(_('must specify file path to censor'))
+        raise error.Abort(_('must specify file path to censor'))
     if not rev:
-        raise util.Abort(_('must specify revision to censor'))
+        raise error.Abort(_('must specify revision to censor'))
 
     wctx = repo[None]
 
     m = scmutil.match(wctx, (path,))
     if m.anypats() or len(m.files()) != 1:
-        raise util.Abort(_('can only specify an explicit filename'))
+        raise error.Abort(_('can only specify an explicit filename'))
     path = m.files()[0]
     flog = repo.file(path)
     if not len(flog):
-        raise util.Abort(_('cannot censor file with no history'))
+        raise error.Abort(_('cannot censor file with no history'))
 
     rev = scmutil.revsingle(repo, rev, rev).rev()
     try:
         ctx = repo[rev]
     except KeyError:
-        raise util.Abort(_('invalid revision identifier %s') % rev)
+        raise error.Abort(_('invalid revision identifier %s') % rev)
 
     try:
         fctx = ctx.filectx(path)
     except error.LookupError:
-        raise util.Abort(_('file does not exist at revision %s') % rev)
+        raise error.Abort(_('file does not exist at revision %s') % rev)
 
     fnode = fctx.filenode()
     headctxs = [repo[c] for c in repo.heads()]
     heads = [c for c in headctxs if path in c and c.filenode(path) == fnode]
     if heads:
         headlist = ', '.join([short(c.node()) for c in heads])
-        raise util.Abort(_('cannot censor file in heads (%s)') % headlist,
+        raise error.Abort(_('cannot censor file in heads (%s)') % headlist,
             hint=_('clean/delete and commit first'))
 
     wp = wctx.parents()
     if ctx.node() in [p.node() for p in wp]:
-        raise util.Abort(_('cannot censor working directory'),
+        raise error.Abort(_('cannot censor working directory'),
             hint=_('clean/delete/update first'))
 
     flogv = flog.version & 0xFFFF
     if flogv != revlog.REVLOGNG:
-        raise util.Abort(
+        raise error.Abort(
             _('censor does not support revlog version %d') % (flogv,))
 
     tombstone = filelog.packmeta({"censored": tombstone}, "")
@@ -91,7 +91,7 @@ def censor(ui, repo, path, rev='', tombstone='', **opts):
     crev = fctx.filerev()
 
     if len(tombstone) > flog.rawsize(crev):
-        raise util.Abort(_(
+        raise error.Abort(_(
             'censor tombstone must be no longer than censored data'))
 
     # Using two files instead of one makes it easy to rewrite entry-by-entry

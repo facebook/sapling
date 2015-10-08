@@ -50,7 +50,7 @@ def _verify(repo):
     lrugetctx = util.lrucachefunc(repo.changectx)
 
     if not repo.url().startswith('file:'):
-        raise util.Abort(_("cannot verify bundle or remote repos"))
+        raise error.Abort(_("cannot verify bundle or remote repos"))
 
     def err(linkrev, msg, filename=None):
         if linkrev is not None:

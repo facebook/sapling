@@ -7,7 +7,7 @@
 import posixpath
 import shlex
 from mercurial.i18n import _
-from mercurial import util, error
+from mercurial import error
 from common import SKIPREV, converter_source
 
 def rpairs(path):
@@ -45,7 +45,7 @@ class filemapper(object):
         self.targetprefixes = None
         if path:
             if self.parse(path):
-                raise util.Abort(_('errors in filemap'))
+                raise error.Abort(_('errors in filemap'))
 
     def parse(self, path):
         errs = 0
@@ -291,7 +291,7 @@ class filemap_source(converter_source):
         try:
             files = self.base.getchangedfiles(rev, i)
         except NotImplementedError:
-            raise util.Abort(_("source repository doesn't support --filemap"))
+            raise error.Abort(_("source repository doesn't support --filemap"))
         for f in files:
             if self.filemapper(f):
                 return True

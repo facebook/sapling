@@ -1056,7 +1056,7 @@ the hunk is left unchanged.
             elif r == 6: # all
                 ret = skipall = True
             elif r == 7: # quit
-                raise util.Abort(_('user quit'))
+                raise error.Abort(_('user quit'))
             return ret, skipfile, skipall, newpatches
 
     seen = set()
@@ -1964,7 +1964,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix='',
                 else:
                     store.setfile(path, data, mode)
         else:
-            raise util.Abort(_('unsupported parser state: %s') % state)
+            raise error.Abort(_('unsupported parser state: %s') % state)
 
     if current_file:
         rejects += current_file.close()
@@ -2022,7 +2022,7 @@ def patchbackend(ui, backend, patchobj, strip, prefix, files=None,
     if eolmode is None:
         eolmode = ui.config('patch', 'eol', 'strict')
     if eolmode.lower() not in eolmodes:
-        raise util.Abort(_('unsupported line endings type: %s') % eolmode)
+        raise error.Abort(_('unsupported line endings type: %s') % eolmode)
     eolmode = eolmode.lower()
 
     store = filestore()
@@ -2095,7 +2095,7 @@ def changedfiles(ui, repo, patchpath, strip=1):
                 if gp.op == 'RENAME':
                     changed.add(gp.oldpath)
             elif state not in ('hunk', 'git'):
-                raise util.Abort(_('unsupported parser state: %s') % state)
+                raise error.Abort(_('unsupported parser state: %s') % state)
         return changed
     finally:
         fp.close()

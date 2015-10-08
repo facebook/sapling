@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import getopt
 
 from .i18n import _
-from . import util
+from . import error
 
 def gnugetopt(args, options, longoptions):
     """Parse options mostly like getopt.gnu_getopt.
@@ -114,7 +114,7 @@ def fancyopts(args, options, state, gnu=False):
             try:
                 state[name] = int(val)
             except ValueError:
-                raise util.Abort(_('invalid value %r for option %s, '
+                raise error.Abort(_('invalid value %r for option %s, '
                                    'expected int') % (val, opt))
         elif t is type(''):
             state[name] = val

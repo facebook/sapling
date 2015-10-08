@@ -480,11 +480,11 @@ def _mergedefaultdest(repo, subset, x):
             else:
                 node = bmheads[0]
         elif len(bmheads) > 2:
-            raise util.Abort(_("multiple matching bookmarks to merge - "
+            raise error.Abort(_("multiple matching bookmarks to merge - "
                 "please merge with an explicit rev or bookmark"),
                 hint=_("run 'hg heads' to see all heads"))
         elif len(bmheads) <= 1:
-            raise util.Abort(_("no matching bookmark to merge - "
+            raise error.Abort(_("no matching bookmark to merge - "
                 "please merge with an explicit rev or bookmark"),
                 hint=_("run 'hg heads' to see all heads"))
     else:
@@ -493,7 +493,7 @@ def _mergedefaultdest(repo, subset, x):
         nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
 
         if len(nbhs) > 2:
-            raise util.Abort(_("branch '%s' has %d heads - "
+            raise error.Abort(_("branch '%s' has %d heads - "
                                "please merge with an explicit rev")
                              % (branch, len(bheads)),
                              hint=_("run 'hg heads .' to see heads"))
@@ -501,21 +501,21 @@ def _mergedefaultdest(repo, subset, x):
         parent = repo.dirstate.p1()
         if len(nbhs) <= 1:
             if len(bheads) > 1:
-                raise util.Abort(_("heads are bookmarked - "
+                raise error.Abort(_("heads are bookmarked - "
                                    "please merge with an explicit rev"),
                                  hint=_("run 'hg heads' to see all heads"))
             if len(repo.heads()) > 1:
-                raise util.Abort(_("branch '%s' has one head - "
+                raise error.Abort(_("branch '%s' has one head - "
                                    "please merge with an explicit rev")
                                  % branch,
                                  hint=_("run 'hg heads' to see all heads"))
             msg, hint = _('nothing to merge'), None
             if parent != repo.lookup(branch):
                 hint = _("use 'hg update' instead")
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
 
         if parent not in bheads:
-            raise util.Abort(_('working directory not at a head revision'),
+            raise error.Abort(_('working directory not at a head revision'),
                              hint=_("use 'hg update' or merge with an "
                                     "explicit revision"))
         if parent == nbhs[0]:
@@ -721,7 +721,7 @@ def bundle(repo, subset, x):
     try:
         bundlerevs = repo.changelog.bundlerevs
     except AttributeError:
-        raise util.Abort(_("no bundle provided - specify with -R"))
+        raise error.Abort(_("no bundle provided - specify with -R"))
     return subset & bundlerevs
 
 def checkstatus(repo, subset, pat, field):
@@ -2669,7 +2669,7 @@ def _expandaliases(aliases, tree, expanding, cache):
     alias = _getalias(aliases, tree)
     if alias is not None:
         if alias.error:
-            raise util.Abort(alias.error)
+            raise error.Abort(alias.error)
         if alias in expanding:
             raise error.ParseError(_('infinite expansion of revset alias "%s" '
                                      'detected') % alias.name)
@@ -2868,7 +2868,7 @@ def formatspec(expr, *args):
                 ret += listexp(list(args[arg]), d)
                 arg += 1
             else:
-                raise util.Abort('unexpected revspec format character %s' % d)
+                raise error.Abort('unexpected revspec format character %s' % d)
         else:
             ret += c
         pos += 1

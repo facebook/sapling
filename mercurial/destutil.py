@@ -8,7 +8,6 @@
 from .i18n import _
 from . import (
     error,
-    util,
     obsolete,
 )
 
@@ -26,7 +25,7 @@ def destupdate(repo):
         if wc.branch() == 'default': # no default branch!
             node = repo.lookup('tip') # update to tip
         else:
-            raise util.Abort(_("branch %s not found") % wc.branch())
+            raise error.Abort(_("branch %s not found") % wc.branch())
 
     if p1.obsolete() and not p1.children():
         # allow updating to successors

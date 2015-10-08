@@ -41,7 +41,7 @@ same name.
 """
 
 import os, re
-from mercurial import extensions, hg, templater, util
+from mercurial import extensions, hg, templater, util, error
 from mercurial.i18n import _
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
@@ -69,7 +69,7 @@ class ShortRepository(object):
         try:
             url = url.split('://', 1)[1]
         except IndexError:
-            raise util.Abort(_("no '://' in scheme url '%s'") % url)
+            raise error.Abort(_("no '://' in scheme url '%s'") % url)
         parts = url.split('/', self.parts)
         if len(parts) > self.parts:
             tail = parts[-1]
@@ -101,7 +101,7 @@ def extsetup(ui):
     for scheme, url in schemes.items():
         if (os.name == 'nt' and len(scheme) == 1 and scheme.isalpha()
             and os.path.exists('%s:\\' % scheme)):
-            raise util.Abort(_('custom scheme %s:// conflicts with drive '
+            raise error.Abort(_('custom scheme %s:// conflicts with drive '
                                'letter %s:\\\n') % (scheme, scheme.upper()))
         hg.schemes[scheme] = ShortRepository(url, scheme, t)
 

@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, util, cmdutil, scmutil, match as match_, \
-        archival, pathutil, revset
+        archival, pathutil, revset, error
 from mercurial.i18n import _
 
 import lfutil
@@ -245,7 +245,7 @@ def decodepath(orig, path):
 
 def overrideadd(orig, ui, repo, *pats, **opts):
     if opts.get('normal') and opts.get('large'):
-        raise util.Abort(_('--normal cannot be used with --large'))
+        raise error.Abort(_('--normal cannot be used with --large'))
     return orig(ui, repo, *pats, **opts)
 
 def cmdutiladd(orig, ui, repo, matcher, prefix, explicitonly, **opts):
@@ -584,7 +584,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
     installnormalfilesmatchfn(repo[None].manifest())
     try:
         result = orig(ui, repo, pats, opts, rename)
-    except util.Abort as e:
+    except error.Abort as e:
         if str(e) != _('no files to copy'):
             raise e
         else:
@@ -688,7 +688,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
                 lfdirstate.add(destlfile)
         lfdirstate.write()
-    except util.Abort as e:
+    except error.Abort as e:
         if str(e) != _('no files to copy'):
             raise e
         else:
@@ -698,7 +698,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         wlock.release()
 
     if nolfiles and nonormalfiles:
-        raise util.Abort(_('no files to copy'))
+        raise error.Abort(_('no files to copy'))
 
     return result
 
@@ -827,7 +827,7 @@ def pulledrevsetsymbol(repo, subset, x):
     try:
         firstpulled = repo.firstpulled
     except AttributeError:
-        raise util.Abort(_("pulled() only available in --lfrev"))
+        raise error.Abort(_("pulled() only available in --lfrev"))
     return revset.baseset([r for r in subset if r >= firstpulled])
 
 def overrideclone(orig, ui, source, dest=None, **opts):
@@ -835,7 +835,7 @@ def overrideclone(orig, ui, source, dest=None, **opts):
     if d is None:
         d = hg.defaultdest(source)
     if opts.get('all_largefiles') and not hg.islocal(d):
-            raise util.Abort(_(
+            raise error.Abort(_(
             '--all-largefiles is incompatible with non-local destination %s') %
             d)
 
@@ -916,13 +916,13 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
         lfcommands.cachelfiles(repo.ui, repo, node)
 
     if kind not in archival.archivers:
-        raise util.Abort(_("unknown archive type '%s'") % kind)
+        raise error.Abort(_("unknown archive type '%s'") % kind)
 
     ctx = repo[node]
 
     if kind == 'files':
         if prefix:
-            raise util.Abort(
+            raise error.Abort(
                 _('cannot give prefix when archiving to files'))
     else:
         prefix = archival.tidyprefix(dest, kind, prefix)
@@ -949,7 +949,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
                 path = lfutil.findfile(repo, getdata().strip())
 
                 if path is None:
-                    raise util.Abort(
+                    raise error.Abort(
                        _('largefile %s not found in repo store or system cache')
                        % lfutil.splitstandin(f))
             else:
@@ -1006,7 +1006,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
                 path = lfutil.findfile(repo._repo, getdata().strip())
 
                 if path is None:
-                    raise util.Abort(
+                    raise error.Abort(
                        _('largefile %s not found in repo store or system cache')
                        % lfutil.splitstandin(f))
             else:
@@ -1043,7 +1043,7 @@ def overridebailifchanged(orig, repo, *args, **kwargs):
     s = repo.status()
     repo.lfstatus = False
     if s.modified or s.added or s.removed or s.deleted:
-        raise util.Abort(_('uncommitted changes'))
+        raise error.Abort(_('uncommitted changes'))
 
 def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
     normalmatcher = composenormalfilematcher(match, repo[None].manifest())
@@ -1344,7 +1344,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
                 store = basestore._openstore(repo)
                 success, missing = store.get([(lf, hash)])
                 if len(success) != 1:
-                    raise util.Abort(
+                    raise error.Abort(
                         _('largefile %s is not in cache and could not be '
                           'downloaded')  % lf)
             path = lfutil.usercachepath(repo.ui, hash)

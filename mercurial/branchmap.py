@@ -19,8 +19,8 @@ from .node import (
 )
 from . import (
     encoding,
+    error,
     scmutil,
-    util,
 )
 
 array = array.array
@@ -250,7 +250,7 @@ class branchcache(dict):
             repo.ui.log('branchcache',
                         'wrote %s branch cache with %d labels and %d nodes\n',
                         repo.filtername, len(self), nodecount)
-        except (IOError, OSError, util.Abort) as inst:
+        except (IOError, OSError, error.Abort) as inst:
             repo.ui.debug("couldn't write branch cache: %s\n" % inst)
             # Abort may be raise by read only opener
             pass
@@ -465,7 +465,7 @@ class revbranchcache(object):
                                   for b in self._names[self._rbcnamescount:]))
                 self._rbcsnameslen = f.tell()
                 f.close()
-            except (IOError, OSError, util.Abort) as inst:
+            except (IOError, OSError, error.Abort) as inst:
                 repo.ui.debug("couldn't write revision branch cache names: "
                               "%s\n" % inst)
                 return
@@ -483,7 +483,7 @@ class revbranchcache(object):
                 end = revs * _rbcrecsize
                 f.write(self._rbcrevs[start:end])
                 f.close()
-            except (IOError, OSError, util.Abort) as inst:
+            except (IOError, OSError, error.Abort) as inst:
                 repo.ui.debug("couldn't write revision branch cache: %s\n" %
                               inst)
                 return

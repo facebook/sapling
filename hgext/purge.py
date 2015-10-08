@@ -24,7 +24,7 @@
 
 '''command to delete untracked files from the working directory'''
 
-from mercurial import util, commands, cmdutil, scmutil
+from mercurial import util, commands, cmdutil, scmutil, error
 from mercurial.i18n import _
 import os
 
@@ -94,7 +94,7 @@ def purge(ui, repo, *dirs, **opts):
             except OSError:
                 m = _('%s cannot be removed') % name
                 if opts['abort_on_err']:
-                    raise util.Abort(m)
+                    raise error.Abort(m)
                 ui.warn(_('warning: %s\n') % m)
         else:
             ui.write('%s%s' % (name, eol))

@@ -9,7 +9,7 @@
 # it cannot access 'bar' repositories, but they were never used very much
 
 import os
-from mercurial import demandimport
+from mercurial import demandimport, error
 # these do not work with demandimport, blacklist
 demandimport.ignore.extend([
         'bzrlib.transactions',
@@ -18,7 +18,7 @@ demandimport.ignore.extend([
     ])
 
 from mercurial.i18n import _
-from mercurial import util
+from mercurial import error
 from common import NoRepo, commit, converter_source
 
 try:
@@ -108,7 +108,8 @@ class bzr_source(converter_source):
                     pass
                 revid = info.rev_id
             if revid is None:
-                raise util.Abort(_('%s is not a valid revision') % self.revs[0])
+                raise error.Abort(_('%s is not a valid revision')
+                                  % self.revs[0])
             heads = [revid]
         # Empty repositories return 'null:', which cannot be retrieved
         heads = [h for h in heads if h != 'null:']
@@ -127,7 +128,7 @@ class bzr_source(converter_source):
         if kind == 'symlink':
             target = revtree.get_symlink_target(fileid)
             if target is None:
-                raise util.Abort(_('%s.%s symlink has no target')
+                raise error.Abort(_('%s.%s symlink has no target')
                                  % (name, rev))
             return target, mode
         else:
@@ -136,7 +137,7 @@ class bzr_source(converter_source):
 
     def getchanges(self, version, full):
         if full:
-            raise util.Abort(_("convert from cvs do not support --full"))
+            raise error.Abort(_("convert from cvs do not support --full"))
         self._modecache = {}
         self._revtree = self.sourcerepo.revision_tree(version)
         # get the parentids from the cache

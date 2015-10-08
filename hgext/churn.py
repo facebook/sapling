@@ -9,7 +9,7 @@
 '''command to display statistics about repository history'''
 
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, scmutil, util, commands
+from mercurial import patch, cmdutil, scmutil, util, commands, error
 from mercurial import encoding
 import os
 import time, datetime
@@ -27,7 +27,7 @@ def maketemplater(ui, repo, tmpl):
         t = cmdutil.changeset_templater(ui, repo, False, None, tmpl,
                                         None, False)
     except SyntaxError as inst:
-        raise util.Abort(inst.args[0])
+        raise error.Abort(inst.args[0])
     return t
 
 def changedlines(ui, repo, ctx1, ctx2, fns):

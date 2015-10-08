@@ -7,7 +7,7 @@
 
 import os, re, socket, errno
 from cStringIO import StringIO
-from mercurial import encoding, util
+from mercurial import encoding, util, error
 from mercurial.i18n import _
 
 from common import NoRepo, commit, converter_source, checktool
@@ -43,14 +43,14 @@ class convert_cvs(converter_source):
         maxrev = 0
         if self.revs:
             if len(self.revs) > 1:
-                raise util.Abort(_('cvs source does not support specifying '
+                raise error.Abort(_('cvs source does not support specifying '
                                    'multiple revs'))
             # TODO: handle tags
             try:
                 # patchset number?
                 maxrev = int(self.revs[0])
             except ValueError:
-                raise util.Abort(_('revision %s is not a patchset number')
+                raise error.Abort(_('revision %s is not a patchset number')
                                  % self.revs[0])
 
         d = os.getcwd()
@@ -150,7 +150,7 @@ class convert_cvs(converter_source):
                 sck.send("\n".join(["BEGIN AUTH REQUEST", root, user, passw,
                                     "END AUTH REQUEST", ""]))
                 if sck.recv(128) != "I LOVE YOU\n":
-                    raise util.Abort(_("CVS pserver authentication failed"))
+                    raise error.Abort(_("CVS pserver authentication failed"))
 
                 self.writep = self.readp = sck.makefile('r+')
 
@@ -193,7 +193,7 @@ class convert_cvs(converter_source):
         self.writep.flush()
         r = self.readp.readline()
         if not r.startswith("Valid-requests"):
-            raise util.Abort(_('unexpected response from CVS server '
+            raise error.Abort(_('unexpected response from CVS server '
                                '(expected "Valid-requests", but got %r)')
                              % r)
         if "UseUnchanged" in r:
@@ -215,7 +215,7 @@ class convert_cvs(converter_source):
             while count > 0:
                 data = fp.read(min(count, chunksize))
                 if not data:
-                    raise util.Abort(_("%d bytes missing from remote file")
+                    raise error.Abort(_("%d bytes missing from remote file")
                                      % count)
                 count -= len(data)
                 output.write(data)
@@ -252,18 +252,18 @@ class convert_cvs(converter_source):
             else:
                 if line == "ok\n":
                     if mode is None:
-                        raise util.Abort(_('malformed response from CVS'))
+                        raise error.Abort(_('malformed response from CVS'))
                     return (data, "x" in mode and "x" or "")
                 elif line.startswith("E "):
                     self.ui.warn(_("cvs server: %s\n") % line[2:])
                 elif line.startswith("Remove"):
                     self.readp.readline()
                 else:
-                    raise util.Abort(_("unknown CVS response: %s") % line)
+                    raise error.Abort(_("unknown CVS response: %s") % line)
 
     def getchanges(self, rev, full):
         if full:
-            raise util.Abort(_("convert from cvs do not support --full"))
+            raise error.Abort(_("convert from cvs do not support --full"))
         self._parse()
         return sorted(self.files[rev].iteritems()), {}, set()
 

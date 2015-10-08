@@ -270,7 +270,7 @@ def runfilter(context, mapping, data):
             dt = arg[1][1]
         else:
             dt = arg[1]
-        raise util.Abort(_("template filter '%s' is not compatible with "
+        raise error.Abort(_("template filter '%s' is not compatible with "
                            "keyword '%s'") % (filt.func_name, dt))
 
 def buildmap(exp, context):
@@ -840,7 +840,7 @@ def stylelist():
             stylelist.append(split[1])
     return ", ".join(sorted(stylelist))
 
-class TemplateNotFound(util.Abort):
+class TemplateNotFound(error.Abort):
     pass
 
 class templater(object):
@@ -873,7 +873,7 @@ class templater(object):
         if not mapfile:
             return
         if not os.path.exists(mapfile):
-            raise util.Abort(_("style '%s' not found") % mapfile,
+            raise error.Abort(_("style '%s' not found") % mapfile,
                              hint=_("available styles: %s") % stylelist())
 
         conf = config.config(includepaths=templatepaths())

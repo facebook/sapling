@@ -30,7 +30,7 @@ def readbundle(ui, fh, fname, vfs=None):
     magic, version = header[0:2], header[2:4]
 
     if magic != 'HG':
-        raise util.Abort(_('%s: not a Mercurial bundle') % fname)
+        raise error.Abort(_('%s: not a Mercurial bundle') % fname)
     if version == '10':
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
@@ -38,7 +38,7 @@ def readbundle(ui, fh, fname, vfs=None):
     elif version.startswith('2'):
         return bundle2.getunbundler(ui, fh, magicstring=magic + version)
     else:
-        raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
+        raise error.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
 def buildobsmarkerspart(bundler, markers):
     """add an obsmarker part to the bundler with <markers>
@@ -193,7 +193,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
             msg = _("required features are not"
                     " supported in the destination:"
                     " %s") % (', '.join(sorted(missing)))
-            raise util.Abort(msg)
+            raise error.Abort(msg)
 
     # there are two ways to push to remote repo:
     #
@@ -204,7 +204,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
     # servers, http servers).
 
     if not pushop.remote.canpush():
-        raise util.Abort(_("destination does not support push"))
+        raise error.Abort(_("destination does not support push"))
     # get local lock as we might write phase data
     localwlock = locallock = None
     try:
@@ -435,9 +435,9 @@ def _pushcheckoutgoing(pushop):
             for node in outgoing.missingheads:
                 ctx = unfi[node]
                 if ctx.obsolete():
-                    raise util.Abort(mso % ctx)
+                    raise error.Abort(mso % ctx)
                 elif ctx.troubled():
-                    raise util.Abort(mst[ctx.troubles()[0]] % ctx)
+                    raise error.Abort(mst[ctx.troubles()[0]] % ctx)
 
         # internal config: bookmarks.pushing
         newbm = pushop.ui.configlist('bookmarks', 'pushing')
@@ -658,14 +658,14 @@ def _pushbundle2(pushop):
         try:
             reply = pushop.remote.unbundle(stream, ['force'], 'push')
         except error.BundleValueError as exc:
-            raise util.Abort('missing support for %s' % exc)
+            raise error.Abort('missing support for %s' % exc)
         try:
             trgetter = None
             if pushback:
                 trgetter = pushop.trmanager.transaction
             op = bundle2.processbundle(pushop.repo, reply, trgetter)
         except error.BundleValueError as exc:
-            raise util.Abort('missing support for %s' % exc)
+            raise error.Abort('missing support for %s' % exc)
     except error.PushkeyFailed as exc:
         partid = int(exc.partid)
         if partid not in pushop.pkfailcb:
@@ -967,7 +967,7 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
             msg = _("required features are not"
                     " supported in the destination:"
                     " %s") % (', '.join(sorted(missing)))
-            raise util.Abort(msg)
+            raise error.Abort(msg)
 
     lock = pullop.repo.lock()
     try:
@@ -1108,7 +1108,7 @@ def _pullbundle2(pullop):
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
     except error.BundleValueError as exc:
-        raise util.Abort('missing support for %s' % exc)
+        raise error.Abort('missing support for %s' % exc)
 
     if pullop.fetch:
         results = [cg['return'] for cg in op.records['changegroup']]
@@ -1158,7 +1158,7 @@ def _pullchangeset(pullop):
     elif pullop.heads is None:
         cg = pullop.remote.changegroup(pullop.fetch, 'pull')
     elif not pullop.remote.capable('changegroupsubset'):
-        raise util.Abort(_("partial pull cannot be done because "
+        raise error.Abort(_("partial pull cannot be done because "
                            "other repository doesn't support "
                            "changegroupsubset."))
     else:

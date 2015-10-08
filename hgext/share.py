@@ -38,7 +38,7 @@ The following ``share.`` config options influence this feature:
 '''
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, hg, util, extensions, bookmarks
+from mercurial import cmdutil, commands, hg, util, extensions, bookmarks, error
 from mercurial.hg import repository, parseurl
 import errno
 
@@ -83,7 +83,7 @@ def unshare(ui, repo):
     """
 
     if not repo.shared():
-        raise util.Abort(_("this is not a shared repo"))
+        raise error.Abort(_("this is not a shared repo"))
 
     destlock = lock = None
     lock = repo.lock()

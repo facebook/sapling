@@ -1060,7 +1060,7 @@ class filectx(basefilectx):
         except error.CensoredNodeError:
             if self._repo.ui.config("censor", "policy", "abort") == "ignore":
                 return ""
-            raise util.Abort(_("censored node: %s") % short(self._filenode),
+            raise error.Abort(_("censored node: %s") % short(self._filenode),
                              hint=_("set censor.policy to ignore errors"))
 
     def size(self):
@@ -1120,7 +1120,7 @@ class committablectx(basectx):
             try:
                 branch = encoding.fromlocal(self._repo.dirstate.branch())
             except UnicodeDecodeError:
-                raise util.Abort(_('branch name not in UTF-8!'))
+                raise error.Abort(_('branch name not in UTF-8!'))
             self._extra['branch'] = branch
         if self._extra['branch'] == '':
             self._extra['branch'] = 'default'

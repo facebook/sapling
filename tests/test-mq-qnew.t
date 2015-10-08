@@ -248,11 +248,11 @@ Test saving last-message.txt
   $ cd repo
 
   $ cat > $TESTTMP/commitfailure.py <<EOF
-  > from mercurial import util
+  > from mercurial import error
   > def reposetup(ui, repo):
   >     class commitfailure(repo.__class__):
   >         def commit(self, *args, **kwargs):
-  >             raise util.Abort('emulating unexpected abort')
+  >             raise error.Abort('emulating unexpected abort')
   >     repo.__class__ = commitfailure
   > EOF
   $ cat >> .hg/hgrc <<EOF

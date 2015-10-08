@@ -238,9 +238,9 @@ def addremove(ui, repo, *pats, **opts):
     try:
         sim = float(opts.get('similarity') or 100)
     except ValueError:
-        raise util.Abort(_('similarity must be a number'))
+        raise error.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:
-        raise util.Abort(_('similarity must be between 0 and 100'))
+        raise error.Abort(_('similarity must be between 0 and 100'))
     matcher = scmutil.match(repo[None], pats, opts)
     return scmutil.addremove(repo, matcher, "", opts, similarity=sim / 100.0)
 
@@ -276,7 +276,7 @@ def annotate(ui, repo, *pats, **opts):
     Returns 0 on success.
     """
     if not pats:
-        raise util.Abort(_('at least one filename or pattern is required'))
+        raise error.Abort(_('at least one filename or pattern is required'))
 
     if opts.get('follow'):
         # --follow is deprecated and now just an alias for -f/--file
@@ -333,7 +333,7 @@ def annotate(ui, repo, *pats, **opts):
 
     linenumber = opts.get('line_number') is not None
     if linenumber and (not opts.get('changeset')) and (not opts.get('number')):
-        raise util.Abort(_('at least one of -n/-c is required for -l'))
+        raise error.Abort(_('at least one of -n/-c is required for -l'))
 
     if fm:
         def makefunc(get, fmt):
@@ -348,7 +348,7 @@ def annotate(ui, repo, *pats, **opts):
                       if opts.get(op))
 
     def bad(x, y):
-        raise util.Abort("%s: %s" % (x, y))
+        raise error.Abort("%s: %s" % (x, y))
 
     m = scmutil.match(ctx, pats, opts, badfn=bad)
 
@@ -438,18 +438,18 @@ def archive(ui, repo, dest, **opts):
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
     if not ctx:
-        raise util.Abort(_('no working directory: please specify a revision'))
+        raise error.Abort(_('no working directory: please specify a revision'))
     node = ctx.node()
     dest = cmdutil.makefilename(repo, dest, node)
     if os.path.realpath(dest) == repo.root:
-        raise util.Abort(_('repository root cannot be destination'))
+        raise error.Abort(_('repository root cannot be destination'))
 
     kind = opts.get('type') or archival.guesskind(dest) or 'files'
     prefix = opts.get('prefix')
 
     if dest == '-':
         if kind == 'files':
-            raise util.Abort(_('cannot archive plain files to stdout'))
+            raise error.Abort(_('cannot archive plain files to stdout'))
         dest = cmdutil.makefileobj(repo, dest)
         if not prefix:
             prefix = os.path.basename(repo.root) + '-%h'
@@ -504,13 +504,13 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
     files.
     '''
     if rev and node:
-        raise util.Abort(_("please specify just one revision"))
+        raise error.Abort(_("please specify just one revision"))
 
     if not rev:
         rev = node
 
     if not rev:
-        raise util.Abort(_("please specify a revision to backout"))
+        raise error.Abort(_("please specify a revision to backout"))
 
     date = opts.get('date')
     if date:
@@ -522,22 +522,22 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
 
     op1, op2 = repo.dirstate.parents()
     if not repo.changelog.isancestor(node, op1):
-        raise util.Abort(_('cannot backout change that is not an ancestor'))
+        raise error.Abort(_('cannot backout change that is not an ancestor'))
 
     p1, p2 = repo.changelog.parents(node)
     if p1 == nullid:
-        raise util.Abort(_('cannot backout a change with no parents'))
+        raise error.Abort(_('cannot backout a change with no parents'))
     if p2 != nullid:
         if not opts.get('parent'):
-            raise util.Abort(_('cannot backout a merge changeset'))
+            raise error.Abort(_('cannot backout a merge changeset'))
         p = repo.lookup(opts['parent'])
         if p not in (p1, p2):
-            raise util.Abort(_('%s is not a parent of %s') %
+            raise error.Abort(_('%s is not a parent of %s') %
                              (short(p), short(node)))
         parent = p
     else:
         if opts.get('parent'):
-            raise util.Abort(_('cannot use --parent on non-merge changeset'))
+            raise error.Abort(_('cannot use --parent on non-merge changeset'))
         parent = p1
 
     # the backout should appear on the same branch
@@ -746,9 +746,9 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             if (good or bad or skip or reset) and interactive:
                 return
             if not state['good']:
-                raise util.Abort(_('cannot bisect (no known good revisions)'))
+                raise error.Abort(_('cannot bisect (no known good revisions)'))
             else:
-                raise util.Abort(_('cannot bisect (no known bad revisions)'))
+                raise error.Abort(_('cannot bisect (no known bad revisions)'))
         return True
 
     # backward compatibility
@@ -762,7 +762,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
         else:
             reset = True
     elif extra or good + bad + skip + reset + extend + bool(command) > 1:
-        raise util.Abort(_('incompatible arguments'))
+        raise error.Abort(_('incompatible arguments'))
 
     cmdutil.checkunfinished(repo)
 
@@ -780,12 +780,12 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
             try:
                 node = state['current'][0]
             except LookupError:
-                raise util.Abort(_('current bisect revision is unknown - '
+                raise error.Abort(_('current bisect revision is unknown - '
                                    'start a new bisect to fix'))
         else:
             node, p2 = repo.dirstate.parents()
             if p2 != nullid:
-                raise util.Abort(_('current bisect revision is a merge'))
+                raise error.Abort(_('current bisect revision is a merge'))
         try:
             while changesets:
                 # update state
@@ -798,9 +798,9 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     transition = "good"
                 # status < 0 means process was killed
                 elif status == 127:
-                    raise util.Abort(_("failed to execute %s") % command)
+                    raise error.Abort(_("failed to execute %s") % command)
                 elif status < 0:
-                    raise util.Abort(_("%s killed") % command)
+                    raise error.Abort(_("%s killed") % command)
                 else:
                     transition = "bad"
                 ctx = scmutil.revsingle(repo, rev, node)
@@ -854,7 +854,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
                     return
                 cmdutil.bailifchanged(repo)
                 return hg.clean(repo, extendnode.node())
-        raise util.Abort(_("nothing to extend"))
+        raise error.Abort(_("nothing to extend"))
 
     if changesets == 0:
         print_result(nodes, good)
@@ -937,7 +937,7 @@ def bookmark(ui, repo, *names, **opts):
     def checkformat(mark):
         mark = mark.strip()
         if not mark:
-            raise util.Abort(_("bookmark names cannot consist entirely of "
+            raise error.Abort(_("bookmark names cannot consist entirely of "
                                "whitespace"))
         scmutil.checknewlabel(repo, mark, 'bookmark')
         return mark
@@ -967,21 +967,21 @@ def bookmark(ui, repo, *names, **opts):
                     ui.status(_("moving bookmark '%s' forward from %s\n") %
                               (mark, short(bmctx.node())))
                     return
-            raise util.Abort(_("bookmark '%s' already exists "
+            raise error.Abort(_("bookmark '%s' already exists "
                                "(use -f to force)") % mark)
         if ((mark in repo.branchmap() or mark == repo.dirstate.branch())
             and not force):
-            raise util.Abort(
+            raise error.Abort(
                 _("a bookmark cannot have the name of an existing branch"))
 
     if delete and rename:
-        raise util.Abort(_("--delete and --rename are incompatible"))
+        raise error.Abort(_("--delete and --rename are incompatible"))
     if delete and rev:
-        raise util.Abort(_("--rev is incompatible with --delete"))
+        raise error.Abort(_("--rev is incompatible with --delete"))
     if rename and rev:
-        raise util.Abort(_("--rev is incompatible with --rename"))
+        raise error.Abort(_("--rev is incompatible with --rename"))
     if not names and (delete or rev):
-        raise util.Abort(_("bookmark name required"))
+        raise error.Abort(_("bookmark name required"))
 
     if delete or rename or names or inactive:
         wlock = lock = tr = None
@@ -994,7 +994,7 @@ def bookmark(ui, repo, *names, **opts):
                 tr = repo.transaction('bookmark')
                 for mark in names:
                     if mark not in marks:
-                        raise util.Abort(_("bookmark '%s' does not exist") %
+                        raise error.Abort(_("bookmark '%s' does not exist") %
                                          mark)
                     if mark == repo._activebookmark:
                         bookmarks.deactivate(repo)
@@ -1003,12 +1003,13 @@ def bookmark(ui, repo, *names, **opts):
             elif rename:
                 tr = repo.transaction('bookmark')
                 if not names:
-                    raise util.Abort(_("new bookmark name required"))
+                    raise error.Abort(_("new bookmark name required"))
                 elif len(names) > 1:
-                    raise util.Abort(_("only one new bookmark name allowed"))
+                    raise error.Abort(_("only one new bookmark name allowed"))
                 mark = checkformat(names[0])
                 if rename not in marks:
-                    raise util.Abort(_("bookmark '%s' does not exist") % rename)
+                    raise error.Abort(_("bookmark '%s' does not exist")
+                                      % rename)
                 checkconflict(repo, mark, cur, force)
                 marks[mark] = marks[rename]
                 if repo._activebookmark == rename and not inactive:
@@ -1119,7 +1120,7 @@ def branch(ui, repo, label=None, **opts):
         elif label:
             if not opts.get('force') and label in repo.branchmap():
                 if label not in [p.branch() for p in repo.parents()]:
-                    raise util.Abort(_('a branch of the same name already'
+                    raise error.Abort(_('a branch of the same name already'
                                        ' exists'),
                                      # i18n: "it" refers to an existing branch
                                      hint=_("use 'hg update' to switch to it"))
@@ -1251,7 +1252,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     bundlecaps = None
     if base:
         if dest:
-            raise util.Abort(_("--base is incompatible with specifying "
+            raise error.Abort(_("--base is incompatible with specifying "
                                "a destination"))
         common = [repo.lookup(rev) for rev in base]
         heads = revs and map(repo.lookup, revs) or revs
@@ -1429,7 +1430,7 @@ def clone(ui, source, dest=None, **opts):
     Returns 0 on success.
     """
     if opts.get('noupdate') and opts.get('updaterev'):
-        raise util.Abort(_("cannot specify both --noupdate and --updaterev"))
+        raise error.Abort(_("cannot specify both --noupdate and --updaterev"))
 
     r = hg.clone(ui, opts, source, dest,
                  pull=opts.get('pull'),
@@ -1501,7 +1502,7 @@ def commit(ui, repo, *pats, **opts):
 
     if opts.get('subrepos'):
         if opts.get('amend'):
-            raise util.Abort(_('cannot amend with --subrepos'))
+            raise error.Abort(_('cannot amend with --subrepos'))
         # Let --subrepos on the command line override config setting.
         ui.setconfig('ui', 'commitsubrepos', True, 'commit')
 
@@ -1515,24 +1516,24 @@ def commit(ui, repo, *pats, **opts):
         extra['close'] = 1
 
         if not bheads:
-            raise util.Abort(_('can only close branch heads'))
+            raise error.Abort(_('can only close branch heads'))
         elif opts.get('amend'):
             if repo.parents()[0].p1().branch() != branch and \
                     repo.parents()[0].p2().branch() != branch:
-                raise util.Abort(_('can only close branch heads'))
+                raise error.Abort(_('can only close branch heads'))
 
     if opts.get('amend'):
         if ui.configbool('ui', 'commitsubrepos'):
-            raise util.Abort(_('cannot amend with ui.commitsubrepos enabled'))
+            raise error.Abort(_('cannot amend with ui.commitsubrepos enabled'))
 
         old = repo['.']
         if not old.mutable():
-            raise util.Abort(_('cannot amend public changesets'))
+            raise error.Abort(_('cannot amend public changesets'))
         if len(repo[None].parents()) > 1:
-            raise util.Abort(_('cannot amend while merging'))
+            raise error.Abort(_('cannot amend while merging'))
         allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
         if not allowunstable and old.children():
-            raise util.Abort(_('cannot amend changeset with children'))
+            raise error.Abort(_('cannot amend changeset with children'))
 
         # commitfunc is used only for temporary amend commit by cmdutil.amend
         def commitfunc(ui, repo, message, match, opts):
@@ -1614,11 +1615,11 @@ def config(ui, repo, *values, **opts):
 
     if opts.get('edit') or opts.get('local') or opts.get('global'):
         if opts.get('local') and opts.get('global'):
-            raise util.Abort(_("can't use --local and --global together"))
+            raise error.Abort(_("can't use --local and --global together"))
 
         if opts.get('local'):
             if not repo:
-                raise util.Abort(_("can't use --local outside a repository"))
+                raise error.Abort(_("can't use --local outside a repository"))
             paths = [repo.join('hgrc')]
         elif opts.get('global'):
             paths = scmutil.systemrcpath()
@@ -1643,7 +1644,7 @@ def config(ui, repo, *values, **opts):
 
         editor = ui.geteditor()
         ui.system("%s \"%s\"" % (editor, f),
-                  onerr=util.Abort, errprefix=_("edit failed"))
+                  onerr=error.Abort, errprefix=_("edit failed"))
         return
 
     for f in scmutil.rcpath():
@@ -1653,7 +1654,7 @@ def config(ui, repo, *values, **opts):
         sections = [v for v in values if '.' not in v]
         items = [v for v in values if '.' in v]
         if len(items) > 1 or items and sections:
-            raise util.Abort(_('only one config item permitted'))
+            raise error.Abort(_('only one config item permitted'))
     matched = False
     for section, name, value in ui.walkconfig(untrusted=untrusted):
         value = str(value).replace('\n', '\\n')
@@ -1715,13 +1716,13 @@ def debugancestor(ui, repo, *args):
         lookup = r.lookup
     elif len(args) == 2:
         if not repo:
-            raise util.Abort(_("there is no Mercurial repository here "
+            raise error.Abort(_("there is no Mercurial repository here "
                                "(.hg not found)"))
         rev1, rev2 = args
         r = repo.changelog
         lookup = repo.lookup
     else:
-        raise util.Abort(_('either two or three arguments required'))
+        raise error.Abort(_('either two or three arguments required'))
     a = r.ancestor(lookup(rev1), lookup(rev2))
     ui.write("%d:%s\n" % (r.rev(a), hex(a)))
 
@@ -1772,7 +1773,7 @@ def debugbuilddag(ui, repo, text=None,
 
     cl = repo.changelog
     if len(cl) > 0:
-        raise util.Abort(_('repository is not empty'))
+        raise error.Abort(_('repository is not empty'))
 
     # determine number of revs in DAG
     total = 0
@@ -1920,7 +1921,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                 showchunks(fname)
         else:
             if isinstance(gen, bundle2.unbundle20):
-                raise util.Abort(_('use debugbundle2 for this file'))
+                raise error.Abort(_('use debugbundle2 for this file'))
             chunkdata = gen.changelogheader()
             chain = None
             while True:
@@ -1936,7 +1937,7 @@ def debugbundle(ui, bundlepath, all=None, **opts):
 def _debugbundle2(ui, gen, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
-        raise util.Abort(_('not a bundle2 file'))
+        raise error.Abort(_('not a bundle2 file'))
     ui.write(('Stream params: %s\n' % repr(gen.params)))
     for part in gen.iterparts():
         ui.write('%s -- %r\n' % (part.type, repr(part.params)))
@@ -1979,7 +1980,7 @@ def debugcheckstate(ui, repo):
             errors += 1
     if errors:
         error = _(".hg/dirstate inconsistent with current parent's manifest")
-        raise util.Abort(error)
+        raise error.Abort(error)
 
 @command('debugcommands', [], _('[COMMAND]'), norepo=True)
 def debugcommands(ui, cmd='', *args):
@@ -2067,7 +2068,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
                         for l in ls:
                             yield 'l', (r, l)
     else:
-        raise util.Abort(_('need repo for changelog dag'))
+        raise error.Abort(_('need repo for changelog dag'))
 
     for line in dagparser.dagtextlines(events(),
                                        addspaces=spaces,
@@ -2094,7 +2095,7 @@ def debugdata(ui, repo, file_, rev=None, **opts):
     try:
         ui.write(r.revision(r.lookup(rev)))
     except KeyError:
-        raise util.Abort(_('invalid revision identifier %s') % rev)
+        raise error.Abort(_('invalid revision identifier %s') % rev)
 
 @command('debugdate',
     [('e', 'extended', None, _('try extended date formats'))],
@@ -2131,7 +2132,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     def doit(localheads, remoteheads, remote=remote):
         if opts.get('old'):
             if localheads:
-                raise util.Abort('cannot use localheads with old style '
+                raise error.Abort('cannot use localheads with old style '
                                  'discovery')
             if not util.safehasattr(remote, 'branches'):
                 # enable in-client legacy support
@@ -2259,7 +2260,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
     """
     repo = hg.peer(ui, opts, repopath)
     if not repo.capable('getbundle'):
-        raise util.Abort("getbundle() not supported by target repository")
+        raise error.Abort("getbundle() not supported by target repository")
     args = {}
     if common:
         args['common'] = [bin(s) for s in common]
@@ -2276,7 +2277,7 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
               'bundle2': 'HG20'}
     bundletype = btypes.get(bundletype)
     if bundletype not in changegroup.bundletypes:
-        raise util.Abort(_('unknown bundle type specified with --type'))
+        raise error.Abort(_('unknown bundle type specified with --type'))
     changegroup.writebundle(ui, bundle, bundlepath, bundletype)
 
 @command('debugignore', [], '')
@@ -2287,7 +2288,7 @@ def debugignore(ui, repo, *values, **opts):
     if includepat is not None:
         ui.write("%s\n" % includepat)
     else:
-        raise util.Abort(_("no ignore patterns found"))
+        raise error.Abort(_("no ignore patterns found"))
 
 @command('debugindex',
     [('c', 'changelog', False, _('open changelog')),
@@ -2301,7 +2302,7 @@ def debugindex(ui, repo, file_=None, **opts):
     r = cmdutil.openrevlog(repo, 'debugindex', file_, opts)
     format = opts.get('format', 0)
     if format not in (0, 1):
-        raise util.Abort(_("unknown format %d") % format)
+        raise error.Abort(_("unknown format %d") % format)
 
     generaldelta = r.version & revlog.REVLOGGENERALDELTA
     if generaldelta:
@@ -2387,7 +2388,7 @@ def debuginstall(ui):
     ui.status(_("checking encoding (%s)...\n") % encoding.encoding)
     try:
         encoding.fromlocal("test")
-    except util.Abort as inst:
+    except error.Abort as inst:
         ui.write(" %s\n" % inst)
         ui.write(_(" (check that your locale is properly set)\n"))
         problems += 1
@@ -2453,7 +2454,7 @@ def debuginstall(ui):
     ui.status(_("checking username...\n"))
     try:
         ui.username()
-    except util.Abort as e:
+    except error.Abort as e:
         ui.write(" %s\n" % e)
         ui.write(_(" (specify a username in your configuration file)\n"))
         problems += 1
@@ -2475,7 +2476,7 @@ def debugknown(ui, repopath, *ids, **opts):
     """
     repo = hg.peer(ui, opts, repopath)
     if not repo.capable('known'):
-        raise util.Abort("known() not supported by target repository")
+        raise error.Abort("known() not supported by target repository")
     flags = repo.known([bin(s) for s in ids])
     ui.write("%s\n" % ("".join([f and "1" or "0" for f in flags])))
 
@@ -2663,12 +2664,12 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 raise TypeError()
             return n
         except TypeError:
-            raise util.Abort('changeset references must be full hexadecimal '
+            raise error.Abort('changeset references must be full hexadecimal '
                              'node identifiers')
 
     if precursor is not None:
         if opts['rev']:
-            raise util.Abort('cannot select revision when creating marker')
+            raise error.Abort('cannot select revision when creating marker')
         metadata = {}
         metadata['user'] = opts['user'] or ui.username()
         succs = tuple(parsenodeid(succ) for succ in successors)
@@ -2685,7 +2686,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                 parents = None
                 if opts['record_parents']:
                     if prec not in repo.unfiltered():
-                        raise util.Abort('cannot used --record-parents on '
+                        raise error.Abort('cannot used --record-parents on '
                                          'unknown changesets')
                     parents = repo.unfiltered()[prec].parents()
                     parents = tuple(p.node() for p in parents)
@@ -2694,7 +2695,7 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                                      metadata=metadata)
                 tr.close()
             except ValueError as exc:
-                raise util.Abort(_('bad obsmarker input: %s') % exc)
+                raise error.Abort(_('bad obsmarker input: %s') % exc)
             finally:
                 tr.release()
         finally:
@@ -3319,7 +3320,7 @@ def diff(ui, repo, *pats, **opts):
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
     elif change:
         node2 = scmutil.revsingle(repo, change, None).node()
         node1 = repo[node2].p1().node()
@@ -3407,7 +3408,7 @@ def export(ui, repo, *changesets, **opts):
         changesets = ['.']
     revs = scmutil.revrange(repo, changesets)
     if not revs:
-        raise util.Abort(_("export requires at least one changeset"))
+        raise error.Abort(_("export requires at least one changeset"))
     if len(revs) > 1:
         ui.note(_('exporting patches:\n'))
     else:
@@ -3511,7 +3512,7 @@ def forget(ui, repo, *pats, **opts):
     """
 
     if not pats:
-        raise util.Abort(_('no files specified'))
+        raise error.Abort(_('no files specified'))
 
     m = scmutil.match(repo[None], pats, opts)
     rejected = cmdutil.forget(ui, repo, m, prefix="", explicitonly=False)[0]
@@ -3602,7 +3603,7 @@ def graft(ui, repo, *revs, **opts):
     if opts['continue']:
         cont = True
         if revs:
-            raise util.Abort(_("can't specify --continue and revisions"))
+            raise error.Abort(_("can't specify --continue and revisions"))
         # read in unfinished revisions
         try:
             nodes = repo.vfs.read('graftstate').splitlines()
@@ -3610,12 +3611,12 @@ def graft(ui, repo, *revs, **opts):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-            raise util.Abort(_("no graft state found, can't continue"))
+            raise error.Abort(_("no graft state found, can't continue"))
     else:
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
         if not revs:
-            raise util.Abort(_('no revisions specified'))
+            raise error.Abort(_('no revisions specified'))
         revs = scmutil.revrange(repo, revs)
 
     skipped = set()
@@ -3738,7 +3739,7 @@ def graft(ui, repo, *revs, **opts):
                     # write out state for --continue
                     nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
                     repo.vfs.write('graftstate', ''.join(nodelines))
-                    raise util.Abort(
+                    raise error.Abort(
                         _("unresolved conflicts, can't continue"),
                         hint=_('use hg resolve and hg graft --continue'))
             else:
@@ -4101,7 +4102,7 @@ def help_(ui, name=None, **opts):
     # to look for, or we could have simply failed to found "foo.bar"
     # because bar isn't a section of foo
     if section and not (formatted and name):
-        raise util.Abort(_("help section not found"))
+        raise error.Abort(_("help section not found"))
 
     if 'verbose' in pruned:
         keep.append('omitted')
@@ -4158,7 +4159,7 @@ def identify(ui, repo, source=None, rev=None,
     """
 
     if not repo and not source:
-        raise util.Abort(_("there is no Mercurial repository here "
+        raise error.Abort(_("there is no Mercurial repository here "
                            "(.hg not found)"))
 
     if ui.debugflag:
@@ -4177,7 +4178,7 @@ def identify(ui, repo, source=None, rev=None,
 
     if not repo:
         if num or branch or tags:
-            raise util.Abort(
+            raise error.Abort(
                 _("can't query remote revision number, branch, or tags"))
         if not rev and revs:
             rev = revs[0]
@@ -4370,7 +4371,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     """
 
     if not patch1:
-        raise util.Abort(_('need at least one patch to import'))
+        raise error.Abort(_('need at least one patch to import'))
 
     patches = (patch1,) + patches
 
@@ -4380,19 +4381,19 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
     update = not opts.get('bypass')
     if not update and opts.get('no_commit'):
-        raise util.Abort(_('cannot use --no-commit with --bypass'))
+        raise error.Abort(_('cannot use --no-commit with --bypass'))
     try:
         sim = float(opts.get('similarity') or 0)
     except ValueError:
-        raise util.Abort(_('similarity must be a number'))
+        raise error.Abort(_('similarity must be a number'))
     if sim < 0 or sim > 100:
-        raise util.Abort(_('similarity must be between 0 and 100'))
+        raise error.Abort(_('similarity must be between 0 and 100'))
     if sim and not update:
-        raise util.Abort(_('cannot use --similarity with --bypass'))
+        raise error.Abort(_('cannot use --similarity with --bypass'))
     if opts.get('exact') and opts.get('edit'):
-        raise util.Abort(_('cannot use --exact with --edit'))
+        raise error.Abort(_('cannot use --exact with --edit'))
     if opts.get('exact') and opts.get('prefix'):
-        raise util.Abort(_('cannot use --exact with --prefix'))
+        raise error.Abort(_('cannot use --exact with --prefix'))
 
     if update:
         cmdutil.checkunfinished(repo)
@@ -4444,7 +4445,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                         break
 
                 if not haspatch:
-                    raise util.Abort(_('%s: no diffs found') % patchurl)
+                    raise error.Abort(_('%s: no diffs found') % patchurl)
 
             if tr:
                 tr.close()
@@ -4540,7 +4541,7 @@ def incoming(ui, repo, source="default", **opts):
         return 0
 
     if opts.get('bundle') and opts.get('subrepos'):
-        raise util.Abort(_('cannot combine --bundle and --subrepos'))
+        raise error.Abort(_('cannot combine --bundle and --subrepos'))
 
     if opts.get('bookmarks'):
         source, branches = hg.parseurl(ui.expandpath(source),
@@ -4806,7 +4807,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
 
     if opts.get('all'):
         if rev or node:
-            raise util.Abort(_("can't specify a revision with --all"))
+            raise error.Abort(_("can't specify a revision with --all"))
 
         res = []
         prefix = "data/"
@@ -4827,7 +4828,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         return
 
     if rev and node:
-        raise util.Abort(_("please specify just one revision"))
+        raise error.Abort(_("please specify just one revision"))
 
     if not node:
         node = rev
@@ -4882,7 +4883,7 @@ def merge(ui, repo, node=None, **opts):
     """
 
     if opts.get('rev') and node:
-        raise util.Abort(_("please specify just one revision"))
+        raise error.Abort(_("please specify just one revision"))
     if not node:
         node = opts.get('rev')
 
@@ -5012,7 +5013,7 @@ def parents(ui, repo, file_=None, **opts):
     if file_:
         m = scmutil.match(ctx, (file_,), opts)
         if m.anypats() or len(m.files()) != 1:
-            raise util.Abort(_('can only specify an explicit filename'))
+            raise error.Abort(_('can only specify an explicit filename'))
         file_ = m.files()[0]
         filenodes = []
         for cp in ctx.parents():
@@ -5023,7 +5024,7 @@ def parents(ui, repo, file_=None, **opts):
             except error.LookupError:
                 pass
         if not filenodes:
-            raise util.Abort(_("'%s' not found in manifest!") % file_)
+            raise error.Abort(_("'%s' not found in manifest!") % file_)
         p = []
         for fn in filenodes:
             fctx = repo.filectx(file_, fileid=fn)
@@ -5112,7 +5113,7 @@ def phase(ui, repo, *revs, **opts):
     for idx, name in enumerate(phases.phasenames):
         if opts[name]:
             if targetphase is not None:
-                raise util.Abort(_('only one phase can be specified'))
+                raise error.Abort(_('only one phase can be specified'))
             targetphase = idx
 
     # look for specified revision
@@ -5139,7 +5140,7 @@ def phase(ui, repo, *revs, **opts):
             tr = repo.transaction("phase")
             # set phase
             if not revs:
-                raise util.Abort(_('empty revision set'))
+                raise error.Abort(_('empty revision set'))
             nodes = [repo[r].node() for r in revs]
             # moving revision from public to draft may hide them
             # We have to check result on an unfiltered repository
@@ -5181,7 +5182,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
         checkout, movemarkfrom = bookmarks.calculateupdate(ui, repo, checkout)
         try:
             ret = hg.update(repo, checkout)
-        except util.Abort as inst:
+        except error.Abort as inst:
             ui.warn(_("not updating: %s\n") % str(inst))
             if inst.hint:
                 ui.warn(_("(%s)\n") % inst.hint)
@@ -5252,7 +5253,7 @@ def pull(ui, repo, source="default", **opts):
             pullopargs['remotebookmarks'] = remotebookmarks
             for b in opts['bookmark']:
                 if b not in remotebookmarks:
-                    raise util.Abort(_('remote bookmark %s not found!') % b)
+                    raise error.Abort(_('remote bookmark %s not found!') % b)
                 revs.append(remotebookmarks[b])
 
         if revs:
@@ -5270,7 +5271,7 @@ def pull(ui, repo, source="default", **opts):
             except error.CapabilityError:
                 err = _("other repository doesn't support revision lookup, "
                         "so a rev cannot be specified.")
-                raise util.Abort(err)
+                raise error.Abort(err)
 
         modheads = exchange.pull(repo, other, heads=revs,
                                  force=opts.get('force'),
@@ -5350,7 +5351,7 @@ def push(ui, repo, dest=None, **opts):
 
     path = ui.paths.getpath(dest, default='default')
     if not path:
-        raise util.Abort(_('default repository not configured!'),
+        raise error.Abort(_('default repository not configured!'),
                          hint=_('see the "path" section in "hg help config"'))
     dest, branches = path.pushloc, (path.branch, opts.get('branch') or [])
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
@@ -5360,7 +5361,7 @@ def push(ui, repo, dest=None, **opts):
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
         if not revs:
-            raise util.Abort(_("specified revisions evaluate to an empty set"),
+            raise error.Abort(_("specified revisions evaluate to an empty set"),
                              hint=_("use different revision arguments"))
 
     repo._subtoppath = dest
@@ -5450,7 +5451,7 @@ def remove(ui, repo, *pats, **opts):
 
     after, force = opts.get('after'), opts.get('force')
     if not pats and not after:
-        raise util.Abort(_('no files specified'))
+        raise error.Abort(_('no files specified'))
 
     m = scmutil.match(repo[None], pats, opts)
     subrepos = opts.get('subrepos')
@@ -5534,11 +5535,11 @@ def resolve(ui, repo, *pats, **opts):
         [opts.get(o) for o in 'all mark unmark list no_status'.split()]
 
     if (show and (mark or unmark)) or (mark and unmark):
-        raise util.Abort(_("too many options specified"))
+        raise error.Abort(_("too many options specified"))
     if pats and all:
-        raise util.Abort(_("can't specify --all and patterns"))
+        raise error.Abort(_("can't specify --all and patterns"))
     if not (all or pats or show or mark or unmark):
-        raise util.Abort(_('no files or directories specified'),
+        raise error.Abort(_('no files or directories specified'),
                          hint=('use --all to re-merge all unresolved files'))
 
     if show:
@@ -5560,7 +5561,7 @@ def resolve(ui, repo, *pats, **opts):
         ms = mergemod.mergestate(repo)
 
         if not (ms.active() or repo.dirstate.p2() != nullid):
-            raise util.Abort(
+            raise error.Abort(
                 _('resolve command not applicable when not merging'))
 
         m = scmutil.match(repo[None], pats, opts)
@@ -5656,13 +5657,13 @@ def revert(ui, repo, *pats, **opts):
 
     if opts.get("date"):
         if opts.get("rev"):
-            raise util.Abort(_("you can't specify a revision and a date"))
+            raise error.Abort(_("you can't specify a revision and a date"))
         opts["rev"] = cmdutil.finddate(ui, repo, opts["date"])
 
     parent, p2 = repo.dirstate.parents()
     if not opts.get('rev') and p2 != nullid:
         # revert after merge is a trap for new users (issue2915)
-        raise util.Abort(_('uncommitted merge with no revision specified'),
+        raise error.Abort(_('uncommitted merge with no revision specified'),
                          hint=_('use "hg update" or see "hg help revert"'))
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
@@ -5673,7 +5674,7 @@ def revert(ui, repo, *pats, **opts):
         if p2 != nullid:
             hint = _("uncommitted merge, use --all to discard all changes,"
                      " or 'hg update -C .' to abort the merge")
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
         dirty = any(repo.status())
         node = ctx.node()
         if node != parent:
@@ -5687,7 +5688,7 @@ def revert(ui, repo, *pats, **opts):
             hint = _("uncommitted changes, use --all to discard all changes")
         else:
             hint = _("use --all to revert all files")
-        raise util.Abort(msg, hint=hint)
+        raise error.Abort(msg, hint=hint)
 
     return cmdutil.revert(ui, repo, ctx, (parent, p2), *pats, **opts)
 
@@ -5799,7 +5800,7 @@ def serve(ui, repo, **opts):
     """
 
     if opts["stdio"] and opts["cmdserver"]:
-        raise util.Abort(_("cannot use --stdio with --cmdserver"))
+        raise error.Abort(_("cannot use --stdio with --cmdserver"))
 
     if opts["stdio"]:
         if repo is None:
@@ -5968,7 +5969,7 @@ def status(ui, repo, *pats, **opts):
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
     elif change:
         node2 = scmutil.revsingle(repo, change, None).node()
         node1 = repo[node2].p1().node()
@@ -6320,14 +6321,14 @@ def tag(ui, repo, name1, *names, **opts):
         rev_ = "."
         names = [t.strip() for t in (name1,) + names]
         if len(names) != len(set(names)):
-            raise util.Abort(_('tag names must be unique'))
+            raise error.Abort(_('tag names must be unique'))
         for n in names:
             scmutil.checknewlabel(repo, n, 'tag')
             if not n:
-                raise util.Abort(_('tag names cannot consist entirely of '
+                raise error.Abort(_('tag names cannot consist entirely of '
                                    'whitespace'))
         if opts.get('rev') and opts.get('remove'):
-            raise util.Abort(_("--rev and --remove are incompatible"))
+            raise error.Abort(_("--rev and --remove are incompatible"))
         if opts.get('rev'):
             rev_ = opts['rev']
         message = opts.get('message')
@@ -6339,12 +6340,12 @@ def tag(ui, repo, name1, *names, **opts):
 
             for n in names:
                 if not repo.tagtype(n):
-                    raise util.Abort(_("tag '%s' does not exist") % n)
+                    raise error.Abort(_("tag '%s' does not exist") % n)
                 if repo.tagtype(n) != expectedtype:
                     if expectedtype == 'global':
-                        raise util.Abort(_("tag '%s' is not a global tag") % n)
+                        raise error.Abort(_("tag '%s' is not a global tag") % n)
                     else:
-                        raise util.Abort(_("tag '%s' is not a local tag") % n)
+                        raise error.Abort(_("tag '%s' is not a local tag") % n)
             rev_ = 'null'
             if not message:
                 # we don't translate commit messages
@@ -6352,15 +6353,15 @@ def tag(ui, repo, name1, *names, **opts):
         elif not opts.get('force'):
             for n in names:
                 if n in repo.tags():
-                    raise util.Abort(_("tag '%s' already exists "
+                    raise error.Abort(_("tag '%s' already exists "
                                        "(use -f to force)") % n)
         if not opts.get('local'):
             p1, p2 = repo.dirstate.parents()
             if p2 != nullid:
-                raise util.Abort(_('uncommitted merge'))
+                raise error.Abort(_('uncommitted merge'))
             bheads = repo.branchheads()
             if not opts.get('force') and bheads and p1 not in bheads:
-                raise util.Abort(_('not at a branch head (use -f to force)'))
+                raise error.Abort(_('not at a branch head (use -f to force)'))
         r = scmutil.revsingle(repo, rev_).node()
 
         if not message:
@@ -6381,7 +6382,7 @@ def tag(ui, repo, name1, *names, **opts):
         # don't allow tagging the null rev
         if (not opts.get('remove') and
             scmutil.revsingle(repo, rev_).rev() == nullrev):
-            raise util.Abort(_("cannot tag null revision"))
+            raise error.Abort(_("cannot tag null revision"))
 
         repo.tag(names, r, message, opts.get('local'), opts.get('user'), date,
                  editor=editor)
@@ -6470,7 +6471,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                     op = bundle2.processbundle(repo, gen, lambda: tr)
                     tr.close()
                 except error.BundleUnknownFeatureError as exc:
-                    raise util.Abort(_('%s: unknown bundle feature, %s')
+                    raise error.Abort(_('%s: unknown bundle feature, %s')
                                      % (fname, exc),
                                      hint=_("see https://mercurial-scm.org/"
                                             "wiki/BundleFeature for more "
@@ -6549,7 +6550,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     Returns 0 on success, 1 if there are unresolved files.
     """
     if rev and node:
-        raise util.Abort(_("please specify just one revision"))
+        raise error.Abort(_("please specify just one revision"))
 
     if rev is None or rev == '':
         rev = node
@@ -6560,7 +6561,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
         if date:
             if rev is not None:
-                raise util.Abort(_("you can't specify a revision and a date"))
+                raise error.Abort(_("you can't specify a revision and a date"))
             rev = cmdutil.finddate(ui, repo, date)
 
         # with no argument, we also move the active bookmark, if any
@@ -6571,7 +6572,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         rev = scmutil.revsingle(repo, rev, rev).rev()
 
         if check and clean:
-            raise util.Abort(_("cannot specify both -c/--check and -C/--clean"))
+            raise error.Abort(_("cannot specify both -c/--check and -C/--clean")
+                             )
 
         if check:
             cmdutil.bailifchanged(repo, merge=False)

@@ -8,7 +8,7 @@
 
 from common import NoRepo, commandline, commit, converter_source
 from mercurial.i18n import _
-from mercurial import encoding, util
+from mercurial import encoding, util, error
 import os, shutil, tempfile, stat
 from email.Parser import Parser
 
@@ -42,7 +42,7 @@ class gnuarch_source(converter_source, commandline):
             if util.findexe('tla'):
                 self.execmd = 'tla'
             else:
-                raise util.Abort(_('cannot find a GNU Arch tool'))
+                raise error.Abort(_('cannot find a GNU Arch tool'))
 
         commandline.__init__(self, ui, self.execmd)
 
@@ -135,7 +135,7 @@ class gnuarch_source(converter_source, commandline):
 
     def getfile(self, name, rev):
         if rev != self.lastrev:
-            raise util.Abort(_('internal calling inconsistency'))
+            raise error.Abort(_('internal calling inconsistency'))
 
         if not os.path.lexists(os.path.join(self.tmppath, name)):
             return None, None
@@ -144,7 +144,7 @@ class gnuarch_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise util.Abort(_("convert from arch do not support --full"))
+            raise error.Abort(_("convert from arch do not support --full"))
         self._update(rev)
         changes = []
         copies = {}
@@ -287,7 +287,7 @@ class gnuarch_source(converter_source, commandline):
                 self.changes[rev].continuationof = self.recode(
                     catlog['Continuation-of'])
         except Exception:
-            raise util.Abort(_('could not parse cat-log of %s') % rev)
+            raise error.Abort(_('could not parse cat-log of %s') % rev)
 
     def _parsechangeset(self, data, rev):
         for l in data:

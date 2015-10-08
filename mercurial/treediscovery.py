@@ -16,7 +16,6 @@ from .node import (
 )
 from . import (
     error,
-    util,
 )
 
 def findcommonincoming(repo, remote, heads=None, force=False):
@@ -149,7 +148,7 @@ def findcommonincoming(repo, remote, heads=None, force=False):
         if force:
             repo.ui.warn(_("warning: repository is unrelated\n"))
         else:
-            raise util.Abort(_("repository is unrelated"))
+            raise error.Abort(_("repository is unrelated"))
 
     repo.ui.debug("found new changesets starting at " +
                  " ".join([short(f) for f in fetch]) + "\n")

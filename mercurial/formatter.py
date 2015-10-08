@@ -18,8 +18,8 @@ from .node import (
 
 from . import (
     encoding,
+    error,
     templater,
-    util,
 )
 
 class baseformatter(object):
@@ -179,7 +179,7 @@ def lookuptemplate(ui, topic, tmpl):
 
     if tmpl == 'list':
         ui.write(_("available styles: %s\n") % templater.stylelist())
-        raise util.Abort(_("specify a template"))
+        raise error.Abort(_("specify a template"))
 
     # perhaps it's a path to a map or a template
     if ('/' in tmpl or '\\' in tmpl) and os.path.isfile(tmpl):

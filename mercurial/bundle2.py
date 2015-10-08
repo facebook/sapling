@@ -627,10 +627,10 @@ def getunbundler(ui, fp, magicstring=None):
         magicstring = changegroup.readexactly(fp, 4)
     magic, version = magicstring[0:2], magicstring[2:4]
     if magic != 'HG':
-        raise util.Abort(_('not a Mercurial bundle'))
+        raise error.Abort(_('not a Mercurial bundle'))
     unbundlerclass = formatmap.get(version)
     if unbundlerclass is None:
-        raise util.Abort(_('unknown bundle version %s') % version)
+        raise error.Abort(_('unknown bundle version %s') % version)
     unbundler = unbundlerclass(ui, fp)
     indebug(ui, 'start processing of %s stream' % magicstring)
     return unbundler
@@ -1206,7 +1206,7 @@ class unbundlepart(unpackermixin):
             self._payloadstream = util.chunkbuffer(self._payloadchunks(chunk))
             adjust = self.read(internaloffset)
             if len(adjust) != internaloffset:
-                raise util.Abort(_('Seek failed\n'))
+                raise error.Abort(_('Seek failed\n'))
             self._pos = newpos
 
 # These are only the static capabilities.
@@ -1304,19 +1304,19 @@ def handleremotechangegroup(op, inpart):
     try:
         raw_url = inpart.params['url']
     except KeyError:
-        raise util.Abort(_('remote-changegroup: missing "%s" param') % 'url')
+        raise error.Abort(_('remote-changegroup: missing "%s" param') % 'url')
     parsed_url = util.url(raw_url)
     if parsed_url.scheme not in capabilities['remote-changegroup']:
-        raise util.Abort(_('remote-changegroup does not support %s urls') %
+        raise error.Abort(_('remote-changegroup does not support %s urls') %
             parsed_url.scheme)
 
     try:
         size = int(inpart.params['size'])
     except ValueError:
-        raise util.Abort(_('remote-changegroup: invalid value for param "%s"')
+        raise error.Abort(_('remote-changegroup: invalid value for param "%s"')
             % 'size')
     except KeyError:
-        raise util.Abort(_('remote-changegroup: missing "%s" param') % 'size')
+        raise error.Abort(_('remote-changegroup: missing "%s" param') % 'size')
 
     digests = {}
     for typ in inpart.params.get('digests', '').split():
@@ -1324,7 +1324,7 @@ def handleremotechangegroup(op, inpart):
         try:
             value = inpart.params[param]
         except KeyError:
-            raise util.Abort(_('remote-changegroup: missing "%s" param') %
+            raise error.Abort(_('remote-changegroup: missing "%s" param') %
                 param)
         digests[typ] = value
 
@@ -1339,7 +1339,7 @@ def handleremotechangegroup(op, inpart):
     from . import exchange
     cg = exchange.readbundle(op.repo.ui, real_part, raw_url)
     if not isinstance(cg, changegroup.cg1unpacker):
-        raise util.Abort(_('%s: not a bundle version 1.0') %
+        raise error.Abort(_('%s: not a bundle version 1.0') %
             util.hidepassword(raw_url))
     ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
@@ -1351,8 +1351,8 @@ def handleremotechangegroup(op, inpart):
         part.addparam('return', '%i' % ret, mandatory=False)
     try:
         real_part.validate()
-    except util.Abort as e:
-        raise util.Abort(_('bundle at %s is corrupted:\n%s') %
+    except error.Abort as e:
+        raise error.Abort(_('bundle at %s is corrupted:\n%s') %
             (util.hidepassword(raw_url), str(e)))
     assert not inpart.read()
 
@@ -1399,7 +1399,7 @@ def handlereplycaps(op, inpart):
 @parthandler('error:abort', ('message', 'hint'))
 def handleerrorabort(op, inpart):
     """Used to transmit abort error over the wire"""
-    raise util.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
+    raise error.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
 
 @parthandler('error:pushkey', ('namespace', 'key', 'new', 'old', 'ret',
                                'in-reply-to'))

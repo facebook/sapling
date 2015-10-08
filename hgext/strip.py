@@ -6,7 +6,7 @@ repository. See the command help for details.
 from mercurial.i18n import _
 from mercurial.node import nullid
 from mercurial.lock import release
-from mercurial import cmdutil, hg, scmutil, util
+from mercurial import cmdutil, hg, scmutil, util, error
 from mercurial import repair, bookmarks, merge
 
 cmdtable = {}
@@ -38,10 +38,10 @@ def checklocalchanges(repo, force=False, excsuffix=''):
     if not force:
         if s.modified or s.added or s.removed or s.deleted:
             _("local changes found") # i18n tool detection
-            raise util.Abort(_("local changes found" + excsuffix))
+            raise error.Abort(_("local changes found" + excsuffix))
         if checksubstate(repo):
             _("local changed subrepos found") # i18n tool detection
-            raise util.Abort(_("local changed subrepos found" + excsuffix))
+            raise error.Abort(_("local changed subrepos found" + excsuffix))
     return s
 
 def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
@@ -131,7 +131,7 @@ def stripcmd(ui, repo, *revs, **opts):
             mark = opts.get('bookmark')
             marks = repo._bookmarks
             if mark not in marks:
-                raise util.Abort(_("bookmark '%s' not found") % mark)
+                raise error.Abort(_("bookmark '%s' not found") % mark)
 
             # If the requested bookmark is not the only one pointing to a
             # a revision we have to only delete the bookmark and not strip
@@ -153,7 +153,7 @@ def stripcmd(ui, repo, *revs, **opts):
                 ui.write(_("bookmark '%s' deleted\n") % mark)
 
         if not revs:
-            raise util.Abort(_('empty revision set'))
+            raise error.Abort(_('empty revision set'))
 
         descendants = set(cl.descendants(revs))
         strippedrevs = revs.union(descendants)

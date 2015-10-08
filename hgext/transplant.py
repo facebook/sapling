@@ -174,7 +174,7 @@ class transplanter(object):
                     else:
                         parent = source.lookup(opts['parent'])
                         if parent not in parents:
-                            raise util.Abort(_('%s is not a parent of %s') %
+                            raise error.Abort(_('%s is not a parent of %s') %
                                              (short(parent), short(node)))
                 else:
                     parent = parents[0]
@@ -245,7 +245,7 @@ class transplanter(object):
                            environ={'HGUSER': changelog[1],
                                     'HGREVISION': revlog.hex(node),
                                     },
-                           onerr=util.Abort, errprefix=_('filter failed'))
+                           onerr=error.Abort, errprefix=_('filter failed'))
             user, date, msg = self.parselog(file(headerfile))[1:4]
         finally:
             os.unlink(headerfile)
@@ -269,7 +269,7 @@ class transplanter(object):
         self.ui.note('%s %s\n%s\n' % (user, date, message))
 
         if not patchfile and not merge:
-            raise util.Abort(_('can only omit patchfile if merging'))
+            raise error.Abort(_('can only omit patchfile if merging'))
         if patchfile:
             try:
                 files = set()
@@ -332,14 +332,14 @@ class transplanter(object):
         merge = False
 
         if not user or not date or not message or not parents[0]:
-            raise util.Abort(_('transplant log file is corrupt'))
+            raise error.Abort(_('transplant log file is corrupt'))
 
         parent = parents[0]
         if len(parents) > 1:
             if opts.get('parent'):
                 parent = source.lookup(opts['parent'])
                 if parent not in parents:
-                    raise util.Abort(_('%s is not a parent of %s') %
+                    raise error.Abort(_('%s is not a parent of %s') %
                                      (short(parent), short(node)))
             else:
                 merge = True
@@ -349,7 +349,7 @@ class transplanter(object):
         try:
             p1, p2 = repo.dirstate.parents()
             if p1 != parent:
-                raise util.Abort(_('working directory not at transplant '
+                raise error.Abort(_('working directory not at transplant '
                                    'parent %s') % revlog.hex(parent))
             if merge:
                 repo.setparents(p1, parents[1])
@@ -358,7 +358,7 @@ class transplanter(object):
                 n = repo.commit(message, user, date, extra=extra,
                                 editor=self.getcommiteditor())
                 if not n:
-                    raise util.Abort(_('commit failed'))
+                    raise error.Abort(_('commit failed'))
                 if not merge:
                     self.transplants.set(n, node)
             else:
@@ -418,7 +418,7 @@ class transplanter(object):
                 inmsg = True
                 message.append(line)
         if None in (user, date):
-            raise util.Abort(_("filter corrupted changeset (no user or date)"))
+            raise error.Abort(_("filter corrupted changeset (no user or date)"))
         return (node, user, date, '\n'.join(message), parents)
 
     def log(self, user, date, message, p1, p2, merge=False):
@@ -594,18 +594,18 @@ def transplant(ui, repo, *revs, **opts):
     def checkopts(opts, revs):
         if opts.get('continue'):
             if opts.get('branch') or opts.get('all') or opts.get('merge'):
-                raise util.Abort(_('--continue is incompatible with '
+                raise error.Abort(_('--continue is incompatible with '
                                    '--branch, --all and --merge'))
             return
         if not (opts.get('source') or revs or
                 opts.get('merge') or opts.get('branch')):
-            raise util.Abort(_('no source URL, branch revision or revision '
+            raise error.Abort(_('no source URL, branch revision or revision '
                                'list provided'))
         if opts.get('all'):
             if not opts.get('branch'):
-                raise util.Abort(_('--all requires a branch revision'))
+                raise error.Abort(_('--all requires a branch revision'))
             if revs:
-                raise util.Abort(_('--all is incompatible with a '
+                raise error.Abort(_('--all is incompatible with a '
                                    'revision list'))
 
     checkopts(opts, revs)
@@ -622,13 +622,13 @@ def transplant(ui, repo, *revs, **opts):
     cmdutil.checkunfinished(repo)
     p1, p2 = repo.dirstate.parents()
     if len(repo) > 0 and p1 == revlog.nullid:
-        raise util.Abort(_('no revision checked out'))
+        raise error.Abort(_('no revision checked out'))
     if not opts.get('continue'):
         if p2 != revlog.nullid:
-            raise util.Abort(_('outstanding uncommitted merges'))
+            raise error.Abort(_('outstanding uncommitted merges'))
         m, a, r, d = repo.status()[:4]
         if m or a or r or d:
-            raise util.Abort(_('outstanding local changes'))
+            raise error.Abort(_('outstanding local changes'))
 
     sourcerepo = opts.get('source')
     if sourcerepo:

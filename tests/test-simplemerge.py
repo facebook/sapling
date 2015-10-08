@@ -15,7 +15,7 @@
 
 import unittest
 from unittest import TestCase
-from mercurial import util, simplemerge
+from mercurial import util, simplemerge, error
 
 # bzr compatible interface, for the tests
 class Merge3(simplemerge.Merge3Text):
@@ -29,7 +29,7 @@ class Merge3(simplemerge.Merge3Text):
         atext = '\n'.join([i.strip('\n') for i in a] + [''])
         btext = '\n'.join([i.strip('\n') for i in b] + [''])
         if util.binary(basetext) or util.binary(atext) or util.binary(btext):
-            raise util.Abort("don't know how to merge binary files")
+            raise error.Abort("don't know how to merge binary files")
         simplemerge.Merge3Text.__init__(self, basetext, atext, btext,
                                         base, a, b)
 
@@ -321,7 +321,7 @@ bbb
         self.assertEquals(ml, MERGED_RESULT)
 
     def test_binary(self):
-        self.assertRaises(util.Abort, Merge3, ['\x00'], ['a'], ['b'])
+        self.assertRaises(error.Abort, Merge3, ['\x00'], ['a'], ['b'])
 
     def test_dos_text(self):
         base_text = 'a\r\n'

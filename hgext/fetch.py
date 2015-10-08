@@ -60,7 +60,7 @@ def fetch(ui, repo, source='default', **opts):
     except error.RepoLookupError:
         branchnode = None
     if parent != branchnode:
-        raise util.Abort(_('working directory not at branch tip'),
+        raise error.Abort(_('working directory not at branch tip'),
                          hint=_('use "hg update" to check out branch tip'))
 
     wlock = lock = None
@@ -73,7 +73,7 @@ def fetch(ui, repo, source='default', **opts):
         bheads = repo.branchheads(branch)
         bheads = [head for head in bheads if len(repo[head].children()) == 0]
         if len(bheads) > 1:
-            raise util.Abort(_('multiple heads in this branch '
+            raise error.Abort(_('multiple heads in this branch '
                                '(use "hg heads ." and "hg merge" to merge)'))
 
         other = hg.peer(repo, opts, ui.expandpath(source))
@@ -86,7 +86,7 @@ def fetch(ui, repo, source='default', **opts):
             except error.CapabilityError:
                 err = _("other repository doesn't support revision lookup, "
                         "so a rev cannot be specified.")
-                raise util.Abort(err)
+                raise error.Abort(err)
 
         # Are there any changes at all?
         modheads = exchange.pull(repo, other, heads=revs).cgresult

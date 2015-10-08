@@ -16,6 +16,7 @@ from .node import (
 from . import (
     bookmarks,
     branchmap,
+    error,
     obsolete,
     phases,
     setdiscovery,
@@ -262,7 +263,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
     # 1. Check for new branches on the remote.
     if newbranches and not newbranch:  # new branch requires --new-branch
         branchnames = ', '.join(sorted(newbranches))
-        raise util.Abort(_("push creates new remote branches: %s!")
+        raise error.Abort(_("push creates new remote branches: %s!")
                            % branchnames,
                          hint=_("use 'hg push --new-branch' to create"
                                 " new remote branches"))
@@ -390,4 +391,4 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             for h in dhs:
                 repo.ui.note((" %s\n") % short(h))
     if errormsg:
-        raise util.Abort(errormsg, hint=hint)
+        raise error.Abort(errormsg, hint=hint)

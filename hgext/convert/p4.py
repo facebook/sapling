@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import util
+from mercurial import util, error
 from mercurial.i18n import _
 
 from common import commit, converter_source, checktool, NoRepo
@@ -70,7 +70,7 @@ class p4_source(converter_source):
         self.re_keywords_old = re.compile("\$(Id|Header):[^$\n]*\$")
 
         if revs and len(revs) > 1:
-            raise util.Abort(_("p4 source does not support specifying "
+            raise error.Abort(_("p4 source does not support specifying "
                                "multiple revisions"))
         self._parse(ui, path)
 
@@ -277,7 +277,7 @@ class p4_source(converter_source):
 
     def getchanges(self, rev, full):
         if full:
-            raise util.Abort(_("convert from p4 do not support --full"))
+            raise error.Abort(_("convert from p4 do not support --full"))
         return self.files[rev], self.copies[rev], set()
 
     def getcommit(self, rev):

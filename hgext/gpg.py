@@ -6,7 +6,7 @@
 '''commands to sign and verify changesets'''
 
 import os, tempfile, binascii
-from mercurial import util, commands, match, cmdutil
+from mercurial import util, commands, match, cmdutil, error
 from mercurial import node as hgnode
 from mercurial.i18n import _
 
@@ -237,7 +237,7 @@ def sign(ui, repo, *revs, **opts):
         nodes = [node for node in repo.dirstate.parents()
                  if node != hgnode.nullid]
         if len(nodes) > 1:
-            raise util.Abort(_('uncommitted merge - please provide a '
+            raise error.Abort(_('uncommitted merge - please provide a '
                                'specific revision'))
         if not nodes:
             nodes = [repo.changelog.tip()]
@@ -250,7 +250,7 @@ def sign(ui, repo, *revs, **opts):
         data = node2txt(repo, n, sigver)
         sig = mygpg.sign(data)
         if not sig:
-            raise util.Abort(_("error while signing"))
+            raise error.Abort(_("error while signing"))
         sig = binascii.b2a_base64(sig)
         sig = sig.replace("\n", "")
         sigmessage += "%s %s %s\n" % (hexnode, sigver, sig)
@@ -263,7 +263,7 @@ def sign(ui, repo, *revs, **opts):
     if not opts["force"]:
         msigs = match.exact(repo.root, '', ['.hgsigs'])
         if any(repo.status(match=msigs, unknown=True, ignored=True)):
-            raise util.Abort(_("working copy of .hgsigs is changed "),
+            raise error.Abort(_("working copy of .hgsigs is changed "),
                              hint=_("please commit .hgsigs manually"))
 
     sigsfile = repo.wfile(".hgsigs", "ab")
@@ -287,7 +287,7 @@ def sign(ui, repo, *revs, **opts):
         repo.commit(message, opts['user'], opts['date'], match=msigs,
                     editor=editor)
     except ValueError as inst:
-        raise util.Abort(str(inst))
+        raise error.Abort(str(inst))
 
 def shortkey(ui, key):
     if len(key) != 16:
@@ -301,4 +301,4 @@ def node2txt(repo, node, ver):
     if ver == "0":
         return "%s\n" % hgnode.hex(node)
     else:
-        raise util.Abort(_("unknown signature version"))
+        raise error.Abort(_("unknown signature version"))

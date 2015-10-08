@@ -43,7 +43,7 @@ configure it, set the following options in your hgrc::
 
 from mercurial.i18n import _
 from mercurial.node import bin, short
-from mercurial import cmdutil, patch, util, mail
+from mercurial import cmdutil, patch, util, mail, error
 import email.Parser
 
 import socket, xmlrpclib
@@ -233,7 +233,7 @@ class hgcia(object):
         srv = xmlrpclib.Server(self.ciaurl)
         res = srv.hub.deliver(msg)
         if res is not True and res != 'queued.':
-            raise util.Abort(_('%s returned an error: %s') %
+            raise error.Abort(_('%s returned an error: %s') %
                              (self.ciaurl, res))
 
     def sendemail(self, address, data):
@@ -259,7 +259,7 @@ def hook(ui, repo, hooktype, node=None, url=None, **kwargs):
             ui.write(msg)
         elif cia.ciaurl.startswith('mailto:'):
             if not cia.emailfrom:
-                raise util.Abort(_('email.from must be defined when '
+                raise error.Abort(_('email.from must be defined when '
                                    'sending by email'))
             cia.sendemail(cia.ciaurl[7:], msg)
         else:

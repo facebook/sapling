@@ -63,7 +63,7 @@ pretty fast (at least faster than having to compare the entire tree).
 from mercurial.i18n import _
 from mercurial.node import short, nullid
 from mercurial import cmdutil, scmutil, util, commands, encoding, filemerge
-from mercurial import archival
+from mercurial import archival, error
 import os, shlex, shutil, tempfile, re
 
 cmdtable = {}
@@ -127,7 +127,7 @@ def dodiff(ui, repo, cmdline, pats, opts):
 
     if revs and change:
         msg = _('cannot specify --rev and --change at the same time')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
     elif change:
         node2 = scmutil.revsingle(repo, change, None).node()
         node1a, node1b = repo.changelog.parents(node2)
@@ -149,9 +149,9 @@ def dodiff(ui, repo, cmdline, pats, opts):
 
     if opts.get('patch'):
         if subrepos:
-            raise util.Abort(_('--patch cannot be used with --subrepos'))
+            raise error.Abort(_('--patch cannot be used with --subrepos'))
         if node2 is None:
-            raise util.Abort(_('--patch requires two revisions'))
+            raise error.Abort(_('--patch requires two revisions'))
     else:
         mod_a, add_a, rem_a = map(set, repo.status(node1a, node2, matcher,
                                                    listsubrepos=subrepos)[:3])

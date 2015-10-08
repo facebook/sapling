@@ -14,7 +14,7 @@ Prepare
 Test that raising an exception in the release function doesn't cause the lock to choke
 
   $ cat > testlock.py << EOF
-  > from mercurial import cmdutil, error, util
+  > from mercurial import cmdutil, error, error
   > 
   > cmdtable = {}
   > command = cmdutil.command(cmdtable)
@@ -22,7 +22,7 @@ Test that raising an exception in the release function doesn't cause the lock to
   > def acquiretestlock(repo, releaseexc):
   >     def unlock():
   >         if releaseexc:
-  >             raise util.Abort('expected release exception')
+  >             raise error.Abort('expected release exception')
   >     l = repo._lock(repo.vfs, 'testlock', False, unlock, None, 'test lock')
   >     return l
   > 
@@ -35,7 +35,7 @@ Test that raising an exception in the release function doesn't cause the lock to
   >         try:
   >             testlock = acquiretestlock(repo, False)
   >         except error.LockHeld:
-  >             raise util.Abort('lockfile on disk even after releasing!')
+  >             raise error.Abort('lockfile on disk even after releasing!')
   >         testlock.release()
   > EOF
   $ cat >> $HGRCPATH << EOF

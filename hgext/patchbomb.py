@@ -60,7 +60,7 @@ You can set patchbomb to always ask for confirmation by setting
 import os, errno, socket, tempfile, cStringIO
 import email
 
-from mercurial import cmdutil, commands, hg, mail, patch, util
+from mercurial import cmdutil, commands, hg, mail, patch, util, error
 from mercurial import scmutil
 from mercurial.i18n import _
 from mercurial.node import bin
@@ -501,15 +501,15 @@ def patchbomb(ui, repo, *revs, **opts):
         mail.validateconfig(ui)
 
     if not (revs or rev or outgoing or bundle or patches):
-        raise util.Abort(_('specify at least one changeset with -r or -o'))
+        raise error.Abort(_('specify at least one changeset with -r or -o'))
 
     if outgoing and bundle:
-        raise util.Abort(_("--outgoing mode always on with --bundle;"
+        raise error.Abort(_("--outgoing mode always on with --bundle;"
                            " do not re-specify --outgoing"))
 
     if outgoing or bundle:
         if len(revs) > 1:
-            raise util.Abort(_("too many destinations"))
+            raise error.Abort(_("too many destinations"))
         if revs:
             dest = revs[0]
         else:
@@ -518,7 +518,7 @@ def patchbomb(ui, repo, *revs, **opts):
 
     if rev:
         if revs:
-            raise util.Abort(_('use only one form to specify the revision'))
+            raise error.Abort(_('use only one form to specify the revision'))
         revs = rev
 
     revs = scmutil.revrange(repo, revs)
@@ -578,7 +578,7 @@ def patchbomb(ui, repo, *revs, **opts):
     to = getaddrs('To', ask=True)
     if not to:
         # we can get here in non-interactive mode
-        raise util.Abort(_('no recipient addresses provided'))
+        raise error.Abort(_('no recipient addresses provided'))
     cc = getaddrs('Cc', ask=True, default='') or []
     bcc = getaddrs('Bcc') or []
     replyto = getaddrs('Reply-To')
@@ -598,7 +598,7 @@ def patchbomb(ui, repo, *revs, **opts):
         ui.write('\n')
         if ui.promptchoice(_('are you sure you want to send (yn)?'
                              '$$ &Yes $$ &No')):
-            raise util.Abort(_('patchbomb canceled'))
+            raise error.Abort(_('patchbomb canceled'))
 
     ui.write('\n')
 

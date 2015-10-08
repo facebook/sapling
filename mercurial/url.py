@@ -19,6 +19,7 @@ import urllib2
 
 from .i18n import _
 from . import (
+    error,
     httpconnection as httpconnectionmod,
     keepalive,
     sslutil,
@@ -48,7 +49,7 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
             u = util.url(authuri)
             u.query = None
             if not self.ui.interactive():
-                raise util.Abort(_('http authorization required for %s') %
+                raise error.Abort(_('http authorization required for %s') %
                                  util.hidepassword(str(u)))
 
             self.ui.write(_("http authorization required for %s\n") %

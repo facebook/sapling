@@ -20,7 +20,6 @@ from .node import (
 )
 from . import (
     error,
-    util,
 )
 
 def bisect(changelog, state):
@@ -74,8 +73,8 @@ def bisect(changelog, state):
     if not ancestors: # now we're confused
         if (len(state['bad']) == 1 and len(state['good']) == 1 and
             state['bad'] != state['good']):
-            raise util.Abort(_("starting revisions are not directly related"))
-        raise util.Abort(_("inconsistent state, %s:%s is good and bad")
+            raise error.Abort(_("starting revisions are not directly related"))
+        raise error.Abort(_("inconsistent state, %s:%s is good and bad")
                          % (badrev, short(bad)))
 
     # build children dict
@@ -149,7 +148,7 @@ def load_state(repo):
             kind, node = l[:-1].split()
             node = repo.lookup(node)
             if kind not in state:
-                raise util.Abort(_("unknown bisect kind %s") % kind)
+                raise error.Abort(_("unknown bisect kind %s") % kind)
             state[kind].append(node)
     return state
 

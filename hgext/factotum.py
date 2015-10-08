@@ -47,7 +47,7 @@ service entry controls the service name used when reading keys.
 
 from mercurial.i18n import _
 from mercurial.url import passwordmgr
-from mercurial import httpconnection, util
+from mercurial import httpconnection, error
 import os, urllib2
 
 ERRMAX = 128
@@ -56,7 +56,7 @@ _executable = _mountpoint = _service = None
 
 def auth_getkey(self, params):
     if not self.ui.interactive():
-        raise util.Abort(_('factotum not interactive'))
+        raise error.Abort(_('factotum not interactive'))
     if 'user=' not in params:
         params = '%s user?' % params
     params = '%s !password?' % params
@@ -77,10 +77,10 @@ def auth_getuserpasswd(self, getkey, params):
                         if passwd.endswith("'"):
                             passwd = passwd[1:-1].replace("''", "'")
                         else:
-                            raise util.Abort(_('malformed password string'))
+                            raise error.Abort(_('malformed password string'))
                     return (user, passwd)
         except (OSError, IOError):
-            raise util.Abort(_('factotum not responding'))
+            raise error.Abort(_('factotum not responding'))
         finally:
             os.close(fd)
         getkey(self, params)

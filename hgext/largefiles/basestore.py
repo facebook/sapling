@@ -10,7 +10,7 @@
 
 import re
 
-from mercurial import util, node, hg
+from mercurial import util, node, hg, error
 from mercurial.i18n import _
 
 import lfutil
@@ -209,7 +209,7 @@ def _openstore(repo, remote=None, put=False):
     try:
         storeproviders = _storeprovider[scheme]
     except KeyError:
-        raise util.Abort(_('unsupported URL scheme %r') % scheme)
+        raise error.Abort(_('unsupported URL scheme %r') % scheme)
 
     for classobj in storeproviders:
         try:
@@ -217,5 +217,5 @@ def _openstore(repo, remote=None, put=False):
         except lfutil.storeprotonotcapable:
             pass
 
-    raise util.Abort(_('%s does not appear to be a largefile store') %
+    raise error.Abort(_('%s does not appear to be a largefile store') %
                      util.hidepassword(path))

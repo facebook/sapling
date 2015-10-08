@@ -394,7 +394,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   $ cd "$TESTTMP/b"
 
   $ cat > hooktests.py <<EOF
-  > from mercurial import util
+  > from mercurial import error
   > 
   > uncallable = 0
   > 
@@ -421,7 +421,7 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     raise LocalException('exception from hook')
   > 
   > def aborthook(**args):
-  >     raise util.Abort('raise abort from hook')
+  >     raise error.Abort('raise abort from hook')
   > 
   > def brokenhook(**args):
   >     return 1 + {}

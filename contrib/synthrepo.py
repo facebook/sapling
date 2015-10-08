@@ -37,7 +37,7 @@ A few obvious properties that are not currently handled realistically:
 '''
 
 import bisect, collections, itertools, json, os, random, time, sys
-from mercurial import cmdutil, context, patch, scmutil, util, hg
+from mercurial import cmdutil, context, patch, scmutil, util, hg, error
 from mercurial.i18n import _
 from mercurial.node import nullrev, nullid, short
 
@@ -254,7 +254,7 @@ def synthesize(ui, repo, descpath, **opts):
     try:
         fp = hg.openpath(ui, descpath)
     except Exception as err:
-        raise util.Abort('%s: %s' % (descpath, err[0].strerror))
+        raise error.Abort('%s: %s' % (descpath, err[0].strerror))
     desc = json.load(fp)
     fp.close()
 
@@ -286,7 +286,7 @@ def synthesize(ui, repo, descpath, **opts):
     try:
         fp = open(dictfile, 'rU')
     except IOError as err:
-        raise util.Abort('%s: %s' % (dictfile, err.strerror))
+        raise error.Abort('%s: %s' % (dictfile, err.strerror))
     words = fp.read().splitlines()
     fp.close()
 

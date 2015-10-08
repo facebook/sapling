@@ -55,7 +55,7 @@ def tidyprefix(dest, kind, prefix):
     if prefix.startswith('./'):
         prefix = prefix[2:]
     if prefix.startswith('../') or os.path.isabs(lpfx) or '/../' in prefix:
-        raise util.Abort(_('archive prefix contains illegal components'))
+        raise error.Abort(_('archive prefix contains illegal components'))
     return prefix
 
 exts = {
@@ -292,7 +292,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
 
     if kind == 'files':
         if prefix:
-            raise util.Abort(_('cannot give prefix when archiving to files'))
+            raise error.Abort(_('cannot give prefix when archiving to files'))
     else:
         prefix = tidyprefix(dest, kind, prefix)
 
@@ -303,7 +303,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
         archiver.addfile(prefix + name, mode, islink, data)
 
     if kind not in archivers:
-        raise util.Abort(_("unknown archive type '%s'") % kind)
+        raise error.Abort(_("unknown archive type '%s'") % kind)
 
     ctx = repo[node]
     archiver = archivers[kind](dest, mtime or ctx.date()[0])

@@ -97,7 +97,7 @@ class convert_git(converter_source):
         # The default value (50) is based on the default for 'git diff'.
         similarity = ui.configint('convert', 'git.similarity', default=50)
         if similarity < 0 or similarity > 100:
-            raise util.Abort(_('similarity must be between 0 and 100'))
+            raise error.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
             self.simopt = '-C%d%%' % similarity
             findcopiesharder = ui.configbool('convert', 'git.findcopiesharder',
@@ -123,14 +123,14 @@ class convert_git(converter_source):
             heads, ret = self.gitread('git rev-parse --branches --remotes')
             heads = heads.splitlines()
             if ret:
-                raise util.Abort(_('cannot retrieve git heads'))
+                raise error.Abort(_('cannot retrieve git heads'))
         else:
             heads = []
             for rev in self.revs:
                 rawhead, ret = self.gitread("git rev-parse --verify %s" % rev)
                 heads.append(rawhead[:-1])
                 if ret:
-                    raise util.Abort(_('cannot retrieve git head "%s"') % rev)
+                    raise error.Abort(_('cannot retrieve git head "%s"') % rev)
         return heads
 
     def catfile(self, rev, type):
@@ -140,11 +140,11 @@ class convert_git(converter_source):
         self.catfilepipe[0].flush()
         info = self.catfilepipe[1].readline().split()
         if info[1] != type:
-            raise util.Abort(_('cannot read %r object at %s') % (type, rev))
+            raise error.Abort(_('cannot read %r object at %s') % (type, rev))
         size = int(info[2])
         data = self.catfilepipe[1].read(size)
         if len(data) < size:
-            raise util.Abort(_('cannot read %r object at %s: unexpected size')
+            raise error.Abort(_('cannot read %r object at %s: unexpected size')
                              % (type, rev))
         # read the trailing newline
         self.catfilepipe[1].read(1)
@@ -210,7 +210,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version, full):
         if full:
-            raise util.Abort(_("convert from git do not support --full"))
+            raise error.Abort(_("convert from git do not support --full"))
         self.modecache = {}
         fh = self.gitopen("git diff-tree -z --root -m -r %s %s" % (
             self.simopt, version))
@@ -283,7 +283,7 @@ class convert_git(converter_source):
                         copies[fdest] = f
             entry = None
         if fh.close():
-            raise util.Abort(_('cannot read changes in %s') % version)
+            raise error.Abort(_('cannot read changes in %s') % version)
 
         if subexists[0]:
             if subdeleted[0]:
@@ -342,13 +342,13 @@ class convert_git(converter_source):
         for line in fh:
             line = line.strip()
             if line.startswith("error:") or line.startswith("fatal:"):
-                raise util.Abort(_('cannot read tags from %s') % self.path)
+                raise error.Abort(_('cannot read tags from %s') % self.path)
             node, tag = line.split(None, 1)
             if not tag.startswith(prefix):
                 continue
             alltags[tag[len(prefix):]] = node
         if fh.close():
-            raise util.Abort(_('cannot read tags from %s') % self.path)
+            raise error.Abort(_('cannot read tags from %s') % self.path)
 
         # Filter out tag objects for annotated tag refs
         for tag in alltags:
@@ -376,7 +376,7 @@ class convert_git(converter_source):
                               '"%s^%s" --' % (version, version, i + 1))
             changes = [f.rstrip('\n') for f in fh]
         if fh.close():
-            raise util.Abort(_('cannot read changes in %s') % version)
+            raise error.Abort(_('cannot read changes in %s') % version)
 
         return changes
 

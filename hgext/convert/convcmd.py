@@ -18,7 +18,7 @@ from p4 import p4_source
 import filemap
 
 import os, shutil, shlex
-from mercurial import hg, util, encoding
+from mercurial import hg, util, encoding, error
 from mercurial.i18n import _
 
 orig_encoding = 'ascii'
@@ -82,7 +82,7 @@ sink_converters = [
 def convertsource(ui, path, type, revs):
     exceptions = []
     if type and type not in [s[0] for s in source_converters]:
-        raise util.Abort(_('%s: invalid source repository type') % type)
+        raise error.Abort(_('%s: invalid source repository type') % type)
     for name, source, sortmode in source_converters:
         try:
             if not type or name == type:
@@ -92,11 +92,11 @@ def convertsource(ui, path, type, revs):
     if not ui.quiet:
         for inst in exceptions:
             ui.write("%s\n" % inst)
-    raise util.Abort(_('%s: missing or unsupported repository') % path)
+    raise error.Abort(_('%s: missing or unsupported repository') % path)
 
 def convertsink(ui, path, type):
     if type and type not in [s[0] for s in sink_converters]:
-        raise util.Abort(_('%s: invalid destination repository type') % type)
+        raise error.Abort(_('%s: invalid destination repository type') % type)
     for name, sink in sink_converters:
         try:
             if not type or name == type:
@@ -104,8 +104,8 @@ def convertsink(ui, path, type):
         except NoRepo as inst:
             ui.note(_("convert: %s\n") % inst)
         except MissingTool as inst:
-            raise util.Abort('%s\n' % inst)
-    raise util.Abort(_('%s: unknown repository type') % path)
+            raise error.Abort('%s\n' % inst)
+    raise error.Abort(_('%s: unknown repository type') % path)
 
 class progresssource(object):
     def __init__(self, ui, source, filecount):
@@ -185,7 +185,7 @@ class converter(object):
                 line = list(lex)
                 # check number of parents
                 if not (2 <= len(line) <= 3):
-                    raise util.Abort(_('syntax error in %s(%d): child parent1'
+                    raise error.Abort(_('syntax error in %s(%d): child parent1'
                                        '[,parent2] expected') % (path, i + 1))
                 for part in line:
                     self.source.checkrevformat(part)
@@ -196,7 +196,7 @@ class converter(object):
                     m[child] = p1 + p2
          # if file does not exist or error reading, exit
         except IOError:
-            raise util.Abort(_('splicemap file not found or error reading %s:')
+            raise error.Abort(_('splicemap file not found or error reading %s:')
                                % path)
         return m
 
@@ -247,7 +247,7 @@ class converter(object):
                     continue
                 # Parent is not in dest and not being converted, not good
                 if p not in parents:
-                    raise util.Abort(_('unknown splice map parent: %s') % p)
+                    raise error.Abort(_('unknown splice map parent: %s') % p)
                 pc.append(p)
             parents[c] = pc
 
@@ -343,7 +343,7 @@ class converter(object):
         elif sortmode == 'closesort':
             picknext = makeclosesorter()
         else:
-            raise util.Abort(_('unknown sort mode: %s') % sortmode)
+            raise error.Abort(_('unknown sort mode: %s') % sortmode)
 
         children, actives = mapchildren(parents)
 
@@ -361,7 +361,7 @@ class converter(object):
                 try:
                     pendings[c].remove(n)
                 except ValueError:
-                    raise util.Abort(_('cycle detected between %s and %s')
+                    raise error.Abort(_('cycle detected between %s and %s')
                                        % (recode(c), recode(n)))
                 if not pendings[c]:
                     # Parents are converted, node is eligible
@@ -369,7 +369,7 @@ class converter(object):
                     pendings[c] = None
 
         if len(s) != len(parents):
-            raise util.Abort(_("not all revisions were sorted"))
+            raise error.Abort(_("not all revisions were sorted"))
 
         return s
 
@@ -556,16 +556,17 @@ def convert(ui, src, dest=None, revmapfile=None, **opts):
     sortmodes = ('branchsort', 'datesort', 'sourcesort', 'closesort')
     sortmode = [m for m in sortmodes if opts.get(m)]
     if len(sortmode) > 1:
-        raise util.Abort(_('more than one sort mode specified'))
+        raise error.Abort(_('more than one sort mode specified'))
     if sortmode:
         sortmode = sortmode[0]
     else:
         sortmode = defaultsort
 
     if sortmode == 'sourcesort' and not srcc.hasnativeorder():
-        raise util.Abort(_('--sourcesort is not supported by this data source'))
+        raise error.Abort(_('--sourcesort is not supported by this data source')
+                         )
     if sortmode == 'closesort' and not srcc.hasnativeclose():
-        raise util.Abort(_('--closesort is not supported by this data source'))
+        raise error.Abort(_('--closesort is not supported by this data source'))
 
     fmap = opts.get('filemap')
     if fmap:

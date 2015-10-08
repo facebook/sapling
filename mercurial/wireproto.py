@@ -690,7 +690,7 @@ def pushkey(repo, proto, namespace, key, old, new):
         try:
             r = repo.pushkey(encoding.tolocal(namespace), encoding.tolocal(key),
                              encoding.tolocal(old), new) or False
-        except util.Abort:
+        except error.Abort:
             r = False
 
         output = proto.restore()
@@ -752,12 +752,12 @@ def unbundle(repo, proto, heads):
             fp.close()
             os.unlink(tempname)
 
-    except (error.BundleValueError, util.Abort, error.PushRaced) as exc:
+    except (error.BundleValueError, error.Abort, error.PushRaced) as exc:
         # handle non-bundle2 case first
         if not getattr(exc, 'duringunbundle2', False):
             try:
                 raise
-            except util.Abort:
+            except error.Abort:
                 # The old code we moved used sys.stderr directly.
                 # We did not change it to minimise code change.
                 # This need to be moved to something proper.
@@ -798,7 +798,7 @@ def unbundle(repo, proto, heads):
                 errpart.addparam('parttype', exc.parttype)
             if exc.params:
                 errpart.addparam('params', '\0'.join(exc.params))
-        except util.Abort as exc:
+        except error.Abort as exc:
             manargs = [('message', str(exc))]
             advargs = []
             if exc.hint is not None:

@@ -90,7 +90,7 @@ Create an extension to test bundle2 API
   >         try:
   >             bundler.addparam(*p)
   >         except ValueError, exc:
-  >             raise util.Abort('%s' % exc)
+  >             raise error.Abort('%s' % exc)
   > 
   >     if opts['compress']:
   >         bundler.setcompression(opts['compress'])
@@ -164,7 +164,7 @@ Create an extension to test bundle2 API
   >         for chunk in bundler.getchunks():
   >             file.write(chunk)
   >     except RuntimeError, exc:
-  >         raise util.Abort(exc)
+  >         raise error.Abort(exc)
   > 
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo, replypath=None):
@@ -178,9 +178,9 @@ Create an extension to test bundle2 API
   >             op = bundle2.processbundle(repo, unbundler, lambda: tr)
   >             tr.close()
   >         except error.BundleValueError, exc:
-  >             raise util.Abort('missing support for %s' % exc)
+  >             raise error.Abort('missing support for %s' % exc)
   >         except error.PushRaced, exc:
-  >             raise util.Abort('push race: %s' % exc)
+  >             raise error.Abort('push race: %s' % exc)
   >     finally:
   >         if tr is not None:
   >             tr.release()
@@ -204,7 +204,7 @@ Create an extension to test bundle2 API
   >     try:
   >         params = unbundler.params
   >     except error.BundleValueError, exc:
-  >        raise util.Abort('unknown parameters: %s' % exc)
+  >        raise error.Abort('unknown parameters: %s' % exc)
   >     ui.write('options count: %i\n' % len(params))
   >     for key in sorted(params):
   >         ui.write('- %s\n' % key)

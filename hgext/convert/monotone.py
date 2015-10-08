@@ -7,7 +7,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os, re
-from mercurial import util
+from mercurial import util, error
 from common import NoRepo, commit, converter_source, checktool
 from common import commandline
 from mercurial.i18n import _
@@ -16,7 +16,7 @@ class monotone_source(converter_source, commandline):
     def __init__(self, ui, path=None, revs=None):
         converter_source.__init__(self, ui, path, revs)
         if revs and len(revs) > 1:
-            raise util.Abort(_('monotone source does not support specifying '
+            raise error.Abort(_('monotone source does not support specifying '
                                'multiple revs'))
         commandline.__init__(self, ui, 'mtn')
 
@@ -110,34 +110,34 @@ class monotone_source(converter_source, commandline):
         while read != ':':
             read = self.mtnreadfp.read(1)
             if not read:
-                raise util.Abort(_('bad mtn packet - no end of commandnbr'))
+                raise error.Abort(_('bad mtn packet - no end of commandnbr'))
             commandnbr += read
         commandnbr = commandnbr[:-1]
 
         stream = self.mtnreadfp.read(1)
         if stream not in 'mewptl':
-            raise util.Abort(_('bad mtn packet - bad stream type %s') % stream)
+            raise error.Abort(_('bad mtn packet - bad stream type %s') % stream)
 
         read = self.mtnreadfp.read(1)
         if read != ':':
-            raise util.Abort(_('bad mtn packet - no divider before size'))
+            raise error.Abort(_('bad mtn packet - no divider before size'))
 
         read = None
         lengthstr = ''
         while read != ':':
             read = self.mtnreadfp.read(1)
             if not read:
-                raise util.Abort(_('bad mtn packet - no end of packet size'))
+                raise error.Abort(_('bad mtn packet - no end of packet size'))
             lengthstr += read
         try:
             length = long(lengthstr[:-1])
         except TypeError:
-            raise util.Abort(_('bad mtn packet - bad packet size %s')
+            raise error.Abort(_('bad mtn packet - bad packet size %s')
                 % lengthstr)
 
         read = self.mtnreadfp.read(length)
         if len(read) != length:
-            raise util.Abort(_("bad mtn packet - unable to read full packet "
+            raise error.Abort(_("bad mtn packet - unable to read full packet "
                 "read %s of %s") % (len(read), length))
 
         return (commandnbr, stream, length, read)
@@ -152,7 +152,7 @@ class monotone_source(converter_source, commandline):
             if stream == 'l':
                 # End of command
                 if output != '0':
-                    raise util.Abort(_("mtn command '%s' returned %s") %
+                    raise error.Abort(_("mtn command '%s' returned %s") %
                         (command, output))
                 break
             elif stream in 'ew':
@@ -229,7 +229,7 @@ class monotone_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise util.Abort(_("convert from monotone do not support --full"))
+            raise error.Abort(_("convert from monotone do not support --full"))
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
         ignoremove = {}
@@ -330,7 +330,7 @@ class monotone_source(converter_source, commandline):
             versionstr = self.mtnrunsingle("interface_version")
             version = float(versionstr)
         except Exception:
-            raise util.Abort(_("unable to determine mtn automate interface "
+            raise error.Abort(_("unable to determine mtn automate interface "
                 "version"))
 
         if version >= 12.0:
@@ -344,12 +344,12 @@ class monotone_source(converter_source, commandline):
             # read the headers
             read = self.mtnreadfp.readline()
             if read != 'format-version: 2\n':
-                raise util.Abort(_('mtn automate stdio header unexpected: %s')
+                raise error.Abort(_('mtn automate stdio header unexpected: %s')
                     % read)
             while read != '\n':
                 read = self.mtnreadfp.readline()
                 if not read:
-                    raise util.Abort(_("failed to reach end of mtn automate "
+                    raise error.Abort(_("failed to reach end of mtn automate "
                         "stdio headers"))
         else:
             self.ui.debug("mtn automate version %s - not using automate stdio "

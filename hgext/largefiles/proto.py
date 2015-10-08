@@ -51,7 +51,8 @@ def getlfile(repo, proto, sha):
     cache.'''
     filename = lfutil.findfile(repo, sha)
     if not filename:
-        raise util.Abort(_('requested largefile %s not present in cache') % sha)
+        raise error.Abort(_('requested largefile %s not present in cache')
+                          % sha)
     f = open(filename, 'rb')
     length = os.fstat(f.fileno())[6]
 

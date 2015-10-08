@@ -453,7 +453,7 @@ Setting up
   > used to test error handling in bundle2
   > """
   > 
-  > from mercurial import util
+  > from mercurial import error
   > from mercurial import bundle2
   > from mercurial import exchange
   > from mercurial import extensions
@@ -471,7 +471,7 @@ Setting up
   > 
   > @bundle2.parthandler("test:abort")
   > def handleabort(op, part):
-  >     raise util.Abort('Abandon ship!', hint="don't panic")
+  >     raise error.Abort('Abandon ship!', hint="don't panic")
   > 
   > def uisetup(ui):
   >     exchange.b2partsgenmapping['failpart'] = _pushbundle2failpart

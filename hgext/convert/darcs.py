@@ -7,7 +7,7 @@
 
 from common import NoRepo, checktool, commandline, commit, converter_source
 from mercurial.i18n import _
-from mercurial import util
+from mercurial import util, error
 import os, shutil, tempfile, re, errno
 
 # The naming drift of ElementTree is fun!
@@ -39,11 +39,11 @@ class darcs_source(converter_source, commandline):
         checktool('darcs')
         version = self.run0('--version').splitlines()[0].strip()
         if version < '2.1':
-            raise util.Abort(_('darcs version 2.1 or newer needed (found %r)') %
-                             version)
+            raise error.Abort(_('darcs version 2.1 or newer needed (found %r)')
+                              % version)
 
         if "ElementTree" not in globals():
-            raise util.Abort(_("Python ElementTree module is not available"))
+            raise error.Abort(_("Python ElementTree module is not available"))
 
         self.path = os.path.realpath(path)
 
@@ -158,7 +158,7 @@ class darcs_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise util.Abort(_("convert from darcs do not support --full"))
+            raise error.Abort(_("convert from darcs do not support --full"))
         copies = {}
         changes = []
         man = None
@@ -192,7 +192,7 @@ class darcs_source(converter_source, commandline):
 
     def getfile(self, name, rev):
         if rev != self.lastrev:
-            raise util.Abort(_('internal calling inconsistency'))
+            raise error.Abort(_('internal calling inconsistency'))
         path = os.path.join(self.tmppath, name)
         try:
             data = util.readfile(path)

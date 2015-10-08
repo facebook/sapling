@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from i18n import _
-import bdiff, mpatch, util, base85
+import bdiff, mpatch, util, base85, error
 import re, struct, zlib
 
 def splitnewlines(text):
@@ -59,7 +59,7 @@ class diffopts(object):
         try:
             self.context = int(self.context)
         except ValueError:
-            raise util.Abort(_('diff context lines count must be '
+            raise error.Abort(_('diff context lines count must be '
                                'an integer, not %r') % self.context)
 
     def copy(self, **kwargs):

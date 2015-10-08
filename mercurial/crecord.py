@@ -22,8 +22,8 @@ import tempfile
 from .i18n import _
 from . import (
     encoding,
+    error,
     patch as patchmod,
-    util,
 )
 
 # This is required for ncurses to display non-ASCII characters in default user
@@ -47,7 +47,7 @@ try:
     curses
 except NameError:
     if os.name != 'nt':  # Temporary hack to get running on Windows again
-        raise util.Abort(
+        raise error.Abort(
             _('the python curses/wcurses module is not available/installed'))
 
 _origstdout = sys.__stdout__ # used by gethw()
@@ -498,7 +498,7 @@ def chunkselector(ui, headerlist):
     f = signal.getsignal(signal.SIGTSTP)
     curses.wrapper(chunkselector.main)
     if chunkselector.initerr is not None:
-        raise util.Abort(chunkselector.initerr)
+        raise error.Abort(chunkselector.initerr)
     # ncurses does not restore signal handler for SIGTSTP
     signal.signal(signal.SIGTSTP, f)
 
@@ -1566,7 +1566,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         elif keypressed in ["H", "KEY_SLEFT"]:
             self.leftarrowshiftevent()
         elif keypressed in ["q"]:
-            raise util.Abort(_('user quit'))
+            raise error.Abort(_('user quit'))
         elif keypressed in ["c"]:
             if self.confirmcommit():
                 return True

@@ -8,7 +8,7 @@
 from i18n import _
 import struct
 import sys, os, errno, traceback, SocketServer
-import dispatch, encoding, util
+import dispatch, encoding, util, error
 
 logfile = None
 
@@ -222,7 +222,7 @@ class server(object):
             else:
                 # clients are expected to check what commands are supported by
                 # looking at the servers capabilities
-                raise util.Abort(_('unknown command %s') % cmd)
+                raise error.Abort(_('unknown command %s') % cmd)
 
         return cmd != ''
 
@@ -301,7 +301,7 @@ class _requesthandler(SocketServer.StreamRequestHandler):
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
             # known exceptions are caught by dispatch.
-            except util.Abort as inst:
+            except error.Abort as inst:
                 ui.warn(_('abort: %s\n') % inst)
             except IOError as inst:
                 if inst.errno != errno.EPIPE:
@@ -323,9 +323,9 @@ class unixservice(object):
         self.repo = repo
         self.address = opts['address']
         if not util.safehasattr(SocketServer, 'UnixStreamServer'):
-            raise util.Abort(_('unsupported platform'))
+            raise error.Abort(_('unsupported platform'))
         if not self.address:
-            raise util.Abort(_('no socket path specified with --address'))
+            raise error.Abort(_('no socket path specified with --address'))
 
     def init(self):
         class cls(SocketServer.ForkingMixIn, SocketServer.UnixStreamServer):
@@ -351,4 +351,4 @@ def createservice(ui, repo, opts):
     try:
         return _servicemap[mode](ui, repo, opts)
     except KeyError:
-        raise util.Abort(_('unknown mode %s') % mode)
+        raise error.Abort(_('unknown mode %s') % mode)

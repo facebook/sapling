@@ -10,11 +10,11 @@
   > EOF
 
   $ cat > prefix.py <<EOF
-  > from mercurial import util
+  > from mercurial import error
   > def stripprefix(s, cmd, filename, **kwargs):
   >     header = '%s\n' % cmd
   >     if s[:len(header)] != header:
-  >         raise util.Abort('missing header "%s" in %s' % (cmd, filename))
+  >         raise error.Abort('missing header "%s" in %s' % (cmd, filename))
   >     return s[len(header):]
   > def insertprefix(s, cmd):
   >     return '%s\n%s' % (cmd, s)

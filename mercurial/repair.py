@@ -15,6 +15,7 @@ from .node import short
 from . import (
     bundle2,
     changegroup,
+    error,
     exchange,
     util,
 )
@@ -156,7 +157,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
     if curtr is not None:
         del curtr  # avoid carrying reference to transaction for nothing
         msg = _('programming error: cannot strip from inside a transaction')
-        raise util.Abort(msg, hint=_('contact your extension maintainer'))
+        raise error.Abort(msg, hint=_('contact your extension maintainer'))
 
     tr = repo.transaction("strip")
     offset = len(tr.entries)

@@ -35,7 +35,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     else:
         d = funcname.rfind('.')
         if d == -1:
-            raise util.Abort(_('%s hook is invalid ("%s" not in '
+            raise error.Abort(_('%s hook is invalid ("%s" not in '
                                'a module)') % (hname, funcname))
         modname = funcname[:d]
         oldpaths = sys.path
@@ -63,7 +63,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                         ui.warn(_('exception from second failed import '
                                   'attempt:\n'))
                     ui.traceback(e2)
-                    raise util.Abort(_('%s hook is invalid '
+                    raise error.Abort(_('%s hook is invalid '
                                        '(import of "%s" failed)') %
                                      (hname, modname))
         sys.path = oldpaths
@@ -71,11 +71,11 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
             for p in funcname.split('.')[1:]:
                 obj = getattr(obj, p)
         except AttributeError:
-            raise util.Abort(_('%s hook is invalid '
+            raise error.Abort(_('%s hook is invalid '
                                '("%s" is not defined)') %
                              (hname, funcname))
         if not callable(obj):
-            raise util.Abort(_('%s hook is invalid '
+            raise error.Abort(_('%s hook is invalid '
                                '("%s" is not callable)') %
                              (hname, funcname))
 
@@ -91,7 +91,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
 
         r = obj(ui=ui, repo=repo, hooktype=name, **args)
     except Exception as exc:
-        if isinstance(exc, util.Abort):
+        if isinstance(exc, error.Abort):
             ui.warn(_('error: %s hook failed: %s\n') %
                          (hname, exc.args[0]))
         else:

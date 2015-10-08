@@ -225,20 +225,20 @@ def rebase(ui, repo, **opts):
             help = "hg%s help -e histedit" % enablehistedit
             msg = _("interactive history editing is supported by the "
                     "'histedit' extension (see \"%s\")") % help
-            raise util.Abort(msg)
+            raise error.Abort(msg)
 
         if collapsemsg and not collapsef:
-            raise util.Abort(
+            raise error.Abort(
                 _('message can only be specified with collapse'))
 
         if contf or abortf:
             if contf and abortf:
-                raise util.Abort(_('cannot use both abort and continue'))
+                raise error.Abort(_('cannot use both abort and continue'))
             if collapsef:
-                raise util.Abort(
+                raise error.Abort(
                     _('cannot use collapse with continue or abort'))
             if srcf or basef or destf:
-                raise util.Abort(
+                raise error.Abort(
                     _('abort and continue do not allow specifying revisions'))
             if abortf and opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
@@ -255,19 +255,19 @@ def rebase(ui, repo, **opts):
                 else:
                     msg = _('cannot continue inconsistent rebase')
                     hint = _('use "hg rebase --abort" to clear broken state')
-                    raise util.Abort(msg, hint=hint)
+                    raise error.Abort(msg, hint=hint)
             if abortf:
                 return abort(repo, originalwd, target, state,
                              activebookmark=activebookmark)
         else:
             if srcf and basef:
-                raise util.Abort(_('cannot specify both a '
+                raise error.Abort(_('cannot specify both a '
                                    'source and a base'))
             if revf and basef:
-                raise util.Abort(_('cannot specify both a '
+                raise error.Abort(_('cannot specify both a '
                                    'revision and a base'))
             if revf and srcf:
-                raise util.Abort(_('cannot specify both a '
+                raise error.Abort(_('cannot specify both a '
                                    'revision and a source'))
 
             cmdutil.checkunfinished(repo)
@@ -335,7 +335,7 @@ def rebase(ui, repo, **opts):
             if (not (keepf or allowunstable)
                   and repo.revs('first(children(%ld) - %ld)',
                                 rebaseset, rebaseset)):
-                raise util.Abort(
+                raise error.Abort(
                     _("can't remove original changesets with"
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
@@ -361,7 +361,7 @@ def rebase(ui, repo, **opts):
 
             root = min(rebaseset)
             if not keepf and not repo[root].mutable():
-                raise util.Abort(_("can't rebase public changeset %s")
+                raise error.Abort(_("can't rebase public changeset %s")
                                  % repo[root],
                                  hint=_('see "hg help phases" for details'))
 
@@ -384,7 +384,7 @@ def rebase(ui, repo, **opts):
                 for rev in state:
                     branches.add(repo[rev].branch())
                     if len(branches) > 1:
-                        raise util.Abort(_('cannot collapse multiple named '
+                        raise error.Abort(_('cannot collapse multiple named '
                             'branches'))
 
         # Rebase
@@ -564,7 +564,7 @@ def externalparent(repo, state, targetancestors):
         return nullrev
     if len(parents) == 1:
         return parents.pop()
-    raise util.Abort(_('unable to collapse on top of %s, there is more '
+    raise error.Abort(_('unable to collapse on top of %s, there is more '
                        'than one external parent: %s') %
                      (max(targetancestors),
                       ', '.join(str(p) for p in sorted(parents))))
@@ -677,7 +677,7 @@ def defineparents(repo, rev, target, state, targetancestors):
                 p2 = state[p2n]
         else: # p2n external
             if p2 != nullrev: # p1n external too => rev is a merged revision
-                raise util.Abort(_('cannot use revision %d as base, result '
+                raise error.Abort(_('cannot use revision %d as base, result '
                         'would have 3 parents') % rev)
             p2 = p2n
     repo.ui.debug(" future parents are %d and %d\n" %
@@ -866,7 +866,7 @@ def restorestatus(repo):
                     state[repo[oldrev].rev()] = repo[newrev].rev()
 
         if keepbranches is None:
-            raise util.Abort(_('.hg/rebasestate is incomplete'))
+            raise error.Abort(_('.hg/rebasestate is incomplete'))
 
         skipped = set()
         # recompute the set of skipped revs
@@ -885,7 +885,7 @@ def restorestatus(repo):
     except IOError as err:
         if err.errno != errno.ENOENT:
             raise
-        raise util.Abort(_('no rebase in progress'))
+        raise error.Abort(_('no rebase in progress'))
 
 def needupdate(repo, state):
     '''check whether we should `update --clean` away from a merge, or if
@@ -959,18 +959,18 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
     # a partially completed rebase is blocked by mq.
     if 'qtip' in repo.tags() and (dest.node() in
                             [s.node for s in repo.mq.applied]):
-        raise util.Abort(_('cannot rebase onto an applied mq patch'))
+        raise error.Abort(_('cannot rebase onto an applied mq patch'))
 
     roots = list(repo.set('roots(%ld)', rebaseset))
     if not roots:
-        raise util.Abort(_('no matching revisions'))
+        raise error.Abort(_('no matching revisions'))
     roots.sort()
     state = {}
     detachset = set()
     for root in roots:
         commonbase = root.ancestor(dest)
         if commonbase == root:
-            raise util.Abort(_('source is ancestor of destination'))
+            raise error.Abort(_('source is ancestor of destination'))
         if commonbase == dest:
             samebranch = root.branch() == dest.branch()
             if not collapse and samebranch and root in dest.children():
@@ -1114,7 +1114,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
             release(lock, wlock)
     else:
         if opts.get('tool'):
-            raise util.Abort(_('--tool can only be used with --rebase'))
+            raise error.Abort(_('--tool can only be used with --rebase'))
         orig(ui, repo, *args, **opts)
 
 def _setrebasesetvisibility(repo, revs):

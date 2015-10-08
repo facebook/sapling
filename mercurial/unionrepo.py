@@ -21,6 +21,7 @@ from .node import nullid
 from . import (
     changelog,
     cmdutil,
+    error,
     filelog,
     localrepo,
     manifest,
@@ -231,7 +232,7 @@ class unionrepository(localrepo.localrepository):
 
 def instance(ui, path, create):
     if create:
-        raise util.Abort(_('cannot create new union repository'))
+        raise error.Abort(_('cannot create new union repository'))
     parentpath = ui.config("bundle", "mainreporoot", "")
     if not parentpath:
         # try to find the correct path to the working directory repo

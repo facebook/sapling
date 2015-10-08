@@ -6,7 +6,7 @@ import os, re, sys, tempfile, urllib, urllib2
 import xml.dom.minidom
 import cPickle as pickle
 
-from mercurial import strutil, scmutil, util, encoding
+from mercurial import strutil, scmutil, util, encoding, error
 from mercurial.i18n import _
 
 propertycache = util.propertycache
@@ -141,7 +141,7 @@ def debugsvnlog(ui, **opts):
     avoid memory collection issues.
     """
     if svn is None:
-        raise util.Abort(_('debugsvnlog could not load Subversion python '
+        raise error.Abort(_('debugsvnlog could not load Subversion python '
                            'bindings'))
 
     util.setbinary(sys.stdin)
@@ -159,14 +159,14 @@ class logstream(object):
             try:
                 entry = pickle.load(self._stdout)
             except EOFError:
-                raise util.Abort(_('Mercurial failed to run itself, check'
+                raise error.Abort(_('Mercurial failed to run itself, check'
                                    ' hg executable is in PATH'))
             try:
                 orig_paths, revnum, author, date, message = entry
             except (TypeError, ValueError):
                 if entry is None:
                     break
-                raise util.Abort(_("log stream exception '%s'") % entry)
+                raise error.Abort(_("log stream exception '%s'") % entry)
             yield entry
 
     def close(self):
@@ -327,12 +327,12 @@ class svn_source(converter_source):
 
         if revs:
             if len(revs) > 1:
-                raise util.Abort(_('subversion source does not support '
+                raise error.Abort(_('subversion source does not support '
                                    'specifying multiple revisions'))
             try:
                 latest = int(revs[0])
             except ValueError:
-                raise util.Abort(_('svn: revision %s is not an integer') %
+                raise error.Abort(_('svn: revision %s is not an integer') %
                                  revs[0])
 
         self.trunkname = self.ui.config('convert', 'svn.trunk',
@@ -343,7 +343,7 @@ class svn_source(converter_source):
             if self.startrev < 0:
                 self.startrev = 0
         except ValueError:
-            raise util.Abort(_('svn: start revision %s is not an integer')
+            raise error.Abort(_('svn: start revision %s is not an integer')
                              % self.startrev)
 
         try:
@@ -351,7 +351,7 @@ class svn_source(converter_source):
         except SvnPathNotFound:
             self.head = None
         if not self.head:
-            raise util.Abort(_('no revision found in module %s')
+            raise error.Abort(_('no revision found in module %s')
                              % self.module)
         self.last_changed = self.revnum(self.head)
 
@@ -396,8 +396,8 @@ class svn_source(converter_source):
                     # we are converting from inside this directory
                     return None
                 if cfgpath:
-                    raise util.Abort(_('expected %s to be at %r, but not found')
-                                 % (name, path))
+                    raise error.Abort(_('expected %s to be at %r, but not found'
+                                       ) % (name, path))
                 return None
             self.ui.note(_('found %s at %r\n') % (name, path))
             return path
@@ -415,7 +415,7 @@ class svn_source(converter_source):
             self.module += '/' + trunk
             self.head = self.latest(self.module, self.last_changed)
             if not self.head:
-                raise util.Abort(_('no revision found in module %s')
+                raise error.Abort(_('no revision found in module %s')
                                  % self.module)
 
         # First head in the list is the module's head
@@ -442,11 +442,11 @@ class svn_source(converter_source):
 
         if self.startrev and self.heads:
             if len(self.heads) > 1:
-                raise util.Abort(_('svn: start revision is not supported '
+                raise error.Abort(_('svn: start revision is not supported '
                                    'with more than one branch'))
             revnum = self.revnum(self.heads[0])
             if revnum < self.startrev:
-                raise util.Abort(
+                raise error.Abort(
                     _('svn: no revision found after start revision %d')
                                  % self.startrev)
 
@@ -502,7 +502,7 @@ class svn_source(converter_source):
                 stop = revnum + 1
             self._fetch_revisions(revnum, stop)
             if rev not in self.commits:
-                raise util.Abort(_('svn: revision %s not found') % revnum)
+                raise error.Abort(_('svn: revision %s not found') % revnum)
         revcommit = self.commits[rev]
         # caller caches the result, so free it here to release memory
         del self.commits[rev]
@@ -513,7 +513,7 @@ class svn_source(converter_source):
         if not re.match(r'svn:[0-9a-f]{8,8}-[0-9a-f]{4,4}-'
                               '[0-9a-f]{4,4}-[0-9a-f]{4,4}-[0-9a-f]'
                               '{12,12}(.*)\@[0-9]+$',revstr):
-            raise util.Abort(_('%s entry %s is not a valid revision'
+            raise error.Abort(_('%s entry %s is not a valid revision'
                                ' identifier') % (mapname, revstr))
 
     def numcommits(self):
@@ -951,7 +951,7 @@ class svn_source(converter_source):
         except SubversionException as xxx_todo_changeme:
             (inst, num) = xxx_todo_changeme.args
             if num == svn.core.SVN_ERR_FS_NO_SUCH_REVISION:
-                raise util.Abort(_('svn: branch has no revision %s')
+                raise error.Abort(_('svn: branch has no revision %s')
                                  % to_revnum)
             raise
 
@@ -1052,7 +1052,7 @@ class svn_source(converter_source):
         try:
             stdin.close()
         except IOError:
-            raise util.Abort(_('Mercurial failed to run itself, check'
+            raise error.Abort(_('Mercurial failed to run itself, check'
                                ' hg executable is in PATH'))
         return logstream(stdout)
 
@@ -1302,7 +1302,7 @@ class svn_sink(converter_sink, commandline):
                     return parents[0]
                 self.ui.warn(_('unexpected svn output:\n'))
                 self.ui.warn(output)
-                raise util.Abort(_('unable to cope with svn output'))
+                raise error.Abort(_('unable to cope with svn output'))
             if commit.rev:
                 self.run('propset', 'hg:convert-rev', commit.rev,
                          revprop=True, revision=rev)
@@ -1329,6 +1329,6 @@ class svn_sink(converter_sink, commandline):
         # repository and childmap would not list all revisions. Too bad.
         if rev in self.childmap:
             return True
-        raise util.Abort(_('splice map revision %s not found in subversion '
+        raise error.Abort(_('splice map revision %s not found in subversion '
                            'child map (revision lookups are not implemented)')
                          % rev)

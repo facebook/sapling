@@ -65,7 +65,7 @@ def addbranchrevs(lrepo, other, branches, revs):
 
     if not peer.capable('branchmap'):
         if branches:
-            raise util.Abort(_("remote branch lookup not supported"))
+            raise error.Abort(_("remote branch lookup not supported"))
         revs.append(hashbranch)
         return revs, revs[0]
     branchmap = peer.branchmap()
@@ -73,7 +73,7 @@ def addbranchrevs(lrepo, other, branches, revs):
     def primary(branch):
         if branch == '.':
             if not lrepo:
-                raise util.Abort(_("dirstate branch not accessible"))
+                raise error.Abort(_("dirstate branch not accessible"))
             branch = lrepo.dirstate.branch()
         if branch in branchmap:
             revs.extend(node.hex(r) for r in reversed(branchmap[branch]))
@@ -160,7 +160,7 @@ def repository(ui, path='', create=False):
     peer = _peerorrepo(ui, path, create)
     repo = peer.local()
     if not repo:
-        raise util.Abort(_("repository '%s' is not local") %
+        raise error.Abort(_("repository '%s' is not local") %
                          (path or peer.url()))
     return repo.filtered('visible')
 
@@ -194,7 +194,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
     '''create a shared repository'''
 
     if not islocal(source):
-        raise util.Abort(_('can only share local repositories'))
+        raise error.Abort(_('can only share local repositories'))
 
     if not dest:
         dest = defaultdest(source)
@@ -217,7 +217,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
     destvfs = scmutil.vfs(os.path.join(destwvfs.base, '.hg'), realpath=True)
 
     if destvfs.lexists():
-        raise util.Abort(_('destination already exists'))
+        raise error.Abort(_('destination already exists'))
 
     if not destwvfs.isdir():
         destwvfs.mkdir()
@@ -320,7 +320,7 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
     revs = None
     if rev:
         if not srcpeer.capable('lookup'):
-            raise util.Abort(_("src repository does not support "
+            raise error.Abort(_("src repository does not support "
                                "revision lookup and so doesn't "
                                "support clone by revision"))
         revs = [srcpeer.lookup(r) for r in rev]
@@ -416,14 +416,14 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
     source = util.urllocalpath(source)
 
     if not dest:
-        raise util.Abort(_("empty destination path is not valid"))
+        raise error.Abort(_("empty destination path is not valid"))
 
     destvfs = scmutil.vfs(dest, expandpath=True)
     if destvfs.lexists():
         if not destvfs.isdir():
-            raise util.Abort(_("destination '%s' already exists") % dest)
+            raise error.Abort(_("destination '%s' already exists") % dest)
         elif destvfs.listdir():
-            raise util.Abort(_("destination '%s' is not empty") % dest)
+            raise error.Abort(_("destination '%s' is not empty") % dest)
 
     shareopts = shareopts or {}
     sharepool = shareopts.get('pool')
@@ -448,7 +448,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
         elif sharenamemode == 'remote':
             sharepath = os.path.join(sharepool, util.sha1(source).hexdigest())
         else:
-            raise util.Abort('unknown share naming mode: %s' % sharenamemode)
+            raise error.Abort('unknown share naming mode: %s' % sharenamemode)
 
         if sharepath:
             return clonewithshare(ui, peeropts, sharepath, source, srcpeer,
@@ -494,7 +494,7 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             except OSError as inst:
                 if inst.errno == errno.EEXIST:
                     cleandir = None
-                    raise util.Abort(_("destination '%s' already exists")
+                    raise error.Abort(_("destination '%s' already exists")
                                      % dest)
                 raise
 
@@ -534,14 +534,14 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             except OSError as inst:
                 if inst.errno == errno.EEXIST:
                     cleandir = None
-                    raise util.Abort(_("destination '%s' already exists")
+                    raise error.Abort(_("destination '%s' already exists")
                                      % dest)
                 raise
 
             revs = None
             if rev:
                 if not srcpeer.capable('lookup'):
-                    raise util.Abort(_("src repository does not support "
+                    raise error.Abort(_("src repository does not support "
                                        "revision lookup and so doesn't "
                                        "support clone by revision"))
                 revs = [srcpeer.lookup(r) for r in rev]
@@ -557,7 +557,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 exchange.push(srcrepo, destpeer, revs=revs,
                               bookmarks=srcrepo._bookmarks.keys())
             else:
-                raise util.Abort(_("clone from remote to remote not supported"))
+                raise error.Abort(_("clone from remote to remote not supported")
+                                 )
 
         cleandir = None
 

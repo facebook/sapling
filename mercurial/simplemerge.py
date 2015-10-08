@@ -23,6 +23,7 @@ import sys
 
 from .i18n import _
 from . import (
+    error,
     mdiff,
     scmutil,
     util,
@@ -361,7 +362,7 @@ def simplemerge(ui, local, base, other, **opts):
             if not opts.get('quiet'):
                 ui.warn(_('warning: %s\n') % msg)
             if not opts.get('text'):
-                raise util.Abort(msg)
+                raise error.Abort(msg)
         return text
 
     mode = opts.get('mode','merge')
@@ -381,13 +382,13 @@ def simplemerge(ui, local, base, other, **opts):
         if len(labels) > 2:
             name_base = labels[2]
         if len(labels) > 3:
-            raise util.Abort(_("can only specify three labels."))
+            raise error.Abort(_("can only specify three labels."))
 
     try:
         localtext = readfile(local)
         basetext = readfile(base)
         othertext = readfile(other)
-    except util.Abort:
+    except error.Abort:
         return 1
 
     local = os.path.realpath(local)

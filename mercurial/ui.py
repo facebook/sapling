@@ -535,11 +535,12 @@ class ui(object):
             except KeyError:
                 pass
         if not user:
-            raise util.Abort(_('no username supplied'),
+            raise error.Abort(_('no username supplied'),
                              hint=_('use "hg config --edit" '
                                     'to set your username'))
         if "\n" in user:
-            raise util.Abort(_("username %s contains a newline\n") % repr(user))
+            raise error.Abort(_("username %s contains a newline\n")
+                              % repr(user))
         return user
 
     def shortuser(self, user):
@@ -755,7 +756,7 @@ class ui(object):
                 self.write(r, "\n")
             return r
         except EOFError:
-            raise util.Abort(_('response expected'))
+            raise error.Abort(_('response expected'))
 
     @staticmethod
     def extractchoices(prompt):
@@ -802,7 +803,7 @@ class ui(object):
             else:
                 return getpass.getpass('')
         except EOFError:
-            raise util.Abort(_('response expected'))
+            raise error.Abort(_('response expected'))
     def status(self, *msg, **opts):
         '''write status message to output (if ui.quiet is False)
 
@@ -858,7 +859,7 @@ class ui(object):
 
             self.system("%s \"%s\"" % (editor, name),
                         environ=environ,
-                        onerr=util.Abort, errprefix=_("edit failed"))
+                        onerr=error.Abort, errprefix=_("edit failed"))
 
             f = open(name)
             t = f.read()

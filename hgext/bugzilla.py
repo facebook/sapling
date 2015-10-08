@@ -279,7 +279,7 @@ All the above add a comment to the Bugzilla bug record of the form::
 
 from mercurial.i18n import _
 from mercurial.node import short
-from mercurial import cmdutil, mail, util
+from mercurial import cmdutil, mail, util, error
 import re, time, urlparse, xmlrpclib
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
@@ -358,7 +358,7 @@ class bzmysql(bzaccess):
             import MySQLdb as mysql
             bzmysql._MySQLdb = mysql
         except ImportError as err:
-            raise util.Abort(_('python mysql support not available: %s') % err)
+            raise error.Abort(_('python mysql support not available: %s') % err)
 
         bzaccess.__init__(self, ui)
 
@@ -392,7 +392,7 @@ class bzmysql(bzaccess):
         self.run('select fieldid from fielddefs where name = "longdesc"')
         ids = self.cursor.fetchall()
         if len(ids) != 1:
-            raise util.Abort(_('unknown database schema'))
+            raise error.Abort(_('unknown database schema'))
         return ids[0][0]
 
     def filter_real_bug_ids(self, bugs):
@@ -437,7 +437,7 @@ class bzmysql(bzaccess):
             ret = fp.close()
             if ret:
                 self.ui.warn(out)
-                raise util.Abort(_('bugzilla notify command %s') %
+                raise error.Abort(_('bugzilla notify command %s') %
                                  util.explainexit(ret)[0])
         self.ui.status(_('done\n'))
 
@@ -470,12 +470,12 @@ class bzmysql(bzaccess):
             try:
                 defaultuser = self.ui.config('bugzilla', 'bzuser')
                 if not defaultuser:
-                    raise util.Abort(_('cannot find bugzilla user id for %s') %
+                    raise error.Abort(_('cannot find bugzilla user id for %s') %
                                      user)
                 userid = self.get_user_id(defaultuser)
                 user = defaultuser
             except KeyError:
-                raise util.Abort(_('cannot find bugzilla user id for %s or %s')
+                raise error.Abort(_('cannot find bugzilla user id for %s or %s')
                                  % (user, defaultuser))
         return (user, userid)
 
@@ -517,7 +517,7 @@ class bzmysql_3_0(bzmysql_2_18):
         self.run('select id from fielddefs where name = "longdesc"')
         ids = self.cursor.fetchall()
         if len(ids) != 1:
-            raise util.Abort(_('unknown database schema'))
+            raise error.Abort(_('unknown database schema'))
         return ids[0][0]
 
 # Bugzilla via XMLRPC interface.
@@ -705,7 +705,7 @@ class bzxmlrpcemail(bzxmlrpc):
 
         self.bzemail = self.ui.config('bugzilla', 'bzemail')
         if not self.bzemail:
-            raise util.Abort(_("configuration 'bzemail' missing"))
+            raise error.Abort(_("configuration 'bzemail' missing"))
         mail.validateconfig(self.ui)
 
     def makecommandline(self, fieldname, value):
@@ -735,8 +735,8 @@ class bzxmlrpcemail(bzxmlrpc):
             matches = self.bzproxy.User.get({'match': [user],
                                              'token': self.bztoken})
             if not matches['users']:
-                raise util.Abort(_("default bugzilla user %s email not found") %
-                                 user)
+                raise error.Abort(_("default bugzilla user %s email not found")
+                                  % user)
         user = matches['users'][0]['email']
         commands.append(self.makecommandline("id", bugid))
 
@@ -789,7 +789,7 @@ class bugzilla(object):
         try:
             bzclass = bugzilla._versions[bzversion]
         except KeyError:
-            raise util.Abort(_('bugzilla version %s not supported') %
+            raise error.Abort(_('bugzilla version %s not supported') %
                              bzversion)
         self.bzdriver = bzclass(self.ui)
 
@@ -900,7 +900,7 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
     bugzilla bug id. only add a comment once per bug, so same change
     seen multiple times does not fill bug with duplicate data.'''
     if node is None:
-        raise util.Abort(_('hook type %s does not pass a changeset id') %
+        raise error.Abort(_('hook type %s does not pass a changeset id') %
                          hooktype)
     try:
         bz = bugzilla(ui, repo)
@@ -911,4 +911,4 @@ def hook(ui, repo, hooktype, node=None, **kwargs):
                 bz.update(bug, bugs[bug], ctx)
             bz.notify(bugs, util.email(ctx.user()))
     except Exception as e:
-        raise util.Abort(_('Bugzilla error: %s') % e)
+        raise error.Abort(_('Bugzilla error: %s') % e)

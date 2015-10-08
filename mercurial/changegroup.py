@@ -37,7 +37,7 @@ def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
     s = stream.read(n)
     if len(s) < n:
-        raise util.Abort(_("stream ended unexpectedly"
+        raise error.Abort(_("stream ended unexpectedly"
                            " (got %d bytes, expected %d)")
                           % (len(s), n))
     return s
@@ -48,7 +48,7 @@ def getchunk(stream):
     l = struct.unpack(">l", d)[0]
     if l <= 4:
         if l:
-            raise util.Abort(_("invalid chunk length %d") % l)
+            raise error.Abort(_("invalid chunk length %d") % l)
         return ""
     return readexactly(stream, l - 4)
 
@@ -144,12 +144,12 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
         # compression argument is only for the bundle2 case
         assert compression is None
         if cg.version != '01':
-            raise util.Abort(_('old bundle types only supports v1 '
-                               'changegroups'))
+            raise error.Abort(_('old bundle types only supports v1 '
+                                'changegroups'))
         header, comp = bundletypes[bundletype]
         if comp not in util.compressors:
-            raise util.Abort(_('unknown stream compression type: %s')
-                             % comp)
+            raise error.Abort(_('unknown stream compression type: %s')
+                              % comp)
         z = util.compressors[comp]()
         subchunkiter = cg.getchunks()
         def chunkiter():
@@ -175,7 +175,7 @@ class cg1unpacker(object):
         if alg == 'UN':
             alg = None # get more modern without breaking too much
         if not alg in util.decompressors:
-            raise util.Abort(_('unknown stream compression type: %s')
+            raise error.Abort(_('unknown stream compression type: %s')
                              % alg)
         if alg == 'BZ':
             alg = '_truncatedBZ'
@@ -198,7 +198,7 @@ class cg1unpacker(object):
         l = struct.unpack(">l", d)[0]
         if l <= 4:
             if l:
-                raise util.Abort(_("invalid chunk length %d") % l)
+                raise error.Abort(_("invalid chunk length %d") % l)
             return 0
         if self.callback:
             self.callback()
@@ -477,7 +477,7 @@ class cg1packer(object):
         for i, fname in enumerate(sorted(changedfiles)):
             filerevlog = repo.file(fname)
             if not filerevlog:
-                raise util.Abort(_("empty or missing revlog for %s") % fname)
+                raise error.Abort(_("empty or missing revlog for %s") % fname)
 
             linkrevnodes = linknodes(filerevlog, fname)
             # Lookup for filenodes, we collected the linkrev nodes above in the
@@ -688,9 +688,9 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
         o = len(fl)
         try:
             if not fl.addgroup(source, revmap, trp):
-                raise util.Abort(_("received file revlog group is empty"))
+                raise error.Abort(_("received file revlog group is empty"))
         except error.CensoredBaseError as e:
-            raise util.Abort(_("received delta base is censored: %s") % e)
+            raise error.Abort(_("received delta base is censored: %s") % e)
         revisions += len(fl) - o
         files += 1
         if f in needfiles:
@@ -700,7 +700,7 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
                 if n in needs:
                     needs.remove(n)
                 else:
-                    raise util.Abort(
+                    raise error.Abort(
                         _("received spurious file revlog entry"))
             if not needs:
                 del needfiles[f]
@@ -712,7 +712,7 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
             try:
                 fl.rev(n)
             except error.LookupError:
-                raise util.Abort(
+                raise error.Abort(
                     _('missing file data for %s:%s - run hg verify') %
                     (f, hex(n)))
 
@@ -784,7 +784,7 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
         efiles = len(efiles)
 
         if not (srccontent or emptyok):
-            raise util.Abort(_("received changelog group is empty"))
+            raise error.Abort(_("received changelog group is empty"))
         clend = len(cl)
         changesets = clend - clstart
         repo.ui.progress(_('changesets'), None)

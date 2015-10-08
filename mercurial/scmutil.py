@@ -123,20 +123,20 @@ def checknewlabel(repo, lbl, kind):
     # Do not use the "kind" parameter in ui output.
     # It makes strings difficult to translate.
     if lbl in ['tip', '.', 'null']:
-        raise util.Abort(_("the name '%s' is reserved") % lbl)
+        raise error.Abort(_("the name '%s' is reserved") % lbl)
     for c in (':', '\0', '\n', '\r'):
         if c in lbl:
-            raise util.Abort(_("%r cannot be used in a name") % c)
+            raise error.Abort(_("%r cannot be used in a name") % c)
     try:
         int(lbl)
-        raise util.Abort(_("cannot use an integer as a name"))
+        raise error.Abort(_("cannot use an integer as a name"))
     except ValueError:
         pass
 
 def checkfilename(f):
     '''Check that the filename f is an acceptable filename for a tracked file'''
     if '\r' in f or '\n' in f:
-        raise util.Abort(_("'\\n' and '\\r' disallowed in filenames: %r") % f)
+        raise error.Abort(_("'\\n' and '\\r' disallowed in filenames: %r") % f)
 
 def checkportable(ui, f):
     '''Check if filename f is portable and warn or abort depending on config'''
@@ -147,7 +147,7 @@ def checkportable(ui, f):
         if msg:
             msg = "%s: %r" % (msg, f)
             if abort:
-                raise util.Abort(msg)
+                raise error.Abort(msg)
             ui.warn(_("warning: %s\n") % msg)
 
 def checkportabilityalert(ui):
@@ -182,7 +182,7 @@ class casecollisionauditor(object):
         if fl in self._loweredfiles and f not in self._dirstate:
             msg = _('possible case-folding collision for %s') % f
             if self._abort:
-                raise util.Abort(msg)
+                raise error.Abort(msg)
             self._ui.warn(_("warning: %s\n") % msg)
         self._loweredfiles.add(fl)
         self._newfiles.add(f)
@@ -475,7 +475,7 @@ class vfs(abstractvfs):
         if self._audit:
             r = util.checkosfilename(path)
             if r:
-                raise util.Abort("%s: %r" % (r, path))
+                raise error.Abort("%s: %r" % (r, path))
         self.audit(path)
         f = self.join(path)
 
@@ -583,7 +583,7 @@ class readonlyvfs(abstractvfs, auditvfs):
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb'):
-            raise util.Abort('this vfs is read only')
+            raise error.Abort('this vfs is read only')
         return self.vfs(path, mode, *args, **kw)
 
     def join(self, path, *insidef):
@@ -689,7 +689,7 @@ def revsingle(repo, revspec, default='.'):
 
     l = revrange(repo, [revspec])
     if not l:
-        raise util.Abort(_('empty revision set'))
+        raise error.Abort(_('empty revision set'))
     return repo[l.last()]
 
 def _pairspec(revspec):
@@ -716,7 +716,7 @@ def revpair(repo, revs):
         second = l.last()
 
     if first is None:
-        raise util.Abort(_('empty revision range'))
+        raise error.Abort(_('empty revision range'))
 
     # if top-level is range expression, the result must always be a pair
     if first == second and len(revs) == 1 and not _pairspec(revs[0]):

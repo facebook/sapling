@@ -18,6 +18,7 @@ import time
 from .i18n import _
 from . import (
     encoding,
+    error,
     sslutil,
     util,
 )
@@ -93,7 +94,7 @@ if util.safehasattr(smtplib.SMTP, '_get_socket'):
             return new_socket
 else:
     def SMTPS(sslkwargs, keyfile=None, certfile=None, **kwargs):
-        raise util.Abort(_('SMTPS requires Python 2.6 or later'))
+        raise error.Abort(_('SMTPS requires Python 2.6 or later'))
 
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
@@ -103,14 +104,14 @@ def _smtp(ui):
     starttls = tls == 'starttls' or util.parsebool(tls)
     smtps = tls == 'smtps'
     if (starttls or smtps) and not util.safehasattr(socket, 'ssl'):
-        raise util.Abort(_("can't use TLS: Python SSL support not installed"))
+        raise error.Abort(_("can't use TLS: Python SSL support not installed"))
     mailhost = ui.config('smtp', 'host')
     if not mailhost:
-        raise util.Abort(_('smtp.host not configured - cannot send mail'))
+        raise error.Abort(_('smtp.host not configured - cannot send mail'))
     verifycert = ui.config('smtp', 'verifycert', 'strict')
     if verifycert not in ['strict', 'loose']:
         if util.parsebool(verifycert) is not False:
-            raise util.Abort(_('invalid smtp.verifycert configuration: %s')
+            raise error.Abort(_('invalid smtp.verifycert configuration: %s')
                              % (verifycert))
         verifycert = False
     if (starttls or smtps) and verifycert:
@@ -151,16 +152,16 @@ def _smtp(ui):
         try:
             s.login(username, password)
         except smtplib.SMTPException as inst:
-            raise util.Abort(inst)
+            raise error.Abort(inst)
 
     def send(sender, recipients, msg):
         try:
             return s.sendmail(sender, recipients, msg)
         except smtplib.SMTPRecipientsRefused as inst:
             recipients = [r[1] for r in inst.recipients.values()]
-            raise util.Abort('\n' + '\n'.join(recipients))
+            raise error.Abort('\n' + '\n'.join(recipients))
         except smtplib.SMTPException as inst:
-            raise util.Abort(inst)
+            raise error.Abort(inst)
 
     return send
 
@@ -174,7 +175,7 @@ def _sendmail(ui, sender, recipients, msg):
     fp.write(msg)
     ret = fp.close()
     if ret:
-        raise util.Abort('%s %s' % (
+        raise error.Abort('%s %s' % (
             os.path.basename(program.split(None, 1)[0]),
             util.explainexit(ret)[0]))
 
@@ -208,11 +209,11 @@ def validateconfig(ui):
     method = ui.config('email', 'method', 'smtp')
     if method == 'smtp':
         if not ui.config('smtp', 'host'):
-            raise util.Abort(_('smtp specified as email transport, '
+            raise error.Abort(_('smtp specified as email transport, '
                                'but no smtp host configured'))
     else:
         if not util.findexe(method):
-            raise util.Abort(_('%r specified as email transport, '
+            raise error.Abort(_('%r specified as email transport, '
                                'but not in PATH') % method)
 
 def mimetextpatch(s, subtype='plain', display=False):
@@ -302,13 +303,13 @@ def _addressencode(ui, name, addr, charsets=None):
         dom = dom.decode(encoding.encoding).encode('idna')
         addr = '%s@%s' % (acc, dom)
     except UnicodeDecodeError:
-        raise util.Abort(_('invalid email address: %s') % addr)
+        raise error.Abort(_('invalid email address: %s') % addr)
     except ValueError:
         try:
             # too strict?
             addr = addr.encode('ascii')
         except UnicodeDecodeError:
-            raise util.Abort(_('invalid local address: %s') % addr)
+            raise error.Abort(_('invalid local address: %s') % addr)
     return email.Utils.formataddr((name, addr))
 
 def addressencode(ui, address, charsets=None, display=False):

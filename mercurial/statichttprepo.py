@@ -171,9 +171,9 @@ class statichttprepository(localrepo.localrepository):
         return statichttppeer(self)
 
     def lock(self, wait=True):
-        raise util.Abort(_('cannot lock static-http repository'))
+        raise error.Abort(_('cannot lock static-http repository'))
 
 def instance(ui, path, create):
     if create:
-        raise util.Abort(_('cannot create new static-http repository'))
+        raise error.Abort(_('cannot create new static-http repository'))
     return statichttprepository(ui, path[7:])

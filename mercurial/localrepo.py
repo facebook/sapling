@@ -640,7 +640,7 @@ class localrepository(object):
         if not local:
             m = matchmod.exact(self.root, '', ['.hgtags'])
             if any(self.status(match=m, unknown=True, ignored=True)):
-                raise util.Abort(_('working copy of .hgtags is changed'),
+                raise error.Abort(_('working copy of .hgtags is changed'),
                                  hint=_('please commit .hgtags manually'))
 
         self.tags() # instantiate the cache
@@ -1119,7 +1119,7 @@ class localrepository(object):
             desc = None
 
         if not force and self['.'] != self['tip'] and desc == 'commit':
-            raise util.Abort(
+            raise error.Abort(
                 _('rollback of last commit while not checked out '
                   'may lose data'), hint=_('use -f to force'))
 
@@ -1433,7 +1433,7 @@ class localrepository(object):
             extra = {}
 
         def fail(f, msg):
-            raise util.Abort('%s: %s' % (f, msg))
+            raise error.Abort('%s: %s' % (f, msg))
 
         if not match:
             match = matchmod.always(self.root, '')
@@ -1449,7 +1449,7 @@ class localrepository(object):
             merge = len(wctx.parents()) > 1
 
             if not force and merge and match.ispartial():
-                raise util.Abort(_('cannot partially commit a merge '
+                raise error.Abort(_('cannot partially commit a merge '
                                    '(do not specify files or patterns)'))
 
             status = self.status(match=match, clean=force)
@@ -1477,12 +1477,12 @@ class localrepository(object):
                             newstate[s] = oldstate[s]
                             continue
                         if not force:
-                            raise util.Abort(
+                            raise error.Abort(
                                 _("commit with new subrepo %s excluded") % s)
                     dirtyreason = wctx.sub(s).dirtyreason(True)
                     if dirtyreason:
                         if not self.ui.configbool('ui', 'commitsubrepos'):
-                            raise util.Abort(dirtyreason,
+                            raise error.Abort(dirtyreason,
                                 hint=_("use --subrepos for recursive commit"))
                         subs.append(s)
                         commitsubs.add(s)
@@ -1499,7 +1499,7 @@ class localrepository(object):
                 if subs:
                     if (not match('.hgsub') and
                         '.hgsub' in (wctx.modified() + wctx.added())):
-                        raise util.Abort(
+                        raise error.Abort(
                             _("can't commit subrepos without .hgsub"))
                     status.modified.insert(0, '.hgsubstate')
 
@@ -1541,12 +1541,12 @@ class localrepository(object):
                 return None
 
             if merge and cctx.deleted():
-                raise util.Abort(_("cannot commit merge with missing files"))
+                raise error.Abort(_("cannot commit merge with missing files"))
 
             ms = mergemod.mergestate(self)
             for f in status.modified:
                 if f in ms and ms[f] == 'u':
-                    raise util.Abort(_('unresolved merge conflicts '
+                    raise error.Abort(_('unresolved merge conflicts '
                                        '(see "hg help resolve")'))
 
             if editor:

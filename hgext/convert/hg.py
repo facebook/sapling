@@ -205,7 +205,7 @@ class mercurial_sink(converter_sink):
             # If the file requires actual merging, abort. We don't have enough
             # context to resolve merges correctly.
             if action in ['m', 'dm', 'cd', 'dc']:
-                raise util.Abort(_("unable to convert merge commit "
+                raise error.Abort(_("unable to convert merge commit "
                     "since target parents do not merge cleanly (file "
                     "%s, parents %s and %s)") % (file, p1ctx,
                                                  p2ctx))
@@ -423,7 +423,7 @@ class mercurial_sink(converter_sink):
 
     def hascommitforsplicemap(self, rev):
         if rev not in self.repo and self.clonebranches:
-            raise util.Abort(_('revision %s not found in destination '
+            raise error.Abort(_('revision %s not found in destination '
                                'repository (lookups with clonebranches=true '
                                'are not implemented)') % rev)
         return rev in self.repo
@@ -455,7 +455,7 @@ class mercurial_source(converter_source):
                 try:
                     startnode = self.repo.lookup(startnode)
                 except error.RepoError:
-                    raise util.Abort(_('%s is not a valid start revision')
+                    raise error.Abort(_('%s is not a valid start revision')
                                      % startnode)
                 startrev = self.repo.changelog.rev(startnode)
                 children = {startnode: 1}
@@ -470,7 +470,7 @@ class mercurial_source(converter_source):
                 self._heads = self.repo.heads()
         else:
             if revs or startnode is not None:
-                raise util.Abort(_('hg.revs cannot be combined with '
+                raise error.Abort(_('hg.revs cannot be combined with '
                                    'hg.startrev or --rev'))
             nodes = set()
             parents = set()

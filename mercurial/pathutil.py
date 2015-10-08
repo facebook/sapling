@@ -8,6 +8,7 @@ import stat
 from .i18n import _
 from . import (
     encoding,
+    error,
     util,
 )
 
@@ -47,18 +48,18 @@ class pathauditor(object):
             return
         # AIX ignores "/" at end of path, others raise EISDIR.
         if util.endswithsep(path):
-            raise util.Abort(_("path ends in directory separator: %s") % path)
+            raise error.Abort(_("path ends in directory separator: %s") % path)
         parts = util.splitpath(path)
         if (os.path.splitdrive(path)[0]
             or _lowerclean(parts[0]) in ('.hg', '.hg.', '')
             or os.pardir in parts):
-            raise util.Abort(_("path contains illegal component: %s") % path)
+            raise error.Abort(_("path contains illegal component: %s") % path)
         # Windows shortname aliases
         for p in parts:
             if "~" in p:
                 first, last = p.split("~", 1)
                 if last.isdigit() and first.upper() in ["HG", "HG8B6C"]:
-                    raise util.Abort(_("path contains illegal component: %s")
+                    raise error.Abort(_("path contains illegal component: %s")
                                      % path)
         if '.hg' in _lowerclean(path):
             lparts = [_lowerclean(p.lower()) for p in parts]
@@ -66,7 +67,7 @@ class pathauditor(object):
                 if p in lparts[1:]:
                     pos = lparts.index(p)
                     base = os.path.join(*parts[:pos])
-                    raise util.Abort(_("path '%s' is inside nested repo %r")
+                    raise error.Abort(_("path '%s' is inside nested repo %r")
                                      % (path, base))
 
         normparts = util.splitpath(normpath)
@@ -90,13 +91,13 @@ class pathauditor(object):
                     raise
             else:
                 if stat.S_ISLNK(st.st_mode):
-                    raise util.Abort(
+                    raise error.Abort(
                         _('path %r traverses symbolic link %r')
                         % (path, prefix))
                 elif (stat.S_ISDIR(st.st_mode) and
                       os.path.isdir(os.path.join(curpath, '.hg'))):
                     if not self.callback or not self.callback(curpath):
-                        raise util.Abort(_("path '%s' is inside nested "
+                        raise error.Abort(_("path '%s' is inside nested "
                                            "repo %r")
                                          % (path, prefix))
             prefixes.append(normprefix)
@@ -112,7 +113,7 @@ class pathauditor(object):
         try:
             self(path)
             return True
-        except (OSError, util.Abort):
+        except (OSError, error.Abort):
             return False
 
 def canonpath(root, cwd, myname, auditor=None):
@@ -167,10 +168,10 @@ def canonpath(root, cwd, myname, auditor=None):
                 canonpath(root, root, myname, auditor)
                 hint = (_("consider using '--cwd %s'")
                         % os.path.relpath(root, cwd))
-        except util.Abort:
+        except error.Abort:
             pass
 
-        raise util.Abort(_("%s not under root '%s'") % (myname, root),
+        raise error.Abort(_("%s not under root '%s'") % (myname, root),
                          hint=hint)
 
 def normasprefix(path):

@@ -1,7 +1,7 @@
 # Extension dedicated to test patch.diff() upgrade modes
 #
 #
-from mercurial import cmdutil, scmutil, patch, util
+from mercurial import cmdutil, scmutil, patch, error
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -30,9 +30,9 @@ def autodiff(ui, repo, *pats, **opts):
         diffopts.git = False
         diffopts.upgrade = True
         def losedatafn(fn=None, **kwargs):
-            raise util.Abort('losing data for %s' % fn)
+            raise error.Abort('losing data for %s' % fn)
     else:
-        raise util.Abort('--git must be yes, no or auto')
+        raise error.Abort('--git must be yes, no or auto')
 
     node1, node2 = scmutil.revpair(repo, [])
     m = scmutil.match(repo[node2], pats, opts)

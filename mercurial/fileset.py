@@ -363,7 +363,7 @@ def encoding(mctx, x):
         try:
             d.decode(enc)
         except LookupError:
-            raise util.Abort(_("unknown encoding '%s'") % enc)
+            raise error.Abort(_("unknown encoding '%s'") % enc)
         except UnicodeDecodeError:
             continue
         s.append(f)

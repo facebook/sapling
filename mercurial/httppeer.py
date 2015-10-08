@@ -49,7 +49,7 @@ class httppeer(wireproto.wirepeer):
         self.requestbuilder = None
         u = util.url(path)
         if u.query or u.fragment:
-            raise util.Abort(_('unsupported URL component: "%s"') %
+            raise error.Abort(_('unsupported URL component: "%s"') %
                              (u.query or u.fragment))
 
         # urllib cannot handle URLs with embedded user or passwd
@@ -86,7 +86,7 @@ class httppeer(wireproto.wirepeer):
         return self.caps
 
     def lock(self):
-        raise util.Abort(_('operation not supported over http'))
+        raise error.Abort(_('operation not supported over http'))
 
     def _callstream(self, cmd, **args):
         if cmd == 'pushkey':
@@ -137,7 +137,7 @@ class httppeer(wireproto.wirepeer):
             resp = self.urlopener.open(req)
         except urllib2.HTTPError as inst:
             if inst.code == 401:
-                raise util.Abort(_('authorization failed'))
+                raise error.Abort(_('authorization failed'))
             raise
         except httplib.HTTPException as inst:
             self.ui.debug('http error while sending %s command\n' % cmd)
@@ -145,7 +145,7 @@ class httppeer(wireproto.wirepeer):
             raise IOError(None, inst)
         except IndexError:
             # this only happens with Python 2.3, later versions raise URLError
-            raise util.Abort(_('http error, possibly caused by proxy setting'))
+            raise error.Abort(_('http error, possibly caused by proxy setting'))
         # record the url we got redirected to
         resp_url = resp.geturl()
         if resp_url.endswith(qs):
@@ -223,8 +223,8 @@ class httppeer(wireproto.wirepeer):
             return vals
         except socket.error as err:
             if err.args[0] in (errno.ECONNRESET, errno.EPIPE):
-                raise util.Abort(_('push failed: %s') % err.args[1])
-            raise util.Abort(err.args[1])
+                raise error.Abort(_('push failed: %s') % err.args[1])
+            raise error.Abort(err.args[1])
         finally:
             fp.close()
             os.unlink(tempname)
@@ -263,13 +263,13 @@ class httppeer(wireproto.wirepeer):
 class httpspeer(httppeer):
     def __init__(self, ui, path):
         if not url.has_https:
-            raise util.Abort(_('Python support for SSL and HTTPS '
+            raise error.Abort(_('Python support for SSL and HTTPS '
                                'is not installed'))
         httppeer.__init__(self, ui, path)
 
 def instance(ui, path, create):
     if create:
-        raise util.Abort(_('cannot create new http repository'))
+        raise error.Abort(_('cannot create new http repository'))
     try:
         if path.startswith('https:'):
             inst = httpspeer(ui, path)

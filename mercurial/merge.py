@@ -22,6 +22,7 @@ from .node import (
 from . import (
     copies,
     destutil,
+    error,
     filemerge,
     obsolete,
     subrepo,
@@ -98,7 +99,7 @@ class mergestate(object):
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
-                raise util.Abort(_('unsupported merge state record: %s')
+                raise error.Abort(_('unsupported merge state record: %s')
                                    % rtype)
         self._dirty = False
 
@@ -346,7 +347,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     for f in sorted(aborts):
         repo.ui.warn(_("%s: untracked file differs\n") % f)
     if aborts:
-        raise util.Abort(_("untracked files in working directory differ "
+        raise error.Abort(_("untracked files in working directory differ "
                            "from files in requested revision"))
 
     for f, (m, args, msg) in actions.iteritems():
@@ -419,7 +420,7 @@ def _checkcollision(repo, wmf, actions):
     for f in sorted(pmmf):
         fold = util.normcase(f)
         if fold in foldmap:
-            raise util.Abort(_("case-folding collision between %s and %s")
+            raise error.Abort(_("case-folding collision between %s and %s")
                              % (f, foldmap[fold]))
         foldmap[fold] = f
 
@@ -1011,18 +1012,18 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
         ### check phase
         if not overwrite and len(pl) > 1:
-            raise util.Abort(_("outstanding uncommitted merge"))
+            raise error.Abort(_("outstanding uncommitted merge"))
         if branchmerge:
             if pas == [p2]:
-                raise util.Abort(_("merging with a working directory ancestor"
+                raise error.Abort(_("merging with a working directory ancestor"
                                    " has no effect"))
             elif pas == [p1]:
                 if not mergeancestor and p1.branch() == p2.branch():
-                    raise util.Abort(_("nothing to merge"),
+                    raise error.Abort(_("nothing to merge"),
                                      hint=_("use 'hg update' "
                                             "or check 'hg heads'"))
             if not force and (wc.files() or wc.deleted()):
-                raise util.Abort(_("uncommitted changes"),
+                raise error.Abort(_("uncommitted changes"),
                                  hint=_("use 'hg status' to list changes"))
             for s in sorted(wc.substate):
                 wc.sub(s).bailifchanged()
@@ -1051,11 +1052,11 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                         else:
                             hint = _("commit or update --clean to discard"
                                      " changes")
-                        raise util.Abort(msg, hint=hint)
+                        raise error.Abort(msg, hint=hint)
                     else:  # node is none
                         msg = _("not a linear update")
                         hint = _("merge or update --check to force update")
-                        raise util.Abort(msg, hint=hint)
+                        raise error.Abort(msg, hint=hint)
                 else:
                     # Allow jumping branches if clean and specific rev given
                     pas = [p1]

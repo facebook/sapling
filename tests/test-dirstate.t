@@ -66,10 +66,10 @@ Verify that exceptions during a dirstate change leave the dirstate
 coherent (issue4353)
 
   $ cat > ../dirstateexception.py <<EOF
-  > from mercurial import merge, extensions, util
+  > from mercurial import merge, extensions, error
   > 
   > def wraprecordupdates(orig, repo, actions, branchmerge):
-  >     raise util.Abort("simulated error while recording dirstateupdates")
+  >     raise error.Abort("simulated error while recording dirstateupdates")
   > 
   > def reposetup(ui, repo):
   >     extensions.wrapfunction(merge, 'recordupdates', wraprecordupdates)

@@ -16,7 +16,7 @@ import copy
 
 from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
-from mercurial import node
+from mercurial import node, error
 
 shortname = '.hglf'
 shortnameslash = shortname + '/'
@@ -33,10 +33,10 @@ def getminsize(ui, assumelfiles, opt, default=10):
         try:
             lfsize = float(lfsize)
         except ValueError:
-            raise util.Abort(_('largefiles: size must be number (not %s)\n')
+            raise error.Abort(_('largefiles: size must be number (not %s)\n')
                              % lfsize)
     if lfsize is None:
-        raise util.Abort(_('minimum size for largefiles must be specified'))
+        raise error.Abort(_('minimum size for largefiles must be specified'))
     return lfsize
 
 def link(src, dest):
@@ -74,7 +74,7 @@ def usercachepath(ui, hash):
                 if home:
                     path = os.path.join(home, '.cache', longname, hash)
         else:
-            raise util.Abort(_('unknown operating system: %s\n') % os.name)
+            raise error.Abort(_('unknown operating system: %s\n') % os.name)
     return path
 
 def inusercache(ui, hash):

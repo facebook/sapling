@@ -123,11 +123,11 @@ def maybeperformlegacystreamclone(pullop):
         raise error.ResponseError(
             _('unexpected response from remote server:'), l)
     if resp == 1:
-        raise util.Abort(_('operation forbidden by server'))
+        raise error.Abort(_('operation forbidden by server'))
     elif resp == 2:
-        raise util.Abort(_('locking the remote repository failed'))
+        raise error.Abort(_('locking the remote repository failed'))
     elif resp != 0:
-        raise util.Abort(_('the server sent an unknown error code'))
+        raise error.Abort(_('the server sent an unknown error code'))
 
     l = fp.readline()
     try:

@@ -7,7 +7,7 @@
 
 from node import nullid
 from i18n import _
-import scmutil, util, osutil, parsers, encoding, pathutil
+import scmutil, util, osutil, parsers, encoding, pathutil, error
 import os, stat, errno
 import match as matchmod
 
@@ -134,7 +134,7 @@ class dirstate(object):
             if l == 40:
                 return st[:20], st[20:40]
             elif l > 0 and l < 40:
-                raise util.Abort(_('working directory state appears damaged!'))
+                raise error.Abort(_('working directory state appears damaged!'))
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
@@ -412,13 +412,13 @@ class dirstate(object):
         if state == 'a' or oldstate == 'r':
             scmutil.checkfilename(f)
             if f in self._dirs:
-                raise util.Abort(_('directory %r already in dirstate') % f)
+                raise error.Abort(_('directory %r already in dirstate') % f)
             # shadows
             for d in util.finddirs(f):
                 if d in self._dirs:
                     break
                 if d in self._map and self[d] != 'r':
-                    raise util.Abort(
+                    raise error.Abort(
                         _('file %r in dirstate clashes with %r') % (d, f))
         if oldstate in "?r" and "_dirs" in self.__dict__:
             self._dirs.addpath(f)
@@ -464,7 +464,7 @@ class dirstate(object):
     def otherparent(self, f):
         '''Mark as coming from the other parent, always dirty.'''
         if self._pl[1] == nullid:
-            raise util.Abort(_("setting %r to other parent "
+            raise error.Abort(_("setting %r to other parent "
                                "only allowed in merges") % f)
         if f in self and self[f] == 'n':
             # merge-like

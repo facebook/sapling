@@ -52,7 +52,7 @@ from .node import (
 )
 from . import (
     dagutil,
-    util,
+    error,
 )
 
 def _updatesample(dag, nodes, sample, quicksamplesize=0):
@@ -241,7 +241,7 @@ def findcommonheads(ui, local, remote,
 
     if not result and srvheadhashes != [nullid]:
         if abortwhenunrelated:
-            raise util.Abort(_("repository is unrelated"))
+            raise error.Abort(_("repository is unrelated"))
         else:
             ui.warn(_("warning: repository is unrelated\n"))
         return (set([nullid]), True, srvheadhashes,)

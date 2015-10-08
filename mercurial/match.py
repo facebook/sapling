@@ -13,6 +13,7 @@ import re
 
 from .i18n import _
 from . import (
+    error,
     pathutil,
     util,
 )
@@ -37,7 +38,7 @@ def _expandsets(kindpats, ctx, listsubrepos):
     for kind, pat, source in kindpats:
         if kind == 'set':
             if not ctx:
-                raise util.Abort("fileset expression with no context")
+                raise error.Abort("fileset expression with no context")
             s = ctx.getfileset(pat)
             fset.update(s)
 
@@ -290,7 +291,7 @@ class match(object):
                         files = files.splitlines()
                     files = [f for f in files if f]
                 except EnvironmentError:
-                    raise util.Abort(_("unable to read file list (%s)") % pat)
+                    raise error.Abort(_("unable to read file list (%s)") % pat)
                 for k, p, source in self._normalize(files, default, root, cwd,
                                                     auditor):
                     kindpats.append((k, p, pat))
@@ -302,8 +303,8 @@ class match(object):
                     for k, p, source in self._normalize(includepats, default,
                                                         root, cwd, auditor):
                         kindpats.append((k, p, source or pat))
-                except util.Abort as inst:
-                    raise util.Abort('%s: %s' % (pat, inst[0]))
+                except error.Abort as inst:
+                    raise error.Abort('%s: %s' % (pat, inst[0]))
                 except IOError as inst:
                     if self._warn:
                         self._warn(_("skipping unreadable pattern file "
@@ -587,11 +588,11 @@ def _buildregexmatch(kindpats, globsuffix):
                 _rematcher('(?:%s)' % _regex(k, p, globsuffix))
             except re.error:
                 if s:
-                    raise util.Abort(_("%s: invalid pattern (%s): %s") %
+                    raise error.Abort(_("%s: invalid pattern (%s): %s") %
                                      (s, k, p))
                 else:
-                    raise util.Abort(_("invalid pattern (%s): %s") % (k, p))
-        raise util.Abort(_("invalid pattern"))
+                    raise error.Abort(_("invalid pattern (%s): %s") % (k, p))
+        raise error.Abort(_("invalid pattern"))
 
 def _roots(kindpats):
     '''return roots and exact explicitly listed files from patterns

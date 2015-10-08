@@ -115,7 +115,6 @@ from .node import (
 )
 from . import (
     error,
-    util,
 )
 
 allphases = public, draft, secret = range(3)
@@ -306,7 +305,7 @@ class phasecache(object):
                     if self.phase(repo, repo[n].rev()) < targetphase]
         if newroots:
             if nullid in newroots:
-                raise util.Abort(_('cannot change null revision phase'))
+                raise error.Abort(_('cannot change null revision phase'))
             currentroots = currentroots.copy()
             currentroots.update(newroots)
             ctxs = repo.set('roots(%ln::)', currentroots)

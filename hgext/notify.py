@@ -135,7 +135,7 @@ web.baseurl
 
 import email, socket, time
 from mercurial.i18n import _
-from mercurial import patch, cmdutil, util, mail
+from mercurial import patch, cmdutil, util, mail, error
 import fnmatch
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
@@ -277,7 +277,7 @@ class notifier(object):
         try:
             msg = p.parsestr(data)
         except email.Errors.MessageParseError as inst:
-            raise util.Abort(inst)
+            raise error.Abort(inst)
 
         # store sender and subject
         sender, subject = msg['From'], msg['Subject']

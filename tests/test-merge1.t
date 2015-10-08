@@ -214,10 +214,10 @@ isn't changed on the filesystem (see also issue4583).
   $ cat > $TESTTMP/abort.py <<EOF
   > # emulate aborting before "recordupdates()". in this case, files
   > # are changed without updating dirstate
-  > from mercurial import extensions, merge, util
+  > from mercurial import extensions, merge, error
   > def applyupdates(orig, *args, **kwargs):
   >     orig(*args, **kwargs)
-  >     raise util.Abort('intentional aborting')
+  >     raise error.Abort('intentional aborting')
   > def extsetup(ui):
   >     extensions.wrapfunction(merge, "applyupdates", applyupdates)
   > EOF

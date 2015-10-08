@@ -166,7 +166,7 @@ print u2.config('foobar', 'baz', untrusted=True)
 print
 print "# error handling"
 
-def assertraises(f, exc=util.Abort):
+def assertraises(f, exc=error.Abort):
     try:
         f()
     except exc as inst:

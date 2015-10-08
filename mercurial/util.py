@@ -1925,7 +1925,7 @@ def getport(port):
 
     If port is an integer, it's returned as is. If it's a string, it's
     looked up using socket.getservbyname(). If there's no matching
-    service, util.Abort is raised.
+    service, error.Abort is raised.
     """
     try:
         return int(port)
