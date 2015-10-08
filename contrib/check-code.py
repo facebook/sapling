@@ -123,7 +123,8 @@ testpats = [
     (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
     (r'^diff *-\w*u.*$\n(^  \$ |^$)', "prefix diff -u with cmp"),
-    (r'seq ', "don't use 'seq', use $TESTDIR/seq.py")
+    (r'seq ', "don't use 'seq', use $TESTDIR/seq.py"),
+    (r'\butil\.Abort\b', "directly use error.Abort"),
   ],
   # warnings
   [
@@ -293,6 +294,7 @@ pypats = [
     (r'\s0[0-7]+\b', 'legacy octal syntax; use "0o" prefix instead of "0"'),
     # XXX only catch mutable arguments on the first line of the definition
     (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
+    (r'\butil\.Abort\b', "directly use error.Abort"),
   ],
   # warnings
   [
