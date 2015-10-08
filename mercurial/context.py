@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import re
+
 from node import nullid, nullrev, wdirid, short, hex, bin
 from i18n import _
 import mdiff, error, util, scmutil, subrepo, patch, encoding, phases
@@ -21,6 +23,8 @@ propertycache = util.propertycache
 # manifests. Manifests support 21-byte hashes for nodes which are
 # dirty in the working copy.
 _newnode = '!' * 21
+
+nonascii = re.compile(r'[^\x21-\x7f]').search
 
 class basectx(object):
     """A basectx object represents the common logic for its children:
@@ -466,7 +470,7 @@ class changectx(basectx):
                 msg = _("working directory has unknown parent '%s'!")
                 raise error.Abort(msg % short(changeid))
             try:
-                if len(changeid) == 20:
+                if len(changeid) == 20 and nonascii(changeid):
                     changeid = hex(changeid)
             except TypeError:
                 pass

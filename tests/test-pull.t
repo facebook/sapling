@@ -52,6 +52,18 @@
   $ hg rollback --dry-run --verbose
   repository tip rolled back to revision -1 (undo pull: http://foo:***@localhost:$HGPORT/)
 
+Test pull of non-existing 20 character revision specification, making sure plain ascii identifiers
+not are encoded like a node:
+
+  $ hg pull -r 'xxxxxxxxxxxxxxxxxxxy'
+  pulling from http://foo@localhost:$HGPORT/
+  abort: unknown revision 'xxxxxxxxxxxxxxxxxxxy'!
+  [255]
+  $ hg pull -r 'xxxxxxxxxxxxxxxxxx y'
+  pulling from http://foo@localhost:$HGPORT/
+  abort: unknown revision '7878787878787878787878787878787878782079'!
+  [255]
+
 Issue622: hg init && hg pull -u URL doesn't checkout default branch
 
   $ cd ..
