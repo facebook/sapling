@@ -505,13 +505,14 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         util.copyfile(a, back)
         files = (a, b, c, back)
 
+    r = 1
+    try:
         markerstyle = ui.config('ui', 'mergemarkers', 'basic')
         if not labels:
             labels = _defaultconflictlabels
         if markerstyle != 'basic':
             labels = _formatlabels(repo, fcd, fco, fca, labels)
 
-        r = 1
         if mergetype == fullmerge:
             r = _premerge(repo, toolconf, files, labels=labels)
 
@@ -527,12 +528,13 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         if r:
             if onfailure:
                 ui.warn(onfailure % fd)
-        else:
-            util.unlink(back)
 
+        return r
+    finally:
+        if not r:
+            util.unlink(back)
         util.unlink(b)
         util.unlink(c)
-        return r
 
 def _check(r, ui, tool, fcd, files):
     fd = fcd.path()
