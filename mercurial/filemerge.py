@@ -247,15 +247,12 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file. Markers will have two sections, one for each side
     of merge, unless mode equals 'union' which suppresses the markers."""
-    r = 1
-    if r:
-        a, b, c, back = files
+    a, b, c, back = files
 
-        ui = repo.ui
+    ui = repo.ui
 
-        r = simplemerge.simplemerge(ui, a, b, c, label=labels, mode=mode)
-        return True, r
-    return False, 0
+    r = simplemerge.simplemerge(ui, a, b, c, label=labels, mode=mode)
+    return True, r
 
 @internaltool('union', fullmerge,
               _("merging %s incomplete! "
