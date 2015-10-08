@@ -500,6 +500,12 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
 
         ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
+        if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
+                                     toolconf):
+            if onfailure:
+                ui.warn(onfailure % fd)
+            return 1
+
         a = repo.wjoin(fd)
         b = temp("base", fca)
         c = temp("other", fco)
@@ -507,21 +513,14 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         util.copyfile(a, back)
         files = (a, b, c, back)
 
-        r = 0
-        if precheck and not precheck(repo, mynode, orig, fcd, fco, fca,
-                                     toolconf):
-            r = 1
-            needcheck = False
+        markerstyle = ui.config('ui', 'mergemarkers', 'basic')
+        if not labels:
+            labels = _defaultconflictlabels
+        if markerstyle != 'basic':
+            labels = _formatlabels(repo, fcd, fco, fca, labels)
 
-        if not r:  # precheck passed
-            markerstyle = ui.config('ui', 'mergemarkers', 'basic')
-            if not labels:
-                labels = _defaultconflictlabels
-            if markerstyle != 'basic':
-                labels = _formatlabels(repo, fcd, fco, fca, labels)
-
-            needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                                files, labels=labels)
+        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                            labels=labels)
 
         if not needcheck:
             if r:
