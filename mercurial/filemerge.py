@@ -247,7 +247,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     files. It will fail if there are any conflicts and leave markers in
     the partially merged file. Markers will have two sections, one for each side
     of merge, unless mode equals 'union' which suppresses the markers."""
-    r = _premerge(repo, toolconf, files, labels=labels)
+    r = 1
     if r:
         a, b, c, back = files
 
@@ -349,7 +349,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     ``a.txt``, these files will accordingly be named ``a.txt.local``,
     ``a.txt.other`` and ``a.txt.base`` and they will be placed in the
     same directory as ``a.txt``."""
-    r = _premerge(repo, toolconf, files, labels=labels)
+    r = 1
     if r:
         a, b, c, back = files
 
@@ -361,7 +361,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return False, r
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
-    r = _premerge(repo, toolconf, files, labels=labels)
+    r = 1
     if r:
         tool, toolpath, binary, symlink = toolconf
         a, b, c, back = files
@@ -519,8 +519,15 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         if markerstyle != 'basic':
             labels = _formatlabels(repo, fcd, fco, fca, labels)
 
-        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf, files,
-                            labels=labels)
+        r = 1
+        if mergetype == fullmerge:
+            r = _premerge(repo, toolconf, files, labels=labels)
+
+        if not r:  # premerge successfully merged the file
+            needcheck = False
+        else:
+            needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
+                                files, labels=labels)
 
         if not needcheck:
             if r:
