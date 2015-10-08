@@ -237,8 +237,6 @@ def runsymbol(context, mapping, key):
             v = ''
     if callable(v):
         return v(**mapping)
-    if isinstance(v, types.GeneratorType):
-        v = list(v)
     return v
 
 def buildtemplate(exp, context):
