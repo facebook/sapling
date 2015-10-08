@@ -521,41 +521,8 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
             needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
                                 files, labels=labels)
 
-        if not needcheck:
-            if r:
-                if onfailure:
-                    ui.warn(onfailure % fd)
-            else:
-                util.unlink(back)
-
-            util.unlink(b)
-            util.unlink(c)
-            return r
-
-        if not r and (_toolbool(ui, tool, "checkconflicts") or
-                      'conflicts' in _toollist(ui, tool, "check")):
-            if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(),
-                         re.MULTILINE):
-                r = 1
-
-        checked = False
-        if 'prompt' in _toollist(ui, tool, "check"):
-            checked = True
-            if ui.promptchoice(_("was merge of '%s' successful (yn)?"
-                                 "$$ &Yes $$ &No") % fd, 1):
-                r = 1
-
-        if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
-                                      'changed' in
-                                      _toollist(ui, tool, "check")):
-            if filecmp.cmp(a, back):
-                if ui.promptchoice(_(" output file %s appears unchanged\n"
-                                     "was merge successful (yn)?"
-                                     "$$ &Yes $$ &No") % fd, 1):
-                    r = 1
-
-        if _toolbool(ui, tool, "fixeol"):
-            _matcheol(a, back)
+        if needcheck:
+            r = _check(r, ui, tool, fcd, files)
 
         if r:
             if onfailure:
@@ -566,6 +533,37 @@ def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         util.unlink(b)
         util.unlink(c)
         return r
+
+def _check(r, ui, tool, fcd, files):
+    fd = fcd.path()
+    a, b, c, back = files
+
+    if not r and (_toolbool(ui, tool, "checkconflicts") or
+                  'conflicts' in _toollist(ui, tool, "check")):
+        if re.search("^(<<<<<<< .*|=======|>>>>>>> .*)$", fcd.data(),
+                     re.MULTILINE):
+            r = 1
+
+    checked = False
+    if 'prompt' in _toollist(ui, tool, "check"):
+        checked = True
+        if ui.promptchoice(_("was merge of '%s' successful (yn)?"
+                             "$$ &Yes $$ &No") % fd, 1):
+            r = 1
+
+    if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
+                                  'changed' in
+                                  _toollist(ui, tool, "check")):
+        if filecmp.cmp(a, back):
+            if ui.promptchoice(_(" output file %s appears unchanged\n"
+                                 "was merge successful (yn)?"
+                                 "$$ &Yes $$ &No") % fd, 1):
+                r = 1
+
+    if _toolbool(ui, tool, "fixeol"):
+        _matcheol(a, back)
+
+    return r
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()
