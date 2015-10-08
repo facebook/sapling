@@ -260,12 +260,13 @@ def mergecmd(orig, ui, repo, node=None, **opts):
     """
     Allowing to disable merges
     """
-    message = ui.config('tweakdefaults', 'mergemessage', 
-        _('merging is not supported for this repository -- use rebase instead'))
     if ui.configbool('tweakdefaults','allowmerge', True):
         return orig(ui, repo, node, **opts)
     else:
-        raise util.Abort(message)
+        message = ui.config('tweakdefaults', 'mergemessage',
+            _('merging is not supported for this repository'))
+        hint = ui.config('tweakdefaults', 'mergehint', _('use rebase instead'))
+        raise util.Abort(message, hint=hint)
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """

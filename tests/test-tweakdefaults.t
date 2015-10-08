@@ -239,11 +239,13 @@ Test tweaked merge command
   (run 'hg heads' to see all heads)
 
   $ hg merge --config tweakdefaults.allowmerge=false
-  abort: merging is not supported for this repository -- use rebase instead
+  abort: merging is not supported for this repository
+  (use rebase instead)
   [255]
 
-  $ hg merge --config tweakdefaults.mergemessage='testing' --config tweakdefaults.allowmerge=false
+  $ hg merge --config tweakdefaults.mergemessage='testing' --config tweakdefaults.mergehint='hint' --config tweakdefaults.allowmerge=false
   abort: testing
+  (hint)
   [255]
 
 Test that status is default relative
