@@ -890,7 +890,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     msg = _('applied to working directory')
 
     rejects = False
-    dsguard = None
 
     try:
         cmdline_message = logmessage(ui, opts)
@@ -932,7 +931,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
 
         n = None
         if update:
-            dsguard = dirstateguard(repo, 'tryimportone')
             if p1 != parents[0]:
                 updatefunc(repo, p1.node())
             if p2 != parents[1]:
@@ -983,7 +981,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                         extrapostimportmap[idfunc](repo[n])
                 finally:
                     repo.ui.restoreconfig(allowemptyback)
-            dsguard.close()
         else:
             if opts.get('exact') or opts.get('import_branch'):
                 branch = branch or 'default'
@@ -1021,7 +1018,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             msg = _('created %s') % short(n)
         return (msg, n, rejects)
     finally:
-        lockmod.release(dsguard)
         os.unlink(tmpname)
 
 # facility to let extensions include additional data in an exported patch
