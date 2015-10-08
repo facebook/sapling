@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import errno
-import multiprocessing
 import os
 import signal
 import sys
@@ -19,10 +18,24 @@ from . import util
 
 def countcpus():
     '''try to count the number of CPUs on the system'''
+
+    # posix
     try:
-        return multiprocessing.cpu_count()
-    except NotImplementedError:
-        return 1
+        n = int(os.sysconf('SC_NPROCESSORS_ONLN'))
+        if n > 0:
+            return n
+    except (AttributeError, ValueError):
+        pass
+
+    # windows
+    try:
+        n = int(os.environ['NUMBER_OF_PROCESSORS'])
+        if n > 0:
+            return n
+    except (KeyError, ValueError):
+        pass
+
+    return 1
 
 def _numworkers(ui):
     s = ui.config('worker', 'numcpus')
