@@ -356,34 +356,31 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     return False, 1
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
-    r = 1
-    if r:
-        tool, toolpath, binary, symlink = toolconf
-        a, b, c, back = files
-        out = ""
-        env = {'HG_FILE': fcd.path(),
-               'HG_MY_NODE': short(mynode),
-               'HG_OTHER_NODE': str(fco.changectx()),
-               'HG_BASE_NODE': str(fca.changectx()),
-               'HG_MY_ISLINK': 'l' in fcd.flags(),
-               'HG_OTHER_ISLINK': 'l' in fco.flags(),
-               'HG_BASE_ISLINK': 'l' in fca.flags(),
-               }
+    tool, toolpath, binary, symlink = toolconf
+    a, b, c, back = files
+    out = ""
+    env = {'HG_FILE': fcd.path(),
+           'HG_MY_NODE': short(mynode),
+           'HG_OTHER_NODE': str(fco.changectx()),
+           'HG_BASE_NODE': str(fca.changectx()),
+           'HG_MY_ISLINK': 'l' in fcd.flags(),
+           'HG_OTHER_ISLINK': 'l' in fco.flags(),
+           'HG_BASE_ISLINK': 'l' in fca.flags(),
+           }
 
-        ui = repo.ui
+    ui = repo.ui
 
-        args = _toolstr(ui, tool, "args", '$local $base $other')
-        if "$output" in args:
-            out, a = a, back # read input from backup, write to original
-        replace = {'local': a, 'base': b, 'other': c, 'output': out}
-        args = util.interpolate(r'\$', replace, args,
-                                lambda s: util.shellquote(util.localpath(s)))
-        cmd = toolpath + ' ' + args
-        repo.ui.debug('launching merge tool: %s\n' % cmd)
-        r = ui.system(cmd, cwd=repo.root, environ=env)
-        repo.ui.debug('merge tool returned: %s\n' % r)
-        return True, r
-    return False, 0
+    args = _toolstr(ui, tool, "args", '$local $base $other')
+    if "$output" in args:
+        out, a = a, back # read input from backup, write to original
+    replace = {'local': a, 'base': b, 'other': c, 'output': out}
+    args = util.interpolate(r'\$', replace, args,
+                            lambda s: util.shellquote(util.localpath(s)))
+    cmd = toolpath + ' ' + args
+    repo.ui.debug('launching merge tool: %s\n' % cmd)
+    r = ui.system(cmd, cwd=repo.root, environ=env)
+    repo.ui.debug('merge tool returned: %s\n' % r)
+    return True, r
 
 def _formatconflictmarker(repo, ctx, template, label, pad):
     """Applies the given template to the ctx, prefixed by the label.
