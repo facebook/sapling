@@ -51,6 +51,9 @@ local:
 build:
 	$(PYTHON) setup.py $(PURE) build $(COMPILER:%=-c %)
 
+wheel:
+	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILER:%=-c %)
+
 doc:
 	$(MAKE) -C doc
 
