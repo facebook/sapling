@@ -1412,6 +1412,21 @@ User interface controls.
     default ``USER@HOST`` is used instead.
     (default: False)
 
+``clonebundlefallback``
+    Whether failure to apply an advertised "clone bundle" from a server
+    should result in fallback to a regular clone.
+
+    This is disabled by default because servers advertising "clone
+    bundles" often do so to reduce server load. If advertised bundles
+    start mass failing and clients automatically fall back to a regular
+    clone, this would add significant and unexpected load to the server
+    since the server is expecting clone operations to be offloaded to
+    pre-generated bundles. Failing fast (the default behavior) ensures
+    clients don't overwhelm the server when "clone bundle" application
+    fails.
+
+    (default: False)
+
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the
     parent repository. If False and one subrepository has uncommitted

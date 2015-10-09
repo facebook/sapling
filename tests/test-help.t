@@ -249,6 +249,8 @@ Test extension help:
        bugzilla      hooks for integrating with the Bugzilla bug tracker
        censor        erase file content at a given revision
        churn         command to display statistics about repository history
+       clonebundles  server side extension to advertise pre-generated bundles to
+                     seed clones.
        color         colorize output from some commands
        convert       import revisions from foreign VCS repositories into
                      Mercurial
@@ -1069,6 +1071,8 @@ Test keyword search help
   
   Extensions:
   
+   clonebundles server side extension to advertise pre-generated bundles to seed
+                clones.
    prefixedname matched against word "clone"
    relink       recreates hardlinks between repository clones
   

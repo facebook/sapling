@@ -7,12 +7,13 @@
 
 from i18n import _
 from node import hex, nullid
-import errno, urllib
+import errno, urllib, urllib2
 import util, scmutil, changegroup, base85, error
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 import lock as lockmod
 import streamclone
 import tags
+import url as urlmod
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -973,6 +974,9 @@ def pull(repo, remote, heads=None, force=False, bookmarks=(), opargs=None,
     try:
         pullop.trmanager = transactionmanager(repo, 'pull', remote.url())
         streamclone.maybeperformlegacystreamclone(pullop)
+        # This should ideally be in _pullbundle2(). However, it needs to run
+        # before discovery to avoid extra work.
+        _maybeapplyclonebundle(pullop)
         _pulldiscovery(pullop)
         if pullop.canusebundle2:
             _pullbundle2(pullop)
@@ -1499,3 +1503,88 @@ def unbundle(repo, cg, heads, source, url):
         if recordout is not None:
             recordout(repo.ui.popbuffer())
     return r
+
+def _maybeapplyclonebundle(pullop):
+    """Apply a clone bundle from a remote, if possible."""
+
+    repo = pullop.repo
+    remote = pullop.remote
+
+    if not repo.ui.configbool('experimental', 'clonebundles', False):
+        return
+
+    if pullop.heads:
+        return
+
+    if not remote.capable('clonebundles'):
+        return
+
+    res = remote._call('clonebundles')
+    entries = parseclonebundlesmanifest(res)
+
+    # TODO filter entries by supported features.
+    # TODO sort entries by user preferences.
+
+    if not entries:
+        repo.ui.note(_('no clone bundles available on remote; '
+                       'falling back to regular clone\n'))
+        return
+
+    url = entries[0]['URL']
+    repo.ui.status(_('applying clone bundle from %s\n') % url)
+    if trypullbundlefromurl(repo.ui, repo, url):
+        repo.ui.status(_('finished applying clone bundle\n'))
+    # Bundle failed.
+    #
+    # We abort by default to avoid the thundering herd of
+    # clients flooding a server that was expecting expensive
+    # clone load to be offloaded.
+    elif repo.ui.configbool('ui', 'clonebundlefallback', False):
+        repo.ui.warn(_('falling back to normal clone\n'))
+    else:
+        raise error.Abort(_('error applying bundle'),
+                          hint=_('consider contacting the server '
+                                 'operator if this error persists'))
+
+def parseclonebundlesmanifest(s):
+    """Parses the raw text of a clone bundles manifest.
+
+    Returns a list of dicts. The dicts have a ``URL`` key corresponding
+    to the URL and other keys are the attributes for the entry.
+    """
+    m = []
+    for line in s.splitlines():
+        fields = line.split()
+        if not fields:
+            continue
+        attrs = {'URL': fields[0]}
+        for rawattr in fields[1:]:
+            key, value = rawattr.split('=', 1)
+            attrs[urllib.unquote(key)] = urllib.unquote(value)
+
+        m.append(attrs)
+
+    return m
+
+def trypullbundlefromurl(ui, repo, url):
+    """Attempt to apply a bundle from a URL."""
+    lock = repo.lock()
+    try:
+        tr = repo.transaction('bundleurl')
+        try:
+            try:
+                fh = urlmod.open(ui, url)
+                cg = readbundle(ui, fh, 'stream')
+                changegroup.addchangegroup(repo, cg, 'clonebundles', url)
+                tr.close()
+                return True
+            except urllib2.HTTPError as e:
+                ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
+            except urllib2.URLError as e:
+                ui.warn(_('error fetching bundle: %s\n') % e.reason)
+
+            return False
+        finally:
+            tr.release()
+    finally:
+        lock.release()
