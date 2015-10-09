@@ -309,7 +309,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             # remove future heads which are actually obsoleted by another
             # pushed element:
             #
-            # XXX as above, There are several cases this case does not handle
+            # XXX as above, There are several cases this code does not handle
             # XXX properly
             #
             # (1) if <nh> is public, it won't be affected by obsolete marker
