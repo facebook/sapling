@@ -320,6 +320,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             #
             # These two cases will be easy to handle for known changeset but
             # much more tricky for unsynced changes.
+            #
+            # In addition, this code is confused by prune as it only looks for
+            # successors of the heads (none if pruned) leading to issue4354
             newhs = set()
             for nh in candidate_newhs:
                 if nh in repo and repo[nh].phase() <= phases.public:
