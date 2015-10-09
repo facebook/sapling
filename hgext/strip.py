@@ -142,10 +142,7 @@ def stripcmd(ui, repo, *revs, **opts):
                     uniquebm = False
                     break
             if uniquebm:
-                rsrevs = repo.revs("ancestors(bookmark(%s)) - "
-                                   "ancestors(head() and not bookmark(%s)) - "
-                                   "ancestors(bookmark() and not bookmark(%s))",
-                                   mark, mark, mark)
+                rsrevs = repair.stripbmrevset(repo, mark)
                 revs.update(set(rsrevs))
             if not revs:
                 del marks[mark]

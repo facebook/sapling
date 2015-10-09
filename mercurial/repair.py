@@ -299,3 +299,15 @@ def rebuildfncache(ui, repo):
     finally:
         lock.release()
 
+def stripbmrevset(repo, mark):
+    """
+    The revset to strip when strip is called with -B mark
+
+    Needs to live here so extensions can use it and wrap it even when strip is
+    not enabled or not present on a box.
+    """
+    return repo.revs("ancestors(bookmark(%s)) - "
+                     "ancestors(head() and not bookmark(%s)) - "
+                     "ancestors(bookmark() and not bookmark(%s))",
+                     mark, mark, mark)
+
