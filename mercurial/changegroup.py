@@ -584,9 +584,9 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
     _changegroupinfo(repo, csets, source)
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
-def getsubset(repo, outgoing, bundler, source, fastpath=False, version='01'):
+def getsubset(repo, outgoing, bundler, source, fastpath=False):
     gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return packermap[version][1](util.chunkbuffer(gengroup), None)
+    return packermap[bundler.version][1](util.chunkbuffer(gengroup), None)
 
 def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are
@@ -613,7 +613,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     discbases = [n for n in discbases if n not in included]
     outgoing = discovery.outgoing(cl, discbases, heads)
     bundler = packermap[version][0](repo)
-    return getsubset(repo, outgoing, bundler, source, version=version)
+    return getsubset(repo, outgoing, bundler, source)
 
 def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
                            version='01'):
