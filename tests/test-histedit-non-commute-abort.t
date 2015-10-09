@@ -72,8 +72,7 @@ edit the history
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 

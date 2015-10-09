@@ -83,8 +83,7 @@ resolve all warning
 resolve all
   $ hg resolve -a
   merging bar
-  warning: conflicts during merge.
-  merging bar incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging bar! (edit, then use 'hg resolve --mark')
   [1]
 
 after

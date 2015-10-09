@@ -627,8 +627,7 @@ Amend a merge changeset (with renames and conflicts from the second parent):
   $ hg add cc
   $ hg ci -m aa
   $ hg merge -q bar
-  warning: conflicts during merge.
-  merging cc incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging cc! (edit, then use 'hg resolve --mark')
   [1]
   $ hg resolve -m cc
   (no more unresolved files)

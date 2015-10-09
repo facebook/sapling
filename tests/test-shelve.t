@@ -301,8 +301,7 @@ force a conflicted merge to occur
   rebasing shelved changes
   rebasing 5:4702e8911fe0 "changes to '[mq]: second.patch'" (tip)
   merging a/a
-  warning: conflicts during merge.
-  merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -382,8 +381,7 @@ try to continue with no unshelve underway
 redo the unshelve to get a conflict
 
   $ hg unshelve -q
-  warning: conflicts during merge.
-  merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -707,8 +705,7 @@ unshelve and conflicts with tracked and untracked files
   rebasing shelved changes
   rebasing 5:23b29cada8ba "changes to 'commit stuff'" (tip)
   merging f
-  warning: conflicts during merge.
-  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg log -G --template '{rev}  {desc|firstline}  {author}  {date|isodate}'
@@ -763,8 +760,7 @@ unshelve and conflicts with tracked and untracked files
   rebasing shelved changes
   rebasing 5:23b29cada8ba "changes to 'commit stuff'" (tip)
   merging f
-  warning: conflicts during merge.
-  merging f incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg st
@@ -807,8 +803,7 @@ Recreate some conflict again
   rebasing shelved changes
   rebasing 5:4b555fdb4e96 "changes to 'second'" (tip)
   merging a/a
-  warning: conflicts during merge.
-  merging a/a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a/a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
   $ hg bookmark

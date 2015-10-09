@@ -255,8 +255,8 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     return True, r
 
 @internaltool('union', fullmerge,
-              _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              _("warning: conflicts while merging %s! "
+                "(edit, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
@@ -267,8 +267,8 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
                   files, labels, 'union')
 
 @internaltool('merge', fullmerge,
-              _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              _("warning: conflicts while merging %s! "
+                "(edit, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
@@ -280,8 +280,8 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
                   files, labels, 'merge')
 
 @internaltool('merge3', fullmerge,
-              _("merging %s incomplete! "
-                "(edit conflicts, then use 'hg resolve --mark')\n"),
+              _("warning: conflicts while merging %s! "
+                "(edit, then use 'hg resolve --mark')\n"),
               precheck=_symlinkcheck)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """

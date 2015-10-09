@@ -60,8 +60,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts during merge.
-  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -98,8 +97,7 @@ Resume the rebasing:
   already rebased 1:27547f69f254 "B" as 45396c49d53b
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts during merge.
-  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -157,8 +155,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts during merge.
-  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 
@@ -230,8 +227,7 @@ Rebasing B onto E:
   rebasing 1:27547f69f254 "B"
   rebasing 2:965c486023db "C"
   merging A
-  warning: conflicts during merge.
-  merging A incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging A! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

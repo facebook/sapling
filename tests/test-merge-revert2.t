@@ -44,8 +44,7 @@
 
   $ hg update
   merging file1
-  warning: conflicts during merge.
-  merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]

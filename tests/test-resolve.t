@@ -134,10 +134,8 @@ resolve without arguments should suggest --all
 
 resolve --all should re-merge all unresolved files
   $ hg resolve -q --all
-  warning: conflicts during merge.
-  merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
-  warning: conflicts during merge.
-  merging file2 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ grep '<<<' file1 > /dev/null
   $ grep '<<<' file2 > /dev/null
@@ -145,8 +143,7 @@ resolve --all should re-merge all unresolved files
 resolve <file> should re-merge file
   $ echo resolved > file1
   $ hg resolve -q file1
-  warning: conflicts during merge.
-  merging file1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
   [1]
   $ grep '<<<' file1 > /dev/null
 

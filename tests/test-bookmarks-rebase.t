@@ -79,8 +79,7 @@ aborted rebase should restore active bookmark.
   $ hg rebase -s three -d two
   rebasing 4:dd7c838e8362 "4" (tip three)
   merging d
-  warning: conflicts during merge.
-  merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg rebase --abort
@@ -95,8 +94,7 @@ after aborted rebase, restoring a bookmark that has been removed should not fail
   $ hg rebase -s three -d two
   rebasing 4:dd7c838e8362 "4" (tip three)
   merging d
-  warning: conflicts during merge.
-  merging d incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging d! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg bookmark -d three

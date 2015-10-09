@@ -153,7 +153,6 @@ conflicts
   other
   end
   >>>>>>> conflict-other
-  warning: conflicts during merge.
   [1]
 
 1 label
@@ -167,7 +166,6 @@ conflicts
   other
   end
   >>>>>>> conflict-other
-  warning: conflicts during merge.
   [1]
 
 2 labels
@@ -181,7 +179,6 @@ conflicts
   other
   end
   >>>>>>> bar
-  warning: conflicts during merge.
   [1]
 
 3 labels
@@ -196,7 +193,6 @@ conflicts
   other
   end
   >>>>>>> bar
-  warning: conflicts during merge.
   [1]
 
 too many labels

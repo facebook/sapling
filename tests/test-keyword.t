@@ -1070,8 +1070,7 @@ conflict: keyword should stay outside conflict zone
   created new head
   $ hg merge
   merging m
-  warning: conflicts during merge.
-  merging m incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging m! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

@@ -64,8 +64,7 @@ Conflicting rebase:
   rebasing 3:3163e20567cc "L1"
   rebasing 4:46f0b057b5c0 "L2"
   merging common
-  warning: conflicts during merge.
-  merging common incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging common! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
 

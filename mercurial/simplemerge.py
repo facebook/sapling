@@ -414,6 +414,4 @@ def simplemerge(ui, local, base, other, **opts):
         out.close()
 
     if m3.conflicts and not mode == 'union':
-        if not opts.get('quiet'):
-            ui.warn(_("warning: conflicts during merge.\n"))
         return 1

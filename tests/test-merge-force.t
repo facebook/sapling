@@ -192,38 +192,28 @@ Merge with remote
   remote changed content1_content2_missing_missing-untracked which local deleted
   use (c)hanged version or leave (d)eleted? c
   merging content1_content2_content1_content4-tracked
-  warning: conflicts during merge.
-  merging content1_content2_content1_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
   merging content1_content2_content2_content1-tracked
   merging content1_content2_content2_content4-tracked
-  warning: conflicts during merge.
-  merging content1_content2_content2_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
   merging content1_content2_content3_content1-tracked
   merging content1_content2_content3_content3-tracked
-  warning: conflicts during merge.
-  merging content1_content2_content3_content3-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
   merging content1_content2_content3_content4-tracked
-  warning: conflicts during merge.
-  merging content1_content2_content3_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
   merging content1_content2_missing_content1-tracked
   merging content1_content2_missing_content4-tracked
-  warning: conflicts during merge.
-  merging content1_content2_missing_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
   merging missing_content2_content2_content4-tracked
-  warning: conflicts during merge.
-  merging missing_content2_content2_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
   merging missing_content2_content3_content3-tracked
-  warning: conflicts during merge.
-  merging missing_content2_content3_content3-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
   merging missing_content2_content3_content4-tracked
-  warning: conflicts during merge.
-  merging missing_content2_content3_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
   merging missing_content2_missing_content4-tracked
-  warning: conflicts during merge.
-  merging missing_content2_missing_content4-tracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
   merging missing_content2_missing_content4-untracked
-  warning: conflicts during merge.
-  merging missing_content2_missing_content4-untracked incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   39 files updated, 3 files merged, 8 files removed, 10 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

@@ -391,8 +391,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg rebase -s 8 -d 7 --config ui.merge=internal:fail
   rebasing 8:6215fafa5447 "H2" (tip)
   merging H
-  warning: conflicts during merge.
-  merging H incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging H! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg resolve --all -t internal:local

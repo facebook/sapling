@@ -89,8 +89,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 abort the edit
@@ -147,8 +146,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 fix up
@@ -158,8 +156,7 @@ fix up
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 This failure is caused by 7b4e2f4b7bcd "e" not rebasing the non commutative
@@ -236,8 +233,7 @@ edit the history, this time with a fold action
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
   $ echo 'I can haz no commute' > e
@@ -246,8 +242,7 @@ edit the history, this time with a fold action
   $ hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 second edit also fails, but just continue
   $ hg revert -r 'p1()' e

@@ -127,8 +127,7 @@ Test that "hg merge" updates largefiles from "other" correctly
   keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
   take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? o
   merging normal1
-  warning: conflicts during merge.
-  merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging normal1! (edit, then use 'hg resolve --mark')
   getting changed largefiles
   1 largefiles updated, 0 removed
   0 files updated, 1 files merged, 0 files removed, 1 files unresolved
@@ -555,8 +554,7 @@ it is aborted by conflict.
   keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
   take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? o
   merging normal1
-  warning: conflicts during merge.
-  merging normal1 incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging normal1! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat .hglf/large1

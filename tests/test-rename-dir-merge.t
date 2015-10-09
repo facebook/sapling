@@ -131,8 +131,7 @@ and committed in local target directory.
   $ hg commit -qm 'new file in target directory'
   $ hg merge 2
   merging b/c and a/c to b/c
-  warning: conflicts during merge.
-  merging b/c incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -162,8 +161,7 @@ and committed in local source directory.
   C a/c
   $ hg merge 5
   merging a/c and b/c to b/c
-  warning: conflicts during merge.
-  merging b/c incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   2 files updated, 0 files merged, 2 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

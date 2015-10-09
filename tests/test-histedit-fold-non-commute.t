@@ -88,8 +88,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 fix up
@@ -123,8 +122,7 @@ fix up
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 just continue this time
@@ -253,8 +251,7 @@ edit the history
   $ hg histedit 3 --commands $EDITED 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 fix up
@@ -266,8 +263,7 @@ fix up
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
-  warning: conflicts during merge.
-  merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
 just continue this time
