@@ -219,8 +219,8 @@ def _aborttransaction(repo):
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
 
-    def publicancestors(ctx):
-        """Compute the public ancestors of a commit.
+    def mutableancestors(ctx):
+        """return all mutable ancestors for ctx (included)
 
         Much faster than the revset ancestors(ctx) & draft()"""
         seen = set([nullrev])
@@ -326,7 +326,7 @@ def createcmd(ui, repo, pats, opts):
                 ui.status(_("nothing changed\n"))
             return 1
 
-        bases = list(publicancestors(repo[node]))
+        bases = list(mutableancestors(repo[node]))
         shelvedfile(repo, name, 'hg').writebundle(bases, node)
         cmdutil.export(repo, [node],
                        fp=shelvedfile(repo, name, 'patch').opener('wb'),
