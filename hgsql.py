@@ -37,7 +37,7 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
-from mercurial import util, changegroup, exchange
+from mercurial import util, changegroup, exchange, bundle2
 import MySQLdb, struct, time, Queue, threading, _mysql_exceptions
 from MySQLdb import cursors
 import warnings
@@ -126,12 +126,55 @@ def reposetup(ui, repo):
             executewithsql(repo, noop, waitforlock=waitforlock)
 
 # Incoming commits are only allowed via push and pull
-def unbundle(orig, *args, **kwargs):
-    repo = args[0]
-    if repo.ui.configbool("hgsql", "enabled"):
-        return executewithsql(repo, orig, True, *args, **kwargs)
+def unbundle(orig, repo, cg, *args, **kwargs):
+    if not repo.ui.configbool("hgsql", "enabled"):
+        return orig(repo, cg, *args, **kwargs)
+
+    isbundle2 = util.safehasattr(cg, 'params')
+    islazylocking = repo.ui.configbool('experimental', 'bundle2lazylocking')
+    if isbundle2 and islazylocking:
+        # lazy locked bundle2
+        exception = None
+        oldopclass = None
+        context = None
+        try:
+            context = sqlcontext(repo, takelock=True, waitforlock=True)
+
+            # Temporarily replace bundleoperation so we can hook into it's
+            # locking mechanism.
+            oldopclass = bundle2.bundleoperation
+            class sqllockedoperation(bundle2.bundleoperation):
+                def __init__(self, repo, transactiongetter, *args, **kwargs):
+                    def sqllocktr():
+                        if not context.active():
+                            context.__enter__()
+                        return transactiongetter()
+
+                    super(sqllockedoperation, self).__init__(repo, sqllocktr,
+                                                           *args, **kwargs)
+                    # undo our temporary wrapping
+                    bundle2.bundleoperation = oldopclass
+            bundle2.bundleoperation = sqllockedoperation
+
+            return orig(repo, cg, *args, **kwargs)
+        except Exception as ex:
+            exception = ex
+            raise
+        finally:
+            # Be extra sure to undo our wrapping
+            if oldopclass:
+                bundle2.bundleoperation = oldopclass
+            # release sqllock here in exit
+            if context:
+                type = value = traceback = None
+                if exception:
+                    type = exception.__class__
+                    value = exception
+                    traceback = [] # This isn't really important
+                context.__exit__(type, value, traceback)
     else:
-        return orig(*args, **kwargs)
+        # bundle1 or non-lazy locked
+        return executewithsql(repo, orig, True, repo, cg, *args, **kwargs)
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
@@ -186,11 +229,16 @@ class sqlcontext(object):
         self._locked = False
         self._used = False
         self._startlocktime = 0
+        self._active = False
+
+    def active(self):
+        return self._active
 
     def __enter__(self):
         if self._used:
             raise Exception("error: using sqlcontext twice")
         self._used = True
+        self._active = True
 
         repo = self.repo
         if not repo.sqlconn:
@@ -218,6 +266,8 @@ class sqlcontext(object):
 
             if self._connected:
                 repo.sqlclose()
+
+            self._active = False
         except (_mysql_exceptions.ProgrammingError,
                 _mysql_exceptions.OperationalError):
             # Only raise sql exceptions if the wrapped code threw no exception
