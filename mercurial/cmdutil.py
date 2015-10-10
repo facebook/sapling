@@ -2691,19 +2691,22 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
 def commiteditor(repo, ctx, subs, editform=''):
     if ctx.description():
         return ctx.description()
-    return commitforceeditor(repo, ctx, subs, editform=editform)
+    return commitforceeditor(repo, ctx, subs, editform=editform,
+                             unchangedmessagedetection=True)
 
 def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
-                      editform=''):
+                      editform='', unchangedmessagedetection=False):
     if not extramsg:
         extramsg = _("Leave message empty to abort commit.")
 
     forms = [e for e in editform.split('.') if e]
     forms.insert(0, 'changeset')
+    templatetext = None
     while forms:
         tmpl = repo.ui.config('committemplate', '.'.join(forms))
         if tmpl:
-            committext = buildcommittemplate(repo, ctx, subs, extramsg, tmpl)
+            templatetext = committext = buildcommittemplate(
+                repo, ctx, subs, extramsg, tmpl)
             break
         forms.pop()
     else:
@@ -2712,14 +2715,18 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     # run editor in the repository root
     olddir = os.getcwd()
     os.chdir(repo.root)
-    text = repo.ui.edit(committext, ctx.user(), ctx.extra(), editform=editform)
-    text = re.sub("(?m)^HG:.*(\n|$)", "", text)
+    editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
+                              editform=editform)
+
+    text = re.sub("(?m)^HG:.*(\n|$)", "", editortext)
     os.chdir(olddir)
 
     if finishdesc:
         text = finishdesc(text)
     if not text.strip():
         raise error.Abort(_("empty commit message"))
+    if unchangedmessagedetection and editortext == templatetext:
+        raise error.Abort(_("commit message unchanged"))
 
     return text
 
