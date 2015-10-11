@@ -2549,6 +2549,7 @@ bail:
 
 #define BUMPED_FIX 1
 #define USING_SHA_256 2
+#define FM1_HEADER_SIZE (4 + 8 + 2 + 2 + 1 + 1 + 1)
 
 static PyObject *readshas(
 	const char *source, unsigned char num, Py_ssize_t hashwidth)
@@ -2570,8 +2571,10 @@ static PyObject *readshas(
 	return list;
 }
 
-static PyObject *fm1readmarker(const char *data, uint32_t *msize)
+static PyObject *fm1readmarker(const char *databegin, const char *dataend,
+			       uint32_t *msize)
 {
+	const char *data = databegin;
 	const char *meta;
 
 	double mtime;
@@ -2583,6 +2586,10 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 	PyObject *prec = NULL, *parents = NULL, *succs = NULL;
 	PyObject *metadata = NULL, *ret = NULL;
 	int i;
+
+	if (data + FM1_HEADER_SIZE > dataend) {
+		goto overflow;
+	}
 
 	*msize = getbe32(data);
 	data += 4;
@@ -2601,12 +2608,23 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 	nparents = (unsigned char)(*data++);
 	nmetadata = (unsigned char)(*data++);
 
+	if (databegin + *msize > dataend) {
+		goto overflow;
+	}
+	dataend = databegin + *msize;  /* narrow down to marker size */
+
+	if (data + hashwidth > dataend) {
+		goto overflow;
+	}
 	prec = PyString_FromStringAndSize(data, hashwidth);
 	data += hashwidth;
 	if (prec == NULL) {
 		goto bail;
 	}
 
+	if (data + nsuccs * hashwidth > dataend) {
+		goto overflow;
+	}
 	succs = readshas(data, nsuccs, hashwidth);
 	if (succs == NULL) {
 		goto bail;
@@ -2614,6 +2632,9 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 	data += nsuccs * hashwidth;
 
 	if (nparents == 1 || nparents == 2) {
+		if (data + nparents * hashwidth > dataend) {
+			goto overflow;
+		}
 		parents = readshas(data, nparents, hashwidth);
 		if (parents == NULL) {
 			goto bail;
@@ -2623,6 +2644,9 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 		parents = Py_None;
 	}
 
+	if (data + 2 * nmetadata > dataend) {
+		goto overflow;
+	}
 	meta = data + (2 * nmetadata);
 	metadata = PyTuple_New(nmetadata);
 	if (metadata == NULL) {
@@ -2632,6 +2656,9 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 		PyObject *tmp, *left = NULL, *right = NULL;
 		Py_ssize_t leftsize = (unsigned char)(*data++);
 		Py_ssize_t rightsize = (unsigned char)(*data++);
+		if (meta + leftsize + rightsize > dataend) {
+			goto overflow;
+		}
 		left = PyString_FromStringAndSize(meta, leftsize);
 		meta += leftsize;
 		right = PyString_FromStringAndSize(meta, rightsize);
@@ -2649,6 +2676,10 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 	}
 	ret = Py_BuildValue("(OOHO(di)O)", prec, succs, flags,
 			    metadata, mtime, (int)tz * 60, parents);
+	goto bail;  /* return successfully */
+
+overflow:
+	PyErr_SetString(PyExc_ValueError, "overflow in obsstore");
 bail:
 	Py_XDECREF(prec);
 	Py_XDECREF(succs);
@@ -2660,7 +2691,7 @@ bail:
 
 
 static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
-	const char *data;
+	const char *data, *dataend;
 	Py_ssize_t datalen;
 	Py_ssize_t offset, stop;
 	PyObject *markers = NULL;
@@ -2668,6 +2699,7 @@ static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "s#nn", &data, &datalen, &offset, &stop)) {
 		return NULL;
 	}
+	dataend = data + datalen;
 	data += offset;
 	markers = PyList_New(0);
 	if (!markers) {
@@ -2676,7 +2708,7 @@ static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
 	while (offset < stop) {
 		uint32_t msize;
 		int error;
-		PyObject *record = fm1readmarker(data, &msize);
+		PyObject *record = fm1readmarker(data, dataend, &msize);
 		if (!record) {
 			goto bail;
 		}
