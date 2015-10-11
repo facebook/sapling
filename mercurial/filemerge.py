@@ -443,6 +443,8 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     fco = other file context
     fca = ancestor file context
     fcd = local file context for current/destination file
+
+    Returns whether the merge is complete, and the return value of the merge.
     """
 
     if True:
@@ -456,7 +458,7 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
             return name
 
         if not fco.cmp(fcd): # files identical?
-            return None
+            return True, None
 
         ui = repo.ui
         fd = fcd.path()
@@ -483,7 +485,7 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         toolconf = tool, toolpath, binary, symlink
 
         if mergetype == nomerge:
-            return func(repo, mynode, orig, fcd, fco, fca, toolconf)
+            return True, func(repo, mynode, orig, fcd, fco, fca, toolconf)
 
         if orig != fco.path():
             ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
@@ -496,7 +498,7 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
                                      toolconf):
             if onfailure:
                 ui.warn(onfailure % fd)
-            return 1
+            return True, 1
 
         a = repo.wjoin(fd)
         b = temp("base", fca)
@@ -529,7 +531,7 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
             if onfailure:
                 ui.warn(onfailure % fd)
 
-        return r
+        return True, r
     finally:
         if not r:
             util.unlink(back)

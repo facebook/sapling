@@ -553,7 +553,7 @@ def overridefilemerge(origfn, repo, mynode, orig, fcd, fco, fca, labels=None):
                (lfutil.splitstandin(orig), ahash, dhash, ohash),
              0) == 1)):
         repo.wwrite(fcd.path(), fco.data(), fco.flags())
-    return 0
+    return True, 0
 
 def copiespathcopies(orig, ctx1, ctx2, match=None):
     copies = orig(ctx1, ctx2, match=match)
