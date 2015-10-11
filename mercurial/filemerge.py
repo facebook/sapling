@@ -435,7 +435,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
         newlabels.append(_formatconflictmarker(repo, ca, tmpl, labels[2], pad))
     return newlabels
 
-def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
+def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
 
     mynode = parent node before merge
@@ -566,6 +566,9 @@ def _check(r, ui, tool, fcd, files):
         _matcheol(a, back)
 
     return r
+
+def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
+    return _filemerge(repo, mynode, orig, fcd, fco, fca, labels=labels)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()

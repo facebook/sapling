@@ -102,7 +102,7 @@ def uisetup(ui):
                                     overrides.mergerecordupdates)
     entry = extensions.wrapfunction(merge, 'update',
                                     overrides.mergeupdate)
-    entry = extensions.wrapfunction(filemerge, 'filemerge',
+    entry = extensions.wrapfunction(filemerge, '_filemerge',
                                     overrides.overridefilemerge)
     entry = extensions.wrapfunction(cmdutil, 'copy',
                                     overrides.overridecopy)
