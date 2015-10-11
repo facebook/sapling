@@ -522,12 +522,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
             # complete if premerge successful (r is 0)
             return not r, r
 
-        if not r:  # premerge successfully merged the file
-            needcheck = False
-        else:
-            needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf,
-                                files, labels=labels)
-
+        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf, files,
+                            labels=labels)
         if needcheck:
             r = _check(r, ui, tool, fcd, files)
 
