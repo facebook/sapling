@@ -2630,12 +2630,12 @@ static PyObject *fm1readmarker(const char *data, uint32_t *msize)
 	}
 	for (i = 0; i < nmetadata; i++) {
 		PyObject *tmp, *left = NULL, *right = NULL;
-		Py_ssize_t metasize = (unsigned char)(*data++);
-		left = PyString_FromStringAndSize(meta, metasize);
-		meta += metasize;
-		metasize = (unsigned char)(*data++);
-		right = PyString_FromStringAndSize(meta, metasize);
-		meta += metasize;
+		Py_ssize_t leftsize = (unsigned char)(*data++);
+		Py_ssize_t rightsize = (unsigned char)(*data++);
+		left = PyString_FromStringAndSize(meta, leftsize);
+		meta += leftsize;
+		right = PyString_FromStringAndSize(meta, rightsize);
+		meta += rightsize;
 		tmp = PyTuple_New(2);
 		if (!left || !right || !tmp) {
 			Py_XDECREF(left);
