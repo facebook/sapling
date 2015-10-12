@@ -89,7 +89,6 @@ form.search div#hint {
   background: #ffc;
   font-size: 70%;
   border: 1px solid yellow;
-  -webkit-border-radius: 5px; /* this is just for Safari */
   border-radius: 5px;
 }
 
