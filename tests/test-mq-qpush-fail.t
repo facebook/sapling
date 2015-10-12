@@ -56,7 +56,9 @@ test qpush on empty series
   applying bad-patch
   transaction abort!
   rollback completed
-  cleaning up working directory...done
+  cleaning up working directory...
+  reverting foo
+  done
   abort: decoding near '\xe9': 'ascii' codec can't decode byte 0xe9 in position 0: ordinal not in range(128)! (esc)
   [255]
   $ hg parents

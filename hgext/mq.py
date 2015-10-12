@@ -1428,9 +1428,9 @@ class queue(object):
             except AbortNoCleanup:
                 raise
             except: # re-raises
-                self.ui.warn(_('cleaning up working directory...'))
-                node = repo.dirstate.p1()
-                hg.revert(repo, node, None)
+                self.ui.warn(_('cleaning up working directory...\n'))
+                cmdutil.revert(self.ui, repo, repo['.'],
+                               repo.dirstate.parents(), no_backup=True)
                 # only remove unknown files that we know we touched or
                 # created while patching
                 for f in all_files:

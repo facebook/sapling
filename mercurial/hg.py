@@ -766,10 +766,6 @@ def outgoing(ui, repo, dest, opts):
     recurse()
     return 0 # exit code is zero since we found outgoing changes
 
-def revert(repo, node, choose):
-    """revert changes to revision in node without updating dirstate"""
-    return mergemod.update(repo, node, False, True, choose)[3] > 0
-
 def verify(repo):
     """verify the consistency of a repository"""
     ret = verifymod.verify(repo)
