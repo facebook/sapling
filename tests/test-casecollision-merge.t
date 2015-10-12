@@ -212,7 +212,7 @@ Directory/file case-folding collision:
   $ hg ci -Aqm1
 
   $ hg merge 0
-  abort: Not a directory: '$TESTTMP/directory-casing/aA/a'
+  abort: case-folding collision between Aa and directory of aA/a
   [255]
 (note: no collision between 0 and 00 or 000/f)
 

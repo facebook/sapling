@@ -478,6 +478,17 @@ def _checkcollision(repo, wmf, actions):
                              % (f, foldmap[fold]))
         foldmap[fold] = f
 
+    # check case-folding of directories
+    foldprefix = unfoldprefix = lastfull = ''
+    for fold, f in sorted(foldmap.items()):
+        if fold.startswith(foldprefix) and not f.startswith(unfoldprefix):
+            # the folded prefix matches but actual casing is different
+            raise error.Abort(_("case-folding collision between "
+                                "%s and directory of %s") % (lastfull, f))
+        foldprefix = fold + '/'
+        unfoldprefix = f + '/'
+        lastfull = f
+
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                   acceptremote, followcopies):
     """
