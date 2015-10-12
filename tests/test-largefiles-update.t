@@ -140,6 +140,28 @@ Test that "hg merge" updates largefiles from "other" correctly
   $ cat .hglf/large1
   58e24f733a964da346e2407a2bee99d9001184f5
 
+(merge non-existing largefiles from "other" via conflict prompt -
+make sure the following commit doesn't abort in a confusing way when trying to
+mark the non-existing file as normal in lfdirstate)
+
+  $ mv .hg/largefiles/58e24f733a964da346e2407a2bee99d9001184f5 .
+  $ hg update -q -C 3
+  $ hg merge --config largefiles.usercache=not --config debug.dirstate.delaywrite=2 --tool :local --config ui.interactive=True <<EOF
+  > o
+  > EOF
+  largefile large1 has a merge conflict
+  ancestor was 4669e532d5b2c093a78eca010077e708a071bb64
+  keep (l)ocal e5bb990443d6a92aaf7223813720f7566c9dd05b or
+  take (o)ther 58e24f733a964da346e2407a2bee99d9001184f5? o
+  getting changed largefiles
+  large1: largefile 58e24f733a964da346e2407a2bee99d9001184f5 not available from file:/*/$TESTTMP/repo (glob)
+  0 largefiles updated, 0 removed
+  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m '1-2-3 testing'
+  $ hg rollback -q
+  $ mv 58e24f733a964da346e2407a2bee99d9001184f5 .hg/largefiles/
+
 Test that "hg revert -r REV" updates largefiles from "REV" correctly
 
   $ hg update -q -C 3

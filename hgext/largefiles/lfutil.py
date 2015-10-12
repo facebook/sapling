@@ -399,7 +399,8 @@ def synclfdirstate(repo, lfdirstate, lfile, normallookup):
     else:
         state, mtime = '?', -1
     if state == 'n':
-        if normallookup or mtime < 0:
+        if (normallookup or mtime < 0 or
+            not os.path.exists(repo.wjoin(lfile))):
             # state 'n' doesn't ensure 'clean' in this case
             lfdirstate.normallookup(lfile)
         else:
