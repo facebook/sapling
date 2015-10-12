@@ -35,7 +35,7 @@ Symlink is local parent, executable is other:
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
    preserving a for resolve of a
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool ':merge' for a (binary False symlink True)
   merging a
   my a@521a1e40188f+ other a@3574f3e69b1c ancestor a@c334dc3be0da
@@ -68,7 +68,7 @@ Symlink is other parent, executable is local:
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool ':union' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
@@ -91,7 +91,7 @@ Symlink is other parent, executable is local:
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
    preserving a for resolve of a
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool ':merge3' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
@@ -124,7 +124,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    branchmerge: False, force: False, partial: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f
    preserving a for resolve of a
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool ':prompt' for a (binary False symlink True)
    no tool found to merge a
@@ -283,10 +283,8 @@ h: l vs l, different
 
   $ hg merge
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for b
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for c
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -297,6 +295,8 @@ h: l vs l, different
   merging h
   warning: internal :merge cannot merge symlinks for h
   warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -342,10 +342,8 @@ h: l vs l, different
   $ hg up -Cqr1
   $ hg merge
   merging a
-  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for b
   merging b
-  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   warning: cannot merge flags for c
   merging d
   warning: internal :merge cannot merge symlinks for d
@@ -356,6 +354,8 @@ h: l vs l, different
   merging h
   warning: internal :merge cannot merge symlinks for h
   warning: conflicts while merging h! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   3 files updated, 0 files merged, 0 files removed, 5 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

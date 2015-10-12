@@ -34,12 +34,12 @@
    preserving a for resolve of b
    preserving a for resolve of c
   removing a
-   b: remote moved from a -> m
+   b: remote moved from a -> m (premerge)
   picked tool ':merge' for b (binary False symlink False)
   merging a and b to b
   my b@add3f11052fa+ other b@17c05bb7fcb6 ancestor a@b8bf91eeebbc
    premerge successful
-   c: remote moved from a -> m
+   c: remote moved from a -> m (premerge)
   picked tool ':merge' for c (binary False symlink False)
   merging a and c to c
   my c@add3f11052fa+ other c@17c05bb7fcb6 ancestor a@b8bf91eeebbc

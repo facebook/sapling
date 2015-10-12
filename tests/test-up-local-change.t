@@ -49,10 +49,11 @@
    preserving a for resolve of a
    b: remote created -> g
   getting b
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
+   a: versions differ -> m (merge)
   picked tool 'true' for a (binary False symlink False)
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
   launching merge tool: true *$TESTTMP/r2/a* * * (glob)
@@ -72,10 +73,11 @@
    preserving a for resolve of a
    b: other deleted -> r
   removing b
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@1e71731e6fbb+ other a@c19d34741b0a ancestor a@1e71731e6fbb
+   a: versions differ -> m (merge)
   picked tool 'true' for a (binary False symlink False)
   my a@1e71731e6fbb+ other a@c19d34741b0a ancestor a@1e71731e6fbb
   launching merge tool: true *$TESTTMP/r2/a* * * (glob)
@@ -103,10 +105,11 @@
    preserving a for resolve of a
    b: remote created -> g
   getting b
-   a: versions differ -> m
+   a: versions differ -> m (premerge)
   picked tool 'true' for a (binary False symlink False)
   merging a
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
+   a: versions differ -> m (merge)
   picked tool 'true' for a (binary False symlink False)
   my a@c19d34741b0a+ other a@1e71731e6fbb ancestor a@c19d34741b0a
   launching merge tool: true *$TESTTMP/r2/a* * * (glob)

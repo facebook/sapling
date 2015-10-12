@@ -89,15 +89,16 @@ $4 = expected result
    preserving a for resolve of b
    preserving rev for resolve of rev
    a: remote unchanged -> k
-   b: remote copied from a -> m
+   b: remote copied from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@4ce40f5aca24 ancestor a@924404dff337
    premerge successful
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@e300d1c794ec+ other rev@4ce40f5aca24 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@e300d1c794ec+ other rev@4ce40f5aca24 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -128,15 +129,16 @@ $4 = expected result
    preserving rev for resolve of rev
    a: remote is newer -> g
   getting a
-   b: local copied/moved from a -> m
+   b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b and a to b
   my b@86a2aa42fc76+ other a@f4db7e329e71 ancestor a@924404dff337
    premerge successful
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@86a2aa42fc76+ other rev@f4db7e329e71 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@86a2aa42fc76+ other rev@f4db7e329e71 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -166,15 +168,16 @@ $4 = expected result
    preserving a for resolve of b
    preserving rev for resolve of rev
   removing a
-   b: remote moved from a -> m
+   b: remote moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@bdb19105162a ancestor a@924404dff337
    premerge successful
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@e300d1c794ec+ other rev@bdb19105162a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@e300d1c794ec+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -202,15 +205,16 @@ $4 = expected result
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: local copied/moved from a -> m
+   b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b and a to b
   my b@02963e448370+ other a@f4db7e329e71 ancestor a@924404dff337
    premerge successful
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@f4db7e329e71 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@02963e448370+ other rev@f4db7e329e71 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -239,10 +243,11 @@ $4 = expected result
    preserving rev for resolve of rev
    b: remote created -> g
   getting b
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@94b33a1b7f2d+ other rev@4ce40f5aca24 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@94b33a1b7f2d+ other rev@4ce40f5aca24 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -269,10 +274,11 @@ $4 = expected result
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
    preserving rev for resolve of rev
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@86a2aa42fc76+ other rev@97c705ade336 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@86a2aa42fc76+ other rev@97c705ade336 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -303,10 +309,11 @@ $4 = expected result
   removing a
    b: remote created -> g
   getting b
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@94b33a1b7f2d+ other rev@bdb19105162a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@94b33a1b7f2d+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -332,10 +339,11 @@ $4 = expected result
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
    preserving rev for resolve of rev
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@97c705ade336 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@02963e448370+ other rev@97c705ade336 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -359,18 +367,20 @@ $4 = expected result
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: both renamed from a -> m
+   b: both renamed from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@62e7bf090eba+ other b@49b6d8032493 ancestor a@924404dff337
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@62e7bf090eba+ other rev@49b6d8032493 ancestor rev@924404dff337
+   b: both renamed from a -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@62e7bf090eba+ other b@49b6d8032493 ancestor a@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@62e7bf090eba+ other rev@49b6d8032493 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@62e7bf090eba+ other rev@49b6d8032493 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -404,10 +414,11 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    c: remote created -> g
   getting c
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@fe905ef2c33e ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@02963e448370+ other rev@fe905ef2c33e ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -435,18 +446,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@86a2aa42fc76+ other b@af30c7647fc7 ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@86a2aa42fc76+ other rev@af30c7647fc7 ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@86a2aa42fc76+ other b@af30c7647fc7 ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@86a2aa42fc76+ other rev@af30c7647fc7 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@86a2aa42fc76+ other rev@af30c7647fc7 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -473,18 +486,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: other deleted -> r
   removing a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@59318016310c+ other b@bdb19105162a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@59318016310c+ other b@bdb19105162a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -510,18 +525,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: remote is newer -> g
   getting a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@86a2aa42fc76+ other b@8dbce441892a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@86a2aa42fc76+ other b@8dbce441892a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -548,18 +565,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: other deleted -> r
   removing a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@59318016310c+ other b@bdb19105162a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@59318016310c+ other b@bdb19105162a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@59318016310c+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -585,18 +604,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: remote is newer -> g
   getting a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@86a2aa42fc76+ other b@8dbce441892a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@86a2aa42fc76+ other b@8dbce441892a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@86a2aa42fc76+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -622,18 +643,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving b for resolve of b
    preserving rev for resolve of rev
    a: remote unchanged -> k
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@0b76e65c8289+ other b@4ce40f5aca24 ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@0b76e65c8289+ other rev@4ce40f5aca24 ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@0b76e65c8289+ other b@4ce40f5aca24 ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@0b76e65c8289+ other rev@4ce40f5aca24 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@0b76e65c8289+ other rev@4ce40f5aca24 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -662,18 +685,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: prompt recreating -> g
   getting a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@02963e448370+ other b@8dbce441892a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@02963e448370+ other b@8dbce441892a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -701,18 +726,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving b for resolve of b
    preserving rev for resolve of rev
    a: prompt keep -> a
-   b: both created -> m
+   b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
   my b@0b76e65c8289+ other b@bdb19105162a ancestor b@000000000000
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
+   b: both created -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@0b76e65c8289+ other b@bdb19105162a ancestor b@000000000000
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -741,18 +768,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving a for resolve of b
    preserving rev for resolve of rev
   removing a
-   b: remote moved from a -> m
+   b: remote moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging a and b to b
   my b@e300d1c794ec+ other b@49b6d8032493 ancestor a@924404dff337
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@e300d1c794ec+ other rev@49b6d8032493 ancestor rev@924404dff337
+   b: remote moved from a -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@e300d1c794ec+ other b@49b6d8032493 ancestor a@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@e300d1c794ec+ other rev@49b6d8032493 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@e300d1c794ec+ other rev@49b6d8032493 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -780,18 +809,20 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
-   b: local copied/moved from a -> m
+   b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b and a to b
   my b@62e7bf090eba+ other a@f4db7e329e71 ancestor a@924404dff337
+   rev: versions differ -> m (premerge)
+  picked tool 'python ../merge' for rev (binary False symlink False)
+  merging rev
+  my rev@62e7bf090eba+ other rev@f4db7e329e71 ancestor rev@924404dff337
+   b: local copied/moved from a -> m (merge)
   picked tool 'python ../merge' for b (binary False symlink False)
   my b@62e7bf090eba+ other a@f4db7e329e71 ancestor a@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/b* * * (glob)
   merge tool returned: 0
-   rev: versions differ -> m
-  picked tool 'python ../merge' for rev (binary False symlink False)
-  merging rev
-  my rev@62e7bf090eba+ other rev@f4db7e329e71 ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@62e7bf090eba+ other rev@f4db7e329e71 ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
@@ -826,15 +857,16 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
    preserving rev for resolve of rev
    c: remote created -> g
   getting c
-   b: local copied/moved from a -> m
+   b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b and a to b
   my b@02963e448370+ other a@2b958612230f ancestor a@924404dff337
    premerge successful
-   rev: versions differ -> m
+   rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   merging rev
   my rev@02963e448370+ other rev@2b958612230f ancestor rev@924404dff337
+   rev: versions differ -> m (merge)
   picked tool 'python ../merge' for rev (binary False symlink False)
   my rev@02963e448370+ other rev@2b958612230f ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)

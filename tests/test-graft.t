@@ -153,7 +153,7 @@ Graft out of order, skipping a merge and a duplicate
    branchmerge: True, force: True, partial: False
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    preserving b for resolve of b
-   b: local copied/moved from a -> m
+   b: local copied/moved from a -> m (premerge)
   picked tool ':merge' for b (binary False symlink False)
   merging b and a to b
   my b@ef0ef43d49e7+ other a@5d205f8b35b6 ancestor a@68795b066622
@@ -183,10 +183,11 @@ Graft out of order, skipping a merge and a duplicate
    d: remote is newer -> g
   getting d
    b: remote unchanged -> k
-   e: versions differ -> m
+   e: versions differ -> m (premerge)
   picked tool ':merge' for e (binary False symlink False)
   merging e
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
+   e: versions differ -> m (merge)
   picked tool ':merge' for e (binary False symlink False)
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')

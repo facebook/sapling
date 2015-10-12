@@ -850,9 +850,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
         updated += 1
 
-    # merge
+    # premerge
+    tocomplete = []
     for f, args, msg in actions['m']:
-        repo.ui.debug(" %s: %s -> m\n" % (f, msg))
+        repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
         if f == '.hgsubstate': # subrepo states need updating
@@ -861,8 +862,24 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             continue
         audit(f)
         complete, r = ms.preresolve(f, wctx, labels=labels)
-        if not complete:
-            r = ms.resolve(f, wctx, labels=labels)
+        if complete:
+            if r is not None and r > 0:
+                unresolved += 1
+            else:
+                if r is None:
+                    updated += 1
+                else:
+                    merged += 1
+        else:
+            numupdates += 1
+            tocomplete.append((f, args, msg))
+
+    # merge
+    for f, args, msg in tocomplete:
+        repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+        r = ms.resolve(f, wctx, labels=labels)
         if r is not None and r > 0:
             unresolved += 1
         else:
