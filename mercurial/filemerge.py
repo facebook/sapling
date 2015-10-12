@@ -487,10 +487,11 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     if mergetype == nomerge:
         return True, func(repo, mynode, orig, fcd, fco, fca, toolconf)
 
-    if orig != fco.path():
-        ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
-    else:
-        ui.status(_("merging %s\n") % fd)
+    if premerge:
+        if orig != fco.path():
+            ui.status(_("merging %s and %s to %s\n") % (orig, fco.path(), fd))
+        else:
+            ui.status(_("merging %s\n") % fd)
 
     ui.debug("my %s other %s ancestor %s\n" % (fcd, fco, fca))
 
