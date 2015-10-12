@@ -5568,6 +5568,7 @@ def resolve(ui, repo, *pats, **opts):
         ret = 0
         didwork = False
 
+        tocomplete = []
         for f in ms:
             if not m(f):
                 continue
@@ -5586,20 +5587,34 @@ def resolve(ui, repo, *pats, **opts):
                 util.copyfile(a, a + ".resolve")
 
                 try:
-                    # resolve file
+                    # preresolve file
                     ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                  'resolve')
                     complete, r = ms.preresolve(f, wctx)
                     if not complete:
-                        r = ms.resolve(f, wctx)
-                    if r:
+                        tocomplete.append(f)
+                    elif r:
                         ret = 1
                 finally:
                     ui.setconfig('ui', 'forcemerge', '', 'resolve')
                     ms.commit()
 
                 # replace filemerge's .orig file with our resolve file
+                # for files in tocomplete, ms.resolve will not overwrite
+                # .orig -- only preresolve does
                 util.rename(a + ".resolve", a + ".orig")
+
+        for f in tocomplete:
+            try:
+                # resolve file
+                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                             'resolve')
+                r = ms.resolve(f, wctx)
+                if r:
+                    ret = 1
+            finally:
+                ui.setconfig('ui', 'forcemerge', '', 'resolve')
+                ms.commit()
 
         ms.commit()
 

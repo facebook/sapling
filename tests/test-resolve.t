@@ -135,8 +135,8 @@ resolve without arguments should suggest --all
 resolve --all should re-merge all unresolved files
   $ hg resolve --all
   merging file1
-  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
   merging file2
+  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
   $ cat file1.orig
