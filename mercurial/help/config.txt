@@ -62,9 +62,9 @@ ones.
   - ``%USERPROFILE%\Mercurial.ini`` (per-user)
   - ``%HOME%\.hgrc`` (per-user)
   - ``%HOME%\Mercurial.ini`` (per-user)
-  - ``<install-dir>\Mercurial.ini`` (per-installation)
-  - ``<install-dir>\hgrc.d\*.rc`` (per-installation)
   - ``HKEY_LOCAL_MACHINE\SOFTWARE\Mercurial`` (per-installation)
+  - ``<install-dir>\hgrc.d\*.rc`` (per-installation)
+  - ``<install-dir>\Mercurial.ini`` (per-installation)
   - ``<internal>/default.d/*.rc`` (defaults)
 
   .. note::

@@ -9,16 +9,13 @@ def systemrcpath():
     filename = util.executablepath()
     # Use mercurial.ini found in directory with hg.exe
     progrc = os.path.join(os.path.dirname(filename), 'mercurial.ini')
-    if os.path.isfile(progrc):
-        rcpath.append(progrc)
-        return rcpath
+    rcpath.append(progrc)
     # Use hgrc.d found in directory with hg.exe
     progrcd = os.path.join(os.path.dirname(filename), 'hgrc.d')
     if os.path.isdir(progrcd):
         for f, kind in osutil.listdir(progrcd):
             if f.endswith('.rc'):
                 rcpath.append(os.path.join(progrcd, f))
-        return rcpath
     # else look for a system rcpath in the registry
     value = util.lookupreg('SOFTWARE\\Mercurial', None,
                            _winreg.HKEY_LOCAL_MACHINE)
