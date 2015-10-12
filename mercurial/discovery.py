@@ -305,7 +305,9 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
         candidate_newhs.update(unsyncedheads)
         dhs = None # delta heads, the new heads on branch
         discardedheads = set()
-        if repo.obsstore:
+        if not repo.obsstore:
+            newhs = candidate_newhs
+        else:
             # remove future heads which are actually obsoleted by another
             # pushed element:
             #
@@ -334,8 +336,6 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                             break
                     else:
                         newhs.add(nh)
-        else:
-            newhs = candidate_newhs
         unsynced = sorted(h for h in unsyncedheads if h not in discardedheads)
         if unsynced:
             if None in unsynced:
