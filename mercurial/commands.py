@@ -5589,7 +5589,10 @@ def resolve(ui, repo, *pats, **opts):
                     # resolve file
                     ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                  'resolve')
-                    if ms.resolve(f, wctx):
+                    complete, r = ms.preresolve(f, wctx)
+                    if not complete:
+                        r = ms.resolve(f, wctx)
+                    if r:
                         ret = 1
                 finally:
                     ui.setconfig('ui', 'forcemerge', '', 'resolve')

@@ -287,7 +287,7 @@ class mergestate(object):
             if entry[0] == 'u':
                 yield f
 
-    def _resolve(self, dfile, wctx, labels=None):
+    def _resolve(self, preresolve, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':
             return True, 0
@@ -302,17 +302,19 @@ class mergestate(object):
         fla = fca.flags()
         if 'x' in flags + flo + fla and 'l' not in flags + flo + fla:
             if fca.node() == nullid:
-                self._repo.ui.warn(_('warning: cannot merge flags for %s\n') %
-                                   afile)
+                if preresolve:
+                    self._repo.ui.warn(
+                        _('warning: cannot merge flags for %s\n') % afile)
             elif flags == fla:
                 flags = flo
-        # restore local
-        f = self._repo.vfs('merge/' + hash)
-        self._repo.wwrite(dfile, f.read(), flags)
-        f.close()
-        complete, r = filemerge.premerge(self._repo, self._local, lfile, fcd,
-                                         fco, fca, labels=labels)
-        if not complete:
+        if preresolve:
+            # restore local
+            f = self._repo.vfs('merge/' + hash)
+            self._repo.wwrite(dfile, f.read(), flags)
+            f.close()
+            complete, r = filemerge.premerge(self._repo, self._local, lfile,
+                                             fcd, fco, fca, labels=labels)
+        else:
             complete, r = filemerge.filemerge(self._repo, self._local, lfile,
                                               fcd, fco, fca, labels=labels)
         if r is None:
@@ -323,9 +325,12 @@ class mergestate(object):
             self.mark(dfile, 'r')
         return complete, r
 
+    def preresolve(self, dfile, wctx, labels=None):
+        return self._resolve(True, dfile, wctx, labels=labels)
+
     def resolve(self, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
-        return self._resolve(dfile, wctx, labels=labels)[1]
+        return self._resolve(False, dfile, wctx, labels=labels)[1]
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
@@ -855,7 +860,9 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                              overwrite)
             continue
         audit(f)
-        r = ms.resolve(f, wctx, labels=labels)
+        complete, r = ms.preresolve(f, wctx, labels=labels)
+        if not complete:
+            r = ms.resolve(f, wctx, labels=labels)
         if r is not None and r > 0:
             unresolved += 1
         else:
