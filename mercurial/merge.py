@@ -287,7 +287,7 @@ class mergestate(object):
             if entry[0] == 'u':
                 yield f
 
-    def resolve(self, dfile, wctx, labels=None):
+    def _resolve(self, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':
             return 0
@@ -322,6 +322,10 @@ class mergestate(object):
         elif not r:
             self.mark(dfile, 'r')
         return r
+
+    def resolve(self, dfile, wctx, labels=None):
+        """rerun merge process for file path `dfile`"""
+        return self._resolve(dfile, wctx, labels=labels)
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
