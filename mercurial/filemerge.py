@@ -435,9 +435,10 @@ def _formatlabels(repo, fcd, fco, fca, labels):
         newlabels.append(_formatconflictmarker(repo, ca, tmpl, labels[2], pad))
     return newlabels
 
-def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
+def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     """perform a 3-way merge in the working directory
 
+    premerge = whether this is a premerge
     mynode = parent node before merge
     orig = original local filename before merge
     fco = other file context
@@ -515,7 +516,7 @@ def _filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
         if markerstyle != 'basic':
             labels = _formatlabels(repo, fcd, fco, fca, labels)
 
-        if mergetype == fullmerge:
+        if premerge and mergetype == fullmerge:
             r = _premerge(repo, toolconf, files, labels=labels)
 
         if not r:  # premerge successfully merged the file
@@ -569,8 +570,13 @@ def _check(r, ui, tool, fcd, files):
 
     return r
 
+def premerge(repo, mynode, orig, fcd, fco, fca, labels=None):
+    return _filemerge(True, repo, mynode, orig, fcd, fco, fca, labels=labels)
+
 def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
-    return _filemerge(repo, mynode, orig, fcd, fco, fca, labels=labels)
+    # premerge = True is temporary -- will be changed to False once premerge
+    # function above is ready
+    return _filemerge(True, repo, mynode, orig, fcd, fco, fca, labels=labels)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()
