@@ -505,7 +505,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     b = temp("base", fca)
     c = temp("other", fco)
     back = a + ".orig"
-    util.copyfile(a, back)
+    if premerge:
+        util.copyfile(a, back)
     files = (a, b, c, back)
 
     r = 1
