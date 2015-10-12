@@ -1090,7 +1090,7 @@ class TTest(Test):
             # clean up any optional leftovers
             while expected.get(pos, None):
                 el = expected[pos].pop(0)
-                if not el.endswith(" (?)\n"):
+                if not el.endswith(b" (?)\n"):
                     expected[pos].insert(0, el)
                     break
                 postout.append(b'  ' + el)
@@ -1160,7 +1160,7 @@ class TTest(Test):
         if el == l: # perfect match (fast)
             return True
         if el:
-            if el.endswith(" (?)\n"):
+            if el.endswith(b" (?)\n"):
                 retry = "retry"
                 el = el[:-5] + "\n"
             if el.endswith(b" (esc)\n"):
