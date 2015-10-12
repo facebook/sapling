@@ -1297,7 +1297,6 @@ def limit(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
-    ss = subset
     os = getset(repo, fullreposet(repo), l[0])
     result = []
     it = iter(os)
@@ -1305,7 +1304,7 @@ def limit(repo, subset, x):
         y = next(it, None)
         if y is None:
             break
-        elif y in ss:
+        elif y in subset:
             result.append(y)
     return baseset(result)
 
@@ -1323,7 +1322,6 @@ def last(repo, subset, x):
     except (TypeError, ValueError):
         # i18n: "last" is a keyword
         raise error.ParseError(_("last expects a number"))
-    ss = subset
     os = getset(repo, fullreposet(repo), l[0])
     os.reverse()
     result = []
@@ -1332,7 +1330,7 @@ def last(repo, subset, x):
         y = next(it, None)
         if y is None:
             break
-        elif y in ss:
+        elif y in subset:
             result.append(y)
     return baseset(result)
 
