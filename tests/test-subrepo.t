@@ -300,6 +300,8 @@ merge tests
   picked tool ':merge' for t (binary False symlink False)
   merging t
   my t@20a0db6fbf6c+ other t@7af322bc1198 ancestor t@6747d179aa9a
+  picked tool ':merge' for t (binary False symlink False)
+  my t@20a0db6fbf6c+ other t@7af322bc1198 ancestor t@6747d179aa9a
   warning: conflicts during merge.
   merging t incomplete! (edit conflicts, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved

@@ -519,6 +519,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
         if premerge and mergetype == fullmerge:
             r = _premerge(repo, toolconf, files, labels=labels)
+            # complete if premerge successful (r is 0)
+            return not r, r
 
         if not r:  # premerge successfully merged the file
             needcheck = False
@@ -575,9 +577,7 @@ def premerge(repo, mynode, orig, fcd, fco, fca, labels=None):
     return _filemerge(True, repo, mynode, orig, fcd, fco, fca, labels=labels)
 
 def filemerge(repo, mynode, orig, fcd, fco, fca, labels=None):
-    # premerge = True is temporary -- will be changed to False once premerge
-    # function above is ready
-    return _filemerge(True, repo, mynode, orig, fcd, fco, fca, labels=labels)
+    return _filemerge(False, repo, mynode, orig, fcd, fco, fca, labels=labels)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = internals.values()

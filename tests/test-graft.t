@@ -187,6 +187,8 @@ Graft out of order, skipping a merge and a duplicate
   picked tool ':merge' for e (binary False symlink False)
   merging e
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
+  picked tool ':merge' for e (binary False symlink False)
+  my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts during merge.
   merging e incomplete! (edit conflicts, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue

@@ -351,6 +351,7 @@ merge-patterns specifies executable not found in PATH and gets warning:
   $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistentmergetool
   couldn't find merge tool true specified for f
   merging f
+  couldn't find merge tool true specified for f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -374,6 +375,7 @@ merge-patterns specifies executable with bogus path and gets warning:
   $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexistent/mergetool
   couldn't find merge tool true specified for f
   merging f
+  couldn't find merge tool true specified for f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
