@@ -290,7 +290,7 @@ class mergestate(object):
     def _resolve(self, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] == 'r':
-            return 0
+            return True, 0
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
         octx = self._repo[self._other]
@@ -321,11 +321,11 @@ class mergestate(object):
             self._dirty = True
         elif not r:
             self.mark(dfile, 'r')
-        return r
+        return complete, r
 
     def resolve(self, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
-        return self._resolve(dfile, wctx, labels=labels)
+        return self._resolve(dfile, wctx, labels=labels)[1]
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
