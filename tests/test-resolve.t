@@ -139,6 +139,12 @@ resolve --all should re-merge all unresolved files
   merging file2
   warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')
   [1]
+  $ cat file1.orig
+  foo
+  baz
+  $ cat file2.orig
+  foo
+  baz
   $ grep '<<<' file1 > /dev/null
   $ grep '<<<' file2 > /dev/null
 
