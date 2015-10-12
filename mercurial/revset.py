@@ -1287,17 +1287,19 @@ def limit(repo, subset, x):
     """``limit(set, [n])``
     First n members of set, defaulting to 1.
     """
-    # i18n: "limit" is a keyword
-    l = getargs(x, 1, 2, _("limit requires one or two arguments"))
+    args = getargsdict(x, 'limit', 'set n')
+    if 'set' not in args:
+        # i18n: "limit" is a keyword
+        raise error.ParseError(_("limit requires one or two arguments"))
     try:
         lim = 1
-        if len(l) == 2:
+        if 'n' in args:
             # i18n: "limit" is a keyword
-            lim = int(getstring(l[1], _("limit requires a number")))
+            lim = int(getstring(args['n'], _("limit requires a number")))
     except (TypeError, ValueError):
         # i18n: "limit" is a keyword
         raise error.ParseError(_("limit expects a number"))
-    os = getset(repo, fullreposet(repo), l[0])
+    os = getset(repo, fullreposet(repo), args['set'])
     result = []
     it = iter(os)
     for x in xrange(lim):
