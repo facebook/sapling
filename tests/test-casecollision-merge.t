@@ -191,6 +191,46 @@ safely removed in merging between #2 and #3.
 
   $ cd ..
 
+Prepare for tests of directory case-folding collisions
+
+  $ hg init directory-casing
+  $ cd directory-casing
+  $ touch 0 # test: file without directory
+  $ mkdir 0a
+  $ touch 0a/f
+  $ mkdir aA
+  $ touch aA/a
+  $ hg ci -Aqm0
+
+Directory/file case-folding collision:
+
+  $ hg up -q null
+  $ touch 00 # test: starts as '0'
+  $ mkdir 000 # test: starts as '0'
+  $ touch 000/f
+  $ touch Aa # test: collision with 'aA/a'
+  $ hg ci -Aqm1
+
+  $ hg merge 0
+  abort: Not a directory: '$TESTTMP/directory-casing/aA/a'
+  [255]
+(note: no collision between 0 and 00 or 000/f)
+
+Directory case-folding collision:
+
+  $ hg up -qC null
+  $ hg --config extensions.purge= purge
+  $ mkdir 0A0
+  $ touch 0A0/f # test: starts as '0a'
+  $ mkdir Aa
+  $ touch Aa/b # test: collision with 'aA/a'
+  $ hg ci -Aqm2
+
+  $ hg merge 0
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cd ..
 
 ################################
 test for linear updates
