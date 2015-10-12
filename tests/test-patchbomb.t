@@ -2845,15 +2845,34 @@ single rev
 Test pull url header
 =================================
 
+basic version
+
   $ echo 'intro=auto' >> $HGRCPATH
-  $ echo 'publicurl=http://example.com/myrepo/' >> $HGRCPATH
+  $ echo "publicurl=$TESTTMP/t2" >> $HGRCPATH
   $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep '^#'
-  # HG changeset patch
-  # User test
-  # Date 5 0
-  #      Thu Jan 01 00:00:05 1970 +0000
-  # Branch test
-  # Node ID 3b6f1ec9dde933a40a115a7990f8b320477231af
-  # Parent  2f9fa9b998c5fe3ac2bd9a2b14bfcbeecbc7c268
-  # Available At http://example.com/myrepo/
-  #              hg pull http://example.com/myrepo/ -r 3b6f1ec9dde9
+  abort: public url $TESTTMP/t2 is missing 3b6f1ec9dde9
+  (use "hg push $TESTTMP/t2 -r 3b6f1ec9dde9")
+  [1]
+
+remote missing
+
+  $ echo 'publicurl=$TESTTMP/missing' >> $HGRCPATH
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  unable to access public repo: $TESTTMP/missing
+  abort: repository $TESTTMP/missing not found!
+  [255]
+
+node missing at remote
+
+  $ hg clone -r '9' . ../t3
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 3 files
+  updating to branch test
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo 'publicurl=$TESTTMP/t3' >> $HGRCPATH
+  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  abort: public url $TESTTMP/t3 is missing 3b6f1ec9dde9
+  (use "hg push $TESTTMP/t3 -r 3b6f1ec9dde9")
+  [255]

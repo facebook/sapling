@@ -527,6 +527,37 @@ def patchbomb(ui, repo, *revs, **opts):
     if bundle:
         opts['revs'] = [str(r) for r in revs]
 
+    # check if revision exist on the public destination
+    publicurl = repo.ui.config('patchbomb', 'publicurl')
+    if publicurl is not None:
+        repo.ui.debug('checking that revision exist in the public repo')
+        try:
+            publicpeer = hg.peer(repo, {}, publicurl)
+        except error.RepoError:
+            repo.ui.write_err(_('unable to access public repo: %s\n')
+                              % publicurl)
+            raise
+        if not publicpeer.capable('known'):
+            repo.ui.debug('skipping existence checks: public repo too old')
+        else:
+            out = [repo[r] for r in revs]
+            known = publicpeer.known(h.node() for h in out)
+            missing = []
+            for idx, h in enumerate(out):
+                if not known[idx]:
+                    missing.append(h)
+            if missing:
+                if 1 < len(missing):
+                    msg = _('public "%s" is missing %s and %i others')
+                    msg %= (publicurl, missing[0], len(missing) - 1)
+                else:
+                    msg = _('public url %s is missing %s')
+                    msg %= (publicurl, missing[0])
+                revhint = ''.join('-r %s' % h
+                                  for h in repo.set('heads(%ld)', missing))
+                hint = _('use "hg push %s %s"') % (publicurl, revhint)
+                raise error.Abort(msg, hint=hint)
+
     # start
     if date:
         start_time = util.parsedate(date)
