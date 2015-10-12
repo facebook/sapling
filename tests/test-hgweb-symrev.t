@@ -783,6 +783,7 @@ Set up the repo
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'file/xyzzy/foo?style=monoblue' | egrep $REVLINKS
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy/?style=monoblue">files</a></li>
+          <li><a href="/file/tip/foo?style=monoblue">latest</a></li>
           <li><a href="/log/xyzzy/foo?style=monoblue">revisions</a></li>
           <li><a href="/annotate/xyzzy/foo?style=monoblue">annotate</a></li>
           <li><a href="/diff/xyzzy/foo?style=monoblue">diff</a></li>
@@ -814,6 +815,7 @@ Set up the repo
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy/?style=monoblue">files</a></li>
           <li><a href="/file/xyzzy/foo?style=monoblue">file</a></li>
+          <li><a href="/file/tip/foo?style=monoblue">latest</a></li>
           <li><a href="/log/xyzzy/foo?style=monoblue">revisions</a></li>
           <li><a href="/diff/xyzzy/foo?style=monoblue">diff</a></li>
           <li><a href="/comparison/xyzzy/foo?style=monoblue">comparison</a></li>
@@ -828,6 +830,7 @@ Set up the repo
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy?style=monoblue">files</a></li>
           <li><a href="/file/xyzzy/foo?style=monoblue">file</a></li>
+          <li><a href="/file/tip/foo?style=monoblue">latest</a></li>
           <li><a href="/log/xyzzy/foo?style=monoblue">revisions</a></li>
           <li><a href="/annotate/xyzzy/foo?style=monoblue">annotate</a></li>
           <li><a href="/comparison/xyzzy/foo?style=monoblue">comparison</a></li>
@@ -840,6 +843,7 @@ Set up the repo
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
               <li><a href="/file/xyzzy?style=monoblue">files</a></li>
           <li><a href="/file/xyzzy/foo?style=monoblue">file</a></li>
+          <li><a href="/file/tip/foo?style=monoblue">latest</a></li>
           <li><a href="/log/xyzzy/foo?style=monoblue">revisions</a></li>
           <li><a href="/annotate/xyzzy/foo?style=monoblue">annotate</a></li>
           <li><a href="/diff/xyzzy/foo?style=monoblue">diff</a></li>
