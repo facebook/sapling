@@ -223,6 +223,7 @@ commit branch
   T a
   T b/c
   $ cvs -q update -r branch > /dev/null
+  $ sleep 1
   $ echo d >> b/c
   $ cvs -q commit -mci2 . | grep '<--'
   $TESTTMP/cvsrepo/src/b/c,v  <--  *c (glob)
