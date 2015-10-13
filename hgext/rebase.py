@@ -23,9 +23,14 @@ from mercurial.lock import release
 from mercurial.i18n import _
 import os, errno
 
+# The following constants are used throughout the rebase module. The ordering of
+# their values must be maintained.
+
+# Indicates that a revision needs to be rebased
 revtodo = -1
 nullmerge = -2
 revignored = -3
+# To do with obsolescence
 revprecursor = -4
 
 cmdtable = {}
@@ -187,6 +192,9 @@ def rebase(ui, repo, **opts):
     originalwd = target = None
     activebookmark = None
     external = nullrev
+    # Mapping between thes old revision id and either what is the new rebased
+    # revision or what needs to be done with the old revsion. The state dict
+    # will be what contains most of the rebase progress state.
     state = {}
     skipped = set()
     targetancestors = set()
