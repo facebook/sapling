@@ -31,8 +31,7 @@ def fakewrite(ui, func):
 
     # parsing 'fakenow' in YYYYmmddHHMM format makes comparison between
     # 'fakenow' value and 'touch -t YYYYmmddHHMM' argument easy
-    timestamp = util.parsedate(fakenow, ['%Y%m%d%H%M'])[0]
-    fakenow = float(timestamp)
+    fakenow = util.parsedate(fakenow, ['%Y%m%d%H%M'])[0]
 
     orig_pack_dirstate = parsers.pack_dirstate
     wrapper = lambda *args: pack_dirstate(fakenow, orig_pack_dirstate, *args)

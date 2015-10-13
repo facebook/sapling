@@ -551,9 +551,9 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	Py_ssize_t nbytes, pos, l;
 	PyObject *k, *v = NULL, *pn;
 	char *p, *s;
-	double now;
+	int now;
 
-	if (!PyArg_ParseTuple(args, "O!O!Od:pack_dirstate",
+	if (!PyArg_ParseTuple(args, "O!O!Oi:pack_dirstate",
 			      &PyDict_Type, &map, &PyDict_Type, &copymap,
 			      &pl, &now))
 		return NULL;
@@ -622,7 +622,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 		mode = tuple->mode;
 		size = tuple->size;
 		mtime = tuple->mtime;
-		if (state == 'n' && mtime == (uint32_t)now) {
+		if (state == 'n' && mtime == now) {
 			/* See pure/parsers.py:pack_dirstate for why we do
 			 * this. */
 			mtime = -1;

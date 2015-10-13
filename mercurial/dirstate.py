@@ -627,7 +627,7 @@ class dirstate(object):
     def _writedirstate(self, st):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
-        now = util.fstat(st).st_mtime
+        now = util.statmtimesec(util.fstat(st)) & _rangemask
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
         st.close()
         self._lastnormaltime = 0
