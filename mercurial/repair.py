@@ -197,9 +197,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 finally:
                     tr.release()
             else:
-                changegroup.addchangegroup(repo, gen, 'strip',
-                                           'bundle:' + vfs.join(chgrpfile),
-                                           True)
+                gen.apply(repo, 'strip', 'bundle:' + vfs.join(chgrpfile), True)
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()
@@ -310,4 +308,3 @@ def stripbmrevset(repo, mark):
                      "ancestors(head() and not bookmark(%s)) - "
                      "ancestors(bookmark() and not bookmark(%s))",
                      mark, mark, mark)
-
