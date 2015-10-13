@@ -41,6 +41,9 @@ command = cmdutil.command(cmdtable)
 # leave the attribute unspecified.
 testedwith = 'internal'
 
+def _nothingtorebase():
+    return 1
+
 def _savegraft(ctx, extra):
     s = ctx.extra().get('source', None)
     if s is not None:
@@ -290,13 +293,13 @@ def rebase(ui, repo, **opts):
                 if not rebaseset:
                     ui.status(_('empty "rev" revision set - '
                                 'nothing to rebase\n'))
-                    return 1
+                    return _nothingtorebase()
             elif srcf:
                 src = scmutil.revrange(repo, [srcf])
                 if not src:
                     ui.status(_('empty "source" revision set - '
                                 'nothing to rebase\n'))
-                    return 1
+                    return _nothingtorebase()
                 rebaseset = repo.revs('(%ld)::', src)
                 assert rebaseset
             else:
@@ -304,7 +307,7 @@ def rebase(ui, repo, **opts):
                 if not base:
                     ui.status(_('empty "base" revision set - '
                                 "can't compute rebase set\n"))
-                    return 1
+                    return _nothingtorebase()
                 commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
                 if commonanc is not None:
                     rebaseset = repo.revs('(%d::(%ld) - %d)::',
@@ -337,7 +340,7 @@ def rebase(ui, repo, **opts):
                     else: # can it happen?
                         ui.status(_('nothing to rebase from %s to %s\n') %
                                   ('+'.join(str(repo[r]) for r in base), dest))
-                    return 1
+                    return _nothingtorebase()
 
             allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
             if (not (keepf or allowunstable)
@@ -365,7 +368,7 @@ def rebase(ui, repo, **opts):
             if not result:
                 # Empty state built, nothing to rebase
                 ui.status(_('nothing to rebase\n'))
-                return 1
+                return _nothingtorebase()
 
             root = min(rebaseset)
             if not keepf and not repo[root].mutable():
