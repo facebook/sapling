@@ -53,6 +53,7 @@ class dirstate(object):
         self._filecache = {}
         self._parentwriters = 0
         self._filename = 'dirstate'
+        self._pendingfilename = '%s.pending' % self._filename
 
     def beginparentchange(self):
         '''Marks the beginning of a set of changes that involve changing
@@ -1052,10 +1053,34 @@ class dirstate(object):
             return list(files)
         return [f for f in dmap if match(f)]
 
+    def _actualfilename(self, repo):
+        if repo.currenttransaction():
+            return self._pendingfilename
+        else:
+            return self._filename
+
     def _savebackup(self, repo, suffix):
         '''Save current dirstate into backup file with suffix'''
-        self.write()
-        filename = self._filename
+        filename = self._actualfilename(repo)
+
+        # use '_writedirstate' instead of 'write' to write changes certainly,
+        # because the latter omits writing out if transaction is running.
+        # output file will be used to create backup of dirstate at this point.
+        self._writedirstate(self._opener(filename, "w", atomictemp=True))
+
+        tr = repo.currenttransaction()
+        if tr:
+            # ensure that subsequent tr.writepending returns True for
+            # changes written out above, even if dirstate is never
+            # changed after this
+            tr.addfilegenerator('dirstate', (self._filename,),
+                                self._writedirstate, location='plain')
+
+            # ensure that pending file written above is unlinked at
+            # failure, even if tr.writepending isn't invoked until the
+            # end of this transaction
+            tr.registertmp(filename, location='plain')
+
         self._opener.write(filename + suffix, self._opener.tryread(filename))
 
     def _restorebackup(self, repo, suffix):
@@ -1063,10 +1088,10 @@ class dirstate(object):
         # this "invalidate()" prevents "wlock.release()" from writing
         # changes of dirstate out after restoring from backup file
         self.invalidate()
-        filename = self._filename
+        filename = self._actualfilename(repo)
         self._opener.rename(filename + suffix, filename)
 
     def _clearbackup(self, repo, suffix):
         '''Clear backup file with suffix'''
-        filename = self._filename
+        filename = self._actualfilename(repo)
         self._opener.unlink(filename + suffix)
