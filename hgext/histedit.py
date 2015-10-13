@@ -163,7 +163,6 @@ import sys
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
-from mercurial import changegroup
 from mercurial import copies
 from mercurial import context
 from mercurial import exchange
@@ -823,8 +822,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 backupfile = repo.join(state.backupfile)
                 f = hg.openpath(ui, backupfile)
                 gen = exchange.readbundle(ui, f, backupfile)
-                changegroup.addchangegroup(repo, gen, 'histedit',
-                                        'bundle:' + backupfile)
+                gen.apply(repo, 'histedit', 'bundle:' + backupfile)
                 os.remove(backupfile)
 
             # check whether we should update away
