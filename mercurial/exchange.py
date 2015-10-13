@@ -1603,7 +1603,7 @@ def _maybeapplyclonebundle(pullop):
         return
 
     res = remote._call('clonebundles')
-    entries = parseclonebundlesmanifest(res)
+    entries = parseclonebundlesmanifest(repo, res)
     if not entries:
         repo.ui.note(_('no clone bundles available on remote; '
                        'falling back to regular clone\n'))
@@ -1640,7 +1640,7 @@ def _maybeapplyclonebundle(pullop):
                           hint=_('consider contacting the server '
                                  'operator if this error persists'))
 
-def parseclonebundlesmanifest(s):
+def parseclonebundlesmanifest(repo, s):
     """Parses the raw text of a clone bundles manifest.
 
     Returns a list of dicts. The dicts have a ``URL`` key corresponding
@@ -1654,7 +1654,23 @@ def parseclonebundlesmanifest(s):
         attrs = {'URL': fields[0]}
         for rawattr in fields[1:]:
             key, value = rawattr.split('=', 1)
-            attrs[urllib.unquote(key)] = urllib.unquote(value)
+            key = urllib.unquote(key)
+            value = urllib.unquote(value)
+            attrs[key] = value
+
+            # Parse BUNDLESPEC into components. This makes client-side
+            # preferences easier to specify since you can prefer a single
+            # component of the BUNDLESPEC.
+            if key == 'BUNDLESPEC':
+                try:
+                    comp, version = parsebundlespec(repo, value,
+                                                    externalnames=True)
+                    attrs['COMPRESSION'] = comp
+                    attrs['VERSION'] = version
+                except error.InvalidBundleSpecification:
+                    pass
+                except error.UnsupportedBundleSpecification:
+                    pass
 
         m.append(attrs)
 
