@@ -6515,8 +6515,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                            for r in op.records['changegroup']]
                 modheads = changegroup.combineresults(changes)
             else:
-                modheads = changegroup.addchangegroup(repo, gen, 'unbundle',
-                                                      'bundle:' + fname)
+                modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
     finally:
         lock.release()
 
