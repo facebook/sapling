@@ -36,6 +36,22 @@ def _getfsnow(vfs):
         os.close(tmpfd)
         vfs.unlink(tmpname)
 
+def _trypending(root, vfs, filename):
+    '''Open  file to be read according to HG_PENDING environment variable
+
+    This opens '.pending' of specified 'filename' only when HG_PENDING
+    is equal to 'root'.
+
+    This returns '(fp, is_pending_opened)' tuple.
+    '''
+    if root == os.environ.get('HG_PENDING'):
+        try:
+            return (vfs('%s.pending' % filename), True)
+        except IOError as inst:
+            if inst.errno != errno.ENOENT:
+                raise
+    return (vfs(filename), False)
+
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -63,6 +79,9 @@ class dirstate(object):
         self._parentwriters = 0
         self._filename = 'dirstate'
         self._pendingfilename = '%s.pending' % self._filename
+
+        # for consitent view between _pl() and _read() invocations
+        self._pendingmode = None
 
     def beginparentchange(self):
         '''Marks the beginning of a set of changes that involve changing
@@ -137,7 +156,7 @@ class dirstate(object):
     @propertycache
     def _pl(self):
         try:
-            fp = self._opener(self._filename)
+            fp = self._opendirstatefile()
             st = fp.read(40)
             fp.close()
             l = len(st)
@@ -342,11 +361,20 @@ class dirstate(object):
             f.discard()
             raise
 
+    def _opendirstatefile(self):
+        fp, mode = _trypending(self._root, self._opener, self._filename)
+        if self._pendingmode is not None and self._pendingmode != mode:
+            fp.close()
+            raise error.Abort(_('working directory state may be '
+                                'changed parallelly'))
+        self._pendingmode = mode
+        return fp
+
     def _read(self):
         self._map = {}
         self._copymap = {}
         try:
-            fp = self._opener.open(self._filename)
+            fp = self._opendirstatefile()
             try:
                 st = fp.read()
             finally:
