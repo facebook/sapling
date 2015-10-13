@@ -909,12 +909,3 @@ def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
                     (f, hex(n)))
 
     return revisions, files
-
-def addchangegroup(repo, source, srctype, url, emptyok=False,
-                   targetphase=phases.draft, expectedtotal=None):
-    """Legacy forwarding method to cg?unpacker.apply() to be removed soon."""
-    if not source:
-        return 0
-
-    return source.apply(repo, srctype, url, emptyok=emptyok,
-                        targetphase=targetphase, expectedtotal=expectedtotal)
