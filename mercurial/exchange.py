@@ -28,7 +28,7 @@ _bundlespeccgversions = {'v1': '01',
                          'bundle2': '02', #legacy
                         }
 
-def parsebundlespec(repo, spec, strict=True):
+def parsebundlespec(repo, spec, strict=True, externalnames=False):
     """Parse a bundle string specification into parts.
 
     Bundle specifications denote a well-defined bundle/exchange format.
@@ -45,6 +45,9 @@ def parsebundlespec(repo, spec, strict=True):
 
     If ``strict`` is True (the default) <compression> is required. Otherwise,
     it is optional.
+
+    If ``externalnames`` is False (the default), the human-centric names will
+    be converted to their internal representation.
 
     Returns a 2-tuple of (compression, version). Compression will be ``None``
     if not in strict mode and a compression isn't defined.
@@ -90,8 +93,9 @@ def parsebundlespec(repo, spec, strict=True):
             raise error.UnsupportedBundleSpecification(
                     _('%s is not a recognized bundle specification') % spec)
 
-    compression = _bundlespeccompressions[compression]
-    version = _bundlespeccgversions[version]
+    if not externalnames:
+        compression = _bundlespeccompressions[compression]
+        version = _bundlespeccgversions[version]
     return compression, version
 
 def readbundle(ui, fh, fname, vfs=None):
