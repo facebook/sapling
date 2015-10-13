@@ -261,3 +261,97 @@ Python <2.7.9 will filter SNI URLs
   searching for changes
   no changes found
 #endif
+
+Set up manifest for testing preferences
+(Remember, the TYPE does not have to match reality - the URL is
+important)
+
+  $ cp full.hg gz-a.hg
+  $ cp full.hg gz-b.hg
+  $ cp full.hg bz2-a.hg
+  $ cp full.hg bz2-b.hg
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2 extra=a
+  > http://localhost:$HGPORT1/bz2-a.hg BUNDLESPEC=bzip2-v2 extra=a
+  > http://localhost:$HGPORT1/gz-b.hg BUNDLESPEC=gzip-v2 extra=b
+  > http://localhost:$HGPORT1/bz2-b.hg BUNDLESPEC=bzip2-v2 extra=b
+  > EOF
+
+Preferring an undefined attribute will take first entry
+
+  $ hg --config experimental.clonebundleprefers=foo=bar clone -U http://localhost:$HGPORT prefer-foo
+  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Preferring bz2 type will download first entry of that type
+
+  $ hg --config experimental.clonebundleprefers=COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-bz
+  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Preferring multiple values of an option works
+
+  $ hg --config experimental.clonebundleprefers=COMPRESSION=unknown,COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-multiple-bz
+  applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Sorting multiple values should get us back to original first entry
+
+  $ hg --config experimental.clonebundleprefers=BUNDLESPEC=unknown,BUNDLESPEC=gzip-v2,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-multiple-gz
+  applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Preferring multiple attributes has correct order
+
+  $ hg --config experimental.clonebundleprefers=extra=b,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-separate-attributes
+  applying clone bundle from http://localhost:$HGPORT1/bz2-b.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Test where attribute is missing from some entries
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/gz-a.hg BUNDLESPEC=gzip-v2
+  > http://localhost:$HGPORT1/bz2-a.hg BUNDLESPEC=bzip2-v2
+  > http://localhost:$HGPORT1/gz-b.hg BUNDLESPEC=gzip-v2 extra=b
+  > http://localhost:$HGPORT1/bz2-b.hg BUNDLESPEC=bzip2-v2 extra=b
+  > EOF
+
+  $ hg --config experimental.clonebundleprefers=extra=b clone -U http://localhost:$HGPORT prefer-partially-defined-attribute
+  applying clone bundle from http://localhost:$HGPORT1/gz-b.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found

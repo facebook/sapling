@@ -1622,7 +1622,7 @@ def _maybeapplyclonebundle(pullop):
                        'operator)\n'))
         return
 
-    # TODO sort entries by user preferences.
+    entries = sortclonebundleentries(repo.ui, entries)
 
     url = entries[0]['URL']
     repo.ui.status(_('applying clone bundle from %s\n') % url)
@@ -1699,6 +1699,51 @@ def filterclonebundleentries(repo, entries):
         newentries.append(entry)
 
     return newentries
+
+def sortclonebundleentries(ui, entries):
+    # experimental config: experimental.clonebundleprefers
+    prefers = ui.configlist('experimental', 'clonebundleprefers', default=[])
+    if not prefers:
+        return list(entries)
+
+    prefers = [p.split('=', 1) for p in prefers]
+
+    # Our sort function.
+    def compareentry(a, b):
+        for prefkey, prefvalue in prefers:
+            avalue = a.get(prefkey)
+            bvalue = b.get(prefkey)
+
+            # Special case for b missing attribute and a matches exactly.
+            if avalue is not None and bvalue is None and avalue == prefvalue:
+                return -1
+
+            # Special case for a missing attribute and b matches exactly.
+            if bvalue is not None and avalue is None and bvalue == prefvalue:
+                return 1
+
+            # We can't compare unless attribute present on both.
+            if avalue is None or bvalue is None:
+                continue
+
+            # Same values should fall back to next attribute.
+            if avalue == bvalue:
+                continue
+
+            # Exact matches come first.
+            if avalue == prefvalue:
+                return -1
+            if bvalue == prefvalue:
+                return 1
+
+            # Fall back to next attribute.
+            continue
+
+        # If we got here we couldn't sort by attributes and prefers. Fall
+        # back to index order.
+        return 0
+
+    return sorted(entries, cmp=compareentry)
 
 def trypullbundlefromurl(ui, repo, url):
     """Attempt to apply a bundle from a URL."""
