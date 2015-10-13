@@ -57,6 +57,12 @@ class Abort(HintException):
     """Raised if a command needs to print an error and exit."""
     pass
 
+class HookLoadError(Abort):
+    """raised when loading a hook fails, aborting an operation
+
+    Exists to allow more specialized catching."""
+    pass
+
 class HookAbort(Abort):
     """raised when a validation hook fails, aborting an operation
 

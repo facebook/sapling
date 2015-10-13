@@ -35,8 +35,9 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
     else:
         d = funcname.rfind('.')
         if d == -1:
-            raise error.Abort(_('%s hook is invalid ("%s" not in '
-                               'a module)') % (hname, funcname))
+            raise error.HookLoadError(
+                _('%s hook is invalid ("%s" not in a module)')
+                % (hname, funcname))
         modname = funcname[:d]
         oldpaths = sys.path
         if util.mainfrozen():
@@ -63,21 +64,21 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                         ui.warn(_('exception from second failed import '
                                   'attempt:\n'))
                     ui.traceback(e2)
-                    raise error.Abort(_('%s hook is invalid '
-                                       '(import of "%s" failed)') %
-                                     (hname, modname))
+                    raise error.HookLoadError(
+                        _('%s hook is invalid (import of "%s" failed)') %
+                        (hname, modname))
         sys.path = oldpaths
         try:
             for p in funcname.split('.')[1:]:
                 obj = getattr(obj, p)
         except AttributeError:
-            raise error.Abort(_('%s hook is invalid '
-                               '("%s" is not defined)') %
-                             (hname, funcname))
+            raise error.HookLoadError(
+                _('%s hook is invalid ("%s" is not defined)')
+                % (hname, funcname))
         if not callable(obj):
-            raise error.Abort(_('%s hook is invalid '
-                               '("%s" is not callable)') %
-                             (hname, funcname))
+            raise error.HookLoadError(
+                _('%s hook is invalid ("%s" is not callable)')
+                % (hname, funcname))
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))
     starttime = time.time()

@@ -628,7 +628,7 @@ make sure --traceback works on hook import failure
   Traceback (most recent call last):
   ImportError: No module named hgext_importfail
   Traceback (most recent call last):
-  Abort: precommit.importfail hook is invalid (import of "importfail" failed)
+  HookLoadError: precommit.importfail hook is invalid (import of "importfail" failed)
   abort: precommit.importfail hook is invalid (import of "importfail" failed)
 
 Issue1827: Hooks Update & Commit not completely post operation
