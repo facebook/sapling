@@ -1271,8 +1271,7 @@ def handlechangegroup(op, inpart):
     nbchangesets = None
     if 'nbchanges' in inpart.params:
         nbchangesets = int(inpart.params.get('nbchanges'))
-    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2',
-                                     expectedtotal=nbchangesets)
+    ret = cg.apply(op.repo, 'bundle2', 'bundle2', expectedtotal=nbchangesets)
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
         # This is definitely not the final form of this
@@ -1341,7 +1340,7 @@ def handleremotechangegroup(op, inpart):
     if not isinstance(cg, changegroup.cg1unpacker):
         raise error.Abort(_('%s: not a bundle version 1.0') %
             util.hidepassword(raw_url))
-    ret = changegroup.addchangegroup(op.repo, cg, 'bundle2', 'bundle2')
+    ret = cg.apply(op.repo, 'bundle2', 'bundle2')
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:
         # This is definitely not the final form of this
