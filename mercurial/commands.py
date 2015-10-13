@@ -1242,7 +1242,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         revs = scmutil.revrange(repo, opts['rev'])
 
     bundletype = opts.get('type', 'bzip2').lower()
-    cgversion, bcompression = cmdutil.parsebundletype(repo, bundletype)
+    cgversion, bcompression = exchange.parsebundlespec(repo, bundletype)
 
     if opts.get('all'):
         base = ['null']

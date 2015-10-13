@@ -15,6 +15,59 @@ import streamclone
 import tags
 import url as urlmod
 
+_bundlecompspecs = {'none': None,
+                    'bzip2': 'BZ',
+                    'gzip': 'GZ',
+                   }
+
+_bundleversionspecs = {'v1': '01',
+                       'v2': '02',
+                       'bundle2': '02', #legacy
+                      }
+
+def parsebundlespec(repo, spec):
+    """return the internal bundle type to use from a user input
+
+    This is parsing user specified bundle type as accepted in:
+
+        'hg bundle --type TYPE'.
+
+    It accept format in the form [compression][-version]|[version]
+
+    Consensus about extensions of the format for various bundle2 feature
+    is to prefix any feature with "+". eg "+treemanifest" or "gzip+phases"
+    """
+    comp, version = None, None
+
+    if '-' in spec:
+        comp, version = spec.split('-', 1)
+    elif spec in _bundlecompspecs:
+        comp = spec
+    elif spec in _bundleversionspecs:
+        version = spec
+    else:
+        raise error.Abort(_('unknown bundle type specified with --type'))
+
+    if comp is None:
+        comp = 'BZ'
+    else:
+        try:
+            comp = _bundlecompspecs[comp]
+        except KeyError:
+            raise error.Abort(_('unknown bundle type specified with --type'))
+
+    if version is None:
+        version = '01'
+        if 'generaldelta' in repo.requirements:
+            version = '02'
+    else:
+        try:
+            version = _bundleversionspecs[version]
+        except KeyError:
+            raise error.Abort(_('unknown bundle type specified with --type'))
+
+    return version, comp
+
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
 
