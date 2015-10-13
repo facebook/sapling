@@ -27,7 +27,7 @@ def _isahash(rev):
         return False
 
 @command("reset", [
-        ('C', 'clean', None, _('wipe the working copy clean when reseting')),
+        ('C', 'clean', None, _('wipe the working copy clean when resetting')),
         ('k', 'keep', None, _('keeps the old commits the bookmark pointed to')),
     ], _('hg reset [REV]'))
 def reset(ui, repo, *args, **opts):
@@ -54,7 +54,7 @@ def reset(ui, repo, *args, **opts):
         # Ensure we have an active bookmark
         bookmark = bmactive(repo)
         if not bookmark:
-            ui.warn(_('reseting without an active bookmark\n'))
+            ui.warn(_('resetting without an active bookmark\n'))
 
         ctx = _revive(repo, rev)
         _moveto(repo, bookmark, ctx, clean=opts.get('clean'))
