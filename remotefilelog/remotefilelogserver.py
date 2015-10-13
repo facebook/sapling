@@ -14,6 +14,13 @@ from mercurial.i18n import _
 import shallowrepo
 import stat, os, lz4, time
 
+try:
+    from mercurial import streamclone
+    streamclone._walkstreamfiles
+    hasstreamclone = True
+except:
+    hasstreamclone = False
+
 def setupserver(ui, repo):
     """Sets up a normal Mercurial repo so it can serve files to shallow repos.
     """
@@ -135,8 +142,10 @@ def onetimesetup(ui):
             for x in orig(repo):
                 yield x
 
-    # This function moved in Mercurial 3.5
-    if util.safehasattr(wireproto, '_walkstreamfiles'):
+    # This function moved in Mercurial 3.5 and 3.6
+    if hasstreamclone:
+        wrapfunction(streamclone, '_walkstreamfiles', _walkstreamfiles)
+    elif util.safehasattr(wireproto, '_walkstreamfiles'):
         wrapfunction(wireproto, '_walkstreamfiles', _walkstreamfiles)
     else:
         wrapfunction(exchange, '_walkstreamfiles', _walkstreamfiles)

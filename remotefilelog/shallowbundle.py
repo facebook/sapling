@@ -207,10 +207,11 @@ if util.safehasattr(changegroup, 'cg2packer'):
             return shallowgroup(shallowcg2packer, self, nodelist, rlog, lookup,
                                 units=units)
 
-def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None):
+def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None,
+                   *args, **kwargs):
     if not requirement in repo.requirements:
         return orig(repo, source, heads=heads, common=common,
-                    bundlecaps=bundlecaps)
+                    bundlecaps=bundlecaps, *args, **kwargs)
 
     original = repo.shallowmatch
     try:
@@ -232,7 +233,7 @@ def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None)
                     includepattern, excludepattern)
             else:
                 repo.shallowmatch = match.always(repo.root, '')
-        return orig(repo, source, heads, common, bundlecaps)
+        return orig(repo, source, heads, common, bundlecaps, *args, **kwargs)
     finally:
         repo.shallowmatch = original
 

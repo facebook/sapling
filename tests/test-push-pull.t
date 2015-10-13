@@ -202,16 +202,20 @@ the server supports our custom getfiles method.
   
 
   $ cd ../multimf-shallow2
-  $ hg pull ssh://user@dummy/$TESTTMP/multimf-shallow
+- initial commit to prevent hg pull from being a clone
+  $ echo z > z && hg commit -qAm z
+  $ hg pull -f ssh://user@dummy/$TESTTMP/multimf-shallow
   pulling from ssh://user@dummy/$TESTTMP/multimf-shallow
+  searching for changes
+  warning: repository is unrelated
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 5 changesets with 4 changes to 3 files (+1 heads)
+  added 5 changesets with 4 changes to 3 files (+2 heads)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
-  $ hg up -q 4
+  $ hg up -q 5
   $ hg log -f -T '{rev}\n' c
+  5
   4
-  3

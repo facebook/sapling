@@ -21,6 +21,13 @@ from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
 
+try:
+    from mercurial import streamclone
+    streamclone._walkstreamfiles
+    hasstreamclone = True
+except:
+    hasstreamclone = False
+
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = ''
@@ -74,25 +81,42 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             return orig(self, *args, **kwargs)
         wrapfunction(localrepo.localrepository, 'clone', clone_shallow)
 
-        def stream_in_shallow(orig, self, remote, requirements):
-            requirements.add(shallowrepo.requirement)
 
+        # Wrap the stream logic to add requirements and to pass include/exclude
+        # patterns around.
+        def setup_streamout(repo, remote):
             # Replace remote.stream_out with a version that sends file
             # patterns.
             def stream_out_shallow(orig):
                 if shallowrepo.requirement in remote._capabilities():
                     opts = {}
-                    if self.includepattern:
-                        opts['includepattern'] = '\0'.join(self.includepattern)
-                    if self.excludepattern:
-                        opts['excludepattern'] = '\0'.join(self.excludepattern)
+                    if repo.includepattern:
+                        opts['includepattern'] = '\0'.join(repo.includepattern)
+                    if repo.excludepattern:
+                        opts['excludepattern'] = '\0'.join(repo.excludepattern)
                     return remote._callstream('stream_out_shallow', **opts)
                 else:
                     return orig()
             wrapfunction(remote, 'stream_out', stream_out_shallow)
+        if hasstreamclone:
+            def stream_wrap(orig, op):
+                setup_streamout(op.repo, op.remote)
+                return orig(op)
+            wrapfunction(streamclone, 'maybeperformlegacystreamclone', stream_wrap)
 
-            return orig(self, remote, requirements)
-        wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
+            def canperformstreamclone(orig, *args, **kwargs):
+                supported, requirements = orig(*args, **kwargs)
+                if requirements is not None:
+                    requirements.add(shallowrepo.requirement)
+                return supported, requirements
+            wrapfunction(streamclone, 'canperformstreamclone',
+                         canperformstreamclone)
+        else:
+            def stream_in_shallow(orig, repo, remote, requirements):
+                setup_streamout(repo, remote)
+                requirements.add(shallowrepo.requirement)
+                return orig(repo, remote, requirements)
+            wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
 
     try:
         orig(ui, repo, *args, **opts)

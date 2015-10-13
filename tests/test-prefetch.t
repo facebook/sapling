@@ -59,17 +59,17 @@
 # prefetch on pull when configured
 
   $ printf "[remotefilelog]\npullprefetch=bookmark()\n" >> .hg/hgrc
-  $ hg strip tip^
-  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/97b1645a8f26-44758a9a-backup.hg (glob)
+  $ hg strip tip
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/109c3a557a73-3f43405e-backup.hg (glob)
 
   $ clearcache
   $ hg pull
   pulling from ssh://user@dummy/master
-  requesting all changes
+  searching for changes
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 0 changes to 0 files
+  added 1 changesets with 0 changes to 0 files
   updating bookmark foo
   (run 'hg update' to get a working copy)
   prefetching file contents
