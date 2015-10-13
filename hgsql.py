@@ -594,38 +594,71 @@ def wraprepo(repo):
                 # commit at the end just to make sure we're clean
                 self.sqlconn.commit()
 
+                # Compute new heads, and delete old heads
+                newheads = set(self.heads())
+                oldheads = []
                 cursor.execute(
-                    "DELETE revision_references FROM revision_references " +
-                    "FORCE INDEX (bookmarkindex) " +
-                    "WHERE namespace = 'heads' " +
-                    "AND repo = %s", (reponame,)
+                    "SELECT value FROM revision_references "
+                    "WHERE repo = %s AND namespace='heads'",
+                    (reponame,)
                 )
+                for head in cursor:
+                    head = head[0]
+                    if head in newheads:
+                        newheads.discard(head)
+                    else:
+                        oldheads.append(head)
 
-                # Write the bookmarks that are part of this transaction. This
-                # may write them even if nothing has changed, but that's not
-                # a big deal.
+                if oldheads:
+                    headargs = ','.join(['%s'] * len(oldheads))
+                    cursor.execute(
+                        "DELETE revision_references FROM revision_references " +
+                        "FORCE INDEX (bookmarkindex) " +
+                        "WHERE namespace = 'heads' " +
+                        "AND repo = %s AND value IN (" + headargs + ")",
+                        (reponame,) + tuple(oldheads)
+                    )
+
+                # Compute new bookmarks, and delete old bookmarks
+                newbookmarks = self._bookmarks.copy()
+                oldbookmarks = []
                 cursor.execute(
-                    "DELETE revision_references FROM revision_references " +
-                    "FORCE INDEX (bookmarkindex) " +
-                    "WHERE namespace = 'bookmarks' " +
-                    "AND repo = %s", (repo.sqlreponame,)
+                    "SELECT name, value FROM revision_references "
+                    "WHERE namespace = 'bookmarks' AND repo = %s",
+                    (reponame,)
                 )
+                for k, v in cursor:
+                    if newbookmarks.get(k) == v:
+                        del newbookmarks[k]
+                    else:
+                        oldbookmarks.append(k)
+
+                if oldbookmarks:
+                    bookargs = ','.join(['%s'] * len(oldbookmarks))
+                    cursor.execute(
+                        "DELETE revision_references FROM revision_references " +
+                        "FORCE INDEX (bookmarkindex) " +
+                        "WHERE namespace = 'bookmarks' AND repo = %s " +
+                        "AND name IN (" + bookargs + ")",
+                        (repo.sqlreponame,) + tuple(oldbookmarks)
+                    )
 
                 tmpl = []
                 values = []
-                for head in self.heads():
+                for head in newheads:
                     tmpl.append("(%s, 'heads', NULL, %s)")
                     values.append(reponame)
                     values.append(hex(head))
 
-                for k, v in repo._bookmarks.iteritems():
+                for k, v in newbookmarks.iteritems():
                     tmpl.append("(%s, 'bookmarks', %s, %s)")
                     values.append(repo.sqlreponame)
                     values.append(k)
                     values.append(hex(v))
 
-                cursor.execute("INSERT INTO revision_references(repo, namespace, name, value) " +
-                               "VALUES %s" % ','.join(tmpl), tuple(values))
+                if tmpl:
+                    cursor.execute("INSERT INTO revision_references(repo, namespace, name, value) " +
+                                   "VALUES %s" % ','.join(tmpl), tuple(values))
 
                 # revision_references has multiple keys (primary key, and a unique index), so
                 # mysql gives a warning when using ON DUPLICATE KEY since it would only update one
