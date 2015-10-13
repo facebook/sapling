@@ -11,7 +11,7 @@ import peer, changegroup, subrepo, pushkey, obsolete, repoview
 import changelog, dirstate, filelog, manifest, context, bookmarks, phases
 import lock as lockmod
 import transaction, store, encoding, exchange, bundle2
-import scmutil, util, extensions, hook, error, revset
+import scmutil, util, extensions, hook, error, revset, cmdutil
 import match as matchmod
 import merge as mergemod
 import tags as tagsmod
@@ -1084,20 +1084,22 @@ class localrepository(object):
             lock.release()
 
     def rollback(self, dryrun=False, force=False):
-        wlock = lock = None
+        wlock = lock = dsguard = None
         try:
             wlock = self.wlock()
             lock = self.lock()
             if self.svfs.exists("undo"):
-                return self._rollback(dryrun, force)
+                dsguard = cmdutil.dirstateguard(self, 'rollback')
+
+                return self._rollback(dryrun, force, dsguard)
             else:
                 self.ui.warn(_("no rollback information available\n"))
                 return 1
         finally:
-            release(lock, wlock)
+            release(dsguard, lock, wlock)
 
     @unfilteredmethod # Until we get smarter cache management
-    def _rollback(self, dryrun, force):
+    def _rollback(self, dryrun, force, dsguard):
         ui = self.ui
         try:
             args = self.vfs.read('undo.desc').splitlines()
@@ -1140,6 +1142,9 @@ class localrepository(object):
         parentgone = (parents[0] not in self.changelog.nodemap or
                       parents[1] not in self.changelog.nodemap)
         if parentgone:
+            # prevent dirstateguard from overwriting already restored one
+            dsguard.close()
+
             self.vfs.rename('undo.dirstate', 'dirstate')
             try:
                 branch = self.vfs.read('undo.branch')

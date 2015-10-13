@@ -428,6 +428,25 @@ patches: import patch1 patch2; rollback
   working directory now based on revision 0
   $ hg --cwd b parents --template 'parent: {rev}\n'
   parent: 0
+
+Test that "hg rollback" doesn't restore dirstate to one at the
+beginning of the rollbacked transaction in not-"parent-gone" case.
+
+invoking pretxncommit hook will cause marking '.hg/dirstate' as a file
+to be restored at rollbacking, after DirstateTransactionPlan (see wiki
+page for detail).
+
+  $ hg --cwd b branch -q foobar
+  $ hg --cwd b commit -m foobar
+  $ hg --cwd b update 0 -q
+  $ hg --cwd b import ../patch1 ../patch2 --config hooks.pretxncommit=true
+  applying ../patch1
+  applying ../patch2
+  $ hg --cwd b update -q 1
+  $ hg --cwd b rollback -q
+  $ hg --cwd b parents --template 'parent: {rev}\n'
+  parent: 1
+
   $ rm -r b
 
 
