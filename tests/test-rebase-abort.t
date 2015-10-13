@@ -318,3 +318,37 @@ during a rebase (issue4661)
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
+
+test aborting a rebase succeeds after rebasing with skipped commits onto a
+public changeset (issue4896)
+
+  $ hg init succeedonpublic
+  $ cd succeedonpublic
+  $ echo 'content' > root
+  $ hg commit -A -m 'root' -q
+
+set up public branch
+  $ echo 'content' > disappear
+  $ hg commit -A -m 'disappear public' -q
+commit will cause merge conflict on rebase
+  $ echo '' > root
+  $ hg commit -m 'remove content public' -q
+  $ hg phase --public
+
+setup the draft branch that will be rebased onto public commit
+  $ hg up -r 0 -q
+  $ echo 'content' > disappear
+commit will disappear
+  $ hg commit -A -m 'disappear draft' -q
+  $ echo 'addedcontADDEDentadded' > root
+commit will cause merge conflict on rebase
+  $ hg commit -m 'add content draft' -q
+
+  $ hg rebase -d 'public()' --tool :merge -q
+  note: rebase of 3:0682fd3dabf5 created no changes to commit
+  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg rebase --abort
+  rebase aborted
+

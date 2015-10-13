@@ -920,7 +920,11 @@ def abort(repo, originalwd, target, state, activebookmark=None):
 
     activebookmark: the name of the bookmark that should be active after the
         restore'''
-    dstates = [s for s in state.values() if s >= 0]
+
+    # If the first commits in the rebased set get skipped during the rebase,
+    # their values within the state mapping will be the target rev id. The
+    # dstates list must must not contain the target rev (issue4896)
+    dstates = [s for s in state.values() if s >= 0 and s != target]
     immutable = [d for d in dstates if not repo[d].mutable()]
     cleanup = True
     if immutable:
