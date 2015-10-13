@@ -963,7 +963,7 @@ def statmtimesec(st):
     """
     try:
         return st[stat.ST_MTIME]
-    except TypeError:
+    except (TypeError, IndexError):
         # osutil.stat doesn't allow index access and its st_mtime is int
         return st.st_mtime
 
