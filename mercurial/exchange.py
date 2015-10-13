@@ -12,6 +12,7 @@ import util, scmutil, changegroup, base85, error
 import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
 import lock as lockmod
 import streamclone
+import sslutil
 import tags
 import url as urlmod
 
@@ -1669,6 +1670,11 @@ def filterclonebundleentries(repo, entries):
                 repo.ui.debug('filtering %s because unsupported bundle '
                               'spec: %s\n' % (entry['URL'], str(e)))
                 continue
+
+        if 'REQUIRESNI' in entry and not sslutil.hassni:
+            repo.ui.debug('filtering %s because SNI not supported\n' %
+                          entry['URL'])
+            continue
 
         newentries.append(entry)
 

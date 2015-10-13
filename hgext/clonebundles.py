@@ -49,6 +49,19 @@ BUNDLESPEC
    The actual value doesn't impact client behavior beyond filtering:
    clients will still sniff the bundle type from the header of downloaded
    files.
+
+REQUIRESNI
+   Whether Server Name Indication (SNI) is required to connect to the URL.
+   SNI allows servers to use multiple certificates on the same IP. It is
+   somewhat common in CDNs and other hosting providers. Older Python
+   versions do not support SNI. Defining this attribute enables clients
+   with older Python versions to filter this entry.
+
+   If this is defined, it is important to advertise a non-SNI fallback
+   URL or clients running old Python releases may not be able to clone
+   with the clonebundles facility.
+
+   Value should be "true".
 """
 
 from mercurial import (
