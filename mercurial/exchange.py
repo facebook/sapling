@@ -15,58 +15,83 @@ import streamclone
 import tags
 import url as urlmod
 
-_bundlecompspecs = {'none': None,
-                    'bzip2': 'BZ',
-                    'gzip': 'GZ',
-                   }
+# Maps bundle compression human names to internal representation.
+_bundlespeccompressions = {'none': None,
+                           'bzip2': 'BZ',
+                           'gzip': 'GZ',
+                          }
 
-_bundleversionspecs = {'v1': '01',
-                       'v2': '02',
-                       'bundle2': '02', #legacy
-                      }
+# Maps bundle version human names to changegroup versions.
+_bundlespeccgversions = {'v1': '01',
+                         'v2': '02',
+                         'bundle2': '02', #legacy
+                        }
 
-def parsebundlespec(repo, spec):
-    """return the internal bundle type to use from a user input
+def parsebundlespec(repo, spec, strict=True):
+    """Parse a bundle string specification into parts.
 
-    This is parsing user specified bundle type as accepted in:
+    Bundle specifications denote a well-defined bundle/exchange format.
+    The content of a given specification should not change over time in
+    order to ensure that bundles produced by a newer version of Mercurial are
+    readable from an older version.
 
-        'hg bundle --type TYPE'.
+    The string currently has the form:
 
-    It accept format in the form [compression][-version]|[version]
+       <compression>-<type>
 
-    Consensus about extensions of the format for various bundle2 feature
-    is to prefix any feature with "+". eg "+treemanifest" or "gzip+phases"
+    Where <compression> is one of the supported compression formats
+    and <type> is (currently) a version string.
+
+    If ``strict`` is True (the default) <compression> is required. Otherwise,
+    it is optional.
+
+    Returns a 2-tuple of (compression, version). Compression will be ``None``
+    if not in strict mode and a compression isn't defined.
+
+    An ``InvalidBundleSpecification`` is raised when the specification is
+    not syntactically well formed.
+
+    An ``UnsupportedBundleSpecification`` is raised when the compression or
+    bundle type/version is not recognized.
+
+    Note: this function will likely eventually return a more complex data
+    structure, including bundle2 part information.
     """
-    comp, version = None, None
+    if strict and '-' not in spec:
+        raise error.InvalidBundleSpecification(
+                _('invalid bundle specification; '
+                  'must be prefixed with compression: %s') % spec)
 
     if '-' in spec:
-        comp, version = spec.split('-', 1)
-    elif spec in _bundlecompspecs:
-        comp = spec
-    elif spec in _bundleversionspecs:
-        version = spec
-    else:
-        raise error.Abort(_('unknown bundle type specified with --type'))
+        compression, version = spec.split('-', 1)
 
-    if comp is None:
-        comp = 'BZ'
-    else:
-        try:
-            comp = _bundlecompspecs[comp]
-        except KeyError:
-            raise error.Abort(_('unknown bundle type specified with --type'))
+        if compression not in _bundlespeccompressions:
+            raise error.UnsupportedBundleSpecification(
+                    _('%s compression is not supported') % compression)
 
-    if version is None:
-        version = '01'
-        if 'generaldelta' in repo.requirements:
-            version = '02'
+        if version not in _bundlespeccgversions:
+            raise error.UnsupportedBundleSpecification(
+                    _('%s is not a recognized bundle version') % version)
     else:
-        try:
-            version = _bundleversionspecs[version]
-        except KeyError:
-            raise error.Abort(_('unknown bundle type specified with --type'))
+        # Value could be just the compression or just the version, in which
+        # case some defaults are assumed (but only when not in strict mode).
+        assert not strict
 
-    return version, comp
+        if spec in _bundlespeccompressions:
+            compression = spec
+            version = 'v1'
+            if 'generaldelta' in repo.requirements:
+                version = 'v2'
+        elif spec in _bundlespeccgversions:
+            compression = 'bzip2'
+            version = spec
+        else:
+            raise error.UnsupportedBundleSpecification(
+                    _('%s is not a recognized bundle specification') % spec)
+
+    compression = _bundlespeccompressions[compression]
+    version = _bundlespeccgversions[version]
+    return compression, version
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)

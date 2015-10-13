@@ -1242,7 +1242,13 @@ def bundle(ui, repo, fname, dest=None, **opts):
         revs = scmutil.revrange(repo, opts['rev'])
 
     bundletype = opts.get('type', 'bzip2').lower()
-    cgversion, bcompression = exchange.parsebundlespec(repo, bundletype)
+    try:
+        bcompression, cgversion = exchange.parsebundlespec(
+                repo, bundletype, strict=False)
+    except error.UnsupportedBundleSpecification as e:
+        raise error.Abort(str(e),
+                          hint=_('see "hg help bundle" for supported '
+                                 'values for --type'))
 
     if opts.get('all'):
         base = ['null']

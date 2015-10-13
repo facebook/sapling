@@ -201,3 +201,12 @@ class CensoredBaseError(RevlogError):
     operation which replaces the entire base with new content. This ensures
     the delta may be applied by clones which have not censored the base.
     """
+
+class InvalidBundleSpecification(Exception):
+    """error raised when a bundle specification is invalid.
+
+    This is used for syntax errors as opposed to support errors.
+    """
+
+class UnsupportedBundleSpecification(Exception):
+    """error raised when a bundle specification is not supported."""
