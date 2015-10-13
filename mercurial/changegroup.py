@@ -361,8 +361,8 @@ class cg1unpacker(object):
             repo.ui.status(_("adding file changes\n"))
             self.callback = None
             pr = prog(_('files'), efiles)
-            newrevs, newfiles = addchangegroupfiles(repo, self, revmap, trp, pr,
-                                                    needfiles)
+            newrevs, newfiles = _addchangegroupfiles(
+                repo, self, revmap, trp, pr, needfiles)
             revisions += newrevs
             files += newfiles
 
@@ -866,7 +866,7 @@ def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
     return changegroupsubset(repo, basenodes, repo.heads(), source)
 
-def addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
+def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
     revisions = 0
     files = 0
     while True:
