@@ -96,9 +96,9 @@ class shelvedfile(object):
         fp = self.opener()
         try:
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
-            changegroup.addchangegroup(self.repo, gen, 'unshelve',
-                                       'bundle:' + self.vfs.join(self.fname),
-                                       targetphase=phases.secret)
+            gen.apply(self.repo, 'unshelve',
+                      'bundle:' + self.vfs.join(self.fname),
+                      targetphase=phases.secret)
         finally:
             fp.close()
 
