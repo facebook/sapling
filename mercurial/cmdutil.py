@@ -3330,10 +3330,9 @@ class dirstateguard(object):
     '''
 
     def __init__(self, repo, name):
-        repo.dirstate.write()
         self._repo = repo
-        self._filename = 'dirstate.backup.%s.%d' % (name, id(self))
-        repo.vfs.write(self._filename, repo.vfs.tryread('dirstate'))
+        self._suffix = '.backup.%s.%d' % (name, id(self))
+        repo.dirstate._savebackup(repo, self._suffix)
         self._active = True
         self._closed = False
 
@@ -3347,27 +3346,24 @@ class dirstateguard(object):
 
     def close(self):
         if not self._active: # already inactivated
-            msg = (_("can't close already inactivated backup: %s")
-                   % self._filename)
+            msg = (_("can't close already inactivated backup: dirstate%s")
+                   % self._suffix)
             raise error.Abort(msg)
 
-        self._repo.vfs.unlink(self._filename)
+        self._repo.dirstate._clearbackup(self._repo, self._suffix)
         self._active = False
         self._closed = True
 
     def _abort(self):
-        # this "invalidate()" prevents "wlock.release()" from writing
-        # changes of dirstate out after restoring to original status
-        self._repo.dirstate.invalidate()
-
-        self._repo.vfs.rename(self._filename, 'dirstate')
+        self._repo.dirstate._restorebackup(self._repo, self._suffix)
         self._active = False
 
     def release(self):
         if not self._closed:
             if not self._active: # already inactivated
-                msg = (_("can't release already inactivated backup: %s")
-                       % self._filename)
+                msg = (_("can't release already inactivated backup:"
+                         " dirstate%s")
+                       % self._suffix)
                 raise error.Abort(msg)
             self._abort()
 

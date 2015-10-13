@@ -1051,3 +1051,22 @@ class dirstate(object):
             # that
             return list(files)
         return [f for f in dmap if match(f)]
+
+    def _savebackup(self, repo, suffix):
+        '''Save current dirstate into backup file with suffix'''
+        self.write()
+        filename = self._filename
+        self._opener.write(filename + suffix, self._opener.tryread(filename))
+
+    def _restorebackup(self, repo, suffix):
+        '''Restore dirstate by backup file with suffix'''
+        # this "invalidate()" prevents "wlock.release()" from writing
+        # changes of dirstate out after restoring from backup file
+        self.invalidate()
+        filename = self._filename
+        self._opener.rename(filename + suffix, filename)
+
+    def _clearbackup(self, repo, suffix):
+        '''Clear backup file with suffix'''
+        filename = self._filename
+        self._opener.unlink(filename + suffix)
