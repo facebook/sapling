@@ -958,6 +958,8 @@ class pulloperation(object):
         self.cgresult = None
         # list of step already done
         self.stepsdone = set()
+        # Whether we attempted a clone from pre-generated bundles.
+        self.clonebundleattempted = False
 
     @util.propertycache
     def pulledsubset(self):
@@ -1603,6 +1605,11 @@ def _maybeapplyclonebundle(pullop):
         return
 
     res = remote._call('clonebundles')
+
+    # If we call the wire protocol command, that's good enough to record the
+    # attempt.
+    pullop.clonebundleattempted = True
+
     entries = parseclonebundlesmanifest(repo, res)
     if not entries:
         repo.ui.note(_('no clone bundles available on remote; '
