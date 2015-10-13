@@ -730,6 +730,9 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
     - fewer heads than before: -1-removed heads (-2..-n)
     - number of heads stays the same: 1
     """
+    if not source:
+        return 0
+
     repo = repo.unfiltered()
     def csmap(x):
         repo.ui.debug("add changeset %s\n" % short(x))
@@ -737,9 +740,6 @@ def addchangegroup(repo, source, srctype, url, emptyok=False,
 
     def revmap(x):
         return cl.rev(x)
-
-    if not source:
-        return 0
 
     changesets = files = revisions = 0
 
