@@ -1262,8 +1262,7 @@ def _pullchangeset(pullop):
                            "changegroupsubset."))
     else:
         cg = pullop.remote.changegroupsubset(pullop.fetch, pullop.heads, 'pull')
-    pullop.cgresult = changegroup.addchangegroup(pullop.repo, cg, 'pull',
-                                                 pullop.remote.url())
+    pullop.cgresult = cg.apply(pullop.repo, 'pull', pullop.remote.url())
 
 def _pullphase(pullop):
     # Get remote phases data from remote
@@ -1592,7 +1591,7 @@ def unbundle(repo, cg, heads, source, url):
                 raise
         else:
             lockandtr[1] = repo.lock()
-            r = changegroup.addchangegroup(repo, cg, source, url)
+            r = cg.apply(repo, source, url)
     finally:
         lockmod.release(lockandtr[2], lockandtr[1], lockandtr[0])
         if recordout is not None:
@@ -1786,7 +1785,7 @@ def trypullbundlefromurl(ui, repo, url):
                 if isinstance(cg, bundle2.unbundle20):
                     bundle2.processbundle(repo, cg, lambda: tr)
                 else:
-                    changegroup.addchangegroup(repo, cg, 'clonebundles', url)
+                    cg.apply(repo, 'clonebundles', url)
                 tr.close()
                 return True
             except urllib2.HTTPError as e:
