@@ -128,7 +128,7 @@ Bundle with partial content works
 
 Bundle with full content works
 
-  $ hg -R server bundle --type gzip --base null -r tip full.hg
+  $ hg -R server bundle --type gzip-v2 --base null -r tip full.hg
   2 changesets found
 
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest

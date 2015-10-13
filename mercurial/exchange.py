@@ -1653,7 +1653,11 @@ def trypullbundlefromurl(ui, repo, url):
             try:
                 fh = urlmod.open(ui, url)
                 cg = readbundle(ui, fh, 'stream')
-                changegroup.addchangegroup(repo, cg, 'clonebundles', url)
+
+                if isinstance(cg, bundle2.unbundle20):
+                    bundle2.processbundle(repo, cg, lambda: tr)
+                else:
+                    changegroup.addchangegroup(repo, cg, 'clonebundles', url)
                 tr.close()
                 return True
             except urllib2.HTTPError as e:
