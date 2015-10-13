@@ -109,8 +109,27 @@ We can override failure to fall back to regular clone
 
 Bundle with partial content works
 
-  $ hg -R server bundle --type gzip --base null -r 53245c60e682 partial.hg
+  $ hg -R server bundle --type gzip-v1 --base null -r 53245c60e682 partial.hg
   1 changesets found
+
+We verify exact bundle content as an extra check against accidental future
+changes. If this output changes, we could break old clients.
+
+  $ f --size --hexdump partial.hg
+  partial.hg: size=208
+  0000: 48 47 31 30 47 5a 78 9c 63 60 60 98 17 ac 12 93 |HG10GZx.c``.....|
+  0010: f0 ac a9 23 45 70 cb bf 0d 5f 59 4e 4a 7f 79 21 |...#Ep..._YNJ.y!|
+  0020: 9b cc 40 24 20 a0 d7 ce 2c d1 38 25 cd 24 25 d5 |..@$ ...,.8%.$%.|
+  0030: d8 c2 22 cd 38 d9 24 cd 22 d5 c8 22 cd 24 cd 32 |..".8.$."..".$.2|
+  0040: d1 c2 d0 c4 c8 d2 32 d1 38 39 29 c9 34 cd d4 80 |......2.89).4...|
+  0050: ab 24 b5 b8 84 cb 40 c1 80 2b 2d 3f 9f 8b 2b 31 |.$....@..+-?..+1|
+  0060: 25 45 01 c8 80 9a d2 9b 65 fb e5 9e 45 bf 8d 7f |%E......e...E...|
+  0070: 9f c6 97 9f 2b 44 34 67 d9 ec 8e 0f a0 92 0b 75 |....+D4g.......u|
+  0080: 41 d6 24 59 18 a4 a4 9a a6 18 1a 5b 98 9b 5a 98 |A.$Y.......[..Z.|
+  0090: 9a 18 26 9b a6 19 98 1a 99 99 26 a6 18 9a 98 24 |..&.......&....$|
+  00a0: 26 59 a6 25 5a 98 a5 18 a6 24 71 41 35 b1 43 dc |&Y.%Z....$qA5.C.|
+  00b0: 96 b0 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a |.....E..V....R..|
+  00c0: 78 ed fc d5 76 f1 36 95 dc 05 07 00 ad 39 5e d3 |x...v.6......9^.|
 
   $ echo "http://localhost:$HGPORT1/partial.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT partial-bundle
@@ -131,6 +150,39 @@ Bundle with full content works
   $ hg -R server bundle --type gzip-v2 --base null -r tip full.hg
   2 changesets found
 
+Again, we perform an extra check against bundle content changes. If this content
+changes, clone bundles produced by new Mercurial versions may not be readable
+by old clients.
+
+  $ f --size --hexdump full.hg
+  full.hg: size=408
+  0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
+  0010: 69 6f 6e 3d 47 5a 78 9c 63 60 60 90 e5 76 f6 70 |ion=GZx.c``..v.p|
+  0020: f4 73 77 75 0f f2 0f 0d 60 00 02 46 06 76 a6 b2 |.swu....`..F.v..|
+  0030: d4 a2 e2 cc fc 3c 03 23 06 06 e6 7d 40 b1 4d c1 |.....<.#...}@.M.|
+  0040: 2a 31 09 cf 9a 3a 52 04 b7 fc db f0 95 e5 a4 f4 |*1...:R.........|
+  0050: 97 17 b2 c9 0c 14 00 02 e6 d9 99 25 1a a7 a4 99 |...........%....|
+  0060: a4 a4 1a 5b 58 a4 19 27 9b a4 59 a4 1a 59 a4 99 |...[X..'..Y..Y..|
+  0070: a4 59 26 5a 18 9a 18 59 5a 26 1a 27 27 25 99 a6 |.Y&Z...YZ&.''%..|
+  0080: 99 1a 70 95 a4 16 97 70 19 28 18 70 a5 e5 e7 73 |..p....p.(.p...s|
+  0090: 71 25 a6 a4 28 00 19 40 13 0e ac fa df ab ff 7b |q%..(..@.......{|
+  00a0: 3f fb 92 dc 8b 1f 62 bb 9e b7 d7 d9 87 3d 5a 44 |?.....b......=ZD|
+  00b0: ac 2f b0 a9 c3 66 1e 54 b9 26 08 a7 1a 1b 1a a7 |./...f.T.&......|
+  00c0: 25 1b 9a 1b 99 19 9a 5a 18 9b a6 18 19 00 dd 67 |%......Z.......g|
+  00d0: 61 61 98 06 f4 80 49 4a 8a 65 52 92 41 9a 81 81 |aa....IJ.eR.A...|
+  00e0: a5 11 17 50 31 30 58 19 cc 80 98 25 29 b1 08 c4 |...P10X....%)...|
+  00f0: 37 07 79 19 88 d9 41 ee 07 8a 41 cd 5d 98 65 fb |7.y...A...A.].e.|
+  0100: e5 9e 45 bf 8d 7f 9f c6 97 9f 2b 44 34 67 d9 ec |..E.......+D4g..|
+  0110: 8e 0f a0 61 a8 eb 82 82 2e c9 c2 20 25 d5 34 c5 |...a....... %.4.|
+  0120: d0 d8 c2 dc d4 c2 d4 c4 30 d9 34 cd c0 d4 c8 cc |........0.4.....|
+  0130: 34 31 c5 d0 c4 24 31 c9 32 2d d1 c2 2c c5 30 25 |41...$1.2-..,.0%|
+  0140: 09 e4 ee 85 8f 85 ff 88 ab 89 36 c7 2a c4 47 34 |..........6.*.G4|
+  0150: fe f8 ec 7b 73 37 3f c3 24 62 1d 8d 4d 1d 9e 40 |...{s7?.$b..M..@|
+  0160: 06 3b 10 14 36 a4 38 10 04 d8 21 01 5a b2 83 f7 |.;..6.8...!.Z...|
+  0170: e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a 78 ed fc d5 |.E..V....R..x...|
+  0180: 76 f1 36 25 81 49 c0 ad 30 c0 0e 49 8f 54 b7 9e |v.6%.I..0..I.T..|
+  0190: d4 1c 09 00 bb 8d f0 bd                         |........|
+
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT full-bundle
   applying clone bundle from http://localhost:$HGPORT1/full.hg
@@ -141,3 +193,37 @@ Bundle with full content works
   finished applying clone bundle
   searching for changes
   no changes found
+
+Entry with unknown BUNDLESPEC is filtered and not used
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://bad.entry1 BUNDLESPEC=UNKNOWN
+  > http://bad.entry2 BUNDLESPEC=xz-v1
+  > http://bad.entry3 BUNDLESPEC=none-v100
+  > http://localhost:$HGPORT1/full.hg BUNDLESPEC=gzip-v2
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT filter-unknown-type
+  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Automatic fallback when all entries are filtered
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://bad.entry BUNDLESPEC=UNKNOWN
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT filter-all
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files

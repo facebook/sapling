@@ -1599,14 +1599,25 @@ def _maybeapplyclonebundle(pullop):
 
     res = remote._call('clonebundles')
     entries = parseclonebundlesmanifest(res)
-
-    # TODO filter entries by supported features.
-    # TODO sort entries by user preferences.
-
     if not entries:
         repo.ui.note(_('no clone bundles available on remote; '
                        'falling back to regular clone\n'))
         return
+
+    entries = filterclonebundleentries(repo, entries)
+    if not entries:
+        # There is a thundering herd concern here. However, if a server
+        # operator doesn't advertise bundles appropriate for its clients,
+        # they deserve what's coming. Furthermore, from a client's
+        # perspective, no automatic fallback would mean not being able to
+        # clone!
+        repo.ui.warn(_('no compatible clone bundles available on server; '
+                       'falling back to regular clone\n'))
+        repo.ui.warn(_('(you may want to report this to the server '
+                       'operator)\n'))
+        return
+
+    # TODO sort entries by user preferences.
 
     url = entries[0]['URL']
     repo.ui.status(_('applying clone bundle from %s\n') % url)
@@ -1643,6 +1654,25 @@ def parseclonebundlesmanifest(s):
         m.append(attrs)
 
     return m
+
+def filterclonebundleentries(repo, entries):
+    newentries = []
+    for entry in entries:
+        spec = entry.get('BUNDLESPEC')
+        if spec:
+            try:
+                parsebundlespec(repo, spec, strict=True)
+            except error.InvalidBundleSpecification as e:
+                repo.ui.debug(str(e) + '\n')
+                continue
+            except error.UnsupportedBundleSpecification as e:
+                repo.ui.debug('filtering %s because unsupported bundle '
+                              'spec: %s\n' % (entry['URL'], str(e)))
+                continue
+
+        newentries.append(entry)
+
+    return newentries
 
 def trypullbundlefromurl(ui, repo, url):
     """Attempt to apply a bundle from a URL."""

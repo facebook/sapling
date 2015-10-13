@@ -32,7 +32,23 @@ The server operator is responsible for generating the bundle manifest file.
 
 Metadata Attributes:
 
-TBD
+BUNDLESPEC
+   A "bundle specification" string that describes the type of the bundle.
+
+   These are string values that are accepted by the "--type" argument of
+   `hg bundle`.
+
+   The values are parsed in strict mode, which means they must be of the
+   "<compression>-<type>" form. See
+   mercurial.exchange.parsebundlespec() for more details.
+
+   Clients will automatically filter out specifications that are unknown or
+   unsupported so they won't attempt to download something that likely won't
+   apply.
+
+   The actual value doesn't impact client behavior beyond filtering:
+   clients will still sniff the bundle type from the header of downloaded
+   files.
 """
 
 from mercurial import (
