@@ -71,7 +71,7 @@ Manifest file with invalid URL aborts
   applying clone bundle from http://does.not.exist/bundle.hg
   error fetching bundle: [Errno -2] Name or service not known
   abort: error applying bundle
-  (consider contacting the server operator if this error persists)
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
   [255]
 
 Server is not running aborts
@@ -81,7 +81,7 @@ Server is not running aborts
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
   error fetching bundle: [Errno 111] Connection refused
   abort: error applying bundle
-  (consider contacting the server operator if this error persists)
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
   [255]
 
 Server returns 404
@@ -92,7 +92,7 @@ Server returns 404
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
   HTTP error fetching bundle: HTTP Error 404: File not found
   abort: error applying bundle
-  (consider contacting the server operator if this error persists)
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
   [255]
 
 We can override failure to fall back to regular clone

@@ -1637,8 +1637,10 @@ def _maybeapplyclonebundle(pullop):
         repo.ui.warn(_('falling back to normal clone\n'))
     else:
         raise error.Abort(_('error applying bundle'),
-                          hint=_('consider contacting the server '
-                                 'operator if this error persists'))
+                          hint=_('if this error persists, consider contacting '
+                                 'the server operator or disable clone '
+                                 'bundles via '
+                                 '"--config experimental.clonebundles=false"'))
 
 def parseclonebundlesmanifest(repo, s):
     """Parses the raw text of a clone bundles manifest.
