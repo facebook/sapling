@@ -1000,6 +1000,11 @@ class localrepository(object):
         def releasefn(tr, success):
             repo = reporef()
             if success:
+                # this should be explicitly invoked here, because
+                # in-memory changes aren't written out at closing
+                # transaction, if tr.addfilegenerator (via
+                # dirstate.write or so) isn't invoked while
+                # transaction running
                 repo.dirstate.write()
             else:
                 # prevent in-memory changes from being written out at

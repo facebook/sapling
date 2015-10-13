@@ -27,6 +27,15 @@ class rootcache(filecache):
     def join(self, obj, fname):
         return obj._join(fname)
 
+def _getfsnow(vfs):
+    '''Get "now" timestamp on filesystem'''
+    tmpfd, tmpname = vfs.mkstemp()
+    try:
+        return util.statmtimesec(os.fstat(tmpfd))
+    finally:
+        os.close(tmpfd)
+        vfs.unlink(tmpname)
+
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -611,7 +620,7 @@ class dirstate(object):
         self._pl = (parent, nullid)
         self._dirty = True
 
-    def write(self):
+    def write(self, repo=None):
         if not self._dirty:
             return
 
@@ -622,7 +631,40 @@ class dirstate(object):
             import time # to avoid useless import
             time.sleep(delaywrite)
 
-        st = self._opener(self._filename, "w", atomictemp=True)
+        filename = self._filename
+        if not repo:
+            tr = None
+            if self._opener.lexists(self._pendingfilename):
+                # if pending file already exists, in-memory changes
+                # should be written into it, because it has priority
+                # to '.hg/dirstate' at reading under HG_PENDING mode
+                filename = self._pendingfilename
+        else:
+            tr = repo.currenttransaction()
+
+        if tr:
+            # 'dirstate.write()' is not only for writing in-memory
+            # changes out, but also for dropping ambiguous timestamp.
+            # delayed writing re-raise "ambiguous timestamp issue".
+            # See also the wiki page below for detail:
+            # https://www.mercurial-scm.org/wiki/DirstateTransactionPlan
+
+            # emulate dropping timestamp in 'parsers.pack_dirstate'
+            now = _getfsnow(repo.vfs)
+            dmap = self._map
+            for f, e in dmap.iteritems():
+                if e[0] == 'n' and e[3] == now:
+                    dmap[f] = dirstatetuple(e[0], e[1], e[2], -1)
+
+            # emulate that all 'dirstate.normal' results are written out
+            self._lastnormaltime = 0
+
+            # delay writing in-memory changes out
+            tr.addfilegenerator('dirstate', (self._filename,),
+                                self._writedirstate, location='plain')
+            return
+
+        st = self._opener(filename, "w", atomictemp=True)
         self._writedirstate(st)
 
     def _writedirstate(self, st):
