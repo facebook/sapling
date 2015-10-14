@@ -67,10 +67,19 @@ int main(int argc, char *argv[])
 	}
 
 	pydll = NULL;
+	/*
+	We first check, that environment variable PYTHONHOME is *not* set.
+	This just mimicks the behavior of the regular python.exe, which uses
+	PYTHONHOME to find its installation directory (if it has been set).
+	Note: Users of HackableMercurial are expected to *not* set PYTHONHOME!
+	*/
 	if (GetEnvironmentVariable("PYTHONHOME", envpyhome,
 				   sizeof(envpyhome)) == 0)
 	{
-		/* environment var PYTHONHOME is not set */
+		/*
+		Environment var PYTHONHOME is *not* set. Let's see if we are
+		running inside a HackableMercurial.
+		*/
 
 		p = strrchr(pyhome, '\\');
 		if (p == NULL) {
