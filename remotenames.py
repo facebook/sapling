@@ -644,6 +644,9 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
     source = revrenames.get(source, source)
 
+    if opts.get('update') and opts.get('rebase'):
+        raise util.Abort(_('specify either rebase or update, not both'))
+
     if not opts.get('rebase'):
         orig(ui, repo, source, **opts)
         return
@@ -658,10 +661,6 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         rebasemodule = None
 
     if _tracking(ui) and activeistracking and rebasemodule:
-        if opts.get('update'):
-            del opts['update']
-            ui.warn('--update and --rebase are not compatible, ignoring '
-                    'the update flag\n')
 
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
