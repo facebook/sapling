@@ -625,7 +625,12 @@ def getbundle(repo, proto, others):
         elif keytype == 'scsv':
             opts[k] = set(v.split(','))
         elif keytype == 'boolean':
-            opts[k] = bool(v)
+            # Client should serialize False as '0', which is a non-empty string
+            # so it evaluates as a True bool.
+            if v == '0':
+                opts[k] = False
+            else:
+                opts[k] = bool(v)
         elif keytype != 'plain':
             raise KeyError('unknown getbundle option type %s'
                            % keytype)
