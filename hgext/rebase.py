@@ -1161,19 +1161,20 @@ def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
     # Build a mapping succesor => obsolete nodes for the obsolete
     # nodes to be rebased
     allsuccessors = {}
+    cl = repo.changelog
     for r in rebasesetrevs:
         n = repo[r]
         if n.obsolete():
-            node = repo.changelog.node(r)
+            node = cl.node(r)
             for s in obsolete.allsuccessors(repo.obsstore, [node]):
-                allsuccessors[repo.changelog.rev(s)] = repo.changelog.rev(node)
+                allsuccessors[cl.rev(s)] = cl.rev(node)
 
     if allsuccessors:
         # Look for successors of obsolete nodes to be rebased among
         # the ancestors of dest
-        ancs = repo.changelog.ancestors([repo[dest].rev()],
-                                        stoprev=min(allsuccessors),
-                                        inclusive=True)
+        ancs = cl.ancestors([repo[dest].rev()],
+                            stoprev=min(allsuccessors),
+                            inclusive=True)
         for s in allsuccessors:
             if s in ancs:
                 obsoletenotrebased[allsuccessors[s]] = s
