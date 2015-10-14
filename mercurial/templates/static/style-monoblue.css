@@ -262,13 +262,16 @@ span.difflineplus { color:#008800; }
 span.difflineminus { color:#cc0000; }
 span.difflineat { color:#990099; }
 
-pre.sourcelines { position: relative; counter-reset: lineno; }
+pre.sourcelines {
+    position: relative;
+    counter-reset: lineno;
+    font-size: 1.2em;
+}
 pre.sourcelines > span {
     display: inline-block;
     box-sizing: border-box;
     width: 100%;
     padding: 0 0 0 5em;
-    font-size: 1.2em;
     counter-increment: lineno;
     vertical-align: top;
 }
@@ -295,6 +298,7 @@ pre.sourcelines > a {
     left: 0px;
     width: 4em;
     height: 1em;
+    padding: 0.15em;
 }
 pre.sourcelines.stripes > :nth-child(4n+1) { background-color: #F1F6F7; }
 pre.sourcelines.stripes > :nth-child(4n+3) { background-color: #FFFFFF; }
