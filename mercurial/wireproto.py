@@ -160,7 +160,8 @@ gboptsmap = {'heads':  'nodes',
              'obsmarkers': 'boolean',
              'bundlecaps': 'scsv',
              'listkeys': 'csv',
-             'cg': 'boolean'}
+             'cg': 'boolean',
+             'cbattempted': 'boolean'}
 
 # client side
 

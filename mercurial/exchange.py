@@ -1179,6 +1179,16 @@ def _pullbundle2(pullop):
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
             kwargs['listkeys'].append('bookmarks')
+
+    # If this is a full pull / clone and the server supports the clone bundles
+    # feature, tell the server whether we attempted a clone bundle. The
+    # presence of this flag indicates the client supports clone bundles. This
+    # will enable the server to treat clients that support clone bundles
+    # differently from those that don't.
+    if (pullop.remote.capable('clonebundles')
+        and pullop.heads is None and list(pullop.common) == [nullid]):
+        kwargs['cbattempted'] = pullop.clonebundleattempted
+
     if streaming:
         pullop.repo.ui.status(_('streaming all changes\n'))
     elif not pullop.fetch:
