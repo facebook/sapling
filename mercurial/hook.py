@@ -167,10 +167,14 @@ def hook(ui, repo, name, throw=False, **args):
         if hname.split('.')[0] == name and cmd:
             hooks.append((hname, cmd))
 
-    return runhooks(ui, repo, name, hooks, throw=throw, **args)
+    res = runhooks(ui, repo, name, hooks, throw=throw, **args)
+    r = False
+    for hname, cmd in hooks:
+        r = res[hname] or r
+    return r
 
 def runhooks(ui, repo, name, hooks, throw=False, **args):
-    r = False
+    res = {}
     oldstdout = -1
 
     try:
@@ -189,7 +193,7 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     pass
 
             if callable(cmd):
-                r = _pythonhook(ui, repo, name, hname, cmd, args, throw) or r
+                r = _pythonhook(ui, repo, name, hname, cmd, args, throw)
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:
                     path, cmd = cmd[7:].rsplit(':', 1)
@@ -204,9 +208,11 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
-                r = _pythonhook(ui, repo, name, hname, hookfn, args, throw) or r
+                r = _pythonhook(ui, repo, name, hname, hookfn, args, throw)
             else:
-                r = _exthook(ui, repo, hname, cmd, args, throw) or r
+                r = _exthook(ui, repo, hname, cmd, args, throw)
+
+            res[hname] = r
 
             # The stderr is fully buffered on Windows when connected to a pipe.
             # A forcible flush is required to make small stderr data in the
@@ -217,4 +223,4 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
             os.dup2(oldstdout, stdoutno)
             os.close(oldstdout)
 
-    return r
+    return res
