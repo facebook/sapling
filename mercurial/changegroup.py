@@ -196,7 +196,7 @@ class cg1unpacker(object):
     def close(self):
         return self._stream.close()
 
-    def chunklength(self):
+    def _chunklength(self):
         d = readexactly(self._stream, 4)
         l = struct.unpack(">l", d)[0]
         if l <= 4:
@@ -217,7 +217,7 @@ class cg1unpacker(object):
 
     def filelogheader(self):
         """return the header of the filelogs chunk, v10 only has the filename"""
-        l = self.chunklength()
+        l = self._chunklength()
         if not l:
             return {}
         fname = readexactly(self._stream, l)
@@ -232,7 +232,7 @@ class cg1unpacker(object):
         return node, p1, p2, deltabase, cs
 
     def deltachunk(self, prevnode):
-        l = self.chunklength()
+        l = self._chunklength()
         if not l:
             return {}
         headerdata = readexactly(self._stream, self.deltaheadersize)
