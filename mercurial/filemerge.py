@@ -120,12 +120,15 @@ def _picktool(repo, ui, path, binary, symlink):
 
     # then merge tools
     tools = {}
+    disabled = set()
     for k, v in ui.configitems("merge-tools"):
         t = k.split('.')[0]
         if t not in tools:
             tools[t] = int(_toolstr(ui, t, "priority", "0"))
+        if _toolbool(ui, t, "disabled", False):
+            disabled.add(t)
     names = tools.keys()
-    tools = sorted([(-p, t) for t, p in tools.items()])
+    tools = sorted([(-p, t) for t, p in tools.items() if t not in disabled])
     uimerge = ui.config("ui", "merge")
     if uimerge:
         if uimerge not in names:

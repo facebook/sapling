@@ -193,6 +193,26 @@ or false set higher on command line:
   M f
   ? f.orig
 
+or true set to disabled:
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  # hg update -C 1
+  $ hg merge -r 2 --config merge-tools.true.disabled=yes
+  merging f
+  merging f failed!
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.orig
+
 or true.executable not found in PATH:
 
   $ beforemerge
