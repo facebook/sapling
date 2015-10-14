@@ -747,7 +747,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     _pushto = True
 
-    # big can o' copypasta from exchange.push
+    # big can o' copypasta from commands.push
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
     try:
