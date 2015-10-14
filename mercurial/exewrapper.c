@@ -90,7 +90,8 @@ int main(int argc, char *argv[])
 			strcat_s(pydllfile, sizeof(pydllfile), "\\" HGPYTHONLIB);
 			pydll = LoadLibrary(pydllfile);
 			if (pydll == NULL) {
-				err = "failed to load private Python DLL";
+				err = "failed to load private Python DLL "
+				      HGPYTHONLIB ".dll";
 				goto bail;
 			}
 			Py_SetPythonHome = (void*)GetProcAddress(pydll,
