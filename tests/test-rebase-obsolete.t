@@ -590,3 +590,51 @@ Test hidden changesets in the rebase set (issue4504)
   note: not rebasing 14:9ad579b4a5de "I", already in destination as 17:fc37a630c901 "K"
   rebasing 15:5ae8a643467b "J"
 
+  $ cd ..
+
+Skip obsolete changeset even with multiple hops
+-----------------------------------------------
+
+setup
+
+  $ hg init obsskip
+  $ cd obsskip
+  $ cat << EOF >> .hg/hgrc
+  > [experimental]
+  > rebaseskipobsolete = True
+  > [extensions]
+  > strip =
+  > EOF
+  $ echo A > A
+  $ hg add A
+  $ hg commit -m A
+  $ echo B > B
+  $ hg add B
+  $ hg commit -m B0
+  $ hg commit --amend -m B1
+  $ hg commit --amend -m B2
+  $ hg up --hidden 'desc(B0)'
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo C > C
+  $ hg add C
+  $ hg commit -m C
+
+Rebase finds its way in a chain of marker
+
+  $ hg rebase -d 'desc(B2)'
+  note: not rebasing 1:a8b11f55fb19 "B0", already in destination as 3:261e70097290 "B2"
+  rebasing 4:212cb178bcbb "C" (tip)
+
+Even when the chain include missing node
+
+  $ hg up --hidden 'desc(B0)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo D > D
+  $ hg add D
+  $ hg commit -m D
+  $ hg --hidden strip -r 'desc(B1)'
+  saved backup bundle to $TESTTMP/obsskip/.hg/strip-backup/86f6414ccda7-b1c452ee-backup.hg (glob)
+
+  $ hg rebase -d 'desc(B2)'
+  note: not rebasing 1:a8b11f55fb19 "B0", already in destination as 2:261e70097290 "B2"
+  rebasing 5:1a79b7535141 "D" (tip)

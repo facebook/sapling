@@ -1167,7 +1167,10 @@ def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
         if n.obsolete():
             node = cl.node(r)
             for s in obsolete.allsuccessors(repo.obsstore, [node]):
-                allsuccessors[cl.rev(s)] = cl.rev(node)
+                try:
+                    allsuccessors[cl.rev(s)] = cl.rev(node)
+                except LookupError:
+                    pass
 
     if allsuccessors:
         # Look for successors of obsolete nodes to be rebased among
