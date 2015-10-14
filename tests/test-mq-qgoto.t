@@ -63,7 +63,7 @@ changes in unrelated files:
   $ echo f >> c
 
   $ hg qgoto 1
-  abort: local changes found, refresh first
+  abort: local changes found, qrefresh first
   [255]
   $ hg qgoto 1 -f
   popping bug141421

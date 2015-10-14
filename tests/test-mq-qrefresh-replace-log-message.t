@@ -139,7 +139,7 @@ Test saving last-message.txt:
 
   $ rm -f .hg/last-message.txt
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qrefresh -e
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: emulating unexpected abort
   [255]
   $ test -f .hg/last-message.txt
@@ -188,7 +188,7 @@ Test saving last-message.txt:
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
@@ -231,7 +231,7 @@ external process
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
 
@@ -269,7 +269,7 @@ dropping status of "file2")
   ====
   transaction abort!
   rollback completed
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
 
@@ -311,7 +311,7 @@ dropping status of "file2")
   ====
   transaction abort!
   rollback completed
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
 

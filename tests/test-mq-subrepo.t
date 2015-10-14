@@ -243,7 +243,7 @@ qpop
   $ hg -R sub update 0000
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg qpop
-  abort: local changed subrepos found, refresh first
+  abort: local changed subrepos found, qrefresh first
   [255]
   $ hg revert sub
   reverting subrepo sub
@@ -262,7 +262,7 @@ qpush
   $ hg -R sub update 0000
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg qpush
-  abort: local changed subrepos found, refresh first
+  abort: local changed subrepos found, qrefresh first
   [255]
   $ hg revert sub
   reverting subrepo sub

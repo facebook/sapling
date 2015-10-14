@@ -45,7 +45,7 @@ Push patch with missing target:
   2 out of 2 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh changeb
+  errors during apply, please fix and qrefresh changeb
   [2]
 
 Display added files:
@@ -98,7 +98,7 @@ Test missing renamed file
   b not tracked!
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh changebb
+  errors during apply, please fix and qrefresh changebb
   [2]
   $ cat a
   a
@@ -150,7 +150,7 @@ Push git patch with missing target:
   1 out of 1 hunks FAILED -- saving rejects to file b.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh changeb
+  errors during apply, please fix and qrefresh changeb
   [2]
   $ hg st
   ? b.rej

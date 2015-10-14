@@ -869,7 +869,7 @@ qpush failure
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh bar
+  errors during apply, please fix and qrefresh bar
   [2]
   $ hg st
   ? foo

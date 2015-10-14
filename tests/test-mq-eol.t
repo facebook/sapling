@@ -61,7 +61,7 @@ should fail in strict mode
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh eol.diff
+  errors during apply, please fix and qrefresh eol.diff
   [2]
   $ hg qpop
   popping eol.diff
@@ -73,7 +73,7 @@ invalid eol
   applying eol.diff
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh eol.diff
+  errors during apply, please fix and qrefresh eol.diff
   [2]
   $ hg qpop
   popping eol.diff
@@ -170,7 +170,7 @@ Test .rej file EOL are left unchanged
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh patch1
+  errors during apply, please fix and qrefresh patch1
   [2]
   $ hg qpop
   popping patch1
@@ -193,7 +193,7 @@ Test .rej file EOL are left unchanged
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh patch1
+  errors during apply, please fix and qrefresh patch1
   [2]
   $ hg qpop
   popping patch1

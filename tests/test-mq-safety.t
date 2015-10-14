@@ -25,7 +25,7 @@ Try to operate on public mq changeset
   $ hg phase --public qbase
   $ echo babar >> foo
   $ hg qref
-  abort: cannot refresh public revision
+  abort: cannot qrefresh public revision
   (see "hg help phases" for details)
   [255]
   $ hg revert -a
@@ -35,7 +35,7 @@ Try to operate on public mq changeset
   (see "hg help phases" for details)
   [255]
   $ hg qfold bar
-  abort: cannot refresh public revision
+  abort: cannot qrefresh public revision
   (see "hg help phases" for details)
   [255]
   $ hg revert -a
@@ -81,7 +81,7 @@ qpop/qrefresh on the wrong revision
   abort: popping would remove a revision not managed by this patch queue
   [255]
   $ hg qrefresh
-  abort: cannot refresh a revision with children
+  abort: cannot qrefresh a revision with children
   [255]
   $ hg tip --template '{rev} {desc}\n'
   3 append quux

@@ -59,7 +59,7 @@ Fold with local changes:
 
   $ echo d >> a
   $ hg qfold p3
-  abort: local changes found, refresh first
+  abort: local changes found, qrefresh first
   [255]
 
   $ hg diff -c .
@@ -181,7 +181,7 @@ and that combination of '--edit' and '--message' doesn't abort execution)
 
   $ rm -f .hg/last-message.txt
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg qfold -e -m MESSAGE p3
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: emulating unexpected abort
   [255]
   $ test -f .hg/last-message.txt
@@ -232,7 +232,7 @@ and that combination of '--edit' and '--message' doesn't abort execution)
   transaction abort!
   rollback completed
   note: commit message saved in .hg/last-message.txt
-  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt

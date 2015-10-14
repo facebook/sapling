@@ -204,7 +204,7 @@ qpush --exact --force with changes to a patched file
   1 out of 1 hunks FAILED -- saving rejects to file fp0.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh p0
+  errors during apply, please fix and qrefresh p0
   [2]
   $ cat fp0
   cp0-bad
@@ -231,7 +231,7 @@ qpush --exact --force with changes to a patched file
   1 out of 1 hunks FAILED -- saving rejects to file fp1.rej
   patch failed, unable to continue (try -v)
   patch failed, rejects left in working directory
-  errors during apply, please fix and refresh p1
+  errors during apply, please fix and qrefresh p1
   [2]
   $ cat fp1
   cp1-bad

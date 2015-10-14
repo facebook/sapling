@@ -1097,10 +1097,10 @@ class queue(object):
     def checklocalchanges(self, repo, force=False, refresh=True):
         excsuffix = ''
         if refresh:
-            excsuffix = ', refresh first'
+            excsuffix = ', qrefresh first'
             # plain versions for i18n tool to detect them
-            _("local changes found, refresh first")
-            _("local changed subrepos found, refresh first")
+            _("local changes found, qrefresh first")
+            _("local changed subrepos found, qrefresh first")
         return checklocalchanges(repo, force, excsuffix)
 
     _reserved = ('series', 'status', 'guards', '.', '..')
@@ -1454,7 +1454,7 @@ class queue(object):
                 return ret[0]
             top = self.applied[-1].name
             if ret[0] and ret[0] > 1:
-                msg = _("errors during apply, please fix and refresh %s\n")
+                msg = _("errors during apply, please fix and qrefresh %s\n")
                 self.ui.write(msg % top)
             else:
                 self.ui.write(_("now at: %s\n") % top)
@@ -1549,7 +1549,7 @@ class queue(object):
 
                 tobackup = set(a + m + r) & tobackup
                 if keepchanges and tobackup:
-                    raise error.Abort(_("local changes found, refresh first"))
+                    raise error.Abort(_("local changes found, qrefresh first"))
                 self.backup(repo, tobackup)
                 repo.dirstate.beginparentchange()
                 for f in a:
@@ -1604,9 +1604,9 @@ class queue(object):
             self.checktoppatch(repo)
             (top, patchfn) = (self.applied[-1].node, self.applied[-1].name)
             if repo.changelog.heads(top) != [top]:
-                raise error.Abort(_("cannot refresh a revision with children"))
+                raise error.Abort(_("cannot qrefresh a revision with children"))
             if not repo[top].mutable():
-                raise error.Abort(_("cannot refresh public revision"),
+                raise error.Abort(_("cannot qrefresh public revision"),
                                  hint=_('see "hg help phases" for details'))
 
             cparents = repo.changelog.parents(top)
@@ -1814,7 +1814,7 @@ class queue(object):
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
                 self.savedirty()
-                self.ui.warn(_('refresh interrupted while patch was popped! '
+                self.ui.warn(_('qrefresh interrupted while patch was popped! '
                                '(revert --all, qpush to recover)\n'))
                 raise
         finally:
