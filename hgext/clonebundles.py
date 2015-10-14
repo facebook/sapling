@@ -64,7 +64,10 @@ REQUIRESNI
    Value should be "true".
 """
 
+from mercurial.i18n import _
+from mercurial.node import nullid
 from mercurial import (
+    exchange,
     extensions,
     wireproto,
 )
@@ -93,6 +96,45 @@ def bundles(repo, proto):
     the closest data center given the client's IP address.
     """
     return repo.opener.tryread('clonebundles.manifest')
+
+@exchange.getbundle2partsgenerator('clonebundlesadvertise', 0)
+def advertiseclonebundlespart(bundler, repo, source, bundlecaps=None,
+                              b2caps=None, heads=None, common=None,
+                              cbattempted=None, **kwargs):
+    """Inserts an output part to advertise clone bundles availability."""
+    # Allow server operators to disable this behavior.
+    # # experimental config: ui.clonebundleadvertise
+    if not repo.ui.configbool('ui', 'clonebundleadvertise', True):
+        return
+
+    # Only advertise if a manifest is present.
+    if not repo.opener.exists('clonebundles.manifest'):
+        return
+
+    # And when changegroup data is requested.
+    if not kwargs.get('cg', True):
+        return
+
+    # And when the client supports clone bundles.
+    if cbattempted is None:
+        return
+
+    # And when the client didn't attempt a clone bundle as part of this pull.
+    if cbattempted:
+        return
+
+    # And when a full clone is requested.
+    # Note: client should not send "cbattempted" for regular pulls. This check
+    # is defense in depth.
+    if common and common != [nullid]:
+        return
+
+    msg = _('this server supports the experimental "clone bundles" feature '
+            'that should enable faster and more reliable cloning\n'
+            'help test it by setting the "experimental.clonebundles" config '
+            'flag to "true"')
+
+    bundler.newpart('output', data=msg)
 
 def extsetup(ui):
     extensions.wrapfunction(wireproto, '_capabilities', capabilities)
