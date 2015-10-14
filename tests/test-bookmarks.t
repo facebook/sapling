@@ -732,6 +732,19 @@ test non-linear update not clearing active bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark four)
 
+no-op update doesn't deactive bookmarks
+
+  $ hg up
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg sum
+  parent: 3:9ba5f110a0b3 tip
+   y
+  branch: test
+  bookmarks: *four
+  commit: 2 unknown (clean)
+  update: (current)
+  phases: 4 draft
+
 test clearing divergent bookmarks of linear ancestors
 
   $ hg bookmark Z -r 0

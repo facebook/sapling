@@ -6619,7 +6619,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
             ret = hg.update(repo, rev)
 
         if not ret and movemarkfrom:
-            if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+            if movemarkfrom == repo['.'].node():
+                pass # no-op update
+            elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
                 ui.status(_("updating bookmark %s\n") % repo._activebookmark)
             else:
                 # this can happen with a non-linear update
