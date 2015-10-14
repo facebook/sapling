@@ -229,7 +229,8 @@ class monotone_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise error.Abort(_("convert from monotone do not support --full"))
+            raise error.Abort(_("convert from monotone does not support "
+                              "--full"))
         revision = self.mtnrun("get_revision", rev).split("\n\n")
         files = {}
         ignoremove = {}

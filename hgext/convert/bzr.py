@@ -137,7 +137,7 @@ class bzr_source(converter_source):
 
     def getchanges(self, version, full):
         if full:
-            raise error.Abort(_("convert from cvs do not support --full"))
+            raise error.Abort(_("convert from cvs does not support --full"))
         self._modecache = {}
         self._revtree = self.sourcerepo.revision_tree(version)
         # get the parentids from the cache

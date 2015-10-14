@@ -210,7 +210,7 @@ class convert_git(converter_source):
 
     def getchanges(self, version, full):
         if full:
-            raise error.Abort(_("convert from git do not support --full"))
+            raise error.Abort(_("convert from git does not support --full"))
         self.modecache = {}
         fh = self.gitopen("git diff-tree -z --root -m -r %s %s" % (
             self.simopt, version))

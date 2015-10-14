@@ -178,7 +178,7 @@ def buildobsmarkerspart(bundler, markers):
         remoteversions = bundle2.obsmarkersversion(bundler.capabilities)
         version = obsolete.commonversion(remoteversions)
         if version is None:
-            raise ValueError('bundler do not support common obsmarker format')
+            raise ValueError('bundler does not support common obsmarker format')
         stream = obsolete.encodemarkers(markers, True, version=version)
         return bundler.newpart('obsmarkers', data=stream)
     return None

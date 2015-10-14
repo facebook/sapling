@@ -144,7 +144,7 @@ class gnuarch_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise error.Abort(_("convert from arch do not support --full"))
+            raise error.Abort(_("convert from arch does not support --full"))
         self._update(rev)
         changes = []
         copies = {}

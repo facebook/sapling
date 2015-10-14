@@ -158,7 +158,7 @@ class darcs_source(converter_source, commandline):
 
     def getchanges(self, rev, full):
         if full:
-            raise error.Abort(_("convert from darcs do not support --full"))
+            raise error.Abort(_("convert from darcs does not support --full"))
         copies = {}
         changes = []
         man = None

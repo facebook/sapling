@@ -263,7 +263,7 @@ class convert_cvs(converter_source):
 
     def getchanges(self, rev, full):
         if full:
-            raise error.Abort(_("convert from cvs do not support --full"))
+            raise error.Abort(_("convert from cvs does not support --full"))
         self._parse()
         return sorted(self.files[rev].iteritems()), {}, set()
 
