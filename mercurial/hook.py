@@ -101,7 +101,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         if throw:
             raise
         ui.traceback()
-        return True
+        return True, True
     finally:
         sys.stdout, sys.stderr, sys.stdin = old
         duration = time.time() - starttime
@@ -111,7 +111,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         if throw:
             raise error.HookAbort(_('%s hook failed') % hname)
         ui.warn(_('warning: %s hook failed\n') % hname)
-    return r
+    return r, False
 
 def _exthook(ui, repo, name, cmd, args, throw):
     ui.note(_("running hook %s: %s\n") % (name, cmd))
@@ -170,7 +170,7 @@ def hook(ui, repo, name, throw=False, **args):
     res = runhooks(ui, repo, name, hooks, throw=throw, **args)
     r = False
     for hname, cmd in hooks:
-        r = res[hname] or r
+        r = res[hname][0] or r
     return r
 
 def runhooks(ui, repo, name, hooks, throw=False, **args):
@@ -193,7 +193,7 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     pass
 
             if callable(cmd):
-                r = _pythonhook(ui, repo, name, hname, cmd, args, throw)
+                r, raised = _pythonhook(ui, repo, name, hname, cmd, args, throw)
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:
                     path, cmd = cmd[7:].rsplit(':', 1)
@@ -208,11 +208,13 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     hookfn = getattr(mod, cmd)
                 else:
                     hookfn = cmd[7:].strip()
-                r = _pythonhook(ui, repo, name, hname, hookfn, args, throw)
+                r, raised = _pythonhook(ui, repo, name, hname, hookfn, args,
+                                        throw)
             else:
                 r = _exthook(ui, repo, hname, cmd, args, throw)
+                raised = False
 
-            res[hname] = r
+            res[hname] = r, raised
 
             # The stderr is fully buffered on Windows when connected to a pipe.
             # A forcible flush is required to make small stderr data in the
