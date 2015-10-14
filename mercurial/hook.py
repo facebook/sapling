@@ -162,14 +162,19 @@ def hook(ui, repo, name, throw=False, **args):
     if not ui.callhooks:
         return False
 
+    hooks = []
+    for hname, cmd in _allhooks(ui):
+        if hname.split('.')[0] == name and cmd:
+            hooks.append((hname, cmd))
+
+    return runhooks(ui, repo, name, hooks, throw=throw, **args)
+
+def runhooks(ui, repo, name, hooks, throw=False, **args):
     r = False
     oldstdout = -1
 
     try:
-        for hname, cmd in _allhooks(ui):
-            if hname.split('.')[0] != name or not cmd:
-                continue
-
+        for hname, cmd in hooks:
             if oldstdout == -1 and _redirect:
                 try:
                     stdoutno = sys.__stdout__.fileno()
