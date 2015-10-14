@@ -329,6 +329,13 @@ class mergestate(object):
             if entry[0] == 'u':
                 yield f
 
+    def driverresolved(self):
+        """Obtain the paths of driver-resolved files."""
+
+        for f, entry in self._state.items():
+            if entry[0] == 'd':
+                yield f
+
     def _resolve(self, preresolve, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] in 'rd':
