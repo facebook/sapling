@@ -310,7 +310,7 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         pushop.ui.debug(msg)
     try:
         if pushop.locallocked:
-            pushop.trmanager = transactionmanager(repo,
+            pushop.trmanager = transactionmanager(pushop.repo,
                                                   'push-response',
                                                   pushop.remote.url())
         pushop.repo.checkpush(pushop)
