@@ -168,6 +168,23 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
     return writechunks(ui, chunkiter, filename, vfs=vfs)
 
 class cg1unpacker(object):
+    """Unpacker for cg1 changegroup streams.
+
+    A changegroup unpacker handles the framing of the revision data in
+    the wire format. Most consumers will want to use the apply()
+    method to add the changes from the changegroup to a repository.
+
+    If you're forwarding a changegroup unmodified to another consumer,
+    use getchunks(), which returns an iterator of changegroup
+    chunks. This is mostly useful for cases where you need to know the
+    data stream has ended by observing the end of the changegroup.
+
+    deltachunk() is useful only if you're applying delta data. Most
+    consumers should prefer apply() instead.
+
+    A few other public methods exist. Those are used only for
+    bundlerepo and some debug commands - their use is discouraged.
+    """
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = '01'
@@ -463,6 +480,12 @@ class cg1unpacker(object):
             return dh + 1
 
 class cg2unpacker(cg1unpacker):
+    """Unpacker for cg2 streams.
+
+    cg2 streams add support for generaldelta, so the delta header
+    format is slightly different. All other features about the data
+    remain the same.
+    """
     deltaheader = _CHANGEGROUPV2_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = '02'
