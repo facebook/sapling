@@ -287,6 +287,18 @@ class cg1unpacker(object):
                     pos = next
             yield closechunk()
 
+    def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
+        # We know that we'll never have more manifests than we had
+        # changesets.
+        self.callback = prog(_('manifests'), numchanges)
+        # no need to check for empty manifest group here:
+        # if the result of the merge of 1 and 2 is the same in 3 and 4,
+        # no new manifest will be created and the manifest group will
+        # be empty during the pull
+        self.manifestheader()
+        repo.manifest.addgroup(self, revmap, trp)
+        repo.ui.progress(_('manifests'), None)
+
     def apply(self, repo, srctype, url, emptyok=False,
               targetphase=phases.draft, expectedtotal=None):
         """Add the changegroup returned by source.read() to this repo.
@@ -357,15 +369,7 @@ class cg1unpacker(object):
 
             # pull off the manifest group
             repo.ui.status(_("adding manifests\n"))
-            # manifests <= changesets
-            self.callback = prog(_('manifests'), changesets)
-            # no need to check for empty manifest group here:
-            # if the result of the merge of 1 and 2 is the same in 3 and 4,
-            # no new manifest will be created and the manifest group will
-            # be empty during the pull
-            self.manifestheader()
-            repo.manifest.addgroup(self, revmap, trp)
-            repo.ui.progress(_('manifests'), None)
+            self._unpackmanifests(repo, revmap, trp, prog, changesets)
 
             needfiles = {}
             if repo.ui.configbool('server', 'validate', default=False):
