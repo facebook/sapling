@@ -260,7 +260,8 @@ bookmsgmap = {'update': (_("updating bookmark %s\n"),
               }
 
 
-def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
+def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=(),
+         opargs=None):
     '''Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
       - None means nothing to push
@@ -269,7 +270,10 @@ def push(repo, remote, force=False, revs=None, newbranch=False, bookmarks=()):
         we have outgoing changesets but refused to push
       - other values as described by addchangegroup()
     '''
-    pushop = pushoperation(repo, remote, force, revs, newbranch, bookmarks)
+    if opargs is None:
+        opargs = {}
+    pushop = pushoperation(repo, remote, force, revs, newbranch, bookmarks,
+                           **opargs)
     if pushop.remote.local():
         missing = (set(pushop.repo.requirements)
                    - pushop.remote.local().supported)
