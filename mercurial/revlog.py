@@ -1442,7 +1442,7 @@ class revlog(object):
             ifh.write(data[1])
             self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, bundle, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, cg, linkmapper, transaction, addrevisioncb=None):
         """
         add a delta group
 
@@ -1479,7 +1479,7 @@ class revlog(object):
             # loop through our set of deltas
             chain = None
             while True:
-                chunkdata = bundle.deltachunk(chain)
+                chunkdata = cg.deltachunk(chain)
                 if not chunkdata:
                     break
                 node = chunkdata['node']
