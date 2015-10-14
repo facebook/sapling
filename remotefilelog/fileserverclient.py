@@ -68,23 +68,33 @@ class cacheconnection(object):
 
     def close(self):
         self.connected = False
-        # if the process is still open, close the pipes
+        # if the process is still open, terminate it
+        # close the pipes
+        if self.pipei:
+            try:
+                self.pipei.write("exit\n")
+            except:
+                pass
+            try:
+                self.pipei.close()
+            finally:
+                self.pipei = None
         if self.pipeo:
-            if self.subprocess and self.subprocess.poll() == None:
-                if self.pipei:
-                    try:
-                        self.pipei.write("exit\n")
-                        self.pipei.close()
-                    except:
-                        pass
-                    self.pipei = None
-                if self.pipeo:
-                    self.pipeo.close()
-                    self.pipeo = None
-                if self.pipee:
-                    self.pipee.close()
-                    self.pipee = None
-                self.subprocess.wait()
+            try:
+                self.pipeo.close()
+            finally:
+                self.pipeo = None
+        if self.pipee:
+            try:
+                self.pipee.close()
+            finally:
+                self.pipee = None
+        try:
+            # Wait for process to terminate, making sure to avoid deadlock. See
+            # https://docs.python.org/2/library/subprocess.html#popen-objects
+            # for warnings about wait() and
+            self.subprocess.communicate()
+        finally:
             self.subprocess = None
 
     def request(self, request, flush=True):
