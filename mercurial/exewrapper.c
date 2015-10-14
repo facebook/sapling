@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 	if (pydll == NULL) {
 		pydll = LoadLibrary(HGPYTHONLIB);
 		if (pydll == NULL) {
-			err = "failed to load Python DLL";
+			err = "failed to load Python DLL " HGPYTHONLIB ".dll";
 			goto bail;
 		}
 	}
