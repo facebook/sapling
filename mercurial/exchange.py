@@ -1677,6 +1677,15 @@ def parseclonebundlesmanifest(repo, s):
     return m
 
 def filterclonebundleentries(repo, entries):
+    """Remove incompatible clone bundle manifest entries.
+
+    Accepts a list of entries parsed with ``parseclonebundlesmanifest``
+    and returns a new list consisting of only the entries that this client
+    should be able to apply.
+
+    There is no guarantee we'll be able to apply all returned entries because
+    the metadata we use to filter on may be missing or wrong.
+    """
     newentries = []
     for entry in entries:
         spec = entry.get('BUNDLESPEC')
