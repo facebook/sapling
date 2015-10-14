@@ -182,6 +182,9 @@ class cg1unpacker(object):
         self._stream = util.decompressors[alg](fh)
         self._type = alg
         self.callback = None
+
+    # These methods (compressed, read, seek, tell) all appear to only
+    # be used by bundlerepo, but it's a little hard to tell.
     def compressed(self):
         return self._type is not None
     def read(self, l):
