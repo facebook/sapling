@@ -300,11 +300,13 @@ pre.sourcelines > a {
     height: 1em;
     padding: 0.15em;
 }
-pre.sourcelines.stripes > :nth-child(4n+1) { background-color: #F1F6F7; }
-pre.sourcelines.stripes > :nth-child(4n+3) { background-color: #FFFFFF; }
-pre.sourcelines.stripes > :nth-child(4n+1):hover,
-pre.sourcelines.stripes > :nth-child(4n+3):hover { background-color: #D5E1E6; }
-tr:target td,
+pre.sourcelines.stripes > :nth-child(4n+2) { background-color: #F1F6F7; }
+pre.sourcelines.stripes > :nth-child(4n+4) { background-color: #FFFFFF; }
+pre.sourcelines.stripes > :nth-child(4n+2):hover,
+pre.sourcelines.stripes > :nth-child(4n+4):hover,
+pre.sourcelines.stripes > :nth-child(4n+1):hover + :nth-child(4n+2),
+pre.sourcelines.stripes > :nth-child(4n+3):hover + :nth-child(4n+4) { background-color: #D5E1E6; }
+
 pre.sourcelines > span:target,
 pre.sourcelines.stripes > span:target {
     background-color: #bfdfff;
