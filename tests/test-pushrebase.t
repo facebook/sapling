@@ -4,7 +4,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > pushrebase=/data/users/durham/fb-hgext/pushrebase.py
+  > pushrebase=
   > [experimental]
   > bundle2lazylocking=True
   > EOF

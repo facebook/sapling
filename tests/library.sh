@@ -6,7 +6,7 @@ DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
 DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
 
 mysql -h $DBHOST -P $DBPORT -u $DBUSER -p$DBPASS -e "
-CREATE DATABASE IF NOT EXISTS $DBNAME;"
+CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
 mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p$DBPASS -e '
 DROP TABLE IF EXISTS revisions;
 
@@ -35,7 +35,7 @@ namespace CHAR(32) BINARY NOT NULL,
 name VARCHAR(256) BINARY,
 value char(40) BINARY NOT NULL,
 UNIQUE KEY bookmarkindex (repo, namespace, name)
-);'
+);' 2>/dev/null
 
 
 function initserver() {
