@@ -32,5 +32,5 @@ override_dh_install:
 	mkdir -p $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
 	cp contrib/debian/*.rc $(CURDIR)/debian/mercurial-common/etc/mercurial/hgrc.d/
 	mkdir -p $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions
-	cp contrib/bash_completion $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions/mercurial
+	cp contrib/bash_completion $(CURDIR)/debian/mercurial-common/usr/share/bash-completion/completions/hg
 	rm $(CURDIR)/debian/mercurial-common/usr/bin/hg
