@@ -442,6 +442,15 @@ def diff(ui, repo, *args, **kwargs):
 
     ui.status(cmd, "\n")
 
+def difftool(ui, repo, *args, **kwargs):
+    ui.status('Mercurial does not enable external difftool by default. You '
+        'need to enable the extdiff extension in your .hgrc file by adding\n'
+        'extdiff =\n'
+        'to the [extensions] section and then running\n\n'
+        'hg extdiff -p <program>\n\n'
+        'See \'hg help extdiff\' and \'hg help -e extdiff\' for more '
+        'information.\n')
+
 def fetch(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('', 'all', None, ''),
@@ -976,6 +985,7 @@ gitcommands = {
     'clone': clone,
     'commit': commit,
     'diff': diff,
+    'difftool': difftool,
     'fetch': fetch,
     'grep': grep,
     'init': init,
