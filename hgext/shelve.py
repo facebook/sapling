@@ -482,9 +482,9 @@ def unshelveabort(ui, repo, state, opts):
         mergefiles(ui, repo, state.wctx, state.pendingctx)
 
         repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
+    finally:
         shelvedstate.clear(repo)
         ui.warn(_("unshelve of '%s' aborted\n") % state.name)
-    finally:
         lockmod.release(lock, wlock)
 
 def mergefiles(ui, repo, wctx, shelvectx):

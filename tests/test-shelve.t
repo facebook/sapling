@@ -1010,3 +1010,43 @@ with general delta
   changegroup -- "{'version': '02'}"
       7e30d8ac6f23cfc84330fd7e698730374615d21a
   $ cd ..
+
+test Abort unshelve always gets user out of the unshelved state
+---------------------------------------------------------------
+  $ hg init salvage
+  $ cd salvage
+  $ echo 'content' > root
+  $ hg commit -A -m 'root' -q
+  $ echo '' > root
+  $ hg shelve -q
+  $ echo 'contADDent' > root
+  $ hg unshelve -q
+  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+Wreak havoc on the unshelve process
+  $ rm .hg/unshelverebasestate
+  $ hg unshelve --abort
+  unshelve of 'default' aborted
+  abort: No such file or directory
+  [255]
+Can the user leave the current state?
+  $ hg up -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Try again but with a corrupted shelve state file
+  $ hg strip -r 2 -r 1 -q
+  $ hg up -r 0 -q
+  $ echo '' > root
+  $ hg shelve -q
+  $ echo 'contADDent' > root
+  $ hg unshelve -q
+  warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ sed 's/ae8c668541e8/123456789012/' .hg/shelvedstate > ../corrupt-shelvedstate
+  $ mv ../corrupt-shelvedstate .hg/histedit-state
+  $ hg unshelve --abort |& grep 'rebase aborted'
+  rebase aborted
+  $ hg up -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
