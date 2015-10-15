@@ -128,6 +128,26 @@ def _local(path):
 
 hg.schemes['file'] = _local
 
+# we need to wrap this so that git-like ssh paths are not prepended with a
+# local filesystem path. ugh.
+def _url(orig, path, **kwargs):
+    # we'll test for 'git@' then use our heuristic method to determine if it's
+    # a git uri
+    if not (path.startswith(os.sep) and ':' in path):
+        return orig(path, **kwargs)
+
+    # the file path will be everything up until the last slash right before the
+    # ':'
+    lastsep = path.rindex(os.sep, None, path.index(':')) + 1
+    gituri = path[lastsep:]
+
+    if util.isgitsshuri(gituri):
+        return orig(gituri, **kwargs)
+    return orig(path, **kwargs)
+
+extensions.wrapfunction(hgutil, 'url', _url)
+
+
 def _httpgitwrapper(orig):
     # we should probably test the connection but for now, we just keep it
     # simple and check for a url ending in '.git'
