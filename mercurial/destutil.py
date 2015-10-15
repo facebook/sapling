@@ -152,42 +152,49 @@ def _destmergebook(repo):
     assert node is not None
     return node
 
+def _destmergebranch(repo):
+    """find merge destination based on branch heads"""
+    node = None
+    branch = repo[None].branch()
+    bheads = repo.branchheads(branch)
+    nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
+
+    if len(nbhs) > 2:
+        raise error.Abort(_("branch '%s' has %d heads - "
+                           "please merge with an explicit rev")
+                         % (branch, len(bheads)),
+                         hint=_("run 'hg heads .' to see heads"))
+
+    parent = repo.dirstate.p1()
+    if len(nbhs) <= 1:
+        if len(bheads) > 1:
+            raise error.Abort(_("heads are bookmarked - "
+                               "please merge with an explicit rev"),
+                             hint=_("run 'hg heads' to see all heads"))
+        if len(repo.heads()) > 1:
+            raise error.Abort(_("branch '%s' has one head - "
+                               "please merge with an explicit rev")
+                             % branch,
+                             hint=_("run 'hg heads' to see all heads"))
+        msg, hint = _('nothing to merge'), None
+        if parent != repo.lookup(branch):
+            hint = _("use 'hg update' instead")
+        raise error.Abort(msg, hint=hint)
+
+    if parent not in bheads:
+        raise error.Abort(_('working directory not at a head revision'),
+                         hint=_("use 'hg update' or merge with an "
+                                "explicit revision"))
+    if parent == nbhs[0]:
+        node = nbhs[-1]
+    else:
+        node = nbhs[0]
+    assert node is not None
+    return node
+
 def destmerge(repo):
     if repo._activebookmark:
         node = _destmergebook(repo)
     else:
-        branch = repo[None].branch()
-        bheads = repo.branchheads(branch)
-        nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
-
-        if len(nbhs) > 2:
-            raise error.Abort(_("branch '%s' has %d heads - "
-                               "please merge with an explicit rev")
-                             % (branch, len(bheads)),
-                             hint=_("run 'hg heads .' to see heads"))
-
-        parent = repo.dirstate.p1()
-        if len(nbhs) <= 1:
-            if len(bheads) > 1:
-                raise error.Abort(_("heads are bookmarked - "
-                                   "please merge with an explicit rev"),
-                                 hint=_("run 'hg heads' to see all heads"))
-            if len(repo.heads()) > 1:
-                raise error.Abort(_("branch '%s' has one head - "
-                                   "please merge with an explicit rev")
-                                 % branch,
-                                 hint=_("run 'hg heads' to see all heads"))
-            msg, hint = _('nothing to merge'), None
-            if parent != repo.lookup(branch):
-                hint = _("use 'hg update' instead")
-            raise error.Abort(msg, hint=hint)
-
-        if parent not in bheads:
-            raise error.Abort(_('working directory not at a head revision'),
-                             hint=_("use 'hg update' or merge with an "
-                                    "explicit revision"))
-        if parent == nbhs[0]:
-            node = nbhs[-1]
-        else:
-            node = nbhs[0]
+        node = _destmergebranch(repo)
     return repo[node].rev()
