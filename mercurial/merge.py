@@ -329,6 +329,9 @@ class mergestate(object):
         self._state[dfile][0] = state
         self._dirty = True
 
+    def mdstate(self):
+        return self._mdstate
+
     def unresolved(self):
         """Obtain the paths of unresolved files."""
 
