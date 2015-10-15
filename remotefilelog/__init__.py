@@ -171,7 +171,11 @@ def onetimeclientsetup(ui):
                                        packermap01[1])
         changegroup.packermap['02'] = (shallowbundle.shallowcg2packer,
                                        packermap02[1])
-    wrapfunction(changegroup, 'addchangegroupfiles', shallowbundle.addchangegroupfiles)
+    if util.safehasattr(changegroup, '_addchangegroupfiles'):
+        fn = '_addchangegroupfiles' # hg >= 3.6
+    else:
+        fn = 'addchangegroupfiles' # hg <= 3.5
+    wrapfunction(changegroup, fn, shallowbundle.addchangegroupfiles)
     wrapfunction(changegroup, 'getchangegroup', shallowbundle.getchangegroup)
 
     def storewrapper(orig, requirements, path, vfstype):
