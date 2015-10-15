@@ -516,6 +516,18 @@ def _checkcollision(repo, wmf, actions):
         unfoldprefix = f + '/'
         lastfull = f
 
+def driverpreprocess(repo, ms, wctx, labels=None):
+    """run the preprocess step of the merge driver, if any
+
+    This is currently not implemented -- it's an extension point."""
+    return True
+
+def driverconclude(repo, ms, wctx, labels=None):
+    """run the conclude step of the merge driver, if any
+
+    This is currently not implemented -- it's an extension point."""
+    return True
+
 def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                   acceptremote, followcopies):
     """
