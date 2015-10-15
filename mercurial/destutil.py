@@ -53,22 +53,22 @@ def destupdate(repo, clean=False, check=False):
     node = None
     wc = repo[None]
     p1 = wc.p1()
-    activemark = None
-
-    # we also move the active bookmark, if any
-    node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
-    if node is not None:
-        activemark = node
+    movemark, activemark = None
 
     if node is None:
-        try:
-            node = repo.branchtip(wc.branch())
-        except error.RepoLookupError:
-            if wc.branch() == 'default': # no default branch!
-                node = repo.lookup('tip') # update to tip
-            else:
-                raise error.Abort(_("branch %s not found") % wc.branch())
+        # we also move the active bookmark, if any
+        node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
+        if node is not None:
+            activemark = node
 
+        if node is None:
+            try:
+                node = repo.branchtip(wc.branch())
+            except error.RepoLookupError:
+                if wc.branch() == 'default': # no default branch!
+                    node = repo.lookup('tip') # update to tip
+                else:
+                    raise error.Abort(_("branch %s not found") % wc.branch())
     if p1.obsolete() and not p1.children():
         # allow updating to successors
         successors = obsolete.successorssets(repo, p1.node())
