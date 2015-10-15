@@ -75,10 +75,10 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
             if not c:
                 raise
 
-    opener.unlink(journal)
     backuppath = "%s.backupfiles" % journal
     if opener.exists(backuppath):
         opener.unlink(backuppath)
+    opener.unlink(journal)
     try:
         for f in backupfiles:
             if opener.exists(f):
@@ -427,10 +427,11 @@ class transaction(object):
         self._writeundo()
         if self.after:
             self.after()
-        if self.opener.isfile(self.journal):
-            self.opener.unlink(self.journal)
         if self.opener.isfile(self._backupjournal):
             self.opener.unlink(self._backupjournal)
+        if self.opener.isfile(self.journal):
+            self.opener.unlink(self.journal)
+        if True:
             for l, _f, b, c in self._backupentries:
                 if l not in self._vfsmap and c:
                     self.report("couldn't remote %s: unknown cache location"
@@ -497,10 +498,10 @@ class transaction(object):
 
         try:
             if not self.entries and not self._backupentries:
-                if self.journal:
-                    self.opener.unlink(self.journal)
                 if self._backupjournal:
                     self.opener.unlink(self._backupjournal)
+                if self.journal:
+                    self.opener.unlink(self.journal)
                 return
 
             self.report(_("transaction abort!\n"))
