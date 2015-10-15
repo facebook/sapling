@@ -29,16 +29,14 @@ from mercurial import extensions, encoding, fileset
 # leave the attribute unspecified.
 testedwith = 'internal'
 
-def checkfctx(fctx, expr):
-    ctx = fctx.changectx()
-    tree = fileset.parse(expr)
-    mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
-    return fctx.path() in fileset.getset(mctx, tree)
-
 def pygmentize(web, field, fctx, tmpl):
     style = web.config('web', 'pygments_style', 'colorful')
     expr = web.config('web', 'highlightfiles', "size('<5M')")
-    if checkfctx(fctx, expr):
+
+    ctx = fctx.changectx()
+    tree = fileset.parse(expr)
+    mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
+    if fctx.path() in fileset.getset(mctx, tree):
         highlight.pygmentize(field, fctx, style, tmpl)
 
 def filerevision_highlight(orig, web, req, tmpl, fctx):
