@@ -1481,6 +1481,11 @@ def handleobsmarker(op, inpart):
     if op.ui.config('experimental', 'obsmarkers-exchange-debug', False):
         op.ui.write(('obsmarker-exchange: %i bytes received\n')
                     % len(markerdata))
+    # The mergemarkers call will crash if marker creation is not enabled.
+    # we want to avoid this if the part is advisory.
+    if not inpart.mandatory and op.repo.obsstore.readonly:
+        op.repo.ui.debug('ignoring obsolescence markers, feature not enabled')
+        return
     new = op.repo.obsstore.mergemarkers(tr, markerdata)
     if new:
         op.repo.ui.status(_('%i new obsolescence markers\n') % new)
