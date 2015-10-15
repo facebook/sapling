@@ -76,6 +76,15 @@ def _destupdateobs(repo, clean, check):
                 movemark = repo['.'].node()
     return node, movemark, None
 
+def _destupdatebook(repo, clean, check):
+    """decide on an update destination from active bookmark"""
+    # we also move the active bookmark, if any
+    activemark = None
+    node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
+    if node is not None:
+        activemark = node
+    return node, movemark, activemark
+
 def destupdate(repo, clean=False, check=False):
     """destination for bare update operation
 
@@ -91,13 +100,10 @@ def destupdate(repo, clean=False, check=False):
     movemark = activemark = None
 
     node, movemark, activemark = _destupdateobs(repo, clean, check)
+    if node is None:
+        node, movemark, activemark = _destupdatebook(repo, clean, check)
 
     if node is None:
-        # we also move the active bookmark, if any
-        node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
-        if node is not None:
-            activemark = node
-
         if node is None:
             try:
                 node = repo.branchtip(wc.branch())
