@@ -650,6 +650,11 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     if not opts.get('rebase'):
         return orig(ui, repo, source, **opts)
 
+    rebasemodule = extensions.find('rebase')
+
+    if not rebasemodule:
+        return orig(ui, repo, source, **opts)
+
     if not _tracking(ui):
         return orig(ui, repo, source, **opts)
 
@@ -657,13 +662,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     trackinginfo = _readtracking(repo)
     activeistracking = active and trackinginfo.get(active, None)
 
-    try:
-        rebasemodule = extensions.find('rebase')
-    except KeyError:
-        rebasemodule = None
-
-    if activeistracking and rebasemodule:
-
+    if activeistracking:
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
 
