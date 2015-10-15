@@ -260,3 +260,8 @@ non-obsolete parent but that will be decided later.
   $ hg debugobsolete bd10386d478cd5a9faf2e604114c8e6da62d3889
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test experimental revset support
+
+  $ hg log -r '_destupdate()'
+  2:bd10386d478c 2 (no-eol)

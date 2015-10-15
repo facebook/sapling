@@ -12,6 +12,7 @@ import re
 
 from .i18n import _
 from . import (
+    destutil,
     encoding,
     error,
     hbisect,
@@ -462,6 +463,11 @@ def func(repo, subset, a, b):
     raise error.UnknownIdentifier(a[1], syms)
 
 # functions
+
+def _destupdate(repo, subset, x):
+    # experimental revset for update destination
+    args = getargsdict(x, 'limit', 'clean check')
+    return subset & baseset([destutil.destupdate(repo, **args)[0]])
 
 def _mergedefaultdest(repo, subset, x):
     # ``_mergedefaultdest()``
@@ -2142,6 +2148,7 @@ def _hexlist(repo, subset, x):
     return baseset([r for r in ls if r in s])
 
 symbols = {
+    "_destupdate": _destupdate,
     "_mergedefaultdest": _mergedefaultdest,
     "adds": adds,
     "all": getall,
