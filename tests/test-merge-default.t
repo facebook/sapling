@@ -108,3 +108,10 @@ Merge preview not affected by common ancestor:
   5:a431fabd6039
   6:e88e33f3bf62
 
+Test experimental destination revset
+
+  $ hg log -r '_destmerge()'
+  abort: branch 'foobranch' has one head - please merge with an explicit rev
+  (run 'hg heads' to see all heads)
+  [255]
+

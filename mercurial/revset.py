@@ -469,13 +469,8 @@ def _destupdate(repo, subset, x):
     args = getargsdict(x, 'limit', 'clean check')
     return subset & baseset([destutil.destupdate(repo, **args)[0]])
 
-def _mergedefaultdest(repo, subset, x):
-    # ``_mergedefaultdest()``
-
-    # default destination for merge.
-    # # XXX: Currently private because I expect the signature to change.
-    # # XXX: - taking rev as arguments,
-    # # XXX: - bailing out in case of ambiguity vs returning all data.
+def _destmerge(repo, subset, x):
+    # experimental revset for merge destination
     getargs(x, 0, 0, _("_mergedefaultdest takes no arguments"))
     return subset & baseset([destutil.destmerge(repo)])
 
@@ -2098,7 +2093,7 @@ def _hexlist(repo, subset, x):
 
 symbols = {
     "_destupdate": _destupdate,
-    "_mergedefaultdest": _mergedefaultdest,
+    "_destmerge": _destmerge,
     "adds": adds,
     "all": getall,
     "ancestor": ancestor,
