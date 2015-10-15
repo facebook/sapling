@@ -56,6 +56,7 @@ Strip using sqlstrip
   [255]
 
   $ hg sqlstrip --i-know-what-i-am-doing 1
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
   saved backup bundle to $TESTTMP/master2/.hg/strip-backup/bc3a71defa4a-f38e411b-backup.hg (glob)
   stripping from the database
@@ -85,6 +86,7 @@ Verify master is broken
 Run sqlstrip on master as well
 
   $ hg sqlstrip --i-know-what-i-am-doing 1
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   stripping locally
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/bc3a71defa4a-f38e411b-backup.hg (glob)
   stripping from the database
@@ -118,11 +120,13 @@ Commit after the strip
 Attempt to strip a non-existant rev
 
   $ hg sqlstrip --i-know-what-i-am-doing 5
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   abort: revision 5 is not in the repo
   [255]
 
 Attempt to strip a non-integer
 
   $ hg sqlstrip --i-know-what-i-am-doing master
+  *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
   abort: specified rev must be an integer: 'master'
   [255]

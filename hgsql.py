@@ -1323,6 +1323,10 @@ def sqlstrip(ui, rev, *args, **opts):
             "command will break your servers until you run it on each one. " +
             "Only the Mercurial server admins should ever run this.")
 
+    ui.warn("*** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***\n")
+    import time
+    time.sleep(5)
+
     global initialsync
     initialsync = INITIAL_SYNC_DISABLE
     repo = hg.repository(ui, ui.environ['PWD'])
