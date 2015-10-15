@@ -369,7 +369,7 @@ def push(repo, dest, force, revs):
     return 1 # so we get a sane exit status, see hg's commands.push
 
 def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
-                 bookmarks=()):
+                 bookmarks=(), **kwargs):
     capable = getattr(remote, 'capable', lambda x: False)
     if capable('subversion'):
         pushop = exchange.pushoperation(repo, remote, force, revs, newbranch,
@@ -377,7 +377,8 @@ def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
         pushop.cgresult = push(repo, remote, force, revs)
         return pushop
     else:
-        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
+        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks,
+                    **kwargs)
 
 def pull(repo, source, heads=[], force=False, meta=None):
     """pull new revisions from Subversion"""
