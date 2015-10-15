@@ -89,8 +89,11 @@ class mergestate(object):
         if node:
             self._local = node
             self._other = other
-        self._mdstate = 'u'
         self._readmergedriver = None
+        if self.mergedriver:
+            self._mdstate = 's'
+        else:
+            self._mdstate = 'u'
         shutil.rmtree(self._repo.join('merge'), True)
         self._dirty = False
 
@@ -103,10 +106,10 @@ class mergestate(object):
         self._state = {}
         self._local = None
         self._other = None
-        self._mdstate = 'u'
         if 'otherctx' in vars(self):
             del self.otherctx
         self._readmergedriver = None
+        self._mdstate = 's'
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
