@@ -84,6 +84,8 @@ class mergestate(object):
         self._state = {}
         self._local = None
         self._other = None
+        if 'otherctx' in vars(self):
+            del self.otherctx
         if node:
             self._local = node
             self._other = other
@@ -101,6 +103,8 @@ class mergestate(object):
         self._local = None
         self._other = None
         self._mdstate = 'u'
+        if 'otherctx' in vars(self):
+            del self.otherctx
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
@@ -233,6 +237,9 @@ class mergestate(object):
     @util.propertycache
     def mergedriver(self):
         return self._repo.ui.config('experimental', 'mergedriver')
+    @util.propertycache
+    def otherctx(self):
+        return self._repo[self._other]
 
     def active(self):
         """Whether mergestate is active.
