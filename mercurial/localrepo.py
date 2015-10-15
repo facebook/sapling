@@ -1564,7 +1564,7 @@ class localrepository(object):
             if unresolved:
                 raise error.Abort(_('unresolved merge conflicts '
                                     '(see "hg help resolve")'))
-            if driverresolved:
+            if driverresolved or ms.mdstate() != 's':
                 raise error.Abort(_('driver-resolved merge conflicts'),
                                   hint=_('run "hg resolve --all" to resolve'))
 
