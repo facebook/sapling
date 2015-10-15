@@ -131,23 +131,30 @@ def destupdate(repo, clean=False, check=False):
 
     return rev, movemark, activemark
 
+def _destmergebook(repo):
+    """find merge destination in the active bookmark case"""
+    node = None
+    bmheads = repo.bookmarkheads(repo._activebookmark)
+    curhead = repo[repo._activebookmark].node()
+    if len(bmheads) == 2:
+        if curhead == bmheads[0]:
+            node = bmheads[1]
+        else:
+            node = bmheads[0]
+    elif len(bmheads) > 2:
+        raise error.Abort(_("multiple matching bookmarks to merge - "
+            "please merge with an explicit rev or bookmark"),
+            hint=_("run 'hg heads' to see all heads"))
+    elif len(bmheads) <= 1:
+        raise error.Abort(_("no matching bookmark to merge - "
+            "please merge with an explicit rev or bookmark"),
+            hint=_("run 'hg heads' to see all heads"))
+    assert node is not None
+    return node
+
 def destmerge(repo):
     if repo._activebookmark:
-        bmheads = repo.bookmarkheads(repo._activebookmark)
-        curhead = repo[repo._activebookmark].node()
-        if len(bmheads) == 2:
-            if curhead == bmheads[0]:
-                node = bmheads[1]
-            else:
-                node = bmheads[0]
-        elif len(bmheads) > 2:
-            raise error.Abort(_("multiple matching bookmarks to merge - "
-                "please merge with an explicit rev or bookmark"),
-                hint=_("run 'hg heads' to see all heads"))
-        elif len(bmheads) <= 1:
-            raise error.Abort(_("no matching bookmark to merge - "
-                "please merge with an explicit rev or bookmark"),
-                hint=_("run 'hg heads' to see all heads"))
+        node = _destmergebook(repo)
     else:
         branch = repo[None].branch()
         bheads = repo.branchheads(branch)
