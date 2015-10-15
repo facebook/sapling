@@ -78,9 +78,6 @@ Building instructions with MSVC 2008 Express Edition:
 
 Copy add_path.exe and cacert.pem files into the dist directory that just got created.
 
-If you are using Python up to version 2.5.4, copy mfc71.dll into the dist
-directory that just got created.
-
 If you are using Python 2.6 or later, or if you are using MSVC 2008 to compile
 mercurial, you must include the C runtime libraries in the installer. To do so,
 install the Visual C++ 2008 redistributable package. Then in your windows\winsxs
