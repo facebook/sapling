@@ -5606,6 +5606,13 @@ def resolve(ui, repo, *pats, **opts):
 
         wctx = repo[None]
 
+        if ms.mergedriver and ms.mdstate() == 'u':
+            proceed = mergemod.driverpreprocess(repo, ms, wctx)
+            ms.commit()
+            # allow mark and unmark to go through
+            if not mark and not unmark and not proceed:
+                return 1
+
         m = scmutil.match(wctx, pats, opts)
         ret = 0
         didwork = False
