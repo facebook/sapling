@@ -12,6 +12,34 @@ from . import (
     obsolete,
 )
 
+def _destupdatevalidate(repo, rev, clean, check):
+    """validate that the destination comply to various rules
+
+    This exists as its own function to help wrapping from extensions."""
+    wc = repo[None]
+    p1 = wc.p1()
+    if not clean:
+        # Check that the update is linear.
+        #
+        # Mercurial do not allow update-merge for non linear pattern
+        # (that would be technically possible but was considered too confusing
+        # for user a long time ago)
+        #
+        # See mercurial.merge.update for details
+        if p1.rev() not in repo.changelog.ancestors([rev], inclusive=True):
+            dirty = wc.dirty(missing=True)
+            foreground = obsolete.foreground(repo, [p1.node()])
+            if not repo[rev].node() in foreground:
+                if dirty:
+                    msg = _("uncommitted changes")
+                    hint = _("commit and merge, or update --clean to"
+                             " discard changes")
+                    raise error.UpdateAbort(msg, hint=hint)
+                elif not check:  # destination is not a descendant.
+                    msg = _("not a linear update")
+                    hint = _("merge or update --check to force update")
+                    raise error.UpdateAbort(msg, hint=hint)
+
 def destupdate(repo, clean=False, check=False):
     """destination for bare update operation
 
@@ -68,27 +96,7 @@ def destupdate(repo, clean=False, check=False):
             node = repo.revs('max(%ln)', successors).first()
     rev = repo[node].rev()
 
-    if not clean:
-        # Check that the update is linear.
-        #
-        # Mercurial do not allow update-merge for non linear pattern
-        # (that would be technically possible but was considered too confusing
-        # for user a long time ago)
-        #
-        # See mercurial.merge.update for details
-        if p1.rev() not in repo.changelog.ancestors([rev], inclusive=True):
-            dirty = wc.dirty(missing=True)
-            foreground = obsolete.foreground(repo, [p1.node()])
-            if not repo[rev].node() in foreground:
-                if dirty:
-                    msg = _("uncommitted changes")
-                    hint = _("commit and merge, or update --clean to"
-                             " discard changes")
-                    raise error.UpdateAbort(msg, hint=hint)
-                elif not check:  # destination is not a descendant.
-                    msg = _("not a linear update")
-                    hint = _("merge or update --check to force update")
-                    raise error.UpdateAbort(msg, hint=hint)
+    _destupdatevalidate(repo, rev, clean, check)
 
     return rev, movemark, activemark
 
