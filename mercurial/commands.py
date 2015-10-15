@@ -5617,6 +5617,19 @@ def resolve(ui, repo, *pats, **opts):
 
             didwork = True
 
+            # don't let driver-resolved files be marked
+            if ms[f] == "d":
+                exact = m.exact(f)
+                if mark:
+                    if exact:
+                        ui.warn(_('not marking %s as it is driver-resolved\n')
+                                % f)
+                elif unmark:
+                    if exact:
+                        ui.warn(_('not unmarking %s as it is driver-resolved\n')
+                                % f)
+                continue
+
             if mark:
                 ms.mark(f, "r")
             elif unmark:

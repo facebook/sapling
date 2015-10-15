@@ -53,6 +53,58 @@ resolving an unknown path should emit a warning, but not for -l
   arguments do not match paths that need resolving
   $ hg resolve -l does-not-exist
 
+don't allow marking or unmarking driver-resolved files
+
+  $ cat > $TESTTMP/markdriver.py << EOF
+  > '''mark and unmark files as driver-resolved'''
+  > from mercurial import cmdutil, merge, scmutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('markdriver',
+  >   [('u', 'unmark', None, '')],
+  >   'FILE...')
+  > def markdriver(ui, repo, *pats, **opts):
+  >     wlock = repo.wlock()
+  >     try:
+  >         ms = merge.mergestate(repo)
+  >         m = scmutil.match(repo[None], pats, opts)
+  >         for f in ms:
+  >             if not m(f):
+  >                 continue
+  >             if not opts['unmark']:
+  >                 ms.mark(f, 'd')
+  >             else:
+  >                 ms.mark(f, 'u')
+  >         ms.commit()
+  >     finally:
+  >         wlock.release()
+  > EOF
+  $ hg --config extensions.markdriver=$TESTTMP/markdriver.py markdriver file1
+  $ hg resolve --list
+  D file1
+  U file2
+  $ hg resolve --mark file1
+  not marking file1 as it is driver-resolved
+this should not print out file1
+  $ hg resolve --mark --all
+  (no more unresolved files -- run "hg resolve --all" to conclude)
+  $ hg resolve --mark 'glob:file*'
+  (no more unresolved files -- run "hg resolve --all" to conclude)
+  $ hg resolve --list
+  D file1
+  R file2
+  $ hg resolve --unmark file1
+  not unmarking file1 as it is driver-resolved
+  (no more unresolved files -- run "hg resolve --all" to conclude)
+  $ hg resolve --unmark --all
+  $ hg resolve --list
+  D file1
+  U file2
+  $ hg --config extensions.markdriver=$TESTTMP/markdriver.py markdriver --unmark file1
+  $ hg resolve --list
+  U file1
+  U file2
+
 resolve the failure
 
   $ echo resolved > file1
