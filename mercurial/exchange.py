@@ -25,6 +25,7 @@ _bundlespeccompressions = {'none': None,
 # Maps bundle version human names to changegroup versions.
 _bundlespeccgversions = {'v1': '01',
                          'v2': '02',
+                         'packed1': 's1',
                          'bundle2': '02', #legacy
                         }
 
@@ -87,7 +88,10 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
             if 'generaldelta' in repo.requirements:
                 version = 'v2'
         elif spec in _bundlespeccgversions:
-            compression = 'bzip2'
+            if spec == 'packed1':
+                compression = 'none'
+            else:
+                compression = 'bzip2'
             version = spec
         else:
             raise error.UnsupportedBundleSpecification(
@@ -121,6 +125,8 @@ def readbundle(ui, fh, fname, vfs=None):
         return changegroup.cg1unpacker(fh, alg)
     elif version.startswith('2'):
         return bundle2.getunbundler(ui, fh, magicstring=magic + version)
+    elif version == 'S1':
+        return streamclone.streamcloneapplier(fh)
     else:
         raise error.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
