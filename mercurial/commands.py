@@ -5616,6 +5616,7 @@ def resolve(ui, repo, *pats, **opts):
         m = scmutil.match(wctx, pats, opts)
         ret = 0
         didwork = False
+        runconclude = False
 
         tocomplete = []
         for f in ms:
@@ -5624,7 +5625,8 @@ def resolve(ui, repo, *pats, **opts):
 
             didwork = True
 
-            # don't let driver-resolved files be marked
+            # don't let driver-resolved files be marked, and run the conclude
+            # step if asked to resolve
             if ms[f] == "d":
                 exact = m.exact(f)
                 if mark:
@@ -5635,6 +5637,8 @@ def resolve(ui, repo, *pats, **opts):
                     if exact:
                         ui.warn(_('not unmarking %s as it is driver-resolved\n')
                                 % f)
+                else:
+                    runconclude = True
                 continue
 
             if mark:
@@ -5680,6 +5684,17 @@ def resolve(ui, repo, *pats, **opts):
 
         if not didwork and pats:
             ui.warn(_("arguments do not match paths that need resolving\n"))
+        elif ms.mergedriver and ms.mdstate() != 's':
+            # run conclude step when either a driver-resolved file is requested
+            # or there are no driver-resolved files
+            # we can't use 'ret' to determine whether any files are unresolved
+            # because we might not have tried to resolve some
+            if ((runconclude or not list(ms.driverresolved()))
+                and not list(ms.unresolved())):
+                proceed = mergemod.driverconclude(repo, ms, wctx)
+                ms.commit()
+                if not proceed:
+                    return 1
 
     finally:
         wlock.release()
