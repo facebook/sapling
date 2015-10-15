@@ -2643,7 +2643,7 @@ def _expandaliases(aliases, tree, expanding, cache):
             l = getlist(tree[2])
             if len(l) != len(alias.args):
                 raise error.ParseError(
-                    _('invalid number of arguments: %s') % len(l))
+                    _('invalid number of arguments: %d') % len(l))
             l = [_expandaliases(aliases, a, [], cache) for a in l]
             result = _expandargs(result, dict(zip(alias.args, l)))
     else:

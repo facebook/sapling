@@ -404,7 +404,7 @@ class fncache(object):
             fp.seek(0)
             for n, line in enumerate(fp):
                 if not line.rstrip('\n'):
-                    t = _('invalid entry in fncache, line %s') % (n + 1)
+                    t = _('invalid entry in fncache, line %d') % (n + 1)
                     raise error.Abort(t)
         fp.close()
 

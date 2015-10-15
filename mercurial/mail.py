@@ -127,7 +127,7 @@ def _smtp(ui):
     else:
         defaultport = 25
     mailport = util.getport(ui.config('smtp', 'port', defaultport))
-    ui.note(_('sending mail: smtp host %s, port %s\n') %
+    ui.note(_('sending mail: smtp host %s, port %d\n') %
             (mailhost, mailport))
     s.connect(host=mailhost, port=mailport)
     if starttls:

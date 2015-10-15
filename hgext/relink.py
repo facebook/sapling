@@ -84,7 +84,7 @@ def collect(src, ui):
     total = live * 3 // 2
     src = src.store.path
     pos = 0
-    ui.status(_("tip has %d files, estimated total number of files: %s\n")
+    ui.status(_("tip has %d files, estimated total number of files: %d\n")
               % (live, total))
     for dirpath, dirnames, filenames in os.walk(src):
         dirnames.sort()
