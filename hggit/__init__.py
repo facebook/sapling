@@ -347,14 +347,15 @@ if not hgutil.safehasattr(localrepo.localrepository, 'pull'):
 # TODO figure out something useful to do with the newbranch param
 @util.transform_notgit
 def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
-                 bookmarks=()):
+                 bookmarks=(), **kwargs):
     if isinstance(remote, gitrepo.gitrepo):
         pushop = exchange.pushoperation(repo, remote, force, revs, newbranch,
-                                        bookmarks)
+                                        bookmarks, **kwargs)
         pushop.cgresult = repo.githandler.push(remote.path, revs, force)
         return pushop
     else:
-        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
+        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks,
+                    **kwargs)
 if not hgutil.safehasattr(localrepo.localrepository, 'push'):
     # Mercurial >= 3.2
     extensions.wrapfunction(exchange, 'push', exchangepush)
