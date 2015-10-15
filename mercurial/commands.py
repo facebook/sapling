@@ -5665,8 +5665,13 @@ def resolve(ui, repo, *pats, **opts):
         wlock.release()
 
     # Nudge users into finishing an unfinished operation
-    if not list(ms.unresolved()):
+    unresolvedf = list(ms.unresolved())
+    driverresolvedf = list(ms.driverresolved())
+    if not unresolvedf and not driverresolvedf:
         ui.status(_('(no more unresolved files)\n'))
+    elif not unresolvedf:
+        ui.status(_('(no more unresolved files -- '
+                    'run "hg resolve --all" to conclude)\n'))
 
     return ret
 
