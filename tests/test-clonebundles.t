@@ -80,7 +80,7 @@ Manifest file with invalid URL aborts
   $ echo 'http://does.not.exist/bundle.hg' > server/.hg/clonebundles.manifest
   $ hg clone http://localhost:$HGPORT 404-url
   applying clone bundle from http://does.not.exist/bundle.hg
-  error fetching bundle: [Errno -2] Name or service not known
+  error fetching bundle: * not known (glob)
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
   [255]
@@ -90,7 +90,7 @@ Server is not running aborts
   $ echo "http://localhost:$HGPORT1/bundle.hg" > server/.hg/clonebundles.manifest
   $ hg clone http://localhost:$HGPORT server-not-runner
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
-  error fetching bundle: [Errno 111] Connection refused
+  error fetching bundle: Connection refused
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
   [255]
