@@ -53,22 +53,8 @@ def destupdate(repo, clean=False, check=False):
     node = None
     wc = repo[None]
     p1 = wc.p1()
-    movemark, activemark = None
+    movemark = activemark = None
 
-    if node is None:
-        # we also move the active bookmark, if any
-        node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
-        if node is not None:
-            activemark = node
-
-        if node is None:
-            try:
-                node = repo.branchtip(wc.branch())
-            except error.RepoLookupError:
-                if wc.branch() == 'default': # no default branch!
-                    node = repo.lookup('tip') # update to tip
-                else:
-                    raise error.Abort(_("branch %s not found") % wc.branch())
     if p1.obsolete() and not p1.children():
         # allow updating to successors
         successors = obsolete.successorssets(repo, p1.node())
@@ -94,6 +80,23 @@ def destupdate(repo, clean=False, check=False):
             # get the max revision for the given successors set,
             # i.e. the 'tip' of a set
             node = repo.revs('max(%ln)', successors).first()
+            if bookmarks.isactivewdirparent(repo):
+                movemark = repo['.'].node()
+
+    if node is None:
+        # we also move the active bookmark, if any
+        node, movemark = bookmarks.calculateupdate(repo.ui, repo, None)
+        if node is not None:
+            activemark = node
+
+        if node is None:
+            try:
+                node = repo.branchtip(wc.branch())
+            except error.RepoLookupError:
+                if wc.branch() == 'default': # no default branch!
+                    node = repo.lookup('tip') # update to tip
+                else:
+                    raise error.Abort(_("branch %s not found") % wc.branch())
     rev = repo[node].rev()
 
     _destupdatevalidate(repo, rev, clean, check)
