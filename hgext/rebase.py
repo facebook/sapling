@@ -926,43 +926,46 @@ def abort(repo, originalwd, target, state, activebookmark=None):
     activebookmark: the name of the bookmark that should be active after the
         restore'''
 
-    # If the first commits in the rebased set get skipped during the rebase,
-    # their values within the state mapping will be the target rev id. The
-    # dstates list must must not contain the target rev (issue4896)
-    dstates = [s for s in state.values() if s >= 0 and s != target]
-    immutable = [d for d in dstates if not repo[d].mutable()]
-    cleanup = True
-    if immutable:
-        repo.ui.warn(_("warning: can't clean up public changesets %s\n")
-                     % ', '.join(str(repo[r]) for r in immutable),
-                     hint=_('see "hg help phases" for details'))
-        cleanup = False
+    try:
+        # If the first commits in the rebased set get skipped during the rebase,
+        # their values within the state mapping will be the target rev id. The
+        # dstates list must must not contain the target rev (issue4896)
+        dstates = [s for s in state.values() if s >= 0 and s != target]
+        immutable = [d for d in dstates if not repo[d].mutable()]
+        cleanup = True
+        if immutable:
+            repo.ui.warn(_("warning: can't clean up public changesets %s\n")
+                        % ', '.join(str(repo[r]) for r in immutable),
+                        hint=_('see "hg help phases" for details'))
+            cleanup = False
 
-    descendants = set()
-    if dstates:
-        descendants = set(repo.changelog.descendants(dstates))
-    if descendants - set(dstates):
-        repo.ui.warn(_("warning: new changesets detected on target branch, "
-                       "can't strip\n"))
-        cleanup = False
+        descendants = set()
+        if dstates:
+            descendants = set(repo.changelog.descendants(dstates))
+        if descendants - set(dstates):
+            repo.ui.warn(_("warning: new changesets detected on target branch, "
+                        "can't strip\n"))
+            cleanup = False
 
-    if cleanup:
-        # Update away from the rebase if necessary
-        if needupdate(repo, state):
-            merge.update(repo, originalwd, False, True, False)
+        if cleanup:
+            # Update away from the rebase if necessary
+            if needupdate(repo, state):
+                merge.update(repo, originalwd, False, True, False)
 
-        # Strip from the first rebased revision
-        rebased = filter(lambda x: x >= 0 and x != target, state.values())
-        if rebased:
-            strippoints = [c.node()  for c in repo.set('roots(%ld)', rebased)]
-            # no backup of rebased cset versions needed
-            repair.strip(repo.ui, repo, strippoints)
+            # Strip from the first rebased revision
+            rebased = filter(lambda x: x >= 0 and x != target, state.values())
+            if rebased:
+                strippoints = [
+                        c.node()  for c in repo.set('roots(%ld)', rebased)]
+                # no backup of rebased cset versions needed
+                repair.strip(repo.ui, repo, strippoints)
 
-    if activebookmark and activebookmark in repo._bookmarks:
-        bookmarks.activate(repo, activebookmark)
+        if activebookmark and activebookmark in repo._bookmarks:
+            bookmarks.activate(repo, activebookmark)
 
-    clearstatus(repo)
-    repo.ui.warn(_('rebase aborted\n'))
+    finally:
+        clearstatus(repo)
+        repo.ui.warn(_('rebase aborted\n'))
     return 0
 
 def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
