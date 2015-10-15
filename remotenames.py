@@ -648,8 +648,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         raise util.Abort(_('specify either rebase or update, not both'))
 
     if not opts.get('rebase'):
-        orig(ui, repo, source, **opts)
-        return
+        return orig(ui, repo, source, **opts)
 
     active = bmactive(repo)
     trackinginfo = _readtracking(repo)
@@ -666,7 +665,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         del opts['rebase']
 
         revsprepull = len(repo)
-        orig(ui, repo, source, **opts)
+        ret = orig(ui, repo, source, **opts)
         revspostpull = len(repo)
 
         # Only rebase if we have something to rebase
@@ -675,8 +674,9 @@ def expullcmd(orig, ui, repo, source="default", **opts):
             # Rebase with a destination but without any arguments has our
             # desired behaviour
             rebase(ui, repo, dest=trackinginfo[active])
+        return ret
     else:
-        orig(ui, repo, source, **opts)
+        return orig(ui, repo, source, **opts)
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
