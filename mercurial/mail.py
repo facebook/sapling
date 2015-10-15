@@ -70,31 +70,27 @@ class STARTTLS(smtplib.SMTP):
             self.does_esmtp = 0
         return (resp, reply)
 
-if util.safehasattr(smtplib.SMTP, '_get_socket'):
-    class SMTPS(smtplib.SMTP):
-        '''Derived class to verify the peer certificate for SMTPS.
+class SMTPS(smtplib.SMTP):
+    '''Derived class to verify the peer certificate for SMTPS.
 
-        This class allows to pass any keyword arguments to SSL socket creation.
-        '''
-        def __init__(self, sslkwargs, keyfile=None, certfile=None, **kwargs):
-            self.keyfile = keyfile
-            self.certfile = certfile
-            smtplib.SMTP.__init__(self, **kwargs)
-            self.default_port = smtplib.SMTP_SSL_PORT
-            self._sslkwargs = sslkwargs
+    This class allows to pass any keyword arguments to SSL socket creation.
+    '''
+    def __init__(self, sslkwargs, keyfile=None, certfile=None, **kwargs):
+        self.keyfile = keyfile
+        self.certfile = certfile
+        smtplib.SMTP.__init__(self, **kwargs)
+        self.default_port = smtplib.SMTP_SSL_PORT
+        self._sslkwargs = sslkwargs
 
-        def _get_socket(self, host, port, timeout):
-            if self.debuglevel > 0:
-                print >> sys.stderr, 'connect:', (host, port)
-            new_socket = socket.create_connection((host, port), timeout)
-            new_socket = sslutil.wrapsocket(new_socket,
-                                            self.keyfile, self.certfile,
-                                            **self._sslkwargs)
-            self.file = smtplib.SSLFakeFile(new_socket)
-            return new_socket
-else:
-    def SMTPS(sslkwargs, keyfile=None, certfile=None, **kwargs):
-        raise error.Abort(_('SMTPS requires Python 2.6 or later'))
+    def _get_socket(self, host, port, timeout):
+        if self.debuglevel > 0:
+            print >> sys.stderr, 'connect:', (host, port)
+        new_socket = socket.create_connection((host, port), timeout)
+        new_socket = sslutil.wrapsocket(new_socket,
+                                        self.keyfile, self.certfile,
+                                        **self._sslkwargs)
+        self.file = smtplib.SSLFakeFile(new_socket)
+        return new_socket
 
 def _smtp(ui):
     '''build an smtp connection and return a function to send mail'''
