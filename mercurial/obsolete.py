@@ -542,6 +542,13 @@ class obsstore(object):
                 pass
         return bool(self._all)
 
+    @property
+    def readonly(self):
+        """True if marker creation is disabled
+
+        Remove me in the future when obsolete marker is always on."""
+        return self._readonly
+
     def create(self, transaction, prec, succs=(), flag=0, parents=None,
                date=None, metadata=None):
         """obsolete: add a new obsolete marker
