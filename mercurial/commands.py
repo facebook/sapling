@@ -5604,7 +5604,9 @@ def resolve(ui, repo, *pats, **opts):
             raise error.Abort(
                 _('resolve command not applicable when not merging'))
 
-        m = scmutil.match(repo[None], pats, opts)
+        wctx = repo[None]
+
+        m = scmutil.match(wctx, pats, opts)
         ret = 0
         didwork = False
 
@@ -5620,8 +5622,6 @@ def resolve(ui, repo, *pats, **opts):
             elif unmark:
                 ms.mark(f, "u")
             else:
-                wctx = repo[None]
-
                 # backup pre-resolve (merge uses .orig for its own purposes)
                 a = repo.wjoin(f)
                 util.copyfile(a, a + ".resolve")
