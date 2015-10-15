@@ -100,6 +100,15 @@ def _destupdatebranch(repo, clean, check):
             raise error.Abort(_("branch %s not found") % wc.branch())
     return node, movemark, None
 
+# order in which each step should be evalutated
+# steps are run until one finds a destination
+destupdatesteps = ['evolution', 'bookmark', 'branch']
+# mapping to ease extension overriding steps.
+destupdatestepmap = {'evolution': _destupdateobs,
+                     'bookmark': _destupdatebook,
+                     'branch': _destupdatebranch,
+                     }
+
 def destupdate(repo, clean=False, check=False):
     """destination for bare update operation
 
@@ -110,14 +119,12 @@ def destupdate(repo, clean=False, check=False):
                 (cf bookmark.calculate update),
     - activemark: a bookmark to activate at the end of the update.
     """
-    node = None
-    movemark = activemark = None
+    node = movemark = activemark = None
 
-    node, movemark, activemark = _destupdateobs(repo, clean, check)
-    if node is None:
-        node, movemark, activemark = _destupdatebook(repo, clean, check)
-    if node is None:
-        node, movemark, activemark = _destupdatebranch(repo, clean, check)
+    for step in destupdatesteps:
+        node, movemark, activemark = destupdatestepmap[step](repo, clean, check)
+        if node is not None:
+            break
     rev = repo[node].rev()
 
     _destupdatevalidate(repo, rev, clean, check)
