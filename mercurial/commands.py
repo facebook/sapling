@@ -1244,7 +1244,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
 
     bundletype = opts.get('type', 'bzip2').lower()
     try:
-        bcompression, cgversion = exchange.parsebundlespec(
+        bcompression, cgversion, params = exchange.parsebundlespec(
                 repo, bundletype, strict=False)
     except error.UnsupportedBundleSpecification as e:
         raise error.Abort(str(e),

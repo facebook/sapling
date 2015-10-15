@@ -39,10 +39,12 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
     The string currently has the form:
 
-       <compression>-<type>
+       <compression>-<type>[;<parameter0>[;<parameter1>]]
 
     Where <compression> is one of the supported compression formats
-    and <type> is (currently) a version string.
+    and <type> is (currently) a version string. A ";" can follow the type and
+    all text afterwards is interpretted as URI encoded, ";" delimited key=value
+    pairs.
 
     If ``strict`` is True (the default) <compression> is required. Otherwise,
     it is optional.
@@ -50,8 +52,8 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
     If ``externalnames`` is False (the default), the human-centric names will
     be converted to their internal representation.
 
-    Returns a 2-tuple of (compression, version). Compression will be ``None``
-    if not in strict mode and a compression isn't defined.
+    Returns a 3-tuple of (compression, version, parameters). Compression will
+    be ``None`` if not in strict mode and a compression isn't defined.
 
     An ``InvalidBundleSpecification`` is raised when the specification is
     not syntactically well formed.
@@ -62,6 +64,27 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
     Note: this function will likely eventually return a more complex data
     structure, including bundle2 part information.
     """
+    def parseparams(s):
+        if ';' not in s:
+            return s, {}
+
+        params = {}
+        version, paramstr = s.split(';', 1)
+
+        for p in paramstr.split(';'):
+            if '=' not in p:
+                raise error.InvalidBundleSpecification(
+                    _('invalid bundle specification: '
+                      'missing "=" in parameter: %s') % p)
+
+            key, value = p.split('=', 1)
+            key = urllib.unquote(key)
+            value = urllib.unquote(value)
+            params[key] = value
+
+        return version, params
+
+
     if strict and '-' not in spec:
         raise error.InvalidBundleSpecification(
                 _('invalid bundle specification; '
@@ -74,6 +97,8 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
             raise error.UnsupportedBundleSpecification(
                     _('%s compression is not supported') % compression)
 
+        version, params = parseparams(version)
+
         if version not in _bundlespeccgversions:
             raise error.UnsupportedBundleSpecification(
                     _('%s is not a recognized bundle version') % version)
@@ -81,6 +106,8 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
         # Value could be just the compression or just the version, in which
         # case some defaults are assumed (but only when not in strict mode).
         assert not strict
+
+        spec, params = parseparams(spec)
 
         if spec in _bundlespeccompressions:
             compression = spec
@@ -100,7 +127,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
     if not externalnames:
         compression = _bundlespeccompressions[compression]
         version = _bundlespeccgversions[version]
-    return compression, version
+    return compression, version, params
 
 def readbundle(ui, fh, fname, vfs=None):
     header = changegroup.readexactly(fh, 4)
@@ -1691,8 +1718,8 @@ def parseclonebundlesmanifest(repo, s):
             # component of the BUNDLESPEC.
             if key == 'BUNDLESPEC':
                 try:
-                    comp, version = parsebundlespec(repo, value,
-                                                    externalnames=True)
+                    comp, version, params = parsebundlespec(repo, value,
+                                                            externalnames=True)
                     attrs['COMPRESSION'] = comp
                     attrs['VERSION'] = version
                 except error.InvalidBundleSpecification:
