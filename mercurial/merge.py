@@ -1002,6 +1002,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                 merged += 1
 
     ms.commit()
+
+    if usemergedriver and not unresolved and ms.mdstate() != 's':
+        if not driverconclude(repo, ms, wctx, labels=labels):
+            # XXX setting unresolved to at least 1 is a hack to make sure we
+            # error out
+            return updated, merged, removed, max(unresolved, 1)
+
+        ms.commit()
+
     progress(_updating, None, total=numupdates, unit=_files)
 
     return updated, merged, removed, unresolved
