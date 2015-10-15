@@ -538,7 +538,8 @@ def expushdiscoverybookmarks(pushop):
 
     if _delete:
         if _delete not in remotemarks:
-            raise util.Abort(_('remote bookmark %s does not exist'))
+            raise util.Abort(_('remote bookmark %s does not exist') %
+                             _delete)
         pushop.outbookmarks.append([_delete, remotemarks[_delete], ''])
         return exchange._pushdiscoverybookmarks(pushop)
 
