@@ -55,19 +55,16 @@ class InterventionRequired(Exception):
 
 class Abort(HintException):
     """Raised if a command needs to print an error and exit."""
-    pass
 
 class HookLoadError(Abort):
     """raised when loading a hook fails, aborting an operation
 
     Exists to allow more specialized catching."""
-    pass
 
 class HookAbort(Abort):
     """raised when a validation hook fails, aborting an operation
 
     Exists to allow more specialized catching."""
-    pass
 
 class ConfigError(Abort):
     """Exception raised when parsing config files"""
@@ -108,7 +105,6 @@ class CapabilityError(RepoError):
 
 class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
-    pass
 
 class LockError(IOError):
     def __init__(self, errno, strerror, filename, desc):
@@ -175,7 +171,6 @@ class BundleUnknownFeatureError(BundleValueError):
 
 class ReadOnlyPartError(RuntimeError):
     """error raised when code tries to alter a part being generated"""
-    pass
 
 class PushkeyFailed(Abort):
     """error raised when a pushkey part failed to update a value"""
