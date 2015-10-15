@@ -60,9 +60,6 @@ class STARTTLS(smtplib.SMTP):
         if resp == 220:
             self.sock = sslutil.wrapsocket(self.sock, keyfile, certfile,
                                            **self._sslkwargs)
-            if not util.safehasattr(self.sock, "read"):
-                # using httplib.FakeSocket with Python 2.5.x or earlier
-                self.sock.read = self.sock.recv
             self.file = smtplib.SSLFakeFile(self.sock)
             self.helo_resp = None
             self.ehlo_resp = None
