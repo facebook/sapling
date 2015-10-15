@@ -419,17 +419,8 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
         if req is not self.retried_req:
             self.retried_req = req
             self.retried = 0
-        # In python < 2.5 AbstractDigestAuthHandler raises a ValueError if
-        # it doesn't know about the auth type requested. This can happen if
-        # somebody is using BasicAuth and types a bad password.
-        try:
-            return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
-                        self, auth_header, host, req, headers)
-        except ValueError as inst:
-            arg = inst.args[0]
-            if arg.startswith("AbstractDigestAuthHandler doesn't know "):
-                return
-            raise
+        return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
+                    self, auth_header, host, req, headers)
 
 class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
     def __init__(self, *args, **kwargs):
