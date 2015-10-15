@@ -650,6 +650,9 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     if not opts.get('rebase'):
         return orig(ui, repo, source, **opts)
 
+    if not _tracking(ui):
+        return orig(ui, repo, source, **opts)
+
     active = bmactive(repo)
     trackinginfo = _readtracking(repo)
     activeistracking = active and trackinginfo.get(active, None)
@@ -659,7 +662,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     except KeyError:
         rebasemodule = None
 
-    if _tracking(ui) and activeistracking and rebasemodule:
+    if activeistracking and rebasemodule:
 
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
@@ -670,10 +673,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 
         # Only rebase if we have something to rebase
         if revsprepull < revspostpull:
-            rebase = rebasemodule.rebase
-            # Rebase with a destination but without any arguments has our
-            # desired behaviour
-            ret = ret or rebase(ui, repo, dest=trackinginfo[active])
+            ret = ret or rebasemodule.rebase(ui, repo, dest=trackinginfo[active])
         return ret
     else:
         return orig(ui, repo, source, **opts)
