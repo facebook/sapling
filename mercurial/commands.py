@@ -4901,7 +4901,7 @@ def merge(ui, repo, node=None, **opts):
         node = scmutil.revsingle(repo, node).node()
 
     if not node:
-        node = scmutil.revsingle(repo, '_mergedefaultdest()').node()
+        node = repo[destutil.destmerge(repo)].node()
 
     if opts.get('preview'):
         # find nodes that are ancestors of p2 but not of p1
