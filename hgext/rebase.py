@@ -845,13 +845,14 @@ def clearstatus(repo):
 
 def restorestatus(repo):
     'Restore a previously stored status'
+    keepbranches = None
+    target = None
+    collapse = False
+    external = nullrev
+    activebookmark = None
+    state = {}
+
     try:
-        keepbranches = None
-        target = None
-        collapse = False
-        external = nullrev
-        activebookmark = None
-        state = {}
         f = repo.vfs("rebasestate")
         for i, l in enumerate(f.read().splitlines()):
             if i == 0:
@@ -881,27 +882,28 @@ def restorestatus(repo):
                 else:
                     state[repo[oldrev].rev()] = repo[newrev].rev()
 
-        if keepbranches is None:
-            raise error.Abort(_('.hg/rebasestate is incomplete'))
-
-        skipped = set()
-        # recompute the set of skipped revs
-        if not collapse:
-            seen = set([target])
-            for old, new in sorted(state.items()):
-                if new != revtodo and new in seen:
-                    skipped.add(old)
-                seen.add(new)
-        repo.ui.debug('computed skipped revs: %s\n' %
-                      (' '.join(str(r) for r in sorted(skipped)) or None))
-        repo.ui.debug('rebase status resumed\n')
-        _setrebasesetvisibility(repo, state.keys())
-        return (originalwd, target, state, skipped,
-                collapse, keep, keepbranches, external, activebookmark)
     except IOError as err:
         if err.errno != errno.ENOENT:
             raise
         raise error.Abort(_('no rebase in progress'))
+
+    if keepbranches is None:
+        raise error.Abort(_('.hg/rebasestate is incomplete'))
+
+    skipped = set()
+    # recompute the set of skipped revs
+    if not collapse:
+        seen = set([target])
+        for old, new in sorted(state.items()):
+            if new != revtodo and new in seen:
+                skipped.add(old)
+            seen.add(new)
+    repo.ui.debug('computed skipped revs: %s\n' %
+                    (' '.join(str(r) for r in sorted(skipped)) or None))
+    repo.ui.debug('rebase status resumed\n')
+    _setrebasesetvisibility(repo, state.keys())
+    return (originalwd, target, state, skipped,
+            collapse, keep, keepbranches, external, activebookmark)
 
 def needupdate(repo, state):
     '''check whether we should `update --clean` away from a merge, or if
