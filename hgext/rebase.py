@@ -69,7 +69,7 @@ def _destrebase(repo):
     branch = repo[None].branch()
     return repo[branch].rev()
 
-def _rebasedefaultdest(repo, subset, x):
+def _revsetdestrebase(repo, subset, x):
     # ``_rebasedefaultdest()``
 
     # default destination for rebase.
@@ -1222,4 +1222,4 @@ def uisetup(ui):
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
     # ensure rebased rev are not hidden
     extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
-    revset.symbols['_rebasedefaultdest'] = _rebasedefaultdest
+    revset.symbols['_destrebase'] = _revsetdestrebase

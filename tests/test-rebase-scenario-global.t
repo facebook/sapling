@@ -743,3 +743,14 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   rebasing 2:779a07b1b7a0 "first source commit"
   rebasing 3:a7d6f3a00bf3 "second source with subdir" (tip)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-backup.hg (glob)
+
+Test experimental revset
+
+  $ cd ..
+  $ hg log -r '_destrebase()'
+  changeset:   3:1910d5ff34ea
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     second source with subdir
+  
