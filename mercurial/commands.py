@@ -5588,7 +5588,8 @@ def resolve(ui, repo, *pats, **opts):
         for f in ms:
             if not m(f):
                 continue
-            l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved'}[ms[f]]
+            l = 'resolve.' + {'u': 'unresolved', 'r': 'resolved',
+                              'd': 'driverresolved'}[ms[f]]
             fm.startitem()
             fm.condwrite(not nostatus, 'status', '%s ', ms[f].upper(), label=l)
             fm.write('path', '%s\n', f, label=l)
