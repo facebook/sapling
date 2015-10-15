@@ -69,6 +69,7 @@ Do not show debug commands if there are other candidates
 Show debug commands if there are no other candidates
   $ hg debugcomplete debug
   debugancestor
+  debugapplystreamclonebundle
   debugbuilddag
   debugbundle
   debugcheckstate
@@ -232,6 +233,7 @@ Show all commands + options
   config: untrusted, edit, local, global
   copy: after, force, include, exclude, dry-run
   debugancestor: 
+  debugapplystreamclonebundle: 
   debugbuilddag: mergeable-file, overwritten-file, new-file
   debugbundle: all
   debugcheckstate: 

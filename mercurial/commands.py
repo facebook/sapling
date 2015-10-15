@@ -1978,6 +1978,13 @@ def debugcreatestreamclonebundle(ui, repo, fname):
 
     ui.write(_('bundle requirements: %s\n') % ', '.join(sorted(requirements)))
 
+@command('debugapplystreamclonebundle', [], 'FILE')
+def debugapplystreamclonebundle(ui, repo, fname):
+    """apply a stream clone bundle file"""
+    f = hg.openpath(ui, fname)
+    gen = exchange.readbundle(ui, f, fname)
+    gen.apply(repo)
+
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):
     """validate the correctness of the current dirstate"""
@@ -6532,6 +6539,11 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                 changes = [r.get('return', 0)
                            for r in op.records['changegroup']]
                 modheads = changegroup.combineresults(changes)
+            elif isinstance(gen, streamclone.streamcloneapplier):
+                raise error.Abort(
+                        _('packed bundles cannot be applied with '
+                          '"hg unbundle"'),
+                        hint=_('use "hg debugapplystreamclonebundle"'))
             else:
                 modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
     finally:

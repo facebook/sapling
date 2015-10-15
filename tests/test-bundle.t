@@ -288,6 +288,26 @@ generaldelta requirement is listed in stream clone bundles
   0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
   0030: 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 03 00 01 |ta/foo.i.64.....|
 
+Unpacking packed1 bundles with "hg unbundle" isn't allowed
+
+  $ hg init packed
+  $ hg -R packed unbundle packed.hg
+  abort: packed bundles cannot be applied with "hg unbundle"
+  (use "hg debugapplystreamclonebundle")
+  [255]
+
+packed1 can be consumed from debug command
+
+  $ hg -R packed debugapplystreamclonebundle packed.hg
+  6 files to transfer, 2.55 KB of data
+  transferred 2.55 KB in *.* seconds (*) (glob)
+
+Does not work on non-empty repo
+
+  $ hg -R packed debugapplystreamclonebundle packed.hg
+  abort: cannot apply stream clone bundle on non-empty repo
+  [255]
+
 Create partial clones
 
   $ rm -r empty

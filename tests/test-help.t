@@ -781,6 +781,8 @@ Test list of internal help commands
   
    debugancestor
                  find the ancestor revision of two revisions in a given index
+   debugapplystreamclonebundle
+                 apply a stream clone bundle file
    debugbuilddag
                  builds a repo with a given DAG from scratch in the current
                  empty repo
@@ -1068,6 +1070,7 @@ Test keyword search help
   
    bookmarks                    create a new bookmark or list existing bookmarks
    clone                        make a copy of an existing repository
+   debugapplystreamclonebundle  apply a stream clone bundle file
    debugcreatestreamclonebundle create a stream clone bundle file
    paths                        show aliases for remote repositories
    update                       update working directory (or switch revisions)
