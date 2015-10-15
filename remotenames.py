@@ -237,7 +237,6 @@ class remotenames(dict):
             nodes.append(binnode)
             self[nametype][name] = nodes
 
-
     def _loadremotenameslazily(self):
         if not self._loadednames:
             self._loadremotenames()
@@ -333,10 +332,10 @@ def reposetup(ui, repo):
             templatename='remotebranches',
             logname='branch',
             colorname='remotebranch',
-            listnames=lambda repo: repo._remotenames.branch2nodes().keys(),
-            namemap=lambda repo, name:
+            listnames = lambda repo: repo._remotenames.branch2nodes().keys(),
+            namemap = lambda repo, name:
                 repo._remotenames.branch2nodes().get(name, None),
-            nodemap=lambda repo, node:
+            nodemap = lambda repo, node:
                 repo._remotenames.node2branch().get(node, []))
         repo.names.addnamespace(remotebranchns)
 
@@ -483,7 +482,6 @@ def extsetup(ui):
         # histedit isn't on
         pass
 
-
     bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     branchcmd = extensions.wrapcommand(commands.table, 'branches', exbranches)
     pushcmd = extensions.wrapcommand(commands.table, 'push', expushcmd)
@@ -492,8 +490,7 @@ def extsetup(ui):
         bookcmd[1].append(('t', 'track', '',
                           'track this bookmark or remote name', 'BOOKMARK'))
         bookcmd[1].append(('u', 'untrack', None,
-                         'remove tracking for this bookmark', 'BOOKMARK'))
-
+                           'remove tracking for this bookmark', 'BOOKMARK'))
 
     newopts = [
         (bookcmd, ('a', 'all', None, 'show both remote and local bookmarks')),
@@ -643,7 +640,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         if opts.get('update'):
             del opts['update']
             ui.warn('--update and --rebase are not compatible, ignoring '
-                        'the update flag\n')
+                    'the update flag\n')
 
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
@@ -652,7 +649,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         orig(ui, repo, source, **opts)
         revspostpull = len(repo)
 
-        #Only rebase if we have something to rebase
+        # Only rebase if we have something to rebase
         if revsprepull < revspostpull:
             rebase = rebasemodule.rebase
             # Rebase with a destination but without any arguments has our
