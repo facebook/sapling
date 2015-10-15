@@ -942,6 +942,27 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
         updated += 1
 
+    mergeactions = actions['m']
+    # the ordering is important here -- ms.mergedriver will raise if the merge
+    # driver has changed, and we want to be able to bypass it when overwrite is
+    # True
+    usemergedriver = not overwrite and mergeactions and ms.mergedriver
+
+    if usemergedriver:
+        ms.commit()
+        proceed = driverpreprocess(repo, ms, wctx, labels=labels)
+        # the driver might leave some files unresolved
+        unresolvedf = set(ms.unresolved())
+        if not proceed:
+            # XXX setting unresolved to at least 1 is a hack to make sure we
+            # error out
+            return updated, merged, removed, max(len(unresolvedf), 1)
+        newactions = []
+        for f, args, msg in mergeactions:
+            if f in unresolvedf:
+                newactions.append((f, args, msg))
+        mergeactions = newactions
+
     # premerge
     tocomplete = []
     for f, args, msg in actions['m']:
