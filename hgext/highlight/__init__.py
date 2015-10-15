@@ -35,6 +35,12 @@ def checkfctx(fctx, expr):
     mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
     return fctx.path() in fileset.getset(mctx, tree)
 
+def pygmentize(web, field, fctx, tmpl):
+    style = web.config('web', 'pygments_style', 'colorful')
+    expr = web.config('web', 'highlightfiles', "size('<5M')")
+    if checkfctx(fctx, expr):
+        highlight.pygmentize(field, fctx, style, tmpl)
+
 def filerevision_highlight(orig, web, req, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
     # only pygmentize for mimetype containing 'html' so we both match
@@ -45,20 +51,16 @@ def filerevision_highlight(orig, web, req, tmpl, fctx):
     # can't clash with the file's content-type here in case we
     # pygmentize a html file
     if 'html' in mt:
-        style = web.config('web', 'pygments_style', 'colorful')
-        expr = web.config('web', 'highlightfiles', "size('<5M')")
-        if checkfctx(fctx, expr):
-            highlight.pygmentize('fileline', fctx, style, tmpl)
+        pygmentize(web, 'fileline', fctx, tmpl)
+
     return orig(web, req, tmpl, fctx)
 
 def annotate_highlight(orig, web, req, tmpl):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
     if 'html' in mt:
         fctx = webutil.filectx(web.repo, req)
-        style = web.config('web', 'pygments_style', 'colorful')
-        expr = web.config('web', 'highlightfiles', "size('<5M')")
-        if checkfctx(fctx, expr):
-            highlight.pygmentize('annotateline', fctx, style, tmpl)
+        pygmentize(web, 'annotateline', fctx, tmpl)
+
     return orig(web, req, tmpl)
 
 def generate_css(web, req, tmpl):
