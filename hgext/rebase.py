@@ -63,6 +63,12 @@ def _makeextrafn(copiers):
             c(ctx, extra)
     return extrafn
 
+def _destrebase(repo):
+    # Destination defaults to the latest revision in the
+    # current branch
+    branch = repo[None].branch()
+    return repo[branch].rev()
+
 def _rebasedefaultdest(repo, subset, x):
     # ``_rebasedefaultdest()``
 
@@ -73,10 +79,7 @@ def _rebasedefaultdest(repo, subset, x):
     # # XXX: - probably merging with the merge destination.
     # i18n: "_rebasedefaultdest" is a keyword
     revset.getargs(x, 0, 0, _("_rebasedefaultdest takes no arguments"))
-    # Destination defaults to the latest revision in the
-    # current branch
-    branch = repo[None].branch()
-    return subset & revset.baseset([repo[branch].rev()])
+    return subset & revset.baseset([_destrebase(repo)])
 
 @command('rebase',
     [('s', 'source', '',
