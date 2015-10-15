@@ -287,9 +287,11 @@ def rebase(ui, repo, **opts):
             cmdutil.checkunfinished(repo)
             cmdutil.bailifchanged(repo)
 
-            if not destf:
-                destf = '_rebasedefaultdest()'
-            dest = scmutil.revsingle(repo, destf)
+            if destf:
+                dest = scmutil.revsingle(repo, destf)
+            else:
+                dest = repo[_destrebase(repo)]
+                destf = str(dest)
 
             if revf:
                 rebaseset = scmutil.revrange(repo, revf)
