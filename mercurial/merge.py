@@ -90,6 +90,7 @@ class mergestate(object):
             self._local = node
             self._other = other
         self._mdstate = 'u'
+        self._readmergedriver = None
         shutil.rmtree(self._repo.join('merge'), True)
         self._dirty = False
 
@@ -105,6 +106,7 @@ class mergestate(object):
         self._mdstate = 'u'
         if 'otherctx' in vars(self):
             del self.otherctx
+        self._readmergedriver = None
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
@@ -118,18 +120,7 @@ class mergestate(object):
                     # the merge driver should be idempotent, so just rerun it
                     mdstate = 'u'
 
-                # protect against the following:
-                # - A configures a malicious merge driver in their hgrc, then
-                #   pauses the merge
-                # - A edits their hgrc to remove references to the merge driver
-                # - A gives a copy of their entire repo, including .hg, to B
-                # - B inspects .hgrc and finds it to be clean
-                # - B then continues the merge and the malicious merge driver
-                #  gets invoked
-                if self.mergedriver != bits[0]:
-                    raise error.ConfigError(
-                        _("merge driver changed since merge started"),
-                        hint=_("revert merge driver change or abort merge"))
+                self._readmergedriver = bits[0]
                 self._mdstate = mdstate
             elif rtype in 'FD':
                 bits = record.split('\0')
@@ -236,7 +227,23 @@ class mergestate(object):
 
     @util.propertycache
     def mergedriver(self):
-        return self._repo.ui.config('experimental', 'mergedriver')
+        # protect against the following:
+        # - A configures a malicious merge driver in their hgrc, then
+        #   pauses the merge
+        # - A edits their hgrc to remove references to the merge driver
+        # - A gives a copy of their entire repo, including .hg, to B
+        # - B inspects .hgrc and finds it to be clean
+        # - B then continues the merge and the malicious merge driver
+        #  gets invoked
+        configmergedriver = self._repo.ui.config('experimental', 'mergedriver')
+        if (self._readmergedriver is not None
+            and self._readmergedriver != configmergedriver):
+            raise error.ConfigError(
+                _("merge driver changed since merge started"),
+                hint=_("revert merge driver change or abort merge"))
+
+        return configmergedriver
+
     @util.propertycache
     def otherctx(self):
         return self._repo[self._other]
