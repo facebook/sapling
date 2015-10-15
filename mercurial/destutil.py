@@ -40,20 +40,12 @@ def _destupdatevalidate(repo, rev, clean, check):
                     hint = _("merge or update --check to force update")
                     raise error.UpdateAbort(msg, hint=hint)
 
-def destupdate(repo, clean=False, check=False):
-    """destination for bare update operation
-
-    return (rev, movemark, activemark)
-
-    - rev: the revision to update to,
-    - movemark: node to move the active bookmark from
-                (cf bookmark.calculate update),
-    - activemark: a bookmark to activate at the end of the update.
-    """
+def _destupdateobs(repo, clean, check):
+    """decide of an update destination from obsolescence markers"""
     node = None
     wc = repo[None]
     p1 = wc.p1()
-    movemark = activemark = None
+    movemark = None
 
     if p1.obsolete() and not p1.children():
         # allow updating to successors
@@ -82,6 +74,23 @@ def destupdate(repo, clean=False, check=False):
             node = repo.revs('max(%ln)', successors).first()
             if bookmarks.isactivewdirparent(repo):
                 movemark = repo['.'].node()
+    return node, movemark, None
+
+def destupdate(repo, clean=False, check=False):
+    """destination for bare update operation
+
+    return (rev, movemark, activemark)
+
+    - rev: the revision to update to,
+    - movemark: node to move the active bookmark from
+                (cf bookmark.calculate update),
+    - activemark: a bookmark to activate at the end of the update.
+    """
+    node = None
+    wc = repo[None]
+    movemark = activemark = None
+
+    node, movemark, activemark = _destupdateobs(repo, clean, check)
 
     if node is None:
         # we also move the active bookmark, if any
