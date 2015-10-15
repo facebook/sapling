@@ -644,4 +644,43 @@ errors encountered
   % hgweb filerevision, html
   % errors encountered
 
+We attempt to highlight unknown files by default
+
+  $ killdaemons.py
+
+  $ cat > .hg/hgrc << EOF
+  > [web]
+  > highlightfiles = **
+  > EOF
+
+  $ cat > unknownfile << EOF
+  > #!/usr/bin/python
+  > def foo():
+  >    pass
+  > EOF
+
+  $ hg add unknownfile
+  $ hg commit -m unknown unknownfile
+
+  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ get-with-headers.py localhost:$HGPORT 'file/tip/unknownfile' | grep l2
+  <span id="l2"><span class="k">def</span> <span class="nf">foo</span><span class="p">():</span></span><a href="#l2"></a>
+
+We can prevent Pygments from falling back to a non filename-based
+detection mode
+
+  $ cat > .hg/hgrc << EOF
+  > [web]
+  > highlightfiles = **
+  > highlightonlymatchfilename = true
+  > EOF
+
+  $ killdaemons.py
+  $ hg serve -p $HGPORT -d -n test --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ get-with-headers.py localhost:$HGPORT 'file/tip/unknownfile' | grep l2
+  <span id="l2">def foo():</span><a href="#l2"></a>
+
   $ cd ..

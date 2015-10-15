@@ -13,11 +13,17 @@
 It depends on the Pygments syntax highlighting library:
 http://pygments.org/
 
-There are two configuration options::
+There are the following configuration options::
 
   [web]
   pygments_style = <style> (default: colorful)
   highlightfiles = <fileset> (default: size('<5M'))
+  highlightonlymatchfilename = <bool> (default False)
+
+``highlightonlymatchfilename`` will only highlight files if their type could
+be identified by their filename. When this is not enabled (the default),
+Pygments will try very hard to identify the file type from content and any
+match (even matches with a low confidence score) will be used.
 """
 
 import highlight
@@ -32,12 +38,14 @@ testedwith = 'internal'
 def pygmentize(web, field, fctx, tmpl):
     style = web.config('web', 'pygments_style', 'colorful')
     expr = web.config('web', 'highlightfiles', "size('<5M')")
+    filenameonly = web.configbool('web', 'highlightonlymatchfilename', False)
 
     ctx = fctx.changectx()
     tree = fileset.parse(expr)
     mctx = fileset.matchctx(ctx, subset=[fctx.path()], status=None)
     if fctx.path() in fileset.getset(mctx, tree):
-        highlight.pygmentize(field, fctx, style, tmpl)
+        highlight.pygmentize(field, fctx, style, tmpl,
+                guessfilenameonly=filenameonly)
 
 def filerevision_highlight(orig, web, req, tmpl, fctx):
     mt = ''.join(tmpl('mimetype', encoding=encoding.encoding))
