@@ -13,7 +13,7 @@
 FILE=$1
 
 getlines() {
-  grep -n "<<<<<<" $FILE | cut -f1 -d:
+  grep -n "^<<<<<<" $FILE | cut -f1 -d:
 }
 
 # editor preference loosely based on https://mercurial-scm.org/wiki/editor
