@@ -1,6 +1,8 @@
   $ USERCACHE="$TESTTMP/cache"; export USERCACHE
   $ mkdir "${USERCACHE}"
   $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > usegeneraldelta=yes
   > [extensions]
   > largefiles =
   > share =
@@ -97,6 +99,7 @@ Test link+rename largefile codepath
   $ cat .hg/requires
   dotencode
   fncache
+  generaldelta
   largefiles
   revlogv1
   store
