@@ -125,6 +125,7 @@ testpats = [
     (r'^diff *-\w*u.*$\n(^  \$ |^$)', "prefix diff -u with cmp"),
     (r'seq ', "don't use 'seq', use $TESTDIR/seq.py"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
+    (r'\|&', "don't use |&, use 2>&1"),
   ],
   # warnings
   [
