@@ -407,15 +407,13 @@ class cg1unpacker(object):
             repo.invalidatevolatilesets()
 
             if changesets > 0:
-                p = lambda: tr.writepending() and repo.root or ""
                 if 'node' not in tr.hookargs:
                     tr.hookargs['node'] = hex(cl.node(clstart))
                     hookargs = dict(tr.hookargs)
                 else:
                     hookargs = dict(tr.hookargs)
                     hookargs['node'] = hex(cl.node(clstart))
-                repo.hook('pretxnchangegroup', throw=True, pending=p,
-                          **hookargs)
+                repo.hook('pretxnchangegroup', throw=True, **hookargs)
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
             publishing = repo.publishing()

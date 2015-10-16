@@ -994,8 +994,7 @@ class localrepository(object):
         reporef = weakref.ref(self)
         def validate(tr):
             """will run pre-closing hooks"""
-            pending = lambda: tr.writepending() and self.root or ""
-            reporef().hook('pretxnclose', throw=True, pending=pending,
+            reporef().hook('pretxnclose', throw=True,
                            txnname=desc, **tr.hookargs)
         def releasefn(tr, success):
             repo = reporef()
@@ -1682,10 +1681,9 @@ class localrepository(object):
             n = self.changelog.add(mn, files, ctx.description(),
                                    trp, p1.node(), p2.node(),
                                    user, ctx.date(), ctx.extra().copy())
-            p = lambda: tr.writepending() and self.root or ""
             xp1, xp2 = p1.hex(), p2 and p2.hex() or ''
             self.hook('pretxncommit', throw=True, node=hex(n), parent1=xp1,
-                      parent2=xp2, pending=p)
+                      parent2=xp2)
             # set the new commit is proper phase
             targetphase = subrepo.newcommitphase(self.ui, ctx)
             if targetphase:
@@ -1865,8 +1863,6 @@ class localrepository(object):
             hookargs = {}
             if tr is not None:
                 hookargs.update(tr.hookargs)
-                pending = lambda: tr.writepending() and self.root or ""
-                hookargs['pending'] = pending
             hookargs['namespace'] = namespace
             hookargs['key'] = key
             hookargs['old'] = old

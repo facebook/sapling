@@ -1011,6 +1011,84 @@ with general delta
       7e30d8ac6f23cfc84330fd7e698730374615d21a
   $ cd ..
 
+Test visibility of in-memory changes inside transaction to external hook
+------------------------------------------------------------------------
+
+  $ cd repo
+
+  $ echo xxxx >> x
+  $ hg commit -m "#5: changes to invoke rebase"
+
+  $ cat > $TESTTMP/checkvisibility.sh <<EOF
+  > echo "==== \$1:"
+  > hg parents --template "VISIBLE {rev}:{node|short}\n"
+  > # test that pending changes are hidden
+  > unset HG_PENDING
+  > hg parents --template "ACTUAL  {rev}:{node|short}\n"
+  > echo "===="
+  > EOF
+
+  $ cat >> .hg/hgrc <<EOF
+  > [defaults]
+  > # to fix hash id of temporary revisions
+  > unshelve = --date '0 0'
+  > EOF
+
+"hg unshelve" at REV5 implies steps below:
+
+(1) commit changes in the working directory (REV6)
+(2) unbundle shelved revision (REV7)
+(3) rebase: merge REV7 into REV6 (REV6 => REV6, REV7)
+(4) rebase: commit merged revision (REV8)
+(5) rebase: update to REV6 (REV8 => REV6)
+(6) update to REV5 (REV6 => REV5)
+(7) abort transaction
+
+== test visibility to external preupdate hook
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > preupdate.visibility = sh $TESTTMP/checkvisibility.sh preupdate
+  > EOF
+
+  $ echo nnnn >> n
+
+  $ sh $TESTTMP/checkvisibility.sh before-unshelving
+  ==== before-unshelving:
+  VISIBLE 5:703117a2acfb
+  ACTUAL  5:703117a2acfb
+  ====
+
+  $ hg unshelve --keep default
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 7:fcbb97608399 "changes to 'create conflict'" (tip)
+  ==== preupdate:
+  VISIBLE 6:66b86db80ee4
+  ACTUAL  5:703117a2acfb
+  ====
+  ==== preupdate:
+  VISIBLE 8:cb2a4e59c2d5
+  ACTUAL  5:703117a2acfb
+  ====
+  ==== preupdate:
+  VISIBLE 6:66b86db80ee4
+  ACTUAL  5:703117a2acfb
+  ====
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > preupdate.visibility =
+  > EOF
+
+  $ sh $TESTTMP/checkvisibility.sh after-unshelving
+  ==== after-unshelving:
+  VISIBLE 5:703117a2acfb
+  ACTUAL  5:703117a2acfb
+  ====
+
+  $ cd ..
+
 test Abort unshelve always gets user out of the unshelved state
 ---------------------------------------------------------------
   $ hg init salvage

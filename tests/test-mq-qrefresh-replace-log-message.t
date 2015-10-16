@@ -242,3 +242,85 @@ dropping status of "file2")
   ====
   0:25e397dabed2
   ====
+
+== test visibility to precommit external hook
+
+  $ hg update -C -q
+  $ rm -f file2
+  $ hg qpush -q second-patch --config hooks.pretxncommit.unexpectedabort=
+  now at: second-patch
+  $ echo bbbb >> file2
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > precommit.checkvisibility = sh "$TESTTMP/checkvisibility.sh"
+  > EOF
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  1:e30108269082
+  M file2
+  ====
+
+  $ hg qrefresh
+  ====
+  0:25e397dabed2
+  A file2
+  ====
+  transaction abort!
+  rollback completed
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  0:25e397dabed2
+  ====
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > precommit.checkvisibility =
+  > EOF
+
+== test visibility to pretxncommit external hook
+
+  $ hg update -C -q
+  $ rm -f file2
+  $ hg qpush -q second-patch --config hooks.pretxncommit.unexpectedabort=
+  now at: second-patch
+  $ echo bbbb >> file2
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.checkvisibility = sh "$TESTTMP/checkvisibility.sh"
+  > # make checkvisibility run before unexpectedabort
+  > priority.pretxncommit.checkvisibility = 10
+  > EOF
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  1:e30108269082
+  M file2
+  ====
+
+  $ hg qrefresh
+  ====
+  0:25e397dabed2
+  A file2
+  ====
+  transaction abort!
+  rollback completed
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  0:25e397dabed2
+  ====
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.checkvisibility =
+  > EOF

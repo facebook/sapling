@@ -533,6 +533,110 @@ external process
   $ hg --cwd b revert --no-backup a
   $ rm -f b/foo
 
+== test visibility to precommit external hook
+
+  $ cat >> b/.hg/hgrc <<EOF
+  > [hooks]
+  > precommit.visibility = sh $TESTTMP/checkvisibility.sh
+  > EOF
+
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  ACTUAL  0:80971e65b431
+  ====
+
+  $ hg --cwd b import ../patch1 ../patch2 ../patch3
+  applying ../patch1
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  applying ../patch2
+  ====
+  VISIBLE 1:1d4bd90af0e4
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  applying ../patch3
+  ====
+  VISIBLE 2:6d019af21222
+  A foo
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+
+  $ hg --cwd b rollback -q
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  $ hg --cwd b revert --no-backup a
+  $ rm -f b/foo
+
+  $ cat >> b/.hg/hgrc <<EOF
+  > [hooks]
+  > precommit.visibility =
+  > EOF
+
+== test visibility to pretxncommit external hook
+
+  $ cat >> b/.hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.visibility = sh $TESTTMP/checkvisibility.sh
+  > EOF
+
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  ACTUAL  0:80971e65b431
+  ====
+
+  $ hg --cwd b import ../patch1 ../patch2 ../patch3
+  applying ../patch1
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  applying ../patch2
+  ====
+  VISIBLE 1:1d4bd90af0e4
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  applying ../patch3
+  ====
+  VISIBLE 2:6d019af21222
+  A foo
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+
+  $ hg --cwd b rollback -q
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  $ hg --cwd b revert --no-backup a
+  $ rm -f b/foo
+
+  $ cat >> b/.hg/hgrc <<EOF
+  > [hooks]
+  > pretxncommit.visibility =
+  > EOF
+
   $ rm -r b
 
 
