@@ -110,6 +110,11 @@ class largefilesdirstate(dirstate.dirstate):
         return super(largefilesdirstate, self).normallookup(unixpath(f))
     def _ignore(self, f):
         return False
+    def write(self, tr=False):
+        # (1) disable PENDING mode always
+        #     (lfdirstate isn't yet managed as a part of the transaction)
+        # (2) avoid develwarn 'use dirstate.write with ....'
+        super(largefilesdirstate, self).write(None)
 
 def openlfdirstate(ui, repo, create=True):
     '''
