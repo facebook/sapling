@@ -1087,6 +1087,52 @@ Test visibility of in-memory changes inside transaction to external hook
   ACTUAL  5:703117a2acfb
   ====
 
+== test visibility to external update hook
+
+  $ hg update -q -C 5
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > update.visibility = sh $TESTTMP/checkvisibility.sh update
+  > EOF
+
+  $ echo nnnn >> n
+
+  $ sh $TESTTMP/checkvisibility.sh before-unshelving
+  ==== before-unshelving:
+  VISIBLE 5:703117a2acfb
+  ACTUAL  5:703117a2acfb
+  ====
+
+  $ hg unshelve --keep default
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 7:fcbb97608399 "changes to 'create conflict'" (tip)
+  ==== update:
+  VISIBLE 6:66b86db80ee4
+  VISIBLE 7:fcbb97608399
+  ACTUAL  5:703117a2acfb
+  ====
+  ==== update:
+  VISIBLE 6:66b86db80ee4
+  ACTUAL  5:703117a2acfb
+  ====
+  ==== update:
+  VISIBLE 5:703117a2acfb
+  ACTUAL  5:703117a2acfb
+  ====
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > update.visibility =
+  > EOF
+
+  $ sh $TESTTMP/checkvisibility.sh after-unshelving
+  ==== after-unshelving:
+  VISIBLE 5:703117a2acfb
+  ACTUAL  5:703117a2acfb
+  ====
+
   $ cd ..
 
 test Abort unshelve always gets user out of the unshelved state

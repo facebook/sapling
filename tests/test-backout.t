@@ -313,6 +313,41 @@ invocation of the hook to be examined)
   > preupdate.visibility =
   > EOF
 
+== test visibility to external update hook
+
+  $ hg update -q -C 2
+  $ hg --config extensions.strip= strip 3
+  saved backup bundle to * (glob)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > update.visibility = sh $TESTTMP/checkvisibility.sh update
+  > EOF
+
+  $ hg backout --merge -d '3 0' 1 --tool=true -m 'fixed comment'
+  ==== update:
+  1:5a50a024c182
+  ====
+  reverting a
+  created new head
+  changeset 3:d92a3f57f067 backs out changeset 1:5a50a024c182
+  ==== update:
+  2:6ea3f2a197a2
+  ====
+  merging with changeset 3:d92a3f57f067
+  merging a
+  ==== update:
+  2:6ea3f2a197a2
+  3:d92a3f57f067
+  ====
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > update.visibility =
+  > EOF
+
   $ cd ..
 
 backout should not back out subsequent changesets
