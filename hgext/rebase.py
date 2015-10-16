@@ -628,7 +628,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, target):
         merge.update(repo, p1, False, True, False)
     else:
         repo.ui.debug(" already in target\n")
-    repo.dirstate.write()
+    repo.dirstate.write(repo.currenttransaction())
     repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
     if base is not None:
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))

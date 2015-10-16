@@ -977,7 +977,7 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"))
 
         # make journal.dirstate contain in-memory changes at this point
-        self.dirstate.write()
+        self.dirstate.write(None)
 
         idbase = "%.40f#%f" % (random.random(), time.time())
         txnid = 'TXN:' + util.sha1(idbase).hexdigest()
@@ -1005,7 +1005,7 @@ class localrepository(object):
                 # transaction, if tr.addfilegenerator (via
                 # dirstate.write or so) isn't invoked while
                 # transaction running
-                repo.dirstate.write()
+                repo.dirstate.write(None)
             else:
                 # prevent in-memory changes from being written out at
                 # the end of outer wlock scope or so
@@ -1319,7 +1319,7 @@ class localrepository(object):
             if self.dirstate.pendingparentchange():
                 self.dirstate.invalidate()
             else:
-                self.dirstate.write()
+                self.dirstate.write(None)
 
             self._filecache['dirstate'].refresh()
 

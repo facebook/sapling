@@ -222,7 +222,7 @@ def perfdirstatewrite(ui, repo, **opts):
     "a" in ds
     def d():
         ds._dirty = True
-        ds.write()
+        ds.write(repo.currenttransaction())
     timer(d)
     fm.end()
 

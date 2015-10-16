@@ -1324,7 +1324,7 @@ class committablectx(basectx):
         # write changes out explicitly, because nesting wlock at
         # runtime may prevent 'wlock.release()' in 'repo.commit()'
         # from immediately doing so for subsequent changing files
-        self._repo.dirstate.write()
+        self._repo.dirstate.write(self._repo.currenttransaction())
 
 class workingctx(committablectx):
     """A workingctx object makes access to data related to
@@ -1530,7 +1530,7 @@ class workingctx(committablectx):
                     # write changes out explicitly, because nesting
                     # wlock at runtime may prevent 'wlock.release()'
                     # below from doing so for subsequent changing files
-                    self._repo.dirstate.write()
+                    self._repo.dirstate.write(self._repo.currenttransaction())
                 finally:
                     wlock.release()
             except error.LockError:

@@ -1277,7 +1277,7 @@ def graft(repo, ctx, pctx, labels):
     # drop the second merge parent
     repo.dirstate.beginparentchange()
     repo.setparents(repo['.'].node(), nullid)
-    repo.dirstate.write()
+    repo.dirstate.write(repo.currenttransaction())
     # fix up dirstate for copies and renames
     copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
     repo.dirstate.endparentchange()

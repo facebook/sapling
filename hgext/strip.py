@@ -58,7 +58,7 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmark=None):
                 and p2 in [x.node for x in repo.mq.applied]):
                 urev = p2
             hg.clean(repo, urev)
-            repo.dirstate.write()
+            repo.dirstate.write(repo.currenttransaction())
 
         repair.strip(ui, repo, revs, backup)
 
@@ -205,7 +205,7 @@ def stripcmd(ui, repo, *revs, **opts):
             changedfiles.extend(dirchanges)
 
             repo.dirstate.rebuild(urev, uctx.manifest(), changedfiles)
-            repo.dirstate.write()
+            repo.dirstate.write(repo.currenttransaction())
 
             # clear resolve state
             ms = merge.mergestate(repo)
