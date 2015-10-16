@@ -227,13 +227,10 @@ Test that rebasing and pushing works as expected
   |/
   @  0 a
   
-  $ hg --config extensions.rebase= rebase -d default/@ -s headc
+  $ hg --config extensions.rebase= rebase -d default/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
   rebasing 1:cc61aa6be3dc "c" (headc)
   merging a
-  warning: conflicts during merge.
-  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
-  [1]
   $ echo "a" > a
   $ echo "b" >> a
   $ echo "c" >> a
