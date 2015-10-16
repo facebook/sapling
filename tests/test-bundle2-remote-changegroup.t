@@ -122,7 +122,7 @@ Start a simple HTTP server to serve bundles
 
 Test a pull with an remote-changegroup
 
-  $ hg bundle -R repo --base '0:4' -r '5:7' bundle.hg
+  $ hg bundle -R repo --type v1 --base '0:4' -r '5:7' bundle.hg
   3 changesets found
   $ cat > repo/.hg/bundle2maker << EOF
   > remote-changegroup http://localhost:$HGPORT/bundle.hg bundle.hg
@@ -164,7 +164,7 @@ Test a pull with an remote-changegroup
 
 Test a pull with an remote-changegroup and a following changegroup
 
-  $ hg bundle -R repo --base 2 -r '3:4' bundle2.hg
+  $ hg bundle -R repo --type v1 --base 2 -r '3:4' bundle2.hg
   2 changesets found
   $ cat > repo/.hg/bundle2maker << EOF
   > remote-changegroup http://localhost:$HGPORT/bundle2.hg bundle2.hg
@@ -212,7 +212,7 @@ Test a pull with an remote-changegroup and a following changegroup
 
 Test a pull with a changegroup followed by an remote-changegroup
 
-  $ hg bundle -R repo --base '0:4' -r '5:7' bundle3.hg
+  $ hg bundle -R repo --type v1 --base '0:4' -r '5:7' bundle3.hg
   3 changesets found
   $ cat > repo/.hg/bundle2maker << EOF
   > changegroup 000000000000 :4
@@ -260,9 +260,9 @@ Test a pull with a changegroup followed by an remote-changegroup
 
 Test a pull with two remote-changegroups and a changegroup
 
-  $ hg bundle -R repo --base 2 -r '3:4' bundle4.hg
+  $ hg bundle -R repo --type v1 --base 2 -r '3:4' bundle4.hg
   2 changesets found
-  $ hg bundle -R repo --base '3:4' -r '5:6' bundle5.hg
+  $ hg bundle -R repo --type v1 --base '3:4' -r '5:6' bundle5.hg
   2 changesets found
   $ cat > repo/.hg/bundle2maker << EOF
   > remote-changegroup http://localhost:$HGPORT/bundle4.hg bundle4.hg
@@ -316,7 +316,7 @@ Test a pull with two remote-changegroups and a changegroup
 
 Hash digest tests
 
-  $ hg bundle -R repo -a bundle6.hg
+  $ hg bundle -R repo --type v1 -a bundle6.hg
   8 changesets found
 
   $ cat > repo/.hg/bundle2maker << EOF
