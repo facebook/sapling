@@ -3339,7 +3339,7 @@ class dirstateguard(object):
     def __init__(self, repo, name):
         self._repo = repo
         self._suffix = '.backup.%s.%d' % (name, id(self))
-        repo.dirstate._savebackup(repo, self._suffix)
+        repo.dirstate._savebackup(repo.currenttransaction(), self._suffix)
         self._active = True
         self._closed = False
 
@@ -3357,12 +3357,14 @@ class dirstateguard(object):
                    % self._suffix)
             raise error.Abort(msg)
 
-        self._repo.dirstate._clearbackup(self._repo, self._suffix)
+        self._repo.dirstate._clearbackup(self._repo.currenttransaction(),
+                                         self._suffix)
         self._active = False
         self._closed = True
 
     def _abort(self):
-        self._repo.dirstate._restorebackup(self._repo, self._suffix)
+        self._repo.dirstate._restorebackup(self._repo.currenttransaction(),
+                                           self._suffix)
         self._active = False
 
     def release(self):

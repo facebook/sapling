@@ -1123,22 +1123,21 @@ class dirstate(object):
             return list(files)
         return [f for f in dmap if match(f)]
 
-    def _actualfilename(self, repo):
-        if repo.currenttransaction():
+    def _actualfilename(self, tr):
+        if tr:
             return self._pendingfilename
         else:
             return self._filename
 
-    def _savebackup(self, repo, suffix):
+    def _savebackup(self, tr, suffix):
         '''Save current dirstate into backup file with suffix'''
-        filename = self._actualfilename(repo)
+        filename = self._actualfilename(tr)
 
         # use '_writedirstate' instead of 'write' to write changes certainly,
         # because the latter omits writing out if transaction is running.
         # output file will be used to create backup of dirstate at this point.
         self._writedirstate(self._opener(filename, "w", atomictemp=True))
 
-        tr = repo.currenttransaction()
         if tr:
             # ensure that subsequent tr.writepending returns True for
             # changes written out above, even if dirstate is never
@@ -1153,15 +1152,15 @@ class dirstate(object):
 
         self._opener.write(filename + suffix, self._opener.tryread(filename))
 
-    def _restorebackup(self, repo, suffix):
+    def _restorebackup(self, tr, suffix):
         '''Restore dirstate by backup file with suffix'''
         # this "invalidate()" prevents "wlock.release()" from writing
         # changes of dirstate out after restoring from backup file
         self.invalidate()
-        filename = self._actualfilename(repo)
+        filename = self._actualfilename(tr)
         self._opener.rename(filename + suffix, filename)
 
-    def _clearbackup(self, repo, suffix):
+    def _clearbackup(self, tr, suffix):
         '''Clear backup file with suffix'''
-        filename = self._actualfilename(repo)
+        filename = self._actualfilename(tr)
         self._opener.unlink(filename + suffix)
