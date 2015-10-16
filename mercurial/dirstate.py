@@ -648,7 +648,7 @@ class dirstate(object):
         self._pl = (parent, nullid)
         self._dirty = True
 
-    def write(self, repo=None):
+    def write(self, tr=False):
         if not self._dirty:
             return
 
@@ -660,17 +660,13 @@ class dirstate(object):
             time.sleep(delaywrite)
 
         filename = self._filename
-        if not repo:
-            tr = None
+        if tr is False: # not explicitly specified
             if self._opener.lexists(self._pendingfilename):
                 # if pending file already exists, in-memory changes
                 # should be written into it, because it has priority
                 # to '.hg/dirstate' at reading under HG_PENDING mode
                 filename = self._pendingfilename
-        else:
-            tr = repo.currenttransaction()
-
-        if tr:
+        elif tr:
             # 'dirstate.write()' is not only for writing in-memory
             # changes out, but also for dropping ambiguous timestamp.
             # delayed writing re-raise "ambiguous timestamp issue".
@@ -678,7 +674,7 @@ class dirstate(object):
             # https://www.mercurial-scm.org/wiki/DirstateTransactionPlan
 
             # emulate dropping timestamp in 'parsers.pack_dirstate'
-            now = _getfsnow(repo.vfs)
+            now = _getfsnow(self._opener)
             dmap = self._map
             for f, e in dmap.iteritems():
                 if e[0] == 'n' and e[3] == now:
