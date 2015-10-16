@@ -88,6 +88,10 @@ filemerge.executable=/Developer/Applications/Utilities/FileMerge.app/Contents/Ma
 filemerge.args=-left $other -right $local -ancestor $base -merge $output
 filemerge.gui=True
 
+filemergexcode.executable=/Applications/Xcode.app/Contents/Applications/FileMerge.app/Contents/MacOS/FileMerge
+filemergexcode.args=-left $other -right $local -ancestor $base -merge $output
+filemergexcode.gui=True
+
 ; Windows version of Beyond Compare
 beyondcompare3.args=$local $other $base $output /ro /lefttitle=local /centertitle=base /righttitle=other /automerge /reviewconflicts /solo
 beyondcompare3.regkey=Software\Scooter Software\Beyond Compare 3
