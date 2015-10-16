@@ -16,9 +16,8 @@ Load commonly used test logic
   $ hg ci -m "A->C"
   created new head
 
-  $ hg merge -r1 2>&1 | sed 's/-C ./-C/' | egrep -v '^merging afile$' | sed 's/incomplete.*/failed!/'
-  warning: conflicts during merge.
-  merging afile failed!
+  $ hg merge -r1 2>&1 | sed 's/-C ./-C/' | egrep -v '^merging afile' | sed 's/incomplete.*/failed!/'
+  warning: conflicts.* (re)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C' to abandon
 resolve using first parent
