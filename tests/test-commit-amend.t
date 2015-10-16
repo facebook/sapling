@@ -19,7 +19,7 @@ Refuse to amend public csets:
 
 Nothing to amend:
 
-  $ hg ci --amend
+  $ hg ci --amend -m 'base1'
   nothing changed
   [1]
 

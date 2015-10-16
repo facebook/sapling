@@ -2,6 +2,13 @@ Environment setup for MQ
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=" >> $HGRCPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [defaults]
+  > # explicit date to commit with fixed hashid
+  > qnew = -d "0 0"
+  > qrefresh = -d "0 0"
+  > qfold = -d "0 0"
+  > EOF
   $ hg init
   $ hg qinit
 
@@ -191,3 +198,47 @@ Test saving last-message.txt:
   
   
   test saving last-message.txt
+
+Test visibility of in-memory distate changes outside transaction to
+external process
+
+  $ cat > $TESTTMP/checkvisibility.sh <<EOF
+  > echo "===="
+  > hg parents --template "{rev}:{node|short}\n"
+  > hg status -arm
+  > echo "===="
+  > EOF
+
+== test visibility to external editor
+
+  $ hg update -C -q first-patch
+  $ rm -f file2
+  $ hg qpush -q second-patch --config hooks.pretxncommit.unexpectedabort=
+  now at: second-patch
+  $ echo bbbb >> file2
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  1:e30108269082
+  M file2
+  ====
+
+  $ HGEDITOR='sh "$TESTTMP/checkvisibility.sh"' hg qrefresh -e
+  ====
+  0:25e397dabed2
+  A file2
+  ====
+  transaction abort!
+  rollback completed
+  note: commit message saved in .hg/last-message.txt
+  refresh interrupted while patch was popped! (revert --all, qpush to recover)
+  abort: pretxncommit.unexpectedabort hook exited with status 1
+  [255]
+
+(rebuilding at failure of qrefresh bases on rev #0, and it causes
+dropping status of "file2")
+
+  $ sh "$TESTTMP/checkvisibility.sh"
+  ====
+  0:25e397dabed2
+  ====

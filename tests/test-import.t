@@ -447,6 +447,92 @@ page for detail).
   $ hg --cwd b parents --template 'parent: {rev}\n'
   parent: 1
 
+  $ hg --cwd b update -q -C 0
+  $ hg --cwd b --config extensions.strip= strip -q 1
+
+Test visibility of in-memory distate changes inside transaction to
+external process
+
+  $ echo foo > a/foo
+  $ hg --cwd a commit -A -m 'adding foo' foo
+  $ hg --cwd a export -o '../patch%R' 3
+
+  $ cat > $TESTTMP/checkvisibility.sh <<EOF
+  > echo "===="
+  > hg parents --template "VISIBLE {rev}:{node|short}\n"
+  > hg status -amr
+  > # test that pending changes are hidden
+  > unset HG_PENDING
+  > hg parents --template "ACTUAL  {rev}:{node|short}\n"
+  > hg status -amr
+  > echo "===="
+  > EOF
+
+== test visibility to external editor
+
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  ACTUAL  0:80971e65b431
+  ====
+
+  $ HGEDITOR="sh $TESTTMP/checkvisibility.sh" hg --cwd b import -v --edit ../patch1 ../patch2 ../patch3
+  applying ../patch1
+  patching file a
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  committing files:
+  a
+  committing manifest
+  committing changelog
+  created 1d4bd90af0e4
+  applying ../patch2
+  patching file a
+  ====
+  VISIBLE 1:1d4bd90af0e4
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  committing files:
+  a
+  committing manifest
+  committing changelog
+  created 6d019af21222
+  applying ../patch3
+  patching file foo
+  adding foo
+  ====
+  VISIBLE 2:6d019af21222
+  A foo
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  committing files:
+  foo
+  committing manifest
+  committing changelog
+  created 55e3f75b2378
+
+  $ hg --cwd b rollback -q
+
+(content of file "a" is already changed and it should be recognized as
+"M", even though dirstate is restored to one before "hg import")
+
+  $ (cd b && sh "$TESTTMP/checkvisibility.sh")
+  ====
+  VISIBLE 0:80971e65b431
+  M a
+  ACTUAL  0:80971e65b431
+  M a
+  ====
+  $ hg --cwd b revert --no-backup a
+  $ rm -f b/foo
+
   $ rm -r b
 
 

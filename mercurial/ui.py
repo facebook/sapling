@@ -835,7 +835,8 @@ class ui(object):
         if self.debugflag:
             opts['label'] = opts.get('label', '') + ' ui.debug'
             self.write(*msg, **opts)
-    def edit(self, text, user, extra=None, editform=None):
+
+    def edit(self, text, user, extra=None, editform=None, pending=None):
         if extra is None:
             extra = {}
         (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
@@ -854,6 +855,8 @@ class ui(object):
                     break
             if editform:
                 environ.update({'HGEDITFORM': editform})
+            if pending:
+                environ.update({'HG_PENDING': pending})
 
             editor = self.geteditor()
 

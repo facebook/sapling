@@ -2715,9 +2715,14 @@ def commitforceeditor(repo, ctx, subs, finishdesc=None, extramsg=None,
     # run editor in the repository root
     olddir = os.getcwd()
     os.chdir(repo.root)
-    editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
-                              editform=editform)
 
+    # make in-memory changes visible to external process
+    tr = repo.currenttransaction()
+    repo.dirstate.write(tr)
+    pending = tr and tr.writepending() and repo.root
+
+    editortext = repo.ui.edit(committext, ctx.user(), ctx.extra(),
+                        editform=editform, pending=pending)
     text = re.sub("(?m)^HG:.*(\n|$)", "", editortext)
     os.chdir(olddir)
 
