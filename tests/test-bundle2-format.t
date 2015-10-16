@@ -285,7 +285,7 @@ Test unbundling
 
 Test old style bundle are detected and refused
 
-  $ hg bundle --all ../bundle.hg
+  $ hg bundle --all --type v1 ../bundle.hg
   1 changesets found
   $ hg statbundle2 < ../bundle.hg
   abort: unknown bundle version 10
