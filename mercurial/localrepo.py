@@ -1306,7 +1306,7 @@ class localrepository(object):
             l.lock()
             return l
 
-        # We do not need to check for non-waiting lock aquisition.  Such
+        # We do not need to check for non-waiting lock acquisition.  Such
         # acquisition would not cause dead-lock as they would just fail.
         if wait and (self.ui.configbool('devel', 'all-warnings')
                      or self.ui.configbool('devel', 'check-locks')):

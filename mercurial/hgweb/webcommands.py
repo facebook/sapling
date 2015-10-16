@@ -740,7 +740,7 @@ def filediff(web, req, tmpl):
 
     The ``filediff`` template is rendered.
 
-    This hander is registered under both the ``/diff`` and ``/filediff``
+    This handler is registered under both the ``/diff`` and ``/filediff``
     paths. ``/diff`` is used in modern code.
     """
     fctx, ctx = None, None

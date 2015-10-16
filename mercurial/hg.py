@@ -824,7 +824,7 @@ def remoteui(src, opts):
 
 # Files of interest
 # Used to check if the repository has changed looking at mtime and size of
-# theses files.
+# these files.
 foi = [('spath', '00changelog.i'),
        ('spath', 'phaseroots'), # ! phase can change content at the same size
        ('spath', 'obsstore'),

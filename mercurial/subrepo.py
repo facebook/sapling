@@ -418,7 +418,7 @@ class abstractsubrepo(object):
         ``ctx`` is the context referring this subrepository in the
         parent repository.
 
-        ``path`` is the path to this subrepositiry as seen from
+        ``path`` is the path to this subrepository as seen from
         innermost repository.
         """
         self.ui = ctx.repo().ui
@@ -1056,7 +1056,7 @@ class hgsubrepo(abstractsubrepo):
 
     @propertycache
     def wvfs(self):
-        """return own wvfs for efficiency and consitency
+        """return own wvfs for efficiency and consistency
         """
         return self._repo.wvfs
 

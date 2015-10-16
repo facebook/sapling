@@ -65,7 +65,7 @@ def fromlocalfunc(modulename, localmods):
     Mercurial specific) modules.
 
     This function assumes that module names not existing in
-    `localmods` are ones of Python standard libarary.
+    `localmods` are from the Python standard library.
 
     This function returns the function, which takes `name` argument,
     and returns `(absname, dottedpath, hassubmod)` tuple if `name`

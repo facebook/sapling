@@ -80,7 +80,7 @@ class dirstate(object):
         self._filename = 'dirstate'
         self._pendingfilename = '%s.pending' % self._filename
 
-        # for consitent view between _pl() and _read() invocations
+        # for consistent view between _pl() and _read() invocations
         self._pendingmode = None
 
     def beginparentchange(self):

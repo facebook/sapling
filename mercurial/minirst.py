@@ -515,7 +515,7 @@ def formatblock(block, width):
     if block['type'] == 'bullet':
         if block['lines'][0].startswith('| '):
             # Remove bullet for line blocks and add no extra
-            # indention.
+            # indentation.
             block['lines'][0] = block['lines'][0][2:]
         else:
             m = _bulletre.match(block['lines'][0])

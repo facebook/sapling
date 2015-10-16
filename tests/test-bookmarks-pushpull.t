@@ -539,7 +539,7 @@ Test to show result of bookmarks comparision
   $ hg clone -U source repo1
 
 (test that incoming/outgoing exit with 1, if there is no bookmark to
-be excahnged)
+be exchanged)
 
   $ hg -R repo1 incoming -B
   comparing with $TESTTMP/bmcomparison/source

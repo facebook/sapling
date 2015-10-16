@@ -931,7 +931,7 @@ class ui(object):
 
     def _progclear(self):
         """clear progress bar output if any. use it before any output"""
-        if '_progbar' not in vars(self): # nothing loadef yet
+        if '_progbar' not in vars(self): # nothing loaded yet
             return
         if self._progbar is not None and self._progbar.printed:
             self._progbar.clear()

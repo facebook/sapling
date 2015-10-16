@@ -324,7 +324,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
             back = util.pconvert(m.rel(hglf)[:-len(hglf)])
 
             def tostandin(f):
-                # The file may already be a standin, so trucate the back
+                # The file may already be a standin, so truncate the back
                 # prefix and test before mangling it.  This avoids turning
                 # 'glob:../.hglf/foo*' into 'glob:../.hglf/../.hglf/foo*'.
                 if f.startswith(back) and lfutil.splitstandin(f[len(back):]):

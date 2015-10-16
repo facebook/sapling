@@ -171,7 +171,7 @@ def activate(repo, mark):
 
 def deactivate(repo):
     """
-    Unset the active bookmark in this reposiotry.
+    Unset the active bookmark in this repository.
     """
     wlock = repo.wlock()
     try:

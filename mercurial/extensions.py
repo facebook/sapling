@@ -205,7 +205,7 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
 
       The ``remotenames`` extension adds the ``--remote`` and ``--all`` (``-a``)
       flags to the bookmarks command. Either flag will show the remote bookmarks
-      known to the repository; ``--remote`` will also supress the output of the
+      known to the repository; ``--remote`` will also suppress the output of the
       local bookmarks.
       """
 

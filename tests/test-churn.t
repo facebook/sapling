@@ -171,7 +171,7 @@ Test multibyte sequences in names
   El Ni\xc3\xb1o         1 *************** (esc)
   with space      1 ***************
 
-Test --template argument, with backwards compatiblity
+Test --template argument, with backwards compatibility
 
   $ hg churn -t '{author|user}'
   user1      4 ***************************************************************

@@ -74,7 +74,7 @@ rendering the page.
 
 Many commands take a ``{revision}`` URL parameter. This defines the
 changeset to operate on. This is commonly specified as the short,
-12 digit hexidecimal abbreviation for the full 40 character unique
+12 digit hexadecimal abbreviation for the full 40 character unique
 revision identifier. However, any value described by
 :hg:`help revisions` typically works.
 

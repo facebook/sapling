@@ -163,7 +163,7 @@ def extract(ui, fileobj):
 
     patch can be a normal patch or contained in an email message.
 
-    return a dictionnary. Standard keys are:
+    return a dictionary. Standard keys are:
       - filename,
       - message,
       - user,
@@ -172,7 +172,7 @@ def extract(ui, fileobj):
       - node,
       - p1,
       - p2.
-    Any item can be missing from the dictionary. If filename is mising,
+    Any item can be missing from the dictionary. If filename is missing,
     fileobj did not contain a patch. Caller must unlink filename when done.'''
 
     # attempt to detect the start of a patch

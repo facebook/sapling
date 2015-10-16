@@ -195,7 +195,7 @@ class patch(patchnode, list): # todo: rename patchroot
 class uiheader(patchnode):
     """patch header
 
-    xxx shoudn't we move this to mercurial/patch.py ?
+    xxx shouldn't we move this to mercurial/patch.py ?
     """
 
     def __init__(self, header):
@@ -1434,7 +1434,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         """
         once we scrolled with pg up pg down we can be pointing outside of the
         display zone. we print the patch with towin=False to compute the
-        location of the selected item eventhough it is outside of the displayed
+        location of the selected item even though it is outside of the displayed
         zone and then update the scroll.
         """
         self.printitem(towin=False)
@@ -1442,7 +1442,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
     def toggleedit(self, item=None, test=False):
         """
-            edit the currently chelected chunk
+            edit the currently selected chunk
         """
         def updateui(self):
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1

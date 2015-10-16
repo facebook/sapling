@@ -58,7 +58,7 @@ class doublepipe(object):
 
     The main pipe is expected to be a 'bufferedinputpipe' from the util module
     that handle all the os specific bites. This class lives in this module
-    because it focus on behavior specifig to the ssh protocol."""
+    because it focus on behavior specific to the ssh protocol."""
 
     def __init__(self, ui, main, side):
         self._ui = ui

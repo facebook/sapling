@@ -263,7 +263,7 @@ class match(object):
         '''True if the matcher won't always match.
 
         Although it's just the inverse of _always in this implementation,
-        an extenion such as narrowhg might make it return something
+        an extension such as narrowhg might make it return something
         slightly different.'''
         return not self._always
 

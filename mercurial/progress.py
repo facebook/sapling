@@ -22,7 +22,7 @@ def shouldprint(ui):
         ui._isatty(sys.stderr) or ui.configbool('progress', 'assume-tty'))
 
 def fmtremaining(seconds):
-    """format a number of remaining seconds in humain readable way
+    """format a number of remaining seconds in human readable way
 
     This will properly display seconds, minutes, hours, days if needed"""
     if seconds < 60:

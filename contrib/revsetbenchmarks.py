@@ -61,7 +61,7 @@ def perf(revset, target=None):
     except CalledProcessError as exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
         if exc.output is None:
-            print >> sys.stderr, '(no ouput)'
+            print >> sys.stderr, '(no output)'
         else:
             print >> sys.stderr, exc.output
         return None
@@ -114,7 +114,7 @@ def idxwidth(nbidx):
 def getfactor(main, other, field, sensitivity=0.05):
     """return the relative factor between values for 'field' in main and other
 
-    Return None if the factor is insignicant (less than <sensitivity>
+    Return None if the factor is insignificant (less than <sensitivity>
     variation)."""
     factor = 1
     if main is not None:
@@ -218,7 +218,7 @@ def applyvariants(revset, variant):
 
 helptext="""This script will run multiple variants of provided revsets using
 different revisions in your mercurial repository. After the benchmark are run
-summary output is provided. Use itto demonstrate speed improvements or pin
+summary output is provided. Use it to demonstrate speed improvements or pin
 point regressions. Revsets to run are specified in a file (or from stdin), one
 revsets per line. Line starting with '#' will be ignored, allowing insertion of
 comments."""

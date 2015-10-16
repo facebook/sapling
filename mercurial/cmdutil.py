@@ -63,7 +63,7 @@ def recordfilter(ui, originalhunks, operation=None):
     """ Prompts the user to filter the originalhunks and return a list of
     selected hunks.
     *operation* is used for ui purposes to indicate the user
-    what kind of filtering they are doing: reverting, commiting, shelving, etc.
+    what kind of filtering they are doing: reverting, committing, shelving, etc.
     *operation* has to be a translated string.
     """
     usecurses =  ui.configbool('experimental', 'crecord', False)
@@ -841,7 +841,7 @@ extrapostimport = [] # run after commit
 # arguments:
 # - repo: the localrepository instance,
 # - patchdata: data extracted from patch header (cf m.patch.patchheadermap),
-# - extra: the future extra dictionnary of the changeset, please mutate it,
+# - extra: the future extra dictionary of the changeset, please mutate it,
 # - opts: the import options.
 # XXX ideally, we would just pass an ctx ready to be computed, that would allow
 # mutation of in memory commit and more. Feel free to rework the code to get

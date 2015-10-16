@@ -13,7 +13,7 @@ data.
 
 Typical uses for censor are due to security or legal requirements, including::
 
- * Passwords, private keys, crytographic material
+ * Passwords, private keys, cryptographic material
  * Licensed data/code/libraries for which the license has expired
  * Personally Identifiable Information or other private data
 

@@ -241,7 +241,7 @@ def _makegetfctx(ctx):
     """return a 'getfctx' function suitable for checkcopies usage
 
     We have to re-setup the function building 'filectx' for each
-    'checkcopies' to ensure the linkrev adjustement is properly setup for
+    'checkcopies' to ensure the linkrev adjustment is properly setup for
     each. Linkrev adjustment is important to avoid bug in rename
     detection. Moreover, having a proper '_ancestrycontext' setup ensures
     the performance impact of this adjustment is kept limited. Without it,

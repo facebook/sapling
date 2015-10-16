@@ -198,8 +198,8 @@ def rebase(ui, repo, **opts):
     originalwd = target = None
     activebookmark = None
     external = nullrev
-    # Mapping between thes old revision id and either what is the new rebased
-    # revision or what needs to be done with the old revsion. The state dict
+    # Mapping between the old revision id and either what is the new rebased
+    # revision or what needs to be done with the old revision. The state dict
     # will be what contains most of the rebase progress state.
     state = {}
     skipped = set()
@@ -1172,7 +1172,7 @@ def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
     rebased that have a successors in the destination"""
     obsoletenotrebased = {}
 
-    # Build a mapping succesor => obsolete nodes for the obsolete
+    # Build a mapping successor => obsolete nodes for the obsolete
     # nodes to be rebased
     allsuccessors = {}
     cl = repo.changelog

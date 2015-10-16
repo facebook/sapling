@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # This is an example of using HGEDITOR to create of diff to review the
-# changes while commiting.
+# changes while committing.
 
 # If you want to pass your favourite editor some other parameters
 # only for Mercurial, modify this:

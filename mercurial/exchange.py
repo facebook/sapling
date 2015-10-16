@@ -610,7 +610,7 @@ def b2partsgenerator(stepname, idx=None):
 def _pushb2ctxcheckheads(pushop, bundler):
     """Generate race condition checking parts
 
-    Exists as an indepedent function to aid extensions
+    Exists as an independent function to aid extensions
     """
     if not pushop.force:
         bundler.newpart('check:heads', data=iter(pushop.remoteheads))

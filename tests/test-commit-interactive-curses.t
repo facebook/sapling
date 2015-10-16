@@ -71,7 +71,7 @@ Committing only one hunk while aborting edition of hunk
 - unfold it
 - go down to second hunk (1 for the first hunk, 1 for the first hunkline, 1 for the second hunk, 1 for the second hunklike)
 - toggle the second hunk
-- edit the hunk and quit the editor imediately with non-zero status
+- edit the hunk and quit the editor immediately with non-zero status
 - commit
 
   $ printf "printf 'editor ran\n'; exit 1" > editor.sh
