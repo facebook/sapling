@@ -410,7 +410,7 @@ class transaction(object):
         # cleanup temporary files
         for l, f, b, c in self._backupentries:
             if l not in self._vfsmap and c:
-                self.report("couldn't remote %s: unknown cache location %s\n"
+                self.report("couldn't remove %s: unknown cache location %s\n"
                             % (b, l))
                 continue
             vfs = self._vfsmap[l]
@@ -421,7 +421,7 @@ class transaction(object):
                     if not c:
                         raise
                     # Abort may be raise by read only opener
-                    self.report("couldn't remote %s: %s\n"
+                    self.report("couldn't remove %s: %s\n"
                                 % (vfs.join(b), inst))
         self.entries = []
         self._writeundo()
@@ -434,7 +434,7 @@ class transaction(object):
         if True:
             for l, _f, b, c in self._backupentries:
                 if l not in self._vfsmap and c:
-                    self.report("couldn't remote %s: unknown cache location"
+                    self.report("couldn't remove %s: unknown cache location"
                                 "%s\n" % (b, l))
                     continue
                 vfs = self._vfsmap[l]
@@ -445,7 +445,7 @@ class transaction(object):
                         if not c:
                             raise
                         # Abort may be raise by read only opener
-                        self.report("couldn't remote %s: %s\n"
+                        self.report("couldn't remove %s: %s\n"
                                     % (vfs.join(b), inst))
         self._backupentries = []
         self.journal = None
@@ -477,7 +477,7 @@ class transaction(object):
                 u = ''
             else:
                 if l not in self._vfsmap and c:
-                    self.report("couldn't remote %s: unknown cache location"
+                    self.report("couldn't remove %s: unknown cache location"
                                 "%s\n" % (b, l))
                     continue
                 vfs = self._vfsmap[l]
