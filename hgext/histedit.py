@@ -925,6 +925,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
+    if supportsmarkers:
+        # Only create markers if the temp nodes weren't already removed.
+        obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(tmpnodes)
+                                       if t in repo))
+    else:
+        cleanupnode(ui, repo, 'temp', tmpnodes)
+
     if not state.keep:
         if mapping:
             movebookmarks(ui, repo, mapping, state.topmost, ntm)
@@ -941,7 +948,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         else:
             cleanupnode(ui, repo, 'replaced', mapping)
 
-    cleanupnode(ui, repo, 'temp', tmpnodes)
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))

@@ -424,6 +424,7 @@ Now, let's try to fold the second commit into the first:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)
+  saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/b0f4233702ca-d99e7186-backup.hg (glob)
 
   $ hg --config diff.git=yes export 0
   # HG changeset patch
