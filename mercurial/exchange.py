@@ -1832,6 +1832,8 @@ def trypullbundlefromurl(ui, repo, url):
 
                 if isinstance(cg, bundle2.unbundle20):
                     bundle2.processbundle(repo, cg, lambda: tr)
+                elif isinstance(cg, streamclone.streamcloneapplier):
+                    cg.apply(repo)
                 else:
                     cg.apply(repo, 'clonebundles', url)
                 tr.close()

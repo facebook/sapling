@@ -273,6 +273,69 @@ Python <2.7.9 will filter SNI URLs
   no changes found
 #endif
 
+Stream clone bundles are supported
+
+  $ hg -R server debugcreatestreamclonebundle packed.hg
+  writing 613 bytes for 4 files
+  bundle requirements: revlogv1
+
+No bundle spec should work
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/packed.hg
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT stream-clone-no-spec
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in *.* seconds (*) (glob)
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Bundle spec without parameters should work
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT stream-clone-vanilla-spec
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in *.* seconds (*) (glob)
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Bundle spec with format requirements should work
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv1
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT stream-clone-supported-requirements
+  applying clone bundle from http://localhost:$HGPORT1/packed.hg
+  4 files to transfer, 613 bytes of data
+  transferred 613 bytes in *.* seconds (*) (glob)
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Stream bundle spec with unknown requirements should be filtered out
+
+  $ cat > server/.hg/clonebundles.manifest << EOF
+  > http://localhost:$HGPORT1/packed.hg BUNDLESPEC=none-packed1;requirements%3Drevlogv42
+  > EOF
+
+  $ hg clone -U http://localhost:$HGPORT stream-clone-unsupported-requirements
+  no compatible clone bundles available on server; falling back to regular clone
+  (you may want to report this to the server operator)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+
 Set up manifest for testing preferences
 (Remember, the TYPE does not have to match reality - the URL is
 important)
