@@ -606,7 +606,7 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 	for (pos = 0; PyDict_Next(map, &pos, &k, &v); ) {
 		dirstateTupleObject *tuple;
 		char state;
-		uint32_t mode, size, mtime;
+		int mode, size, mtime;
 		Py_ssize_t len, l;
 		PyObject *o;
 		char *t;
@@ -636,9 +636,9 @@ static PyObject *pack_dirstate(PyObject *self, PyObject *args)
 			mtime_unset = NULL;
 		}
 		*p++ = state;
-		putbe32(mode, p);
-		putbe32(size, p + 4);
-		putbe32(mtime, p + 8);
+		putbe32((uint32_t)mode, p);
+		putbe32((uint32_t)size, p + 4);
+		putbe32((uint32_t)mtime, p + 8);
 		t = p + 12;
 		p += 16;
 		len = PyString_GET_SIZE(k);
