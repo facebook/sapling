@@ -250,6 +250,44 @@ Pull full.hg into empty again (using -R; with hook)
   changegroup hook: HG_NODE=f9ee2f85a263049e9ae6d37a0e67e96194ffb735 HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=bundle:empty+full.hg (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
+Cannot produce streaming clone bundles with "hg bundle"
+
+  $ hg -R test bundle -t packed1 packed.hg
+  abort: packed bundles cannot be produced by "hg bundle"
+  (use "hg debugcreatestreamclonebundle")
+  [255]
+
+packed1 is produced properly
+
+  $ hg -R test debugcreatestreamclonebundle packed.hg
+  writing 2608 bytes for 6 files
+  bundle requirements: revlogv1
+
+  $ f -B 64 --size --sha1 --hexdump packed.hg
+  packed.hg: size=2758, sha1=864c1c7b490bac9f2950ef5a660668378ac0524e
+  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 06 00 00 |HGS1UN..........|
+  0010: 00 00 00 00 0a 30 00 09 72 65 76 6c 6f 67 76 31 |.....0..revlogv1|
+  0020: 00 64 61 74 61 2f 61 64 69 66 66 65 72 65 6e 74 |.data/adifferent|
+  0030: 66 69 6c 65 2e 69 00 31 33 39 0a 00 01 00 01 00 |file.i.139......|
+
+generaldelta requirement is listed in stream clone bundles
+
+  $ hg --config format.generaldelta=true init testgd
+  $ cd testgd
+  $ touch foo
+  $ hg -q commit -A -m initial
+  $ cd ..
+  $ hg -R testgd debugcreatestreamclonebundle packedgd.hg
+  writing 301 bytes for 3 files
+  bundle requirements: generaldelta, revlogv1
+
+  $ f -B 64 --size --sha1 --hexdump packedgd.hg
+  packedgd.hg: size=396, sha1=981f9e589799335304a5a9a44caa3623a48d2a9f
+  0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 03 00 00 |HGS1UN..........|
+  0010: 00 00 00 00 01 2d 00 16 67 65 6e 65 72 61 6c 64 |.....-..generald|
+  0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
+  0030: 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 03 00 01 |ta/foo.i.64.....|
+
 Create partial clones
 
   $ rm -r empty

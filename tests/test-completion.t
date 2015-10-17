@@ -75,6 +75,7 @@ Show debug commands if there are no other candidates
   debugcommands
   debugcomplete
   debugconfig
+  debugcreatestreamclonebundle
   debugdag
   debugdata
   debugdate
@@ -236,6 +237,7 @@ Show all commands + options
   debugcheckstate: 
   debugcommands: 
   debugcomplete: options
+  debugcreatestreamclonebundle: 
   debugdag: tags, branches, dots, spaces
   debugdata: changelog, manifest, dir
   debugdate: extended

@@ -23,6 +23,7 @@ import random, operator
 import setdiscovery, treediscovery, dagutil, pvec, localrepo, destutil
 import phases, obsolete, exchange, bundle2, repair, lock as lockmod
 import ui as uimod
+import streamclone
 
 table = {}
 
@@ -1250,6 +1251,11 @@ def bundle(ui, repo, fname, dest=None, **opts):
                           hint=_('see "hg help bundle" for supported '
                                  'values for --type'))
 
+    # Packed bundles are a pseudo bundle format for now.
+    if cgversion == 's1':
+        raise error.Abort(_('packed bundles cannot be produced by "hg bundle"'),
+                          hint=_('use "hg debugcreatestreamclonebundle"'))
+
     if opts.get('all'):
         base = ['null']
     else:
@@ -1959,6 +1965,18 @@ def _debugbundle2(ui, gen, **opts):
                 node = chunkdata['node']
                 ui.write("    %s\n" % hex(node))
                 chain = node
+
+@command('debugcreatestreamclonebundle', [], 'FILE')
+def debugcreatestreamclonebundle(ui, repo, fname):
+    """create a stream clone bundle file
+
+    Stream bundles are special bundles that are essentially archives of
+    revlog files. They are commonly used for cloning very quickly.
+    """
+    requirements, gen = streamclone.generatebundlev1(repo)
+    changegroup.writechunks(ui, gen, fname)
+
+    ui.write(_('bundle requirements: %s\n') % ', '.join(sorted(requirements)))
 
 @command('debugcheckstate', [], '')
 def debugcheckstate(ui, repo):

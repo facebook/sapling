@@ -791,6 +791,8 @@ Test list of internal help commands
                  list all available commands and options
    debugcomplete
                  returns the completion list associated with the given command
+   debugcreatestreamclonebundle
+                 create a stream clone bundle file
    debugdag      format the changelog or an index DAG as a concise textual
                  description
    debugdata     dump the contents of a data file revision
@@ -1064,10 +1066,11 @@ Test keyword search help
   
   Commands:
   
-   bookmarks create a new bookmark or list existing bookmarks
-   clone     make a copy of an existing repository
-   paths     show aliases for remote repositories
-   update    update working directory (or switch revisions)
+   bookmarks                    create a new bookmark or list existing bookmarks
+   clone                        make a copy of an existing repository
+   debugcreatestreamclonebundle create a stream clone bundle file
+   paths                        show aliases for remote repositories
+   update                       update working directory (or switch revisions)
   
   Extensions:
   
