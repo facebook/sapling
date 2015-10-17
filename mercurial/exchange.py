@@ -124,6 +124,17 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
             raise error.UnsupportedBundleSpecification(
                     _('%s is not a recognized bundle specification') % spec)
 
+    # The specification for packed1 can optionally declare the data formats
+    # required to apply it. If we see this metadata, compare against what the
+    # repo supports and error if the bundle isn't compatible.
+    if version == 'packed1' and 'requirements' in params:
+        requirements = set(params['requirements'].split(','))
+        missingreqs = requirements - repo.supportedformats
+        if missingreqs:
+            raise error.UnsupportedBundleSpecification(
+                    _('missing support for repository features: %s') %
+                      ', '.join(sorted(missingreqs)))
+
     if not externalnames:
         compression = _bundlespeccompressions[compression]
         version = _bundlespeccgversions[version]
