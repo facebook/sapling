@@ -62,7 +62,7 @@ commit.
   o  0 3903 a
   
   $ cd ..
-  $ hg init client
+  $ hg init client --config format.generaldelta=false
   $ cd client
   $ hg pull -q ../server -r 4
   $ hg debugindex x
