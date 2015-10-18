@@ -1577,7 +1577,7 @@ static int nt_insert(indexObject *self, const char *node, int rev)
 static int nt_init(indexObject *self)
 {
 	if (self->nt == NULL) {
-		if (self->raw_length > INT_MAX / sizeof(nodetree)) {
+		if ((size_t)self->raw_length > INT_MAX / sizeof(nodetree)) {
 			PyErr_SetString(PyExc_ValueError, "overflow in nt_init");
 			return -1;
 		}
