@@ -2,6 +2,8 @@ This emulates the effects of an hg pull --rebase in which the remote repo
 already has one local mq patch
 
   $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > usegeneraldelta=yes
   > [extensions]
   > rebase=
   > mq=
@@ -68,17 +70,17 @@ already has one local mq patch
   $TESTTMP/a/.hg/patches/p0.patch (glob)
   2 changesets found
   uncompressed size of bundle content:
-       344 (changelog)
-       284 (manifests)
-       109  p0
-       109  p1
+       384 (changelog)
+       324 (manifests)
+       129  p0
+       129  p1
   saved backup bundle to $TESTTMP/a/.hg/strip-backup/13a46ce44f60-5da6ecfb-backup.hg (glob)
   2 changesets found
   uncompressed size of bundle content:
-       399 (changelog)
-       284 (manifests)
-       109  p0
-       109  p1
+       439 (changelog)
+       324 (manifests)
+       129  p0
+       129  p1
   adding branch
   adding changesets
   adding manifests
