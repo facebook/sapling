@@ -523,7 +523,8 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: 
   remote: Checking if lock exists (it should not):
   remote: ls: cannot access .hg/store/lock: No such file or directory
-  remote: warning: prepushrebase hook exited with status 2
+  abort: prepushrebase hook exited with status 2
+  [255]
 
   $ cd ..
 
@@ -575,3 +576,60 @@ Test that hooks are fired with the correct variables
   changegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   incoming hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   $ cd ../
+
+Test date rewriting
+
+  $ hg init rewritedate
+  $ cd rewritedate
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > [pushrebase]
+  > rewritedates = True
+  > EOF
+  $ touch a && hg commit -Aqm a
+  $ touch b && hg commit -Aqm b
+  $ hg book master
+  $ cd ..
+
+  $ hg clone rewritedate rewritedateclient
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd rewritedateclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ touch c && hg commit -Aqm c
+
+  $ cat > $TESTTMP/daterewrite.py <<EOF
+  > import sys, time
+  > from mercurial import extensions
+  > def extsetup(ui):
+  >     def faketime(orig):
+  >         return 1000000000
+  >     extensions.wrapfunction(time, 'time', faketime)
+  > EOF
+  $ cat >> ../rewritedate/.hg/hgrc <<EOF
+  > [extensions]
+  > daterewrite=$TESTTMP/daterewrite.py
+  > EOF
+  $ hg push --to master
+  pushing to $TESTTMP/rewritedate
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files
+  1 new obsolescence markers
+  $ hg log -G -T '{desc} {date|isodate}'
+  o  c 2001-09-09 01:46 +0000
+  |
+  | @  c 1970-01-01 00:00 +0000
+  | |
+  o |  b 1970-01-01 00:00 +0000
+  |/
+  o  a 1970-01-01 00:00 +0000
+  

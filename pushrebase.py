@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, os, tempfile, sys, operator, resource, collections
+import errno, os, tempfile, sys, operator, resource, collections, time
 
 try:
     import json
@@ -350,13 +350,17 @@ def _graft(repo, rev, mapping):
     else:
         files = rev.files()
 
+
+    date = rev.date()
+    if repo.ui.configbool('pushrebase', 'rewritedates'):
+        date = (time.time(), date[1])
     return context.memctx(repo,
                           [newp1, newp2],
                           rev.description(),
                           files,
                           getfilectx,
                           rev.user(),
-                          rev.date(),
+                          date,
                           rev.extra(),
                          ).commit()
 
