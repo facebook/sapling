@@ -5416,7 +5416,8 @@ def push(ui, repo, dest=None, **opts):
         del repo._subtoppath
     pushop = exchange.push(repo, other, opts.get('force'), revs=revs,
                            newbranch=opts.get('new_branch'),
-                           bookmarks=opts.get('bookmark', ()))
+                           bookmarks=opts.get('bookmark', ()),
+                           opargs=opts.get('opargs'))
 
     result = not pushop.cgresult
 
