@@ -1,3 +1,7 @@
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
 
 Set up repo
 
@@ -118,13 +122,13 @@ Merge creates 2-parent revision of directory revlog
   $ cat dir1/b
   6
   $ hg debugindex --dir dir1
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      54      0       1 8b3ffd73f901 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      54     -1       1 8b3ffd73f901 000000000000 000000000000
        1        54      68      0       2 b66d046c644f 8b3ffd73f901 000000000000
-       2       122      12      0       4 b87265673c8a b66d046c644f 000000000000
-       3       134      95      0       5 aa5d3adcec72 b66d046c644f 000000000000
-       4       229      81      0       6 e29b066b91ad b66d046c644f 000000000000
-       5       310     107      5       7 a120ce2b83f5 e29b066b91ad aa5d3adcec72
+       2       122      12      1       4 b87265673c8a b66d046c644f 000000000000
+       3       134      55      1       5 aa5d3adcec72 b66d046c644f 000000000000
+       4       189      55      1       6 e29b066b91ad b66d046c644f 000000000000
+       5       244      55      4       7 a120ce2b83f5 e29b066b91ad aa5d3adcec72
 
 Merge keeping directory from parent 1 does not create revlog entry. (Note that
 dir1's manifest does change, but only because dir1/a's filelog changes.)
@@ -250,13 +254,13 @@ Merge of two trees
 Parent of tree root manifest should be flat manifest, and two for merge
 
   $ hg debugindex -m
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      80      0       0 40536115ed9e 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      80     -1       0 40536115ed9e 000000000000 000000000000
        1        80      83      0       1 f3376063c255 40536115ed9e 000000000000
-       2       163     103      0       2 5d9b9da231a2 40536115ed9e 000000000000
-       3       266      83      0       3 d17d663cbd8a 5d9b9da231a2 f3376063c255
-       4       349     132      4       4 c05a51345f86 f3376063c255 000000000000
-       5       481     110      4       5 82594b1f557d 5d9b9da231a2 f3376063c255
+       2       163      89      0       2 5d9b9da231a2 40536115ed9e 000000000000
+       3       252      83      2       3 d17d663cbd8a 5d9b9da231a2 f3376063c255
+       4       335     124      1       4 c05a51345f86 f3376063c255 000000000000
+       5       459     124      2       5 82594b1f557d 5d9b9da231a2 f3376063c255
 
 
 Status across flat/tree boundary should work
@@ -270,16 +274,16 @@ Status across flat/tree boundary should work
 Turning off treemanifest config has no effect
 
   $ hg debugindex .hg/store/meta/dir1/00manifest.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0     125      0       4 63c9c0557d24 000000000000 000000000000
-       1       125     109      0       5 23d12a1f6e0e 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0     125     -1       4 63c9c0557d24 000000000000 000000000000
+       1       125     131     -1       5 23d12a1f6e0e 000000000000 000000000000
   $ echo 2 > dir1/a
   $ hg --config experimental.treemanifest=False ci -qm 'modify dir1/a'
   $ hg debugindex .hg/store/meta/dir1/00manifest.i
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0     125      0       4 63c9c0557d24 000000000000 000000000000
-       1       125     109      0       5 23d12a1f6e0e 000000000000 000000000000
-       2       234      55      0       6 3cb2d87b4250 23d12a1f6e0e 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0     125     -1       4 63c9c0557d24 000000000000 000000000000
+       1       125     131     -1       5 23d12a1f6e0e 000000000000 000000000000
+       2       256      55      1       6 3cb2d87b4250 23d12a1f6e0e 000000000000
 
 Create deeper repo with tree manifests.
 
