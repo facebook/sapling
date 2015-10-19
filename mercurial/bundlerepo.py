@@ -277,22 +277,26 @@ class bundlerepository(localrepo.localrepository):
         self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
 
         if isinstance(self.bundle, bundle2.unbundle20):
-            cgparts = [part for part in self.bundle.iterparts()
-                       if (part.type == 'changegroup')
-                       and (part.params.get('version', '01')
-                            in changegroup.packermap)]
+            cgstream = None
+            for part in self.bundle.iterparts():
+                if part.type == 'changegroup':
+                    if cgstream is not None:
+                        raise NotImplementedError("can't process "
+                                                  "multiple changegroups")
+                    cgstream = part
+                    version = part.params.get('version', '01')
+                    if version not in changegroup.packermap:
+                        msg = _('Unsupported changegroup version: %s')
+                        raise error.Abort(msg % version)
+                    if self.bundle.compressed():
+                        cgstream = _writetempbundle(part.read,
+                                                    ".cg%sun" % version)
 
-            if not cgparts:
+            if cgstream is None:
                 raise error.Abort('No changegroups found')
-            version = cgparts[0].params.get('version', '01')
-            cgparts = [p for p in cgparts
-                       if p.params.get('version', '01') == version]
-            if len(cgparts) > 1:
-                raise NotImplementedError("Can't process multiple changegroups")
-            part = cgparts[0]
+            cgstream.seek(0)
 
-            part.seek(0)
-            self.bundle = changegroup.packermap[version][1](part, 'UN')
+            self.bundle = changegroup.packermap[version][1](cgstream, 'UN')
 
         elif self.bundle.compressed():
             f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')
