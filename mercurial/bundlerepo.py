@@ -237,6 +237,27 @@ class bundlephasecache(phases.phasecache):
 
 class bundlerepository(localrepo.localrepository):
     def __init__(self, ui, path, bundlename):
+        def _writetempbundle(read, suffix, header=''):
+            """Write a temporary file to disk
+
+            This is closure because we need to make sure this tracked by
+            self.tempfile for cleanup purposes."""
+            fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
+                                            suffix=".hg10un")
+            self.tempfile = temp
+            fptemp = os.fdopen(fdtemp, 'wb')
+
+            try:
+                fptemp.write(header)
+                while True:
+                    chunk = read(2**18)
+                    if not chunk:
+                        break
+                    fptemp.write(chunk)
+            finally:
+                fptemp.close()
+
+            return self.vfs.open(self.tempfile, mode="rb")
         self._tempparent = None
         try:
             localrepo.localrepository.__init__(self, ui, path)
@@ -255,22 +276,7 @@ class bundlerepository(localrepo.localrepository):
         f = util.posixfile(bundlename, "rb")
         self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
         if self.bundle.compressed():
-            fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
-                                            suffix=".hg10un")
-            self.tempfile = temp
-            fptemp = os.fdopen(fdtemp, 'wb')
-
-            try:
-                fptemp.write("HG10UN")
-                while True:
-                    chunk = self.bundle.read(2**18)
-                    if not chunk:
-                        break
-                    fptemp.write(chunk)
-            finally:
-                fptemp.close()
-
-            f = self.vfs.open(self.tempfile, mode="rb")
+            f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')
             self.bundlefile = self.bundle = exchange.readbundle(ui, f,
                                                                 bundlename,
                                                                 self.vfs)
