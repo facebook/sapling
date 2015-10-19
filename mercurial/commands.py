@@ -5312,6 +5312,7 @@ def pull(ui, repo, source="default", **opts):
                         "so a rev cannot be specified.")
                 raise error.Abort(err)
 
+        pullopargs.update(opts.get('opargs', {}))
         modheads = exchange.pull(repo, other, heads=revs,
                                  force=opts.get('force'),
                                  bookmarks=opts.get('bookmark', ()),
