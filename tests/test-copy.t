@@ -1,3 +1,9 @@
+# enable bundle2 in advance
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
 
   $ mkdir part1
   $ cd part1
@@ -87,7 +93,7 @@ this should show the rename information in the metadata
   copyrev: b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
 
   $ md5sum.py .hg/store/data/b.i
-  4999f120a3b88713bbefddd195cf5133  .hg/store/data/b.i
+  44913824c8f5890ae218f9829535922e  .hg/store/data/b.i
   $ hg cat b > bsum
   $ md5sum.py bsum
   60b725f10c9c85c70d97880dfe8191b3  bsum
