@@ -100,9 +100,9 @@ splice repo2 on repo1
   sorting...
   converting...
   2 addaandd
-  spliced in ['6d4c2037ddc2cb2627ac3a244ecce35283268f8e'] as parents of 527cdedf31fbd5ea708aa14eeecf53d4676f38db
+  spliced in 6d4c2037ddc2cb2627ac3a244ecce35283268f8e as parents of 527cdedf31fbd5ea708aa14eeecf53d4676f38db
   1 changed
-  spliced in ['e55c719b85b60e5102fac26110ba626e7cb6b7dc', '527cdedf31fbd5ea708aa14eeecf53d4676f38db'] as parents of e4ea00df91897da3079a10fab658c1eddba6617b
+  spliced in e55c719b85b60e5102fac26110ba626e7cb6b7dc and 527cdedf31fbd5ea708aa14eeecf53d4676f38db as parents of e4ea00df91897da3079a10fab658c1eddba6617b
   0 adde
   $ glog -R target1
   o  5:16bc847b02aa "adde" files: e
@@ -161,7 +161,7 @@ Test regular conversion
   2 changea
   1 addb
   0 changeaagain
-  spliced in ['717d54d67e6c31fd75ffef2ff3042bdd98418437', '102a90ea7b4a3361e4082ed620918c261189a36a'] as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
+  spliced in 717d54d67e6c31fd75ffef2ff3042bdd98418437 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
   $ glog -R ordered-hg1
   o    3:4cb04b9afbf2 "changeaagain" files: a
   |\
@@ -199,7 +199,7 @@ and destination identifiers. Test unknown splicemap target.
   sorting...
   converting...
   0 changeaagain
-  spliced in ['717d54d67e6c31fd75ffef2ff3042bdd98418437', '102a90ea7b4a3361e4082ed620918c261189a36a'] as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
+  spliced in 717d54d67e6c31fd75ffef2ff3042bdd98418437 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 7c364e7fa7d70ae525610c016317ed717b519d97
   $ glog -R ordered-hg2
   o    3:4cb04b9afbf2 "changeaagain" files: a
   |\

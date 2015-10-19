@@ -440,7 +440,7 @@ class converter(object):
         try:
             parents = self.splicemap[rev]
             self.ui.status(_('spliced in %s as parents of %s\n') %
-                           (parents, rev))
+                           (_(' and ').join(parents), rev))
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
