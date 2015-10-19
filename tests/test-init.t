@@ -1,5 +1,12 @@
 This test tries to exercise the ssh functionality with a dummy script
 
+(enable general delta early)
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
+
   $ checknewrepo()
   > {
   >    name=$1
@@ -20,6 +27,7 @@ creating 'local'
   00changelog.i created
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
   $ echo this > local/foo
@@ -55,6 +63,7 @@ creating repo with format.usestore=false
 
   $ hg --config format.usestore=false init old
   $ checknewrepo old
+  generaldelta
   revlogv1
 
 creating repo with format.usefncache=false
@@ -63,6 +72,7 @@ creating repo with format.usefncache=false
   $ checknewrepo old2
   store created
   00changelog.i created
+  generaldelta
   revlogv1
   store
 
@@ -72,6 +82,18 @@ creating repo with format.dotencode=false
   $ checknewrepo old3
   store created
   00changelog.i created
+  fncache
+  generaldelta
+  revlogv1
+  store
+
+creating repo with format.dotencode=false
+
+  $ hg --config format.generaldelta=false --config format.usegeneraldelta=false init old4
+  $ checknewrepo old4
+  store created
+  00changelog.i created
+  dotencode
   fncache
   revlogv1
   store
@@ -186,6 +208,7 @@ creating 'local/sub/repo'
   00changelog.i created
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
 
@@ -203,6 +226,7 @@ init should (for consistency with clone) expand the url
   00changelog.i created
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
 
@@ -216,6 +240,7 @@ verify that clone also expand urls
   00changelog.i created
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
 
