@@ -44,9 +44,10 @@ def expush(orig, repo, remote, *args, **kwargs):
     return res
 
 def expushop(orig, pushop, repo, remote, force=False, revs=None,
-             newbranch=False, bookmarks=(), to=None, **kwargs):
+             newbranch=False, bookmarks=(), to=None, delete=None, **kwargs):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
     pushop.to = to
+    pushop.delete = delete
 
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
@@ -531,18 +532,17 @@ def exlog(orig, ui, repo, *args, **opts):
         repo.__setattr__('_unblockhiddenremotenames', False)
     return res
 
-_delete = None
-
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
     force = pushop.force
 
-    if _delete:
-        if _delete not in remotemarks:
+    if pushop.delete:
+        if pushop.delete not in remotemarks:
             raise util.Abort(_('remote bookmark %s does not exist') %
-                             _delete)
-        pushop.outbookmarks.append([_delete, remotemarks[_delete], ''])
+                             pushop.delete)
+        pushop.outbookmarks.append([pushop.delete, remotemarks[pushop.delete],
+                                    ''])
         return exchange._pushdiscoverybookmarks(pushop)
 
     if not pushop.to:
@@ -665,13 +665,12 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
-    global _delete
     opargs = {
+        'delete': opts.get('delete'),
         'to': opts.get('to'),
     }
 
-    _delete = opts.get('delete')
-    if _delete:
+    if opargs['delete']:
         flag = None
         for f in ('to', 'bookmark', 'branch', 'rev'):
             if opts.get(f):
