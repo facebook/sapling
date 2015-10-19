@@ -212,9 +212,7 @@ Rebasing C onto H detaching from B and collapsing:
   
   $ hg rebase --collapse -s 2 -d 7
   rebasing 2:5fddd98957c8 "C"
-  note: rebase of 2:5fddd98957c8 created no changes to commit
   rebasing 3:32af7686d403 "D"
-  note: rebase of 3:32af7686d403 created no changes to commit
   saved backup bundle to $TESTTMP/a4/.hg/strip-backup/5fddd98957c8-f9244fa1-backup.hg (glob)
 
   $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
@@ -341,11 +339,8 @@ Verify that target is not selected as external rev (issue3085)
 
   $ hg rebase -s 8 -d 7 --collapse --config ui.merge=internal:other
   rebasing 8:9790e768172d "I"
-  note: rebase of 8:9790e768172d created no changes to commit
   rebasing 9:5d7b11f5fb97 "Merge"
-  note: rebase of 9:5d7b11f5fb97 created no changes to commit
   rebasing 10:9427d4d5af81 "J" (tip)
-  note: rebase of 10:9427d4d5af81 created no changes to commit
   saved backup bundle to $TESTTMP/a6/.hg/strip-backup/9790e768172d-c2111e9d-backup.hg (glob)
 
   $ hg tglog

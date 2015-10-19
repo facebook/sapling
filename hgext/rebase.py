@@ -466,9 +466,9 @@ def rebase(ui, repo, **opts):
                     state[rev] = repo[newnode].rev()
                     ui.debug('rebased as %s\n' % short(newnode))
                 else:
-                    ui.warn(_('note: rebase of %d:%s created no changes '
-                              'to commit\n') % (rev, ctx))
                     if not collapsef:
+                        ui.warn(_('note: rebase of %d:%s created no changes '
+                                  'to commit\n') % (rev, ctx))
                         skipped.add(rev)
                     state[rev] = p1
                     ui.debug('next revision set to %s\n' % p1)

@@ -259,11 +259,8 @@ collapse rebase
   $ cd collapse
   $ hg rebase  -s 42ccdea3bb16 -d eea13746799a --collapse
   rebasing 1:42ccdea3bb16 "B"
-  note: rebase of 1:42ccdea3bb16 created no changes to commit
   rebasing 2:5fddd98957c8 "C"
-  note: rebase of 2:5fddd98957c8 created no changes to commit
   rebasing 3:32af7686d403 "D"
-  note: rebase of 3:32af7686d403 created no changes to commit
   $ hg log -G
   o  8:4dc2197e807b Collapsed revision
   |
