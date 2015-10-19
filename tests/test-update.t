@@ -47,3 +47,17 @@ Testing update -B feature
   $ hg update -B foo bar
   abort: bookmark 'foo' already exists
   [255]
+
+Test that a bare update no long moves the active bookmark
+
+  $ hg update
+  updating to active bookmark bar
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg log -G -T '{rev} {bookmarks} {remotebookmarks}'
+  o  2
+  |
+  @  1 bar foo
+  |
+  o  0
+  

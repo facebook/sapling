@@ -38,6 +38,21 @@ from mercurial.node import hex, short, bin
 from hgext import schemes
 from hgext.convert import hg as converthg
 
+def exbookcalcupdate(orig, ui, repo, checkout):
+    '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
+    check out and where to move the active bookmark from, if needed.'''
+    movemarkfrom = None
+    if checkout is None:
+        activemark = bmactive(repo)
+        if not activemark:
+            # if no active bookmark then keep using the old code path for now
+            return orig(ui, repo, checkout)
+        if bookmarks.isactivewdirparent(repo):
+            movemarkfrom = repo['.'].node()
+        ui.status(_("updating to active bookmark %s\n") % activemark)
+        checkout = activemark
+    return (checkout, movemarkfrom)
+
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote)
@@ -430,6 +445,7 @@ def expaths(orig, ui, repo, *args, **opts):
     return orig(ui, repo, *args)
 
 def extsetup(ui):
+    extensions.wrapfunction(bookmarks, 'calculateupdate', exbookcalcupdate)
     extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
