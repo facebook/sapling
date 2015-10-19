@@ -275,11 +275,6 @@ class bundlerepository(localrepo.localrepository):
         self.tempfile = None
         f = util.posixfile(bundlename, "rb")
         self.bundlefile = self.bundle = exchange.readbundle(ui, f, bundlename)
-        if self.bundle.compressed():
-            f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')
-            self.bundlefile = self.bundle = exchange.readbundle(ui, f,
-                                                                bundlename,
-                                                                self.vfs)
 
         if isinstance(self.bundle, bundle2.unbundle20):
             cgparts = [part for part in self.bundle.iterparts()
@@ -298,6 +293,12 @@ class bundlerepository(localrepo.localrepository):
 
             part.seek(0)
             self.bundle = changegroup.packermap[version][1](part, 'UN')
+
+        elif self.bundle.compressed():
+            f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')
+            self.bundlefile = self.bundle = exchange.readbundle(ui, f,
+                                                                bundlename,
+                                                                self.vfs)
 
         # dict with the mapping 'filename' -> position in the bundle
         self.bundlefilespos = {}
