@@ -687,13 +687,12 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         return orig(ui, repo, dest, opargs=opargs, **opts)
 
     revs = opts.get('rev')
-    to = opts.get('to')
 
     paths = dict((path, url) for path, url in ui.configitems('paths'))
     revrenames = dict((v, k) for k, v in _getrenames(ui).iteritems())
 
     origdest = dest
-    if not dest and not to and not revs and _tracking(ui):
+    if not dest and not opargs['to'] and not revs and _tracking(ui):
         current = bmactive(repo)
         tracking = _readtracking(repo)
         # print "tracking on %s %s" % (current, tracking)
@@ -704,8 +703,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             path = revrenames.get(path, path)
             if book and path in paths:
                 dest = path
-                to = book
-                opargs['to'] = to
+                opargs['to'] = book
 
     # un-rename passed path
     dest = revrenames.get(dest, dest)
@@ -724,7 +722,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     except KeyError:
         pass
 
-    if not to:
+    if not opargs['to']:
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
@@ -768,14 +766,14 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     # all checks pass, go for it!
     node = repo.lookup(rev)
     ui.status(_('pushing rev %s to destination %s bookmark %s\n') % (
-              short(node), dest, to))
+              short(node), dest, opargs['to']))
 
     # TODO: subrepo stuff
 
     force = opts.get('force')
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
-    pushop = exchange.push(repo, other, force, revs=[node], bookmarks=(to,),
-                           opargs=opargs)
+    pushop = exchange.push(repo, other, force, revs=[node],
+                           bookmarks=(opargs['to'],), opargs=opargs)
 
     result = not pushop.cgresult
     if pushop.bkresult is not None:
