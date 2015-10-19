@@ -662,7 +662,7 @@ class dirstate(object):
         filename = self._filename
         if tr is False: # not explicitly specified
             if (self._ui.configbool('devel', 'all-warnings')
-                or self.ui.configbool('devel', 'check-dirstate-write')):
+                or self._ui.configbool('devel', 'check-dirstate-write')):
                 self._ui.develwarn('use dirstate.write with '
                                    'repo.currenttransaction()')
 
