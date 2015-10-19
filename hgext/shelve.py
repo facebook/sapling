@@ -27,7 +27,7 @@ from mercurial.i18n import _
 from mercurial.node import nullid, nullrev, bin, hex
 from mercurial import changegroup, cmdutil, scmutil, phases, commands
 from mercurial import error, hg, mdiff, merge, patch, repair, util
-from mercurial import templatefilters, exchange, bundlerepo
+from mercurial import templatefilters, exchange, bundlerepo, bundle2
 from mercurial import lock as lockmod
 from hgext import rebase
 import errno
@@ -96,9 +96,15 @@ class shelvedfile(object):
         fp = self.opener()
         try:
             gen = exchange.readbundle(self.repo.ui, fp, self.fname, self.vfs)
-            gen.apply(self.repo, 'unshelve',
-                      'bundle:' + self.vfs.join(self.fname),
-                      targetphase=phases.secret)
+            if not isinstance(gen, bundle2.unbundle20):
+                gen.apply(self.repo, 'unshelve',
+                          'bundle:' + self.vfs.join(self.fname),
+                          targetphase=phases.secret)
+            if isinstance(gen, bundle2.unbundle20):
+                bundle2.applybundle(self.repo, gen,
+                                    self.repo.currenttransaction(),
+                                    source='unshelve',
+                                    url='bundle:' + self.vfs.join(self.fname))
         finally:
             fp.close()
 
