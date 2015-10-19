@@ -68,7 +68,7 @@ def recordbookmarks(orig, self, fp):
             repo.reflog.addentry(bookmarktype, mark, oldvalue, value)
     return orig(self, fp)
 
-def recorddirstateparents(orig, self):
+def recorddirstateparents(orig, self, tr=False):
     """Records all dirstate parent changes to the reflog."""
     oldparents = [nullid, nullid]
     try:
