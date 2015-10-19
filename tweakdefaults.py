@@ -18,7 +18,7 @@ This extension changes defaults to be more user friendly.
 
 """
 
-from mercurial import util, cmdutil, commands, hg, scmutil
+from mercurial import util, cmdutil, commands, extensions, hg, scmutil
 from mercurial import bookmarks
 from mercurial.extensions import wrapcommand, _order
 import mercurial.extensions
@@ -68,6 +68,9 @@ def extsetup(ui):
     wrapcommand(commands.table, 'tag', tagcmd)
     wrapcommand(commands.table, 'tags', tagscmd)
 
+    # Tweak Behaviours
+    tweakbehaviors(ui)
+
 def tweakorder():
     """
     Tweakdefaults generally should load first; other extensions may modify
@@ -82,6 +85,28 @@ def tweakorder():
     order.remove('tweakdefaults')
     order.insert(0, 'tweakdefaults')
     mercurial.extensions._order = order
+
+def tweakbehaviors(ui):
+    """Tweak Behaviors
+
+    Right now this only tweaks the rebase behavior such that the default
+    exit status code for a noop rebase becomes 0 instead of 1.
+
+    In future we may add or modify other behaviours here.
+    """
+
+    # noop rebase returns 0
+    def _nothingtorebase(orig, *args, **kwargs):
+        return 0
+
+    if ui.config("tweakdefaults", "nooprebase", False):
+        try:
+            rebase = extensions.find("rebase")
+            extensions.wrapfunction(
+                rebase, "_nothingtorebase", _nothingtorebase
+            )
+        except KeyError:
+            pass
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
@@ -302,7 +327,7 @@ def rollbackcmd(orig, ui, repo, **opts):
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
     """
-    Allowing to disable tags 
+    Allowing to disable tags
     """
     message = ui.config('tweakdefaults', 'tagmessage',
             _('new tags are disabled in this repository'))

@@ -95,6 +95,11 @@ Empty rebase fails
   rebasing 1:7b4cb4e1674c "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7b4cb4e1674c-f22b5b1e-backup.hg (glob)
 
+Empty rebase with nooprebase=True succeeds
+
+  $ hg rebase --config 'tweakdefaults.nooprebase=True' -s tip -d "tip^1"
+  nothing to rebase
+
 Rebase fast forwards bookmark
 
   $ hg book -r 1 mybook
@@ -106,6 +111,7 @@ Rebase fast forwards bookmark
   
   $ hg rebase -d 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  devel-warn: bookmarks write with no wlock at: * (glob)
 
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   @  2 b mybook
@@ -128,6 +134,7 @@ Rebase works with hyphens
   
   $ hg rebase -d hyphen-dest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  devel-warn: bookmarks write with no wlock at: * (glob)
 
   $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
   @  2 b hyphen-book hyphen-dest mybook
