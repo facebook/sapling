@@ -160,6 +160,7 @@ import errno
 import os
 import sys
 
+from mercurial import bundle2
 from mercurial import cmdutil
 from mercurial import discovery
 from mercurial import error
@@ -822,7 +823,18 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 backupfile = repo.join(state.backupfile)
                 f = hg.openpath(ui, backupfile)
                 gen = exchange.readbundle(ui, f, backupfile)
-                gen.apply(repo, 'histedit', 'bundle:' + backupfile)
+                tr = repo.transaction('histedit.abort')
+                try:
+                    if not isinstance(gen, bundle2.unbundle20):
+                        gen.apply(repo, 'histedit', 'bundle:' + backupfile)
+                    if isinstance(gen, bundle2.unbundle20):
+                        bundle2.applybundle(repo, gen, tr,
+                                            source='histedit',
+                                            url='bundle:' + backupfile)
+                    tr.close()
+                finally:
+                    tr.release()
+
                 os.remove(backupfile)
 
             # check whether we should update away
