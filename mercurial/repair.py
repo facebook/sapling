@@ -192,7 +192,8 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 tr.hookargs = {'source': 'strip',
                                'url': 'bundle:' + vfs.join(chgrpfile)}
                 try:
-                    bundle2.processbundle(repo, gen, lambda: tr)
+                    bundle2.applybundle(repo, gen, tr, source='strip',
+                                        url='bundle:' + vfs.join(chgrpfile))
                     tr.close()
                 finally:
                     tr.release()
