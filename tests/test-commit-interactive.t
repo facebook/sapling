@@ -153,7 +153,7 @@ Delete empty file
 
 Add binary file
 
-  $ hg bundle --base -2 tip.bundle
+  $ hg bundle --type v1 --base -2 tip.bundle
   1 changesets found
   $ hg add tip.bundle
   $ hg commit -i -d '4 0' -m binary<<EOF
@@ -178,7 +178,7 @@ Add binary file
 
 Change binary file
 
-  $ hg bundle --base -2 tip.bundle
+  $ hg bundle --base -2 --type v1 tip.bundle
   1 changesets found
   $ hg commit -i -d '5 0' -m binary-change<<EOF
   > y
@@ -202,7 +202,7 @@ Change binary file
 Rename and change binary file
 
   $ hg mv tip.bundle top.bundle
-  $ hg bundle --base -2 top.bundle
+  $ hg bundle --base -2 --type v1 top.bundle
   1 changesets found
   $ hg commit -i -d '6 0' -m binary-change-rename<<EOF
   > y
