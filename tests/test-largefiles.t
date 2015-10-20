@@ -1850,7 +1850,7 @@ the add and the remove is committed.
   .hglf/normal3
   .hglf/sub2/large6
   .hglf/sub2/large7
-  normal3
+  large4-renamed
   sub/normal4
 
   $ cd ..
