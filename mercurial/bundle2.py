@@ -302,6 +302,10 @@ def _notransaction():
     to be created"""
     raise TransactionUnavailable()
 
+def applybundle(repo, unbundler, tr, op=None):
+    # transform me into unbundler.apply() as soon as the freeze is lifted
+    return processbundle(repo, unbundler, lambda: tr, op=op)
+
 def processbundle(repo, unbundler, transactiongetter=None, op=None):
     """This function process a bundle, apply effect to/from a repo
 
