@@ -31,7 +31,7 @@ test preparation
   $ . "$TESTDIR/cgienv"
   $ REQUEST_METHOD="POST"; export REQUEST_METHOD
   $ CONTENT_TYPE="application/octet-stream"; export CONTENT_TYPE
-  $ hg bundle --all bundle.hg
+  $ hg bundle --type v1 --all bundle.hg
   1 changesets found
   $ CONTENT_LENGTH=279; export CONTENT_LENGTH;
 
