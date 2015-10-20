@@ -1,3 +1,9 @@
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
+
 Setting up test
 
   $ hg init test
@@ -260,15 +266,15 @@ Cannot produce streaming clone bundles with "hg bundle"
 packed1 is produced properly
 
   $ hg -R test debugcreatestreamclonebundle packed.hg
-  writing 2608 bytes for 6 files
-  bundle requirements: revlogv1
+  writing 2663 bytes for 6 files
+  bundle requirements: generaldelta, revlogv1
 
   $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2758, sha1=864c1c7b490bac9f2950ef5a660668378ac0524e
+  packed.hg: size=2826, sha1=e139f97692a142b19cdcff64a69697d5307ce6d4
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 06 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 0a 30 00 09 72 65 76 6c 6f 67 76 31 |.....0..revlogv1|
-  0020: 00 64 61 74 61 2f 61 64 69 66 66 65 72 65 6e 74 |.data/adifferent|
-  0030: 66 69 6c 65 2e 69 00 31 33 39 0a 00 01 00 01 00 |file.i.139......|
+  0010: 00 00 00 00 0a 67 00 16 67 65 6e 65 72 61 6c 64 |.....g..generald|
+  0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
+  0030: 74 61 2f 61 64 69 66 66 65 72 65 6e 74 66 69 6c |ta/adifferentfil|
 
 generaldelta requirement is listed in stream clone bundles
 
@@ -299,8 +305,8 @@ Unpacking packed1 bundles with "hg unbundle" isn't allowed
 packed1 can be consumed from debug command
 
   $ hg -R packed debugapplystreamclonebundle packed.hg
-  6 files to transfer, 2.55 KB of data
-  transferred 2.55 KB in *.* seconds (*) (glob)
+  6 files to transfer, 2.60 KB of data
+  transferred 2.60 KB in *.* seconds (* */sec) (glob)
 
 Does not work on non-empty repo
 
@@ -695,6 +701,8 @@ bundle single branch
   list of changesets:
   1a38c1b849e8b70c756d2d80b0b9a3ac0b7ea11a
   057f4db07f61970e1c11e83be79e9d08adc4dc31
+  bundle2-output-bundle: "HG20", (1 params) 1 parts total
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   bundling: 1/2 changesets (50.00%)
   bundling: 2/2 changesets (100.00%)
   bundling: 1/2 manifests (50.00%)
