@@ -1,4 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > usegeneraldelta=yes
   > [extensions]
   > rebase=
   > 
@@ -275,13 +277,19 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   list of changesets:
   e31216eec445e44352c5f01588856059466a24c9
   2f2496ddf49d69b5ef23ad8cf9fb2e0e4faf0ac2
+  bundle2-output-bundle: "HG20", (1 params) 1 parts total
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   saved backup bundle to $TESTTMP/issue4041/.hg/strip-backup/e31216eec445-15f7a814-backup.hg (glob)
   3 changesets found
   list of changesets:
   4c9fbe56a16f30c0d5dcc40ec1a97bbe3325209c
   19c888675e133ab5dff84516926a65672eaf04d9
   2a7f09cac94c7f4b73ebd5cd1a62d3b2e8e336bf
+  bundle2-output-bundle: "HG20", 1 parts total
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   adding branch
+  bundle2-input-bundle: with-transaction
+  bundle2-input-part: "changegroup" (params: 1 mandatory) supported
   adding changesets
   add changeset 4c9fbe56a16f
   add changeset 19c888675e13
@@ -290,6 +298,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   adding file changes
   adding f1.txt revisions
   added 2 changesets with 2 changes to 1 files
+  bundle2-input-part: total payload size 1713
+  bundle2-input-bundle: 0 parts total
   invalid branchheads cache (served): tip differs
   rebase completed
   updating the branch cache
