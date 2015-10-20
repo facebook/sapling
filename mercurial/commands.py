@@ -2683,7 +2683,7 @@ def debuglocks(ui, repo, **opts):
           _('record parent information for the precursor')),
          ('r', 'rev', [], _('display markers relevant to REV')),
         ] + commitopts2,
-         _('[OBSOLETED [REPLACEMENT] [REPL... ]'))
+         _('[OBSOLETED [REPLACEMENT ...]]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
     """create arbitrary obsolete marker
 
