@@ -1,3 +1,8 @@
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
+
   $ hg init
 
 Setup:
@@ -115,15 +120,15 @@ No changes, just a different message:
   stripping amended changeset 74609c7f506e
   1 changesets found
   uncompressed size of bundle content:
-       250 (changelog)
-       143 (manifests)
-       109  a
+       270 (changelog)
+       163 (manifests)
+       129  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/74609c7f506e-1bfde511-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       246 (changelog)
-       143 (manifests)
-       109  a
+       266 (changelog)
+       163 (manifests)
+       129  a
   adding branch
   adding changesets
   adding manifests
@@ -259,15 +264,15 @@ then, test editing custom commit message
   stripping amended changeset 5f357c7560ab
   1 changesets found
   uncompressed size of bundle content:
-       238 (changelog)
-       143 (manifests)
-       111  a
+       258 (changelog)
+       163 (manifests)
+       131  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/5f357c7560ab-e7c84ade-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       246 (changelog)
-       143 (manifests)
-       111  a
+       266 (changelog)
+       163 (manifests)
+       131  a
   adding branch
   adding changesets
   adding manifests
@@ -302,15 +307,15 @@ Same, but with changes in working dir (different code path):
   stripping amended changeset 7ab3bf440b54
   2 changesets found
   uncompressed size of bundle content:
-       450 (changelog)
-       282 (manifests)
-       209  a
+       490 (changelog)
+       322 (manifests)
+       249  a
   saved backup bundle to $TESTTMP/.hg/strip-backup/7ab3bf440b54-8e3b5088-amend-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       246 (changelog)
-       143 (manifests)
-       113  a
+       266 (changelog)
+       163 (manifests)
+       133  a
   adding branch
   adding changesets
   adding manifests
@@ -1138,14 +1143,14 @@ directory)
   R olddirname/commonfile.py
   R olddirname/newfile.py
   $ hg debugindex newdirname/newfile.py
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      88      0       3 34a4d536c0c0 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      88     -1       3 34a4d536c0c0 000000000000 000000000000
 
   $ echo a >> newdirname/commonfile.py
   $ hg ci --amend -m bug
   $ hg debugrename newdirname/newfile.py
   newdirname/newfile.py renamed from olddirname/newfile.py:690b295714aed510803d3020da9c70fca8336def (glob)
   $ hg debugindex newdirname/newfile.py
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      88      0       3 34a4d536c0c0 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      88     -1       3 34a4d536c0c0 000000000000 000000000000
 
