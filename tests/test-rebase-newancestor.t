@@ -1,4 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
+  > [format]
+  > usegeneraldelta=yes
   > [extensions]
   > rebase=
   > 
@@ -298,15 +300,15 @@ rebase of merge of ancestors
   rebase merging completed
   1 changesets found
   uncompressed size of bundle content:
-       193 (changelog)
-       196 (manifests)
-       162  other
+       213 (changelog)
+       216 (manifests)
+       182  other
   saved backup bundle to $TESTTMP/parentorder/.hg/strip-backup/4c5f12f25ebe-f46990e5-backup.hg (glob)
   1 changesets found
   uncompressed size of bundle content:
-       252 (changelog)
-       147 (manifests)
-       162  other
+       272 (changelog)
+       167 (manifests)
+       182  other
   adding branch
   adding changesets
   adding manifests
