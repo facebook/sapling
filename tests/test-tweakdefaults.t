@@ -302,3 +302,33 @@ Test tweaked tag command
 
   $ hg tags --config tweakdefaults.tagsmessage='testing' | head -n0
   testing
+
+Test reuse message flag by taking message from previous commit
+  $ touch afile
+  $ hg add afile
+  $ hg commit -M 2
+  $ hg log --template {desc} -r .
+  b (no-eol)
+  $ echo 'canada rocks, eh?' > afile
+  $ hg commit -M . -m 'this command will fail'
+  abort: --reuse-message and --message are mutually exclusive
+  [255]
+  $ echo 'Super duper commit message' > ../commitmessagefile
+  $ hg commit -M . -l ../commitmessagefile
+  abort: --reuse-message and --logfile are mutually exclusive
+  [255]
+  $ hg commit -M thisrevsetdoesnotexist
+  abort: unknown revision 'thisrevsetdoesnotexist'!
+  [255]
+  $ HGEDITOR=cat hg commit -M . -e
+  b
+  
+  
+  HG: Enter commit message.  Lines beginning with 'HG:' are removed.
+  HG: Leave message empty to abort commit.
+  HG: --
+  HG: user: test
+  HG: branch 'foo'
+  HG: bookmark 'hyphen-book'
+  HG: changed dir1/foo/afile
+

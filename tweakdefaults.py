@@ -44,6 +44,11 @@ def extsetup(ui):
     options.insert(3, ('n', 'nocheck', None,
         _('update even with outstanding changes')))
 
+    entry = wrapcommand(commands.table, 'commit', commitcmd)
+    options = entry[1]
+    options.insert(9, ('M', 'reuse-message', '',
+        _('reuse commit message from REV'), _('REV')))
+
     wrapcommand(rebase.cmdtable, 'rebase', _rebase)
 
     entry = wrapcommand(commands.table, 'log', log)
@@ -107,6 +112,21 @@ def tweakbehaviors(ui):
             )
         except KeyError:
             pass
+
+def commitcmd(orig, ui, repo, *pats, **opts):
+    rev = opts.get('reuse_message')
+
+    invalidargs = ['message', 'logfile']
+    currentinvalidargs = [ia for ia in invalidargs if opts.get(ia) != '']
+
+    if rev != '' and currentinvalidargs:
+        raise util.Abort(_('--reuse-message and --%s are '
+            'mutually exclusive') % currentinvalidargs[0])
+
+    if rev != '':
+       opts['message'] = repo[rev].description()
+
+    return orig(ui, repo, *pats, **opts)
 
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
