@@ -302,9 +302,11 @@ def _notransaction():
     to be created"""
     raise TransactionUnavailable()
 
-def applybundle(repo, unbundler, tr, op=None):
+def applybundle(repo, unbundler, tr, source=None, op=None):
     # transform me into unbundler.apply() as soon as the freeze is lifted
     tr.hookargs['bundle2'] = '1'
+    if source is not None and 'source' not in tr.hookargs:
+        tr.hookargs['source'] = source
     return processbundle(repo, unbundler, lambda: tr, op=op)
 
 def processbundle(repo, unbundler, transactiongetter=None, op=None):
