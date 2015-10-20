@@ -6566,7 +6566,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             if isinstance(gen, bundle2.unbundle20):
                 tr = repo.transaction('unbundle')
                 try:
-                    op = bundle2.applybundle(repo, gen, tr)
+                    op = bundle2.applybundle(repo, gen, tr, source='unbundle')
                     tr.close()
                 except error.BundleUnknownFeatureError as exc:
                     raise error.Abort(_('%s: unknown bundle feature, %s')
