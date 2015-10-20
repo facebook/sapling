@@ -1,3 +1,5 @@
+  $ echo "[format]" >> $HGRCPATH
+  $ echo "usegeneraldelta=yes" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "strip=" >> $HGRCPATH
 
@@ -208,7 +210,9 @@
   summary:     b
   
   $ hg debugbundle .hg/strip-backup/*
-  264128213d290d868c54642d13aeaa3675551a78
+  Stream params: {'Compression': 'BZ'}
+  changegroup -- "{'version': '02'}"
+      264128213d290d868c54642d13aeaa3675551a78
   $ hg pull .hg/strip-backup/*
   pulling from .hg/strip-backup/264128213d29-0b39d6bf-backup.hg
   searching for changes
@@ -751,6 +755,8 @@ check strip behavior
   list of changesets:
   6625a516847449b6f0fa3737b9ba56e9f0f3032c
   d8db9d1372214336d2b5570f20ee468d2c72fa8b
+  bundle2-output-bundle: "HG20", (1 params) 1 parts total
+  bundle2-output-part: "changegroup" (params: 1 mandatory) streamed payload
   saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/6625a5168474-345bb43d-backup.hg (glob)
   invalid branchheads cache (served): tip differs
   truncating cache/rbc-revs-v1 to 24
