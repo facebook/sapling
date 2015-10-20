@@ -23,6 +23,8 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   >     print l,
   > EOF
   $ FILTERBOUNDARY="python `pwd`/prune-blank-after-boundary.py"
+  $ echo "[format]" >> $HGRCPATH
+  $ echo "generaldelta = accept" >> $HGRCPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "patchbomb=" >> $HGRCPATH
 
@@ -347,21 +349,22 @@ test bundle and description:
   Content-Disposition: attachment; filename="bundle.hg"
   Content-Transfer-Encoding: base64
   
-  SEcxMEJaaDkxQVkmU1nvR7I3AAAN////lFYQWj1/4HwRkdC/AywIAk0E4pfoSIIIgQCgGEQOcLAA
-  2tA1VPyp4mkeoG0EaaPU0GTT1GjRiNPIg9CZGBqZ6UbU9J+KFU09DNUaGgAAAAAANAGgAAAAA1U8
-  oGgAADQGgAANNANAAAAAAZipFLz3XoakCEQB3PVPyHJVi1iYkAAKQAZQGpQGZESInRnCFMqLDla2
-  Bx3qfRQeA2N4lnzKkAmP8kR2asievLLXXebVU8Vg4iEBqcJNJAxIapSU6SM4888ZAciRG6MYAIEE
-  SlIBpFisgGkyRjX//TMtfcUAEsGu56+YnE1OlTZmzKm8BSu2rvo4rHAYYaadIFFuTy0LYgIkgLVD
-  sgVa2F19D1tx9+hgbAygLgQwaIqcDdgA4BjQgIiz/AEP72++llgDKhKducqodGE4B0ETqF3JFOFC
-  Q70eyNw=
-  --===*=-- (glob)
+  SEcyMAAAAA5Db21wcmVzc2lvbj1CWkJaaDkxQVkmU1lCZFwPAAAKf//7nFYSWD1/4H7R09C/I70I
+  Ak0E4peoSIYIgQCgGUQOcLABGY2hqoAAAaBMTTAAAahgTCZoAAAAAMQaqn5GmapojQ00DEGI/VGJ
+  kDAJoGTDUAAyM0QaAEqalPTUaMhoyDIDR6IxAGEGmgAehMRhDRsoyB6TYTC8JyLN+jTGqitRAgRJ
+  b3SRlhd8/+VxlAUqAilLoKPEEyxFQkaEGo+DzItFeNiFAo8NMMweVtvXJFIMhjoKC18DeYwjLKBz
+  wrMcs86qJrctDNJorwBMuLcqvTVWHh1IlsIaaaYSUIP2IZsogT1+pSSZS+bSTJrgfKsO9go/f0HF
+  uW4Yr2vXpxDreOgSIAdK/xC8Yay48SLpxIuqc/BZ6rVZCgG21rr0zhCaEgXOTqNaYEvANvg0B0Qo
+  dgtqAs1FDcZgzYitwJh6ZAG0C4mA7FPrp9b7h0h/A44Xgd+0it1gvF0mFE/CCPwymXS+OisOOCAF
+  mDUDAC1pBvsXckU4UJBCZFwP
+  --===============*==-- (glob)
 
 with a specific bundle type
 (binary part must be different)
 
   $ hg email --date '1970-1-1 0:3' -n -f quux -t foo \
   >  -c bar -s test -r tip -b --desc description \
-  > --config patchbomb.bundletype=gzip | $FILTERBOUNDARY
+  > --config patchbomb.bundletype=gzip-v1 | $FILTERBOUNDARY
   searching for changes
   1 changesets found
   
