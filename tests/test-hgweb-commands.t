@@ -2098,10 +2098,34 @@ Graph json escape of multibyte character
 
 capabilities
 
-  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities'; echo
+(plain version to check the format)
+
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | dd ibs=75 count=1 2> /dev/null; echo
   200 Script output follows
   
-  lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream-preferred stream bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1*%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024 (glob)
+  lookup changegroupsubset branchmap pushkey known
+
+(spread version to check the content)
+
+  $ get-with-headers.py 127.0.0.1:$HGPORT '?cmd=capabilities' | tr ' ' '\n'; echo
+  200
+  Script
+  output
+  follows
+  
+  lookup
+  changegroupsubset
+  branchmap
+  pushkey
+  known
+  getbundle
+  unbundlehash
+  batch
+  stream-preferred
+  stream
+  bundle2=HG20%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps
+  unbundle=HG10GZ,HG10BZ,HG10UN
+  httpheader=1024
 
 heads
 
