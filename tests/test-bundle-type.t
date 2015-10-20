@@ -1,3 +1,9 @@
+
+  $ cat << EOF >> $HGRCPATH
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
+
 bundle w/o type option
 
   $ hg init t1
@@ -43,20 +49,26 @@ test bundle types
   % test bundle type None
   searching for changes
   1 changesets found
-  HG10UN
-  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  HG20\x00\x00 (esc)
+  Stream params: {}
+  changegroup -- "{'version': '02'}"
+      c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   
   % test bundle type bzip2
   searching for changes
   1 changesets found
-  HG10BZ
-  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  HG20\x00\x00 (esc)
+  Stream params: {'Compression': 'BZ'}
+  changegroup -- "{'version': '02'}"
+      c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   
   % test bundle type gzip
   searching for changes
   1 changesets found
-  HG10GZ
-  c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  HG20\x00\x00 (esc)
+  Stream params: {'Compression': 'GZ'}
+  changegroup -- "{'version': '02'}"
+      c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
   
   % test bundle type none-v2
   searching for changes
