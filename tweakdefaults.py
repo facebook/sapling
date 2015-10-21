@@ -24,7 +24,7 @@ from mercurial.extensions import wrapcommand, _order
 import mercurial.extensions
 from mercurial.i18n import _
 from hgext import rebase
-import errno, os, stat, subprocess
+import errno, os, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -72,6 +72,7 @@ def extsetup(ui):
 
     wrapcommand(commands.table, 'tag', tagcmd)
     wrapcommand(commands.table, 'tags', tagscmd)
+    wrapcommand(commands.table, 'graft', graftcmd)
 
     # Tweak Behaviours
     tweakbehaviors(ui)
@@ -271,6 +272,11 @@ def _rebase(orig, ui, repo, **opts):
             return result
 
     return orig(ui, repo, **opts)
+
+def graftcmd(orig, ui, repo, *revs, **opts):
+    if not opts.get("date") and not ui.configbool('tweakdefaults', 'graftkeepdate'):
+        opts["date"] = "%d %d" % util.makedate(time.time())
+    return orig(ui, repo, *revs, **opts)
 
 def log(orig, ui, repo, *pats, **opts):
     # 'hg log' defaults to -f

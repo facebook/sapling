@@ -11,13 +11,13 @@ Setup repo
   $ hg init repo
   $ cd repo
   $ touch a
-  $ hg commit -Aqm a
+  $ hg commit -d "0 0" -Aqm a
   $ mkdir dir
   $ touch dir/b
-  $ hg commit -Aqm b
+  $ hg commit -d "0 0" -Aqm b
   $ hg up -q 0
   $ echo x >> a
-  $ hg commit -Aqm a2
+  $ hg commit -d "0 0" -Aqm a2
 
 Empty update fails
 
@@ -303,7 +303,27 @@ Test tweaked tag command
   $ hg tags --config tweakdefaults.tagsmessage='testing' | head -n0
   testing
 
+Test graft date when tweakdefaults.graftkeepdate is not set
+  $ hg revert -a -q
+  $ hg up -q 1
+  $ hg graft -q 2
+  $ hg log -T "{rev}\n" -d "yesterday to today"
+  4
+
+Test graft date when tweakdefaults.graftkeepdate is not set and --date is provided
+  $ hg up -q 1
+  $ hg graft -q 2 --date "1 1"
+  $ hg log -l 1 -T "{date} {rev}\n"
+  1.01 5
+
+Test graft date when tweakdefaults.graftkeepdate is set
+  $ hg up -q 1
+  $ hg graft -q 2 --config tweakdefaults.graftkeepdate=True
+  $ hg log -l 1 -T "{date} {rev}\n"
+  0.00 6
+
 Test reuse message flag by taking message from previous commit
+  $ hg up -q hyphen-book
   $ touch afile
   $ hg add afile
   $ hg commit -M 2
