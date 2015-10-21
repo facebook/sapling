@@ -8,8 +8,8 @@
 
 from mercurial import util, cmdutil, commands, hg, scmutil, localrepo
 from mercurial import bookmarks, dispatch, dirstate
-from mercurial.extensions import wrapcommand, wrapfunction
-from mercurial.node import nullid, hex
+from mercurial.extensions import wrapcommand, wrapfunction, find
+from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 import errno, os, getpass, time, sys
 
@@ -21,6 +21,7 @@ version = 0
 
 bookmarktype = 'bookmark'
 workingcopyparenttype = 'workingcopyparent'
+remotebookmarktype = 'remotebookmark'
 
 def wrapfilecache(cls, propname, wrapper):
     """Wraps a filecache property. These can't be wrapped using the normal
@@ -46,6 +47,13 @@ def extsetup(ui):
     wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
     wrapfunction(dirstate.dirstate, 'write', recorddirstateparents)
 
+    try:
+        remotenames = find('remotenames')
+        if remotenames:
+            wrapfunction(remotenames, 'saveremotenames', recordremotebookmarks)
+    except KeyError:
+        pass
+
     def wrapdirstate(orig, self):
         dirstate = orig(self)
         dirstate.reflogrepo = self
@@ -67,6 +75,28 @@ def recordbookmarks(orig, self, fp):
         if value != oldvalue:
             repo.reflog.addentry(bookmarktype, mark, oldvalue, value)
     return orig(self, fp)
+
+def recordremotebookmarks(orig, repo, remotepath, branches, bookmarks={}):
+    """Records all remote bookmark movements to the reflog."""
+
+    if bookmarks:
+        remotenames = find('remotenames')
+        oldremotenames = remotenames.readremotenames(repo)
+
+        oldbookmarks = {}
+        for oldnode, nametype, oldremote, oldname in oldremotenames:
+            if nametype == 'bookmarks' and oldremote == remotepath:
+                oldbookmarks[oldname] = oldnode
+
+        for rmbookmark, node in bookmarks.iteritems():
+            oldnode = oldbookmarks.get(rmbookmark, hex(nullid))
+            if oldnode != node:
+                joinedremotename = remotenames.joinremotename(
+                    remotepath, rmbookmark)
+                repo.reflog.addentry(remotebookmarktype,
+                        joinedremotename, bin(oldnode), bin(node))
+
+    return orig(repo, remotepath, branches, bookmarks)
 
 def recorddirstateparents(orig, self, tr=False):
     """Records all dirstate parent changes to the reflog."""
