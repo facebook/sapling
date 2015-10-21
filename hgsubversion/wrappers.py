@@ -375,7 +375,7 @@ def push(repo, dest, force, revs):
     return 1 # so we get a sane exit status, see hg's commands.push
 
 def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
-                 bookmarks=()):
+                 bookmarks=(), **kwargs):
     capable = getattr(remote, 'capable', lambda x: False)
     if capable('subversion'):
         pushop = exchange.pushoperation(repo, remote, force, revs, newbranch,
@@ -383,7 +383,8 @@ def exchangepush(orig, repo, remote, force=False, revs=None, newbranch=False,
         pushop.cgresult = push(repo, remote, force, revs)
         return pushop
     else:
-        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks)
+        return orig(repo, remote, force, revs, newbranch, bookmarks=bookmarks,
+                    **kwargs)
 
 def pull(repo, source, heads=[], force=False, meta=None):
     """pull new revisions from Subversion"""
@@ -523,7 +524,7 @@ def pull(repo, source, heads=[], force=False, meta=None):
         ui.status("pulled %d revisions\n" % revisions)
 
 def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(),
-                 opargs=None, **kwargs):
+                 **kwargs):
     capable = getattr(remote, 'capable', lambda x: False)
     if capable('subversion'):
         # transaction manager is present in Mercurial >= 3.3
@@ -544,14 +545,7 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(),
             else:
                 pullop.releasetransaction()
     else:
-        if opargs is not None:
-            # hg 3.5
-            return orig(
-                repo, remote, heads, force, bookmarks=bookmarks,
-                opargs=opargs, **kwargs)
-        else:
-            # hg 3.4
-            return orig(repo, remote, heads, force, bookmarks=bookmarks)
+        return orig(repo, remote, heads, force, bookmarks=bookmarks, **kwargs)
 
 def rebase(orig, ui, repo, **opts):
     """rebase current unpushed revisions onto the Subversion head
