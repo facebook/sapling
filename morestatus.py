@@ -72,18 +72,27 @@ def bisectmsg(ui):
             'To abort:                      hg bisect --reset\n')
     ui.warn(prefixlines(msg))
 
+def fileexistspredicate(filename):
+    return lambda repo: repo.vfs.exists(filename)
+
+def cleanmergepredicate(repo):
+    return len(repo.parents()) > 1
+
 STATES = (
-    # (state, file path indicating states, helpful message function)
-    ('histedit', 'histedit-state', histeditmsg),
-    ('bisect', 'bisect.state', bisectmsg),
-    ('graft', 'graftstate', graftmsg),
-    ('unshelve', 'unshelverebasestate', unshelvemsg),
-    ('rebase', 'rebasestate', rebasemsg),
+    # (state, predicate to detect states, helpful message function)
+    ('histedit', fileexistspredicate('histedit-state'), histeditmsg),
+    ('bisect', fileexistspredicate('bisect.state'), bisectmsg),
+    ('graft', fileexistspredicate('graftstate'), graftmsg),
+    ('unshelve', fileexistspredicate('unshelverebasestate'), unshelvemsg),
+    ('rebase', fileexistspredicate('rebasestate'), rebasemsg),
     # The merge state is part of a list that will be iterated over. It needs to
-    # be last because some of the other unfinished states may also be in a merge
-    # state (eg.  histedit, graft, etc). We want those to have priority.
-    ('merge', 'merge', mergemsg),
+    # be second to last because some of the other unfinished states may also be
+    # in a conflicted or clean merge state (eg.  histedit, graft, etc). We want
+    # those to have priority.
+    ('merge', fileexistspredicate('merge'), mergemsg),
+    ('merge', cleanmergepredicate, mergemsg),
 )
+
 
 def extsetup(ui):
     if ui.configbool('morestatus', 'show', False) and not ui.plain():
@@ -100,7 +109,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
 
     statetuple = getrepostate(repo)
     if statetuple:
-        state, statefile, helpfulmsg = statetuple
+        state, statedetectionpredicate, helpfulmsg = statetuple
         statemsg = _('The repository is in an unfinished *%s* state.') % state
         ui.warn('\n' + prefixlines(statemsg))
         conflictsmsg(repo, ui)
@@ -113,7 +122,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     return ret
 
 def getrepostate(repo):
-    for state, statefilepath, msgfn in STATES:
-        if repo.vfs.exists(statefilepath):
-            return (state, statefilepath, msgfn)
+    for state, statedetectionpredicate, msgfn in STATES:
+        if statedetectionpredicate(repo):
+            return (state, statedetectionpredicate, msgfn)
 

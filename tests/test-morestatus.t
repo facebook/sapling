@@ -155,7 +155,7 @@ Test hg status is normal after rebase abort
   ? a.orig
   $ rm a.orig
 
-Test merge state
+Test conflicted merge state
   $ hg merge -q
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
@@ -177,3 +177,20 @@ Test hg status is normal after merge abort
   $ hg status
   ? a.orig
   $ rm a.orig
+
+Test non-conflicted merge state
+  $ hg up -r 0 -q
+  $ touch z
+  $ hg add z
+  $ hg commit -m 'a commit that will merge without conflicts' -q
+  $ hg merge -r 79361b8cdbb -q
+  $ hg status
+  M a
+  
+  # The repository is in an unfinished *merge* state.
+  # To continue:                hg commit
+  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
+
+Test hg status is normal after merge commit (no output)
+  $ hg commit -m 'merge commit' -q
+  $ hg status
