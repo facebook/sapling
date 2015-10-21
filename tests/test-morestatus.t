@@ -57,8 +57,7 @@ Test graft state
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg graft -q 2977a57
-  warning: conflicts during merge.
-  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue)
   [255]
@@ -85,13 +84,12 @@ Test unshelve state
   $ echo "reset=" >> $HGRCPATH
   $ echo "shelve=" >> $HGRCPATH
   $ hg reset .^ -q
-  reseting without an active bookmark
+  resetting without an active bookmark
   devel-warn: transaction with no lock at: * (strip) (glob)
   $ hg shelve -q
   $ hg up -r 2977a57 -q
   $ hg unshelve -q
-  warning: conflicts during merge.
-  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
 
@@ -122,8 +120,7 @@ Test rebase state
   $ echo 'ab' > a
   $ hg commit -q -m 'add content'
   $ hg rebase -s 2977a57 -d . -q
-  warning: conflicts during merge.
-  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ hg status
@@ -160,8 +157,7 @@ Test hg status is normal after rebase abort
 
 Test merge state
   $ hg merge -q
-  warning: conflicts during merge.
-  merging a incomplete! (edit conflicts, then use 'hg resolve --mark')
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
   $ hg status
   M a
