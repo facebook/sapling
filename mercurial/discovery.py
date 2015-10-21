@@ -279,7 +279,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
             if bookmarks.validdest(repo, rctx, lctx):
                 bookmarkedheads.add(lctx.node())
         else:
-            if bm in newbookmarks:
+            if bm in newbookmarks and bm not in remotebookmarks:
                 bookmarkedheads.add(repo[bm].node())
 
     # 3. Check for new heads.
