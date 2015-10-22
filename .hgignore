@@ -2,3 +2,4 @@
 \.so$
 \.err$
 ^build/
+^.*\.egg-info/
