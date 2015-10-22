@@ -46,6 +46,24 @@ Push should push to 'default-push' when set:
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Push should push to 'default-push' when 'default' is not set
+
+  $ hg -q clone a push-default-only
+  $ cd push-default-only
+  $ rm .hg/hgrc
+
+  $ touch foo
+  $ hg -q commit -A -m 'add foo'
+  $ hg --config paths.default-push=../a push
+  pushing to $TESTTMP/a (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+  $ cd ..
+
 Pushing to a path that isn't defined should not fall back to default
 
   $ hg --cwd b push doesnotexist

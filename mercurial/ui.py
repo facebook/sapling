@@ -1026,7 +1026,11 @@ class paths(dict):
         # Handle default-push, which is a one-off that defines the push URL for
         # the "default" path.
         defaultpush = ui.config('paths', 'default-push')
-        if defaultpush and 'default' in self:
+        if defaultpush:
+            # "default-push" can be defined without "default" entry. This is a
+            # bit weird, but is allowed for backwards compatibility.
+            if 'default' not in self:
+                self['default'] = path('default', rawloc=defaultpush)
             self['default']._pushloc = defaultpush
 
     def getpath(self, name, default=None):
