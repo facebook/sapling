@@ -111,7 +111,7 @@ def tweakbehaviors(ui):
             extensions.wrapfunction(
                 rebase, "_nothingtorebase", _nothingtorebase
             )
-        except KeyError:
+        except (KeyError, AttributeError):
             pass
 
 def commitcmd(orig, ui, repo, *pats, **opts):
