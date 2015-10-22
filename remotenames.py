@@ -849,7 +849,7 @@ def _readtracking(repo):
         vfs = shareawarevfs(repo)
         for line in vfs.read('bookmarks.tracking').strip().split('\n'):
             try:
-                book, track = line.strip().split(' ')
+                book, track = line.strip().split(' ', 1)
                 tracking[book] = track
             except ValueError:
                 # corrupt file, ignore entry
