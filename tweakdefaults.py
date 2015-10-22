@@ -74,7 +74,7 @@ def extsetup(ui):
     wrapcommand(commands.table, 'tags', tagscmd)
     wrapcommand(commands.table, 'graft', graftcmd)
 
-    # Tweak Behaviours
+    # Tweak Behavior
     tweakbehaviors(ui)
 
 def tweakorder():
@@ -105,7 +105,7 @@ def tweakbehaviors(ui):
     def _nothingtorebase(orig, *args, **kwargs):
         return 0
 
-    if ui.config("tweakdefaults", "nooprebase", False):
+    if ui.configbool("tweakdefaults", "nooprebase", True):
         try:
             rebase = extensions.find("rebase")
             extensions.wrapfunction(
