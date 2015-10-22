@@ -1,8 +1,10 @@
   $ extpath=$(dirname $TESTDIR)
   $ cp $extpath/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > tweakdefaults=$TESTTMP/tweakdefaults.py
+  > fbamend=$TESTTMP/fbamend.py
   > rebase=
   > EOF
 
@@ -11,13 +13,13 @@ Setup repo
   $ hg init repo
   $ cd repo
   $ touch a
-  $ hg commit -d "0 0" -Aqm a
+  $ hg commit -Aqm a
   $ mkdir dir
   $ touch dir/b
-  $ hg commit -d "0 0" -Aqm b
+  $ hg commit -Aqm b
   $ hg up -q 0
   $ echo x >> a
-  $ hg commit -d "0 0" -Aqm a2
+  $ hg commit -Aqm a2
 
 Empty update fails
 
@@ -328,7 +330,41 @@ Test graft date when tweakdefaults.graftkeepdate is set
   $ hg log -l 1 -T "{date} {rev}\n"
   0.00 6
 
+Test amend date when tweakdefaults.amendkeepdate is not set
+  $ hg up -q 1
+  $ echo x > a
+  $ hg commit -Aqm "commit for amend"
+  $ echo x > a
+  $ hg amend -q -m "amended message"
+  $ hg log -T "{rev}\n" -d "yesterday to today"
+  7
+
+Test amend date when tweakdefaults.amendkeepdate is set
+  $ touch new_file
+  $ hg commit -d "0 0" -Aqm "commit for amend"
+  $ echo x > new_file
+  $ hg commit -q --amend -m "amended message" --config tweakdefaults.amendkeepdate=True
+  $ hg log -l 1 -T "{date} {rev}\n"
+  0.00 8
+
+Test commit --amend date when tweakdefaults.amendkeepdate is set
+  $ echo a >> new_file
+  $ hg commit -d "0 0" -Aqm "commit for amend"
+  $ echo x > new_file
+  $ hg commit -q --amend -m "amended message" --config tweakdefaults.amendkeepdate=True
+  $ hg log -l 1 -T "{date} {rev}\n"
+  0.00 9
+
+Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date is provided
+  $ echo xxx > a
+  $ hg commit -d "0 0" -Aqm "commit for amend"
+  $ echo x > a
+  $ hg commit -q --amend -m "amended message" --date "1 1"
+  $ hg log -l 1 -T "{date} {rev}\n"
+  1.01 10
+
 Test reuse message flag by taking message from previous commit
+  $ cd ../..
   $ hg up -q hyphen-book
   $ touch afile
   $ hg add afile
@@ -356,5 +392,5 @@ Test reuse message flag by taking message from previous commit
   HG: user: test
   HG: branch 'foo'
   HG: bookmark 'hyphen-book'
-  HG: changed dir1/foo/afile
+  HG: changed afile
 

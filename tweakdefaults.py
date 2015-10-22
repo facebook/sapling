@@ -73,6 +73,11 @@ def extsetup(ui):
     wrapcommand(commands.table, 'tag', tagcmd)
     wrapcommand(commands.table, 'tags', tagscmd)
     wrapcommand(commands.table, 'graft', graftcmd)
+    try:
+      fbamendmodule = mercurial.extensions.find('fbamend')
+      wrapcommand(fbamendmodule.cmdtable, 'amend', amendcmd)
+    except KeyError:
+      pass
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -115,6 +120,9 @@ def tweakbehaviors(ui):
             pass
 
 def commitcmd(orig, ui, repo, *pats, **opts):
+    if opts.get("amend") and not opts.get("date") and not ui.configbool('tweakdefaults', 'amendkeepdate'):
+        opts["date"] = currentdate()
+
     rev = opts.get('reuse_message')
 
     invalidargs = ['message', 'logfile']
@@ -273,10 +281,18 @@ def _rebase(orig, ui, repo, **opts):
 
     return orig(ui, repo, **opts)
 
+def currentdate():
+    return "%d %d" % util.makedate(time.time())
+
 def graftcmd(orig, ui, repo, *revs, **opts):
     if not opts.get("date") and not ui.configbool('tweakdefaults', 'graftkeepdate'):
-        opts["date"] = "%d %d" % util.makedate(time.time())
+        opts["date"] = currentdate()
     return orig(ui, repo, *revs, **opts)
+
+def amendcmd(orig, ui, repo, *pats, **opts):
+    if not opts.get("date") and not ui.configbool('tweakdefaults', 'amendkeepdate'):
+        opts["date"] = currentdate()
+    return orig(ui, repo, *pats, **opts)
 
 def log(orig, ui, repo, *pats, **opts):
     # 'hg log' defaults to -f

@@ -104,11 +104,12 @@ def amend(ui, repo, *pats, **opts):
         opts['message'] = old.description()
 
     tempnode = []
+    commitdate = old.date() if not opts.get('date') else opts.get('date')
     def commitfunc(ui, repo, message, match, opts):
         e = cmdutil.commiteditor
         noderesult = repo.commit(message,
                            old.user(),
-                           old.date(),
+                           commitdate,
                            match,
                            editor=e,
                            extra={})
