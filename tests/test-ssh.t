@@ -501,3 +501,32 @@ debug output
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
   changegroup-in-remote hook: HG_BUNDLE2=1 HG_NODE=65c38f4125f9602c8db4af56530cc221d93b8ef8 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:ssh:127.0.0.1 (glob)
   Got arguments 1:user@dummy 2:hg -R remote serve --stdio
+
+remote hook failure is attributed to remote
+
+  $ cat > $TESTTMP/failhook << EOF
+  > def hook(ui, repo, **kwargs):
+  >     ui.write('hook failure!\n')
+  >     ui.flush()
+  >     return 1
+  > EOF
+
+  $ echo "pretxnchangegroup.fail = python:$TESTTMP/failhook:hook" >> remote/.hg/hgrc
+
+  $ hg -q --config ui.ssh="python '$TESTDIR/dummyssh'" clone ssh://user@dummy/remote hookout
+  $ cd hookout
+  $ touch hookfailure
+  $ hg -q commit -A -m 'remote hook failure'
+  $ hg --config ui.ssh="python '$TESTDIR/dummyssh'" push
+  pushing to ssh://user@dummy/remote
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  remote: hook failure!
+  remote: transaction abort!
+  remote: rollback completed
+  abort: pretxnchangegroup.fail hook failed
+  [255]
+
