@@ -3037,7 +3037,9 @@ def debugrevlog(ui, repo, file_=None, **opts):
     totalsize = fulltotal + deltatotal
     avgchainlen = sum(chainlengths) / numrevs
     maxchainlen = max(chainlengths)
-    compratio = totalrawsize / totalsize
+    compratio = 1
+    if totalsize:
+        compratio = totalrawsize / totalsize
 
     basedfmtstr = '%%%dd\n'
     basepcfmtstr = '%%%dd %s(%%5.2f%%%%)\n'
@@ -3048,7 +3050,10 @@ def debugrevlog(ui, repo, file_=None, **opts):
         return basepcfmtstr % (len(str(max)), ' ' * padding)
 
     def pcfmt(value, total):
-        return (value, 100 * float(value) / total)
+        if total:
+            return (value, 100 * float(value) / total)
+        else:
+            return value, 100.0
 
     ui.write(('format : %d\n') % format)
     ui.write(('flags  : %s\n') % ', '.join(flags))
