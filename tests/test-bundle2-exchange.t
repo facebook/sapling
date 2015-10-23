@@ -518,14 +518,16 @@ Doing the actual push: Abort error
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
-  abort: Abandon ship!
+  remote: Abandon ship!
+  abort: push failed on remote
   (don't panic)
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
   searching for changes
-  abort: Abandon ship!
+  remote: Abandon ship!
+  abort: push failed on remote
   (don't panic)
   [255]
 
@@ -624,7 +626,8 @@ Doing the actual push: hook abort
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnclose.failpush hook exited with status 1
+  remote: pretxnclose.failpush hook exited with status 1
+  abort: push failed on remote
   [255]
 
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
@@ -639,7 +642,8 @@ Doing the actual push: hook abort
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnclose.failpush hook exited with status 1
+  remote: pretxnclose.failpush hook exited with status 1
+  abort: push failed on remote
   [255]
 
 (check that no 'pending' files remain)
@@ -684,7 +688,8 @@ Check error from hook during the unbundling process itself
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnchangegroup hook exited with status 1
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
@@ -697,7 +702,8 @@ Check error from hook during the unbundling process itself
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnchangegroup hook exited with status 1
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   [255]
 
 Check output capture control.
@@ -733,7 +739,8 @@ Check output capture control.
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnchangegroup hook exited with status 1
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/
@@ -746,7 +753,8 @@ Check output capture control.
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: pretxnchangegroup hook exited with status 1
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   [255]
 
 Check abort from mandatory pushkey
@@ -928,7 +936,8 @@ Test lazily acquiring the lock during unbundle
   $ hg push
   pushing to ssh://user@dummy/lazylock
   searching for changes
-  abort: Lock should not be taken
+  remote: Lock should not be taken
+  abort: push failed on remote
   [255]
 
   $ cat >> ../lazylock/.hg/hgrc <<EOF

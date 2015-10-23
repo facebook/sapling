@@ -397,7 +397,8 @@ Test hg-ssh in read-only mode:
   pushing to ssh://user@dummy/*/remote (glob)
   searching for changes
   remote: Permission denied
-  abort: pretxnopen.hg-ssh hook failed
+  remote: pretxnopen.hg-ssh hook failed
+  abort: push failed on remote
   [255]
 
   $ cd ..
@@ -527,6 +528,7 @@ remote hook failure is attributed to remote
   remote: hook failure!
   remote: transaction abort!
   remote: rollback completed
-  abort: pretxnchangegroup.fail hook failed
+  remote: pretxnchangegroup.fail hook failed
+  abort: push failed on remote
   [255]
 

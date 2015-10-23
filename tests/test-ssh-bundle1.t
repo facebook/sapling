@@ -533,7 +533,8 @@ remote hook failure is attributed to remote
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: hook failure!transaction abort!
+  remote: hook failure!
+  remote: transaction abort!
   remote: rollback completed
   remote: abort: pretxnchangegroup.fail hook failed
   [1]

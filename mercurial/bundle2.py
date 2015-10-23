@@ -1408,10 +1408,14 @@ def handlereplycaps(op, inpart):
     if op.reply is None:
         op.reply = bundle20(op.ui, caps)
 
+class AbortFromPart(error.Abort):
+    """Sub-class of Abort that denotes an error from a bundle2 part."""
+
 @parthandler('error:abort', ('message', 'hint'))
 def handleerrorabort(op, inpart):
     """Used to transmit abort error over the wire"""
-    raise error.Abort(inpart.params['message'], hint=inpart.params.get('hint'))
+    raise AbortFromPart(inpart.params['message'],
+                        hint=inpart.params.get('hint'))
 
 @parthandler('error:pushkey', ('namespace', 'key', 'new', 'old', 'ret',
                                'in-reply-to'))
