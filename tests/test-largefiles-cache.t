@@ -209,12 +209,10 @@ Test coverage of error handling from putlfile:
   $ hg serve -R ../mirror -d -p $HGPORT1 --pid-file hg.pid --config largefiles.usercache=$TESTTMP/mirrorcache
   $ cat hg.pid >> $DAEMON_PIDS
 
-(the following push fails but doesn't show why)
   $ hg push http://localhost:$HGPORT1 -f --config files.usercache=nocache
   pushing to http://localhost:$HGPORT1/
   searching for changes
-  unexpected putlfile response: None
-  abort: remotestore: could not put $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020 to remote store http://localhost:$HGPORT1/
+  abort: remotestore: could not open file $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020: HTTP Error 403: ssl required
   [255]
 
   $ rm .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
