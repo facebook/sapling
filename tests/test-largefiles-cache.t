@@ -191,13 +191,12 @@ Inject corruption into the largefiles store and see how update handles that:
   e2fb5f2139d086ded2cb600d5a91a196e76bf020
   $ mv .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020 ..
   $ echo corruption > .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
-(the following update will put the corrupted file into the working directory
-where it will show up as a change)
   $ hg up -C
   getting changed largefiles
-  1 largefiles updated, 0 removed
+  large: data corruption in $TESTTMP/src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020 with hash 6a7bb2556144babe3899b25e5428123735bb1e27
+  0 largefiles updated, 0 removed
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg st
-  M large
+  ! large
   ? z
   $ rm .hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
