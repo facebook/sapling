@@ -740,4 +740,48 @@ test converting merges into a repo that contains other files
      - converted/a
      - toberemoved
   
+  $ cd ..
 
+Test case where cleanp2 contains a file that doesn't exist in p2 - for
+example because filemap changed.
+
+  $ hg init cleanp2
+  $ cd cleanp2
+  $ touch f f1 f2 && hg ci -Aqm '0'
+  $ echo f1 > f1 && echo >> f && hg ci -m '1'
+  $ hg up -qr0 && echo f2 > f2 && echo >> f && hg ci -qm '2'
+  $ echo "include f" > filemap
+  $ hg convert --filemap filemap .
+  assuming destination .-hg
+  initializing destination .-hg repository
+  scanning source...
+  sorting...
+  converting...
+  2 0
+  1 1
+  0 2
+  $ hg merge && hg ci -qm '3'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ echo "include ." > filemap
+  $ hg convert --filemap filemap .
+  assuming destination .-hg
+  scanning source...
+  sorting...
+  converting...
+  0 3
+  $ hg -R .-hg log -G -T '{shortest(node)} {desc}\n{files % "- {file}\n"}\n'
+  o    e9ed 3
+  |\
+  | o  33a0 2
+  | |  - f
+  | |
+  o |  f73e 1
+  |/   - f
+  |
+  o  d681 0
+     - f
+  
+  $ hg -R .-hg mani -r tip
+  f
+  $ cd ..
