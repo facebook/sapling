@@ -197,47 +197,6 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.wfile.write('0\r\n\r\n')
             self.wfile.flush()
 
-class _httprequesthandleropenssl(_httprequesthandler):
-    """HTTPS handler based on pyOpenSSL"""
-
-    url_scheme = 'https'
-
-    @staticmethod
-    def preparehttpserver(httpserver, ssl_cert):
-        try:
-            import OpenSSL
-            OpenSSL.SSL.Context
-        except ImportError:
-            raise error.Abort(_("SSL support is unavailable"))
-        ctx = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
-        ctx.use_privatekey_file(ssl_cert)
-        ctx.use_certificate_file(ssl_cert)
-        sock = socket.socket(httpserver.address_family, httpserver.socket_type)
-        httpserver.socket = OpenSSL.SSL.Connection(ctx, sock)
-        httpserver.server_bind()
-        httpserver.server_activate()
-
-    def setup(self):
-        self.connection = self.request
-        self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
-        self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
-
-    def do_write(self):
-        import OpenSSL
-        try:
-            _httprequesthandler.do_write(self)
-        except OpenSSL.SSL.SysCallError as inst:
-            if inst.args[0] != errno.EPIPE:
-                raise
-
-    def handle_one_request(self):
-        import OpenSSL
-        try:
-            _httprequesthandler.handle_one_request(self)
-        except (OpenSSL.SSL.SysCallError, OpenSSL.SSL.ZeroReturnError):
-            self.close_connection = True
-            pass
-
 class _httprequesthandlerssl(_httprequesthandler):
     """HTTPS handler based on Python's ssl module"""
 
@@ -311,10 +270,7 @@ class IPv6HTTPServer(MercurialHTTPServer):
 def create_server(ui, app):
 
     if ui.config('web', 'certificate'):
-        if sys.version_info >= (2, 6):
-            handler = _httprequesthandlerssl
-        else:
-            handler = _httprequesthandleropenssl
+        handler = _httprequesthandlerssl
     else:
         handler = _httprequesthandler
 
