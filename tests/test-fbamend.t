@@ -22,6 +22,7 @@ Test functionality is present
    -A --addremove           mark new/missing files as added/removed before
                             committing
    -e --edit                prompt to edit the commit message
+   -i --interactive         use interactive mode
       --rebase              rebases children commits after the amend
       --fixup               rebase children commits from a previous amend
    -I --include PATTERN [+] include names matching the given patterns
@@ -344,6 +345,73 @@ Fbamend respects the createmarkers option
   rebasing 6:bc3b6a46cdb4 "commit --amend message"
   rebasing 7:9752120dcffe "bar"
 
+Test that fbamend works with interactive commits (crecord)
+  $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > interactive = true
+  > [experimental]
+  > crecord = True
+  > crecordtest = testModeCommands
+  > EOF
+  $ hg up 18b434184b29 -q
+  $ echo 'This line will remain into the next amend' > afile
+  $ hg add afile
+  $ hg commit -m 'commit to be amended'
+  $ echo "some content" > afile
 
+test hg amend -i works in a stack
+  $ hg commit -m 'descendant commit'
+  $ hg up .^ -q -C
+  $ echo 'be happy' > anotherfile
+  $ hg add anotherfile
+Just commit the file in interactive mode
+  $ cat <<EOF > testModeCommands
+  > X
+  > EOF
+  $ hg amend -i --config "fbamend.education=" -q
+  warning: the commit's children were left behind
+preamend bookmark exists
+  $ hg log -G -T '{bookmarks}' | grep 'preamend'
+  | x  6cd3bb4b4ada.preamend
+Make sure fixup gets rid of preamend bookmarks (there should be none)
+  $ hg amend --fixup
+  rebasing the children of 6cd3bb4b4ada.preamend
+  rebasing 13:ab75b93512f7 "descendant commit"
+preamend bookmark has been removed
+  $ hg log -G -T '{bookmarks}' | grep 'preamend'
+  [1]
 
+test hg commit -i --amend works in a stack
+  $ echo 'be honest' > anotherfile
+  $ cat <<EOF > testModeCommands
+  > X
+  > EOF
+  $ hg commit -i --amend --config "fbamend.education=" -q -m 'a commit msg'
+  warning: the commit's children were left behind
+  1 new unstable changesets
+preamend bookmark exists
+  $ hg log -G -T '{bookmarks}' | grep 'preamend'
+  | x  039ee914a5fd.preamend
+Make sure fixup gets rid of preamend bookmarks (there should be none)
+  $ hg amend --fixup
+  rebasing the children of 039ee914a5fd.preamend
+  rebasing 16:2c40a2aa23f1 "descendant commit"
+preamend bookmark has been removed
+  $ hg log -G -T '{bookmarks}' | grep 'preamend'
+  [1]
 
+Test fbamend fails with both --iteractive and --rebase
+  $ hg commit --amend --rebase -i
+  abort: --interactive and --rebase are mutually exclusive
+  [255]
+  $ hg amend --rebase -i
+  abort: --interactive and --rebase are mutually exclusive
+  [255]
+
+Test fbamend fails with both --iteractive and --fixup
+  $ hg commit --amend --fixup -i
+  abort: --interactive and --fixup are mutually exclusive
+  [255]
+  $ hg amend --fixup -i
+  abort: --interactive and --fixup are mutually exclusive
+  [255]

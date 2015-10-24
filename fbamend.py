@@ -54,6 +54,7 @@ def uisetup(ui):
             ('A', 'addremove', None,
              _('mark new/missing files as added/removed before committing')),
            ('e', 'edit', None, _('prompt to edit the commit message')),
+           ('i', 'interactive', None, _('use interactive mode')),
        ] + amendopts + commands.walkopts + commands.commitopts,
        _('hg amend [OPTION]...'))(amend)
 
@@ -86,6 +87,12 @@ def amend(ui, repo, *pats, **opts):
         # if a histedit is in flight, it's dangerous to remove old commits
         hint = _('during histedit, use amend without --rebase')
         raise util.Abort('histedit in progress', hint=hint)
+
+    badflags = [flag for flag in
+            ['rebase', 'fixup'] if opts.get(flag, None)]
+    if opts.get('interactive') and badflags:
+        raise util.Abort(_('--interactive and --%s are mutually exclusive') %
+                badflags[0])
 
     fixup = opts.get('fixup')
     if fixup:
@@ -140,7 +147,16 @@ def amend(ui, repo, *pats, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        node = cmdutil.amend(ui, repo, commitfunc, old, {}, pats, opts)
+
+        if opts.get('interactive'):
+            # Strip the interactive flag to avoid infinite recursive loop
+            opts.pop('interactive')
+            cmdutil.dorecord(ui, repo, amend, None, False,
+                    cmdutil.recordfilter, *pats, **opts)
+            return
+
+        else:
+            node = cmdutil.amend(ui, repo, commitfunc, old, {}, pats, opts)
 
         if node == old.node():
             ui.status(_("nothing changed\n"))
