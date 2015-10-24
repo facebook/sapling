@@ -61,8 +61,14 @@ HGPLAIN
 
 HGPLAINEXCEPT
     This is a comma-separated list of features to preserve when
-    HGPLAIN is enabled. Currently the only value supported is "i18n",
-    which preserves internationalization in plain mode.
+    HGPLAIN is enabled. Currently the following values are supported:
+
+    ``alias``
+        Don't remove aliases.
+    ``i18n``
+        Preserve internationalization.
+    ``revsetalias``
+        Don't remove revset aliases.
 
     Setting HGPLAINEXCEPT to anything (even an empty string) will
     enable plain mode.
