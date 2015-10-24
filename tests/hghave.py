@@ -463,3 +463,12 @@ def has_pure():
 @check("slow", "allow slow tests")
 def has_slow():
     return os.environ.get('HGTEST_SLOW') == 'slow'
+
+@check("hypothesis", "is Hypothesis installed")
+def has_hypothesis():
+    try:
+        import hypothesis
+        hypothesis.given
+        return True
+    except ImportError:
+        return False
