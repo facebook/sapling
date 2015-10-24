@@ -198,3 +198,18 @@ def destmerge(repo):
     else:
         node = _destmergebranch(repo)
     return repo[node].rev()
+
+histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'
+
+def desthistedit(ui, repo):
+    """Default base revision to edit for `hg histedit`."""
+    default = ui.config('histedit', 'defaultrev', histeditdefaultrevset)
+    if default:
+        revs = repo.revs(default)
+        if revs:
+            # The revset supplied by the user may not be in ascending order nor
+            # take the first revision. So do this manually.
+            revs.sort()
+            return revs.first()
+
+    return None

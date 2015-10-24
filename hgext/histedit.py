@@ -149,6 +149,13 @@ configuration file::
 
   [histedit]
   linelen = 120      # truncate rule lines at 120 characters
+
+``hg histedit`` attempts to automatically choose an appropriate base
+revision to use. To change which base revision is used, define a
+revset in your configuration file::
+
+  [histedit]
+  defaultrev = only(.) & draft()
 """
 
 try:
@@ -166,6 +173,7 @@ from mercurial import discovery
 from mercurial import error
 from mercurial import copies
 from mercurial import context
+from mercurial import destutil
 from mercurial import exchange
 from mercurial import extensions
 from mercurial import hg
@@ -786,12 +794,18 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
      ('f', 'force', False,
       _('force outgoing even for unrelated repositories')),
      ('r', 'rev', [], _('first revision to be edited'), _('REV'))],
-     _("ANCESTOR | --outgoing [URL]"))
+     _("[ANCESTOR] | --outgoing [URL]"))
 def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
 
-    This command edits changesets between ANCESTOR and the parent of
+    This command edits changesets between an ANCESTOR and the parent of
     the working directory.
+
+    The value from the "histedit.defaultrev" config option is used as a
+    revset to select the base revision when ANCESTOR is not specified.
+    The first revision returned by the revset is used. By default, this
+    selects the editable history that is unique to the ancestry of the
+    working directory.
 
     With --outgoing, this edits changesets not found in the
     destination repository. If URL of the destination is omitted, the
@@ -917,10 +931,10 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         else:
             revs.extend(freeargs)
             if len(revs) == 0:
-                # experimental config: histedit.defaultrev
-                histeditdefault = ui.config('histedit', 'defaultrev')
-                if histeditdefault:
-                    revs.append(histeditdefault)
+                defaultrev = destutil.desthistedit(ui, repo)
+                if defaultrev is not None:
+                    revs.append(defaultrev)
+
             if len(revs) != 1:
                 raise error.Abort(
                     _('histedit requires exactly one ancestor revision'))

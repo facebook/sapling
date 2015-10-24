@@ -347,3 +347,101 @@ Histedit state has been exited
   commit: 1 added, 1 unknown (new branch head)
   update: 4 new changesets (update)
 
+  $ cd ..
+
+Set up default base revision tests
+
+  $ hg init defaultbase
+  $ cd defaultbase
+  $ touch foo
+  $ hg -q commit -A -m root
+  $ echo 1 > foo
+  $ hg commit -m 'public 1'
+  $ hg phase --force --public -r .
+  $ echo 2 > foo
+  $ hg commit -m 'draft after public'
+  $ hg -q up -r 1
+  $ echo 3 > foo
+  $ hg commit -m 'head 1 public'
+  created new head
+  $ hg phase --force --public -r .
+  $ echo 4 > foo
+  $ hg commit -m 'head 1 draft 1'
+  $ echo 5 > foo
+  $ hg commit -m 'head 1 draft 2'
+  $ hg -q up -r 2
+  $ echo 6 > foo
+  $ hg commit -m 'head 2 commit 1'
+  $ echo 7 > foo
+  $ hg commit -m 'head 2 commit 2'
+  $ hg -q up -r 2
+  $ echo 8 > foo
+  $ hg commit -m 'head 3'
+  created new head
+  $ hg -q up -r 2
+  $ echo 9 > foo
+  $ hg commit -m 'head 4'
+  created new head
+  $ hg merge --tool :local -r 8
+  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -m 'merge head 3 into head 4'
+  $ echo 11 > foo
+  $ hg commit -m 'commit 1 after merge'
+  $ echo 12 > foo
+  $ hg commit -m 'commit 2 after merge'
+
+  $ hg log -G -T '{rev}:{node|short} {phase} {desc}\n'
+  @  12:8cde254db839 draft commit 2 after merge
+  |
+  o  11:6f2f0241f119 draft commit 1 after merge
+  |
+  o    10:90506cc76b00 draft merge head 3 into head 4
+  |\
+  | o  9:f8607a373a97 draft head 4
+  | |
+  o |  8:0da92be05148 draft head 3
+  |/
+  | o  7:4c35cdf97d5e draft head 2 commit 2
+  | |
+  | o  6:931820154288 draft head 2 commit 1
+  |/
+  | o  5:8cdc02b9bc63 draft head 1 draft 2
+  | |
+  | o  4:463b8c0d2973 draft head 1 draft 1
+  | |
+  | o  3:23a0c4eefcbf public head 1 public
+  | |
+  o |  2:4117331c3abb draft draft after public
+  |/
+  o  1:4426d359ea59 public public 1
+  |
+  o  0:54136a8ddf32 public root
+  
+
+Default base revision should stop at public changesets
+
+  $ hg -q up 8cdc02b9bc63
+  $ hg histedit --commands - <<EOF
+  > pick 463b8c0d2973
+  > pick 8cdc02b9bc63
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Default base revision should stop at branchpoint
+
+  $ hg -q up 4c35cdf97d5e
+  $ hg histedit --commands - <<EOF
+  > pick 931820154288
+  > pick 4c35cdf97d5e
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Default base revision should stop at merge commit
+
+  $ hg -q up 8cde254db839
+  $ hg histedit --commands - <<EOF
+  > pick 6f2f0241f119
+  > pick 8cde254db839
+  > EOF
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
