@@ -91,39 +91,7 @@ _notset = object()
 def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
 
-def sha1(s=''):
-    '''
-    Low-overhead wrapper around Python's SHA support
-
-    >>> f = _fastsha1
-    >>> a = sha1()
-    >>> a = f()
-    >>> a.hexdigest()
-    'da39a3ee5e6b4b0d3255bfef95601890afd80709'
-    '''
-
-    return _fastsha1(s)
-
-def _fastsha1(s=''):
-    # This function will import sha1 from hashlib or sha (whichever is
-    # available) and overwrite itself with it on the first call.
-    # Subsequent calls will go directly to the imported function.
-    if sys.version_info >= (2, 5):
-        from hashlib import sha1 as _sha1
-    else:
-        from sha import sha as _sha1
-    global _fastsha1, sha1
-    _fastsha1 = sha1 = _sha1
-    return _sha1(s)
-
-def md5(s=''):
-    try:
-        from hashlib import md5 as _md5
-    except ImportError:
-        from md5 import md5 as _md5
-    global md5
-    md5 = _md5
-    return _md5(s)
+from hashlib import md5, sha1
 
 DIGESTS = {
     'md5': md5,
