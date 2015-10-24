@@ -847,7 +847,6 @@ class queue(object):
                 try:
                     tr.abort()
                 finally:
-                    repo.invalidate()
                     self.invalidate()
                 raise
         finally:

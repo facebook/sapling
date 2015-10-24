@@ -1014,6 +1014,8 @@ class localrepository(object):
                 # out) in this transaction
                 repo.vfs.rename('journal.dirstate', 'dirstate')
 
+                repo.invalidate(clearfilecache=True)
+
         tr = transaction.transaction(rp, self.svfs, vfsmap,
                                      "journal",
                                      "undo",
@@ -1205,13 +1207,15 @@ class localrepository(object):
                     pass
             delattr(self.unfiltered(), 'dirstate')
 
-    def invalidate(self):
+    def invalidate(self, clearfilecache=False):
         unfiltered = self.unfiltered() # all file caches are stored unfiltered
-        for k in self._filecache:
+        for k in self._filecache.keys():
             # dirstate is invalidated separately in invalidatedirstate()
             if k == 'dirstate':
                 continue
 
+            if clearfilecache:
+                del self._filecache[k]
             try:
                 delattr(unfiltered, k)
             except AttributeError:
