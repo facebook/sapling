@@ -50,18 +50,6 @@ function Graph() {
 		this.cell_height = this.box_size;
 	}
 
-	function colorPart(num) {
-		num *= 255
-		num = num < 0 ? 0 : num;
-		num = num > 255 ? 255 : num;
-		var digits = Math.round(num).toString(16);
-		if (num < 16) {
-			return '0' + digits;
-		} else {
-			return digits;
-		}
-	}
-
 	this.setColor = function(color, bg, fg) {
 
 		// Set the colour.
