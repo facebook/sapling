@@ -9,9 +9,6 @@ from mercurial import store
 import binascii, itertools, math, os, random, sys, time
 import collections
 
-if sys.version_info[:2] < (2, 6):
-    sys.exit(0)
-
 validchars = set(map(chr, range(0, 256)))
 alphanum = range(ord('A'), ord('Z'))
 
