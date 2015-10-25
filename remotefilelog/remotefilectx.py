@@ -83,8 +83,6 @@ class remotefilectx(context.filectx):
             relativeto = None
             if '_changeid' in self.__dict__:
                 relativeto = self._repo.changelog.node(self._changeid)
-            elif '_changectx' in self.__dict__:
-                changectx = self._changectx.node()
             self._ancestormap = self.filelog().ancestormap(self._filenode,
                 relativeto=relativeto)
 
