@@ -205,6 +205,10 @@ class remotefilectx(context.filectx):
 
         return True
 
+    # Return empty set so that the hg serve and thg don't stack trace
+    def children(self):
+        return []
+
 class remoteworkingfilectx(context.workingfilectx, remotefilectx):
     def __init__(self, repo, path, filelog=None, workingctx=None):
         self._ancestormap = None
