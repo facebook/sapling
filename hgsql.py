@@ -75,7 +75,11 @@ def uisetup(ui):
     wireproto.commands['pushkey'] = (wireproto.pushkey, 'namespace key old new')
 
     wrapfunction(bookmarks, 'updatefromremote', updatefromremote)
-    wrapfunction(changegroup, 'addchangegroup', addchangegroup)
+    if util.safehasattr(changegroup, 'addchangegroup'):
+        wrapfunction(changegroup, 'addchangegroup', addchangegroup)
+    else:
+        # Mercurial 3.6+
+        wrapfunction(changegroup.cg1unpacker, 'apply', changegroupapply)
 
     # Record revlog writes
     def writeentry(orig, self, transaction, ifh, dfh, entry, data, link, offset):
@@ -208,6 +212,13 @@ def updatefromremote(orig, *args, **kwargs):
 
 def addchangegroup(orig, *args, **kwargs):
     repo = args[0]
+    if repo.ui.configbool("hgsql", "enabled"):
+        return executewithsql(repo, orig, True, *args, **kwargs)
+    else:
+        return orig(*args, **kwargs)
+
+def changegroupapply(orig, *args, **kwargs):
+    repo = args[1]
     if repo.ui.configbool("hgsql", "enabled"):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
