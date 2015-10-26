@@ -46,6 +46,13 @@ if [ ! -d .hg ]; then
 fi
 
 gethgversion
+debver="$version"
+if [ -n "$type" ] ; then
+    debver="$debver~$type"
+fi
+if [ -n "$distance" ] ; then
+    debver="$debver+$distance-$node"
+fi
 
 control=debian/control
 changelog=debian/changelog
@@ -61,7 +68,7 @@ if [ "$BUILD" ]; then
 
     # This looks like sed -i, but sed -i behaves just differently enough
     # between BSD and GNU sed that I gave up and did the dumb thing.
-    sed "s/__VERSION__/$version/" < $changelog > $changelog.tmp
+    sed "s/__VERSION__/$debver/" < $changelog > $changelog.tmp
     date=$(date --rfc-2822)
     sed "s/__DATE__/$date/" < $changelog.tmp > $changelog
     rm $changelog.tmp
@@ -79,6 +86,6 @@ if [ "$CLEANUP" ] ; then
     find ../mercurial*.deb ../mercurial_*.build ../mercurial_*.changes \
           -type f -newer $control -print0 | \
       xargs -Inarf -0 mv narf "$OUTPUTDIR"
-    echo "Built packages for $version-$release:"
+    echo "Built packages for $debver:"
     find "$OUTPUTDIR" -type f -newer $control -name '*.deb'
 fi

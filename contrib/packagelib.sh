@@ -1,3 +1,12 @@
+# Extract version number into 4 parts, some of which may be empty:
+#
+# version: the numeric part of the most recent tag. Will always look like 1.3.
+#
+# type: if an rc build, "rc", otherwise empty
+#
+# distance: the distance from the nearest tag, or empty if built from a tag
+#
+# node: the node|short hg was built from, or empty if built from a tag
 gethgversion() {
     make clean
     make local || make local PURE=--pure
@@ -7,13 +16,20 @@ gethgversion() {
 
     hgversion=`$HG version | sed -ne 's/.*(version \(.*\))$/\1/p'`
 
-    if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
-        # nightly build case, version is like 1.3.1+250-20b91f91f9ca
-        version=`echo $hgversion | cut -d- -f1`
-        release=`echo $hgversion | cut -d- -f2 | sed -e 's/+.*//'`
+    if echo $hgversion | grep + > /dev/null 2>&1 ; then
+        tmp=`echo $hgversion | cut -d+ -f 2`
+        hgversion=`echo $hgversion | cut -d+ -f 1`
+        distance=`echo $tmp | cut -d- -f 1`
+        node=`echo $tmp | cut -d- -f 2`
     else
-        # official tag, version is like 1.3.1
-        version=`echo $hgversion | sed -e 's/+.*//'`
-        release='0'
+        distance=''
+        node=''
+    fi
+    if echo $hgversion | grep -- '-' > /dev/null 2>&1; then
+        version=`echo $hgversion | cut -d- -f1`
+        type=`echo $hgversion | cut -d- -f2`
+    else
+        version=$hgversion
+        type=''
     fi
 }

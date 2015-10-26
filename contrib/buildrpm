@@ -49,6 +49,18 @@ fi
 
 gethgversion
 
+# TODO: handle distance/node set, and type set
+
+if [ -z "$type" ] ; then
+   release=1
+else
+    release=0.9_$type
+fi
+
+if [ -n "$distance" ] ; then
+    release=$release+$distance_$node
+fi
+
 if [ "$PYTHONVER" ]; then
     release=$release+$PYTHONVER
     RPMPYTHONVER=$PYTHONVER
