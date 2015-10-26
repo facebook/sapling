@@ -415,3 +415,11 @@ Test fbamend fails with both --iteractive and --fixup
   $ hg amend --fixup -i
   abort: --interactive and --fixup are mutually exclusive
   [255]
+
+Test commit fails with --fixup and --rebase without --amend
+  $ hg commit --fixup
+  abort: --fixup must be called with --amend
+  [255]
+  $ hg commit --rebase
+  abort: --rebase must be called with --amend
+  [255]

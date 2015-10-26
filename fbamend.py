@@ -58,13 +58,18 @@ def uisetup(ui):
        ] + amendopts + commands.walkopts + commands.commitopts,
        _('hg amend [OPTION]...'))(amend)
 
-
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
         # commit --amend default behavior is to prompt for edit
         opts['noeditmessage'] = True
         return amend(ui, repo, *pats, **opts)
     else:
+        badflags = [flag for flag in
+                ['rebase', 'fixup'] if opts.get(flag, None)]
+        if badflags:
+            raise util.Abort(_('--%s must be called with --amend') %
+                    badflags[0])
+
         return orig(ui, repo, *pats, **opts)
 
 def amend(ui, repo, *pats, **opts):
