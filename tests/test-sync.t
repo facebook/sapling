@@ -88,7 +88,7 @@
   $ cd ../master
   $ hg log -l 1 --template '{rev} {desc}\n' &
   $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
-  waiting for lock on repository $TESTTMP/master held by * (glob)
+  waiting for lock on working directory of $TESTTMP/master held by * (glob)
   3 a
   got lock after ? seconds (glob)
   3 a

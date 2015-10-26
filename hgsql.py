@@ -431,7 +431,9 @@ def wraprepo(repo):
             # afterwards.
             oldmancache = self.manifest._mancache
 
+            wlock = lock = None
             try:
+                wlock = self.wlock(wait=waitforlock)
                 lock = self.lock(wait=waitforlock)
             except error.LockHeld:
                 # Oh well. Don't block this non-critical read-only operation.
@@ -522,7 +524,10 @@ def wraprepo(repo):
             finally:
                 for backup in configbackups:
                     ui.restoreconfig(backup)
-                lock.release()
+                if lock:
+                    lock.release()
+                if wlock:
+                    wlock.release()
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):
             """Fetches every revision from fetchstart to fetchend (inclusive)
@@ -1348,6 +1353,8 @@ def sqlstrip(ui, rev, *args, **opts):
     except ValueError:
         raise util.Abort("specified rev must be an integer: '%s'" % rev)
 
+    wlock = lock = None
+    wlock = repo.wlock()
     lock = repo.lock()
     try:
         repo.sqlconnect()
@@ -1396,4 +1403,7 @@ def sqlstrip(ui, rev, *args, **opts):
             repo.sqlunlock(writelock)
             repo.sqlclose()
     finally:
-        lock.release()
+        if lock:
+            lock.release()
+        if wlock:
+            wlock.release()
