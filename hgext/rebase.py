@@ -586,7 +586,7 @@ def externalparent(repo, state, targetancestors):
                       ', '.join(str(p) for p in sorted(parents))))
 
 def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
-                 keepbranches=False):
+                 keepbranches=False, date=None):
     '''Commit the wd changes with parents p1 and p2. Reuse commit info from rev
     but also store useful information in extra.
     Return node of committed revision.'''
@@ -608,8 +608,10 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
             if keepbranch:
                 repo.ui.setconfig('ui', 'allowemptycommit', True)
             # Commit might fail if unresolved files exist
+            if date is None:
+                date = ctx.date()
             newnode = repo.commit(text=commitmsg, user=ctx.user(),
-                                  date=ctx.date(), extra=extra, editor=editor)
+                                  date=date, extra=extra, editor=editor)
         finally:
             repo.ui.restoreconfig(backup)
 
