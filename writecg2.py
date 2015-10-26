@@ -28,11 +28,11 @@ from mercurial.node import nullid
 import os
 import tempfile
 
-def overridewritebundle(orig, ui, cg, filename, bundletype, vfs=None):
+def overridewritebundle(orig, ui, cg, filename, bundletype, *args, **kwargs):
     if (bundletype.startswith('HG10') and
         isinstance(cg, changegroup.cg2unpacker)):
         bundletype = 'HG2C' + bundletype[4:]
-    return orig(ui, cg, filename, bundletype, vfs=vfs)
+    return orig(ui, cg, filename, bundletype, *args, **kwargs)
 
 def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
     # we only care about performance for strips, not about 'hg bundle' and
