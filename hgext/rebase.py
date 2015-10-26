@@ -220,6 +220,7 @@ def rebase(ui, repo, **opts):
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
         collapsemsg = cmdutil.logmessage(ui, opts)
+        date = opts.get('date', None)
         e = opts.get('extrafn') # internal, used by e.g. hgsubversion
         extrafns = [_savegraft]
         if e:
@@ -454,7 +455,8 @@ def rebase(ui, repo, **opts):
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
                                            editor=editor,
-                                           keepbranches=keepbranchesf)
+                                           keepbranches=keepbranchesf,
+                                           date=date)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.beginparentchange()
@@ -505,7 +507,8 @@ def rebase(ui, repo, **opts):
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
             newnode = concludenode(repo, rev, p1, external, commitmsg=commitmsg,
                                    extrafn=extrafn, editor=editor,
-                                   keepbranches=keepbranchesf)
+                                   keepbranches=keepbranchesf,
+                                   date=date)
             if newnode is None:
                 newrev = target
             else:
