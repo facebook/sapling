@@ -376,7 +376,7 @@ function ajaxScrollInit(urlFormat,
 
             if (!nextPageVar) {
                 var message = {
-                    class: 'scroll-loading-info',
+                    'class': 'scroll-loading-info',
                     text: 'No more entries'
                 };
                 appendFormatHTML(container, messageFormat, message);
@@ -388,7 +388,7 @@ function ajaxScrollInit(urlFormat,
                 'GET',
                 function onstart() {
                     var message = {
-                        class: 'scroll-loading',
+                        'class': 'scroll-loading',
                         text: 'Loading...'
                     };
                     appendFormatHTML(container, messageFormat, message);
@@ -423,7 +423,7 @@ function ajaxScrollInit(urlFormat,
                 },
                 function onerror(errorText) {
                     var message = {
-                        class: 'scroll-loading-error',
+                        'class': 'scroll-loading-error',
                         text: 'Error: ' + errorText
                     };
                     appendFormatHTML(container, messageFormat, message);
