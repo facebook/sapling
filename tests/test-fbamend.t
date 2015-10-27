@@ -399,6 +399,7 @@ Make sure fixup gets rid of preamend bookmarks (there should be none)
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
+  $ rm testModeCommands
 
 Test fbamend fails with both --iteractive and --rebase
   $ hg commit --amend --rebase -i
@@ -423,3 +424,18 @@ Test commit fails with --fixup and --rebase without --amend
   $ hg commit --rebase
   abort: --rebase must be called with --amend
   [255]
+
+Test hg amend works with a logfile
+  $ hg up -r 'last(.::)' -q
+  $ echo 'content change' > a
+  $ echo 'this will be a logfile based commit message' > alogfile
+  $ hg amend --logfile alogfile
+  $ hg log -r . -T '{desc}'
+  this will be a logfile based commit message (no-eol)
+
+  $ echo 'another content change' > a
+  $ hg amend --logfile alogfile --message 'Crazy. You can not mix -m with -l'
+  abort: options --message and --logfile are mutually exclusive
+  [255]
+  $ rm alogfile
+
