@@ -13,15 +13,12 @@
   $ cd remote
   $ touch a
   $ hg commit -A -m 'a commit' -q
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg book bmwillnotmove
   $ hg book bm
 
 Test reflog with remote bookmarks works on clone
   $ cd ..
   $ hg clone remote local -q
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ cd local
   $ hg reflog remote/bm
   Previous locations of 'remote/bm':
@@ -32,7 +29,6 @@ Test reflog with remote bookmarks works on pull
   $ hg up bm -q
   $ echo 'modified' > a
   $ hg commit -m 'a second commit' -q
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ cd ../local
   $ hg pull -q
   $ hg reflog remote/bm
@@ -42,11 +38,8 @@ Test reflog with remote bookmarks works on pull
 
 Test reflog with remote bookmarks works after push
   $ hg up remote/bm -q
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ echo 'modified locally' > a
   $ hg commit -m 'local commit' -q
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg push --to bm -q
   $ hg reflog remote/bm
   Previous locations of 'remote/bm':

@@ -21,22 +21,17 @@ Test that working copy changes are tracked
 
   $ echo a > a
   $ hg commit -Aqm a
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg reflog
   Previous locations of '.':
   cb9a9f314b8b  commit -Aqm a
   $ echo b > a
   $ hg commit -Aqm b
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg reflog
   Previous locations of '.':
   1e6c11564562  commit -Aqm b
   cb9a9f314b8b  commit -Aqm a
   $ hg up 0
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg reflog
   Previous locations of '.':
   cb9a9f314b8b  up 0
@@ -55,10 +50,8 @@ Test that bookmarks are tracked
   cb9a9f314b8b  book -f foo
   1e6c11564562  book -r tip foo
   $ hg up
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark foo
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg reflog foo
   Previous locations of 'foo':
   1e6c11564562  up
@@ -128,9 +121,6 @@ Test pulls
   $ hg init ../repo2
   $ hg push -q -B foo ../repo2
   $ hg strip -q -r . --config extensions.strip=
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
-  devel-warn: use dirstate.write with repo.currenttransaction() at: * (recorddirstateparents) (glob)
   $ hg pull -q ../repo2
   $ hg reflog foo
   Previous locations of 'foo':

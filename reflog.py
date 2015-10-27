@@ -122,7 +122,7 @@ def recorddirstateparents(orig, self, tr=False):
             newhashes.append(parents[1])
         self.reflogrepo.reflog.addentry(workingcopyparenttype, '.', oldhashes,
             newhashes)
-    return orig(self)
+    return orig(self, tr=tr)
 
 @command('reflog',
     [('', 'all', None, 'show history for all refs'),
