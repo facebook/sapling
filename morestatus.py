@@ -75,7 +75,7 @@ def bisectmsg(ui):
 def fileexistspredicate(filename):
     return lambda repo: repo.vfs.exists(filename)
 
-def cleanmergepredicate(repo):
+def mergepredicate(repo):
     return len(repo.parents()) > 1
 
 STATES = (
@@ -86,11 +86,9 @@ STATES = (
     ('unshelve', fileexistspredicate('unshelverebasestate'), unshelvemsg),
     ('rebase', fileexistspredicate('rebasestate'), rebasemsg),
     # The merge state is part of a list that will be iterated over. It needs to
-    # be second to last because some of the other unfinished states may also be
-    # in a conflicted or clean merge state (eg.  histedit, graft, etc). We want
-    # those to have priority.
-    ('merge', fileexistspredicate('merge'), mergemsg),
-    ('merge', cleanmergepredicate, mergemsg),
+    # be last because some of the other unfinished states may also be in a merge
+    # state (eg.  histedit, graft, etc). We want those to have priority.
+    ('merge', mergepredicate, mergemsg),
 )
 
 
