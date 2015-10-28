@@ -120,19 +120,20 @@ def tweakbehaviors(ui):
             pass
 
 def commitcmd(orig, ui, repo, *pats, **opts):
-    if opts.get("amend") and not opts.get("date") and not ui.configbool('tweakdefaults', 'amendkeepdate'):
+    if (opts.get("amend")
+            and not opts.get("date")
+            and not ui.configbool('tweakdefaults', 'amendkeepdate')):
         opts["date"] = currentdate()
 
     rev = opts.get('reuse_message')
+    if rev:
+        invalidargs = ['message', 'logfile']
+        currentinvalidargs = [ia for ia in invalidargs if opts.get(ia)]
+        if currentinvalidargs:
+            raise util.Abort(_('--reuse-message and --%s are '
+                'mutually exclusive') % (currentinvalidargs[0]))
 
-    invalidargs = ['message', 'logfile']
-    currentinvalidargs = [ia for ia in invalidargs if opts.get(ia) != '']
-
-    if rev != '' and currentinvalidargs:
-        raise util.Abort(_('--reuse-message and --%s are '
-            'mutually exclusive') % currentinvalidargs[0])
-
-    if rev != '':
+    if rev:
        opts['message'] = repo[rev].description()
 
     return orig(ui, repo, *pats, **opts)
