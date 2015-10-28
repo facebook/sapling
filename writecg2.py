@@ -15,6 +15,7 @@ read and write changegroup2s to disk.
 from mercurial import bundle2
 from mercurial import bundlerepo
 from mercurial import changegroup
+from mercurial import commands
 from mercurial import discovery
 from mercurial import error
 from mercurial import exchange
@@ -27,39 +28,6 @@ from mercurial.node import nullid
 
 import os
 import tempfile
-
-def overridewritebundle(orig, ui, cg, filename, bundletype, *args, **kwargs):
-    if (bundletype.startswith('HG10') and
-        isinstance(cg, changegroup.cg2unpacker)):
-        bundletype = 'HG2C' + bundletype[4:]
-    return orig(ui, cg, filename, bundletype, *args, **kwargs)
-
-def overridechangegroupsubset(orig, repo, roots, heads, source, version = '01'):
-    # we only care about performance for strips, not about 'hg bundle' and
-    # similar
-    if source != 'strip' or version != '01':
-        return orig(repo, roots, heads, source, version=version)
-
-    # below is all copied from changegroup.py, except with cg1 changed to
-    # cg2
-    cl = repo.changelog
-    if not roots:
-        roots = [nullid]
-    discbases = []
-    for n in roots:
-        discbases.extend([p for p in cl.parents(n) if p != nullid])
-    # TODO: remove call to nodesbetween.
-    csets, roots, heads = cl.nodesbetween(roots, heads)
-    included = set(csets)
-    discbases = [n for n in discbases if n not in included]
-    outgoing = discovery.outgoing(cl, discbases, heads)
-    # use packermap because other extensions might override it
-    bundler = changegroup.packermap['02'][0](repo)
-    gengroup = changegroup.getsubsetraw(repo, outgoing, bundler, source,
-                                        fastpath=False)
-    result = changegroup.cg2unpacker(util.chunkbuffer(gengroup), 'UN')
-    result.version = '01' # needed to pass writebundle checks
-    return result
 
 def overridereadbundle(orig, ui, fh, fname, vfs=None):
     # copied from exchange.py
@@ -134,7 +102,15 @@ def extsetup(ui):
             cg2types[cg2type] = (cg2header, compressor)
     bundletypes.update(cg2types)
 
-    extensions.wrapfunction(changegroup, 'writebundle', overridewritebundle)
-    extensions.wrapfunction(changegroup, 'changegroupsubset',
-                            overridechangegroupsubset)
     extensions.wrapfunction(exchange, 'readbundle', overridereadbundle)
+
+    extensions.wrapcommand(commands.table, 'bundle', bundlecmd)
+
+def bundlecmd(orig, ui, repo, fname, dest=None, **opts):
+    bundletype = opts.get('type')
+    # Temporarily force writes to be the old style. This makes them compatible
+    # across all of our clients. Once we've deployed versions of hg that can
+    # read new bundles, we can disable this.
+    if not bundletype or bundletype == 'bzip2':
+        opts['type'] = 'bzip2-v1'
+    return orig(ui, repo, fname, dest=dest, **opts)
