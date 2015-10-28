@@ -233,6 +233,7 @@ ignore = [
     # raise ImportError if x not defined
     '__main__',
     '_ssl', # conditional imports in the stdlib, issue1964
+    '_sre', # issue4920
     'rfc822',
     'mimetools',
     # setuptools 8 expects this module to explode early when not on windows
