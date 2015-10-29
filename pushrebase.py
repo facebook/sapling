@@ -31,6 +31,7 @@ commonheadsparttype = 'b2x:commonheads'
 
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
+pushrebasemarker = '__pushrebase_processed__'
 
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
@@ -75,6 +76,16 @@ def extsetup(ui):
     wrapfunction(exchange, 'unbundle', unbundle)
 
     wrapfunction(hg, '_peerorrepo', _peerorrepo)
+
+def reposetup(ui, repo):
+    if repo.ui.configbool('pushrebase', 'blocknonpushrebase'):
+        repo.ui.setconfig('hooks', 'prechangegroup.blocknonpushrebase',
+                          blocknonpushrebase)
+
+def blocknonpushrebase(ui, repo, **kwargs):
+    if not repo.ui.configbool('pushrebase', pushrebasemarker):
+        raise util.Abort("this repository requires that you push using "
+                         "'hg push --to'")
 
 def _peerorrepo(orig, ui, path, create=False):
     # Force hooks to use a bundle repo
@@ -437,6 +448,7 @@ def bundle2rebase(op, part):
         prelockrebaseargs['hook_bundlepath'] = bundlefile
         op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
+        op.repo.ui.setconfig('pushrebase', pushrebasemarker, True)
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
 
