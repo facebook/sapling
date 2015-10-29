@@ -203,6 +203,17 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
+
+        if (getattr(dirstate, 'rootcache', False) and
+            (not ignoremod or getattr(ignore, 'readpats', False))):
+            # only install our dirstate wrapper if it has a hope of working
+            import gitdirstate
+            if ignoremod:
+                def ignorewrap(orig, *args, **kwargs):
+                    return gitdirstate.gignore(*args, **kwargs)
+                extensions.wrapfunction(ignore, 'ignore', ignorewrap)
+            dirstate.dirstate = gitdirstate.gitdirstate
+
         klass = hgrepo.generate_repo_subclass(repo.__class__)
         repo.__class__ = klass
 
@@ -240,16 +251,6 @@ def gverify(ui, repo, **opts):
     '''
     ctx = scmutil.revsingle(repo, opts.get('rev'), '.')
     return verify.verify(ui, repo, ctx)
-
-if (getattr(dirstate, 'rootcache', False) and
-    (not ignoremod or getattr(ignore, 'readpats', False))):
-    # only install our dirstate wrapper if it has a hope of working
-    import gitdirstate
-    if ignoremod:
-        def ignorewrap(orig, *args, **kwargs):
-            return gitdirstate.gignore(*args, **kwargs)
-        extensions.wrapfunction(ignore, 'ignore', ignorewrap)
-    dirstate.dirstate = gitdirstate.gitdirstate
 
 @command('git-cleanup')
 def git_cleanup(ui, repo):
