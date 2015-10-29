@@ -211,7 +211,9 @@ Stack with conflict in tail should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  abort: conflicting changes in ['a']
+  abort: conflicting changes in:
+      a
+  
   [255]
 
   $ hg strip 5
@@ -242,7 +244,9 @@ Stack with conflict in head should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  abort: conflicting changes in ['a']
+  abort: conflicting changes in:
+      a
+  
   [255]
 
   $ hg strip 5

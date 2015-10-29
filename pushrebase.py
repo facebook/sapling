@@ -315,7 +315,8 @@ def _getrevs(bundle, onto):
         ontomanifest = onto.manifest().matches(filematcher)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
-            raise util.Abort(_('conflicting changes in %r') % conflicts)
+            raise util.Abort(_('conflicting changes in:\n%s') %
+                             ''.join('    %s\n' % f for f in sorted(conflicts)))
 
     return revs, oldonto
 
