@@ -456,6 +456,11 @@ def bundle2rebase(op, part):
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
 
+        # Recreate the bundle repo, since taking the lock in gettranscation()
+        # may have caused it to become out of date.
+        # (but grab a copy of the cache first)
+        bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
         # specific data.
