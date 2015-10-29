@@ -32,6 +32,7 @@ commonheadsparttype = 'b2x:commonheads'
 experimental = 'experimental'
 configonto = 'server-rebase-onto'
 pushrebasemarker = '__pushrebase_processed__'
+donotrebasemarker = '__pushrebase_donotrebase__'
 
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
@@ -123,7 +124,7 @@ def validaterevset(repo, revset):
 
     repo.ui.note(_('validated revset for rebase\n'))
 
-def getrebasepart(repo, peer, outgoing, onto, newhead, force):
+def getrebasepart(repo, peer, outgoing, onto, newhead):
     if not outgoing.missing:
         raise util.Abort(_('no commits to rebase'))
 
@@ -141,7 +142,6 @@ def getrebasepart(repo, peer, outgoing, onto, newhead, force):
         mandatoryparams={
             'onto': onto,
             'newhead': repr(newhead),
-            'force': 'True' if force else 'False',
         }.items(),
         data = cg)
 
@@ -227,12 +227,15 @@ def partgen(pushop, bundler):
         pushop.cgresult = 0
         return
 
+    # Force push means no rebasing, so let's just take the existing parent.
+    if pushop.force:
+        onto = donotrebasemarker
+
     rebasepart = getrebasepart(pushop.repo,
                                pushop.remote,
                                pushop.outgoing,
                                onto,
-                               pushop.newbranch,
-                               pushop.force)
+                               pushop.newbranch)
 
     bundler.addpart(rebasepart)
 
@@ -432,7 +435,7 @@ def _addpushbackparts(op, replacements):
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
 
-@bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'force'))
+@bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
@@ -473,10 +476,11 @@ def bundle2rebase(op, part):
         try:
             # onto == None means don't do rebasing
             onto = None
-            if params['force'] != 'True':
-                onto = scmutil.revsingle(op.repo, params['onto'])
+            ontoarg = params.get('onto', donotrebasemarker)
+            if ontoarg != donotrebasemarker:
+                onto = scmutil.revsingle(op.repo, ontoarg)
         except error.RepoLookupError:
-            # Probably a new bookmark. Don't do rebasing
+            # Probably a new bookmark. Leave onto as None to not do any rebasing
             pass
 
         if not params['newhead']:
