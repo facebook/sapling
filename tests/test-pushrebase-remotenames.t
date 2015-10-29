@@ -79,10 +79,6 @@ Test pushing a new bookmark
   $ hg -R client push --to newbook -f
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 0 changes to 1 files (+1 heads)
   exporting bookmark newbook
   $ hg -R server book
    * master                    2:796d44dcaae0
@@ -201,3 +197,50 @@ Test that we still don't allow non-ff bm changes
   remote: rollback completed
   abort: updating bookmark bm failed!
   [255]
+
+  $ cd ..
+
+Test force pushes
+  $ hg init forcepushserver
+  $ cd forcepushserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ echo a > a && hg commit -Aqm a
+  $ hg book master
+  $ cd ..
+
+  $ hg clone forcepushserver forcepushclient
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd forcepushserver
+  $ echo a >> a && hg commit -Aqm aa
+
+  $ cd ../forcepushclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ hg up master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo b >> a && hg commit -Aqm b
+  $ hg push -f --to master
+  pushing rev 1846eede8b68 to destination * (glob)
+  searching for changes
+  updating bookmark master
+  $ hg pull
+  pulling from * (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{rev} {desc} {remotebookmarks}'
+  o  2 aa
+  |
+  | @  1 b default/master
+  |/
+  o  0 a
+  

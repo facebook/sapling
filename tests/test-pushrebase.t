@@ -633,3 +633,49 @@ Test date rewriting
   |/
   o  a 1970-01-01 00:00 +0000
   
+  $ cd ..
+
+Test force pushes
+  $ hg init forcepushserver
+  $ cd forcepushserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ echo a > a && hg commit -Aqm a
+  $ cd ..
+
+  $ hg clone forcepushserver forcepushclient
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd forcepushserver
+  $ echo a >> a && hg commit -Aqm aa
+
+  $ cd ../forcepushclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase = $TESTDIR/../pushrebase.py
+  > EOF
+  $ hg up 0
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo b >> a && hg commit -Aqm b
+  $ hg book master
+  $ hg push -f --to master -B master
+  pushing to $TESTTMP/forcepushserver
+  searching for changes
+  exporting bookmark master
+  $ hg pull
+  pulling from $TESTTMP/forcepushserver
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg log -G -T '{rev} {desc} {bookmarks}'
+  o  2 aa
+  |
+  | @  1 b master
+  |/
+  o  0 a
+  

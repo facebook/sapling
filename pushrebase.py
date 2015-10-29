@@ -112,7 +112,7 @@ def validaterevset(repo, revset):
 
     repo.ui.note(_('validated revset for rebase\n'))
 
-def getrebasepart(repo, peer, outgoing, onto, newhead=False):
+def getrebasepart(repo, peer, outgoing, onto, newhead, force):
     if not outgoing.missing:
         raise util.Abort(_('no commits to rebase'))
 
@@ -125,11 +125,14 @@ def getrebasepart(repo, peer, outgoing, onto, newhead=False):
 
     # .upper() marks this as a mandatory part: server will abort if there's no
     #  handler
-    return bundle2.bundlepart(rebaseparttype.upper(),
-                              mandatoryparams={'onto': onto,
-                                               'newhead': repr(newhead),
-                                              }.items(),
-                              data = cg)
+    return bundle2.bundlepart(
+        rebaseparttype.upper(),
+        mandatoryparams={
+            'onto': onto,
+            'newhead': repr(newhead),
+            'force': 'True' if force else 'False',
+        }.items(),
+        data = cg)
 
 def _checkheads(orig, repo, remote, *args, **kwargs):
     onto = repo.ui.config(experimental, configonto)
@@ -201,7 +204,7 @@ def commonheadshandler(op, inpart):
 @exchange.b2partsgenerator(rebaseparttype)
 def partgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
-    if 'changesets' in pushop.stepsdone or not onto or pushop.force:
+    if 'changesets' in pushop.stepsdone or not onto:
         return
 
     pushop.stepsdone.add('changesets')
@@ -217,7 +220,8 @@ def partgen(pushop, bundler):
                                pushop.remote,
                                pushop.outgoing,
                                onto,
-                               pushop.newbranch)
+                               pushop.newbranch,
+                               pushop.force)
 
     bundler.addpart(rebasepart)
 
@@ -413,7 +417,7 @@ def _addpushbackparts(op, replacements):
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
 
-@bundle2.parthandler(rebaseparttype, ('onto', 'newhead'))
+@bundle2.parthandler(rebaseparttype, ('onto', 'newhead', 'force'))
 def bundle2rebase(op, part):
     '''unbundle a bundle2 containing a changegroup to rebase'''
 
@@ -446,10 +450,13 @@ def bundle2rebase(op, part):
         bundle.manifest._cache = op.repo.manifest._cache
 
         try:
-            onto = scmutil.revsingle(op.repo, params['onto'])
-        except error.RepoLookupError:
-            # Probably a new bookmark. onto == None means don't do rebasing
+            # onto == None means don't do rebasing
             onto = None
+            if params['force'] != 'True':
+                onto = scmutil.revsingle(op.repo, params['onto'])
+        except error.RepoLookupError:
+            # Probably a new bookmark. Don't do rebasing
+            pass
 
         if not params['newhead']:
             if not op.repo.revs('%r and head()', params['onto']):
