@@ -52,6 +52,8 @@ Pushrebase pushes should be allowed
   $ hg push --config extensions.pushrebase=$TESTDIR/../pushrebase.py --to master -B master
   pushing to $TESTTMP/server
   searching for changes
+  pushing 1 commit:
+      1846eede8b68  b
   exporting bookmark master
 
 Bookmark pushes should not be affected by the block

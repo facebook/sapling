@@ -115,6 +115,10 @@ Stack of non-conflicting commits should be accepted
   46a2df24e27273bb06dbf28b085fcc2e911bf986
   0e3997dc073308e42715a44d345466690abfd09a
   sending unbundle command
+  remote: pushing 2 commits:
+  remote:     46a2df24e272  b => xxx
+  remote:     0e3997dc0733  b => baz
+  remote: 3 new commits from the server will be downloaded
   adding changesets
   add changeset add0c792bfce
   add changeset 6a6d9484552c
@@ -174,6 +178,8 @@ Regular commits should go through without changing hash
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  remote: pushing 1 commit:
+  remote:     741fd2094512  b => quux
 
   $ cd ../server
   $ hg update default
@@ -305,6 +311,13 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg push --to master -B master
   pushing to ssh://user@dummy/server
   searching for changes
+  remote: pushing 5 commits:
+  remote:     e6b7549904cd  branch left
+  remote:     add5ec74853d  branch start
+  remote:     5a0cbf3df4ef  branch middle
+  remote:     2c0c699d7086  merge
+  remote:     9007d6a204f8  on top of merge
+  remote: 6 new commits from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -383,6 +396,10 @@ With evolution enabled, should set obsolescence markers
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
+  remote: pushing 2 commits:
+  remote:     9467a8ee5d0d  b => k
+  remote:     e73acfaeee82  b => foobar
+  remote: 4 new commits from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -452,6 +469,8 @@ Test pushing master bookmark, fast forward
   $ hg push --to master
   pushing to ssh://user@dummy/server
   searching for changes
+  remote: pushing 1 commit:
+  remote:     56b2e0949966  b => babar
   updating bookmark master
   $ hg log -r master -R ../server -T"{node}\n"
   56b2e094996609874ae1c9aae1626bfba61d07d8
@@ -570,6 +589,8 @@ Test that hooks are fired with the correct variables
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  pushing 1 commit:
+      4fcee35c508c  first
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pretxnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   txnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
@@ -619,6 +640,9 @@ Test date rewriting
   $ hg push --to master
   pushing to $TESTTMP/rewritedate
   searching for changes
+  pushing 1 commit:
+      d5e255ef74f8  c
+  1 new commit from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
@@ -663,6 +687,8 @@ Test force pushes
   $ hg push -f --to master -B master
   pushing to $TESTTMP/forcepushserver
   searching for changes
+  pushing 1 commit:
+      1846eede8b68  b
   exporting bookmark master
   $ hg pull
   pulling from $TESTTMP/forcepushserver

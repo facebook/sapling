@@ -425,6 +425,9 @@ def _addpushbackparts(op, replacements):
                                        if old != new])
 
         if outgoing.missing:
+            plural = 's' if len(outgoing.missing) > 1 else ''
+            op.repo.ui.warn("%s new commit%s from the server will be downloaded\n" %
+                            (len(outgoing.missing), plural))
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
 
@@ -492,6 +495,19 @@ def bundle2rebase(op, part):
 
         replacements = {}
         added = []
+
+        # Notify the user of what is being pushed
+        plural = 's' if len(revs) > 1 else ''
+        op.repo.ui.warn("pushing %s commit%s:\n" % (len(revs), plural))
+        maxoutput = 10
+        for i in range(0, min(len(revs), maxoutput)):
+            firstline = bundle[revs[i]].description().split('\n')[0][:50]
+            op.repo.ui.warn("    %s  %s\n" % (revs[i], firstline))
+
+        if len(revs) > maxoutput + 1:
+            op.repo.ui.warn("    ...\n")
+            firstline = bundle[revs[-1]].description().split('\n')[0][:50]
+            op.repo.ui.warn("    %s  %s\n" % (revs[-1], firstline))
 
         for rev in revs:
             newrev = _graft(op.repo, rev, mapping)
