@@ -358,8 +358,12 @@ def svnpropget(repo_path, path, prop, rev='HEAD'):
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     stdout, stderr = p.communicate()
-    if p.returncode:
+    if p.returncode and stderr:
         raise Exception('svn ls failed on %s: %r' % (path, stderr))
+    if 'W200017' in stdout:
+        # subversion >= 1.9 changed 'no properties' to be an error, so let's
+        # avoid that
+        return ''
     return stdout.strip()
 
 
