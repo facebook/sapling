@@ -5972,10 +5972,9 @@ def serve(ui, repo, **opts):
     if opts["cmdserver"]:
         import commandserver
         service = commandserver.createservice(ui, repo, opts)
-        return cmdutil.service(opts, initfn=service.init, runfn=service.run)
-
-    service = hgweb.createservice(ui, repo, opts)
-    cmdutil.service(opts, initfn=service.init, runfn=service.run)
+    else:
+        service = hgweb.createservice(ui, repo, opts)
+    return cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
 @command('^status|st',
     [('A', 'all', None, _('show status of all files')),
