@@ -96,6 +96,16 @@ def createservice(ui, repo, opts):
         alluis.update([repo.baseui, repo.ui])
     else:
         baseui = ui
+    webconf = opts.get('web_conf') or opts.get('webdir_conf')
+    if webconf:
+        # load server settings (e.g. web.port) to "copied" ui, which allows
+        # hgwebdir to reload webconf cleanly
+        servui = ui.copy()
+        servui.readconfig(webconf, sections=['web'])
+        alluis.add(servui)
+    else:
+        servui = ui
+
     optlist = ("name templates style address port prefix ipv6"
                " accesslog errorlog certificate encoding")
     for o in optlist.split():
@@ -105,7 +115,6 @@ def createservice(ui, repo, opts):
         for u in alluis:
             u.setconfig("web", o, val, 'serve')
 
-    webconf = opts.get('web_conf') or opts.get('webdir_conf')
     if webconf:
         app = hgwebdir_mod.hgwebdir(webconf, baseui=baseui)
     else:
@@ -113,4 +122,4 @@ def createservice(ui, repo, opts):
             raise error.RepoError(_("there is no Mercurial repository"
                                     " here (.hg not found)"))
         app = hgweb_mod.hgweb(repo, baseui=baseui)
-    return httpservice(ui, app, opts)
+    return httpservice(servui, app, opts)

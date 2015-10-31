@@ -1181,6 +1181,38 @@ test inexistent and inaccessible repo should be ignored silently
   </body>
   </html>
   
+
+test listening address/port specified by web-conf (issue4699):
+
+  $ killdaemons.py
+  $ cat >> paths.conf <<EOF
+  > [web]
+  > address = localhost
+  > port = $HGPORT1
+  > EOF
+  $ hg serve -d --pid-file=hg.pid --web-conf paths.conf \
+  >     -A access-paths.log -E error-paths-9.log
+  listening at http://*:$HGPORT1/ (bound to 127.0.0.1:$HGPORT1) (glob)
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ get-with-headers.py localhost:$HGPORT1 '?style=raw'
+  200 Script output follows
+  
+  
+  
+test --port option overrides web.port:
+
+  $ killdaemons.py
+  $ hg serve -p $HGPORT2 -d -v --pid-file=hg.pid --web-conf paths.conf \
+  >     -A access-paths.log -E error-paths-10.log
+  listening at http://*:$HGPORT2/ (bound to 127.0.0.1:$HGPORT2) (glob)
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ get-with-headers.py localhost:$HGPORT2 '?style=raw'
+  200 Script output follows
+  
+  
+  
+
+  $ killdaemons.py
   $ cat > collections.conf <<EOF
   > [collections]
   > $root=$root
@@ -1337,6 +1369,14 @@ paths errors 7
 paths errors 8
 
   $ cat error-paths-8.log
+
+paths errors 9
+
+  $ cat error-paths-9.log
+
+paths errors 10
+
+  $ cat error-paths-10.log
 
 collections errors
 
