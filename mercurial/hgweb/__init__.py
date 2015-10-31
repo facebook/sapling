@@ -104,12 +104,12 @@ def createservice(ui, repo, opts):
         if repo and repo.ui != baseui:
             repo.ui.setconfig("web", o, val, 'serve')
 
-    o = opts.get('web_conf') or opts.get('webdir_conf')
-    if not o:
+    webconf = opts.get('web_conf') or opts.get('webdir_conf')
+    if webconf:
+        app = hgwebdir_mod.hgwebdir(webconf, baseui=baseui)
+    else:
         if not repo:
             raise error.RepoError(_("there is no Mercurial repository"
                                     " here (.hg not found)"))
-        o = repo
-
-    app = hgweb(o, baseui=baseui)
+        app = hgweb_mod.hgweb(repo, baseui=baseui)
     return httpservice(ui, app, opts)
