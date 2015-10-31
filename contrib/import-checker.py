@@ -239,7 +239,7 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
     >>> sorted(imported_modules(
     ...        'import foo1; from bar import bar1',
     ...        modulename, localmods))
-    ['foo.bar.__init__', 'foo.bar.bar1', 'foo.foo1']
+    ['foo.bar.bar1', 'foo.foo1']
     >>> sorted(imported_modules(
     ...        'from bar.bar1 import name1, name2, name3',
     ...        modulename, localmods))
@@ -286,19 +286,26 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
                 continue
 
             absname, dottedpath, hassubmod = found
-            yield dottedpath
             if not hassubmod:
+                # "dottedpath" is not a package; must be imported
+                yield dottedpath
                 # examination of "node.names" should be redundant
                 # e.g.: from mercurial.node import nullid, nullrev
                 continue
 
+            modnotfound = False
             prefix = absname + '.'
             for n in node.names:
                 found = fromlocal(prefix + n.name)
                 if not found:
                     # this should be a function or a property of "node.module"
+                    modnotfound = True
                     continue
                 yield found[1]
+            if modnotfound:
+                # "dottedpath" is a package, but imported because of non-module
+                # lookup
+                yield dottedpath
 
 def verify_import_convention(module, source):
     """Verify imports match our established coding convention.

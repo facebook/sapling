@@ -68,6 +68,12 @@ Run additional tests for the import checker
   > from .. import parent
   > EOF
 
+  $ touch testpackage/subpackage/foo.py
+  $ cat > testpackage/subpackage/__init__.py << EOF
+  > from __future__ import absolute_import
+  > from . import levelpriority  # should not cause cycle
+  > EOF
+
   $ cat > testpackage/sortedentries.py << EOF
   > from __future__ import absolute_import
   > from . import (
