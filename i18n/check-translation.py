@@ -76,7 +76,7 @@ def deprecatedsetup(pofile):
         global deprecatedpe
         deprecatedpe = pes[0]
 
-@fatalchecker('(DEPRECATED)')
+@fatalchecker(r'\(DEPRECATED\)')
 def deprecated(pe):
     """Check for DEPRECATED
     >>> ped = polib.POEntry(
@@ -102,6 +102,10 @@ def deprecated(pe):
     True
     >>> for e in deprecated(pe): print e
     msgstr inconsistently translated (DEPRECATED)
+    >>> pe = polib.POEntry(
+    ...     msgid = 'Something (DEPRECATED, foo bar)',
+    ...     msgstr= 'something (DETACERPED, foo bar)')
+    >>> match(deprecated, pe)
     """
     if not ('(DEPRECATED)' in pe.msgstr or
             (deprecatedpe and deprecatedpe.msgstr and
