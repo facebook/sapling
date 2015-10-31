@@ -5,9 +5,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import cgi, cStringIO, zlib, urllib
-from mercurial import util, wireproto
-from common import HTTP_OK
+from __future__ import absolute_import
+
+import cStringIO
+import cgi
+import urllib
+import zlib
+
+from .common import (
+    HTTP_OK,
+)
+
+from .. import (
+    util,
+    wireproto,
+)
 
 HGTYPE = 'application/mercurial-0.1'
 HGERRTYPE = 'application/hg-error'

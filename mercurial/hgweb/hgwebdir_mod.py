@@ -6,16 +6,42 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, re, time
-from mercurial.i18n import _
-from mercurial import hg, scmutil, util, templater
-from mercurial import ui as uimod
-from mercurial import error, encoding
-from common import ErrorResponse, get_mtime, staticfile, paritygen, ismember, \
-                   get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
-import hgweb_mod
-from request import wsgirequest
-import webutil, wsgicgi
+from __future__ import absolute_import
+
+import os
+import re
+import time
+
+from ..i18n import _
+
+from .common import (
+    ErrorResponse,
+    HTTP_NOT_FOUND,
+    HTTP_OK,
+    HTTP_SERVER_ERROR,
+    get_contact,
+    get_mtime,
+    ismember,
+    paritygen,
+    staticfile,
+)
+from .request import wsgirequest
+
+from .. import (
+    encoding,
+    error,
+    hg,
+    scmutil,
+    templater,
+    ui as uimod,
+    util,
+)
+
+from . import (
+    hgweb_mod,
+    webutil,
+    wsgicgi,
+)
 
 def cleannames(items):
     return [(util.pconvert(name).strip('/'), path) for name, path in items]

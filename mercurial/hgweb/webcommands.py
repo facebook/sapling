@@ -5,17 +5,43 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, mimetypes, re, cgi, copy
-import webutil
-from mercurial import error, encoding, archival, templater, templatefilters
-from mercurial.node import short, hex
-from mercurial import util
-from common import paritygen, staticfile, get_contact, ErrorResponse
-from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
-from mercurial import graphmod, patch
-from mercurial import scmutil
-from mercurial.i18n import _
-from mercurial import revset
+from __future__ import absolute_import
+
+import cgi
+import copy
+import mimetypes
+import os
+import re
+
+from ..i18n import _
+from ..node import hex, short
+
+from .common import (
+    ErrorResponse,
+    HTTP_FORBIDDEN,
+    HTTP_NOT_FOUND,
+    HTTP_OK,
+    get_contact,
+    paritygen,
+    staticfile,
+)
+
+from .. import (
+    archival,
+    encoding,
+    error,
+    graphmod,
+    patch,
+    revset,
+    scmutil,
+    templatefilters,
+    templater,
+    util,
+)
+
+from . import (
+    webutil,
+)
 
 __all__ = []
 commands = {}
@@ -1268,8 +1294,7 @@ def help(web, req, tmpl):
     The ``help`` template will be rendered when requesting help for a topic.
     ``helptopics`` will be rendered for the index of help topics.
     """
-    from mercurial import commands # avoid cycle
-    from mercurial import help as helpmod # avoid cycle
+    from .. import commands, help as helpmod  # avoid cycle
 
     topicname = req.form.get('node', [None])[0]
     if not topicname:

@@ -8,9 +8,18 @@
 # This was originally copied from the public domain code at
 # http://www.python.org/dev/peps/pep-0333/#the-server-gateway-side
 
-import os, sys
-from mercurial import util
-from mercurial.hgweb import common
+from __future__ import absolute_import
+
+import os
+import sys
+
+from .. import (
+    util,
+)
+
+from . import (
+    common,
+)
 
 def launch(application):
     util.setbinary(sys.stdin)

@@ -6,16 +6,32 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, copy
-import re
-from mercurial import match, patch, error, util, pathutil, context
-from mercurial import ui as uimod
-from mercurial.i18n import _
-from mercurial.node import hex, nullid, short
-from mercurial import templatefilters
-from common import ErrorResponse, paritygen
-from common import HTTP_NOT_FOUND
+from __future__ import absolute_import
+
+import copy
 import difflib
+import os
+import re
+
+from ..i18n import _
+from ..node import hex, nullid, short
+
+from .common import (
+    ErrorResponse,
+    HTTP_NOT_FOUND,
+    paritygen,
+)
+
+from .. import (
+    context,
+    error,
+    match,
+    patch,
+    pathutil,
+    templatefilters,
+    ui as uimod,
+    util,
+)
 
 def up(p):
     if p[0] != "/":

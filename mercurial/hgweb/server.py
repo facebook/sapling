@@ -6,10 +6,27 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import os, sys, errno, urllib, BaseHTTPServer, socket, SocketServer, traceback
-from mercurial import util, error
-from mercurial.hgweb import common
-from mercurial.i18n import _
+from __future__ import absolute_import
+
+import BaseHTTPServer
+import SocketServer
+import errno
+import os
+import socket
+import sys
+import traceback
+import urllib
+
+from ..i18n import _
+
+from .. import (
+    error,
+    util,
+)
+
+from . import (
+    common,
+)
 
 def _splitURI(uri):
     """Return path and query that has been split from uri
@@ -219,8 +236,8 @@ class _httprequesthandlerssl(_httprequesthandler):
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
 
 try:
-    from threading import activeCount
-    activeCount() # silence pyflakes
+    import threading
+    threading.activeCount() # silence pyflakes and bypass demandimport
     _mixin = SocketServer.ThreadingMixIn
 except ImportError:
     if util.safehasattr(os, "fork"):
