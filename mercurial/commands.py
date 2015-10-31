@@ -5974,33 +5974,7 @@ def serve(ui, repo, **opts):
         service = commandserver.createservice(ui, repo, opts)
         return cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
-    # this way we can check if something was given in the command-line
-    if opts.get('port'):
-        opts['port'] = util.getport(opts.get('port'))
-
-    if repo:
-        baseui = repo.baseui
-    else:
-        baseui = ui
-    optlist = ("name templates style address port prefix ipv6"
-               " accesslog errorlog certificate encoding")
-    for o in optlist.split():
-        val = opts.get(o, '')
-        if val in (None, ''): # should check against default options instead
-            continue
-        baseui.setconfig("web", o, val, 'serve')
-        if repo and repo.ui != baseui:
-            repo.ui.setconfig("web", o, val, 'serve')
-
-    o = opts.get('web_conf') or opts.get('webdir_conf')
-    if not o:
-        if not repo:
-            raise error.RepoError(_("there is no Mercurial repository"
-                                    " here (.hg not found)"))
-        o = repo
-
-    app = hgweb.hgweb(o, baseui=baseui)
-    service = hgweb.httpservice(ui, app, opts)
+    service = hgweb.createservice(ui, repo, opts)
     cmdutil.service(opts, initfn=service.init, runfn=service.run)
 
 @command('^status|st',
