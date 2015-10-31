@@ -71,7 +71,9 @@ def promptchoice(pe):
 deprecatedpe = None
 @scanner()
 def deprecatedsetup(pofile):
-    pes = [p for p in pofile if p.msgid == 'DEPRECATED']
+    pes = [p for p in pofile
+           if ((p.msgid == 'DEPRECATED' or p.msgid == '(DEPRECATED)') and
+               p.msgstr)]
     if len(pes):
         global deprecatedpe
         deprecatedpe = pes[0]
@@ -108,7 +110,7 @@ def deprecated(pe):
     >>> match(deprecated, pe)
     """
     if not ('(DEPRECATED)' in pe.msgstr or
-            (deprecatedpe and deprecatedpe.msgstr and
+            (deprecatedpe and
              deprecatedpe.msgstr in pe.msgstr)):
         yield "msgstr inconsistently translated (DEPRECATED)"
 
