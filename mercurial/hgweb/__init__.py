@@ -10,9 +10,16 @@ from __future__ import absolute_import
 
 import os
 
+from ..i18n import _
+
+from .. import (
+    util,
+)
+
 from . import (
     hgweb_mod,
     hgwebdir_mod,
+    server,
 )
 
 def hgweb(config, name=None, baseui=None):
@@ -35,3 +42,44 @@ def hgweb(config, name=None, baseui=None):
 def hgwebdir(config, baseui=None):
     return hgwebdir_mod.hgwebdir(config, baseui=baseui)
 
+class httpservice(object):
+    def __init__(self, ui, app, opts):
+        self.ui = ui
+        self.app = app
+        self.opts = opts
+
+    def init(self):
+        util.setsignalhandler()
+        self.httpd = server.create_server(self.ui, self.app)
+
+        if self.opts['port'] and not self.ui.verbose:
+            return
+
+        if self.httpd.prefix:
+            prefix = self.httpd.prefix.strip('/') + '/'
+        else:
+            prefix = ''
+
+        port = ':%d' % self.httpd.port
+        if port == ':80':
+            port = ''
+
+        bindaddr = self.httpd.addr
+        if bindaddr == '0.0.0.0':
+            bindaddr = '*'
+        elif ':' in bindaddr: # IPv6
+            bindaddr = '[%s]' % bindaddr
+
+        fqaddr = self.httpd.fqaddr
+        if ':' in fqaddr:
+            fqaddr = '[%s]' % fqaddr
+        if self.opts['port']:
+            write = self.ui.status
+        else:
+            write = self.ui.write
+        write(_('listening at http://%s%s/%s (bound to %s:%d)\n') %
+              (fqaddr, port, prefix, bindaddr, self.httpd.port))
+        self.ui.flush()  # avoid buffering of status message
+
+    def run(self):
+        self.httpd.serve_forever()
