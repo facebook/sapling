@@ -6,6 +6,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+import BaseHTTPServer
 import errno, mimetypes, os
 
 HTTP_OK = 200
@@ -102,8 +103,7 @@ class continuereader(object):
         raise AttributeError
 
 def _statusmessage(code):
-    from BaseHTTPServer import BaseHTTPRequestHandler
-    responses = BaseHTTPRequestHandler.responses
+    responses = BaseHTTPServer.BaseHTTPRequestHandler.responses
     return responses.get(code, ('Error', 'Unknown error'))[0]
 
 def statusmessage(code, message=None):
