@@ -87,20 +87,20 @@ Run additional tests for the import checker
   > EOF
 
   $ python "$import_checker" testpackage/*.py testpackage/subpackage/*.py
-  testpackage/importalias.py ui module must be "as" aliased to uimod
-  testpackage/importfromalias.py ui from testpackage must be "as" aliased to uimod
-  testpackage/importfromrelative.py import should be relative: testpackage.unsorted
-  testpackage/importfromrelative.py direct symbol import from testpackage.unsorted
-  testpackage/latesymbolimport.py symbol import follows non-symbol import: mercurial.node
-  testpackage/multiple.py multiple imported names: os, sys
-  testpackage/multiplegroups.py multiple "from . import" statements
-  testpackage/relativestdlib.py relative import of stdlib module
-  testpackage/requirerelative.py import should be relative: testpackage.unsorted
-  testpackage/sortedentries.py imports from testpackage not lexically sorted: bar < foo
-  testpackage/stdafterlocal.py stdlib import follows local import: os
-  testpackage/subpackage/levelpriority.py higher-level import should come first: testpackage
-  testpackage/symbolimport.py direct symbol import from testpackage.unsorted
-  testpackage/unsorted.py imports not lexically sorted: os < sys
+  testpackage/importalias.py:2: ui module must be "as" aliased to uimod
+  testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
+  testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted
+  testpackage/importfromrelative.py:2: direct symbol import from testpackage.unsorted
+  testpackage/latesymbolimport.py:3: symbol import follows non-symbol import: mercurial.node
+  testpackage/multiple.py:2: multiple imported names: os, sys
+  testpackage/multiplegroups.py:3: multiple "from . import" statements
+  testpackage/relativestdlib.py:2: relative import of stdlib module
+  testpackage/requirerelative.py:2: import should be relative: testpackage.unsorted
+  testpackage/sortedentries.py:2: imports from testpackage not lexically sorted: bar < foo
+  testpackage/stdafterlocal.py:3: stdlib import follows local import: os
+  testpackage/subpackage/levelpriority.py:3: higher-level import should come first: testpackage
+  testpackage/symbolimport.py:2: direct symbol import from testpackage.unsorted
+  testpackage/unsorted.py:3: imports not lexically sorted: os < sys
   [1]
 
   $ cd "$TESTDIR"/..

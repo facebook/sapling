@@ -356,7 +356,7 @@ def verify_modern_convention(module, root):
 
     for node in ast.walk(root):
         def msg(fmt, *args):
-            return fmt % args
+            return (fmt % args, node.lineno)
         if isinstance(node, ast.Import):
             # Disallow "import foo, bar" and require separate imports
             # for each module.
@@ -464,7 +464,7 @@ def verify_stdlib_on_own_line(root):
     http://bugs.python.org/issue19510.
 
     >>> list(verify_stdlib_on_own_line(ast.parse('import sys, foo')))
-    ['mixed imports\\n   stdlib:    sys\\n   relative:  foo']
+    [('mixed imports\\n   stdlib:    sys\\n   relative:  foo', 1)]
     >>> list(verify_stdlib_on_own_line(ast.parse('import sys, os')))
     []
     >>> list(verify_stdlib_on_own_line(ast.parse('import foo, bar')))
@@ -478,7 +478,7 @@ def verify_stdlib_on_own_line(root):
             if from_stdlib[True] and from_stdlib[False]:
                 yield ('mixed imports\n   stdlib:    %s\n   relative:  %s' %
                        (', '.join(sorted(from_stdlib[True])),
-                        ', '.join(sorted(from_stdlib[False]))))
+                        ', '.join(sorted(from_stdlib[False]))), node.lineno)
 
 class CircularImport(Exception):
     pass
@@ -550,9 +550,9 @@ def main(argv):
         src = f.read()
         used_imports[modname] = sorted(
             imported_modules(src, modname, localmods, ignore_nested=True))
-        for error in verify_import_convention(modname, src):
+        for error, lineno in verify_import_convention(modname, src):
             any_errors = True
-            print source_path, error
+            print '%s:%d: %s' % (source_path, lineno, error)
         f.close()
     cycles = find_cycles(used_imports)
     if cycles:
