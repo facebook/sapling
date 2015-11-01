@@ -355,12 +355,14 @@ def verify_modern_convention(module, root):
     seenlevels = set()
 
     for node in ast.walk(root):
+        def msg(fmt, *args):
+            return fmt % args
         if isinstance(node, ast.Import):
             # Disallow "import foo, bar" and require separate imports
             # for each module.
             if len(node.names) > 1:
-                yield 'multiple imported names: %s' % ', '.join(
-                    n.name for n in node.names)
+                yield msg('multiple imported names: %s',
+                          ', '.join(n.name for n in node.names))
 
             name = node.names[0].name
             asname = node.names[0].asname
@@ -368,15 +370,15 @@ def verify_modern_convention(module, root):
             # Ignore sorting rules on imports inside blocks.
             if node.col_offset == 0:
                 if lastname and name < lastname:
-                    yield 'imports not lexically sorted: %s < %s' % (
-                           name, lastname)
+                    yield msg('imports not lexically sorted: %s < %s',
+                              name, lastname)
 
                 lastname = name
 
             # stdlib imports should be before local imports.
             stdlib = name in stdlib_modules
             if stdlib and seenlocal and node.col_offset == 0:
-                yield 'stdlib import follows local import: %s' % name
+                yield msg('stdlib import follows local import: %s', name)
 
             if not stdlib:
                 seenlocal = True
@@ -384,11 +386,11 @@ def verify_modern_convention(module, root):
             # Import of sibling modules should use relative imports.
             topname = name.split('.')[0]
             if topname == topmodule:
-                yield 'import should be relative: %s' % name
+                yield msg('import should be relative: %s', name)
 
             if name in requirealias and asname != requirealias[name]:
-                yield '%s module must be "as" aliased to %s' % (
-                       name, requirealias[name])
+                yield msg('%s module must be "as" aliased to %s',
+                          name, requirealias[name])
 
         elif isinstance(node, ast.ImportFrom):
             # Resolve the full imported module name.
@@ -402,13 +404,13 @@ def verify_modern_convention(module, root):
 
                 topname = fullname.split('.')[0]
                 if topname == topmodule:
-                    yield 'import should be relative: %s' % fullname
+                    yield msg('import should be relative: %s', fullname)
 
             # __future__ is special since it needs to come first and use
             # symbol import.
             if fullname != '__future__':
                 if not fullname or fullname in stdlib_modules:
-                    yield 'relative import of stdlib module'
+                    yield msg('relative import of stdlib module')
                 else:
                     seenlocal = True
 
@@ -416,11 +418,11 @@ def verify_modern_convention(module, root):
             # must occur before non-symbol imports.
             if node.module and node.col_offset == 0:
                 if fullname not in allowsymbolimports:
-                    yield 'direct symbol import from %s' % fullname
+                    yield msg('direct symbol import from %s', fullname)
 
                 if seennonsymbolrelative:
-                    yield ('symbol import follows non-symbol import: %s' %
-                           fullname)
+                    yield msg('symbol import follows non-symbol import: %s',
+                              fullname)
 
             if not node.module:
                 assert node.level
@@ -428,13 +430,13 @@ def verify_modern_convention(module, root):
 
                 # Only allow 1 group per level.
                 if node.level in seenlevels and node.col_offset == 0:
-                    yield 'multiple "from %s import" statements' % (
-                           '.' * node.level)
+                    yield msg('multiple "from %s import" statements',
+                              '.' * node.level)
 
                 # Higher-level groups come before lower-level groups.
                 if any(node.level > l for l in seenlevels):
-                    yield 'higher-level import should come first: %s' % (
-                           fullname)
+                    yield msg('higher-level import should come first: %s',
+                              fullname)
 
                 seenlevels.add(node.level)
 
@@ -444,14 +446,14 @@ def verify_modern_convention(module, root):
 
             for n in node.names:
                 if lastentryname and n.name < lastentryname:
-                    yield 'imports from %s not lexically sorted: %s < %s' % (
-                           fullname, n.name, lastentryname)
+                    yield msg('imports from %s not lexically sorted: %s < %s',
+                              fullname, n.name, lastentryname)
 
                 lastentryname = n.name
 
                 if n.name in requirealias and n.asname != requirealias[n.name]:
-                    yield '%s from %s must be "as" aliased to %s' % (
-                          n.name, fullname, requirealias[n.name])
+                    yield msg('%s from %s must be "as" aliased to %s',
+                              n.name, fullname, requirealias[n.name])
 
 def verify_stdlib_on_own_line(root):
     """Given some python source, verify that stdlib imports are done
