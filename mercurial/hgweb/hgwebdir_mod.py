@@ -8,7 +8,8 @@
 
 import os, re, time
 from mercurial.i18n import _
-from mercurial import ui, hg, scmutil, util, templater
+from mercurial import hg, scmutil, util, templater
+from mercurial import ui as uimod
 from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen, ismember, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -108,7 +109,7 @@ class hgwebdir(object):
         if self.baseui:
             u = self.baseui.copy()
         else:
-            u = ui.ui()
+            u = uimod.ui()
             u.setconfig('ui', 'report_untrusted', 'off', 'hgwebdir')
             u.setconfig('ui', 'nontty', 'true', 'hgwebdir')
             # displaying bundling progress bar while serving feels wrong and may

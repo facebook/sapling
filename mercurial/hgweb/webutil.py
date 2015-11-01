@@ -8,7 +8,8 @@
 
 import os, copy
 import re
-from mercurial import match, patch, error, ui, util, pathutil, context
+from mercurial import match, patch, error, util, pathutil, context
+from mercurial import ui as uimod
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, short
 from mercurial.templatefilters import revescape
@@ -537,7 +538,7 @@ class sessionvars(object):
             yield {'name': key, 'value': str(value), 'separator': separator}
             separator = '&'
 
-class wsgiui(ui.ui):
+class wsgiui(uimod.ui):
     # default termwidth breaks under mod_wsgi
     def termwidth(self):
         return 80

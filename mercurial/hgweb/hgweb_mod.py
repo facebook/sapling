@@ -8,7 +8,8 @@
 
 import contextlib
 import os
-from mercurial import ui, hg, hook, error, encoding, templater, util, repoview
+from mercurial import hg, hook, error, encoding, templater, util, repoview
+from mercurial import ui as uimod
 from mercurial.templatefilters import websub
 from common import ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
@@ -195,7 +196,7 @@ class hgweb(object):
             if baseui:
                 u = baseui.copy()
             else:
-                u = ui.ui()
+                u = uimod.ui()
             r = hg.repository(u, repo)
         else:
             # we trust caller to give us a private copy
