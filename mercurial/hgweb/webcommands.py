@@ -15,7 +15,6 @@ from common import HTTP_OK, HTTP_FORBIDDEN, HTTP_NOT_FOUND
 from mercurial import graphmod, patch
 from mercurial import scmutil
 from mercurial.i18n import _
-from mercurial.error import ParseError, RepoLookupError, Abort
 from mercurial import revset
 
 __all__ = []
@@ -225,7 +224,7 @@ def _search(web, req, tmpl):
         revdef = 'reverse(%s)' % query
         try:
             tree = revset.parse(revdef)
-        except ParseError:
+        except error.ParseError:
             # can't parse to a revset tree
             return MODE_KEYWORD, query
 
@@ -249,7 +248,8 @@ def _search(web, req, tmpl):
             # RepoLookupError: no such revision, e.g. in 'revision:'
             # Abort: bookmark/tag not exists
             # LookupError: ambiguous identifier, e.g. in '(bc)' on a large repo
-        except (ParseError, RepoLookupError, Abort, LookupError):
+        except (error.ParseError, error.RepoLookupError, error.Abort,
+                LookupError):
             return MODE_KEYWORD, query
 
     def changelist(**map):
