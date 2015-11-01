@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import ast
 import os
 import sys
