@@ -14,6 +14,8 @@ import zlib
 # Whitelist of modules that symbols can be directly imported from.
 allowsymbolimports = (
     '__future__',
+    'mercurial.hgweb.common',
+    'mercurial.hgweb.request',
     'mercurial.i18n',
     'mercurial.node',
 )
