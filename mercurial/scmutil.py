@@ -717,6 +717,9 @@ def revpair(repo, revs):
 
     if first is None:
         raise error.Abort(_('empty revision range'))
+    if (first == second and len(revs) >= 2
+        and not all(revrange(repo, [r]) for r in revs)):
+        raise error.Abort(_('empty revision on one side of range'))
 
     # if top-level is range expression, the result must always be a pair
     if first == second and len(revs) == 1 and not _pairspec(revs[0]):

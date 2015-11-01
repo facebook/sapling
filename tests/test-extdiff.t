@@ -70,6 +70,12 @@ Should diff cloned files directly:
   [1]
 #endif
 
+Specifying an empty revision should abort.
+
+  $ hg extdiff --patch --rev 'ancestor()' --rev 1
+  abort: empty revision on one side of range
+  [255]
+
 Test diff during merge:
 
   $ hg update -C 0
