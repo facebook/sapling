@@ -15,7 +15,7 @@ from common import ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
 from request import wsgirequest
-import webcommands, protocol, webutil
+import webcommands, protocol, webutil, wsgicgi
 
 perms = {
     'changegroup': 'pull',
@@ -261,7 +261,6 @@ class hgweb(object):
         if not os.environ.get('GATEWAY_INTERFACE', '').startswith("CGI/1."):
             raise RuntimeError("This function is only intended to be "
                                "called while running as a CGI script.")
-        import mercurial.hgweb.wsgicgi as wsgicgi
         wsgicgi.launch(self)
 
     def __call__(self, env, respond):
