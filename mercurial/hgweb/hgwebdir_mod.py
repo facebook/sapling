@@ -13,7 +13,7 @@ from mercurial import ui as uimod
 from mercurial import error, encoding
 from common import ErrorResponse, get_mtime, staticfile, paritygen, ismember, \
                    get_contact, HTTP_OK, HTTP_NOT_FOUND, HTTP_SERVER_ERROR
-from hgweb_mod import hgweb, makebreadcrumb
+import hgweb_mod
 from request import wsgirequest
 import webutil
 
@@ -232,7 +232,7 @@ class hgwebdir(object):
                     try:
                         # ensure caller gets private copy of ui
                         repo = hg.repository(self.ui.copy(), real)
-                        return hgweb(repo).run_wsgi(req)
+                        return hgweb_mod.hgweb(repo).run_wsgi(req)
                     except IOError as inst:
                         msg = inst.strerror
                         raise ErrorResponse(HTTP_SERVER_ERROR, msg)
@@ -427,7 +427,7 @@ class hgwebdir(object):
         self.updatereqenv(req.env)
 
         return tmpl("index", entries=entries, subdir=subdir,
-                    pathdef=makebreadcrumb('/' + subdir, self.prefix),
+                    pathdef=hgweb_mod.makebreadcrumb('/' + subdir, self.prefix),
                     sortcolumn=sortcolumn, descending=descending,
                     **dict(sort))
 
