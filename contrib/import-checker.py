@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ast
+import collections
 import os
 import sys
 
@@ -36,6 +37,17 @@ def usingabsolute(root):
                         return True
 
     return False
+
+def walklocal(root):
+    """Recursively yield all descendant nodes but not in a different scope"""
+    todo = collections.deque(ast.iter_child_nodes(root))
+    yield root, False
+    while todo:
+        node = todo.popleft()
+        newscope = isinstance(node, ast.FunctionDef)
+        if not newscope:
+            todo.extend(ast.iter_child_nodes(node))
+        yield node, newscope
 
 def dotted_name_of_path(path, trimpure=False):
     """Given a relative path to a source file, return its dotted module name.
@@ -324,7 +336,7 @@ def verify_import_convention(module, source):
     else:
         return verify_stdlib_on_own_line(root)
 
-def verify_modern_convention(module, root):
+def verify_modern_convention(module, root, root_col_offset=0):
     """Verify a file conforms to the modern import convention rules.
 
     The rules of the modern convention are:
@@ -361,10 +373,15 @@ def verify_modern_convention(module, root):
     # Relative import levels encountered so far.
     seenlevels = set()
 
-    for node in ast.walk(root):
+    for node, newscope in walklocal(root):
         def msg(fmt, *args):
             return (fmt % args, node.lineno)
-        if isinstance(node, ast.Import):
+        if newscope:
+            # Check for local imports in function
+            for r in verify_modern_convention(module, node,
+                                              node.col_offset + 4):
+                yield r
+        elif isinstance(node, ast.Import):
             # Disallow "import foo, bar" and require separate imports
             # for each module.
             if len(node.names) > 1:
@@ -375,7 +392,7 @@ def verify_modern_convention(module, root):
             asname = node.names[0].asname
 
             # Ignore sorting rules on imports inside blocks.
-            if node.col_offset == 0:
+            if node.col_offset == root_col_offset:
                 if lastname and name < lastname:
                     yield msg('imports not lexically sorted: %s < %s',
                               name, lastname)
@@ -384,7 +401,7 @@ def verify_modern_convention(module, root):
 
             # stdlib imports should be before local imports.
             stdlib = name in stdlib_modules
-            if stdlib and seenlocal and node.col_offset == 0:
+            if stdlib and seenlocal and node.col_offset == root_col_offset:
                 yield msg('stdlib import follows local import: %s', name)
 
             if not stdlib:
@@ -423,7 +440,7 @@ def verify_modern_convention(module, root):
 
             # Direct symbol import is only allowed from certain modules and
             # must occur before non-symbol imports.
-            if node.module and node.col_offset == 0:
+            if node.module and node.col_offset == root_col_offset:
                 if fullname not in allowsymbolimports:
                     yield msg('direct symbol import from %s', fullname)
 
@@ -436,7 +453,8 @@ def verify_modern_convention(module, root):
                 seennonsymbolrelative = True
 
                 # Only allow 1 group per level.
-                if node.level in seenlevels and node.col_offset == 0:
+                if (node.level in seenlevels
+                    and node.col_offset == root_col_offset):
                     yield msg('multiple "from %s import" statements',
                               '.' * node.level)
 

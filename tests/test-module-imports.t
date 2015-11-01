@@ -74,6 +74,17 @@ Run additional tests for the import checker
   > from . import levelpriority  # should not cause cycle
   > EOF
 
+  $ cat > testpackage/subpackage/localimport.py << EOF
+  > from __future__ import absolute_import
+  > from . import foo
+  > def bar():
+  >     # should not cause "higher-level import should come first"
+  >     from .. import unsorted
+  >     # but other errors should be detected
+  >     from .. import more
+  >     import testpackage.subpackage.levelpriority
+  > EOF
+
   $ cat > testpackage/sortedentries.py << EOF
   > from __future__ import absolute_import
   > from . import (
@@ -105,6 +116,8 @@ Run additional tests for the import checker
   testpackage/sortedentries.py:2: imports from testpackage not lexically sorted: bar < foo
   testpackage/stdafterlocal.py:3: stdlib import follows local import: os
   testpackage/subpackage/levelpriority.py:3: higher-level import should come first: testpackage
+  testpackage/subpackage/localimport.py:7: multiple "from .. import" statements
+  testpackage/subpackage/localimport.py:8: import should be relative: testpackage.subpackage.levelpriority
   testpackage/symbolimport.py:2: direct symbol import from testpackage.unsorted
   testpackage/unsorted.py:3: imports not lexically sorted: os < sys
   [1]
