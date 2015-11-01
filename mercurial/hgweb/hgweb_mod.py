@@ -10,7 +10,7 @@ import contextlib
 import os
 from mercurial import hg, hook, error, encoding, templater, util, repoview
 from mercurial import ui as uimod
-from mercurial.templatefilters import websub
+from mercurial import templatefilters
 from common import ErrorResponse, permhooks, caching
 from common import HTTP_OK, HTTP_NOT_MODIFIED, HTTP_BAD_REQUEST
 from common import HTTP_NOT_FOUND, HTTP_SERVER_ERROR
@@ -159,7 +159,7 @@ class requestcontext(object):
                              or req.url.strip('/') or self.repo.root)
 
         def websubfilter(text):
-            return websub(text, self.websubtable)
+            return templatefilters.websub(text, self.websubtable)
 
         # create the templater
 

@@ -12,7 +12,7 @@ from mercurial import match, patch, error, util, pathutil, context
 from mercurial import ui as uimod
 from mercurial.i18n import _
 from mercurial.node import hex, nullid, short
-from mercurial.templatefilters import revescape
+from mercurial import templatefilters
 from common import ErrorResponse, paritygen
 from common import HTTP_NOT_FOUND
 import difflib
@@ -315,7 +315,7 @@ def changelistentry(web, ctx, tmpl):
 
 def symrevorshortnode(req, ctx):
     if 'node' in req.form:
-        return revescape(req.form['node'][0])
+        return templatefilters.revescape(req.form['node'][0])
     else:
         return short(ctx.node())
 
