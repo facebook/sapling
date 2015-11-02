@@ -230,6 +230,7 @@ class revlog(object):
                 self._maxchainlen = opts['maxchainlen']
             if 'aggressivemergedeltas' in opts:
                 self._aggressivemergedeltas = opts['aggressivemergedeltas']
+            self._lazydeltabase = bool(opts.get('lazydeltabase', False))
 
         if self._chunkcachesize <= 0:
             raise RevlogError(_('revlog chunk cache size %r is not greater '
@@ -1370,7 +1371,11 @@ class revlog(object):
 
         # should we try to build a delta?
         if prev != nullrev:
-            if self._generaldelta:
+            if cachedelta and self._generaldelta and self._lazydeltabase:
+                # Assume what we received from the server is a good choice
+                # build delta will reuse the cache
+                d = builddelta(cachedelta[0])
+            elif self._generaldelta:
                 if p2r != nullrev and self._aggressivemergedeltas:
                     d = builddelta(p1r)
                     d2 = builddelta(p2r)

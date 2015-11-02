@@ -71,10 +71,55 @@ commit.
 
   $ cd ..
 
+Test "usegeneraldelta" config
+(repo are general delta, but incoming bundle are not re-deltified)
+
+delta coming from the server base delta server are not recompressed.
+(also include the aggressive version for comparison)
+
+  $ hg clone repo --pull --config format.usegeneraldelta=1 usegd
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 5 changes to 2 files (+2 heads)
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone repo --pull --config format.generaldelta=1 full
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 5 changes to 2 files (+2 heads)
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R repo debugindex -m
+     rev    offset  length   base linkrev nodeid       p1           p2
+       0         0      77      0       0 0273e8a1b972 000000000000 000000000000
+       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
+       2       134      77      2       2 de950093e41b 0273e8a1b972 000000000000
+       3       211      57      2       3 db74c7cde4d0 0273e8a1b972 000000000000
+  $ hg -R usegd debugindex -m
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      77     -1       0 0273e8a1b972 000000000000 000000000000
+       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
+       2       134      77     -1       2 de950093e41b 0273e8a1b972 000000000000
+       3       211      57      2       3 db74c7cde4d0 0273e8a1b972 000000000000
+  $ hg -R full debugindex -m
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      77     -1       0 0273e8a1b972 000000000000 000000000000
+       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
+       2       134      57      0       2 de950093e41b 0273e8a1b972 000000000000
+       3       191      57      0       3 db74c7cde4d0 0273e8a1b972 000000000000
+
 Test format.aggressivemergedeltas
 
   $ hg init --config format.generaldelta=1 aggressive
   $ cd aggressive
+  $ cat << EOF >> .hg/hgrc
+  > [format]
+  > generaldelta = 1
+  > EOF
   $ touch a b c d e
   $ hg commit -Aqm side1
   $ hg up -q null

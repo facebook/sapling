@@ -358,6 +358,7 @@ class localrepository(object):
         aggressivemergedeltas = self.ui.configbool('format',
             'aggressivemergedeltas', False)
         self.svfs.options['aggressivemergedeltas'] = aggressivemergedeltas
+        self.svfs.options['lazydeltabase'] = not scmutil.gddeltaconfig(self.ui)
 
     def _writerequirements(self):
         scmutil.writerequires(self.vfs, self.requirements)

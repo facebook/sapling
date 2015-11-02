@@ -666,6 +666,14 @@ Example for ``~/.hgrc``::
 ``format``
 ----------
 
+``usegeneraldelta``
+    Enable or disable the "generaldelta" repository format which improves
+    repository compression by allowing "revlog" to store delta against arbitrary
+    revision instead of the previous stored one. This provides significant
+    improvement for repositories with branches. Disabling this option ensures that
+    the on-disk format of newly created repository will be compatible with
+    Mercurial before version 1.9.
+
 ``usestore``
     Enable or disable the "store" repository format which improves
     compatibility with systems that fold case or otherwise mangle
