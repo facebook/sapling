@@ -1170,3 +1170,11 @@ def wlocksub(repo, cmd, *args, **kwargs):
     subprocess."""
     return _locksub(repo, repo.currentwlock(), 'HG_WLOCK_LOCKER', cmd, *args,
                     **kwargs)
+
+def gdinitconfig(ui):
+    """helper function to know if a repo should be created as general delta
+
+    This currently depends on a single config option but this will get more
+    complicated soon."""
+    # experimental config: format.generaldelta
+    return ui.configbool('format', 'generaldelta', False)

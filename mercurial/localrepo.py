@@ -258,8 +258,7 @@ class localrepository(object):
                         '\0\0\0\2' # represents revlogv2
                         ' dummy changelog to prevent using the old repo layout'
                     )
-                # experimental config: format.generaldelta
-                if self.ui.configbool('format', 'generaldelta', False):
+                if scmutil.gdinitconfig(self.ui):
                     self.requirements.add("generaldelta")
                 if self.ui.configbool('experimental', 'treemanifest', False):
                     self.requirements.add("treemanifest")
