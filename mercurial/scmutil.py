@@ -1176,7 +1176,7 @@ def gdinitconfig(ui):
     """
     # experimental config: format.generaldelta
     return (ui.configbool('format', 'generaldelta', False)
-            or ui.configbool('format', 'usegeneraldelta', False))
+            or ui.configbool('format', 'usegeneraldelta', True))
 
 def gddeltaconfig(ui):
     """helper function to know if incoming delta should be optimised
