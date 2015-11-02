@@ -18,6 +18,7 @@ setup(
         'backups',
         'chistedit',
         'commitextras',
+        'dirsync',
         'fbamend',
         'fbconduit',
         'fbhistedit',
