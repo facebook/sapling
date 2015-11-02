@@ -175,9 +175,12 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     ui = repo.ui
     fd = fcd.path()
 
-    if ui.promptchoice(_(" no tool found to merge %s\n"
-                         "keep (l)ocal or take (o)ther?"
-                         "$$ &Local $$ &Other") % fd, 0):
+    index = ui.promptchoice(_(" no tool found to merge %s\n"
+                              "keep (l)ocal or take (o)ther?"
+                              "$$ &Local $$ &Other") % fd, 0)
+    choice = ['local', 'other'][index]
+
+    if choice == 'other':
         return _iother(repo, mynode, orig, fcd, fco, fca, toolconf)
     else:
         return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
