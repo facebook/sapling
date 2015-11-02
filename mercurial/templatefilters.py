@@ -219,7 +219,7 @@ def json(obj):
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
 def _uescape(c):
-    if ord(c) < 0x80:
+    if 0x20 <= ord(c) < 0x80:
         return c
     else:
         return '\\u%04x' % ord(c)

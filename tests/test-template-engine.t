@@ -44,4 +44,17 @@
   0 97e5f848f0936960273bbf75be6388cd0350a32b -1 0000000000000000000000000000000000000000
   -1 0000000000000000000000000000000000000000 -1 0000000000000000000000000000000000000000
 
+Fuzzing the unicode escaper to ensure it produces valid data
+
+#if hypothesis
+
+  >>> from hypothesishelpers import *
+  >>> import mercurial.templatefilters as tf
+  >>> import json
+  >>> @check(st.text().map(lambda s: s.encode('utf-8')))
+  ... def testtfescapeproducesvalidjson(text):
+  ...     json.loads('"' + tf.jsonescape(text) + '"')
+
+#endif
+
   $ cd ..
