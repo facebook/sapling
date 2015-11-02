@@ -304,8 +304,8 @@ class hgweb(object):
                 parts = parts[len(repo_parts):]
             query = '/'.join(parts)
         else:
-            query = req.env['QUERY_STRING'].split('&', 1)[0]
-            query = query.split(';', 1)[0]
+            query = req.env['QUERY_STRING'].partition('&')[0]
+            query = query.partition(';')[0]
 
         # process this if it's a protocol request
         # protocol bits don't need to create any URLs

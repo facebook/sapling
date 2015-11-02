@@ -80,7 +80,7 @@ class wsgirequest(object):
         if self._start_response is not None:
             self.headers.append(('Content-Type', type))
             if filename:
-                filename = (filename.split('/')[-1]
+                filename = (filename.rpartition('/')[-1]
                             .replace('\\', '\\\\').replace('"', '\\"'))
                 self.headers.append(('Content-Disposition',
                                      'inline; filename="%s"' % filename))

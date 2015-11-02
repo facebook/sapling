@@ -1248,7 +1248,7 @@ def graph(web, req, tmpl):
 def _getdoc(e):
     doc = e[0].__doc__
     if doc:
-        doc = _(doc).split('\n')[0]
+        doc = _(doc).partition('\n')[0]
     else:
         doc = _('(no help text available)')
     return doc
@@ -1278,7 +1278,7 @@ def help(web, req, tmpl):
                 yield {'topic': entries[0], 'summary': summary}
 
         early, other = [], []
-        primary = lambda s: s.split('|')[0]
+        primary = lambda s: s.partition('|')[0]
         for c, e in commands.table.iteritems():
             doc = _getdoc(e)
             if 'DEPRECATED' in doc or c.startswith('debug'):
