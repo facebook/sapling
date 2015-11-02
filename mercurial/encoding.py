@@ -497,11 +497,17 @@ def fromutf8b(s):
     is a round-trip process for strings like filenames, but metadata
     that's was passed through tolocal will remain in UTF-8.
 
+    >>> roundtrip = lambda x: fromutf8b(toutf8b(x)) == x
     >>> m = "\\xc3\\xa9\\x99abcd"
-    >>> n = toutf8b(m)
-    >>> n
+    >>> toutf8b(m)
     '\\xc3\\xa9\\xed\\xb2\\x99abcd'
-    >>> fromutf8b(n) == m
+    >>> roundtrip(m)
+    True
+    >>> roundtrip("\\xc2\\xc2\\x80")
+    True
+    >>> roundtrip("\\xef\\xbf\\xbd")
+    True
+    >>> roundtrip("\\xef\\xef\\xbf\\xbd")
     True
     '''
 
