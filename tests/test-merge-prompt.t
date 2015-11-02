@@ -148,3 +148,25 @@ Interactive merge with not enough input:
   changed
   *** file2 does not exist
 
+Non-interactive linear update
+
+  $ hg co -C 0
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo changed >> file1
+  $ hg rm file2
+  $ hg update 1 -y
+  local changed file1 which remote deleted
+  use (c)hanged version or (d)elete? c
+  remote changed file2 which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ status
+  --- status ---
+  A file1
+  C file2
+  --- file1 ---
+  1
+  changed
+  --- file2 ---
+  2
+  changed
