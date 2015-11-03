@@ -43,6 +43,11 @@ def expush(orig, repo, remote, *args, **kwargs):
     pullremotenames(repo, remote)
     return res
 
+def expushop(orig, pushop, repo, remote, force=False, revs=None,
+             newbranch=False, bookmarks=(), to=None, **kwargs):
+    orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
+    pushop.to = to
+
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
     pullremotenames(repo, remote)
@@ -424,6 +429,7 @@ def expaths(orig, ui, repo, *args, **opts):
     return orig(ui, repo, *args)
 
 def extsetup(ui):
+    extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
     extensions.wrapfunction(exchange, 'push', expush)
     extensions.wrapfunction(exchange, 'pull', expull)
     extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
@@ -525,7 +531,6 @@ def exlog(orig, ui, repo, *args, **opts):
         repo.__setattr__('_unblockhiddenremotenames', False)
     return res
 
-_pushto = False
 _delete = None
 
 def expushdiscoverybookmarks(pushop):
@@ -540,7 +545,7 @@ def expushdiscoverybookmarks(pushop):
         pushop.outbookmarks.append([_delete, remotemarks[_delete], ''])
         return exchange._pushdiscoverybookmarks(pushop)
 
-    if not _pushto:
+    if not pushop.to:
         ret = exchange._pushdiscoverybookmarks(pushop)
         if not (repo.ui.configbool('remotenames', 'pushanonheads') or
                 force):
@@ -660,8 +665,9 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
-    global _pushto, _delete
+    global _delete
     opargs = {
+        'to': opts.get('to'),
     }
 
     _delete = opts.get('delete')
@@ -699,6 +705,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
             if book and path in paths:
                 dest = path
                 to = book
+                opargs['to'] = to
 
     # un-rename passed path
     dest = revrenames.get(dest, dest)
@@ -745,8 +752,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         raise util.Abort(msg, hint=hint)
     rev = revs[0]
 
-    _pushto = True
-
     # big can o' copypasta from commands.push
     dest = ui.expandpath(dest or 'default-push', dest or 'default')
     dest, branches = hg.parseurl(dest, opts.get('branch'))
@@ -769,7 +774,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     force = opts.get('force')
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
-    pushop = exchange.push(repo, other, force, revs=[node], bookmarks=(to,))
+    pushop = exchange.push(repo, other, force, revs=[node], bookmarks=(to,),
+                           opargs=opargs)
 
     result = not pushop.cgresult
     if pushop.bkresult is not None:
@@ -778,7 +784,6 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         elif not result and pushop.bkresult:
             result = 2
 
-    _pushto = False
     return result
 
 def exclonecmd(orig, ui, *args, **opts):
