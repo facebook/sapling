@@ -661,6 +661,8 @@ def expullcmd(orig, ui, repo, source="default", **opts):
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
     global _pushto, _delete
+    opargs = {
+    }
 
     _delete = opts.get('delete')
     if _delete:
@@ -676,7 +678,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         # we want to skip pushing any changesets while deleting a remote
         # bookmark, so we send the null revision
         opts['rev'] = ['null']
-        return orig(ui, repo, dest, **opts)
+        return orig(ui, repo, dest, opargs=opargs, **opts)
 
     revs = opts.get('rev')
     to = opts.get('to')
@@ -711,7 +713,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         # directly
         path = paths[dest]
         if path.startswith('svn+') or path.startswith('git+'):
-            return orig(ui, repo, dest, **opts)
+            return orig(ui, repo, dest, opargs=opargs, **opts)
     except KeyError:
         pass
 
@@ -724,7 +726,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         if not revs:
             opts['rev'] = _pushrevs(repo, ui, None)
 
-        return orig(ui, repo, dest, **opts)
+        return orig(ui, repo, dest, opargs=opargs, **opts)
 
     if opts.get('bookmark'):
         msg = _('do not specify --to/-t and --bookmark/-B at the same time')
