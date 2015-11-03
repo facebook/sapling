@@ -87,4 +87,23 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   |/
   o  root |  |
   
-
+Tests the behavior of a pull followed by a pull --rebase
+  $ cd ../remoterepo
+  $ hg up bookmarkonremote -q
+  $ echo foo > foo
+  $ hg add foo -q
+  $ hg commit -m foo -q
+  $ cd ../localrepo
+  $ hg book -t default/bookmarkonremote tracking
+  $ hg pull
+  pulling from $TESTTMP/remoterepo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg pull --rebase
+  pulling from $TESTTMP/remoterepo
+  searching for changes
+  no changes found

@@ -673,7 +673,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
             rebase = rebasemodule.rebase
             # Rebase with a destination but without any arguments has our
             # desired behaviour
-            rebase(ui, repo, dest=trackinginfo[active])
+            ret = ret or rebase(ui, repo, dest=trackinginfo[active])
         return ret
     else:
         return orig(ui, repo, source, **opts)
