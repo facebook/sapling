@@ -658,20 +658,21 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     if not _tracking(ui):
         return orig(ui, repo, source, **opts)
 
-    active = bmactive(repo)
-    trackinginfo = _readtracking(repo)
-    activeistracking = active and trackinginfo.get(active, None)
+    dest = _getrebasedest(repo, opts)
 
-    if activeistracking:
+    if dest:
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
-
         ret = orig(ui, repo, source, **opts)
-
-        # Only rebase if we have something to rebase
-        return ret or rebasemodule.rebase(ui, repo, dest=trackinginfo[active])
+        return ret or rebasemodule.rebase(ui, repo, dest=dest)
     else:
         return orig(ui, repo, source, **opts)
+
+def _getrebasedest(repo, opts):
+    """opts is passed in for extensibility"""
+    tracking = _readtracking(repo)
+    active = bmactive(repo)
+    return tracking.get(active)
 
 def expushcmd(orig, ui, repo, dest=None, **opts):
     # needed for discovery method
