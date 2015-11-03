@@ -1079,7 +1079,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
     else:
         transaction.add(self.indexfile, isize, r)
         transaction.add(self.datafile, end)
-        dfh = self.opener(self.datafile, "a")
+        dfh = self.opener(self.datafile, "a+")
 
     try:
         # loop through our set of deltas
@@ -1206,8 +1206,8 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
                 # addrevision switched from inline to conventional
                 # reopen the index
                 ifh.close()
-                dfh = self.opener(self.datafile, "a")
-                ifh = self.opener(self.indexfile, "a")
+                dfh = self.opener(self.datafile, "a+")
+                ifh = self.opener(self.indexfile, "a+")
     finally:
         if dfh:
             dfh.close()
