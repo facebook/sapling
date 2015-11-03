@@ -71,9 +71,7 @@ def promptchoice(pe):
 deprecatedpe = None
 @scanner()
 def deprecatedsetup(pofile):
-    pes = [p for p in pofile
-           if ((p.msgid == 'DEPRECATED' or p.msgid == '(DEPRECATED)') and
-               p.msgstr)]
+    pes = [p for p in pofile if p.msgid == '(DEPRECATED)' and p.msgstr]
     if len(pes):
         global deprecatedpe
         deprecatedpe = pes[0]
@@ -82,8 +80,8 @@ def deprecatedsetup(pofile):
 def deprecated(pe):
     """Check for DEPRECATED
     >>> ped = polib.POEntry(
-    ...     msgid = 'DEPRECATED',
-    ...     msgstr= 'DETACERPED')
+    ...     msgid = '(DEPRECATED)',
+    ...     msgstr= '(DETACERPED)')
     >>> deprecatedsetup([ped])
     >>> pe = polib.POEntry(
     ...     msgid = 'Something (DEPRECATED)',
