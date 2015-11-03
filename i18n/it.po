@@ -7505,8 +7505,8 @@ msgstr "estensioni abilitate:"
 msgid "VALUE"
 msgstr ""
 
-msgid "DEPRECATED"
-msgstr "DEPRECATO"
+msgid "(DEPRECATED)"
+msgstr "(DEPRECATO)"
 
 msgid ""
 "\n"
