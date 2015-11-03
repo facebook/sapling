@@ -167,12 +167,6 @@ Incremental pull doesn't fetch bundle
   $ cd partial-clone
   $ hg pull
   pulling from http://localhost:$HGPORT/
-  applying clone bundle from http://localhost:$HGPORT1/partial.hg
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 1 files
-  finished applying clone bundle
   searching for changes
   adding changesets
   adding manifests

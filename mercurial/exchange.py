@@ -1658,6 +1658,10 @@ def _maybeapplyclonebundle(pullop):
     if not repo.ui.configbool('experimental', 'clonebundles', False):
         return
 
+    # Only run if local repo is empty.
+    if len(repo):
+        return
+
     if pullop.heads:
         return
 
