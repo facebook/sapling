@@ -211,18 +211,6 @@ def capabilities(orig, repo, proto):
 
     return caps
 
-@wireproto.wireprotocommand('clonebundles', '')
-def bundles(repo, proto):
-    """Server command for returning info for available bundles to seed clones.
-
-    Clients will parse this response and determine what bundle to fetch.
-
-    Other extensions may wrap this command to filter or dynamically emit
-    data depending on the request. e.g. you could advertise URLs for
-    the closest data center given the client's IP address.
-    """
-    return repo.opener.tryread('clonebundles.manifest')
-
 @exchange.getbundle2partsgenerator('clonebundlesadvertise', 0)
 def advertiseclonebundlespart(bundler, repo, source, bundlecaps=None,
                               b2caps=None, heads=None, common=None,

@@ -224,6 +224,18 @@ by old clients.
   searching for changes
   no changes found
 
+Feature works over SSH
+
+  $ hg clone -U -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/server ssh-full-clone
+  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
 Entry with unknown BUNDLESPEC is filtered and not used
 
   $ cat > server/.hg/clonebundles.manifest << EOF
