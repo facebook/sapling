@@ -15,6 +15,7 @@ setup(
     keywords='fb hg mercurial',
     license='',
     py_modules=[
+        'automv',
         'backups',
         'chistedit',
         'commitextras',
