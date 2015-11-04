@@ -62,7 +62,7 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
              newbranch=False, bookmarks=(), **kwargs):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
 
-    for flag in ['to', 'delete', 'create']:
+    for flag in ['to', 'delete', 'create', 'allowanon']:
         setattr(pushop, flag, kwargs.get(flag))
 
 def expull(orig, repo, remote, *args, **kwargs):
@@ -524,6 +524,7 @@ def extsetup(ui):
         (pushcmd, ('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK')),
         (pushcmd, ('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK')),
         (pushcmd, ('', 'create', None, 'create a new remote bookmark')),
+        (pushcmd, ('', 'allow-anon', None, 'allow a new unbookmarked head')),
     ]
 
     def afterload(loaded):
@@ -565,8 +566,7 @@ def expushdiscoverybookmarks(pushop):
 
     if not pushop.to:
         ret = exchange._pushdiscoverybookmarks(pushop)
-        if not (repo.ui.configbool('remotenames', 'pushanonheads') or
-                force):
+        if not pushop.allowanon:
             # check to make sure we don't push an anonymous head
             if pushop.revs:
                 revs = set(pushop.revs)
@@ -597,7 +597,7 @@ def expushdiscoverybookmarks(pushop):
 
             if anonheads:
                 msg = _("push would create new anonymous heads (%s)")
-                hint = _("use --force to override this warning")
+                hint = _("use --allow-anon to override this warning")
                 raise util.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
         return ret
 
@@ -682,6 +682,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         'delete': opts.get('delete'),
         'to': opts.get('to'),
         'create': opts.get('create'),
+        'allowanon': opts.get('allow_anon') or
+                     repo.ui.configbool('remotenames', 'pushanonheads'),
     }
 
     if opargs['delete']:

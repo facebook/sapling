@@ -24,7 +24,7 @@ Test that anonymous heads are disallowed by default
   pushing to ssh://user@dummy/repo1
   searching for changes
   abort: push would create new anonymous heads (cb9a9f314b8b)
-  (use --force to override this warning)
+  (use --allow-anon to override this warning)
   [255]
 
 Create a remote bookmark
@@ -75,7 +75,7 @@ remote or local repo
 
   $ echo c >> a
   $ hg commit -m c
-  $ hg push -f
+  $ hg push --allow-anon
   pushing to ssh://user@dummy/repo1
   searching for changes
   remote: adding changesets
@@ -128,7 +128,7 @@ Test pushrev configuration option
   pushing to ssh://user@dummy/repo1
   searching for changes
   abort: push would create new anonymous heads (7481df5f123a)
-  (use --force to override this warning)
+  (use --allow-anon to override this warning)
   [255]
 
 Test traditional push with subrepo
@@ -159,7 +159,7 @@ Test traditional push with subrepo
   updating bookmark @
   searching for changes
   abort: push would create new anonymous heads (296c645d2a63)
-  (use --force to override this warning)
+  (use --allow-anon to override this warning)
   [255]
   $ hg bookmark @
   $ hg push
@@ -167,7 +167,7 @@ Test traditional push with subrepo
   no changes made to subrepo nested since last push to ssh://user@dummy/repo1/nested
   searching for changes
   abort: push would create new anonymous heads (296c645d2a63)
-  (use --force to override this warning)
+  (use --allow-anon to override this warning)
   [255]
   $ hg push --to @
   pushing rev 296c645d2a63 to destination ssh://user@dummy/repo1 bookmark @

@@ -120,7 +120,7 @@ Test push to renamed dest
   pushing to $TESTTMP/repo1 (glob)
   searching for changes
   abort: push would create new anonymous heads (d2ae7f538514)
-  (use --force to override this warning)
+  (use --allow-anon to override this warning)
   [255]
 
 Test pull from renamed source
