@@ -36,7 +36,7 @@ a strip bundle should be changegroup2
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
   $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
-  HG2CBZ (no-eol)
+  HG10BZ (no-eol)
 
 applying bundle1 should continue to work
   $ hg unbundle ../bundle.bundle
@@ -71,7 +71,7 @@ applying bundle1 should continue to work
   $ hg strip 1
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
   $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
-  HG2CBZ (no-eol)
+  HG10BZ (no-eol)
 
 hg incoming on a changegroup2 should work
   $ hg incoming .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg --traceback
@@ -100,7 +100,7 @@ applying a changegroup2 should work via unbundle
   $ hg strip 1
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
   $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
-  HG2CBZ (no-eol)
+  HG10BZ (no-eol)
   $ hg pull .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   pulling from .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   searching for changes
@@ -116,7 +116,7 @@ amends should also be cg2
   $ touch d && hg add d && hg ci --amend -mcd
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg (glob)
   $ head -c 6 .hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg
-  HG2CBZ (no-eol)
+  HG10BZ (no-eol)
 
 turn on bundle2
   $ cat >> $HGRCPATH <<EOF
@@ -147,10 +147,8 @@ strip should produce bundle2
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-1954568c-backup.hg (glob)
   $ hg debugbundle .hg/strip-backup/0e067c57feba-1954568c-backup.hg
-  Stream params: {}
-  changegroup -- "{'version': '02'}"
-      0e067c57feba1a5694ca4844f05588bb1bf82342
-      b2a74d690cb63a443d20de84bdc9eb5a7ddbedac
+  0e067c57feba1a5694ca4844f05588bb1bf82342
+  b2a74d690cb63a443d20de84bdc9eb5a7ddbedac
   $ hg incoming .hg/strip-backup/0e067c57feba-1954568c-backup.hg
   comparing with .hg/strip-backup/0e067c57feba-1954568c-backup.hg
   searching for changes
