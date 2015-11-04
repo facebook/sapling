@@ -667,14 +667,10 @@ def expullcmd(orig, ui, repo, source="default", **opts):
         # Let `pull` do its thing without `rebase.py->pullrebase()`
         del opts['rebase']
 
-        revsprepull = len(repo)
         ret = orig(ui, repo, source, **opts)
-        revspostpull = len(repo)
 
         # Only rebase if we have something to rebase
-        if revsprepull < revspostpull:
-            ret = ret or rebasemodule.rebase(ui, repo, dest=trackinginfo[active])
-        return ret
+        return ret or rebasemodule.rebase(ui, repo, dest=trackinginfo[active])
     else:
         return orig(ui, repo, source, **opts)
 

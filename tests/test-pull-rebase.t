@@ -96,7 +96,7 @@ Tests the behavior of a pull followed by a pull --rebase
   $ cd ../localrepo
   $ hg book -t default/bookmarkonremote tracking
   $ hg pull
-  pulling from $TESTTMP/remoterepo
+  pulling from $TESTTMP/remoterepo (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -104,6 +104,9 @@ Tests the behavior of a pull followed by a pull --rebase
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hg pull --rebase
-  pulling from $TESTTMP/remoterepo
+  pulling from $TESTTMP/remoterepo (glob)
   searching for changes
   no changes found
+  abort: can't rebase public changeset 4557926d2166
+  (see "hg help phases" for details)
+  [255]
