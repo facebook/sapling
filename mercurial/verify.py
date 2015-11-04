@@ -35,6 +35,17 @@ def _normpath(f):
         f = f.replace('//', '/')
     return f
 
+def _validpath(repo, path):
+    """Returns False if a path should NOT be treated as part of a repo.
+
+    For all in-core cases, this returns True, as we have no way for a
+    path to be mentioned in the history but not actually be
+    relevant. For narrow clones, this is important because many
+    filelogs will be missing, and changelog entries may mention
+    modified files that are outside the narrow scope.
+    """
+    return True
+
 def _verify(repo):
     repo = repo.unfiltered()
     mflinkrevs = {}
@@ -154,7 +165,8 @@ def _verify(repo):
                 mflinkrevs.setdefault(changes[0], []).append(i)
                 refersmf = True
             for f in changes[3]:
-                filelinkrevs.setdefault(_normpath(f), []).append(i)
+                if _validpath(repo, f):
+                    filelinkrevs.setdefault(_normpath(f), []).append(i)
         except Exception as inst:
             refersmf = True
             exc(i, _("unpacking changeset %s") % short(n), inst)
@@ -181,7 +193,9 @@ def _verify(repo):
                 if not f:
                     err(lr, _("file without name in manifest"))
                 elif f != "/dev/null": # ignore this in very old repos
-                    filenodes.setdefault(_normpath(f), {}).setdefault(fn, lr)
+                    if _validpath(repo, f):
+                        filenodes.setdefault(
+                            _normpath(f), {}).setdefault(fn, lr)
         except Exception as inst:
             exc(lr, _("reading manifest delta %s") % short(n), inst)
     ui.progress(_('checking'), None)
