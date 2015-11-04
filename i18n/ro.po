@@ -8258,8 +8258,8 @@ msgstr "extensii activate:"
 msgid "VALUE"
 msgstr "VALOARE"
 
-msgid "DEPRECATED"
-msgstr "ÎNVECHIT"
+msgid "(DEPRECATED)"
+msgstr "(ÎNVECHIT)"
 
 msgid ""
 "\n"

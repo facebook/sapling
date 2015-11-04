@@ -122,7 +122,8 @@ def _exthook(ui, repo, name, cmd, args, throw):
     # make in-memory changes visible to external process
     tr = repo.currenttransaction()
     repo.dirstate.write(tr)
-    if tr and tr.writepending():
+    if tr:
+        tr.writepending()
         env['HG_PENDING'] = repo.root
 
     for k, v in args.iteritems():

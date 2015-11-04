@@ -549,6 +549,17 @@ def branches(repo, proto, nodes):
         r.append(encodelist(b) + "\n")
     return "".join(r)
 
+@wireprotocommand('clonebundles', '')
+def clonebundles(repo, proto):
+    """Server command for returning info for available bundles to seed clones.
+
+    Clients will parse this response and determine what bundle to fetch.
+
+    Extensions may wrap this command to filter or dynamically emit data
+    depending on the request. e.g. you could advertise URLs for the closest
+    data center given the client's IP address.
+    """
+    return repo.opener.tryread('clonebundles.manifest')
 
 wireprotocaps = ['lookup', 'changegroupsubset', 'branchmap', 'pushkey',
                  'known', 'getbundle', 'unbundlehash', 'batch']

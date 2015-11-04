@@ -156,6 +156,25 @@ changes. If this output changes, we could break old clients.
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+Incremental pull doesn't fetch bundle
+
+  $ hg clone -r 53245c60e682 -U http://localhost:$HGPORT partial-clone
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+  $ cd partial-clone
+  $ hg pull
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ cd ..
+
 Bundle with full content works
 
   $ hg -R server bundle --type gzip-v2 --base null -r tip full.hg
@@ -196,6 +215,18 @@ by old clients.
 
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT full-bundle
+  applying clone bundle from http://localhost:$HGPORT1/full.hg
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  finished applying clone bundle
+  searching for changes
+  no changes found
+
+Feature works over SSH
+
+  $ hg clone -U -e "python \"$TESTDIR/dummyssh\"" ssh://user@dummy/server ssh-full-clone
   applying clone bundle from http://localhost:$HGPORT1/full.hg
   adding changesets
   adding manifests

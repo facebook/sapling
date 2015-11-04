@@ -9366,8 +9366,8 @@ msgstr ""
 msgid "VALUE"
 msgstr ""
 
-msgid "DEPRECATED"
-msgstr "FORÆLDET"
+msgid "(DEPRECATED)"
+msgstr "(FORÆLDET)"
 
 msgid ""
 "\n"

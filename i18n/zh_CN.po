@@ -10444,5 +10444,5 @@ msgstr ""
 msgid "user name not available - set USERNAME environment variable"
 msgstr ""
 
-msgid "DEPRECATED"
-msgstr "不赞成"
+msgid "(DEPRECATED)"
+msgstr "(不赞成)"
