@@ -686,6 +686,7 @@ new commits must be visible in pretxnchangegroup (issue3428)
   $ cd ..
   $ hg init to
   $ echo '[hooks]' >> to/.hg/hgrc
+  $ echo 'prechangegroup = hg --traceback tip' >> to/.hg/hgrc
   $ echo 'pretxnchangegroup = hg --traceback tip' >> to/.hg/hgrc
   $ echo a >> to/a
   $ hg --cwd to ci -Ama
@@ -698,6 +699,12 @@ new commits must be visible in pretxnchangegroup (issue3428)
   $ hg --cwd from push
   pushing to $TESTTMP/to (glob)
   searching for changes
+  changeset:   0:cb9a9f314b8b
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
   adding changesets
   adding manifests
   adding file changes
