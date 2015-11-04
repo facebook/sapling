@@ -77,7 +77,7 @@ def _markchanges(repo, renames):
         wlock.release()
 
 
-def concludenode(orig, repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None):
+def concludenode(orig, repo, rev, p1, p2, **kwargs):
     """
     wraps the committing function from rebase, retrieves the stored temp data
     during mergecopies and writes it in the dirstate, adds the renames data in
@@ -87,7 +87,7 @@ def concludenode(orig, repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=N
     # doesn't do today
     cp = dbutil.retrievedata(repo, dbname, '0', move=False)
     _markchanges(repo, cp)
-    ret = orig(repo, rev, p1, p2, commitmsg, editor, extrafn)
+    ret = orig(repo, rev, p1, p2, **kwargs)
 
     _adddata(repo)
     return ret
