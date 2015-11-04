@@ -59,12 +59,11 @@ def expush(orig, repo, remote, *args, **kwargs):
     return res
 
 def expushop(orig, pushop, repo, remote, force=False, revs=None,
-             newbranch=False, bookmarks=(), to=None, delete=None,
-             create=False, **kwargs):
+             newbranch=False, bookmarks=(), **kwargs):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
-    pushop.to = to
-    pushop.delete = delete
-    pushop.create = create
+
+    for flag in ['to', 'delete', 'create']:
+        setattr(pushop, flag, kwargs.get(flag))
 
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
