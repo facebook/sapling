@@ -95,7 +95,7 @@ vanilla hg should bail in an lz4 repo
 
   $ hg --config 'extensions.lz4revlog=!' tip
   abort: repository requires features unknown to this Mercurial: lz4revlog!
-  (see http://mercurial.selenic.com/wiki/MissingRequirement for more information)
+  (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
 start a server
