@@ -21,7 +21,9 @@ Build a query string for later use:
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
 
   $ grep batch access.log | grep getfile
-  * "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=getfile+node%3D1406e74118627694268417491f018a4a883152f0%2Cfile%3Dx (glob)
+  * "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=getfile+*node%3D1406e74118627694268417491f018a4a883152f0* (glob)
+  $ grep batch access.log | grep getfile
+  * "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=getfile+*file%3Dx* (glob)
 
 Clear filenode cache so we can test fetching with a modified batch size
   $ rm -r $TESTTMP/hgcache
