@@ -3479,3 +3479,26 @@ Test broken string escapes:
   $ hg log -T "\\xy" -R a
   hg: parse error: invalid \x escape
   [255]
+
+Set up repository for non-ascii encoding tests:
+
+  $ hg init nonascii
+  $ cd nonascii
+  $ python <<EOF
+  > open('utf-8', 'w').write('\xc3\xa9')
+  > EOF
+  $ HGENCODING=utf-8 hg branch -q `cat utf-8`
+  $ HGENCODING=utf-8 hg ci -qAm 'non-ascii branch' utf-8
+
+json filter should try round-trip conversion to utf-8:
+
+  $ HGENCODING=ascii hg log -T "{branch|json}\n" -r0
+  "\u00e9"
+
+json filter should not abort if it can't decode bytes:
+(not sure the current behavior is right; we might want to use utf-8b encoding?)
+
+  $ HGENCODING=ascii hg log -T "{'`cat utf-8`'|json}\n" -l1
+  "\ufffd\ufffd"
+
+  $ cd ..
