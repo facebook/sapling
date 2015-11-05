@@ -395,10 +395,15 @@ class mergestate(object):
         return complete, r
 
     def preresolve(self, dfile, wctx, labels=None):
+        """run premerge process for dfile
+
+        Returns whether the merge is complete, and the exit code."""
         return self._resolve(True, dfile, wctx, labels=labels)
 
     def resolve(self, dfile, wctx, labels=None):
-        """rerun merge process for file path `dfile`"""
+        """run merge process (assuming premerge was run) for dfile
+
+        Returns the exit code of the merge."""
         return self._resolve(False, dfile, wctx, labels=labels)[1]
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
