@@ -934,7 +934,7 @@ def addentries(repo, queue, transaction):
         if not hasattr(revlog, 'ifh') or revlog.ifh.closed:
             dfh = None
             if not revlog._inline:
-                dfh = bufferedopener(opener, revlog.datafile, "a")
+                dfh = bufferedopener(opener, revlog.datafile, "a+")
             ifh = bufferedopener(opener, revlog.indexfile, "a+")
             revlog.ifh = ifh
             revlog.dfh = dfh
