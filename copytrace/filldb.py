@@ -14,7 +14,6 @@ from mercurial import copies as copiesmod
 import sqlite3
 
 import dbutil
-dbname = 'moves.db'
 
 
 def _sortmvcp(repo, ctx, cp, moves, copies):
@@ -43,7 +42,7 @@ def _adddata(repo):
 
     _sortmvcp(repo, ctx, cp, moves, copies)
 
-    dbutil.insertdata(repo, dbname, ctx, moves, copies)
+    dbutil.insertdata(repo, ctx, moves, copies)
 
 
 def commit(orig, ui, repo, commitfunc, pats, opts):
@@ -85,7 +84,7 @@ def concludenode(orig, repo, rev, p1, p2, **kwargs):
     """
     # this allows to trace rename information from the rebase which mercurial
     # doesn't do today
-    cp = dbutil.retrievedata(repo, dbname, '0', move=False)
+    cp = dbutil.retrievedata(repo, '0', move=False)
     _markchanges(repo, cp)
     ret = orig(repo, rev, p1, p2, **kwargs)
 

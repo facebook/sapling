@@ -10,7 +10,6 @@ from mercurial import copies, scmutil, util
 import sqlite3
 
 import dbutil
-dbname = 'moves.db'
 
 
 def _createctxstack(repo, c, ca):
@@ -53,7 +52,7 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
 
     while ctxstack:
         ctx = ctxstack.pop()
-        data = dbutil.retrievedata(repo, dbname, ctx, move=True)
+        data = dbutil.retrievedata(repo, ctx, move=True)
         pk = paths.keys()
         delsrc = []
         for dst, src in data.iteritems():
@@ -197,8 +196,8 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
 
     # puts the copy data into a temporary row of the db to be able to retrieve
     # it at the commit time of the rebase (concludenode)
-    dbutil.removectx(repo, dbname, '0')
-    dbutil.insertdata(repo, dbname, '0', {}, copy)
+    dbutil.removectx(repo, '0')
+    dbutil.insertdata(repo, '0', {}, copy)
     return copy, {}, diverge, renamedelete
 
 
@@ -247,11 +246,11 @@ def _processrenames(repo, ctx, renamed, move=False):
     Adds the renames {dst: src} to the 'renamed' dictionary if the source is
      in files
     """
-    data = dbutil.retrievedata(repo, dbname, ctx, move=True)
+    data = dbutil.retrievedata(repo, ctx, move=True)
     movedsrc = []
     # moves and copies
     if not move:
-        data.update(dbutil.retrievedata(repo, dbname, ctx, move=False))
+        data.update(dbutil.retrievedata(repo, ctx, move=False))
 
     for dst, src in data.iteritems():
         # checks if the source file is to be considered
