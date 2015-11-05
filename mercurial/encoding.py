@@ -470,17 +470,20 @@ def toutf8b(s):
         s.decode('utf-8')
         return s
     except UnicodeDecodeError:
-        # surrogate-encode any characters that don't round-trip
-        s2 = s.decode('utf-8', 'ignore').encode('utf-8')
-        r = ""
-        pos = 0
-        for c in s:
-            if s2[pos:pos + 1] == c:
-                r += c
-                pos += 1
-            else:
-                r += unichr(0xdc00 + ord(c)).encode('utf-8')
-        return r
+        pass
+
+    r = ""
+    pos = 0
+    l = len(s)
+    while pos < l:
+        try:
+            c = getutf8char(s, pos)
+            pos += len(c)
+        except UnicodeDecodeError:
+            c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+            pos += 1
+        r += c
+    return r
 
 def fromutf8b(s):
     '''Given a UTF-8b string, return a local, possibly-binary string.
