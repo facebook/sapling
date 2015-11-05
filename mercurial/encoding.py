@@ -463,14 +463,14 @@ def toutf8b(s):
     internal surrogate encoding as a UTF-8 string.)
     '''
 
-    if isinstance(s, localstr):
-        return s._utf8
-
-    try:
-        s.decode('utf-8')
-        return s
-    except UnicodeDecodeError:
-        pass
+    if "\xed" not in s:
+        if isinstance(s, localstr):
+            return s._utf8
+        try:
+            s.decode('utf-8')
+            return s
+        except UnicodeDecodeError:
+            pass
 
     r = ""
     pos = 0
@@ -478,7 +478,12 @@ def toutf8b(s):
     while pos < l:
         try:
             c = getutf8char(s, pos)
-            pos += len(c)
+            if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
+                # have to re-escape existing U+DCxx characters
+                c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
+                pos += 1
+            else:
+                pos += len(c)
         except UnicodeDecodeError:
             c = unichr(0xdc00 + ord(s[pos])).encode('utf-8')
             pos += 1
