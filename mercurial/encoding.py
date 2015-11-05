@@ -504,7 +504,7 @@ def fromutf8b(s):
     u = s.decode("utf-8")
     r = ""
     for c in u:
-        if ord(c) & 0xff00 == 0xdc00:
+        if ord(c) & 0xffff00 == 0xdc00:
             r += chr(ord(c) & 0xff)
         else:
             r += c.encode("utf-8")
