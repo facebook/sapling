@@ -88,9 +88,9 @@ Rebase wrapping
   |   desc: mv a c
   o  changeset: 2f1222a290f07a1758cc927c57cc22805d6696ed
       desc: add a b
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves"
-  a003d50a0eea20c381b92e9200e323f3c945c473|a|c|1
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
   01cdd63d5282e9d0c3267de46b9f95f06786f454|b|d|1
   0|a|c|0
   0|b|d|0
   111a6d6f8ddc7309891f6e7ede7ba993125c4b54|b|d|1
+  a003d50a0eea20c381b92e9200e323f3c945c473|a|c|1
