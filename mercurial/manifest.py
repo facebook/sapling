@@ -334,36 +334,44 @@ class manifestdict(object):
         # zero copy representation of base as a buffer
         addbuf = util.buffer(base)
 
-        # start with a readonly loop that finds the offset of
-        # each line and creates the deltas
-        for f, todelete in changes:
-            # bs will either be the index of the item or the insert point
-            start, end = _msearch(addbuf, f, start)
-            if not todelete:
-                h, fl = self._lm[f]
-                l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
-            else:
-                if start == end:
-                    # item we want to delete was not found, error out
-                    raise AssertionError(
-                            _("failed to remove %s from manifest") % f)
-                l = ""
-            if dstart is not None and dstart <= start and dend >= start:
-                if dend < end:
+        changes = list(changes)
+        if len(changes) < 1000:
+            # start with a readonly loop that finds the offset of
+            # each line and creates the deltas
+            for f, todelete in changes:
+                # bs will either be the index of the item or the insert point
+                start, end = _msearch(addbuf, f, start)
+                if not todelete:
+                    h, fl = self._lm[f]
+                    l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
+                else:
+                    if start == end:
+                        # item we want to delete was not found, error out
+                        raise AssertionError(
+                                _("failed to remove %s from manifest") % f)
+                    l = ""
+                if dstart is not None and dstart <= start and dend >= start:
+                    if dend < end:
+                        dend = end
+                    if l:
+                        dline.append(l)
+                else:
+                    if dstart is not None:
+                        delta.append([dstart, dend, "".join(dline)])
+                    dstart = start
                     dend = end
-                if l:
-                    dline.append(l)
-            else:
-                if dstart is not None:
-                    delta.append([dstart, dend, "".join(dline)])
-                dstart = start
-                dend = end
-                dline = [l]
+                    dline = [l]
 
-        if dstart is not None:
-            delta.append([dstart, dend, "".join(dline)])
-        # apply the delta to the base, and get a delta for addrevision
-        deltatext, arraytext = _addlistdelta(base, delta)
+            if dstart is not None:
+                delta.append([dstart, dend, "".join(dline)])
+            # apply the delta to the base, and get a delta for addrevision
+            deltatext, arraytext = _addlistdelta(base, delta)
+        else:
+            # For large changes, it's much cheaper to just build the text and
+            # diff it.
+            arraytext = array.array('c', self.text())
+            deltatext = mdiff.textdiff(base, arraytext)
+
         return arraytext, deltatext
 
 def _msearch(m, s, lo=0, hi=None):
