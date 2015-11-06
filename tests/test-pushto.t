@@ -100,7 +100,7 @@ Test that --create is required to create new bookmarks
   added 1 changesets with 1 changes to 1 files
   exporting bookmark @
 
-Test that --force is required to move bookmarks to odd locations
+Test that --non-forward-move is required to move bookmarks to odd locations
 
   $ hg push --to @
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
@@ -112,7 +112,7 @@ Test that --force is required to move bookmarks to odd locations
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
-  (use --force flag to complete non-fast-forward update)
+  (use --non-forward-move flag to complete arbitrary moves)
   [255]
   $ hg up ".^"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -123,10 +123,10 @@ Test that --force is required to move bookmarks to odd locations
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
-  (use --force flag to complete non-fast-forward update)
+  (use --non-forward-move flag to complete arbitrary moves)
   [255]
 
-Test that --force allows moving bookmark around arbitrarily
+Test that --non-forward-move allows moving bookmark around arbitrarily
 
   $ hg book -r 1 headb
   $ hg book -r 2 headc
@@ -143,19 +143,19 @@ Test that --force allows moving bookmark around arbitrarily
   remote bookmark already points at pushed rev
   no changes found
   [1]
-  $ hg push --to @ -r headb -f
+  $ hg push --to @ -r headb
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
+  remote bookmark already points at pushed rev
   no changes found
-  updating bookmark @
   [1]
   $ hg push --to @ -r headc
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
-  (use --force flag to complete non-fast-forward update)
+  (use --non-forward-move flag to complete arbitrary moves)
   [255]
-  $ hg push --to @ -r headc -f
+  $ hg push --to @ -r headc --non-forward-move --force
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
   adding changesets
@@ -167,9 +167,9 @@ Test that --force allows moving bookmark around arbitrarily
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: pushed rev is not in the foreground of remote bookmark
-  (use --force flag to complete non-fast-forward update)
+  (use --non-forward-move flag to complete arbitrary moves)
   [255]
-  $ hg push --to @ -r 0 -f
+  $ hg push --to @ -r 0 --non-forward-move
   pushing rev cb9a9f314b8b to destination $TESTTMP/repo1 bookmark @
   searching for changes
   no changes found
@@ -182,7 +182,7 @@ Test that --force allows moving bookmark around arbitrarily
   updating bookmark @
   [1]
 
-Test that local must have rev of remote to push --to without --force
+Test that local must have rev of remote to push --to without --non-forward-move
 
   $ hg up -r 0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -193,7 +193,7 @@ Test that local must have rev of remote to push --to without --force
   pushing rev cc61aa6be3dc to destination $TESTTMP/repo1 bookmark @
   searching for changes
   abort: remote bookmark revision is not in local repo
-  (pull and merge or rebase or use --force)
+  (pull and merge or rebase or use --non-forward-move)
   [255]
 
 Clean up repo1
@@ -265,7 +265,7 @@ Test that rebasing and pushing works as expected
   o  0 a
   
 
-Test that pushing over obsoleted changesets doesn't require force
+Test that pushing over obsoleted changesets doesn't require --non-forward-move
 
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "evolve=" >> $HGRCPATH

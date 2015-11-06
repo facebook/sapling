@@ -62,7 +62,7 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
              newbranch=False, bookmarks=(), **kwargs):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
 
-    for flag in ['to', 'delete', 'create', 'allowanon']:
+    for flag in ['to', 'delete', 'create', 'allowanon', 'nonforwardmove']:
         setattr(pushop, flag, kwargs.get(flag))
 
 def expull(orig, repo, remote, *args, **kwargs):
@@ -525,6 +525,8 @@ def extsetup(ui):
         (pushcmd, ('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK')),
         (pushcmd, ('', 'create', None, 'create a new remote bookmark')),
         (pushcmd, ('', 'allow-anon', None, 'allow a new unbookmarked head')),
+        (pushcmd, ('', 'non-forward-move', None,
+                   'allows moving a remote bookmark to an arbitrary place')),
     ]
 
     def afterload(loaded):
@@ -554,7 +556,6 @@ def exlog(orig, ui, repo, *args, **opts):
 def expushdiscoverybookmarks(pushop):
     repo = pushop.repo.unfiltered()
     remotemarks = pushop.remote.listkeys('bookmarks')
-    force = pushop.force
 
     if pushop.delete:
         if pushop.delete not in remotemarks:
@@ -613,20 +614,21 @@ def expushdiscoverybookmarks(pushop):
         hint = _('use --create to create a new bookmark')
         raise util.Abort(msg, hint=hint)
 
-    # allow non-ff only if force is True
-    allownonff = repo.ui.configbool('remotenames', 'allownonfastforward')
-    if not force and old != '' and not allownonff:
+    # allow non-fg bookmark move only if --non-forward-move is specified
+    if not pushop.nonforwardmove and old != '':
+        # the first check isn't technically about non-fg moves, but the non-fg
+        # check relies on the old bm location being in the local repo
         if old not in repo:
             msg = _('remote bookmark revision is not in local repo')
-            hint = _('pull and merge or rebase or use --force')
+            hint = _('pull and merge or rebase or use --non-forward-move')
             raise util.Abort(msg, hint=hint)
         foreground = obsolete.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
             msg = _('pushed rev is not in the foreground of remote bookmark')
-            hint = _('use --force flag to complete non-fast-forward update')
+            hint = _('use --non-forward-move flag to complete arbitrary moves')
             raise util.Abort(msg, hint=hint)
         if repo[old] == repo[rev]:
-            repo.ui.warn(_('remote bookmark already points at pushed rev\n'))
+            repo.ui.status(_('remote bookmark already points at pushed rev\n'))
             return
 
     pushop.outbookmarks.append((bookmark, old, hex(rev)))
@@ -684,6 +686,8 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         'create': opts.get('create'),
         'allowanon': opts.get('allow_anon') or
                      repo.ui.configbool('remotenames', 'pushanonheads'),
+        'nonforwardmove': opts.get('non_forward_move') or
+                repo.ui.configbool('remotenames', 'allownonfastforward'),
     }
 
     if opargs['delete']:
