@@ -238,6 +238,23 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
         unsynced = set()
     return {None: (oldheads, newheads, unsynced)}
 
+def _nowarnheads(repo, remote, newbookmarks):
+    # Compute newly pushed bookmarks. We don't warn about bookmarked heads.
+    localbookmarks = repo._bookmarks
+    remotebookmarks = remote.listkeys('bookmarks')
+    bookmarkedheads = set()
+    for bm in localbookmarks:
+        rnode = remotebookmarks.get(bm)
+        if rnode and rnode in repo:
+            lctx, rctx = repo[bm], repo[rnode]
+            if bookmarks.validdest(repo, rctx, lctx):
+                bookmarkedheads.add(lctx.node())
+        else:
+            if bm in newbookmarks and bm not in remotebookmarks:
+                bookmarkedheads.add(repo[bm].node())
+
+    return bookmarkedheads
+
 def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                newbookmarks=[]):
     """Check that a push won't add any outgoing head
@@ -268,19 +285,8 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                          hint=_("use 'hg push --new-branch' to create"
                                 " new remote branches"))
 
-    # 2. Compute newly pushed bookmarks. We don't warn about bookmarked heads.
-    localbookmarks = repo._bookmarks
-    remotebookmarks = remote.listkeys('bookmarks')
-    bookmarkedheads = set()
-    for bm in localbookmarks:
-        rnode = remotebookmarks.get(bm)
-        if rnode and rnode in repo:
-            lctx, rctx = repo[bm], repo[rnode]
-            if bookmarks.validdest(repo, rctx, lctx):
-                bookmarkedheads.add(lctx.node())
-        else:
-            if bm in newbookmarks and bm not in remotebookmarks:
-                bookmarkedheads.add(repo[bm].node())
+    # 2. Find heads that we need not warn about
+    nowarnheads = _nowarnheads(repo, remote, newbookmarks)
 
     # 3. Check for new heads.
     # If there are more heads after the push than before, a suitable
@@ -366,7 +372,7 @@ def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
                              " pushing new heads")
         elif len(newhs) > len(oldhs):
             # remove bookmarked or existing remote heads from the new heads list
-            dhs = sorted(newhs - bookmarkedheads - oldhs)
+            dhs = sorted(newhs - nowarnheads - oldhs)
         if dhs:
             if errormsg is None:
                 if branch not in ('default', None):
