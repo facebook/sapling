@@ -10,7 +10,7 @@ comes from an unrecorded mv
 """
 
 from mercurial import cmdutil, scmutil
-from mercurial import similar, util, commands
+from mercurial import similar, util, commands, copies
 from mercurial.extensions import wrapcommand
 from mercurial import extensions
 from mercurial.i18n import _
@@ -44,20 +44,14 @@ def mvcheck(orig, ui, repo, *pats, **opts):
         return orig(ui, repo, *pats, **opts)
 
 def _interestingfiles(repo, matcher):
-    added, removed = [], []
+    stat = repo.status(repo['.'], repo[None], matcher)
+    added = stat[1]
+    removed = stat[2]
 
-    ctx = repo[None]
-    dirstate = repo.dirstate
-    files = dirstate.matches(matcher)
-    for abs, st in dirstate.iteritems():
-        if not abs in files:
-            continue
-        dstate = dirstate[abs]
-        # for finding renames
-        if dstate == 'r':
-            removed.append(abs)
-        elif dstate == 'a':
-            added.append(abs)
+    copy = copies._forwardcopies(repo['.'], repo[None], matcher)
+    # remove the copy files for which we already have copy info
+    added = [f for f in added if f not in copy]
+
     return added, removed
 
 def _findrenames(repo, matcher, added, removed, similarity):
