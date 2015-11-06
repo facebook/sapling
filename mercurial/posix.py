@@ -170,22 +170,26 @@ def checklink(path):
     """check whether the given path is on a symlink-capable filesystem"""
     # mktemp is not racy because symlink creation will fail if the
     # file already exists
-    name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
-    try:
-        fd = tempfile.NamedTemporaryFile(dir=path, prefix='hg-checklink-')
+    while True:
+        name = tempfile.mktemp(dir=path, prefix='hg-checklink-')
         try:
-            os.symlink(os.path.basename(fd.name), name)
-            os.unlink(name)
-            return True
-        finally:
-            fd.close()
-    except AttributeError:
-        return False
-    except OSError as inst:
-        # sshfs might report failure while successfully creating the link
-        if inst[0] == errno.EIO and os.path.exists(name):
-            os.unlink(name)
-        return False
+            fd = tempfile.NamedTemporaryFile(dir=path, prefix='hg-checklink-')
+            try:
+                os.symlink(os.path.basename(fd.name), name)
+                os.unlink(name)
+                return True
+            except OSError as inst:
+                # link creation might race, try again
+                if inst[0] == errno.EEXIST:
+                    continue
+                # sshfs might report failure while successfully creating the link
+                if inst[0] == errno.EIO and os.path.exists(name):
+                    os.unlink(name)
+                return False
+            finally:
+                fd.close()
+        except AttributeError:
+            return False
 
 def checkosfilename(path):
     '''Check that the base-relative path is a valid filename on this platform.
