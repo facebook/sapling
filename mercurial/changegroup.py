@@ -406,10 +406,6 @@ class cg1unpacker(object):
                              % (changesets, revisions, files, htext))
             repo.invalidatevolatilesets()
 
-            # Call delayupdate again to ensure the transaction writepending
-            # subscriptions are still in place.
-            cl.delayupdate(tr)
-
             if changesets > 0:
                 if 'node' not in tr.hookargs:
                     tr.hookargs['node'] = hex(cl.node(clstart))
