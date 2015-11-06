@@ -23,7 +23,7 @@ helpentry = '
 naventry = '<a href="{url|urlescape}log/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navshortentry = '<a href="{url|urlescape}shortlog/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
 navgraphentry = '<a href="{url|urlescape}graph/{node|short}{sessionvars%urlparameter}">{label|escape}</a> '
-filenaventry = '<a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a>'
+filenaventry = '<a href="{url|urlescape}log/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{label|escape}</a> '
 filedifflink = '<a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{file|escape}</a> '
 filenodelink = '
   <tr class="parity{parity}">

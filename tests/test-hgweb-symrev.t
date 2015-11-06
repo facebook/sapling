@@ -816,7 +816,7 @@ Set up the repo
   <a href="/file/43c799df6e75/foo?style=monoblue">file</a> |
   <a href="/diff/43c799df6e75/foo?style=monoblue">diff</a> |
   <a href="/annotate/43c799df6e75/foo?style=monoblue">annotate</a>
-      <a href="/log/43c799df6e75/foo?style=monoblue">(0)</a><a href="/log/tip/foo?style=monoblue">tip</a>
+      <a href="/log/43c799df6e75/foo?style=monoblue">(0)</a> <a href="/log/tip/foo?style=monoblue">tip</a> 
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'annotate/xyzzy/foo?style=monoblue' | egrep $REVLINKS
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
