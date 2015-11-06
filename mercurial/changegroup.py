@@ -329,13 +329,13 @@ class cg1unpacker(object):
             # the top level value (if they exist) in this function.
             srctype = tr.hookargs.setdefault('source', srctype)
             url = tr.hookargs.setdefault('url', url)
+            repo.hook('prechangegroup', throw=True, **tr.hookargs)
 
             # write changelog data to temp files so concurrent readers
             # will not see an inconsistent view
             cl = repo.changelog
             cl.delayupdate(tr)
             oldheads = cl.heads()
-            repo.hook('prechangegroup', throw=True, **tr.hookargs)
 
             trp = weakref.proxy(tr)
             # pull off the changeset group
