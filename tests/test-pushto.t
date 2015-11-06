@@ -83,15 +83,15 @@ Test that --to limits other options
   abort: do not specify --to/-t and --branch/-b at the same time
   [255]
 
-Test that --force is required to create new bookmarks
+Test that --create is required to create new bookmarks
 
   $ hg push --to @
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
-  abort: not creating new bookmark
-  (use --force to create a new bookmark)
+  abort: not creating new remote bookmark
+  (use --create to create a new bookmark)
   [255]
-  $ hg push --to @ -f
+  $ hg push --to @ --create
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
   searching for changes
   adding changesets

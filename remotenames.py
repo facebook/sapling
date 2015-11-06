@@ -59,10 +59,12 @@ def expush(orig, repo, remote, *args, **kwargs):
     return res
 
 def expushop(orig, pushop, repo, remote, force=False, revs=None,
-             newbranch=False, bookmarks=(), to=None, delete=None, **kwargs):
+             newbranch=False, bookmarks=(), to=None, delete=None,
+             create=False, **kwargs):
     orig(pushop, repo, remote, force, revs, newbranch, bookmarks)
     pushop.to = to
     pushop.delete = delete
+    pushop.create = create
 
 def expull(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
@@ -522,6 +524,7 @@ def extsetup(ui):
         (branchcmd, ('', 'remote', None, 'show only remote branches')),
         (pushcmd, ('t', 'to', '', 'push revs to this bookmark', 'BOOKMARK')),
         (pushcmd, ('d', 'delete', '', 'delete remote bookmark', 'BOOKMARK')),
+        (pushcmd, ('', 'create', None, 'create a new remote bookmark')),
     ]
 
     def afterload(loaded):
@@ -602,13 +605,13 @@ def expushdiscoverybookmarks(pushop):
     bookmark = pushop.bookmarks[0]
     rev = pushop.revs[0]
 
-    # allow new bookmark only if force is True
+    # allow new bookmark only if --create is specified
     old = ''
     if bookmark in remotemarks:
         old = remotemarks[bookmark]
-    elif not force:
-        msg = _('not creating new bookmark')
-        hint = _('use --force to create a new bookmark')
+    elif not pushop.create:
+        msg = _('not creating new remote bookmark')
+        hint = _('use --create to create a new bookmark')
         raise util.Abort(msg, hint=hint)
 
     # allow non-ff only if force is True
@@ -679,6 +682,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     opargs = {
         'delete': opts.get('delete'),
         'to': opts.get('to'),
+        'create': opts.get('create'),
     }
 
     if opargs['delete']:

@@ -29,7 +29,7 @@ Test that anonymous heads are disallowed by default
 
 Create a remote bookmark
 
-  $ hg push --to @ -f
+  $ hg push --to @ --create
   pushing rev cb9a9f314b8b to destination ssh://user@dummy/repo1 bookmark @
   searching for changes
   remote: adding changesets
@@ -172,8 +172,8 @@ Test traditional push with subrepo
   $ hg push --to @
   pushing rev 296c645d2a63 to destination ssh://user@dummy/repo1 bookmark @
   searching for changes
-  abort: not creating new bookmark
-  (use --force to create a new bookmark)
+  abort: not creating new remote bookmark
+  (use --create to create a new bookmark)
   [255]
   $ hg push -B @
   pushing to ssh://user@dummy/repo1
