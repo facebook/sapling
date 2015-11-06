@@ -113,7 +113,7 @@ test generic hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  prechangegroup hook: HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=file:$TESTTMP/a (glob)
+  prechangegroup hook: HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=file:$TESTTMP/a (glob)
   adding changesets
   adding manifests
   adding file changes
@@ -272,7 +272,7 @@ test that prepushkey can prevent incoming keys
   listkeys hook: HG_NAMESPACE=bookmarks HG_VALUES={'bar': '0000000000000000000000000000000000000000', 'foo': '0000000000000000000000000000000000000000'}
   no changes found
   pretxnopen hook: HG_TXNID=TXN:* HG_TXNNAME=push (glob)
-  prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_PENDING=$TESTTMP/a HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  prepushkey.forbid hook: HG_BUNDLE2=1 HG_KEY=baz HG_NAMESPACE=bookmarks HG_NEW=0000000000000000000000000000000000000000 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pushkey-abort: prepushkey hook exited with status 1
   abort: exporting bookmark baz failed!
   [255]
@@ -306,7 +306,7 @@ prechangegroup hook can prevent incoming changes
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  prechangegroup.forbid hook: HG_PENDING=$TESTTMP/b HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=file:$TESTTMP/a (glob)
+  prechangegroup.forbid hook: HG_SOURCE=pull HG_TXNID=TXN:* HG_URL=file:$TESTTMP/a (glob)
   abort: prechangegroup.forbid hook exited with status 1
   [255]
 
