@@ -6578,10 +6578,10 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                     tr.close()
                 except error.BundleUnknownFeatureError as exc:
                     raise error.Abort(_('%s: unknown bundle feature, %s')
-                                     % (fname, exc),
-                                     hint=_("see https://mercurial-scm.org/"
-                                            "wiki/BundleFeature for more "
-                                            "information"))
+                                      % (fname, exc),
+                                      hint=_("see https://mercurial-scm.org/"
+                                             "wiki/BundleFeature for more "
+                                             "information"))
                 finally:
                     if tr:
                         tr.release()
