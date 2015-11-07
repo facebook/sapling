@@ -1,5 +1,9 @@
 Set up a server
 
+  $ cat >> $HGRCPATH << EOF
+  > [format]
+  > usegeneraldelta=yes
+  > EOF
   $ hg init server
   $ cd server
   $ cat >> .hg/hgrc << EOF
@@ -308,7 +312,7 @@ Stream clone bundles are supported
 
   $ hg -R server debugcreatestreamclonebundle packed.hg
   writing 613 bytes for 4 files
-  bundle requirements: revlogv1
+  bundle requirements: generaldelta, revlogv1
 
 No bundle spec should work
 
