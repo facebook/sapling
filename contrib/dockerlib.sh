@@ -35,8 +35,8 @@ function initcontainer() {
         # running docker. This is *very likely* to fail at some point.
         echo RUN useradd $DBUILDUSER -u 1000
     else
-        echo RUN groupadd $DBUILDUSER -g `id -g`
-        echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER
+        echo RUN groupadd $DBUILDUSER -g `id -g` --non-unique
+        echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER --non-unique
     fi
   ) | $DOCKER build --tag $CONTAINER -
 }
