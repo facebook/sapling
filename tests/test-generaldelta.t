@@ -3,7 +3,7 @@ regular equivalent. Test would fail if generaldelta was naive
 implementation of parentdelta: third manifest revision would be fully
 inserted due to big distance from its paren revision (zero).
 
-  $ hg init repo
+  $ hg init repo --config format.generaldelta=no --config format.usegeneraldelta=no
   $ cd repo
   $ echo foo > foo
   $ echo bar > bar
@@ -62,7 +62,7 @@ commit.
   o  0 3903 a
   
   $ cd ..
-  $ hg init client --config format.generaldelta=false
+  $ hg init client --config format.generaldelta=false --config format.usegeneraldelta=false
   $ cd client
   $ hg pull -q ../server -r 4
   $ hg debugindex x
