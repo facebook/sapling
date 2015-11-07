@@ -47,8 +47,8 @@ $(PREFIX)/bin/python:
 	[ -f $(PYTHON_SRCFILE) ] || wget http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || curl -OL http://www.python.org/ftp/python/$(PYTHONVER)/$(PYTHON_SRCFILE) || [ -f $(PYTHON_SRCFILE) ]
 	rm -rf $(PYTHON_SRCDIR)
 	tar xf $(PYTHON_SRCFILE)
-	# Ubuntu disables SSLv2 the hard way, disable it on old Pythons too
-	-sed -i 's,self.*SSLv2_method(),0;//\0,g' $(PYTHON_SRCDIR)/Modules/_ssl.c
+	# Debian/Ubuntu disables SSLv2,3 the hard way, disable it on old Pythons too
+	-sed -i 's,self.*SSLv[23]_method(),0;//\0,g' $(PYTHON_SRCDIR)/Modules/_ssl.c
 	# Find multiarch system libraries on Ubuntu and disable fortify error when setting argv
 	LDFLAGS="-L/usr/lib/`dpkg-architecture -qDEB_HOST_MULTIARCH`"; \
 	BASECFLAGS=-U_FORTIFY_SOURCE; \
