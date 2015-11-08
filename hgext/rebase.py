@@ -48,6 +48,9 @@ def _savegraft(ctx, extra):
     s = ctx.extra().get('source', None)
     if s is not None:
         extra['source'] = s
+    s = ctx.extra().get('intermediate-source', None)
+    if s is not None:
+        extra['intermediate-source'] = s
 
 def _savebranch(ctx, extra):
     extra['branch'] = ctx.branch()

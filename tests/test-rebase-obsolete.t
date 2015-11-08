@@ -248,6 +248,30 @@ More complex case were part of the rebase set were already rebased
   D
   
   
+  $ hg up -qr 'desc(G)'
+  $ hg graft 4596109a6a4328c398bde3a4a3b6737cfade3003
+  grafting 11:4596109a6a43 "D"
+  $ hg up -qr 'desc(E)'
+  $ hg rebase -s tip -d .
+  rebasing 14:9e36056a46e3 "D" (tip)
+  $ hg log --style default --debug -r tip
+  changeset:   15:627d4614809036ba22b9e7cb31638ddc06ab99ab
+  tag:         tip
+  phase:       draft
+  parent:      4:9520eea781bcca16c1e15acc0ba14335a0e8e5ba
+  parent:      -1:0000000000000000000000000000000000000000
+  manifest:    15:648e8ede73ae3e497d093d3a4c8fcc2daa864f42
+  user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
+  date:        Sat Apr 30 15:24:48 2011 +0200
+  files+:      D
+  extra:       branch=default
+  extra:       intermediate-source=4596109a6a4328c398bde3a4a3b6737cfade3003
+  extra:       rebase_source=9e36056a46e37c9776168c7375734eebc70e294f
+  extra:       source=32af7686d403cf45b5d95f2d70cebea587ac806a
+  description:
+  D
+  
+  
   $ cd ..
 
 collapse rebase
