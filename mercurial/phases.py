@@ -308,9 +308,19 @@ class phasecache(object):
                 raise error.Abort(_('cannot change null revision phase'))
             currentroots = currentroots.copy()
             currentroots.update(newroots)
-            ctxs = repo.set('roots(%ln::)', currentroots)
-            currentroots.intersection_update(ctx.node() for ctx in ctxs)
-            self._updateroots(targetphase, currentroots, tr)
+
+            # Only compute new roots for revs above the roots that are being
+            # retracted.
+            minnewroot = min(repo[n].rev() for n in newroots)
+            aboveroots = [n for n in currentroots
+                          if repo[n].rev() >= minnewroot]
+            updatedroots = repo.set('roots(%ln::)', aboveroots)
+
+            finalroots = set(n for n in currentroots if repo[n].rev() <
+                             minnewroot)
+            finalroots.update(ctx.node() for ctx in updatedroots)
+
+            self._updateroots(targetphase, finalroots, tr)
         repo.invalidatevolatilesets()
 
     def filterunknown(self, repo):
