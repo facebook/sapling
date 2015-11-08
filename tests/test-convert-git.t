@@ -689,10 +689,7 @@ Run convert when the remote branches have changed
 
   $ cd git-repo7
   $ echo a >> a
-  $ git commit -am "move master forward"
-  [master 0c81947] move master forward
-   Author: nottest <test@example.org>
-   1 file changed, 1 insertion(+)
+  $ git commit -q -am "move master forward"
   $ cd ..
   $ rm -rf hg-repo7
   $ hg convert --config convert.git.remoteprefix=origin git-repo7-client hg-repo7
