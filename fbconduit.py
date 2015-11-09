@@ -25,6 +25,7 @@ class HttpError(Exception):
     pass
 
 githashre = re.compile('g([0-9a-fA-F]{40,40})')
+fbsvnhash = re.compile('r[A-Z]+(\d+)')
 
 def extsetup(ui):
     global conduit_host, conduit_path, conduit_protocol
@@ -198,6 +199,23 @@ def gitnode(repo, subset, x):
     return subset.filter(lambda r: r == rn)
 
 def overridestringset(orig, repo, subset, x):
+    svnrev = fbsvnhash.match(x)
+    if svnrev and not x in repo:
+        try:
+            extensions.find('hgsubversion')
+            meta = repo.svnmeta()
+
+            desiredrevision = int(svnrev.group(1))
+            # For some odd reason, the key is a tuple instead of a revision num
+            # The second member always seems to be None
+            revmapkey = (desiredrevision, None)
+            hghash = meta.revmap.get(revmapkey)
+            if hghash:
+                return orig(repo, subset, hghash)
+
+        except KeyError:
+            pass
+
     m = githashre.match(x)
     if m is not None:
         return gitnode(repo, subset, ('string', m.group(1)))
