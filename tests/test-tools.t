@@ -43,7 +43,13 @@ Tests of the file helper tool
   foo: mode=644
 #endif
 
+#if no-windows
   $ python $TESTDIR/seq.py 10 > bar
+#else
+Convert CRLF -> LF for consistency
+  $ python $TESTDIR/seq.py 10 | sed "s/$//" > bar
+#endif
+
 #if unix-permissions symlink
   $ chmod +x bar
   $ f bar --newer foo --mode --type --size --dump --links --bytes 7
