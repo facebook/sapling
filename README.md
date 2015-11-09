@@ -137,12 +137,7 @@ your `~/.hgrc` file look something like this:
 
 That will enable the Hg-Git extension for you.
 
-This plugin is currently tested against the following Mercurial versions:
-
- * 2.0.2
- * 2.1.2
- * 2.2.3
- * 2.3.1
+See the Makefile for a list of compatible Mercurial versions.
 
 Configuration
 =============
