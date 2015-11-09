@@ -3,3 +3,4 @@ include MANIFEST.in
 include README.md
 
 recursive-include hggit *.py *.rst
+recursive-include tests *.t *.py *.py.out hghave latin-1-encoding testutil
