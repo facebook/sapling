@@ -164,7 +164,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         # The name of the module the import statement is located in.
         globalname = globals.get('__name__')
 
-        def processfromitem(mod, attr, **kwargs):
+        def processfromitem(mod, attr):
             """Process an imported symbol in the import statement.
 
             If the symbol doesn't exist in the parent module, it must be a
@@ -172,7 +172,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             """
             symbol = getattr(mod, attr, nothing)
             if symbol is nothing:
-                symbol = _demandmod(attr, mod.__dict__, locals, **kwargs)
+                symbol = _demandmod(attr, mod.__dict__, locals, level=1)
                 setattr(mod, attr, symbol)
 
             # Record the importing module references this symbol so we can
@@ -194,7 +194,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             mod = _hgextimport(_origimport, name, globals, locals, level=level)
 
             for x in fromlist:
-                processfromitem(mod, x, level=level)
+                processfromitem(mod, x)
 
             return mod
 

@@ -57,7 +57,7 @@ operator could use a dynamic service for retrieving bundle data. However,
 static file hosting services are simple and scalable and should be sufficient
 for most needs.
 
-Bundle files can be generated with the :hg:`bundle` comand. Typically
+Bundle files can be generated with the :hg:`bundle` command. Typically
 :hg:`bundle --all` is used to produce a bundle of the entire repository.
 
 :hg:`debugcreatestreamclonebundle` can be used to produce a special

@@ -2692,7 +2692,7 @@ bail:
 
 static PyObject *fm1readmarkers(PyObject *self, PyObject *args) {
 	const char *data, *dataend;
-	Py_ssize_t datalen;
+	int datalen;
 	Py_ssize_t offset, stop;
 	PyObject *markers = NULL;
 
