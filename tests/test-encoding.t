@@ -272,3 +272,14 @@ Test roundtrip encoding of lookup tables when not using UTF-8 (issue2763)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ cd ..
+
+Test roundtrip encoding/decoding of utf8b for generated data
+
+#if hypothesis
+
+  >>> from hypothesishelpers import *
+  >>> from mercurial import encoding
+  >>> roundtrips(st.binary(), encoding.fromutf8b, encoding.toutf8b)
+  Round trip OK
+
+#endif
