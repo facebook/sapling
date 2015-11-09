@@ -445,6 +445,11 @@ class dirstate(object):
         if self[f] not in "?r" and "_dirs" in self.__dict__:
             self._dirs.delpath(f)
 
+        if "_filefoldmap" in self.__dict__:
+            normed = util.normcase(f)
+            if normed in self._filefoldmap:
+                del self._filefoldmap[normed]
+
     def _addpath(self, f, state, mode, size, mtime):
         oldstate = self[f]
         if state == 'a' or oldstate == 'r':
