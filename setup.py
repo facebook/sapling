@@ -32,6 +32,7 @@ setup(
         'perftweaks',
         'phabdiff',
         'phrevset',
+        'phabstatus',
         'pushrebase',
         'pushvars',
         'rage',
