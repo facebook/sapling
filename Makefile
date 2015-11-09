@@ -29,6 +29,6 @@ tests-%:
 # Mercurial 3.4 had a core bug that caused a harmless test failure -- 3.4.1
 # fixes that bug.
 
-all-version-tests: tests-2.8.2 tests-3.0.1 tests-3.1 tests-3.2.2 tests-3.3 tests-3.4.1 tests-3.5 tests-@
+all-version-tests: tests-2.8.2 tests-3.0.1 tests-3.1 tests-3.2.2 tests-3.3 tests-3.4.1 tests-3.5 tests-3.6 tests-@
 
 .PHONY: tests all-version-tests
