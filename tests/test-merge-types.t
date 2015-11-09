@@ -118,7 +118,7 @@ Symlink is other parent, executable is local:
   picked tool ':merge-local' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: :merge-local cannot merge symlinks for a
+  warning: internal :merge-local cannot merge symlinks for a
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -140,7 +140,7 @@ Symlink is other parent, executable is local:
   picked tool ':merge-other' for a (binary False symlink True)
   merging a
   my a@3574f3e69b1c+ other a@521a1e40188f ancestor a@c334dc3be0da
-  warning: :merge-other cannot merge symlinks for a
+  warning: internal :merge-other cannot merge symlinks for a
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]

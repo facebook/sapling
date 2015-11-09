@@ -308,16 +308,12 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
     """
     assert localorother is not None
     tool, toolpath, binary, symlink = toolconf
-    if symlink:
-        repo.ui.warn(_('warning: :merge-%s cannot merge symlinks '
-                       'for %s\n') % (localorother, fcd.path()))
-        return False, 1
     a, b, c, back = files
     r = simplemerge.simplemerge(repo.ui, a, b, c, label=labels,
                                 localorother=localorother)
     return True, r
 
-@internaltool('merge-local', mergeonly)
+@internaltool('merge-local', mergeonly, precheck=_symlinkcheck)
 def _imergelocal(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
@@ -325,7 +321,7 @@ def _imergelocal(*args, **kwargs):
     success, status = _imergeauto(localorother='local', *args, **kwargs)
     return success, status
 
-@internaltool('merge-other', mergeonly)
+@internaltool('merge-other', mergeonly, precheck=_symlinkcheck)
 def _imergeother(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
