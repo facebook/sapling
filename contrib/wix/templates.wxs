@@ -227,7 +227,7 @@
             <File Id="static.mercurial.js"       Name="mercurial.js" />
             <File Id="static.hgicon.png"         Name="hgicon.png" />
             <File Id="static.hglogo.png"         Name="hglogo.png" />
-            <File Id="static.style.coal.css"     Name="style-coal.css" />
+            <File Id="static.style.coal.css"     Name="style-extra-coal.css" />
             <File Id="static.style.gitweb.css"   Name="style-gitweb.css" />
             <File Id="static.style.monoblue.css" Name="style-monoblue.css" />
             <File Id="static.style.paper.css"    Name="style-paper.css" />
