@@ -163,7 +163,7 @@ Test merge states
   $ hg merge
   merging b2
   warning: conflicts while merging b2! (edit, then use 'hg resolve --mark')
-  6 files updated, 0 files merged, 1 files removed, 1 files unresolved
+  * files updated, 0 files merged, 1 files removed, 1 files unresolved (glob)
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ fileset 'resolved()'
