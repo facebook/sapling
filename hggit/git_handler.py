@@ -1097,6 +1097,8 @@ class GitHandler(object):
         graphwalker = self.git.get_graph_walker(heads=haveheads)
 
         def determine_wants(refs):
+            if refs is None:
+                return None
             filteredrefs = self.filter_refs(refs, heads)
             return [x for x in filteredrefs.itervalues() if x not in self.git]
 
