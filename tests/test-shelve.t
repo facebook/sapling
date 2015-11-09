@@ -1158,7 +1158,7 @@ Wreak havoc on the unshelve process
   $ rm .hg/unshelverebasestate
   $ hg unshelve --abort
   unshelve of 'default' aborted
-  abort: No such file or directory
+  abort: (No such file or directory|The system cannot find the file specified) (re)
   [255]
 Can the user leave the current state?
   $ hg up -C .
