@@ -255,12 +255,22 @@ def _nowarnheads(repo, remote, newbookmarks):
 
     return bookmarkedheads
 
-def checkheads(repo, remote, outgoing, remoteheads, newbranch=False, inc=False,
-               newbookmarks=[]):
+def checkheads(pushop):
     """Check that a push won't add any outgoing head
 
     raise Abort error and display ui message as needed.
     """
+
+    repo = pushop.repo.unfiltered()
+    remote = pushop.remote
+    outgoing = pushop.outgoing
+    remoteheads = pushop.remoteheads
+    newbranch = pushop.newbranch
+    inc = bool(pushop.incoming)
+
+    # internal config: bookmarks.pushing
+    newbookmarks = pushop.ui.configlist('bookmarks', 'pushing')
+
     # Check for each named branch if we're creating new remote heads.
     # To be a remote head after push, node must be either:
     # - unknown locally

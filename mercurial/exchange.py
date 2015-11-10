@@ -571,13 +571,7 @@ def _pushcheckoutgoing(pushop):
                 elif ctx.troubled():
                     raise error.Abort(mst[ctx.troubles()[0]] % ctx)
 
-        # internal config: bookmarks.pushing
-        newbm = pushop.ui.configlist('bookmarks', 'pushing')
-        discovery.checkheads(unfi, pushop.remote, outgoing,
-                             pushop.remoteheads,
-                             pushop.newbranch,
-                             bool(pushop.incoming),
-                             newbm)
+        discovery.checkheads(pushop)
     return True
 
 # List of names of steps to perform for an outgoing bundle2, order matters.
