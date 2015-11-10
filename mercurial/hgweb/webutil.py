@@ -297,8 +297,8 @@ def changelistentry(web, ctx, tmpl):
 
     return {
         "author": ctx.user(),
-        "parent": parents(ctx, rev - 1),
-        "child": children(ctx, rev + 1),
+        "parent": lambda **x: parents(ctx, rev - 1),
+        "child": lambda **x: children(ctx, rev + 1),
         "changelogtag": showtags,
         "desc": ctx.description(),
         "extra": ctx.extra(),
