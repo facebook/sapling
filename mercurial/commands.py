@@ -5678,7 +5678,7 @@ def resolve(ui, repo, *pats, **opts):
                 # for files in tocomplete, ms.resolve will not overwrite
                 # .orig -- only preresolve does
                 try:
-                    util.rename(a + ".resolve", a + ".orig")
+                    util.rename(a + ".resolve", cmdutil.origpath(ui, repo, a))
                 except OSError as inst:
                     if inst.errno != errno.ENOENT:
                         raise
