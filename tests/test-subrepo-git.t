@@ -875,6 +875,16 @@ revert the subrepository
   $ hg status --subrepos
   ? s/barfoo
 
+revert moves orig files to the right place
+  $ echo 'bloop' > s/foobar
+  $ hg revert --all --verbose --config 'ui.origbackuppath=.hg/origbackups'
+  reverting subrepo ../gitroot
+  creating directory: $TESTTMP/tc/.hg/origbackups
+  saving current version of foobar as $TESTTMP/tc/.hg/origbackups/foobar.orig
+  $ ls .hg/origbackups
+  foobar.orig
+  $ rm -rf .hg/origbackups
+
 show file at specific revision
   $ cat > s/foobar << EOF
   > woop    woop

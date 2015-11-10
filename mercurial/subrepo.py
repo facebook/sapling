@@ -1910,7 +1910,7 @@ class gitsubrepo(abstractsubrepo):
             status = self.status(None)
             names = status.modified
             for name in names:
-                bakname = "%s.orig" % name
+                bakname = cmdutil.origpath(self.ui, self._subparent, name)
                 self.ui.note(_('saving current version of %s as %s\n') %
                         (name, bakname))
                 self.wvfs.rename(name, bakname)
