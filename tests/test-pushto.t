@@ -291,3 +291,21 @@ Test that pushing over obsoleted changesets doesn't require --non-forward-move
   added 1 changesets with 1 changes to 1 files (+1 heads)
   2 new obsolescence markers
   updating bookmark @
+
+Test that creating a new head with a remote bookmark is allowed without --force
+
+  $ hg up -q .^
+  $ hg push -q --to bm --create
+  [1]
+  $ echo e >> a
+  $ hg commit -qm 'ea'
+  $ hg push --to bm
+  pushing rev d5bfa899fbbd to destination $TESTTMP/repo1 bookmark bm
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  updating bookmark bm
+
+

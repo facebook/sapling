@@ -19,6 +19,7 @@ import shutil
 
 from mercurial import bookmarks
 from mercurial import commands
+from mercurial import discovery
 from mercurial import encoding
 from mercurial import error
 from mercurial import exchange
@@ -445,6 +446,14 @@ def expaths(orig, ui, repo, *args, **opts):
 
     return orig(ui, repo, *args)
 
+def exnowarnheads(orig, pushop):
+    heads = orig(pushop)
+    if pushop.to:
+        repo = pushop.repo.unfiltered()
+        rev = pushop.revs[0]
+        heads.add(repo[rev].node())
+    return heads
+
 def extsetup(ui):
     extensions.wrapfunction(bookmarks, 'calculateupdate', exbookcalcupdate)
     extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
@@ -462,6 +471,9 @@ def extsetup(ui):
 
     extensions.wrapfunction(converthg.mercurial_source, 'getbookmarks',
                             exconvertbookmarks)
+
+    if util.safehasattr(discovery, '_nowarnheads'):
+        extensions.wrapfunction(discovery, '_nowarnheads', exnowarnheads)
 
     if _tracking(ui):
         try:
