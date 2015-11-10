@@ -558,20 +558,29 @@ def gcclient(ui, cachepath):
     localcache.gc(keepkeys)
 
 def log(orig, ui, repo, *pats, **opts):
-    if pats and not opts.get("follow"):
-        # Force slowpath for non-follow patterns
-        opts['removed'] = True
-        match, pats = scmutil.matchandpats(repo['.'], pats, opts)
-        isfile = not match.anypats()
-        if isfile:
-            for file in match.files():
-                if not os.path.isfile(repo.wjoin(file)):
-                    isfile = False
-                    break
+    follow = opts.get('follow')
+    revs = opts.get('rev')
+    if pats:
+        # Force slowpath for non-follow patterns and follows that start from
+        # non-working-copy-parent revs.
+        if not follow or revs:
+            # This forces the slowpath
+            opts['removed'] = True
 
-        if isfile:
-            ui.warn(_("warning: file log can be slow on large repos - " +
-                      "use -f to speed it up\n"))
+        # If this is a non-follow log without any revs specified, recommend that
+        # the user add -f to speed it up.
+        if not follow and not revs:
+            match, pats = scmutil.matchandpats(repo['.'], pats, opts)
+            isfile = not match.anypats()
+            if isfile:
+                for file in match.files():
+                    if not os.path.isfile(repo.wjoin(file)):
+                        isfile = False
+                        break
+
+            if isfile:
+                ui.warn(_("warning: file log can be slow on large repos - " +
+                          "use -f to speed it up\n"))
 
     return orig(ui, repo, *pats, **opts)
 

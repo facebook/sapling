@@ -87,3 +87,7 @@ Log on a file from inside a directory
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y
   
+Log on a file via -fr
+  $ cd ..
+  $ hg log -fr tip dir/ --template '{rev}\n'
+  1
