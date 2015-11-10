@@ -5,6 +5,9 @@ b5605d88dc27: Make ui.prompt repeat on "unrecognized response" again
 840e2b315c1f: Fix misleading error and prompts during update/merge
  (issue556)
 
+Make sure HGMERGE doesn't interfere with the test
+  $ unset HGMERGE
+
   $ status() {
   >     echo "--- status ---"
   >     hg st -A file1 file2
