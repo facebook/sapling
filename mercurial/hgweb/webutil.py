@@ -125,20 +125,28 @@ class filerevnav(revnav):
     def hex(self, rev):
         return hex(self._changelog.node(self._revlog.linkrev(rev)))
 
+class _siblings(object):
+    def __init__(self, siblings=[], hiderev=None):
+        self.siblings = [s for s in siblings if s.node() != nullid]
+        if len(self.siblings) == 1 and self.siblings[0].rev() == hiderev:
+            self.siblings = []
 
-def _siblings(siblings=[], hiderev=None):
-    siblings = [s for s in siblings if s.node() != nullid]
-    if len(siblings) == 1 and siblings[0].rev() == hiderev:
-        return
-    for s in siblings:
-        d = {'node': s.hex(), 'rev': s.rev()}
-        d['user'] = s.user()
-        d['date'] = s.date()
-        d['description'] = s.description()
-        d['branch'] = s.branch()
-        if util.safehasattr(s, 'path'):
-            d['file'] = s.path()
-        yield d
+    def __iter__(self):
+        for s in self.siblings:
+            d = {
+                'node': s.hex(),
+                'rev': s.rev(),
+                'user': s.user(),
+                'date': s.date(),
+                'description': s.description(),
+                'branch': s.branch(),
+            }
+            if util.safehasattr(s, 'path'):
+                d['file'] = s.path()
+            yield d
+
+    def __len__(self):
+        return len(self.siblings)
 
 def parents(ctx, hide=None):
     if isinstance(ctx, context.basefilectx):
@@ -355,7 +363,7 @@ def changesetentry(web, req, tmpl, ctx):
         rev=ctx.rev(),
         node=ctx.hex(),
         symrev=symrevorshortnode(req, ctx),
-        parent=tuple(parents(ctx)),
+        parent=parents(ctx),
         child=children(ctx),
         basenode=basectx.hex(),
         changesettag=showtags,
