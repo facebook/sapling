@@ -1135,7 +1135,7 @@ Test visibility of in-memory changes inside transaction to external hook
 
   $ cd ..
 
-test Abort unshelve always gets user out of the unshelved state
+test .orig files go where the user wants them to
 ---------------------------------------------------------------
   $ hg init salvage
   $ cd salvage
@@ -1144,10 +1144,16 @@ test Abort unshelve always gets user out of the unshelved state
   $ echo '' > root
   $ hg shelve -q
   $ echo 'contADDent' > root
-  $ hg unshelve -q
+  $ hg unshelve -q --config 'ui.origbackuppath=.hg/origbackups'
   warning: conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
   [1]
+  $ ls .hg/origbackups
+  root.orig
+  $ rm -rf .hg/origbackups
+
+test Abort unshelve always gets user out of the unshelved state
+---------------------------------------------------------------
 Wreak havoc on the unshelve process
   $ rm .hg/unshelverebasestate
   $ hg unshelve --abort

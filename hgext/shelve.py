@@ -507,7 +507,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
         # revert will overwrite unknown files, so move them out of the way
         for file in repo.status(unknown=True).unknown:
             if file in files:
-                util.rename(file, file + ".orig")
+                util.rename(file, cmdutil.origpath(ui, repo, file))
         ui.pushbuffer(True)
         cmdutil.revert(ui, repo, shelvectx, repo.dirstate.parents(),
                        *pathtofiles(repo, files),
