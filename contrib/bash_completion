@@ -629,7 +629,7 @@ _hg_shelves()
 
 _hg_cmd_shelve()
 {
-    if [[ "$prev" = @(-d|--delete|-l|--list) ]]; then
+    if [[ "$prev" = @(-d|--delete|-l|--list|-p|--patch|--stat) ]]; then
         _hg_shelves
     else
         _hg_status "mard"
