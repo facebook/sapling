@@ -258,3 +258,35 @@ Test force pushes
   |/
   o  0 a
   
+  $ cd ..
+
+Test 'hg push' with a tracking bookmark
+  $ hg init trackingserver
+  $ cd trackingserver
+  $ echo a > a && hg commit -Aqm a
+  $ hg book master
+  $ cd ..
+  $ hg clone -q trackingserver trackingclient
+  $ cd trackingclient
+  $ hg book feature -t default/master
+  $ echo b > b && hg commit -Aqm b
+  $ cd ../trackingserver
+  $ echo c > c && hg commit -Aqm c
+  $ cd ../trackingclient
+  $ hg push --debug | grep -i rebase
+  pushing 1 commit:
+      d2ae7f538514  b
+  2 new commits from the server will be downloaded
+  validated revset for rebase
+  bundle2-output-part: "B2X:REBASE" (params: 2 mandatory) streamed payload
+  bundle2-input-part: "b2x:rebase" (params: 2 mandatory) supported
+  validated revset for rebase
+  $ hg log -T '{rev} {desc}' -G
+  o  3 b
+  |
+  o  2 c
+  |
+  | @  1 b
+  |/
+  o  0 a
+  

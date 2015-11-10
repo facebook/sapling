@@ -175,7 +175,23 @@ def _push(orig, ui, repo, *args, **opts):
     oldphasemove = None
 
     try:
-        ui.setconfig(experimental, configonto, opts.get('to'), '--to')
+        onto = opts.get('to')
+        if not onto and not opts.get('rev') and not opts.get('dest'):
+            try:
+                # If it's a tracking bookmark, remotenames will push there,
+                # so let's set that up as our --to.
+                remotenames = extensions.find('remotenames')
+                active = remotenames.bmactive(repo)
+                tracking = remotenames._readtracking(repo)
+                if active and active in tracking:
+                    track = tracking[active]
+                    path, book = remotenames.splitremotename(track)
+                    onto = book
+            except KeyError:
+                # No remotenames? No big deal.
+                pass
+
+        ui.setconfig(experimental, configonto, onto, '--to')
         if ui.config(experimental, configonto):
             ui.setconfig(experimental, 'bundle2.pushback', True)
             oldphasemove = wrapfunction(exchange, '_localphasemove', _phasemove)
