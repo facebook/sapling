@@ -697,11 +697,13 @@ class queue(object):
             absf = repo.wjoin(f)
             if os.path.lexists(absf):
                 self.ui.note(_('saving current version of %s as %s\n') %
-                             (f, f + '.orig'))
+                             (f, cmdutil.origpath(self.ui, repo, f)))
+
+                absorig = cmdutil.origpath(self.ui, repo, absf)
                 if copy:
-                    util.copyfile(absf, absf + '.orig')
+                    util.copyfile(absf, absorig)
                 else:
-                    util.rename(absf, absf + '.orig')
+                    util.rename(absf, absorig)
 
     def printdiff(self, repo, diffopts, node1, node2=None, files=None,
                   fp=None, changes=None, opts={}):

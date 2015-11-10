@@ -444,7 +444,7 @@ test mq.keepchanges setting
   $ hg st a
   M a
   $ echo b >> b
-  $ hg --config mq.keepchanges=1 qpop --force
+  $ hg --config mq.keepchanges=1 qpop --force --config 'ui.origbackuppath=.hg/origbackups'
   popping p3
   now at: p2
   $ hg st b
@@ -460,5 +460,11 @@ test mq.keepchanges setting
   applying p2
   now at: p2
   $ hg st a
+
+test previous qpop (with --force and --config) saved .orig files to where user
+wants them
+  $ ls .hg/origbackups
+  b.orig
+  $ rm -rf .hg/origbackups
 
   $ cd ..

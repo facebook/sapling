@@ -1394,9 +1394,10 @@ qpush should fail, local changes
 
 apply force, should discard changes in hello, but not bye
 
-  $ hg qpush -f --verbose
+  $ hg qpush -f --verbose --config 'ui.origbackuppath=.hg/origbackups'
   applying empty
-  saving current version of hello.txt as hello.txt.orig
+  creating directory: $TESTTMP/forcepush/.hg/origbackups
+  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt.orig
   patching file hello.txt
   committing files:
   hello.txt
@@ -1405,7 +1406,6 @@ apply force, should discard changes in hello, but not bye
   now at: empty
   $ hg st
   M bye.txt
-  ? hello.txt.orig
   $ hg diff --config diff.nodates=True
   diff -r ba252371dbc1 bye.txt
   --- a/bye.txt
@@ -1428,6 +1428,10 @@ apply force, should discard changes in hello, but not bye
   +world
   +universe
 
+test that the previous call to qpush with -f (--force) and --config actually put
+the orig files out of the working copy
+  $ ls .hg/origbackups
+  hello.txt.orig
 
 test popping revisions not in working dir ancestry
 
