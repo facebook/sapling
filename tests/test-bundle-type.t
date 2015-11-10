@@ -34,7 +34,7 @@ test bundle types
   >   hg init t$t
   >   cd t1
   >   hg bundle -t $t ../b$t ../t$t
-  >   cut -b 1-6 ../b$t | head -n 1
+  >   f -q -B6 -D ../b$t; echo
   >   cd ../t$t
   >   hg debugbundle ../b$t
   >   echo
