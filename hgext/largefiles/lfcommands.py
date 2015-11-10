@@ -444,12 +444,14 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
         updated, removed = 0, 0
         for lfile in lfiles:
             abslfile = repo.wjoin(lfile)
+            abslfileorig = cmdutil.origpath(ui, repo, abslfile)
             absstandin = repo.wjoin(lfutil.standin(lfile))
+            absstandinorig = cmdutil.origpath(ui, repo, absstandin)
             if os.path.exists(absstandin):
-                if (os.path.exists(absstandin + '.orig') and
+                if (os.path.exists(absstandinorig) and
                     os.path.exists(abslfile)):
-                    shutil.copyfile(abslfile, abslfile + '.orig')
-                    util.unlinkpath(absstandin + '.orig')
+                    shutil.copyfile(abslfile, abslfileorig)
+                    util.unlinkpath(absstandinorig)
                 expecthash = lfutil.readstandin(repo, lfile)
                 if expecthash != '':
                     if lfile not in repo[None]: # not switched to normal file
