@@ -756,7 +756,7 @@ class ui(object):
                 self.write(r, "\n")
             return r
         except EOFError:
-            raise error.Abort(_('response expected'))
+            raise error.ResponseExpected()
 
     @staticmethod
     def extractchoices(prompt):
@@ -803,7 +803,7 @@ class ui(object):
             else:
                 return getpass.getpass('')
         except EOFError:
-            raise error.Abort(_('response expected'))
+            raise error.ResponseExpected()
     def status(self, *msg, **opts):
         '''write status message to output (if ui.quiet is False)
 

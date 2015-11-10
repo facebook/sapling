@@ -72,6 +72,12 @@ class ConfigError(Abort):
 class UpdateAbort(Abort):
     """Raised when an update is aborted for destination issue"""
 
+class ResponseExpected(Abort):
+    """Raised when an EOF is received for a prompt"""
+    def __init__(self):
+        from .i18n import _
+        Abort.__init__(self, _('response expected'))
+
 class OutOfBandError(Exception):
     """Exception raised when a remote repo reports failure"""
 
