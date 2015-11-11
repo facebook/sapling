@@ -50,6 +50,8 @@ revision 4 - hard to merge
   >   cat f
   >   echo "# hg stat"
   >   hg stat
+  >   echo "# hg resolve --list"
+  >   hg resolve --list
   >   rm -f f.orig
   > }
 
@@ -82,6 +84,8 @@ running from a devel copy, not a temp installation
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 simplest hgrc using false for merge:
 
@@ -103,6 +107,8 @@ simplest hgrc using false for merge:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 #if unix-permissions
 
@@ -150,6 +156,8 @@ true with higher .priority gets precedence:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 unless lowered on command line:
 
@@ -171,6 +179,8 @@ unless lowered on command line:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 or false set higher on command line:
 
@@ -192,6 +202,8 @@ or false set higher on command line:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 or true set to disabled:
   $ beforemerge
@@ -212,6 +224,8 @@ or true set to disabled:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 or true.executable not found in PATH:
 
@@ -233,6 +247,8 @@ or true.executable not found in PATH:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 or true.executable with bogus path:
 
@@ -254,6 +270,8 @@ or true.executable with bogus path:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 but true.executable set to cat found in PATH works:
 
@@ -280,6 +298,8 @@ but true.executable set to cat found in PATH works:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 and true.executable set to cat with path works:
 
@@ -305,6 +325,8 @@ and true.executable set to cat with path works:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 #if unix-permissions
 
@@ -330,6 +352,8 @@ environment variables in true.executable are handled:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 #endif
 
@@ -356,6 +380,8 @@ merge-patterns specifies new tool false:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 merge-patterns specifies executable not found in PATH and gets warning:
 
@@ -380,6 +406,8 @@ merge-patterns specifies executable not found in PATH and gets warning:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 merge-patterns specifies executable with bogus path and gets warning:
 
@@ -404,6 +432,8 @@ merge-patterns specifies executable with bogus path and gets warning:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 ui.merge overrules priority
 
@@ -428,6 +458,8 @@ ui.merge specifies false:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 ui.merge specifies internal:fail:
 
@@ -447,6 +479,8 @@ ui.merge specifies internal:fail:
   space
   # hg stat
   M f
+  # hg resolve --list
+  U f
 
 ui.merge specifies :local (without internal prefix):
 
@@ -465,6 +499,8 @@ ui.merge specifies :local (without internal prefix):
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 ui.merge specifies internal:other:
 
@@ -483,6 +519,8 @@ ui.merge specifies internal:other:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 ui.merge specifies internal:prompt:
 
@@ -503,6 +541,8 @@ ui.merge specifies internal:prompt:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 ui.merge specifies internal:dump:
 
@@ -527,6 +567,8 @@ ui.merge specifies internal:dump:
   ? f.local
   ? f.orig
   ? f.other
+  # hg resolve --list
+  U f
 
 f.base:
 
@@ -568,6 +610,8 @@ ui.merge specifies internal:other but is overruled by pattern for false:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 Premerge
 
@@ -592,6 +636,8 @@ ui.merge specifies internal:other but is overruled by --tool=false
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 HGMERGE specifies internal:other but is overruled by --tool=false
 
@@ -615,6 +661,8 @@ HGMERGE specifies internal:other but is overruled by --tool=false
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
   $ unset HGMERGE # make sure HGMERGE doesn't interfere with remaining tests
 
@@ -671,6 +719,8 @@ changed on the filesystem (see also issue4583))
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 update should also have --tool
 
@@ -712,6 +762,8 @@ update should also have --tool
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 Default is silent simplemerge:
 
@@ -732,6 +784,8 @@ Default is silent simplemerge:
   revision 3
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 .premerge=True is same:
 
@@ -752,6 +806,8 @@ Default is silent simplemerge:
   revision 3
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 .premerge=False executes merge-tool:
 
@@ -778,6 +834,8 @@ Default is silent simplemerge:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 premerge=keep keeps conflict markers in:
 
@@ -810,6 +868,8 @@ premerge=keep keeps conflict markers in:
   >>>>>>> other: 81448d39c9a0 - test: revision 4
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 premerge=keep-merge3 keeps conflict markers with base content:
 
@@ -848,6 +908,8 @@ premerge=keep-merge3 keeps conflict markers with base content:
   >>>>>>> other: 81448d39c9a0 - test: revision 4
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 
 Tool execution
@@ -886,6 +948,8 @@ set tools.args explicit to include $base $local $other $output:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 Merge with "echo mergeresult > $local":
 
@@ -904,6 +968,8 @@ Merge with "echo mergeresult > $local":
   mergeresult
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 - and $local is the file f:
 
@@ -922,6 +988,8 @@ Merge with "echo mergeresult > $local":
   mergeresult
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 Merge with "echo mergeresult > $output" - the variable is a bit magic:
 
@@ -940,6 +1008,8 @@ Merge with "echo mergeresult > $output" - the variable is a bit magic:
   mergeresult
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 Merge using tool with a path that must be quoted:
 
@@ -969,6 +1039,8 @@ Merge using tool with a path that must be quoted:
   space
   # hg stat
   M f
+  # hg resolve --list
+  R f
 
 Issue3581: Merging a filename that needs to be quoted
 (This test doesn't work on Windows filesystems even on Linux, so check
@@ -1029,6 +1101,8 @@ cat is a bad merge-tool and doesn't change:
   # hg stat
   M f
   ? f.orig
+  # hg resolve --list
+  U f
 
 #if symlink
 
