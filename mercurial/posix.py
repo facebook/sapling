@@ -182,13 +182,15 @@ def checklink(path):
                 # link creation might race, try again
                 if inst[0] == errno.EEXIST:
                     continue
-                # sshfs might report failure while successfully creating the link
-                if inst[0] == errno.EIO and os.path.exists(name):
-                    os.unlink(name)
-                return False
+                raise
             finally:
                 fd.close()
         except AttributeError:
+            return False
+        except OSError as inst:
+            # sshfs might report failure while successfully creating the link
+            if inst[0] == errno.EIO and os.path.exists(name):
+                os.unlink(name)
             return False
 
 def checkosfilename(path):
