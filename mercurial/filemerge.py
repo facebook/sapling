@@ -177,7 +177,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     fd = fcd.path()
 
     try:
-        index = ui.promptchoice(_(" no tool found to merge %s\n"
+        index = ui.promptchoice(_("no tool found to merge %s\n"
                                   "keep (l)ocal or take (o)ther?"
                                   "$$ &Local $$ &Other") % fd, 0)
         choice = ['local', 'other'][index]

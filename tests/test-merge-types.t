@@ -171,7 +171,7 @@ Update to link with local change should cause a merge prompt (issue3200):
    a: versions differ -> m (premerge)
   (couldn't find merge tool hgmerge|tool hgmerge can't handle symlinks) (re)
   picked tool ':prompt' for a (binary False symlink True)
-   no tool found to merge a
+  no tool found to merge a
   keep (l)ocal or take (o)ther? l
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   $ hg diff --git

@@ -531,7 +531,7 @@ ui.merge specifies internal:prompt:
   true.executable=cat
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt
-   no tool found to merge f
+  no tool found to merge f
   keep (l)ocal or take (o)ther? l
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -553,7 +553,7 @@ prompt with EOF
   true.executable=cat
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt --config ui.interactive=true
-   no tool found to merge f
+  no tool found to merge f
   keep (l)ocal or take (o)ther? 
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -567,7 +567,7 @@ prompt with EOF
   # hg resolve --list
   U f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
-   no tool found to merge f
+  no tool found to merge f
   keep (l)ocal or take (o)ther? 
   [1]
   $ aftermerge
@@ -581,7 +581,7 @@ prompt with EOF
   U f
   $ rm f
   $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
-   no tool found to merge f
+  no tool found to merge f
   keep (l)ocal or take (o)ther? 
   [1]
   $ aftermerge
@@ -593,7 +593,7 @@ prompt with EOF
   # hg resolve --list
   U f
   $ hg resolve --all --config ui.merge=internal:prompt
-   no tool found to merge f
+  no tool found to merge f
   keep (l)ocal or take (o)ther? l
   (no more unresolved files)
   $ aftermerge
