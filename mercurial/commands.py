@@ -3162,8 +3162,12 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     [('', 'nodates', None, _('do not display the saved mtime')),
     ('', 'datesort', None, _('sort by saved mtime'))],
     _('[OPTION]...'))
-def debugstate(ui, repo, nodates=None, datesort=None):
+def debugstate(ui, repo, **opts):
     """show the contents of the current dirstate"""
+
+    nodates = opts.get('nodates')
+    datesort = opts.get('datesort')
+
     timestr = ""
     if datesort:
         keyfunc = lambda x: (x[1][3], x[0]) # sort by mtime, then by filename
