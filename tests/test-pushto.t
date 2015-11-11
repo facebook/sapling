@@ -308,4 +308,18 @@ Test that creating a new head with a remote bookmark is allowed without --force
   added 1 changesets with 1 changes to 1 files (+1 heads)
   updating bookmark bm
 
+Test that the forcecompat flag works
+
+  $ hg push --to bm2 --force
+  pushing rev d5bfa899fbbd to destination $TESTTMP/repo1 bookmark bm2
+  searching for changes
+  abort: not creating new remote bookmark
+  (use --create to create a new bookmark)
+  [255]
+  $ hg push --to bm2 --force --config remotenames.forcecompat=True
+  pushing rev d5bfa899fbbd to destination $TESTTMP/repo1 bookmark bm2
+  searching for changes
+  no changes found
+  exporting bookmark bm2
+  [1]
 
