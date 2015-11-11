@@ -544,6 +544,41 @@ ui.merge specifies internal:prompt:
   # hg resolve --list
   R f
 
+prompt with EOF
+
+  $ beforemerge
+  [merge-tools]
+  false.whatever=
+  true.priority=1
+  true.executable=cat
+  # hg update -C 1
+  $ hg merge -r 2 --config ui.merge=internal:prompt --config ui.interactive=true
+   no tool found to merge f
+  keep (l)ocal or take (o)ther? 
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  # hg resolve --list
+  U f
+  $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
+   no tool found to merge f
+  keep (l)ocal or take (o)ther? 
+  [1]
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.orig
+  # hg resolve --list
+  U f
 ui.merge specifies internal:dump:
 
   $ beforemerge
