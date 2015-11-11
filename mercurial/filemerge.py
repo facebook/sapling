@@ -16,6 +16,7 @@ from .i18n import _
 from .node import short
 
 from . import (
+    cmdutil,
     error,
     match,
     simplemerge,
@@ -510,7 +511,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     a = repo.wjoin(fd)
     b = temp("base", fca)
     c = temp("other", fco)
-    back = a + ".orig"
+    back = cmdutil.origpath(ui, repo, a)
     if premerge:
         util.copyfile(a, back)
     files = (a, b, c, back)

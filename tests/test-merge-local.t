@@ -91,13 +91,17 @@ Local merge with conflicts:
   use 'hg resolve' to retry unresolved file merges
   [1]
 
-  $ hg co 0
+  $ hg co 0 --config 'ui.origbackuppath=.hg/origbackups'
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: conflicts while merging zzz2_merge_bad! (edit, then use 'hg resolve --mark')
   2 files updated, 1 files merged, 3 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
+
+Are orig files from the last commit where we want them?
+  $ ls .hg/origbackups
+  zzz2_merge_bad.orig
 
   $ hg diff --nodates | grep "^[+-][^<>]"
   --- a/zzz1_merge_ok
