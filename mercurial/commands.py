@@ -5655,7 +5655,11 @@ def resolve(ui, repo, *pats, **opts):
             else:
                 # backup pre-resolve (merge uses .orig for its own purposes)
                 a = repo.wjoin(f)
-                util.copyfile(a, a + ".resolve")
+                try:
+                    util.copyfile(a, a + ".resolve")
+                except (IOError, OSError) as inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
 
                 try:
                     # preresolve file
@@ -5673,7 +5677,11 @@ def resolve(ui, repo, *pats, **opts):
                 # replace filemerge's .orig file with our resolve file
                 # for files in tocomplete, ms.resolve will not overwrite
                 # .orig -- only preresolve does
-                util.rename(a + ".resolve", a + ".orig")
+                try:
+                    util.rename(a + ".resolve", a + ".orig")
+                except OSError as inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
 
         for f in tocomplete:
             try:

@@ -579,6 +579,33 @@ prompt with EOF
   ? f.orig
   # hg resolve --list
   U f
+  $ rm f
+  $ hg resolve --all --config ui.merge=internal:prompt --config ui.interactive=true
+   no tool found to merge f
+  keep (l)ocal or take (o)ther? 
+  [1]
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  # hg resolve --list
+  U f
+  $ hg resolve --all --config ui.merge=internal:prompt
+   no tool found to merge f
+  keep (l)ocal or take (o)ther? l
+  (no more unresolved files)
+  $ aftermerge
+  # cat f
+  revision 1
+  space
+  # hg stat
+  M f
+  ? f.orig
+  # hg resolve --list
+  R f
+
 ui.merge specifies internal:dump:
 
   $ beforemerge
