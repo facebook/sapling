@@ -259,6 +259,9 @@ def grep(ui, repo, pattern, *pats, **opts):
     return p.wait()
 
 def _rebase(orig, ui, repo, **opts):
+    if not opts.get('date') and not ui.configbool('tweakdefaults', 'rebasekeepdate'):
+        opts['date'] = currentdate()
+
     if opts.get('continue') or opts.get('abort'):
         return orig(ui, repo, **opts)
 

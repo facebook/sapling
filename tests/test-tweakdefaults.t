@@ -326,9 +326,9 @@ Test graft date when tweakdefaults.graftkeepdate is not set and --date is provid
 
 Test graft date when tweakdefaults.graftkeepdate is set
   $ hg up -q 1
-  $ hg graft -q 2 --config tweakdefaults.graftkeepdate=True
+  $ hg graft -q 5 --config tweakdefaults.graftkeepdate=True
   $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 6
+  1.01 6
 
 Test amend date when tweakdefaults.amendkeepdate is not set
   $ hg up -q 1
@@ -362,6 +362,31 @@ Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date 
   $ hg commit -q --amend -m "amended message" --date "1 1"
   $ hg log -l 1 -T "{date} {rev}\n"
   1.01 10
+
+Test rebase date when tweakdefaults.rebasekeepdate is not set
+  $ echo test_1 > rebase_dest
+  $ hg commit --date "1 1" -Aqm "dest commit for rebase"
+  $ hg bookmark rebase_dest_test_1
+  $ hg up -q .^
+  $ echo test_1 > rebase_source
+  $ hg commit --date "1 1" -Aqm "source commit for rebase"
+  $ hg bookmark rebase_source_test_1
+  $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
+  $ hg log -l 1 -T "{rev}\n" -d "yesterday to today"
+  12
+
+Test rebase date when tweakdefaults.rebasekeepdate is set
+  $ echo test_2 > rebase_dest
+  $ hg commit -Aqm "dest commit for rebase"
+  $ hg bookmark rebase_dest_test_2
+  $ hg up -q .^
+  $ echo test_2 > rebase_source
+  $ hg commit -Aqm "source commit for rebase"
+  $ hg bookmark rebase_source_test_2
+  $ hg rebase -q -s rebase_source_test_2 -d rebase_dest_test_2 --config tweakdefaults.rebasekeepdate=True
+  $ hg log -l 2 -T "{date} {rev}\n"
+  0.00 14
+  0.00 13
 
 Test reuse message flag by taking message from previous commit
   $ cd ../..
