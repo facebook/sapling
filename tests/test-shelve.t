@@ -971,7 +971,7 @@ Shelve from general delta repo uses bundle2 on disk
 
 no general delta
 
-  $ hg clone --pull repo bundle1 --config format.generaldelta=0
+  $ hg clone --pull repo bundle1 --config format.usegeneraldelta=0
   requesting all changes
   adding changesets
   adding manifests
@@ -991,7 +991,7 @@ no general delta
 
 with general delta
 
-  $ hg clone --pull repo bundle2 --config format.generaldelta=1
+  $ hg clone --pull repo bundle2 --config format.usegeneraldelta=1
   requesting all changes
   adding changesets
   adding manifests
