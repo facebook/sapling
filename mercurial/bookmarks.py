@@ -132,9 +132,14 @@ class bmstore(dict):
         wlock = repo.wlock()
         try:
 
-            file = repo.vfs('bookmarks', 'w', atomictemp=True)
-            self._write(file)
-            file.close()
+            file_ = repo.vfs('bookmarks', 'w', atomictemp=True)
+            try:
+                self._write(file_)
+            except: # re-raises
+                file_.discard()
+                raise
+            finally:
+                file_.close()
 
         finally:
             wlock.release()
