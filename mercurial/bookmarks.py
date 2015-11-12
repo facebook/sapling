@@ -78,6 +78,15 @@ class bmstore(dict):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
+        self._clean = True
+
+    def __setitem__(self, *args, **kwargs):
+        self._clean = False
+        return dict.__setitem__(self, *args, **kwargs)
+
+    def __delitem__(self, key):
+        self._clean = False
+        return dict.__delitem__(self, key)
 
     def recordchange(self, tr):
         """record that bookmarks have been changed in a transaction
@@ -96,6 +105,8 @@ class bmstore(dict):
         We also store a backup of the previous state in undo.bookmarks that
         can be copied back on rollback.
         '''
+        if self._clean:
+            return
         repo = self._repo
         if (repo.ui.configbool('devel', 'all-warnings')
                 or repo.ui.configbool('devel', 'check-locks')):
@@ -131,6 +142,7 @@ class bmstore(dict):
     def _write(self, fp):
         for name, node in self.iteritems():
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
+        self._clean = True
 
 def readactive(repo):
     """
