@@ -3,13 +3,54 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import bundle2, util, exchange
+from mercurial import bundle2, util, exchange, hg, error
+from mercurial.i18n import _
 import dbutil
 
 
-# Temporarily used to force to load the module, will be completed later
+# Temporarily used to force to load the module
 def _pullbundle2extraprepare(orig, pullop, kwargs):
     return orig(pullop, kwargs)
+
+
+def pullmoves(repo, nodelist, source="default"):
+    """
+    Fetch move data from the server
+    """
+    source, branches = hg.parseurl(repo.ui.expandpath(source))
+    # No default server defined
+    try:
+        remote = hg.peer(repo, {}, source)
+    except:
+        return
+    repo.ui.status(_('pulling move data from %s\n') % util.hidepassword(source))
+    pullop = exchange.pulloperation(repo, remote, nodelist, False)
+    lock = pullop.repo.lock()
+    try:
+        pullop.trmanager = exchange.transactionmanager(repo, 'pull',
+                                                       remote.url())
+        _pullmovesbundle2(pullop)
+        pullop.trmanager.close()
+    finally:
+        pullop.trmanager.release()
+        lock.release()
+
+
+def _pullmovesbundle2(pullop):
+    """
+    Pull move data
+    """
+    kwargs = {}
+    kwargs['bundlecaps'] = exchange.caps20to10(pullop.repo)
+    kwargs['movedatareq'] = pullop.heads
+    kwargs['common'] = pullop.heads
+    kwargs['heads'] = pullop.heads
+    kwargs['cg'] = False
+    bundle = pullop.remote.getbundle('pull', **kwargs)
+    try:
+        op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
+    except error.BundleValueError as exc:
+        raise error.Abort('missing support for %s' % exc)
 
 
 @exchange.getbundle2partsgenerator('pull:movedata')

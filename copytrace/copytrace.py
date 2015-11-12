@@ -266,6 +266,7 @@ def _processrenames(repo, ctx, renamed, move=False):
         if not src in m:
             del renamed[src]
 
+
 def _forwardrenameswithdb(a, b, match=None, move=False):
     """
     find {dst@b: src@a} renames mapping where a is an ancestor of b
@@ -329,3 +330,18 @@ def pathcopieswithdb(orig, x, y, match=None):
         return _backwardrenameswithdb(x, y)
     return _chain(x, y, _backwardrenameswithdb(x, a),
                    _forwardrenameswithdb(a, y, match=match))
+
+
+def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
+    """
+    wraps the command to get the set of revs that will be involved in the
+    rebase and checks if they are in the database
+    """
+    if rebaseset:
+        rev = rebaseset.first()
+        rebased = repo[rev]
+        ca = rebased.ancestor(dest)
+        ctxlist = list(repo.set("only(%r, %r)" % (dest.rev(), ca.rev())))
+        if ctxlist:
+            dbutil.checkpresence(repo, ctxlist)
+    return orig(repo, dest, rebaseset, collapsef, obsoletenotrebased)

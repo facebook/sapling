@@ -8,7 +8,8 @@
 # GNU General Public License version 2 or any later version.
 
 
-from mercurial import scmutil, util
+from mercurial import scmutil, util, commands
+import bundle2
 import sqlite3
 
 
@@ -79,7 +80,6 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
         ctxhash = '0'
     else:
         ctxhash = str(ctx.hex())
-
     try:
         insertitem(c, ctxhash, mvdict, True)
         insertitem(c, ctxhash, cpdict, False)
@@ -90,7 +90,7 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     _close(conn)
 
 
-def retrievedata(repo, ctx, move=False, remote=False):
+def retrievedata(repo, ctx, move=False, remote=False, askserver=True):
     """
     returns the {dst:src} dictonary for moves if move = True or of copies if
     move = False for ctx
@@ -113,6 +113,14 @@ def retrievedata(repo, ctx, move=False, remote=False):
     all_rows = c.fetchall()
     _close(conn)
     ret = {}
+
+    # The local database doesn't have the data for this ctx and hasn't tried
+    # to retrieve it yet (askserver)
+    if askserver and not remote and not all_rows:
+        _requestdata(repo, [ctx])
+        return retrievedata(repo, ctx, move=move, remote=remote,
+                            askserver=False)
+
     for src, dst in all_rows:
         # this ctx is registered but has no move data
         if not dst:
@@ -142,7 +150,7 @@ def insertrawdata(repo, dic, remote=False):
     _close(conn)
 
 
-def retrieverawdata(repo, ctxlist, remote=False):
+def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
@@ -167,6 +175,17 @@ def retrieverawdata(repo, ctxlist, remote=False):
         ret.setdefault(ctxhash.encode('utf8'), []).append((src.encode('utf8'),
              dst.encode('utf8'), mv.encode('utf8')))
 
+    processed = ret.keys()
+    missing = [f for f in ctxlist if f not in processed]
+
+    # The local database doesn't have the data for this ctx and hasn't tried
+    # to retrieve it yet (askserver)
+    if askserver and not remote and missing:
+        _requestdata(repo, missing)
+        add = retrieverawdata(repo, missing, move=move, remote=remote,
+                              askserver=False)
+        ret.update(add)
+
     return ret
 
 
@@ -187,3 +206,33 @@ def removectx(repo, ctx, remote=False):
         raise util.Abort('could not delete ctx from the %s database' % dbname)
 
     _close(conn)
+
+
+def checkpresence(repo, ctxlist):
+    """
+    checks if the ctx in ctxlist are present in the database or requests for it
+    """
+    ctxhashs = [ctx.hex() for ctx in ctxlist]
+    dbname, conn, c = _connect(repo, False)
+    try:
+        c.execute('SELECT DISTINCT hash FROM Moves WHERE hash IN (%s)'
+                  % (','.join('?' * len(ctxhashs))), ctxhashs)
+    except:
+        raise util.Abort('could not check ctx presence in the %s database'
+                         % dbname)
+    processed = c.fetchall()
+    _close(conn)
+    processed = [ctx[0].encode('utf8') for ctx in processed]
+    missing = [repo[f].node() for f in ctxlist if f not in processed]
+    if missing:
+        _requestdata(repo, missing)
+
+
+def _requestdata(repo, nodelist):
+    """
+    Requests missing ctx data to a server
+    """
+    try:
+        bundle2.pullmoves(repo, nodelist)
+    except:
+        pass

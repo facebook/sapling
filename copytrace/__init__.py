@@ -5,6 +5,7 @@ import filldb
 import copytrace
 import bundle2
 
+
 def extsetup(ui):
     wrapfunction(cmdutil, 'commit', filldb.commit)
     wrapfunction(cmdutil, 'amend', filldb.amend)
@@ -12,6 +13,7 @@ def extsetup(ui):
 
     wrapfunction(copies, 'mergecopies', copytrace.mergecopieswithdb)
     wrapfunction(copies, 'pathcopies', copytrace.pathcopieswithdb)
+    wrapfunction(rebase, 'buildstate', copytrace.buildstate)
 
     wrapfunction(exchange, '_pullbundle2extraprepare',
                 bundle2._pullbundle2extraprepare)
