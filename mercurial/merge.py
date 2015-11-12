@@ -970,7 +970,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
     # premerge
     tocomplete = []
-    for f, args, msg in actions['m']:
+    for f, args, msg in mergeactions:
         repo.ui.debug(" %s: %s -> m (premerge)\n" % (f, msg))
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
