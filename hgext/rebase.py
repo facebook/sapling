@@ -441,7 +441,7 @@ def rebase(ui, repo, **opts):
                                              targetancestors)
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                             keepbranchesf, external, activebookmark)
-                if len(repo.parents()) == 2:
+                if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
                     try:
@@ -930,7 +930,7 @@ def restorestatus(repo):
 def needupdate(repo, state):
     '''check whether we should `update --clean` away from a merge, or if
     somehow the working dir got forcibly updated, e.g. by older hg'''
-    parents = [p.rev() for p in repo.parents()]
+    parents = [p.rev() for p in repo[None].parents()]
 
     # Are we in a merge state at all?
     if len(parents) < 2:

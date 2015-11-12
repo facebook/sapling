@@ -1190,7 +1190,7 @@ def branch(ui, repo, label=None, **opts):
             ui.status(_('reset working directory to branch %s\n') % label)
         elif label:
             if not opts.get('force') and label in repo.branchmap():
-                if label not in [p.branch() for p in repo.parents()]:
+                if label not in [p.branch() for p in repo[None].parents()]:
                     raise error.Abort(_('a branch of the same name already'
                                        ' exists'),
                                      # i18n: "it" refers to an existing branch
@@ -1600,8 +1600,8 @@ def commit(ui, repo, *pats, **opts):
         if not bheads:
             raise error.Abort(_('can only close branch heads'))
         elif opts.get('amend'):
-            if repo.parents()[0].p1().branch() != branch and \
-                    repo.parents()[0].p2().branch() != branch:
+            if repo[None].parents()[0].p1().branch() != branch and \
+                    repo[None].parents()[0].p2().branch() != branch:
                 raise error.Abort(_('can only close branch heads'))
 
     if opts.get('amend'):
@@ -4545,7 +4545,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                 tr = repo.transaction('import')
             else:
                 dsguard = cmdutil.dirstateguard(repo, 'import')
-            parents = repo.parents()
+            parents = repo[None].parents()
             for patchurl in patches:
                 if patchurl == '-':
                     ui.status(_('applying patch from stdin\n'))
@@ -4565,7 +4565,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                         haspatch = True
                         ui.note(msg + '\n')
                     if update or opts.get('exact'):
-                        parents = repo.parents()
+                        parents = repo[None].parents()
                     else:
                         parents = [repo[node]]
                     if rej:

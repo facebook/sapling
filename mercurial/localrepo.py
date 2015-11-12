@@ -852,10 +852,6 @@ class localrepository(object):
     def changectx(self, changeid):
         return self[changeid]
 
-    def parents(self, changeid=None):
-        '''get list of changectxs for parents of changeid'''
-        return self[changeid].parents()
-
     def setparents(self, p1, p2=nullid):
         self.dirstate.beginparentchange()
         copies = self.dirstate.setparents(p1, p2)
@@ -1170,7 +1166,7 @@ class localrepository(object):
                         % self.dirstate.branch())
 
             self.dirstate.invalidate()
-            parents = tuple([p.rev() for p in self.parents()])
+            parents = tuple([p.rev() for p in self[None].parents()])
             if len(parents) > 1:
                 ui.status(_('working directory now based on '
                             'revisions %d and %d\n') % parents)
