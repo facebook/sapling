@@ -3114,6 +3114,26 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     finally:
         wlock.release()
 
+def origpath(ui, repo, filepath):
+    '''customize where .orig files are created
+
+    Fetch user defined path from config file: [ui] origbackuppath = <path>
+    Fall back to default (filepath) if not specified
+    '''
+    origbackuppath = ui.config('ui', 'origbackuppath', None)
+    if origbackuppath is None:
+        return filepath + ".orig"
+
+    filepathfromroot = os.path.relpath(filepath, start=repo.root)
+    fullorigpath = repo.wjoin(origbackuppath, filepathfromroot)
+
+    origbackupdir = repo.vfs.dirname(fullorigpath)
+    if not repo.vfs.exists(origbackupdir):
+        ui.note(_('creating directory: %s\n') % origbackupdir)
+        util.makedirs(origbackupdir)
+
+    return fullorigpath + ".orig"
+
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
     pass

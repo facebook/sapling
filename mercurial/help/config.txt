@@ -1496,6 +1496,10 @@ User interface controls.
     markers is different from the encoding of the merged files,
     serious problems may occur.
 
+``origbackuppath``
+    The path to a directory used to store generated .orig files. If the path is
+    not a directory, one will be created.
+
 ``patch``
     An optional external tool that ``hg import`` and some extensions
     will use for applying patches. By default Mercurial uses an
