@@ -123,7 +123,7 @@ def clone(orig, ui, source, *args, **opts):
 def extsetup(ui):
     extensions.wrapfunction(bookmarks.bmstore, 'getbkfile', getbkfile)
     extensions.wrapfunction(bookmarks.bmstore, 'recordchange', recordchange)
-    extensions.wrapfunction(bookmarks.bmstore, 'write', write)
+    extensions.wrapfunction(bookmarks.bmstore, '_writerepo', writerepo)
     extensions.wrapcommand(commands.table, 'clone', clone)
 
 def _hassharedbookmarks(repo):
@@ -166,10 +166,11 @@ def recordchange(orig, self, tr):
             category = 'share-bookmarks'
             tr.addpostclose(category, lambda tr: self._writerepo(srcrepo))
 
-def write(orig, self):
+def writerepo(orig, self, repo):
     # First write local bookmarks file in case we ever unshare
-    orig(self)
+    orig(self, repo)
+
     if _hassharedbookmarks(self._repo):
         srcrepo = _getsrcrepo(self._repo)
         if srcrepo is not None:
-            self._writerepo(srcrepo)
+            orig(self, srcrepo)

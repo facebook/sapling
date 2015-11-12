@@ -1174,3 +1174,42 @@ Try again but with a corrupted shelve state file
   rebase aborted
   $ hg up -C .
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ cd ..
+
+Keep active bookmark while (un)shelving even on shared repo (issue4940)
+-----------------------------------------------------------------------
+
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > share =
+  > EOF
+
+  $ hg bookmarks -R repo
+     test                      4:33f7f61e6c5e
+  $ hg share -B repo share
+  updating working directory
+  6 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd share
+
+  $ hg bookmarks
+     test                      4:33f7f61e6c5e
+  $ hg bookmarks foo
+  $ hg bookmarks
+   * foo                       5:703117a2acfb
+     test                      4:33f7f61e6c5e
+  $ echo x >> x
+  $ hg shelve
+  shelved as foo
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg bookmarks
+   * foo                       5:703117a2acfb
+     test                      4:33f7f61e6c5e
+
+  $ hg unshelve
+  unshelving change 'foo'
+  $ hg bookmarks
+   * foo                       5:703117a2acfb
+     test                      4:33f7f61e6c5e
+
+  $ cd ..
