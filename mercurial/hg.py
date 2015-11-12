@@ -546,13 +546,22 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                                        "support clone by revision"))
                 revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
-            if destpeer.local():
+            local = destpeer.local()
+            if local:
                 if not stream:
                     if pull:
                         stream = False
                     else:
                         stream = None
-                destpeer.local().clone(srcpeer, heads=revs, stream=stream)
+                # internal config: ui.quietbookmarkmove
+                quiet = local.ui.backupconfig('ui', 'quietbookmarkmove')
+                try:
+                    local.ui.setconfig(
+                        'ui', 'quietbookmarkmove', True, 'clone')
+                    exchange.pull(local, srcpeer, revs,
+                                  streamclonerequested=stream)
+                finally:
+                    local.ui.restoreconfig(quiet)
             elif srcrepo:
                 exchange.push(srcrepo, destpeer, revs=revs,
                               bookmarks=srcrepo._bookmarks.keys())

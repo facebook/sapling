@@ -1856,22 +1856,6 @@ class localrepository(object):
         """
         return util.hooks()
 
-    def clone(self, remote, heads=[], stream=None):
-        '''clone remote repository.
-
-        keyword arguments:
-        heads: list of revs to clone (forces use of pull)
-        stream: use streaming clone if possible'''
-        # internal config: ui.quietbookmarkmove
-        quiet = self.ui.backupconfig('ui', 'quietbookmarkmove')
-        try:
-            self.ui.setconfig('ui', 'quietbookmarkmove', True, 'clone')
-            pullop = exchange.pull(self, remote, heads,
-                                   streamclonerequested=stream)
-            return pullop.cgresult
-        finally:
-            self.ui.restoreconfig(quiet)
-
     def pushkey(self, namespace, key, old, new):
         try:
             tr = self.currenttransaction()
