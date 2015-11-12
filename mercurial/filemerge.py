@@ -244,7 +244,7 @@ def _premerge(repo, toolconf, files, labels=None):
             util.copyfile(back, a) # restore from backup and try again
     return 1 # continue merging
 
-def _symlinkcheck(repo, mynode, orig, fcd, fco, fca, toolconf):
+def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
     tool, toolpath, binary, symlink = toolconf
     if symlink:
         repo.ui.warn(_('warning: internal %s cannot merge symlinks '
@@ -268,7 +268,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
 @internaltool('union', fullmerge,
               _("warning: conflicts while merging %s! "
                 "(edit, then use 'hg resolve --mark')\n"),
-              precheck=_symlinkcheck)
+              precheck=_mergecheck)
 def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -280,7 +280,7 @@ def _iunion(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 @internaltool('merge', fullmerge,
               _("warning: conflicts while merging %s! "
                 "(edit, then use 'hg resolve --mark')\n"),
-              precheck=_symlinkcheck)
+              precheck=_mergecheck)
 def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -293,7 +293,7 @@ def _imerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 @internaltool('merge3', fullmerge,
               _("warning: conflicts while merging %s! "
                 "(edit, then use 'hg resolve --mark')\n"),
-              precheck=_symlinkcheck)
+              precheck=_mergecheck)
 def _imerge3(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal non-interactive simple merge algorithm for merging
@@ -318,7 +318,7 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
                                 localorother=localorother)
     return True, r
 
-@internaltool('merge-local', mergeonly, precheck=_symlinkcheck)
+@internaltool('merge-local', mergeonly, precheck=_mergecheck)
 def _imergelocal(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
@@ -326,7 +326,7 @@ def _imergelocal(*args, **kwargs):
     success, status = _imergeauto(localorother='local', *args, **kwargs)
     return success, status
 
-@internaltool('merge-other', mergeonly, precheck=_symlinkcheck)
+@internaltool('merge-other', mergeonly, precheck=_mergecheck)
 def _imergeother(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
