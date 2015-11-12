@@ -221,9 +221,13 @@ def _readtags(ui, repo, lines, fn, recode=None, calcnodelines=False):
     '''
     filetags, nodelines = _readtaghist(ui, repo, lines, fn, recode=recode,
                                        calcnodelines=calcnodelines)
+    # util.sortdict().__setitem__ is much slower at replacing then inserting
+    # new entries. The difference can matter if there are thousands of tags.
+    # Create a new sortdict to avoid the performance penalty.
+    newtags = util.sortdict()
     for tag, taghist in filetags.items():
-        filetags[tag] = (taghist[-1], taghist[:-1])
-    return filetags
+        newtags[tag] = (taghist[-1], taghist[:-1])
+    return newtags
 
 def _updatetags(filetags, tagtype, alltags, tagtypes):
     '''Incorporate the tag info read from one file into the two
