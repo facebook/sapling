@@ -2530,13 +2530,14 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
             # First, do a regular commit to record all changes in the working
             # directory (if there are any)
             ui.callhooks = False
-            activebookmark = repo._activebookmark
+            activebookmark = repo._bookmarks.active
             try:
-                repo._activebookmark = None
+                repo._bookmarks.active = None
                 opts['message'] = 'temporary amend commit for %s' % old
                 node = commit(ui, repo, commitfunc, pats, opts)
             finally:
-                repo._activebookmark = activebookmark
+                repo._bookmarks.active = activebookmark
+                repo._bookmarks.recordchange(tr)
                 ui.callhooks = True
             ctx = repo[node]
 

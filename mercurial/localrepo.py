@@ -459,13 +459,13 @@ class localrepository(object):
             pass
         return proxycls(self, name)
 
-    @repofilecache('bookmarks')
+    @repofilecache('bookmarks', 'bookmarks.current')
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
-    @repofilecache('bookmarks.current')
+    @property
     def _activebookmark(self):
-        return bookmarks.readactive(self)
+        return self._bookmarks.active
 
     def bookmarkheads(self, bookmark):
         name = bookmark.split('@', 1)[0]

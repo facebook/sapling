@@ -44,16 +44,15 @@ def _getbkfile(repo):
 class bmstore(dict):
     """Storage for bookmarks.
 
-    This object should do all bookmark reads and writes, so that it's
-    fairly simple to replace the storage underlying bookmarks without
-    having to clone the logic surrounding bookmarks.
+    This object should do all bookmark-related reads and writes, so
+    that it's fairly simple to replace the storage underlying
+    bookmarks without having to clone the logic surrounding
+    bookmarks. This type also should manage the active bookmark, if
+    any.
 
     This particular bmstore implementation stores bookmarks as
     {hash}\s{name}\n (the same format as localtags) in
     .hg/bookmarks. The mapping is stored as {name: nodeid}.
-
-    This class does NOT handle the "active" bookmark state at this
-    time.
     """
 
     def __init__(self, repo):
@@ -79,6 +78,20 @@ class bmstore(dict):
             if inst.errno != errno.ENOENT:
                 raise
         self._clean = True
+        self._active = _readactive(repo, self)
+        self._aclean = True
+
+    @property
+    def active(self):
+        return self._active
+
+    @active.setter
+    def active(self, mark):
+        if mark is not None and mark not in self:
+            raise AssertionError('bookmark %s does not exist!' % mark)
+
+        self._active = mark
+        self._aclean = False
 
     def __setitem__(self, *args, **kwargs):
         self._clean = False
@@ -107,6 +120,9 @@ class bmstore(dict):
         '''
         msg = 'bm.write() is deprecated, use bm.recordchange(transaction)'
         self._repo.ui.deprecwarn(msg, '3.7')
+        # TODO: writing the active bookmark should probably also use a
+        # transaction.
+        self._writeactive()
         if self._clean:
             return
         repo = self._repo
@@ -128,8 +144,10 @@ class bmstore(dict):
 
     def _writerepo(self, repo):
         """Factored out for extensibility"""
-        if repo._activebookmark not in self:
-            deactivate(repo)
+        rbm = repo._bookmarks
+        if rbm.active not in self:
+            rbm.active = None
+            rbm._writeactive()
 
         wlock = repo.wlock()
         try:
@@ -146,12 +164,33 @@ class bmstore(dict):
         finally:
             wlock.release()
 
+    def _writeactive(self):
+        if self._aclean:
+            return
+        wlock = self._repo.wlock()
+        try:
+            if self._active is not None:
+                f = self._repo.vfs('bookmarks.current', 'w', atomictemp=True)
+                try:
+                    f.write(encoding.fromlocal(self._active))
+                finally:
+                    f.close()
+            else:
+                try:
+                    self._repo.vfs.unlink('bookmarks.current')
+                except OSError as inst:
+                    if inst.errno != errno.ENOENT:
+                        raise
+        finally:
+            wlock.release()
+        self._aclean = True
+
     def _write(self, fp):
         for name, node in self.iteritems():
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
         self._clean = True
 
-def readactive(repo):
+def _readactive(repo, marks):
     """
     Get the active bookmark. We can have an active bookmark that updates
     itself as we commit. This function returns the name of that bookmark.
@@ -172,7 +211,7 @@ def readactive(repo):
         # static-http which only tries to load the file when we try
         # to read from it.
         mark = encoding.tolocal((file.readlines() or [''])[0])
-        if mark == '' or mark not in repo._bookmarks:
+        if mark == '' or mark not in marks:
             mark = None
     except IOError as inst:
         if inst.errno != errno.ENOENT:
@@ -188,35 +227,15 @@ def activate(repo, mark):
     follow new commits that are made.
     The name is recorded in .hg/bookmarks.current
     """
-    if mark not in repo._bookmarks:
-        raise AssertionError('bookmark %s does not exist!' % mark)
-
-    active = repo._activebookmark
-    if active == mark:
-        return
-
-    wlock = repo.wlock()
-    try:
-        file = repo.vfs('bookmarks.current', 'w', atomictemp=True)
-        file.write(encoding.fromlocal(mark))
-        file.close()
-    finally:
-        wlock.release()
-    repo._activebookmark = mark
+    repo._bookmarks.active = mark
+    repo._bookmarks._writeactive()
 
 def deactivate(repo):
     """
     Unset the active bookmark in this repository.
     """
-    wlock = repo.wlock()
-    try:
-        repo.vfs.unlink('bookmarks.current')
-        repo._activebookmark = None
-    except OSError as inst:
-        if inst.errno != errno.ENOENT:
-            raise
-    finally:
-        wlock.release()
+    repo._bookmarks.active = None
+    repo._bookmarks._writeactive()
 
 def isactivewdirparent(repo):
     """
@@ -266,7 +285,7 @@ def update(repo, parents, node):
     deletefrom = parents
     marks = repo._bookmarks
     update = False
-    active = repo._activebookmark
+    active = marks.active
     if not active:
         return False
 
