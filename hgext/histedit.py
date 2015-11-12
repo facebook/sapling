@@ -502,6 +502,9 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
                          editor=editor)
     return repo.commitctx(new)
 
+def _isdirtywc(repo):
+    return repo[None].dirty(missing=True)
+
 class pick(histeditaction):
     def run(self):
         rulectx = self.repo[self.node]
@@ -971,11 +974,9 @@ def bootstrapcontinue(ui, state, opts):
 
         actobj = actiontable[action].fromrule(state, currentnode)
 
-        s = repo.status()
-        if s.modified or s.added or s.removed or s.deleted:
+        if _isdirtywc(repo):
             actobj.continuedirty()
-            s = repo.status()
-            if s.modified or s.added or s.removed or s.deleted:
+            if _isdirtywc(repo):
                 raise error.Abort(_("working copy still dirty"))
 
         parentctx, replacements = actobj.continueclean()
