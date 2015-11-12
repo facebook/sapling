@@ -86,6 +86,16 @@ Test creation of backup (.orig) files
   saving current version of e as e.orig
   reverting e
 
+Test creation of backup (.orig) file in configured file location
+----------------------------------------------------------------
+
+  $ echo z > e
+  $ hg revert --all -v --config 'ui.origbackuppath=.hg/origbackups'
+  creating directory: $TESTTMP/repo/.hg/origbackups
+  saving current version of e as $TESTTMP/repo/.hg/origbackups/e.orig
+  reverting e
+  $ rm -rf .hg/origbackups
+
 revert on clean file (no change)
 --------------------------------
 

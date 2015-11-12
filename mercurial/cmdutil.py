@@ -3082,7 +3082,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     xlist.append(abs)
                     if dobackup and (backup <= dobackup
                                      or wctx[abs].cmp(ctx[abs])):
-                            bakname = "%s.orig" % rel
+                            bakname = origpath(ui, repo, rel)
                             ui.note(_('saving current version of %s as %s\n') %
                                     (rel, bakname))
                             if not opts.get('dry_run'):
