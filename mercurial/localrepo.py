@@ -759,6 +759,7 @@ class localrepository(object):
         return self._tagscache.nodetagscache.get(node, [])
 
     def nodebookmarks(self, node):
+        """return the list of bookmarks pointing to the specified node"""
         marks = []
         for bookmark, n in self._bookmarks.iteritems():
             if n == node:
