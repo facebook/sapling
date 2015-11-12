@@ -184,4 +184,56 @@ SETUP CLIENT REPO
   d9e9933769659048c7efa24b53b2e38a1d8205b2|||0
   daf6369e3e011c90ecd56144609c0e8fd823e83b|b|z|1
   daf6369e3e011c90ecd56144609c0e8fd823e83b|||0
+  $ cd ..
+  $ rm -rf serverrepo
+  $ rm -rf clientrepo
 
+
+
+!! TEST 3: pulling missing move data from repo when rebasing !!
+
+SETUP SERVER REPO
+
+  $ hg init serverrepo
+  $ cd serverrepo
+  $ touch a
+  $ hg add a
+  $ hg commit -m "add a"
+  $ cd ..
+
+SETUP CLIENT REPO
+
+  $ hg clone serverrepo clientrepo
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd clientrepo
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
+  @  changeset: ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+      desc: add a
+  $ hg mv a b
+  $ hg commit -m "mv a b"
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
+  $ hg push
+  pushing to $TESTTMP/serverrepo
+  searching for changes
+  moves for 1 changesets pushed
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  $ cd ..
+
+CHECK SERVER MOVE DATA
+  $ cd serverrepo
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
+  o  changeset: 274c7e2c58b0256e17dc0f128380c8600bb0ee43
+  |   desc: mv a b
+  @  changeset: ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+      desc: add a
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1

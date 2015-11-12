@@ -53,6 +53,31 @@ def _pullmovesbundle2(pullop):
         raise error.Abort('missing support for %s' % exc)
 
 
+@exchange.b2partsgenerator('push:movedata')
+def _pushb2movedata(pushop, bundler):
+    """
+    add parts containing the movedata when pushing new commits -- client-side
+    """
+    repo = pushop.repo
+    ctxlist = _processctxlist(repo, pushop.remoteheads, pushop.revs)
+    if ctxlist:
+        dic = dbutil.retrieverawdata(repo, ctxlist, askserver=False)
+        data = _encodedict(dic)
+        repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
+
+        part = bundler.newpart('push:movedata', data=data)
+
+
+@bundle2.parthandler('push:movedata')
+def _handlemovedatarequest(op, inpart):
+    """
+    process a movedata push -- server-side
+    """
+    dic = _decodedict(inpart)
+    op.records.add('movedata', {'mvdict': dic})
+    dbutil.insertrawdata(op.repo, dic, remote=True)
+
+
 @exchange.getbundle2partsgenerator('pull:movedata')
 def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
                        common=None,  b2caps=None, **kwargs):
