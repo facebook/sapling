@@ -121,7 +121,7 @@ def clone(orig, ui, source, *args, **opts):
     return orig(ui, source, *args, **opts)
 
 def extsetup(ui):
-    extensions.wrapfunction(bookmarks.bmstore, 'getbkfile', getbkfile)
+    extensions.wrapfunction(bookmarks, '_getbkfile', getbkfile)
     extensions.wrapfunction(bookmarks.bmstore, 'recordchange', recordchange)
     extensions.wrapfunction(bookmarks.bmstore, '_writerepo', writerepo)
     extensions.wrapcommand(commands.table, 'clone', clone)
@@ -149,12 +149,12 @@ def _getsrcrepo(repo):
     srcurl, branches = parseurl(source)
     return repository(repo.ui, srcurl)
 
-def getbkfile(orig, self, repo):
+def getbkfile(orig, repo):
     if _hassharedbookmarks(repo):
         srcrepo = _getsrcrepo(repo)
         if srcrepo is not None:
             repo = srcrepo
-    return orig(self, repo)
+    return orig(repo)
 
 def recordchange(orig, self, tr):
     # Continue with write to local bookmarks file as usual
