@@ -411,6 +411,9 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: fe905ef2c33e
+  note: possible conflict - a was renamed multiple times to:
+   b
+   c
    preserving rev for resolve of rev
    c: remote created -> g
   getting c
@@ -423,9 +426,6 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@02963e448370+ other rev@fe905ef2c33e ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
   merge tool returned: 0
-  note: possible conflict - a was renamed multiple times to:
-   b
-   c
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------

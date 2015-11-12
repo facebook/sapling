@@ -36,6 +36,9 @@
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: af1939970a1c, local: 044f8520aeeb+, remote: 85c198ef2f6c
+  note: possible conflict - a2 was renamed multiple times to:
+   c2
+   b2
    preserving a for resolve of b
   removing a
    b2: remote created -> g
@@ -45,9 +48,6 @@
   merging a and b to b
   my b@044f8520aeeb+ other b@85c198ef2f6c ancestor a@af1939970a1c
    premerge successful
-  note: possible conflict - a2 was renamed multiple times to:
-   c2
-   b2
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -177,10 +177,10 @@ Check for issue3074
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 19d7f95df299, local: 0084274f6b67+, remote: 5d32493049f0
-   newfile: remote created -> g
-  getting newfile
   note: possible conflict - file was deleted and renamed to:
    newfile
+   newfile: remote created -> g
+  getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg status

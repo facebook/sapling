@@ -1273,16 +1273,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 actions['g'].append((f, (flags,), "prompt recreating"))
         del actions['dc'][:]
 
-        ### apply phase
-        if not branchmerge: # just jump to the new rev
-            fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
-        if not partial:
-            repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
-            # note that we're in the middle of an update
-            repo.vfs.write('updatestate', p2.hex())
-
-        stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
-
         # divergent renames
         for f, fl in sorted(diverge.iteritems()):
             repo.ui.warn(_("note: possible conflict - %s was renamed "
@@ -1296,6 +1286,16 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                            "and renamed to:\n") % f)
             for nf in fl:
                 repo.ui.warn(" %s\n" % nf)
+
+        ### apply phase
+        if not branchmerge: # just jump to the new rev
+            fp1, fp2, xp1, xp2 = fp2, nullid, xp2, ''
+        if not partial:
+            repo.hook('preupdate', throw=True, parent1=xp1, parent2=xp2)
+            # note that we're in the middle of an update
+            repo.vfs.write('updatestate', p2.hex())
+
+        stats = applyupdates(repo, actions, wc, p2, overwrite, labels=labels)
 
         if not partial:
             repo.dirstate.beginparentchange()
