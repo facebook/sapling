@@ -61,6 +61,12 @@ class bmstore(dict):
                 raise
 
     def getbkfile(self, repo):
+        """Hook so that extensions that mess with the store can hook bm storage.
+
+        For core, this just handles wether we should see pending
+        bookmarks or the committed ones. Other extensions (like share)
+        may need to tweak this behavior further.
+        """
         bkfile = None
         if 'HG_PENDING' in os.environ:
             try:
