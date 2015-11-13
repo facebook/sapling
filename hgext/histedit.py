@@ -340,6 +340,7 @@ class histeditaction(object):
            Available constraints:
                noduplicates - aborts if there are multiple rules for one node
                noother - abort if the node doesn't belong to edited stack
+               forceother - abort if the node does belong to edited stack
         """
 
         return set(['noduplicates', 'noother'])
@@ -1087,6 +1088,10 @@ def verifyrules(rules, state, ctxs):
                 raise error.Abort(
                     _('may not use "%s" with changesets '
                       'other than the ones listed') % verb)
+            if 'forceother' in constraints and ha in expected:
+                raise error.Abort(
+                    _('may not use "%s" with changesets '
+                      'within the edited list') % verb)
             if 'noduplicates' in constraints and ha in seen:
                 raise error.Abort(_('duplicated command for changeset %s') %
                         ha[:12])
