@@ -308,6 +308,25 @@ def filectx(repo, req):
 
     return fctx
 
+def commonentry(repo, ctx):
+    node = ctx.node()
+    return {
+        'rev': ctx.rev(),
+        'node': hex(node),
+        'author': ctx.user(),
+        'desc': ctx.description(),
+        'date': ctx.date(),
+        'extra': ctx.extra(),
+        'phase': ctx.phasestr(),
+        'branch': nodebranchnodefault(ctx),
+        'inbranch': nodeinbranch(repo, ctx),
+        'branches': nodebranchdict(repo, ctx),
+        'tags': nodetagsdict(repo, node),
+        'bookmarks': nodebookmarksdict(repo, node),
+        'parent': lambda **x: parents(ctx),
+        'child': lambda **x: children(ctx),
+    }
+
 def changelistentry(web, ctx, tmpl):
     '''Obtain a dictionary to be used for entries in a changelist.
 
@@ -320,22 +339,14 @@ def changelistentry(web, ctx, tmpl):
     showtags = showtag(repo, tmpl, 'changelogtag', n)
     files = listfilediffs(tmpl, ctx.files(), n, web.maxfiles)
 
-    return {
-        "author": ctx.user(),
-        "parent": lambda **x: parents(ctx, rev - 1),
-        "child": lambda **x: children(ctx, rev + 1),
-        "changelogtag": showtags,
-        "desc": ctx.description(),
-        "extra": ctx.extra(),
-        "date": ctx.date(),
-        "files": files,
-        "rev": rev,
-        "node": hex(n),
-        "tags": nodetagsdict(repo, n),
-        "bookmarks": nodebookmarksdict(repo, n),
-        "inbranch": nodeinbranch(repo, ctx),
-        "branches": nodebranchdict(repo, ctx)
-    }
+    entry = commonentry(repo, ctx)
+    entry.update(
+        parent=lambda **x: parents(ctx, rev - 1),
+        child=lambda **x: children(ctx, rev + 1),
+        changelogtag=showtags,
+        files=files,
+    )
+    return entry
 
 def symrevorshortnode(req, ctx):
     if 'node' in req.form:
@@ -376,29 +387,16 @@ def changesetentry(web, req, tmpl, ctx):
 
     return dict(
         diff=diff,
-        rev=ctx.rev(),
-        node=ctx.hex(),
         symrev=symrevorshortnode(req, ctx),
-        parent=parents(ctx),
-        child=children(ctx),
         basenode=basectx.hex(),
         changesettag=showtags,
         changesetbookmark=showbookmarks,
         changesetbranch=showbranch,
-        author=ctx.user(),
-        desc=ctx.description(),
-        extra=ctx.extra(),
-        date=ctx.date(),
-        phase=ctx.phasestr(),
         files=files,
         diffsummary=lambda **x: diffsummary(diffstatsgen),
         diffstat=diffstats,
         archives=web.archivelist(ctx.hex()),
-        tags=nodetagsdict(web.repo, ctx.node()),
-        bookmarks=nodebookmarksdict(web.repo, ctx.node()),
-        branch=showbranch,
-        inbranch=nodeinbranch(web.repo, ctx),
-        branches=nodebranchdict(web.repo, ctx))
+        **commonentry(web.repo, ctx))
 
 def listfilediffs(tmpl, files, node, max):
     for f in files[:max]:

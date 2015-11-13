@@ -145,20 +145,10 @@ def _filerevision(web, req, tmpl, fctx):
                 file=f,
                 path=webutil.up(f),
                 text=lines(),
-                rev=fctx.rev(),
                 symrev=webutil.symrevorshortnode(req, fctx),
-                node=fctx.hex(),
-                author=fctx.user(),
-                date=fctx.date(),
-                desc=fctx.description(),
-                extra=fctx.extra(),
-                branch=webutil.nodebranchnodefault(fctx),
-                parent=webutil.parents(fctx),
-                child=webutil.children(fctx),
                 rename=webutil.renamelink(fctx),
-                tags=webutil.nodetagsdict(web.repo, fctx.node()),
-                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
-                permissions=fctx.manifest().flags(f))
+                permissions=fctx.manifest().flags(f),
+                **webutil.commonentry(web.repo, fctx))
 
 @webcommand('file')
 def file(web, req, tmpl):
@@ -289,20 +279,9 @@ def _search(web, req, tmpl):
 
             yield tmpl('searchentry',
                        parity=parity.next(),
-                       author=ctx.user(),
-                       parent=lambda **x: webutil.parents(ctx),
-                       child=lambda **x: webutil.children(ctx),
                        changelogtag=showtags,
-                       desc=ctx.description(),
-                       extra=ctx.extra(),
-                       date=ctx.date(),
                        files=files,
-                       rev=ctx.rev(),
-                       node=hex(n),
-                       tags=webutil.nodetagsdict(web.repo, n),
-                       bookmarks=webutil.nodebookmarksdict(web.repo, n),
-                       inbranch=webutil.nodeinbranch(web.repo, ctx),
-                       branches=webutil.nodebranchdict(web.repo, ctx))
+                       **webutil.commonentry(web.repo, ctx))
 
             if count >= revcount:
                 break
@@ -572,20 +551,14 @@ def manifest(web, req, tmpl):
                    "basename": d}
 
     return tmpl("manifest",
-                rev=ctx.rev(),
                 symrev=symrev,
-                node=hex(node),
                 path=abspath,
                 up=webutil.up(abspath),
                 upparity=parity.next(),
                 fentries=filelist,
                 dentries=dirlist,
                 archives=web.archivelist(hex(node)),
-                tags=webutil.nodetagsdict(web.repo, node),
-                bookmarks=webutil.nodebookmarksdict(web.repo, node),
-                branch=webutil.nodebranchnodefault(ctx),
-                inbranch=webutil.nodeinbranch(web.repo, ctx),
-                branches=webutil.nodebranchdict(web.repo, ctx))
+                **webutil.commonentry(web.repo, ctx))
 
 @webcommand('tags')
 def tags(web, req, tmpl):
@@ -719,22 +692,11 @@ def summary(web, req, tmpl):
             revs = web.repo.changelog.revs(start, end - 1)
         for i in revs:
             ctx = web.repo[i]
-            n = ctx.node()
-            hn = hex(n)
 
             l.append(tmpl(
-               'shortlogentry',
+                'shortlogentry',
                 parity=parity.next(),
-                author=ctx.user(),
-                desc=ctx.description(),
-                extra=ctx.extra(),
-                date=ctx.date(),
-                rev=i,
-                node=hn,
-                tags=webutil.nodetagsdict(web.repo, n),
-                bookmarks=webutil.nodebookmarksdict(web.repo, n),
-                inbranch=webutil.nodeinbranch(web.repo, ctx),
-                branches=webutil.nodebranchdict(web.repo, ctx)))
+                **webutil.commonentry(web.repo, ctx)))
 
         l.reverse()
         yield l
@@ -779,12 +741,8 @@ def filediff(web, req, tmpl):
             raise
 
     if fctx is not None:
-        n = fctx.node()
         path = fctx.path()
         ctx = fctx.changectx()
-    else:
-        n = ctx.node()
-        # path already defined in except clause
 
     parity = paritygen(web.stripecount)
     style = web.config('web', 'style', 'paper')
@@ -800,20 +758,10 @@ def filediff(web, req, tmpl):
         ctx = ctx
     return tmpl("filediff",
                 file=path,
-                node=hex(n),
-                rev=ctx.rev(),
                 symrev=webutil.symrevorshortnode(req, ctx),
-                date=ctx.date(),
-                desc=ctx.description(),
-                extra=ctx.extra(),
-                author=ctx.user(),
                 rename=rename,
-                branch=webutil.nodebranchnodefault(ctx),
-                parent=webutil.parents(ctx),
-                child=webutil.children(ctx),
-                tags=webutil.nodetagsdict(web.repo, n),
-                bookmarks=webutil.nodebookmarksdict(web.repo, n),
-                diff=diffs)
+                diff=diffs,
+                **webutil.commonentry(web.repo, ctx))
 
 diff = webcommand('diff')(filediff)
 
@@ -881,24 +829,14 @@ def comparison(web, req, tmpl):
         ctx = ctx
     return tmpl('filecomparison',
                 file=path,
-                node=hex(ctx.node()),
-                rev=ctx.rev(),
                 symrev=webutil.symrevorshortnode(req, ctx),
-                date=ctx.date(),
-                desc=ctx.description(),
-                extra=ctx.extra(),
-                author=ctx.user(),
                 rename=rename,
-                branch=webutil.nodebranchnodefault(ctx),
-                parent=webutil.parents(ctx),
-                child=webutil.children(ctx),
-                tags=webutil.nodetagsdict(web.repo, ctx.node()),
-                bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
                 leftrev=leftrev,
                 leftnode=hex(leftnode),
                 rightrev=rightrev,
                 rightnode=hex(rightnode),
-                comparison=comparison)
+                comparison=comparison,
+                **webutil.commonentry(web.repo, ctx))
 
 @webcommand('annotate')
 def annotate(web, req, tmpl):
@@ -950,20 +888,10 @@ def annotate(web, req, tmpl):
                 file=f,
                 annotate=annotate,
                 path=webutil.up(f),
-                rev=fctx.rev(),
                 symrev=webutil.symrevorshortnode(req, fctx),
-                node=fctx.hex(),
-                author=fctx.user(),
-                date=fctx.date(),
-                desc=fctx.description(),
-                extra=fctx.extra(),
                 rename=webutil.renamelink(fctx),
-                branch=webutil.nodebranchnodefault(fctx),
-                parent=webutil.parents(fctx),
-                child=webutil.children(fctx),
-                tags=webutil.nodetagsdict(web.repo, fctx.node()),
-                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
-                permissions=fctx.manifest().flags(f))
+                permissions=fctx.manifest().flags(f),
+                **webutil.commonentry(web.repo, fctx))
 
 @webcommand('filelog')
 def filelog(web, req, tmpl):
@@ -1025,23 +953,12 @@ def filelog(web, req, tmpl):
         for i in revs:
             iterfctx = fctx.filectx(i)
 
-            l.append({"parity": parity.next(),
-                      "filerev": i,
-                      "file": f,
-                      "node": iterfctx.hex(),
-                      "author": iterfctx.user(),
-                      "date": iterfctx.date(),
-                      "rename": webutil.renamelink(iterfctx),
-                      "parent": lambda **x: webutil.parents(iterfctx),
-                      "child": lambda **x: webutil.children(iterfctx),
-                      "desc": iterfctx.description(),
-                      "extra": iterfctx.extra(),
-                      "tags": webutil.nodetagsdict(repo, iterfctx.node()),
-                      "bookmarks": webutil.nodebookmarksdict(
-                          repo, iterfctx.node()),
-                      "branch": webutil.nodebranchnodefault(iterfctx),
-                      "inbranch": webutil.nodeinbranch(repo, iterfctx),
-                      "branches": webutil.nodebranchdict(repo, iterfctx)})
+            l.append(dict(
+                parity=parity.next(),
+                filerev=i,
+                file=f,
+                rename=webutil.renamelink(iterfctx),
+                **webutil.commonentry(repo, iterfctx)))
         for e in reversed(l):
             yield e
 
@@ -1050,15 +967,16 @@ def filelog(web, req, tmpl):
 
     revnav = webutil.filerevnav(web.repo, fctx.path())
     nav = revnav.gen(end - 1, revcount, count)
-    return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
-                rev=fctx.rev(),
+    return tmpl("filelog",
+                file=f,
+                nav=nav,
                 symrev=webutil.symrevorshortnode(req, fctx),
-                branch=webutil.nodebranchnodefault(fctx),
-                tags=webutil.nodetagsdict(web.repo, fctx.node()),
-                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
                 entries=entries,
                 latestentry=latestentry,
-                revcount=revcount, morevars=morevars, lessvars=lessvars)
+                revcount=revcount,
+                morevars=morevars,
+                lessvars=lessvars,
+                **webutil.commonentry(web.repo, fctx))
 
 @webcommand('archive')
 def archive(web, req, tmpl):
