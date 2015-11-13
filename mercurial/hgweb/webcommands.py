@@ -1045,7 +1045,11 @@ def filelog(web, req, tmpl):
     revnav = webutil.filerevnav(web.repo, fctx.path())
     nav = revnav.gen(end - 1, revcount, count)
     return tmpl("filelog", file=f, node=fctx.hex(), nav=nav,
+                rev=fctx.rev(),
                 symrev=webutil.symrevorshortnode(req, fctx),
+                branch=webutil.nodebranchnodefault(fctx),
+                tags=webutil.nodetagsdict(web.repo, fctx.node()),
+                bookmarks=webutil.nodebookmarksdict(web.repo, fctx.node()),
                 entries=entries,
                 latestentry=latestentry,
                 revcount=revcount, morevars=morevars, lessvars=lessvars)

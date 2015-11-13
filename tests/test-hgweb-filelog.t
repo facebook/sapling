@@ -187,7 +187,10 @@ tip - two revisions
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>log a</h3>
+  <h3>
+   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
+   <span class="branchname">a-branch</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -304,7 +307,10 @@ second version - two revisions
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>log a</h3>
+  <h3>
+   log a @ 4:<a href="/rev/3f41bc784e7e">3f41bc784e7e</a>
+   <span class="branchname">a-branch</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -421,7 +427,10 @@ first deleted - one revision
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>log a</h3>
+  <h3>
+   log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
+   <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+  </h3>
   
   <form class="search" action="/log">
   
@@ -530,7 +539,10 @@ first version - one revision
   
   <div class="main">
   <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
-  <h3>log a</h3>
+  <h3>
+   log a @ 1:<a href="/rev/5ed941583260">5ed941583260</a>
+   <span class="tag">a-tag</span> <span class="tag">a-bookmark</span> 
+  </h3>
   
   <form class="search" action="/log">
   
