@@ -157,15 +157,24 @@ git.authors
 -----------
 
 Git uses a strict convention for "author names" when representing changesets,
-using the form `[realname] [email address]`.   Mercurial encourages this
+using the form `[realname] [email address]`. Mercurial encourages this
 convention as well but is not as strict, so it's not uncommon for a Mercurial
-repo to have authors listed as simple usernames.   hg-git by default will 
-translate such names using the email address `none@none`, which then shows up
-unpleasantly on GitHub as "illegal email address".
+repo to have authors listed as, for example, simple usernames. hg-git by default
+will attempt to translate Mercurial usernames using the following rules:
 
-The `git.authors` option provides for an "authors translation file" that will 
-be used during outgoing transfers from mercurial to git only, by modifying 
-`hgrc` as such:
+* If the Mercurial username fits the pattern `NAME <EMAIL>`, the git name will be
+  set to NAME and the email to EMAIL.
+* If the Mercurial username looks like an email (if it contains an `@`), the
+  git name and email will both be set to that email.
+* If the Mercurial username consists of only a name, the email will be set to `none@none`.
+* Illegal characters (stray `<`s or `>`s) will be stripped out, and for `NAME <EMAIL>`
+  usernames, any content after the right-bracket (for example, a second `>`) will be
+  turned into a url-encoded sigil like `ext:(%3E)` in the git author name.
+
+Since these default behaviors may not be what you want (`none@none`, for example,
+shows up unpleasantly on Github as "illegal email address"), the `git.authors`
+option provides for an "authors translation file" that will be used during outgoing
+transfers from mercurial to git only, by modifying `hgrc` as such:
 
     [git]
     authors = authors.txt
