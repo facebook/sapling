@@ -228,3 +228,30 @@ Test checking out a commit that does not contain the sparse profile
   readme.txt
   $ hg sparse --disable-profile backend.sparse --debug | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
+
+  $ cd ..
+
+Test file permissions changing across a sparse profile change
+  $ hg init sparseperm
+  $ cd sparseperm
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > sparse=$(dirname $TESTDIR)/sparse.py
+  > EOF
+  $ touch a b
+  $ cat > .hgsparse <<EOF
+  > a
+  > EOF
+  $ hg commit -Aqm 'initial'
+  $ chmod a+x b
+  $ hg commit -qm 'make executable'
+  $ cat >> .hgsparse <<EOF
+  > b
+  > EOF
+  $ hg commit -qm 'update profile'
+  $ hg up -q 0
+  $ hg sparse --enable-profile .hgsparse
+  $ hg up -q 2
+  $ ls -l b
+  -rwxr-xr-x* b (glob)
+

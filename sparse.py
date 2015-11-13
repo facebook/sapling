@@ -152,14 +152,13 @@ def _setupupdates(ui):
         if changedprofiles and not branchmerge:
             mf = mctx.manifest()
             for file in mf:
-                if file not in files:
-                    old = oldsparsematch(file)
-                    new = sparsematch(file)
-                    if not old and new:
-                        flags = mf.flags(file)
-                        prunedactions[file] = ('g', (flags,), '')
-                    elif old and not new:
-                        prunedactions[file] = ('r', [], '')
+                old = oldsparsematch(file)
+                new = sparsematch(file)
+                if not old and new:
+                    flags = mf.flags(file)
+                    prunedactions[file] = ('g', (flags,), '')
+                elif old and not new:
+                    prunedactions[file] = ('r', [], '')
 
         return prunedactions, diverge, renamedelete
 
