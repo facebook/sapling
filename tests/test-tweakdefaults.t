@@ -373,7 +373,7 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ hg bookmark rebase_source_test_1
   $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
   $ hg log -l 1 -T "{rev}\n" -d "yesterday to today"
-  12
+  7
 
 Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
