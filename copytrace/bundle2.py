@@ -5,7 +5,7 @@
 
 from mercurial import bundle2, util, exchange
 import dbutil
-import binascii
+
 
 # Temporarily used to force to load the module, will be completed later
 def _pullbundle2extraprepare(orig, pullop, kwargs):
@@ -18,53 +18,59 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
     """
     add parts containing the movedata requested to the bundle -- server-side
     """
-    ctxlist = kwargs.get('movedatareq', [])
-    if common:
-        common = [binascii.hexlify(ctx) for ctx in common]
-    else:
-        common = []
-    if heads:
-        heads = [binascii.hexlify(ctx) for ctx in heads]
-        for ctx in heads:
-            while ctx and not ctx in common and ctx not in ctxlist:
-                ctxlist.append(ctx)
-                if repo[ctx].p2():
-                    heads.append(repo[ctx].p2().hex())
-                ctx = repo[ctx].p1().hex()
+    ctxlist = [repo[node].hex() for node in kwargs.get('movedatareq', [])]
+    ctxlist.extend(_processctxlist(repo, common, heads))
+
     if ctxlist:
-        mvdict = dbutil.retrievedatapkg(repo, ctxlist, remote=True)
-        ret = encodemvdict(mvdict)
-        part = bundler.newpart('pull:movedata')
-        part.addparam('movedata', ret)
+        dic = dbutil.retrieverawdata(repo, ctxlist, remote=True)
+        data = _encodedict(dic)
+
+        part = bundler.newpart('pull:movedata', data=data)
 
 
-@bundle2.parthandler('pull:movedata', ('movedata',))
-def handlemovedatarequest(op, inpart):
+@bundle2.parthandler('pull:movedata')
+def _handlemovedatarequest(op, inpart):
     """
     process a movedata reply -- client-side
     """
-    mvdict = decodemvdict(inpart.params['movedata'])
-    op.records.add('movedata', {'mvdict': mvdict})
-    dbutil.insertdatapkg(op.repo, mvdict)
+    dic = _decodedict(inpart)
+    op.records.add('movedata', {'mvdict': dic})
+    op.repo.ui.warn('moves for %d changesets retrieved\n' % len(dic.keys()))
+    dbutil.insertrawdata(op.repo, dic)
 
 
-def encodemvdict(mvdict):
+def _processctxlist(repo, remoteheads, localheads):
+    """
+    Processes the ctx list between remoteheads and localheads
+    """
+
+    if not localheads:
+        localheads = [repo[rev].node() for rev in repo.changelog.headrevs()]
+    if not remoteheads:
+        remoteheads = []
+
+    return [ctx.hex() for ctx in
+            repo.set("only(%ln, %ln)", localheads, remoteheads)]
+
+
+def _encodedict(dic):
     """
     encode the content of the move data for exchange over the wire
+    dic = {ctxhash: [(src, dst, mv)]}
     """
     expandedlist = []
-    for ctxhash, renames in mvdict.iteritems():
-        for src, dst, mv in renames:
-            expandedlist.append('%s\t%s\t%s\t%s' % (ctxhash, src, dst, mv))
+    for ctxhash, mvlist in dic.iteritems():
+        for src, dst, mv in mvlist:
+             expandedlist.append('%s\t%s\t%s\t%s' % (ctxhash, src, dst, mv))
     return '\n'.join(expandedlist)
 
 
-def decodemvdict(data):
+def _decodedict(data):
     """
     decode the content of the move data from exchange over the wire
     """
     result = {}
-    for l in data.splitlines():
+    for l in data.read().splitlines():
         ctxhash, src, dst, mv = l.split('\t')
         result.setdefault(ctxhash, []).append((src, dst, mv))
     return result

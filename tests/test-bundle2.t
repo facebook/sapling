@@ -6,6 +6,8 @@
   > EOF
 
 
+!! TEST 1: pulling move data from repo with 'hg pull' !!
+
 SETUP SERVER REPO
 
   $ hg init serverrepo
@@ -28,9 +30,13 @@ ADD MOVES IN SERVER
   $ hg commit -m "mv a b"
   $ hg cp b c
   $ hg commit -m "cp b c"
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves"
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
+  4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|||1
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1
   $ cd ..
 
 PULLS FROM SERVER
@@ -43,10 +49,13 @@ PULLS FROM SERVER
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
+  moves for 2 changesets retrieved
   (run 'hg update' to get a working copy)
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves"
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
+  4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|||1
   $ cd ..
 
 SEVERAL BRANCHES ON SERVER
@@ -81,10 +90,15 @@ PULLS FROM SERVER
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files (+1 heads)
+  moves for 2 changesets retrieved
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves"
+  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
-  ec660297011163dd7658d444365b6590c0dd67b3|b|d|1
+  4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|||1
   b85e8d9fbcaad4fbdfee2a1fcf518629f66c8c66|c|e|1
+  b85e8d9fbcaad4fbdfee2a1fcf518629f66c8c66|||0
+  ec660297011163dd7658d444365b6590c0dd67b3|b|d|1
+  ec660297011163dd7658d444365b6590c0dd67b3|||0
   $ cd ..
