@@ -1262,7 +1262,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 actions['r'].append((f, None, "prompt delete"))
             else:
                 actions['a'].append((f, None, "prompt keep"))
-        del actions['cd'][:]
 
         for f, args, msg in sorted(actions['dc']):
             flags, = args
@@ -1271,7 +1270,6 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                   "use (c)hanged version or leave (d)eleted?"
                   "$$ &Changed $$ &Deleted") % f, 0) == 0:
                 actions['g'].append((f, (flags,), "prompt recreating"))
-        del actions['dc'][:]
 
         # divergent renames
         for f, fl in sorted(diverge.iteritems()):
