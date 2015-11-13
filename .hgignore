@@ -3,3 +3,4 @@
 \.err$
 ^build/
 ^.*\.egg-info/
+^dist/
