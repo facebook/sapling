@@ -317,7 +317,7 @@ def gcserver(ui, repo):
         return
 
     neededfiles = set()
-    heads = repo.revs("heads(all())")
+    heads = repo.revs("heads(tip~25000:) - null")
 
     cachepath = repo.join("remotefilelogcache")
     for head in heads:
