@@ -207,6 +207,30 @@ resolve <file> should re-merge file
   [1]
   $ grep '<<<' file1 > /dev/null
 
+test .orig behavior with resolve
+
+  $ echo resolve > file
+  $ hg resolve -q file1 --tool 'f --dump $TESTTMP/repo/file1.orig'
+  */file1~base*: (glob)
+  >>>
+  foo
+  <<<
+  */file1~other*: (glob)
+  >>>
+  foo
+  bar
+  <<<
+  $TESTTMP/repo/file1: (glob)
+  >>>
+  foo
+  baz
+  <<<
+  $TESTTMP/repo/file1.orig: (glob)
+  >>>
+  foo
+  baz
+  <<<
+
 resolve <file> should do nothing if 'file' was marked resolved
   $ echo resolved > file1
   $ hg resolve -m file1

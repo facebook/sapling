@@ -5670,10 +5670,10 @@ def resolve(ui, repo, *pats, **opts):
                     ui.setconfig('ui', 'forcemerge', '', 'resolve')
                     ms.commit()
 
-                # replace filemerge's .orig file with our resolve file
-                # for files in tocomplete, ms.resolve will not overwrite
-                # .orig -- only preresolve does
-                util.rename(a + ".resolve", a + ".orig")
+                # replace filemerge's .orig file with our resolve file, but only
+                # for merges that are complete
+                if complete:
+                    util.rename(a + ".resolve", a + ".orig")
 
         for f in tocomplete:
             try:
@@ -5686,6 +5686,10 @@ def resolve(ui, repo, *pats, **opts):
             finally:
                 ui.setconfig('ui', 'forcemerge', '', 'resolve')
                 ms.commit()
+
+            # replace filemerge's .orig file with our resolve file
+            a = repo.wjoin(f)
+            util.rename(a + ".resolve", a + ".orig")
 
         ms.commit()
 
