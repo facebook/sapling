@@ -25,7 +25,7 @@ class HttpError(Exception):
     pass
 
 githashre = re.compile('g([0-9a-fA-F]{40,40})')
-fbsvnhash = re.compile('r[A-Z]+(\d+)')
+fbsvnhash = re.compile('^r[A-Z]+(\d+)$')
 
 def extsetup(ui):
     global conduit_host, conduit_path, conduit_protocol
