@@ -328,6 +328,10 @@ def _mergecheck(repo, mynode, orig, fcd, fco, fca, toolconf):
         repo.ui.warn(_('warning: internal %s cannot merge symlinks '
                        'for %s\n') % (tool, fcd.path()))
         return False
+    if fcd.isabsent() or fco.isabsent():
+        repo.ui.warn(_('warning: internal %s cannot merge change/delete '
+                       'conflict for %s\n') % (tool, fcd.path()))
+        return False
     return True
 
 def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
