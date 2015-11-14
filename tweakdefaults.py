@@ -50,6 +50,18 @@ def extsetup(ui):
         _('reuse commit message from REV'), _('REV')))
 
     wrapcommand(rebase.cmdtable, 'rebase', _rebase)
+    entry = wrapcommand(commands.table, 'pull', pull)
+    options = entry[1]
+    options.append(
+        ('d', 'dest', '', _('destination for rebase or update')))
+
+    try:
+        remotenames = extensions.find('remotenames')
+        wrapfunction(remotenames, '_getrebasedest', _getrebasedest)
+    except KeyError:
+        pass  # no remotenames, no worries
+    except AttributeError:
+        pass  # old version of remotenames doh
 
     entry = wrapcommand(commands.table, 'log', log)
     for opt in logopts:
@@ -96,6 +108,89 @@ def tweakorder():
     order.remove('tweakdefaults')
     order.insert(0, 'tweakdefaults')
     extensions._order = order
+
+# This is an ugly hack
+# The remotenames extension removes the --rebase flag from pull so that the
+# upstream rebase won't rebase to the wrong place. However, we want to allow
+# the user to specify an explicit destination, but still abort if the user
+# specifies dest without update or rebase. Conveniently, _getrebasedest is
+# called before the --rebase flag is stripped from the opts. We will save it
+# when _getrebasedest is called, then look it up in the pull command to do the
+# right thing.
+rebaseflag = False
+rebasedest = None
+
+def _getrebasedest(orig, repo, opts):
+    """Use the manually specified destination over the tracking destination"""
+    global rebaseflag, rebasedest
+    rebaseflag = opts.get('rebase')
+    origdest = orig(repo, opts)
+    dest = opts.get('dest')
+    if not dest:
+        dest = origdest
+    rebasedest = dest
+    return dest
+
+def pull(orig, ui, repo, *args, **opts):
+    """pull --rebase/--update are problematic without an explicit destination"""
+    try:
+        rebasemodule = extensions.find('rebase')
+    except KeyError:
+        rebasemodule = None
+
+    rebase = opts.get('rebase')
+    update = opts.get('update')
+    isrebase = rebase or rebaseflag
+    if isrebase:
+        dest = rebasedest
+    else:
+        dest = opts.get('dest')
+
+    if isrebase and update:
+        mess = _('specify either rebase or update, not both')
+        raise util.Abort(mess)
+
+    if dest and not (isrebase or update):
+        mess = _('only specify a destination if rebasing or updating')
+        raise util.Abort(mess)
+
+    if (isrebase or update) and not dest:
+        rebasemsg = _('you must use a bookmark with tracking '
+                      'or manually specify a destination for the rebase')
+        if isrebase and bmactive(repo):
+            rebasehint = _('set up tracking with `hg book -t <destination>` '
+                           'or manually supply --dest / -d')
+            mess = ui.config('tweakdefaults', 'bmnodestmsg', rebasemsg)
+            hint = ui.config('tweakdefaults', 'bmnodesthint', _(
+                'set up tracking with `hg book -t <destination>` '
+                'or manually supply --dest / -d'))
+        elif isrebase:
+            mess = ui.config('tweakdefaults', 'nodestmsg', rebasemsg)
+            hint = ui.config('tweakdefaults', 'nodesthint', _(
+                'set up tracking with `hg book <name> -t <destination>` '
+                'or manually supply --dest / -d'))
+        else: # update
+            mess = _('you must specify a destination for the update')
+            hint = _('use `hg pull --update --dest <destination>`')
+        raise util.Abort(mess, hint=hint)
+
+    if 'rebase' in opts:
+        del opts['rebase']
+    if 'update' in opts:
+        del opts['update']
+    if 'dest' in opts:
+        del opts['dest']
+
+    ret = orig(ui, repo, *args, **opts)
+
+    # NB: we use rebase and not isrebase on the next line because
+    # remotenames may have already handled the rebase.
+    if dest and rebase:
+        ret = ret or rebasemodule.rebase(ui, repo, dest=dest)
+    if dest and update:
+        ret = ret or commands.update(ui, repo, node=dest, check=True)
+
+    return ret
 
 
 def tweakbehaviors(ui):
