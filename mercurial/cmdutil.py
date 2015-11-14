@@ -2159,8 +2159,9 @@ def getlogrevs(repo, pats, opts):
 
     return revs, expr, filematcher
 
-def displaygraph(ui, dag, displayer, showparents, edgefn, getrenamed=None,
+def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                  filematcher=None):
+    showparents = [ctx.node() for ctx in repo[None].parents()]
     seen, state = [], graphmod.asciistate()
     for rev, type, ctx, parents in dag:
         char = 'o'
@@ -2202,9 +2203,8 @@ def graphlog(ui, repo, *pats, **opts):
             endrev = scmutil.revrange(repo, opts.get('rev')).max() + 1
         getrenamed = templatekw.getrenamedfn(repo, endrev=endrev)
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    showparents = [ctx.node() for ctx in repo[None].parents()]
-    displaygraph(ui, revdag, displayer, showparents,
-                 graphmod.asciiedges, getrenamed, filematcher)
+    displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges, getrenamed,
+                 filematcher)
 
 def checkunsupportedgraphflags(pats, opts):
     for op in ["newest_first"]:

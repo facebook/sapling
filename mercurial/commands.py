@@ -4696,8 +4696,7 @@ def incoming(ui, repo, source="default", **opts):
         cmdutil.checkunsupportedgraphflags([], opts)
         def display(other, chlist, displayer):
             revdag = cmdutil.graphrevs(other, chlist, opts)
-            showparents = [ctx.node() for ctx in repo[None].parents()]
-            cmdutil.displaygraph(ui, revdag, displayer, showparents,
+            cmdutil.displaygraph(ui, repo, revdag, displayer,
                                  graphmod.asciiedges)
 
         hg._incoming(display, lambda: 1, ui, repo, source, opts, buffered=True)
@@ -5134,9 +5133,7 @@ def outgoing(ui, repo, dest=None, **opts):
 
         revdag = cmdutil.graphrevs(repo, o, opts)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-        showparents = [ctx.node() for ctx in repo[None].parents()]
-        cmdutil.displaygraph(ui, revdag, displayer, showparents,
-                             graphmod.asciiedges)
+        cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
         cmdutil.outgoinghooks(ui, repo, other, opts, o)
         return 0
 
