@@ -447,6 +447,10 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
+    if fcd.isabsent() or fco.isabsent():
+        repo.ui.warn(_('warning: %s cannot merge change/delete conflict '
+                       'for %s\n') % (tool, fcd.path()))
+        return False, 1, None
     a, b, c, back = files
     out = ""
     env = {'HG_FILE': fcd.path(),
