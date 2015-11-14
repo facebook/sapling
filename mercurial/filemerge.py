@@ -221,10 +221,23 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
     fd = fcd.path()
 
     try:
-        index = ui.promptchoice(_("no tool found to merge %s\n"
-                                  "keep (l)ocal or take (o)ther?"
-                                  "$$ &Local $$ &Other") % fd, 0)
-        choice = ['local', 'other'][index]
+        if fco.isabsent():
+            index = ui.promptchoice(
+                _("local changed %s which remote deleted\n"
+                  "use (c)hanged version or (d)elete?"
+                  "$$ &Changed $$ &Delete") % fd, 0)
+            choice = ['local', 'other'][index]
+        elif fcd.isabsent():
+            index = ui.promptchoice(
+                _("remote changed %s which local deleted\n"
+                  "use (c)hanged version or leave (d)eleted?"
+                  "$$ &Changed $$ &Deleted") % fd, 0)
+            choice = ['other', 'local'][index]
+        else:
+            index = ui.promptchoice(_("no tool found to merge %s\n"
+                                      "keep (l)ocal or take (o)ther?"
+                                      "$$ &Local $$ &Other") % fd, 0)
+            choice = ['local', 'other'][index]
 
         if choice == 'other':
             return _iother(repo, mynode, orig, fcd, fco, fca, toolconf)
