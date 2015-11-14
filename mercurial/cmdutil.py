@@ -2161,16 +2161,9 @@ def getlogrevs(repo, pats, opts):
 
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                  filematcher=None):
-    showparents = [ctx.node() for ctx in repo[None].parents()]
     seen, state = [], graphmod.asciistate()
     for rev, type, ctx, parents in dag:
-        char = 'o'
-        if ctx.node() in showparents:
-            char = '@'
-        elif ctx.obsolete():
-            char = 'x'
-        elif ctx.closesbranch():
-            char = '_'
+        char = templatekw.showgraphnode(repo, ctx)
         copies = None
         if getrenamed and ctx.rev():
             copies = []

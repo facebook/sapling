@@ -340,6 +340,19 @@ def showfiles(**args):
     """
     return showlist('file', args['ctx'].files(), **args)
 
+def showgraphnode(repo, ctx, **args):
+    """:graphnode: String. The character representing the changeset node in
+    an ASCII revision graph"""
+    wpnodes = [pctx.node() for pctx in repo[None].parents()]
+    if ctx.node() in wpnodes:
+        return '@'
+    elif ctx.obsolete():
+        return 'x'
+    elif ctx.closesbranch():
+        return '_'
+    else:
+        return 'o'
+
 def showlatesttag(**args):
     """:latesttag: List of strings. The global tags on the most recent globally
     tagged ancestor of this changeset.
@@ -518,6 +531,7 @@ keywords = {
     'file_dels': showfiledels,
     'file_mods': showfilemods,
     'files': showfiles,
+    'graphnode': showgraphnode,
     'latesttag': showlatesttag,
     'latesttagdistance': showlatesttagdistance,
     'manifest': showmanifest,
