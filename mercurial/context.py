@@ -747,11 +747,15 @@ class basefilectx(object):
     def islink(self):
         return 'l' in self.flags()
 
+    _customcmp = False
     def cmp(self, fctx):
         """compare with other file context
 
         returns True if different than fctx.
         """
+        if fctx._customcmp:
+            return fctx.cmp(self)
+
         if (fctx._filerev is None
             and (self._repo._encodefilterpats
                  # if file data starts with '\1\n', empty metadata block is
