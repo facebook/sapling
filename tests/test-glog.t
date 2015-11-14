@@ -2400,4 +2400,25 @@ working-directory revision
   @  3:5918b8d165d1
   |
 
+node template with changeset_printer:
+
+  $ hg log -Gqr 5:7 --config ui.graphnodetemplate='{rev}'
+  7  7:02dbb8e276b8
+  |
+  6    6:fc281d8ff18d
+  |\
+  5 |  5:99b31f1c2782
+  | |
+
+node template with changeset_templater (shared cache variable):
+
+  $ hg log -Gr 5:7 -T '{latesttag % "{rev} {tag}+{distance}"}\n' \
+  > --config ui.graphnodetemplate='{ifeq(latesttagdistance, 0, "#", graphnode)}'
+  o  7 foo-bar+1
+  |
+  #    6 foo-bar+0
+  |\
+  o |  5 null+5
+  | |
+
   $ cd ..

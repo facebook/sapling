@@ -2159,11 +2159,31 @@ def getlogrevs(repo, pats, opts):
 
     return revs, expr, filematcher
 
+def _graphnodeformatter(ui, displayer):
+    spec = ui.config('ui', 'graphnodetemplate')
+    if not spec:
+        return templatekw.showgraphnode  # fast path for "{graphnode}"
+
+    templ = formatter.gettemplater(ui, 'graphnode', spec)
+    cache = {}
+    if isinstance(displayer, changeset_templater):
+        cache = displayer.cache  # reuse cache of slow templates
+    props = templatekw.keywords.copy()
+    props['templ'] = templ
+    props['cache'] = cache
+    def formatnode(repo, ctx):
+        props['ctx'] = ctx
+        props['repo'] = repo
+        props['revcache'] = {}
+        return templater.stringify(templ('graphnode', **props))
+    return formatnode
+
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                  filematcher=None):
+    formatnode = _graphnodeformatter(ui, displayer)
     seen, state = [], graphmod.asciistate()
     for rev, type, ctx, parents in dag:
-        char = templatekw.showgraphnode(repo, ctx)
+        char = formatnode(repo, ctx)
         copies = None
         if getrenamed and ctx.rev():
             copies = []

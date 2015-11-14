@@ -1454,6 +1454,10 @@ User interface controls.
     Encoding to try if it's not possible to decode the changelog using
     UTF-8. (default: ISO-8859-1)
 
+``graphnodetemplate``
+    The template used to print changeset nodes in an ASCII revision graph.
+    (default: ``{graphnode}``)
+
 ``ignore``
     A file to read per-user ignore patterns from. This file should be
     in the same format as a repository-wide .hgignore file. Filenames
