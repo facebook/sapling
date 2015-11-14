@@ -2547,8 +2547,8 @@ def debugmergestate(ui, repo, *args):
                     flags = r[7]
                 else:
                     onode, flags = r[7:9]
-                ui.write(('file: %s (state "%s", hash %s)\n')
-                         % (f, state, hash))
+                ui.write(('file: %s (record type "%s", state "%s", hash %s)\n')
+                         % (f, rtype, state, hash))
                 ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
                 ui.write(('  ancestor path: %s (node %s)\n') % (afile, anode))
                 ui.write(('  other path: %s (node %s)\n') % (ofile, onode))
