@@ -7,7 +7,7 @@
 
 from __future__ import absolute_import
 
-from .node import hex
+from .node import hex, nullid
 from . import (
     error,
     hbisect,
@@ -343,7 +343,9 @@ def showfiles(**args):
 def showgraphnode(repo, ctx, **args):
     """:graphnode: String. The character representing the changeset node in
     an ASCII revision graph"""
-    wpnodes = [pctx.node() for pctx in repo[None].parents()]
+    wpnodes = repo.dirstate.parents()
+    if wpnodes[1] == nullid:
+        wpnodes = wpnodes[:1]
     if ctx.node() in wpnodes:
         return '@'
     elif ctx.obsolete():
