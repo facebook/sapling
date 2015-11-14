@@ -366,8 +366,11 @@ class mergestate(object):
 
         note: also write the local version to the `.hg/merge` directory.
         """
-        hash = util.sha1(fcl.path()).hexdigest()
-        self._repo.vfs.write('merge/' + hash, fcl.data())
+        if fcl.isabsent():
+            hash = nullhex
+        else:
+            hash = util.sha1(fcl.path()).hexdigest()
+            self._repo.vfs.write('merge/' + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
                            fca.path(), hex(fca.filenode()),
                            fco.path(), hex(fco.filenode()),
