@@ -20,8 +20,8 @@ This extension changes defaults to be more user friendly.
 
 from mercurial import util, cmdutil, commands, extensions, hg, scmutil
 from mercurial import bookmarks
-from mercurial.extensions import wrapcommand, _order
-import mercurial.extensions
+from mercurial.extensions import wrapcommand, wrapfunction
+from mercurial import extensions
 from mercurial.i18n import _
 from hgext import rebase
 import errno, os, stat, subprocess, time
@@ -74,7 +74,7 @@ def extsetup(ui):
     wrapcommand(commands.table, 'tags', tagscmd)
     wrapcommand(commands.table, 'graft', graftcmd)
     try:
-      fbamendmodule = mercurial.extensions.find('fbamend')
+      fbamendmodule = extensions.find('fbamend')
       wrapcommand(fbamendmodule.cmdtable, 'amend', amendcmd)
     except KeyError:
       pass
@@ -92,10 +92,11 @@ def tweakorder():
     As of this writing, the extensions that we should load before are
     remotenames and directaccess (NB: directaccess messes with order as well).
     """
-    order = mercurial.extensions._order
+    order = extensions._order
     order.remove('tweakdefaults')
     order.insert(0, 'tweakdefaults')
-    mercurial.extensions._order = order
+    extensions._order = order
+
 
 def tweakbehaviors(ui):
     """Tweak Behaviors
@@ -315,7 +316,7 @@ def branchcmd(orig, ui, repo, label=None, **opts):
             del opts['new']
         return orig(ui, repo, label, **opts)
     elif enabled:
-	    raise util.Abort(
+        raise util.Abort(
             _('do not use branches; use bookmarks instead'),
             hint=_('use --new if you are certain you want a branch'))
     else:
