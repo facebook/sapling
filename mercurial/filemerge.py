@@ -600,9 +600,12 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     a = repo.wjoin(fd)
     b = temp("base", fca)
     c = temp("other", fco)
-    back = cmdutil.origpath(ui, repo, a)
-    if premerge:
-        util.copyfile(a, back)
+    if not fcd.isabsent():
+        back = cmdutil.origpath(ui, repo, a)
+        if premerge:
+            util.copyfile(a, back)
+    else:
+        back = None
     files = (a, b, c, back)
 
     r = 1
@@ -630,7 +633,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
         return True, r, deleted
     finally:
-        if not r:
+        if not r and back is not None:
             util.unlink(back)
         util.unlink(b)
         util.unlink(c)
@@ -655,13 +658,13 @@ def _check(r, ui, tool, fcd, files):
     if not r and not checked and (_toolbool(ui, tool, "checkchanged") or
                                   'changed' in
                                   _toollist(ui, tool, "check")):
-        if filecmp.cmp(a, back):
+        if back is not None and filecmp.cmp(a, back):
             if ui.promptchoice(_(" output file %s appears unchanged\n"
                                  "was merge successful (yn)?"
                                  "$$ &Yes $$ &No") % fd, 1):
                 r = 1
 
-    if _toolbool(ui, tool, "fixeol"):
+    if back is not None and _toolbool(ui, tool, "fixeol"):
         _matcheol(a, back)
 
     return r
