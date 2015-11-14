@@ -287,9 +287,9 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
     used to resolve these conflicts."""
     return 1, False
 
-def _premerge(repo, toolconf, files, labels=None):
+def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
-    if symlink:
+    if symlink or fcd.isabsent() or fco.isabsent():
         return 1
     a, b, c, back = files
 
@@ -610,7 +610,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
             labels = _formatlabels(repo, fcd, fco, fca, labels)
 
         if premerge and mergetype == fullmerge:
-            r = _premerge(repo, toolconf, files, labels=labels)
+            r = _premerge(repo, fcd, fco, fca, toolconf, files, labels=labels)
             # complete if premerge successful (r is 0)
             return not r, r, False
 
