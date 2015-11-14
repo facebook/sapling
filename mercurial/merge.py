@@ -623,7 +623,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                     if acceptremote:
                         actions[f] = ('r', None, "remote delete")
                     else:
-                        actions[f] = ('cd', None,  "prompt changed/deleted")
+                        actions[f] = ('cd', (f, None, f, False, pa.node()),
+                                      "prompt changed/deleted")
                 elif n1[20:] == 'a':
                     # This extra 'a' is added by working copy manifest to mark
                     # the file as locally added. We should forget it instead of
@@ -673,7 +674,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
                 if acceptremote:
                     actions[f] = ('c', (fl2,), "remote recreating")
                 else:
-                    actions[f] = ('dc', (fl2,), "prompt deleted/changed")
+                    actions[f] = ('dc', (None, f, f, False, pa.node()),
+                                  "prompt deleted/changed")
 
     return actions, diverge, renamedelete
 
@@ -1264,7 +1266,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 actions['a'].append((f, None, "prompt keep"))
 
         for f, args, msg in sorted(actions['dc']):
-            flags, = args
+            f1, f2, fa, move, anc = args
+            flags = p2[f2].flags()
             if repo.ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?"
