@@ -25,8 +25,9 @@ Should not update:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  not updating: not a linear update
+  abort: not updating: not a linear update
   (merge or update --check to force update)
+  [255]
 
   $ cd ../tt
 
@@ -39,8 +40,9 @@ Should not update:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  not updating: not a linear update
+  abort: not updating: not a linear update
   (merge or update --check to force update)
+  [255]
 
   $ HGMERGE=true hg merge
   merging foo

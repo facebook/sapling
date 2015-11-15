@@ -5227,10 +5227,9 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
                 checkout, movemarkfrom, brev = updata
             ret = hg.update(repo, checkout)
         except error.UpdateAbort as inst:
-            ui.warn(_("not updating: %s\n") % str(inst))
-            if inst.hint:
-                ui.warn(_("(%s)\n") % inst.hint)
-            return 0
+            msg = _("not updating: %s") % str(inst)
+            hint = inst.hint
+            raise error.UpdateAbort(msg, hint=hint)
         if not ret and not checkout:
             if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
                 ui.status(_("updating bookmark %s\n") % repo._activebookmark)
