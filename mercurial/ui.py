@@ -612,10 +612,10 @@ class ui(object):
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
         '''
-        self._progclear()
         if self._buffers:
             self._buffers[-1].extend([str(a) for a in args])
         else:
+            self._progclear()
             for a in args:
                 self.fout.write(str(a))
 
