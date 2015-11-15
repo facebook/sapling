@@ -1096,6 +1096,7 @@ def clearrebased(ui, repo, state, skipped, collapsedas=None):
 
 def pullrebase(orig, ui, repo, *args, **opts):
     'Call rebase after pull if the latter has been invoked with --rebase'
+    ret = None
     if opts.get('rebase'):
         wlock = lock = None
         try:
@@ -1113,7 +1114,7 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 pass
             commands.postincoming = _dummy
             try:
-                orig(ui, repo, *args, **opts)
+                ret = orig(ui, repo, *args, **opts)
             finally:
                 commands.postincoming = origpostincoming
             revspostpull = len(repo)
@@ -1140,7 +1141,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
     else:
         if opts.get('tool'):
             raise error.Abort(_('--tool can only be used with --rebase'))
-        orig(ui, repo, *args, **opts)
+        ret = orig(ui, repo, *args, **opts)
+
+    return ret
 
 def _setrebasesetvisibility(repo, revs):
     """store the currently rebased set on the repo object
