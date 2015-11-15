@@ -1301,16 +1301,17 @@ class changeset_printer(object):
                               label='log.summary')
         self.ui.write("\n")
 
-        self.showpatch(changenode, matchfn)
+        self.showpatch(ctx, matchfn)
 
-    def showpatch(self, node, matchfn):
+    def showpatch(self, ctx, matchfn):
         if not matchfn:
             matchfn = self.matchfn
         if matchfn:
             stat = self.diffopts.get('stat')
             diff = self.diffopts.get('patch')
             diffopts = patch.diffallopts(self.ui, self.diffopts)
-            prev = self.repo.changelog.parents(node)[0]
+            node = ctx.node()
+            prev = ctx.p1()
             if stat:
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
                                match=matchfn, stat=True)
@@ -1492,7 +1493,7 @@ class changeset_templater(changeset_printer):
             # write changeset metadata, then patch if requested
             key = self._parts['changeset']
             self.ui.write(templater.stringify(self.t(key, **props)))
-            self.showpatch(ctx.node(), matchfn)
+            self.showpatch(ctx, matchfn)
 
             if self._parts['footer']:
                 if not self.footer:
