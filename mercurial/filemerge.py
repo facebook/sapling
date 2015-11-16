@@ -120,8 +120,11 @@ def findexternaltool(ui, tool):
     exe = _toolstr(ui, tool, "executable", tool)
     return util.findexe(util.expandpath(exe))
 
-def _picktool(repo, ui, path, binary, symlink):
-    def check(tool, pat, symlink, binary):
+def _picktool(repo, ui, path, binary, symlink, changedelete):
+    def supportscd(tool):
+        return tool in internals and internals[tool].mergetype == nomerge
+
+    def check(tool, pat, symlink, binary, changedelete):
         tmsg = tool
         if pat:
             tmsg += " specified for " + pat
@@ -134,6 +137,10 @@ def _picktool(repo, ui, path, binary, symlink):
             ui.warn(_("tool %s can't handle symlinks\n") % tmsg)
         elif binary and not _toolbool(ui, tool, "binary"):
             ui.warn(_("tool %s can't handle binary\n") % tmsg)
+        elif changedelete and not supportscd(tool):
+            # the nomerge tools are the only tools that support change/delete
+            # conflicts
+            pass
         elif not util.gui() and _toolbool(ui, tool, "gui"):
             ui.warn(_("tool %s requires a GUI\n") % tmsg)
         else:
@@ -145,21 +152,27 @@ def _picktool(repo, ui, path, binary, symlink):
     force = ui.config('ui', 'forcemerge')
     if force:
         toolpath = _findtool(ui, force)
-        if toolpath:
-            return (force, util.shellquote(toolpath))
+        if changedelete and not supportscd(toolpath):
+            return ":prompt", None
         else:
-            # mimic HGMERGE if given tool not found
-            return (force, force)
+            if toolpath:
+                return (force, util.shellquote(toolpath))
+            else:
+                # mimic HGMERGE if given tool not found
+                return (force, force)
 
     # HGMERGE takes next precedence
     hgmerge = os.environ.get("HGMERGE")
     if hgmerge:
-        return (hgmerge, hgmerge)
+        if changedelete and not supportscd(hgmerge):
+            return ":prompt", None
+        else:
+            return (hgmerge, hgmerge)
 
     # then patterns
     for pat, tool in ui.configitems("merge-patterns"):
         mf = match.match(repo.root, '', [pat])
-        if mf(path) and check(tool, pat, symlink, False):
+        if mf(path) and check(tool, pat, symlink, False, changedelete):
             toolpath = _findtool(ui, tool)
             return (tool, util.shellquote(toolpath))
 
@@ -176,17 +189,19 @@ def _picktool(repo, ui, path, binary, symlink):
     tools = sorted([(-p, t) for t, p in tools.items() if t not in disabled])
     uimerge = ui.config("ui", "merge")
     if uimerge:
-        if uimerge not in names:
+        # external tools defined in uimerge won't be able to handle
+        # change/delete conflicts
+        if uimerge not in names and not changedelete:
             return (uimerge, uimerge)
         tools.insert(0, (None, uimerge)) # highest priority
     tools.append((None, "hgmerge")) # the old default, if found
     for p, t in tools:
-        if check(t, None, symlink, binary):
+        if check(t, None, symlink, binary, changedelete):
             toolpath = _findtool(ui, t)
             return (t, util.shellquote(toolpath))
 
     # internal merge or prompt as last resort
-    if symlink or binary:
+    if symlink or binary or changedelete:
         return ":prompt", None
     return ":merge", None
 
@@ -535,7 +550,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     fd = fcd.path()
     binary = fcd.isbinary() or fco.isbinary() or fca.isbinary()
     symlink = 'l' in fcd.flags() + fco.flags()
-    tool, toolpath = _picktool(repo, ui, fd, binary, symlink)
+    changedelete = fcd.isabsent() or fco.isabsent()
+    tool, toolpath = _picktool(repo, ui, fd, binary, symlink, changedelete)
     if tool in internals and tool.startswith('internal:'):
         # normalize to new-style names (':merge' etc)
         tool = tool[len('internal'):]
