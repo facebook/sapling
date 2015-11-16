@@ -1131,38 +1131,38 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 def recordupdates(repo, actions, branchmerge):
     "record merge actions to the dirstate"
     # remove (must come first)
-    for f, args, msg in actions['r']:
+    for f, args, msg in actions.get('r', []):
         if branchmerge:
             repo.dirstate.remove(f)
         else:
             repo.dirstate.drop(f)
 
     # forget (must come first)
-    for f, args, msg in actions['f']:
+    for f, args, msg in actions.get('f', []):
         repo.dirstate.drop(f)
 
     # re-add
-    for f, args, msg in actions['a']:
+    for f, args, msg in actions.get('a', []):
         if not branchmerge:
             repo.dirstate.add(f)
 
     # exec change
-    for f, args, msg in actions['e']:
+    for f, args, msg in actions.get('e', []):
         repo.dirstate.normallookup(f)
 
     # keep
-    for f, args, msg in actions['k']:
+    for f, args, msg in actions.get('k', []):
         pass
 
     # get
-    for f, args, msg in actions['g']:
+    for f, args, msg in actions.get('g', []):
         if branchmerge:
             repo.dirstate.otherparent(f)
         else:
             repo.dirstate.normal(f)
 
     # merge
-    for f, args, msg in actions['m']:
+    for f, args, msg in actions.get('m', []):
         f1, f2, fa, move, anc = args
         if branchmerge:
             # We've done a branch merge, mark this file as merged
@@ -1187,7 +1187,7 @@ def recordupdates(repo, actions, branchmerge):
                 repo.dirstate.drop(f1)
 
     # directory rename, move local
-    for f, args, msg in actions['dm']:
+    for f, args, msg in actions.get('dm', []):
         f0, flag = args
         if branchmerge:
             repo.dirstate.add(f)
@@ -1198,7 +1198,7 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.drop(f0)
 
     # directory rename, get
-    for f, args, msg in actions['dg']:
+    for f, args, msg in actions.get('dg', []):
         f0, flag = args
         if branchmerge:
             repo.dirstate.add(f)
