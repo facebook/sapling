@@ -1396,8 +1396,8 @@ apply force, should discard changes in hello, but not bye
 
   $ hg qpush -f --verbose --config 'ui.origbackuppath=.hg/origbackups'
   applying empty
-  creating directory: $TESTTMP/forcepush/.hg/origbackups
-  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt.orig
+  creating directory: $TESTTMP/forcepush/.hg/origbackups (glob)
+  saving current version of hello.txt as $TESTTMP/forcepush/.hg/origbackups/hello.txt.orig (glob)
   patching file hello.txt
   committing files:
   hello.txt

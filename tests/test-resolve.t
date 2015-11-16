@@ -201,7 +201,7 @@ resolve --all should re-merge all unresolved files
 .orig files should exists where specified
   $ hg resolve --all --verbose --config 'ui.origbackuppath=.hg/origbackups'
   merging file1
-  creating directory: $TESTTMP/repo/.hg/origbackups
+  creating directory: $TESTTMP/repo/.hg/origbackups (glob)
   merging file2
   warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging file2! (edit, then use 'hg resolve --mark')

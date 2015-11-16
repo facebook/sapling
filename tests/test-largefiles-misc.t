@@ -513,10 +513,10 @@ Test actions on largefiles using relative paths from subdir
 Test orig files go where we want them
   $ echo moremore >> anotherlarge
   $ hg revert anotherlarge -v --config 'ui.origbackuppath=.hg/origbackups'
-  creating directory: $TESTTMP/addrm2/.hg/origbackups/.hglf/sub
-  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge.orig
+  creating directory: $TESTTMP/addrm2/.hg/origbackups/.hglf/sub (glob)
+  saving current version of ../.hglf/sub/anotherlarge as $TESTTMP/addrm2/.hg/origbackups/.hglf/sub/anotherlarge.orig (glob)
   reverting ../.hglf/sub/anotherlarge (glob)
-  creating directory: $TESTTMP/addrm2/.hg/origbackups/sub
+  creating directory: $TESTTMP/addrm2/.hg/origbackups/sub (glob)
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   found 90c622cf65cebe75c5842f9136c459333faf392e in store
   $ ls ../.hg/origbackups/sub
