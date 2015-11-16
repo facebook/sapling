@@ -747,6 +747,13 @@ class basefilectx(object):
     def islink(self):
         return 'l' in self.flags()
 
+    def isabsent(self):
+        """whether this filectx represents a file not in self._changectx
+
+        This is mainly for merge code to detect change/delete conflicts. This is
+        expected to be True for all subclasses of basectx."""
+        return False
+
     _customcmp = False
     def cmp(self, fctx):
         """compare with other file context
