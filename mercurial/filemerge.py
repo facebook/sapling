@@ -13,7 +13,7 @@ import re
 import tempfile
 
 from .i18n import _
-from .node import short
+from .node import nullid, short
 
 from . import (
     cmdutil,
@@ -43,6 +43,50 @@ internalsdoc = {}
 nomerge = None
 mergeonly = 'mergeonly'  # just the full merge, no premerge
 fullmerge = 'fullmerge'  # both premerge and merge
+
+class absentfilectx(object):
+    """Represents a file that's ostensibly in a context but is actually not
+    present in it.
+
+    This is here because it's very specific to the filemerge code for now --
+    other code is likely going to break with the values this returns."""
+    def __init__(self, ctx, f):
+        self._ctx = ctx
+        self._f = f
+
+    def path(self):
+        return self._f
+
+    def size(self):
+        return None
+
+    def data(self):
+        return None
+
+    def filenode(self):
+        return nullid
+
+    _customcmp = True
+    def cmp(self, fctx):
+        """compare with other file context
+
+        returns True if different from fctx.
+        """
+        return not (fctx.isabsent() and
+                    fctx.ctx() == self.ctx() and
+                    fctx.path() == self.path())
+
+    def flags(self):
+        return ''
+
+    def changectx(self):
+        return self._ctx
+
+    def isbinary(self):
+        return False
+
+    def isabsent(self):
+        return True
 
 def internaltool(name, mergetype, onfailure=None, precheck=None):
     '''return a decorator for populating internal merge tool table'''
