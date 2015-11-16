@@ -5711,6 +5711,7 @@ def resolve(ui, repo, *pats, **opts):
                     raise
 
         ms.commit()
+        ms.recordactions()
 
         if not didwork and pats:
             ui.warn(_("arguments do not match paths that need resolving\n"))
