@@ -1735,7 +1735,10 @@ Importing some extra header
   > mercurial.cmdutil.extrapostimport.append('foo')
   > mercurial.cmdutil.extrapostimportmap['foo'] = postimport
   > EOF
-  $ printf "[extensions]\nparseextra=$TESTTMP/parseextra.py" >> $HGRCPATH
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > parseextra=$TESTTMP/parseextra.py
+  > EOF
   $ hg up -C tip
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > $TESTTMP/foo.patch <<EOF
