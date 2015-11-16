@@ -223,7 +223,7 @@ external process
   M file2
   ====
 
-  $ HGEDITOR='sh "$TESTTMP/checkvisibility.sh"' hg qrefresh -e
+  $ HGEDITOR="sh \"$TESTTMP/checkvisibility.sh\"" hg qrefresh -e
   ====
   0:25e397dabed2
   A file2
