@@ -519,11 +519,11 @@ remote hook failure is attributed to remote
 
   $ echo "pretxnchangegroup.fail = python:$TESTTMP/failhook:hook" >> remote/.hg/hgrc
 
-  $ hg -q --config ui.ssh="python '$TESTDIR/dummyssh'" clone ssh://user@dummy/remote hookout
+  $ hg -q --config ui.ssh="python $TESTDIR/dummyssh" clone ssh://user@dummy/remote hookout
   $ cd hookout
   $ touch hookfailure
   $ hg -q commit -A -m 'remote hook failure'
-  $ hg --config ui.ssh="python '$TESTDIR/dummyssh'" push
+  $ hg --config ui.ssh="python $TESTDIR/dummyssh" push
   pushing to ssh://user@dummy/remote
   searching for changes
   remote: adding changesets
