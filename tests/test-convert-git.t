@@ -533,8 +533,7 @@ test missing .gitmodules
   $ git commit -q -m "remove .gitmodules" .gitmodules
   $ git commit -q -m "missing .gitmodules"
   $ cd ..
-  $ hg convert git-repo6 hg-repo6 --traceback
-  fatal: Path '.gitmodules' does not exist in '*' (glob)
+  $ hg convert git-repo6 hg-repo6 --traceback 2>&1 | grep -v "fatal: Path '.gitmodules' does not exist"
   initializing destination hg-repo6 repository
   scanning source...
   sorting...
