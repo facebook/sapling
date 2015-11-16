@@ -600,7 +600,11 @@ running is placed.
   > - \$TESTDIR, in which test-runtestdir.t is placed (expanded at runtime)
   > - \$RUNTESTDIR, in which run-tests.py is placed (expanded at runtime)
   > 
+  > #if windows
+  >   $ test "\$TESTDIR" = "$TESTTMP\anothertests"
+  > #else
   >   $ test "\$TESTDIR" = "$TESTTMP"/anothertests
+  > #endif
   >   $ test "\$RUNTESTDIR" = "$TESTDIR"
   >   $ head -n 3 "\$RUNTESTDIR"/../contrib/check-code.py
   >   #!/usr/bin/env python
