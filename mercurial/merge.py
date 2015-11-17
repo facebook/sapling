@@ -286,19 +286,23 @@ class mergestate(object):
     def commit(self):
         """Write current state on disk (if necessary)"""
         if self._dirty:
-            records = []
-            records.append(('L', hex(self._local)))
-            records.append(('O', hex(self._other)))
-            if self.mergedriver:
-                records.append(('m', '\0'.join([
-                    self.mergedriver, self._mdstate])))
-            for d, v in self._state.iteritems():
-                if v[0] == 'd':
-                    records.append(('D', '\0'.join([d] + v)))
-                else:
-                    records.append(('F', '\0'.join([d] + v)))
+            records = self._makerecords()
             self._writerecords(records)
             self._dirty = False
+
+    def _makerecords(self):
+        records = []
+        records.append(('L', hex(self._local)))
+        records.append(('O', hex(self._other)))
+        if self.mergedriver:
+            records.append(('m', '\0'.join([
+                self.mergedriver, self._mdstate])))
+        for d, v in self._state.iteritems():
+            if v[0] == 'd':
+                records.append(('D', '\0'.join([d] + v)))
+            else:
+                records.append(('F', '\0'.join([d] + v)))
+        return records
 
     def _writerecords(self, records):
         """Write current state on disk (both v1 and v2)"""
