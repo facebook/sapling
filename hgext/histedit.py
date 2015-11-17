@@ -646,6 +646,23 @@ class fold(histeditaction):
             replacements.append((ich, (n,)))
         return repo[n], replacements
 
+class base(histeditaction):
+    def constraints(self):
+        return set(['forceother'])
+
+    def run(self):
+        if self.repo['.'].node() != self.node:
+            mergemod.update(self.repo, self.node, False, True, False)
+            #                                     branchmerge, force, partial)
+        return self.continueclean()
+
+    def continuedirty(self):
+        abortdirty()
+
+    def continueclean(self):
+        basectx = self.repo['.']
+        return basectx, []
+
 class _multifold(fold):
     """fold subclass used for when multiple folds happen in a row
 
@@ -1291,3 +1308,5 @@ def extsetup(ui):
     cmdutil.unfinishedstates.append(
         ['histedit-state', False, True, _('histedit in progress'),
          _("use 'hg histedit --continue' or 'hg histedit --abort'")])
+    if ui.configbool("experimental", "histeditng"):
+        actiontable.update({'b': base, 'base': base})
