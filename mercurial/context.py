@@ -336,17 +336,19 @@ class basectx(object):
 
         if listsubrepos:
             for subpath, sub in scmutil.itersubrepos(ctx1, ctx2):
-                rev2 = ctx2.subrev(subpath)
                 try:
-                    submatch = matchmod.narrowmatcher(subpath, match)
-                    s = sub.status(rev2, match=submatch, ignored=listignored,
-                                   clean=listclean, unknown=listunknown,
-                                   listsubrepos=True)
-                    for rfiles, sfiles in zip(r, s):
-                        rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
-                except error.LookupError:
-                    self._repo.ui.status(_("skipping missing "
-                                           "subrepository: %s\n") % subpath)
+                    rev2 = ctx2.subrev(subpath)
+                except KeyError:
+                    # A subrepo that existed in node1 was deleted between
+                    # node1 and node2 (inclusive). Thus, ctx2's substate
+                    # won't contain that subpath. The best we can do ignore it.
+                    rev2 = None
+                submatch = matchmod.narrowmatcher(subpath, match)
+                s = sub.status(rev2, match=submatch, ignored=listignored,
+                               clean=listclean, unknown=listunknown,
+                               listsubrepos=True)
+                for rfiles, sfiles in zip(r, s):
+                    rfiles.extend("%s/%s" % (subpath, f) for f in sfiles)
 
         for l in r:
             l.sort()

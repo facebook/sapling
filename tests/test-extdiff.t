@@ -126,6 +126,25 @@ Check diff are made from the first parent:
   diff-like tools yield a non-zero exit code
 #endif
 
+issue3153: ensure using extdiff with removed subrepos doesn't crash:
+
+  $ hg init suba
+  $ cd suba
+  $ echo suba > suba
+  $ hg add
+  adding suba
+  $ hg ci -m "adding suba file"
+  $ cd ..
+  $ echo suba=suba > .hgsub
+  $ hg add
+  adding .hgsub
+  $ hg ci -Sm "adding subrepo"
+  $ echo > .hgsub
+  $ hg ci -m "removing subrepo"
+  $ hg falabala -r 4 -r 5 -S
+  diffing a.398e36faf9c6 a.5ab95fb166c4
+  [1]
+
 issue4463: usage of command line configuration without additional quoting
 
   $ cat <<EOF >> $HGRCPATH
