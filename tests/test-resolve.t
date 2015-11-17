@@ -66,7 +66,7 @@ don't allow marking or unmarking driver-resolved files
   > def markdriver(ui, repo, *pats, **opts):
   >     wlock = repo.wlock()
   >     try:
-  >         ms = merge.mergestate(repo)
+  >         ms = merge.mergestate.read(repo)
   >         m = scmutil.match(repo[None], pats, opts)
   >         for f in ms:
   >             if not m(f):
