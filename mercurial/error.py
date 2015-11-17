@@ -112,6 +112,16 @@ class CapabilityError(RepoError):
 class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
 
+class UnsupportedMergeRecords(Abort):
+    def __init__(self, recordtypes):
+        from .i18n import _
+        self.recordtypes = sorted(recordtypes)
+        s = ' '.join(self.recordtypes)
+        Abort.__init__(
+            self, _('unsupported merge state records: %s') % s,
+            hint=_('see https://mercurial-scm.org/wiki/MergeStateRecords for '
+                   'more information'))
+
 class LockError(IOError):
     def __init__(self, errno, strerror, filename, desc):
         IOError.__init__(self, errno, strerror, filename)
