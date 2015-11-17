@@ -30,10 +30,19 @@ def defineactions():
     class stop(histedit.histeditaction):
         def run(self):
             parentctx, replacements = super(stop, self).run()
+            self.state.read()
+            self.state.replacements.extend(replacements)
+            self.state.write()
             raise error.InterventionRequired(
                 _('Changes commited as %s. You may amend the commit now.\n'
                   'When you are finished, run hg histedit --continue to resume') %
                 parentctx)
+
+        def continueclean(self):
+            self.state.replacements = [(n, r) for (n, r) \
+                                       in self.state.replacements \
+                                       if n!=self.node]
+            return super(stop, self).continueclean()
 
     class execute(histedit.histeditaction):
         def __init__(self, state, command):

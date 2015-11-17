@@ -196,3 +196,26 @@ fold a commit to check if other non-pick actions are handled correctly
   |
   o  cb9a9f314b8b a a
   
+  $ hg histedit 08cf87522012 --commands - 2>&1 << EOF| fixbundle
+  > stop 08cf87522012
+  > pick 3c9ba74168ea
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  Changes commited as 7228fc97bd5e. You may amend the commit now.
+  When you are finished, run hg histedit --continue to resume
+
+  $ hg histedit --abort
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/r/.hg/strip-backup/7228fc97bd5e-1de48a61-backup.hg (glob)
+  $ hg log --graph --template '{node|short} {desc} {files}\n'
+  @  3c9ba74168ea f f
+  |
+  o  08cf87522012 e added e
+  |
+  o  66584b8c84e1 c
+  |  ***
+  |  d c d
+  o  d2ae7f538514 b b
+  |
+  o  cb9a9f314b8b a a
+  
