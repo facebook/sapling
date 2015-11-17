@@ -410,12 +410,12 @@ class mercurial_sink(converter_sink):
     def putbookmarks(self, updatedbookmark):
         if not len(updatedbookmark):
             return
-
-        self.ui.status(_("updating bookmarks\n"))
-        destmarks = self.repo._bookmarks
-        for bookmark in updatedbookmark:
-            destmarks[bookmark] = bin(updatedbookmark[bookmark])
-        destmarks.write()
+        if True:
+            self.ui.status(_("updating bookmarks\n"))
+            destmarks = self.repo._bookmarks
+            for bookmark in updatedbookmark:
+                destmarks[bookmark] = bin(updatedbookmark[bookmark])
+            destmarks.write()
 
     def hascommitfrommap(self, rev):
         # the exact semantics of clonebranches is unclear so we can't say no
