@@ -110,6 +110,7 @@ class mergestate(object):
             del self.otherctx
         self._readmergedriver = None
         self._mdstate = 's'
+        unsupported = set()
         records = self._readrecords()
         for rtype, record in records:
             if rtype == 'L':
@@ -129,9 +130,11 @@ class mergestate(object):
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
-                raise error.Abort(_('unsupported merge state record: %s')
-                                   % rtype)
+                unsupported.add(rtype)
         self._dirty = False
+
+        if unsupported:
+            raise error.UnsupportedMergeRecords(unsupported)
 
     def _readrecords(self):
         """Read merge state from disk and return a list of record (TYPE, data)
