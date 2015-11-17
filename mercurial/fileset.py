@@ -249,7 +249,7 @@ def resolved(mctx, x):
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
-    ms = merge.mergestate(mctx.ctx.repo())
+    ms = merge.mergestate.read(mctx.ctx.repo())
     return [f for f in mctx.subset if f in ms and ms[f] == 'r']
 
 def unresolved(mctx, x):
@@ -260,7 +260,7 @@ def unresolved(mctx, x):
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:
         return []
-    ms = merge.mergestate(mctx.ctx.repo())
+    ms = merge.mergestate.read(mctx.ctx.repo())
     return [f for f in mctx.subset if f in ms and ms[f] == 'u']
 
 def hgignore(mctx, x):
