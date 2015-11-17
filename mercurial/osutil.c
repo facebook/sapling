@@ -615,7 +615,7 @@ static PyObject *statfiles(PyObject *self, PyObject *args)
 
 		pypath = PySequence_GetItem(names, i);
 		if (!pypath)
-			return NULL;
+			goto bail;
 		path = PyString_AsString(pypath);
 		if (path == NULL) {
 			Py_DECREF(pypath);
