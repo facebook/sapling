@@ -79,7 +79,7 @@
   $ cd ../master
   $ echo '[hooks]' >> $HGRCPATH
   $ echo 'presyncdb=$TESTTMP/hook.sh' >> $HGRCPATH
-  $ echo 'sleep 1' > $TESTTMP/hook.sh
+  $ echo 'sleep 2' > $TESTTMP/hook.sh
   $ chmod a+x $TESTTMP/hook.sh
   $ cd ../client
   $ echo a > a
@@ -87,6 +87,7 @@
   $ hg push -q ssh://user@dummy/master2
   $ cd ../master
   $ hg log -l 1 --template '{rev} {desc}\n' &
+  $ sleep 1
   $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
   waiting for lock on working directory of $TESTTMP/master held by * (glob)
   3 a
