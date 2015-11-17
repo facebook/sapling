@@ -5,9 +5,9 @@ DBNAME=`echo $DBHOSTPORT | cut -d : -f 3`
 DBUSER=`echo $DBHOSTPORT | cut -d : -f 4`
 DBPASS=`echo $DBHOSTPORT | cut -d : -f 5-`
 
-mysql -h $DBHOST -P $DBPORT -u $DBUSER -p$DBPASS -e "
+mysql -h $DBHOST -P $DBPORT -u $DBUSER -p"$DBPASS" -e "
 CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p$DBPASS -e '
+mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER -p"$DBPASS" -e '
 DROP TABLE IF EXISTS revisions;
 
 CREATE TABLE IF NOT EXISTS revisions(
