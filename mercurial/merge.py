@@ -87,12 +87,15 @@ class mergestate(object):
     def read(repo):
         """Initialize the merge state, reading it from disk."""
         ms = mergestate(repo)
+        ms._read()
         return ms
 
     def __init__(self, repo):
+        """Initialize the merge state.
+
+        Do not use this directly! Instead call read() or clean()."""
         self._repo = repo
         self._dirty = False
-        self._read()
 
     def reset(self, node=None, other=None):
         self._state = {}
