@@ -6208,8 +6208,15 @@ def summary(ui, repo, **opts):
         if d in status.added:
             status.added.remove(d)
 
-    ms = mergemod.mergestate(repo)
-    unresolved = [f for f in ms if ms[f] == 'u']
+    try:
+        ms = mergemod.mergestate.read(repo)
+    except error.UnsupportedMergeRecords as e:
+        s = ' '.join(e.recordtypes)
+        ui.warn(
+            _('warning: merge state has unsupported record types: %s\n') % s)
+        unresolved = 0
+    else:
+        unresolved = [f for f in ms if ms[f] == 'u']
 
     subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
 
