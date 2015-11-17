@@ -83,6 +83,12 @@ class mergestate(object):
         ms.reset(node, other)
         return ms
 
+    @staticmethod
+    def read(repo):
+        """Initialize the merge state, reading it from disk."""
+        ms = mergestate(repo)
+        return ms
+
     def __init__(self, repo):
         self._repo = repo
         self._dirty = False
