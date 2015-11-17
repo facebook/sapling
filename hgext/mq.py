@@ -1790,27 +1790,28 @@ class queue(object):
 
                 # Ensure we create a new changeset in the same phase than
                 # the old one.
-                n = newcommit(repo, oldphase, message, user, ph.date,
+                if True:
+                    n = newcommit(repo, oldphase, message, user, ph.date,
                               match=match, force=True, editor=editor)
-                # only write patch after a successful commit
-                c = [list(x) for x in refreshchanges]
-                if inclsubs:
-                    self.putsubstate2changes(substatestate, c)
-                chunks = patchmod.diff(repo, patchparent,
-                                       changes=c, opts=diffopts)
-                comments = str(ph)
-                if comments:
-                    patchf.write(comments)
-                for chunk in chunks:
-                    patchf.write(chunk)
-                patchf.close()
+                    # only write patch after a successful commit
+                    c = [list(x) for x in refreshchanges]
+                    if inclsubs:
+                        self.putsubstate2changes(substatestate, c)
+                    chunks = patchmod.diff(repo, patchparent,
+                                           changes=c, opts=diffopts)
+                    comments = str(ph)
+                    if comments:
+                        patchf.write(comments)
+                    for chunk in chunks:
+                        patchf.write(chunk)
+                    patchf.close()
 
-                marks = repo._bookmarks
-                for bm in bmlist:
-                    marks[bm] = n
-                marks.write()
+                    marks = repo._bookmarks
+                    for bm in bmlist:
+                        marks[bm] = n
+                    marks.write()
 
-                self.applied.append(statusentry(n, patchfn))
+                    self.applied.append(statusentry(n, patchfn))
             except: # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
