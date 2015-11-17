@@ -66,6 +66,9 @@ class CorruptionException(Exception):
 def issqlrepo(repo):
     return repo.ui.configbool('hgsql', 'enabled')
 
+def cansyncwithsql(repo):
+    return issqlrepo(repo) and not isinstance(repo, bundlerepo.bundlerepository)
+
 def uisetup(ui):
     # Enable SQL for local commands that write to the repository.
     wrapcommand(commands.table, 'pull', pull)
@@ -130,7 +133,7 @@ def reposetup(ui, repo):
     if issqlrepo(repo):
         wraprepo(repo)
 
-        if initialsync != INITIAL_SYNC_DISABLE:
+        if initialsync != INITIAL_SYNC_DISABLE and cansyncwithsql(repo):
             # Use a noop to force a sync
             def noop():
                 pass
