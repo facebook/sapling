@@ -68,6 +68,7 @@ from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
 from mercurial import extensions, error, phases
 from mercurial import patch as patchmod
+from mercurial import lock as lockmod
 from mercurial import localrepo
 from mercurial import subrepo
 import os, re, errno, shutil
@@ -1790,7 +1791,10 @@ class queue(object):
 
                 # Ensure we create a new changeset in the same phase than
                 # the old one.
-                if True:
+                lock = tr = None
+                try:
+                    lock = repo.lock()
+                    tr = repo.transaction('mq')
                     n = newcommit(repo, oldphase, message, user, ph.date,
                               match=match, force=True, editor=editor)
                     # only write patch after a successful commit
@@ -1809,9 +1813,12 @@ class queue(object):
                     marks = repo._bookmarks
                     for bm in bmlist:
                         marks[bm] = n
-                    marks.write()
+                    marks.recordchange(tr)
+                    tr.close()
 
                     self.applied.append(statusentry(n, patchfn))
+                finally:
+                    lockmod.release(lock, tr)
             except: # re-raises
                 ctx = repo[cparents[0]]
                 repo.dirstate.rebuild(ctx.node(), ctx.manifest())
