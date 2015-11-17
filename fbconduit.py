@@ -4,7 +4,7 @@
 #
 # Copyright 2015 Facebook, Inc.
 
-from mercurial import templater, extensions, revset, templatekw, node
+from mercurial import util, templater, extensions, revset, templatekw, node
 from mercurial.i18n import _
 
 import re
@@ -24,7 +24,8 @@ class ConduitError(Exception):
 class HttpError(Exception):
     pass
 
-githashre = re.compile('g([0-9a-fA-F]{40,40})')
+githashre = re.compile('g([0-9a-fA-F]{12,40})')
+phabhashre = re.compile('^r([A-Z]+)([0-9a-f]{12,40})$')
 fbsvnhash = re.compile('^r[A-Z]+(\d+)$')
 
 def extsetup(ui):
@@ -199,6 +200,19 @@ def gitnode(repo, subset, x):
     return subset.filter(lambda r: r == rn)
 
 def overridestringset(orig, repo, subset, x):
+    # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
+    phabmatch = phabhashre.match(x)
+    if phabmatch:
+        phabrepo = phabmatch.group(1)
+        phabhash = phabmatch.group(2)
+        # The hash may be a git hash
+        if phabrepo in repo.ui.configlist('fbconduit', 'gitcallsigns', []):
+            return overridestringset(orig, repo, subset, 'g%s' % phabhash)
+
+        if phabhash in repo:
+            return orig(repo, subset, phabhash)
+
+    # Is the given revset a phabricator svn revision (rO11223232323232)?
     svnrev = fbsvnhash.match(x)
     if svnrev and not x in repo:
         try:
@@ -218,5 +232,9 @@ def overridestringset(orig, repo, subset, x):
 
     m = githashre.match(x)
     if m is not None:
-        return gitnode(repo, subset, ('string', m.group(1)))
+        githash = m.group(1)
+        if len(githash) == 40:
+            return gitnode(repo, subset, ('string', githash))
+        else:
+            raise util.Abort('git hash must be 40 characters')
     return orig(repo, subset, x)
