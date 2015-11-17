@@ -249,7 +249,14 @@ def update(repo, parents, node):
         update = True
 
     if update:
-        marks.write()
+        lock = tr = None
+        try:
+            lock = repo.lock()
+            tr = repo.transaction('bookmark')
+            marks.recordchange(tr)
+            tr.close()
+        finally:
+            lockmod.release(tr, lock)
     return update
 
 def listbookmarks(repo):
