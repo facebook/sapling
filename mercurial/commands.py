@@ -2556,6 +2556,9 @@ def debugmergestate(ui, repo, *args):
                 ui.write(('unrecognized entry: %s\t%s\n')
                          % (rtype, record.replace('\0', '\t')))
 
+    # Avoid mergestate.read() since it may raise an exception for unsupported
+    # merge state records. We shouldn't be doing this, but this is OK since this
+    # command is pretty low-level.
     ms = mergemod.mergestate(repo)
 
     # sort so that reasonable information is on top
