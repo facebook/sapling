@@ -58,6 +58,9 @@ initialsync = INITIAL_SYNC_NORMAL
 class CorruptionException(Exception):
     pass
 
+def issqlrepo(repo):
+    return repo.ui.configbool('hgsql', 'enabled')
+
 def uisetup(ui):
     # Enable SQL for local commands that write to the repository.
     wrapcommand(commands.table, 'pull', pull)
@@ -119,7 +122,7 @@ def extsetup(ui):
         initialsync = INITIAL_SYNC_FORCE
 
 def reposetup(ui, repo):
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         wraprepo(repo)
 
         if initialsync != INITIAL_SYNC_DISABLE:
@@ -131,7 +134,7 @@ def reposetup(ui, repo):
 
 # Incoming commits are only allowed via push and pull
 def unbundle(orig, repo, cg, *args, **kwargs):
-    if not repo.ui.configbool("hgsql", "enabled"):
+    if not issqlrepo(repo):
         return orig(repo, cg, *args, **kwargs)
 
     isbundle2 = util.safehasattr(cg, 'params')
@@ -182,14 +185,14 @@ def unbundle(orig, repo, cg, *args, **kwargs):
 
 def pull(orig, *args, **kwargs):
     repo = args[1]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def push(orig, *args, **kwargs):
     repo = args[0]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         # A push locks the local repo in order to update phase data, so we need
         # to take the lock for the local repo during a push.
         return executewithsql(repo, orig, True, *args, **kwargs)
@@ -198,35 +201,35 @@ def push(orig, *args, **kwargs):
 
 def commit(orig, *args, **kwargs):
     repo = args[1]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def updatefromremote(orig, *args, **kwargs):
     repo = args[1]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def addchangegroup(orig, *args, **kwargs):
     repo = args[0]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def changegroupapply(orig, *args, **kwargs):
     repo = args[1]
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 
 def _localphasemove(orig, pushop, *args, **kwargs):
     repo = pushop.repo
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         return executewithsql(repo, orig, True, pushop, *args, **kwargs)
     else:
         return orig(pushop, *args, **kwargs)
@@ -1216,7 +1219,7 @@ def addgroup(orig, self, bundle, linkmapper, transaction, addrevisioncb=None):
     return content
 
 def bookmarkcommand(orig, ui, repo, *names, **opts):
-    if not repo.ui.configbool("hgsql", "enabled"):
+    if not issqlrepo(repo):
         return orig(ui, repo, *names, **opts)
 
     write = (opts.get('delete') or opts.get('rename')
@@ -1232,7 +1235,7 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
 
 def bookmarkwrite(orig, self):
     repo = self._repo
-    if not repo.ui.configbool("hgsql", "enabled") or repo.disablesync:
+    if not issqlrepo(repo) or repo.disablesync:
         return orig(self)
 
     if not repo.sqlconn:
@@ -1256,7 +1259,7 @@ def bookmarkwrite(orig, self):
         raise
 
 def pushkey(orig, repo, proto, namespace, key, old, new):
-    if repo.ui.configbool("hgsql", "enabled"):
+    if issqlrepo(repo):
         def commitpushkey():
             return orig(repo, proto, namespace, key, old, new)
 
