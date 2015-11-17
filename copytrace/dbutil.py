@@ -90,45 +90,6 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     _close(conn)
 
 
-def retrievedata(repo, ctx, move=False, remote=False, askserver=True):
-    """
-    returns the {dst:src} dictonary for moves if move = True or of copies if
-    move = False for ctx
-    """
-    dbname, conn, c = _connect(repo, remote)
-
-    # '0'is used as temp data storage
-    if ctx == '0':
-        ctxhash = '0'
-    else:
-        ctxhash = str(ctx.hex())
-    mv = '1' if move else '0'
-
-    try:
-        c.execute('SELECT DISTINCT source, destination FROM Moves ' +
-                'WHERE hash = ? AND mv = ?', [ctxhash, mv])
-    except:
-        raise util.Abort('could not access data from the %s database' % dbname)
-
-    all_rows = c.fetchall()
-    _close(conn)
-    ret = {}
-
-    # The local database doesn't have the data for this ctx and hasn't tried
-    # to retrieve it yet (askserver)
-    if askserver and not remote and not all_rows:
-        _requestdata(repo, [ctx])
-        return retrievedata(repo, ctx, move=move, remote=remote,
-                            askserver=False)
-
-    for src, dst in all_rows:
-        # this ctx is registered but has no move data
-        if not dst:
-            break
-        ret[dst.encode('utf8')] = src.encode('utf8')
-    return ret
-
-
 def insertrawdata(repo, dic, remote=False):
     """
     inserts dict = {ctxhash: [src, dst, mv]} for moves and copies into the
@@ -150,9 +111,51 @@ def insertrawdata(repo, dic, remote=False):
     _close(conn)
 
 
-def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
+def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
+    """
+    # Do we want moves or copies
+    mv = '1' if move else '0'
+
+    dbname, conn, c = _connect(repo, remote)
+    try:
+        c.execute('SELECT DISTINCT hash, source, destination FROM Moves' +
+                  ' WHERE hash IN (%s) AND mv = ?'
+                  % (','.join('?' * len(ctxlist))), ctxlist + [mv])
+    except:
+        raise util.Abort('could not access data from the %s database' % dbname)
+
+    all_rows = c.fetchall()
+    _close(conn)
+
+    ret = {}
+    # Building the mvdict and cpdict for each ctxhash:
+    for ctxhash, src, dst in all_rows:
+        # No move or No copy
+        if not dst:
+            ret.setdefault(ctxhash.encode('utf8'), {})
+        else:
+            ret.setdefault(ctxhash.encode('utf8'), {})[dst.encode('utf8')] = \
+                 src.encode('utf8')
+
+    processed = ret.keys()
+    missing = [f for f in ctxlist if f not in processed]
+
+    # The local database doesn't have the data for this ctx and hasn't tried
+    # to retrieve it yet (firstcheck)
+    if askserver and not remote and missing:
+        _requestdata(repo, missing)
+        add = retrievedatapkg(repo, missing, move=move, remote=remote,
+                              askserver=False)
+        ret.update(add)
+
+    return ret
+
+
+def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
+    """
+    retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or copies
     """
     dbname, conn, c = _connect(repo, remote)
     try:

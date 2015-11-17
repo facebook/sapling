@@ -84,7 +84,7 @@ def concludenode(orig, repo, rev, p1, p2, **kwargs):
     """
     # this allows to trace rename information from the rebase which mercurial
     # doesn't do today
-    cp = dbutil.retrievedata(repo, '0', move=False)
+    cp = dbutil.retrievedatapkg(repo, ['0'], move=False, askserver=False)['0']
     _markchanges(repo, cp)
     ret = orig(repo, rev, p1, p2, **kwargs)
 

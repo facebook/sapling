@@ -50,9 +50,13 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
 
     paths = {}
 
+    # Retrieve the move data for all the ctx
+    ctxhash = [ctx.hex() for ctx in ctxstack]
+    datapkg = dbutil.retrievedatapkg(repo, ctxhash, move=True)
+
     while ctxstack:
         ctx = ctxstack.pop()
-        data = dbutil.retrievedata(repo, ctx, move=True)
+        data = datapkg[ctx.hex()]
         pk = paths.keys()
         delsrc = []
         for dst, src in data.iteritems():
@@ -241,16 +245,13 @@ def _dirstaterenames(ctx):
     return copies
 
 
-def _processrenames(repo, ctx, renamed, move=False):
+def _processrenames(repo, ctx, datapkg, renamed, move=False):
     """
     Adds the renames {dst: src} to the 'renamed' dictionary if the source is
      in files
     """
-    data = dbutil.retrievedata(repo, ctx, move=True)
+    data = datapkg[ctx.hex()]
     movedsrc = []
-    # moves and copies
-    if not move:
-        data.update(dbutil.retrievedata(repo, ctx, move=False))
 
     for dst, src in data.iteritems():
         # checks if the source file is to be considered
@@ -284,13 +285,23 @@ def _forwardrenameswithdb(a, b, match=None, move=False):
         if a == b:
         # short-circuit to avoid issues with merge states
             return dirstatefunc(w)
+    repo = b._repo
+    ctxstack = _createctxstack(repo, b, a)
+    ctxhash = [ctx.hex() for ctx in ctxstack]
 
-    ctxstack = _createctxstack(b._repo, b, a)
+    # Retrieve the move data for all the ctx
+    # move-only data
+    datapkg = dbutil.retrievedatapkg(repo, ctxhash, move=True)
+    # adding the copies
+    if not move:
+        cppkg = dbutil.retrievedatapkg(repo, ctxhash, move=False)
+        for ctx, dic in cppkg.iteritems():
+            datapkg.setdefault(ctx, {}).update(dic)
     renamed = {}
 
     while ctxstack:
         ctx = ctxstack.pop()
-        _processrenames(b._repo, ctx, renamed, move)
+        _processrenames(repo, ctx, datapkg, renamed, move)
 
     # combine renames from dirstate if necessary
     if w is not None:
