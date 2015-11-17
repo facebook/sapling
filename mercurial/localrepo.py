@@ -1556,7 +1556,7 @@ class localrepository(object):
                 raise error.Abort(_("cannot commit merge with missing files"))
 
             unresolved, driverresolved = False, False
-            ms = mergemod.mergestate(self)
+            ms = mergemod.mergestate.read(self)
             for f in status.modified:
                 if f in ms:
                     if ms[f] == 'u':
