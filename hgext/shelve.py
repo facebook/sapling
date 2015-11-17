@@ -531,7 +531,7 @@ def unshelvecontinue(ui, repo, state, opts):
     lock = None
     try:
         checkparents(repo, state)
-        ms = merge.mergestate(repo)
+        ms = merge.mergestate.read(repo)
         if [f for f in ms if ms[f] == 'u']:
             raise error.Abort(
                 _("unresolved conflicts, can't continue"),
