@@ -14,6 +14,17 @@ import os
 import json
 import logging
 
+def memoize(f):
+    def helper(*args):
+        repo = args[0]
+        if not hgutil.safehasattr(repo, '_phabstatuscache'):
+            repo._phabstatuscache = {}
+        if args not in repo._phabstatuscache:
+            repo._phabstatuscache[args] = f(*args)
+        return repo._phabstatuscache[args]
+    return helper
+
+@memoize
 def getdiffstatus(repo, diffid):
     """Perform a Conduit API call by shelling out to `arc`
 
