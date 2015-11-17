@@ -5589,7 +5589,7 @@ def resolve(ui, repo, *pats, **opts):
 
     if show:
         fm = ui.formatter('resolve', opts)
-        ms = mergemod.mergestate(repo)
+        ms = mergemod.mergestate.read(repo)
         m = scmutil.match(repo[None], pats, opts)
         for f in ms:
             if not m(f):
@@ -5604,7 +5604,7 @@ def resolve(ui, repo, *pats, **opts):
 
     wlock = repo.wlock()
     try:
-        ms = mergemod.mergestate(repo)
+        ms = mergemod.mergestate.read(repo)
 
         if not (ms.active() or repo.dirstate.p2() != nullid):
             raise error.Abort(
