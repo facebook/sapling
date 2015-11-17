@@ -23,6 +23,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, nullid
 from mercurial import hg, util, context, bookmarks, error, scmutil, exchange
 from mercurial import phases
+from mercurial import lock as lockmod
 from mercurial import merge as mergemod
 
 from common import NoRepo, commit, converter_source, converter_sink, mapfile
@@ -410,12 +411,19 @@ class mercurial_sink(converter_sink):
     def putbookmarks(self, updatedbookmark):
         if not len(updatedbookmark):
             return
-        if True:
+        wlock = lock = tr = None
+        try:
+            wlock = self.repo.wlock()
+            lock = self.repo.lock()
+            tr = self.repo.transaction('bookmark')
             self.ui.status(_("updating bookmarks\n"))
             destmarks = self.repo._bookmarks
             for bookmark in updatedbookmark:
                 destmarks[bookmark] = bin(updatedbookmark[bookmark])
-            destmarks.write()
+            destmarks.recordchange(tr)
+            tr.close()
+        finally:
+            lockmod.release(lock, wlock, tr)
 
     def hascommitfrommap(self, rev):
         # the exact semantics of clonebranches is unclear so we can't say no
