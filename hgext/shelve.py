@@ -572,7 +572,7 @@ def unshelvecontinue(ui, repo, state, opts):
            _('abort an incomplete unshelve operation')),
           ('c', 'continue', None,
            _('continue an incomplete unshelve operation')),
-          ('', 'keep', None,
+          ('k', 'keep', None,
            _('keep shelve after unshelving')),
           ('', 'date', '',
            _('set date for temporary commits (DEPRECATED)'), _('DATE'))],

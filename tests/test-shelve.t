@@ -493,7 +493,7 @@ test keep and cleanup
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg shelve --list
   default         (*)    changes to 'create conflict' (glob)
-  $ hg unshelve --keep
+  $ hg unshelve -k
   unshelving change 'default'
   $ hg shelve --list
   default         (*)    changes to 'create conflict' (glob)
