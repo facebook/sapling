@@ -94,7 +94,7 @@ merge driver that always takes other versions
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
 mark a file driver-resolved, and leave others unresolved
@@ -120,7 +120,7 @@ mark a file driver-resolved, and leave others unresolved
   * preprocess called
   merging bar.txt
   warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
-  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 XXX 1 file merged!
@@ -217,7 +217,7 @@ implicitly makes them resolved
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "s")
@@ -257,7 +257,7 @@ XXX shouldn't output a warning
   * preprocess called
   warning: preprocess hook failed
   * conclude called
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugmergestate
   * version 2 records
