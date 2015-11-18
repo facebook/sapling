@@ -75,11 +75,11 @@ Test pushing a new bookmark
   $ hg -R client push --to newbook
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
-  abort: not creating new bookmark
-  (use --force to create a new bookmark)
+  abort: not creating new remote bookmark
+  (use --create to create a new bookmark)
   [255]
 
-  $ hg -R client push --to newbook -f
+  $ hg -R client push --to newbook --create
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark newbook
   searching for changes
   remote: pushing 1 commit:

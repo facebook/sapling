@@ -35,7 +35,7 @@ Old head (rev 1) should no longer be visible
 
   $ echo z >> x
   $ hg commit -qAm x3
-  $ hg push -f -q --to master
+  $ hg push --non-forward-move -q --to master
   $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
   @  2  default/master
   |
@@ -47,7 +47,7 @@ Test configuration of "interesting" bookmarks
   $ hg up -q .^
   $ echo x >> x
   $ hg commit -qAm x4
-  $ hg push -f -q --to project/bookmark --force
+  $ hg push -q --to project/bookmark --create
   $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
   o  2  default/master
   |
