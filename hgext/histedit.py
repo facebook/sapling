@@ -334,6 +334,24 @@ class histeditaction(object):
             raise error.Abort(_('unknown changeset %s listed') % rulehash[:12])
         return cls(state, node)
 
+    def constraints(self):
+        """Return a set of constrains that this action should be verified for
+
+           Available constraints:
+               noduplicates - aborts if there are multiple rules for one node
+               noother - abort if the node doesn't belong to edited stack
+        """
+
+        return set(['noduplicates', 'noother'])
+
+    def nodetoverify(self):
+        """Returns a node associated with the action that will be used for
+        verification purposes.
+
+        If the action doesn't correspond to node it should return None
+        """
+        return self.node
+
     def run(self):
         """Runs the action. The default behavior is simply apply the action's
         rulectx onto the current parentctx."""
@@ -810,7 +828,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             f.close()
         rules = [l for l in (r.strip() for r in rules.splitlines())
                  if l and not l.startswith('#')]
-        rules = verifyrules(rules, repo, [repo[c] for [_a, c] in state.rules])
+        rules = verifyrules(rules, state, [repo[c] for [_a, c] in state.rules])
         state.rules = rules
         state.write()
         return
@@ -891,7 +909,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             f.close()
         rules = [l for l in (r.strip() for r in rules.splitlines())
                  if l and not l.startswith('#')]
-        rules = verifyrules(rules, repo, ctxs)
+        rules = verifyrules(rules, state, ctxs)
 
         parentctxnode = repo[root].parents()[0].node()
 
@@ -1039,34 +1057,42 @@ def ruleeditor(repo, ui, rules, editcomment=""):
 
     return rules
 
-def verifyrules(rules, repo, ctxs):
+def verifyrules(rules, state, ctxs):
     """Verify that there exists exactly one edit rule per given changeset.
 
     Will abort if there are to many or too few rules, a malformed rule,
     or a rule on a changeset outside of the user-given range.
     """
+    known_constraints = ['noother', 'noduplicates']
     parsed = []
     expected = set(c.hex() for c in ctxs)
     seen = set()
     for r in rules:
         if ' ' not in r:
             raise error.Abort(_('malformed line "%s"') % r)
-        action, rest = r.split(' ', 1)
-        ha = rest.strip().split(' ', 1)[0]
-        try:
-            ha = repo[ha].hex()
-        except error.RepoError:
-            raise error.Abort(_('unknown changeset %s listed') % ha[:12])
-        if ha not in expected:
-            raise error.Abort(
-                _('may not use changesets other than the ones listed'))
-        if ha in seen:
-            raise error.Abort(_('duplicated command for changeset %s') %
-                    ha[:12])
-        seen.add(ha)
-        if action not in actiontable or action.startswith('_'):
-            raise error.Abort(_('unknown action "%s"') % action)
-        parsed.append([action, ha])
+        verb, rest = r.split(' ', 1)
+
+        if verb not in actiontable or verb.startswith('_'):
+            raise error.Abort(_('unknown action "%s"') % verb)
+        action = actiontable[verb].fromrule(state, rest)
+        constraints = action.constraints()
+        for constraint in constraints:
+            if constraint not in known_constraints:
+                error.Abort(_('unknown constraint "%s"') % constraint)
+
+        nodetoverify = action.nodetoverify()
+        if nodetoverify is not None:
+            ha = node.hex(nodetoverify)
+            if 'noother' in constraints and ha not in expected:
+                raise error.Abort(
+                    _('may not use "%s" with changesets '
+                      'other than the ones listed') % verb)
+            if 'noduplicates' in constraints and ha in seen:
+                raise error.Abort(_('duplicated command for changeset %s') %
+                        ha[:12])
+            seen.add(ha)
+            rest = ha
+        parsed.append([verb, rest])
     missing = sorted(expected - seen)  # sort to stabilize output
     if missing:
         raise error.Abort(_('missing rules for changeset %s') %

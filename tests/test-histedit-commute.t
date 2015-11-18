@@ -281,7 +281,7 @@ try with --rev
   > pick de71b079d9ce e
   > pick 38b92f448761 c
   > EOF
-  abort: may not use changesets other than the ones listed
+  abort: may not use "pick" with changesets other than the ones listed
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
   |  tag:         tip
