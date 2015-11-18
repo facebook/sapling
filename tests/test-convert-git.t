@@ -54,7 +54,7 @@ Remove the directory, then try to replace it with a file (issue754)
   $ hg convert --config extensions.progress= --config progress.assume-tty=1 \
   >   --config progress.delay=0 --config progress.changedelay=0 \
   >   --config progress.refresh=0 --config progress.width=60 \
-  > --datesort git-repo
+  >   --config progress.format='topic, bar, number' --datesort git-repo
   \r (no-eol) (esc)
   scanning [======>                                     ] 1/6\r (no-eol) (esc)
   scanning [=============>                              ] 2/6\r (no-eol) (esc)
@@ -173,7 +173,8 @@ full conversion
   $ hg convert --datesort git-repo2 fullrepo \
   > --config extensions.progress= --config progress.assume-tty=1 \
   > --config progress.delay=0 --config progress.changedelay=0 \
-  > --config progress.refresh=0 --config progress.width=60
+  > --config progress.refresh=0 --config progress.width=60 \
+  > --config progress.format='topic, bar, number'
   \r (no-eol) (esc)
   scanning [===>                                        ] 1/9\r (no-eol) (esc)
   scanning [========>                                   ] 2/9\r (no-eol) (esc)
