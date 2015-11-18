@@ -675,7 +675,7 @@ def unshelve(ui, repo, *shelved, **opts):
 
                 backup = repo.ui.backupconfig('phases', 'new-commit')
                 try:
-                    repo.ui. setconfig('phases', 'new-commit', phases.secret)
+                    repo.ui.setconfig('phases', 'new-commit', phases.secret)
                     return repo.commit(message, 'shelve@localhost',
                                        opts.get('date'), match)
                 finally:
