@@ -17,55 +17,99 @@ localdb = 'moves.db'
 remotedb = 'moves.db'  # Will be modified to the XDB database
 
 
+def _sqlcmds(name, remote):
+    """
+    returns a sql command for the given name and remote (MySQL or sqlite)
+    """
+
+    if name == 'tableexists':
+        return "SELECT name " + \
+               "FROM sqlite_master " + \
+               "WHERE type='table' AND name='Moves';"
+
+    elif name == 'createtable':
+        return 'CREATE TABLE Moves(' + \
+                    'repo CHAR(64) NOT NULL, ' + \
+                    'hash CHAR(40) NOT NULL, ' + \
+                    'source TEXT, ' + \
+                    'destination TEXT, ' + \
+                    'mv CHAR(1) NOT NULL ' + \
+                    ');'
+
+    elif name == 'insertctx':
+        return 'INSERT INTO Moves VALUES (?, ?, ?, ?, ?);'
+
+    elif name == 'retrievemoves':
+        return 'SELECT DISTINCT hash, source, destination ' + \
+               'FROM Moves ' + \
+               'WHERE hash IN (%s) AND mv = %s AND repo = %s;'
+
+    elif name == 'retrieveraw':
+        return 'SELECT DISTINCT hash, source, destination, mv ' + \
+               'FROM Moves ' + \
+               'WHERE hash IN (%s) and repo = %s;'
+
+    elif name == 'retrievehashes':
+        return 'SELECT DISTINCT hash ' + \
+               'FROM Moves ' + \
+               'WHERE hash IN (%s);'
+
+    elif name == 'deletectx':
+        return 'DELETE FROM Moves ' + \
+               'WHERE hash = ? AND repo = ?;'
+
+
 def _connect(repo, remote):
     if remote:
         dbname = remotedb
     else:
         dbname = localdb
 
-    _exists(repo, dbname)
     try:
         conn = sqlite3.connect(repo.vfs.join(dbname))
-        c = conn.cursor()
+        cursor = conn.cursor()
     except:
-        raise util.Abort('could not open the %s local database' % dbname)
-    return dbname, conn, c
+        raise util.Abort('could not reach the local %s database' % dbname)
+
+    _exists(cursor, remote)
+    return dbname, conn, cursor
 
 
-def _close(conn):
+def _close(conn, cursor):
+    cursor.close()
     conn.close()
 
 
-def _exists(repo, dbname):
+def _exists(cursor, remote):
     """
-    checks the existence of the database or creates it
+    checks the existence of the Moves table and creates it if it doesn't
     """
     try:
-        conn = sqlite3.connect(repo.vfs.join(dbname))
-        c = conn.cursor()
-        c.execute("SELECT name FROM sqlite_master WHERE type='table'" +
-                  " AND name='Moves';")
-        table = c.fetchall()
+        cursor.execute(_sqlcmds('tableexists', remote))
+        table = cursor.fetchall()
         if not table:
-            c.execute('CREATE TABLE Moves(hash CHAR(40), source TEXT, ' +
-                      'destination TEXT, mv CHAR(1));')
-        _close(conn)
+            cursor.execute(_sqlcmds('createtable', remote))
     except:
-        raise util.Abort('could not create the %s local database' % dbname)
+        raise util.Abort('could not create the %s Moves table ' %
+                         'remote' if remote else 'local')
 
 
-def insertitem(cursor, ctxhash, dic, move):
+def insertitem(cursor, ctxhash, dic, move, remote, repo):
     """
     inserts {dst:src} in the database using the cursor
     """
     mv = '1' if move else '0'
-    insertcmd = 'INSERT INTO Moves VALUES(?, ?, ?, ?);'
+    insertcmd = _sqlcmds('insertctx', remote)
+
     # No rename in this ctx
     if dic == {}:
-        cursor.execute(insertcmd, (ctxhash, None, None, mv))
+        insertdata = (repo.root, ctxhash, None, None, mv)
+        cursor.execute(insertcmd, insertdata)
+
     else:
         for dst, src in dic.iteritems():
-            cursor.execute(insertcmd, (ctxhash, src, dst, mv))
+            insertdata = (repo.root, ctxhash, src, dst, mv)
+            cursor.execute(insertcmd, insertdata)
 
 
 def insertdata(repo, ctx, mvdict, cpdict, remote=False):
@@ -73,7 +117,7 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     inserts the mvdict/cpdict = {dst: src} data in the database with '1' if it
     is a move, '0' if it is a copy
     """
-    dbname, conn, c = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo, remote)
 
     # '0'is used as temp data storage
     if ctx == '0':
@@ -81,13 +125,13 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     else:
         ctxhash = str(ctx.hex())
     try:
-        insertitem(c, ctxhash, mvdict, True)
-        insertitem(c, ctxhash, cpdict, False)
+        insertitem(cursor, ctxhash, mvdict, True, remote, repo)
+        insertitem(cursor, ctxhash, cpdict, False, remote, repo)
         conn.commit()
     except:
         raise util.Abort('could not insert data into the %s database' % dbname)
 
-    _close(conn)
+    _close(conn, cursor)
 
 
 def insertrawdata(repo, dic, remote=False):
@@ -95,20 +139,20 @@ def insertrawdata(repo, dic, remote=False):
     inserts dict = {ctxhash: [src, dst, mv]} for moves and copies into the
     database
     """
-    dbname, conn, c = _connect(repo, remote)
-    insertcmd = 'INSERT INTO Moves VALUES(?, ?, ?, ?);'
+    dbname, conn, cursor = _connect(repo, remote)
     try:
         for ctxhash, mvlist in dic.iteritems():
             for src, dst, mv in mvlist:
                 if src == 'None' and dst == 'None':
                     src = None
                     dst = None
-                c.execute(insertcmd, (ctxhash, src, dst, mv))
+                insertdata = (repo.root, ctxhash, src, dst, mv)
+                cursor.execute(_sqlcmds('insertctx', remote), insertdata)
         conn.commit()
     except:
         raise util.Abort('could not insert data into the %s database' % dbname)
 
-    _close(conn)
+    _close(conn, cursor)
 
 
 def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
@@ -118,16 +162,17 @@ def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
     # Do we want moves or copies
     mv = '1' if move else '0'
 
-    dbname, conn, c = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo, remote)
     try:
-        c.execute('SELECT DISTINCT hash, source, destination FROM Moves' +
-                  ' WHERE hash IN (%s) AND mv = ?'
-                  % (','.join('?' * len(ctxlist))), ctxlist + [mv])
+        # Returns : hash, src, dst
+        cursor.execute(_sqlcmds('retrievemoves', remote)
+                      % (','.join(['?'] * len(ctxlist)), '?', '?'),
+                      ctxlist + [mv, repo.root])
     except:
         raise util.Abort('could not access data from the %s database' % dbname)
 
-    all_rows = c.fetchall()
-    _close(conn)
+    all_rows = cursor.fetchall()
+    _close(conn, cursor)
 
     ret = {}
     # Building the mvdict and cpdict for each ctxhash:
@@ -155,18 +200,20 @@ def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
 
 def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
     """
-    retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or copies
+    retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or
+    copies
     """
-    dbname, conn, c = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo, remote)
     try:
-        c.execute('SELECT DISTINCT hash, source, destination, mv FROM Moves' +
-                  ' WHERE hash IN (%s)'
-                  % (','.join('?' * len(ctxlist))), ctxlist)
+        # Returns: hash, src, dst, mv
+        cursor.execute(_sqlcmds('retrieveraw', remote) %
+                       (','.join(['?'] * len(ctxlist)), '?'),
+                       ctxlist + [repo.root])
     except:
         raise util.Abort('could not access data from the %s database' % dbname)
 
-    all_rows = c.fetchall()
-    _close(conn)
+    all_rows = cursor.fetchall()
+    _close(conn, cursor)
 
     ret = {}
     # Building the mvdict and cpdict for each ctxhash:
@@ -196,35 +243,38 @@ def removectx(repo, ctx, remote=False):
     """
     removes the data concerning the ctx in the database
     """
-    dbname, conn, c = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo, remote)
     # '0'is used as temp data storage
     if ctx == '0':
         ctxhash = '0'
     else:
         ctxhash = str(ctx.hex())
+    deletedata = [ctxhash, repo.root]
     try:
-        c.execute('DELETE FROM Moves WHERE hash = ?', [ctxhash])
+        cursor.execute(_sqlcmds('deletectx', remote), deletedata)
         conn.commit()
     except:
         raise util.Abort('could not delete ctx from the %s database' % dbname)
 
-    _close(conn)
+    _close(conn, cursor)
 
 
 def checkpresence(repo, ctxlist):
     """
-    checks if the ctx in ctxlist are present in the database or requests for it
+    checks if the ctx in ctxlist are in the local database or requests for it
     """
     ctxhashs = [ctx.hex() for ctx in ctxlist]
-    dbname, conn, c = _connect(repo, False)
+    dbname, conn, cursor = _connect(repo, False)
     try:
-        c.execute('SELECT DISTINCT hash FROM Moves WHERE hash IN (%s)'
-                  % (','.join('?' * len(ctxhashs))), ctxhashs)
+        # Returns hash
+        cursor.execute(_sqlcmds('retrievehashes', False)
+                       % (','.join('?' * len(ctxhashs))),
+                       ctxhashs)
     except:
         raise util.Abort('could not check ctx presence in the %s database'
                          % dbname)
-    processed = c.fetchall()
-    _close(conn)
+    processed = cursor.fetchall()
+    _close(conn, cursor)
     processed = [ctx[0].encode('utf8') for ctx in processed]
     missing = [repo[f].node() for f in ctxlist if f not in processed]
     if missing:

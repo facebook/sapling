@@ -30,7 +30,7 @@ ADD MOVES IN SERVER
   $ hg commit -m "mv a b"
   $ hg cp b c
   $ hg commit -m "cp b c"
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
@@ -51,7 +51,7 @@ PULLS FROM SERVER
   added 2 changesets with 2 changes to 2 files
   moves for 2 changesets retrieved
   (run 'hg update' to get a working copy)
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
@@ -92,7 +92,7 @@ PULLS FROM SERVER
   added 2 changesets with 2 changes to 2 files (+1 heads)
   moves for 2 changesets retrieved
   (run 'hg heads' to see heads, 'hg merge' to merge)
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   4fe6b0cbea2cebfe016c553c782dcf8bedad63d5|b|c|0
@@ -153,7 +153,7 @@ SETUP CLIENT REPO
   |/    desc: mv a c
   o  changeset: 2f1222a290f07a1758cc927c57cc22805d6696ed
       desc: add a b
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   d9e9933769659048c7efa24b53b2e38a1d8205b2|b|z|1
   d9e9933769659048c7efa24b53b2e38a1d8205b2|||0
   $ hg rebase -s d9e993 -d d46700
@@ -172,7 +172,7 @@ SETUP CLIENT REPO
   |   desc: mv a c
   o  changeset: 2f1222a290f07a1758cc927c57cc22805d6696ed
       desc: add a b
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   0|a|d|0
   0|b|z|0
   0|||1
@@ -212,7 +212,7 @@ SETUP CLIENT REPO
       desc: add a
   $ hg mv a b
   $ hg commit -m "mv a b"
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   $ hg push
@@ -232,7 +232,7 @@ CHECK SERVER MOVE DATA
   |   desc: mv a b
   @  changeset: ac82d8b1f7c418c61a493ed229ffaa981bda8e90
       desc: add a
-  $ sqlite3 .hg/moves.db "SELECT * FROM Moves" | sort
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
