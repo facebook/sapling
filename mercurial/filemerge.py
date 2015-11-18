@@ -242,8 +242,14 @@ def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
 @internaltool('other', nomerge)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the other version of files as the merged version."""
-    repo.wwrite(fcd.path(), fco.data(), fco.flags())
-    return 0, False
+    if fco.isabsent():
+        # local changed, remote deleted -- 'deleted' picked
+        repo.wvfs.unlinkpath(fcd.path())
+        deleted = True
+    else:
+        repo.wwrite(fcd.path(), fco.data(), fco.flags())
+        deleted = False
+    return 0, deleted
 
 @internaltool('fail', nomerge)
 def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
