@@ -34,6 +34,7 @@ revignored = -3
 revprecursor = -4
 # plain prune (no successor)
 revpruned = -5
+revskipped = (revignored, revprecursor, revpruned)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -681,7 +682,7 @@ def defineparents(repo, rev, target, state, targetancestors):
     elif p1n in state:
         if state[p1n] == nullmerge:
             p1 = target
-        elif state[p1n] in (revignored, revprecursor, revpruned):
+        elif state[p1n] in revskipped:
             p1 = nearestrebased(repo, p1n, state)
             if p1 is None:
                 p1 = target
@@ -697,7 +698,7 @@ def defineparents(repo, rev, target, state, targetancestors):
         if p2n in state:
             if p1 == target: # p1n in targetancestors or external
                 p1 = state[p2n]
-            elif state[p2n] in (revignored, revprecursor, revpruned):
+            elif state[p2n] in revskipped:
                 p2 = nearestrebased(repo, p2n, state)
                 if p2 is None:
                     # no ancestors rebased yet, detach
