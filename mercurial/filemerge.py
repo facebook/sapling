@@ -232,18 +232,18 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
             return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
     except error.ResponseExpected:
         ui.write("\n")
-        return 1
+        return 1, False
 
 @internaltool('local', nomerge)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the local version of files as the merged version."""
-    return 0
+    return 0, False
 
 @internaltool('other', nomerge)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the other version of files as the merged version."""
     repo.wwrite(fcd.path(), fco.data(), fco.flags())
-    return 0
+    return 0, False
 
 @internaltool('fail', nomerge)
 def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
@@ -251,7 +251,7 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
     Rather than attempting to merge files that were modified on both
     branches, it marks them as unresolved. The resolve command must be
     used to resolve these conflicts."""
-    return 1
+    return 1, False
 
 def _premerge(repo, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
@@ -536,7 +536,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     toolconf = tool, toolpath, binary, symlink
 
     if mergetype == nomerge:
-        return True, func(repo, mynode, orig, fcd, fco, fca, toolconf)
+        r, deleted = func(repo, mynode, orig, fcd, fco, fca, toolconf)
+        return True, r
 
     if premerge:
         if orig != fco.path():
