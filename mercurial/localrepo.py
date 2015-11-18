@@ -1168,8 +1168,7 @@ class localrepository(object):
             else:
                 ui.status(_('working directory now based on '
                             'revision %d\n') % parents)
-            ms = mergemod.mergestate(self)
-            ms.reset(self['.'].node())
+            mergemod.mergestate.clean(self, self['.'].node())
 
         # TODO: if we know which new heads may result from this rollback, pass
         # them to destroy(), which will prevent the branchhead cache from being
