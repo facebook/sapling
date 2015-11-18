@@ -249,9 +249,69 @@ resolve <file> should do nothing if 'file' was marked resolved
   $ cat file1
   resolved
 
-test crashed merge with empty mergestate
+insert unsupported advisory merge record
+
+  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate
+  * version 2 records
+  local: 57653b9f834a4493f7240b0681efcb9ae7cab745
+  other: dc77451844e37f03f5c559e3b8529b2b48d381d1
+  unrecognized entry: x	advisory record
+  file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+    local path: file1 (flags "")
+    ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
+    other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
+    local path: file2 (flags "")
+    ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
+    other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  $ hg resolve -l
+  R file1
+  U file2
+
+insert unsupported mandatory merge record
+
+  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate
+  * version 2 records
+  local: 57653b9f834a4493f7240b0681efcb9ae7cab745
+  other: dc77451844e37f03f5c559e3b8529b2b48d381d1
+  file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+    local path: file1 (flags "")
+    ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
+    other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
+    local path: file2 (flags "")
+    ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
+    other path: file2 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  unrecognized entry: X	mandatory record
+  $ hg resolve -l
+  abort: unsupported merge state records: X
+  (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
+  [255]
+  $ hg resolve -ma
+  abort: unsupported merge state records: X
+  (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
+  [255]
+  $ hg summary
+  parent: 2:57653b9f834a 
+   append baz to files
+  parent: 1:dc77451844e3 
+   append bar to files
+  branch: default
+  warning: merge state has unsupported record types: X
+  commit: 2 modified, 2 unknown (merge)
+  update: 2 new changesets (update)
+  phases: 5 draft
+
+update --clean shouldn't abort on unsupported records
 
   $ hg up -qC 1
+  $ hg debugmergestate
+  no merge state found
+
+test crashed merge with empty mergestate
+
   $ mkdir .hg/merge
   $ touch .hg/merge/state
 

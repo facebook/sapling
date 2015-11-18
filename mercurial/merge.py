@@ -62,6 +62,8 @@ class mergestate(object):
        (experimental)
     m: the external merge driver defined for this merge plus its run state
        (experimental)
+    X: unsupported mandatory record type (used in tests)
+    x: unsupported advisory record type (used in tests)
 
     Merge driver run states (experimental):
     u: driver-resolved files unmarked -- needs to be run next time we're about
@@ -231,6 +233,13 @@ class mergestate(object):
         `type` is a single character, `length` is a 4 byte integer, and
         `content` is an arbitrary byte sequence of length `length`.
 
+        Mercurial versions prior to 3.7 have a bug where if there are
+        unsupported mandatory merge records, attempting to clear out the merge
+        state with hg update --clean or similar aborts. The 't' record type
+        works around that by writing out what those versions treat as an
+        advisory record, but later versions interpret as special: the first
+        character is the 'real' record type and everything onwards is the data.
+
         Returns list of records [(TYPE, data), ...]."""
         records = []
         try:
@@ -245,6 +254,8 @@ class mergestate(object):
                 off += 4
                 record = data[off:(off + length)]
                 off += length
+                if rtype == 't':
+                    rtype, record = record[0], record[1:]
                 records.append((rtype, record))
             f.close()
         except IOError as err:
@@ -326,10 +337,16 @@ class mergestate(object):
         f.close()
 
     def _writerecordsv2(self, records):
-        """Write current state on disk in a version 2 file"""
+        """Write current state on disk in a version 2 file
+
+        See the docstring for _readrecordsv2 for why we use 't'."""
+        # these are the records that all version 2 clients can read
+        whitelist = 'LOF'
         f = self._repo.vfs(self.statepathv2, 'w')
         for key, data in records:
             assert len(key) == 1
+            if key not in whitelist:
+                key, data = 't', '%s%s' % (key, data)
             format = '>sI%is' % len(data)
             f.write(_pack(format, key, len(data), data))
         f.close()

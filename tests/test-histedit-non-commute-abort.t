@@ -75,10 +75,45 @@ edit the history
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
 
+insert unsupported advisory merge record
+  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x
+  $ hg debugmergestate
+  * version 2 records
+  local: 8f7551c7e4a2f2efe0bc8c741baf7f227d65d758
+  other: e860deea161a2f77de56603b340ebbb4536308ae
+  unrecognized entry: x	advisory record
+  file: e (record type "F", state "u", hash 58e6b3a414a1e090dfc6029add0f3555ccba127f)
+    local path: e (flags "")
+    ancestor path: e (node 0000000000000000000000000000000000000000)
+    other path: e (node 6b67ccefd5ce6de77e7ead4f5292843a0255329f)
+  $ hg resolve -l
+  U e
 
-abort the edit
+insert unsupported mandatory merge record
+  $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -X
+  $ hg debugmergestate
+  * version 2 records
+  local: 8f7551c7e4a2f2efe0bc8c741baf7f227d65d758
+  other: e860deea161a2f77de56603b340ebbb4536308ae
+  file: e (record type "F", state "u", hash 58e6b3a414a1e090dfc6029add0f3555ccba127f)
+    local path: e (flags "")
+    ancestor path: e (node 0000000000000000000000000000000000000000)
+    other path: e (node 6b67ccefd5ce6de77e7ead4f5292843a0255329f)
+  unrecognized entry: X	mandatory record
+  $ hg resolve -l
+  abort: unsupported merge state records: X
+  (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
+  [255]
+  $ hg resolve -ma
+  abort: unsupported merge state records: X
+  (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
+  [255]
+
+abort the edit (should clear out merge state)
   $ hg histedit --abort 2>&1 | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugmergestate
+  no merge state found
 
 log after abort
   $ hg resolve -l
