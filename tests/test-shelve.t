@@ -469,6 +469,29 @@ set up another conflict between a commit and a shelved change
 
 if we resolve a conflict while unshelving, the unshelve should succeed
 
+  $ hg unshelve --tool :merge-other --keep
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 6:c5e6910e7601 "changes to 'second'" (tip)
+  merging a/a
+  $ hg parents -q
+  4:33f7f61e6c5e
+  $ hg shelve -l
+  default         (*)* changes to 'second' (glob)
+  $ hg status
+  M a/a
+  A foo/foo
+  $ cat a/a
+  a
+  c
+  a
+  $ cat > a/a << EOF
+  > a
+  > c
+  > x
+  > EOF
+
   $ HGMERGE=true hg unshelve
   unshelving change 'default'
   temporarily committing pending changes (restore with 'hg unshelve --abort')
@@ -730,7 +753,8 @@ unshelve and conflicts with tracked and untracked files
   >>>>>>> source: 23b29cada8ba - shelve: changes to 'commit stuff'
   $ cat f.orig
   g
-  $ hg unshelve --abort
+  $ hg unshelve --abort -t false
+  tool option will be ignored
   rebase aborted
   unshelve of 'default' aborted
   $ hg st

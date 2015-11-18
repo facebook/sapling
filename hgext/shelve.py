@@ -574,6 +574,7 @@ def unshelvecontinue(ui, repo, state, opts):
            _('continue an incomplete unshelve operation')),
           ('k', 'keep', None,
            _('keep shelve after unshelving')),
+          ('t', 'tool', '', _('specify merge tool')),
           ('', 'date', '',
            _('set date for temporary commits (DEPRECATED)'), _('DATE'))],
          _('hg unshelve [SHELVED]'))
@@ -620,6 +621,8 @@ def unshelve(ui, repo, *shelved, **opts):
         if shelved:
             raise error.Abort(_('cannot combine abort/continue with '
                                'naming a shelved change'))
+        if abortf and opts.get('tool', False):
+            ui.warn(_('tool option will be ignored\n'))
 
         try:
             state = shelvedstate.load(repo)
@@ -648,7 +651,9 @@ def unshelve(ui, repo, *shelved, **opts):
 
     oldquiet = ui.quiet
     wlock = lock = tr = None
+    forcemerge = ui.backupconfig('ui', 'forcemerge')
     try:
+        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''), 'unshelve')
         wlock = repo.wlock()
         lock = repo.lock()
 
@@ -706,6 +711,7 @@ def unshelve(ui, repo, *shelved, **opts):
                     'rev' : [shelvectx.rev()],
                     'dest' : str(tmpwctx.rev()),
                     'keep' : True,
+                    'tool' : opts.get('tool', ''),
                 })
             except error.InterventionRequired:
                 tr.close()
@@ -744,6 +750,7 @@ def unshelve(ui, repo, *shelved, **opts):
         if tr:
             tr.release()
         lockmod.release(lock, wlock)
+        ui.restoreconfig(forcemerge)
 
 @command('shelve',
          [('A', 'addremove', None,
