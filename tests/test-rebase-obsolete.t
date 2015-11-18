@@ -659,3 +659,29 @@ Even when the chain include missing node
   $ hg rebase -d 'desc(B2)'
   note: not rebasing 1:a8b11f55fb19 "B0", already in destination as 2:261e70097290 "B2"
   rebasing 5:1a79b7535141 "D" (tip)
+  $ hg up 4
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo "O" > O
+  $ hg add O
+  $ hg commit -m O
+  $ echo "P" > P
+  $ hg add P
+  $ hg commit -m P
+  $ hg log -G
+  @  8:8d47583e023f P
+  |
+  o  7:360bbaa7d3ce O
+  |
+  | o  6:9c48361117de D
+  | |
+  o |  4:ff2c4d47b71d C
+  |/
+  o  2:261e70097290 B2
+  |
+  o  0:4a2df7238c3b A
+  
+  $ hg debugobsolete `hg log -r 7 -T '{node}\n'` --config experimental.evolution=all
+  $ hg rebase -d 6 -r "4::"
+  rebasing 4:ff2c4d47b71d "C"
+  note: not rebasing 7:360bbaa7d3ce "O", it has no successor
+  rebasing 8:8d47583e023f "P" (tip)

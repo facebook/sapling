@@ -32,6 +32,7 @@ nullmerge = -2
 revignored = -3
 # To do with obsolescence
 revprecursor = -4
+revpruned = -5
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -487,6 +488,9 @@ def rebase(ui, repo, **opts):
                              targetctx.description().split('\n', 1)[0])
                 msg = _('note: not rebasing %s, already in destination as %s\n')
                 ui.status(msg % (desc, desctarget))
+            elif state[rev] == revpruned:
+                msg = _('note: not rebasing %s, it has no successor\n')
+                ui.status(msg % desc)
             else:
                 ui.status(_('already rebased %s as %s\n') %
                           (desc, repo[state[rev]]))
@@ -676,7 +680,7 @@ def defineparents(repo, rev, target, state, targetancestors):
     elif p1n in state:
         if state[p1n] == nullmerge:
             p1 = target
-        elif state[p1n] in (revignored, revprecursor):
+        elif state[p1n] in (revignored, revprecursor, revpruned):
             p1 = nearestrebased(repo, p1n, state)
             if p1 is None:
                 p1 = target
@@ -692,7 +696,7 @@ def defineparents(repo, rev, target, state, targetancestors):
         if p2n in state:
             if p1 == target: # p1n in targetancestors or external
                 p1 = state[p2n]
-            elif state[p2n] in (revignored, revprecursor):
+            elif state[p2n] in (revignored, revprecursor, revpruned):
                 p2 = nearestrebased(repo, p2n, state)
                 if p2 is None:
                     # no ancestors rebased yet, detach
@@ -882,7 +886,7 @@ def restorestatus(repo):
             else:
                 oldrev, newrev = l.split(':')
                 if newrev in (str(nullmerge), str(revignored),
-                              str(revprecursor)):
+                              str(revprecursor), str(revpruned)):
                     state[repo[oldrev].rev()] = int(newrev)
                 elif newrev == nullid:
                     state[repo[oldrev].rev()] = revtodo
@@ -1066,7 +1070,10 @@ def buildstate(repo, dest, rebaseset, collapse, obsoletenotrebased):
         for ignored in set(rebasedomain) - set(rebaseset):
             state[ignored] = revignored
     for r in obsoletenotrebased:
-        state[r] = revprecursor
+        if obsoletenotrebased[r] is None:
+            state[r] = revpruned
+        else:
+            state[r] = revprecursor
     return repo['.'].rev(), dest.rev(), state
 
 def clearrebased(ui, repo, state, skipped, collapsedas=None):
@@ -1180,7 +1187,9 @@ def _rebasedvisible(orig, repo):
 
 def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
     """return a mapping obsolete => successor for all obsolete nodes to be
-    rebased that have a successors in the destination"""
+    rebased that have a successors in the destination
+
+    obsolete => None entries in the mapping indicate nodes with no succesor"""
     obsoletenotrebased = {}
 
     # Build a mapping successor => obsolete nodes for the obsolete
@@ -1206,6 +1215,11 @@ def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
         for s in allsuccessors:
             if s in ancs:
                 obsoletenotrebased[allsuccessors[s]] = s
+            elif (s == allsuccessors[s] and
+                  allsuccessors.values().count(s) == 1):
+                # plain prune
+                obsoletenotrebased[s] = None
+
     return obsoletenotrebased
 
 def summaryhook(ui, repo):
