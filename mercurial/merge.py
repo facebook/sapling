@@ -16,6 +16,7 @@ from .i18n import _
 from .node import (
     bin,
     hex,
+    nullhex,
     nullid,
     nullrev,
 )
@@ -58,6 +59,7 @@ class mergestate(object):
     L: the node of the "local" part of the merge (hexified version)
     O: the node of the "other" part of the merge (hexified version)
     F: a file to be merged entry
+    C: a change/delete or delete/change conflict
     D: a file that the external merge driver will merge internally
        (experimental)
     m: the external merge driver defined for this merge plus its run state
@@ -143,7 +145,7 @@ class mergestate(object):
 
                 self._readmergedriver = bits[0]
                 self._mdstate = mdstate
-            elif rtype in 'FD':
+            elif rtype in 'FDC':
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
@@ -315,6 +317,10 @@ class mergestate(object):
         for d, v in self._state.iteritems():
             if v[0] == 'd':
                 records.append(('D', '\0'.join([d] + v)))
+            # v[1] == local ('cd'), v[6] == other ('dc') -- not supported by
+            # older versions of Mercurial
+            elif v[1] == nullhex or v[6] == nullhex:
+                records.append(('C', '\0'.join([d] + v)))
             else:
                 records.append(('F', '\0'.join([d] + v)))
         return records
