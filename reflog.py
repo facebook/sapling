@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 """show the previous position of bookmarks and the working copy"""
 
-from mercurial import util, cmdutil, commands, hg, scmutil, localrepo
+from mercurial import util, cmdutil, commands, hg, scmutil, localrepo, error
 from mercurial import bookmarks, dispatch, dirstate
 from mercurial.extensions import wrapcommand, wrapfunction, find
 from mercurial.node import nullid, hex, bin
@@ -126,7 +126,8 @@ def recorddirstateparents(orig, self, tr=False):
 
 @command('reflog',
     [('', 'all', None, 'show history for all refs'),
-     ] + commands.formatteropts, '[OPTION]... [REFNAME]')
+    ('c', 'commits', None, 'show commit metadata'),
+     ] + commands.logopts, '[OPTION]... [REFNAME]')
 def reflog(ui, repo, *args, **opts):
     """show the previous position of bookmarks and the working copy
 
@@ -160,18 +161,28 @@ def reflog(ui, repo, *args, **opts):
     for entry in repo.reflog.iter(refnamecond=refname):
         count += 1
         timestamp, user, command, reftype, refname, oldhashes, newhashes = entry
-        newhashes = ','.join([hash[:12] for hash in newhashes])
-        oldhashes = ','.join([hash[:12] for hash in oldhashes])
+        newhashesstr = ','.join([hash[:12] for hash in newhashes])
+        oldhashesstr = ','.join([hash[:12] for hash in oldhashes])
 
         fm.startitem()
-        fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashes)
-        fm.write('newhashes', '%s', newhashes)
+        fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
+        fm.write('newhashes', '%s', newhashesstr)
         fm.condwrite(ui.verbose, 'user', ' %s', user.ljust(8))
 
         timestruct = time.localtime(timestamp[0])
         timestring = time.strftime('%Y-%m-%d %H:%M:%S', timestruct)
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
         fm.write('command', '  %s\n', command)
+
+        if opts.get("commits"):
+            displayer = cmdutil.show_changeset(ui, repo, opts, buffered=False)
+            for hash in newhashes:
+                try:
+                    ctx = repo[hash]
+                    displayer.show(ctx)
+                except error.RepoLookupError as e:
+                    fm.write('repolookuperror', "%s\n\n", str(e))
+            displayer.close()
 
     fm.end()
 
