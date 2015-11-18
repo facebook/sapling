@@ -524,6 +524,12 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
 def _isdirtywc(repo):
     return repo[None].dirty(missing=True)
 
+def abortdirty():
+    raise error.Abort(_('working copy has pending changes'),
+        hint=_('amend, commit, or revert them and run histedit '
+            '--continue, or abort with histedit --abort'))
+
+
 class pick(histeditaction):
     def run(self):
         rulectx = self.repo[self.node]
@@ -996,7 +1002,7 @@ def bootstrapcontinue(ui, state, opts):
         if _isdirtywc(repo):
             actobj.continuedirty()
             if _isdirtywc(repo):
-                raise error.Abort(_("working copy still dirty"))
+                abortdirty()
 
         parentctx, replacements = actobj.continueclean()
 
