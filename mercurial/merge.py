@@ -853,8 +853,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """
 
     updated, merged, removed, unresolved = 0, 0, 0, 0
-    ms = mergestate(repo)
-    ms.reset(wctx.p1().node(), mctx.node())
+    ms = mergestate.clean(repo, wctx.p1().node(), mctx.node())
     moves = []
     for m, l in actions.items():
         l.sort()
