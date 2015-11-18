@@ -294,7 +294,7 @@ Test that pushing over obsoleted changesets doesn't require --non-forward-move
 
 Test that creating a new head with a remote bookmark is allowed without --force
 
-  $ hg up -q .^
+  $ hg up -q '.^'
   $ hg push -q --to bm --create
   [1]
   $ echo e >> a
