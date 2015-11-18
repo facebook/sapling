@@ -307,7 +307,7 @@ def _merge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels, mode):
     ui = repo.ui
 
     r = simplemerge.simplemerge(ui, a, b, c, label=labels, mode=mode)
-    return True, r
+    return True, r, False
 
 @internaltool('union', fullmerge,
               _("warning: conflicts while merging %s! "
@@ -368,7 +368,7 @@ def _imergelocal(*args, **kwargs):
     Like :merge, but resolve all conflicts non-interactively in favor
     of the local changes."""
     success, status = _imergeauto(localorother='local', *args, **kwargs)
-    return success, status
+    return success, status, False
 
 @internaltool('merge-other', mergeonly, precheck=_mergecheck)
 def _imergeother(*args, **kwargs):
@@ -376,7 +376,7 @@ def _imergeother(*args, **kwargs):
     Like :merge, but resolve all conflicts non-interactively in favor
     of the other changes."""
     success, status = _imergeauto(localorother='other', *args, **kwargs)
-    return success, status
+    return success, status, False
 
 @internaltool('tagmerge', mergeonly,
               _("automatic tag merging of %s failed! "
@@ -386,7 +386,8 @@ def _itagmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     """
     Uses the internal tag merge algorithm (experimental).
     """
-    return tagmerge.merge(repo, fcd, fco, fca)
+    success, status = tagmerge.merge(repo, fcd, fco, fca)
+    return success, status, False
 
 @internaltool('dump', fullmerge)
 def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
@@ -404,7 +405,7 @@ def _idump(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     util.copyfile(a, a + ".local")
     repo.wwrite(fd + ".other", fco.data(), fco.flags())
     repo.wwrite(fd + ".base", fca.data(), fca.flags())
-    return False, 1
+    return False, 1, False
 
 def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     tool, toolpath, binary, symlink = toolconf
@@ -431,7 +432,7 @@ def _xmerge(repo, mynode, orig, fcd, fco, fca, toolconf, files, labels=None):
     repo.ui.debug('launching merge tool: %s\n' % cmd)
     r = ui.system(cmd, cwd=repo.root, environ=env)
     repo.ui.debug('merge tool returned: %s\n' % r)
-    return True, r
+    return True, r, False
 
 def _formatconflictmarker(repo, ctx, template, label, pad):
     """Applies the given template to the ctx, prefixed by the label.
@@ -574,8 +575,9 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
             # complete if premerge successful (r is 0)
             return not r, r
 
-        needcheck, r = func(repo, mynode, orig, fcd, fco, fca, toolconf, files,
-                            labels=labels)
+        needcheck, r, deleted = func(repo, mynode, orig, fcd, fco, fca,
+                                     toolconf, files, labels=labels)
+
         if needcheck:
             r = _check(r, ui, tool, fcd, files)
 
