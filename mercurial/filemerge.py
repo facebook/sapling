@@ -237,7 +237,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
 @internaltool('local', nomerge)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
     """Uses the local version of files as the merged version."""
-    return 0, False
+    return 0, fcd.isabsent()
 
 @internaltool('other', nomerge)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
