@@ -75,6 +75,14 @@ class mergestate(object):
     statepathv1 = 'merge/state'
     statepathv2 = 'merge/state2'
 
+    @staticmethod
+    def clean(repo, node=None, other=None):
+        """Initialize a brand new merge state, removing any existing state on
+        disk."""
+        ms = mergestate(repo)
+        ms.reset(node, other)
+        return ms
+
     def __init__(self, repo):
         self._repo = repo
         self._dirty = False
