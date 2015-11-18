@@ -11,7 +11,7 @@ Enable obsolete
   > evolution=createmarkers,allowunstable
   > [phases]
   > publish=False
-  > [extensions]'
+  > [extensions]
   > rebase=
   > EOF
 
