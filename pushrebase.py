@@ -145,7 +145,8 @@ def getrebasepart(repo, peer, outgoing, onto, newhead):
         }.items(),
         data = cg)
 
-def _checkheads(orig, repo, remote, *args, **kwargs):
+def _checkheads(orig, pushop):
+    repo = pushop.repo
     onto = repo.ui.config(experimental, configonto)
     if onto: # This is a rebasing push
         # The rest of the checks are performed during bundle2 part processing;
@@ -157,7 +158,7 @@ def _checkheads(orig, repo, remote, *args, **kwargs):
             raise util.Abort(_('bundle2 needs to be enabled on server'))
         return
     else:
-        return orig(repo, remote, *args, **kwargs)
+        return orig(pushop)
 
 def _exchangecheckheads(orig, repo, *args, **kwargs):
     onto = repo.ui.config(experimental, configonto)

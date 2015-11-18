@@ -211,9 +211,10 @@ Stack with conflict in tail should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  abort: conflicting changes in:
+  remote: conflicting changes in:
       a
   
+  abort: push failed on remote
   [255]
 
   $ hg strip 5
@@ -244,9 +245,10 @@ Stack with conflict in head should abort
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  abort: conflicting changes in:
+  remote: conflicting changes in:
       a
   
+  abort: push failed on remote
   [255]
 
   $ hg strip 5
@@ -546,7 +548,8 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: 
   remote: Checking if lock exists (it should not):
   remote: ls: cannot access .hg/store/lock: No such file or directory
-  abort: prepushrebase hook exited with status 2
+  remote: prepushrebase hook exited with status 2
+  abort: push failed on remote
   [255]
 
   $ cd ..
@@ -591,8 +594,8 @@ Test that hooks are fired with the correct variables
   $ hg push --to master
   pushing to $TESTTMP/hookserver
   searching for changes
-  prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push (glob)
-  prechangegroup hook: HG_BUNDLE2=1 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
+  prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   pushing 1 commit:
       4fcee35c508c  first
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
