@@ -497,8 +497,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     fca = ancestor file context
     fcd = local file context for current/destination file
 
-    Returns whether the merge is complete, and the return value of the merge.
-    """
+    Returns whether the merge is complete, the return value of the merge, and
+    a boolean indicating whether the file was deleted from disk."""
 
     def temp(prefix, ctx):
         pre = "%s~%s." % (os.path.basename(ctx.path()), prefix)
@@ -510,7 +510,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         return name
 
     if not fco.cmp(fcd): # files identical?
-        return True, None
+        return True, None, False
 
     ui = repo.ui
     fd = fcd.path()
@@ -538,7 +538,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
 
     if mergetype == nomerge:
         r, deleted = func(repo, mynode, orig, fcd, fco, fca, toolconf)
-        return True, r
+        return True, r, deleted
 
     if premerge:
         if orig != fco.path():
@@ -552,7 +552,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
                                  toolconf):
         if onfailure:
             ui.warn(onfailure % fd)
-        return True, 1
+        return True, 1, False
 
     a = repo.wjoin(fd)
     b = temp("base", fca)
@@ -573,7 +573,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
         if premerge and mergetype == fullmerge:
             r = _premerge(repo, toolconf, files, labels=labels)
             # complete if premerge successful (r is 0)
-            return not r, r
+            return not r, r, False
 
         needcheck, r, deleted = func(repo, mynode, orig, fcd, fco, fca,
                                      toolconf, files, labels=labels)
@@ -585,7 +585,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
             if onfailure:
                 ui.warn(onfailure % fd)
 
-        return True, r
+        return True, r, deleted
     finally:
         if not r:
             util.unlink(back)

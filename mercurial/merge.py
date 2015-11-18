@@ -432,11 +432,13 @@ class mergestate(object):
             f = self._repo.vfs('merge/' + hash)
             self._repo.wwrite(dfile, f.read(), flags)
             f.close()
-            complete, r = filemerge.premerge(self._repo, self._local, lfile,
-                                             fcd, fco, fca, labels=labels)
+            complete, r, deleted = filemerge.premerge(self._repo, self._local,
+                                                      lfile, fcd, fco, fca,
+                                                      labels=labels)
         else:
-            complete, r = filemerge.filemerge(self._repo, self._local, lfile,
-                                              fcd, fco, fca, labels=labels)
+            complete, r, deleted = filemerge.filemerge(self._repo, self._local,
+                                                       lfile, fcd, fco, fca,
+                                                       labels=labels)
         if r is None:
             # no real conflict
             del self._state[dfile]

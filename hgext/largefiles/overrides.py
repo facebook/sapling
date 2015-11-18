@@ -561,7 +561,7 @@ def overridefilemerge(origfn, premerge, repo, mynode, orig, fcd, fco, fca,
                (lfutil.splitstandin(orig), ahash, dhash, ohash),
              0) == 1)):
         repo.wwrite(fcd.path(), fco.data(), fco.flags())
-    return True, 0
+    return True, 0, False
 
 def copiespathcopies(orig, ctx1, ctx2, match=None):
     copies = orig(ctx1, ctx2, match=match)
