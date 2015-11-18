@@ -113,9 +113,9 @@ same thing, but run $EDITOR
   > echo "another precious commit message" > "$1"
   > __EOF__
   $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg --config hooks.pretxncommit=false commit 2>&1
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   abort: pretxncommit hook exited with status * (glob)
   [255]
   $ cat .hg/last-message.txt

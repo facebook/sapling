@@ -364,9 +364,9 @@ check saving last-message.txt, at first
   HG: branch 'default'
   HG: added f
   ====
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
@@ -388,9 +388,9 @@ action)
   HG: user: test
   HG: branch 'default'
   HG: added f
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
 

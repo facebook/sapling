@@ -185,9 +185,9 @@ Test saving last-message.txt:
   HG: branch 'default'
   HG: added file2
   ====
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
@@ -228,9 +228,9 @@ external process
   0:25e397dabed2
   A file2
   ====
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]

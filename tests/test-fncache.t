@@ -96,6 +96,7 @@ Non store repo:
   .hg/phaseroots
   .hg/requires
   .hg/undo
+  .hg/undo.backup.dirstate
   .hg/undo.backupfiles
   .hg/undo.bookmarks
   .hg/undo.branch
@@ -132,6 +133,7 @@ Non fncache repo:
   .hg/store/undo
   .hg/store/undo.backupfiles
   .hg/store/undo.phaseroots
+  .hg/undo.backup.dirstate
   .hg/undo.bookmarks
   .hg/undo.branch
   .hg/undo.desc
@@ -223,6 +225,7 @@ Aborting lock does not prevent fncache writes
   $ touch y
   $ hg ci -qAm y
   abort: forced lock failure
+  Exception mercurial.error.Abort: Abort('forced lock failure',) in <bound method lock.__del__ of <mercurial.lock.lock object at *>> ignored (glob)
   [255]
   $ cat .hg/store/fncache
   data/y.i

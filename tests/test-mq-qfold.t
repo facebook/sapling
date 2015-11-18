@@ -229,9 +229,9 @@ and that combination of '--edit' and '--message' doesn't abort execution)
   HG: added aa
   HG: changed a
   ====
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   qrefresh interrupted while patch was popped! (revert --all, qpush to recover)
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]

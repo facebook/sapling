@@ -272,9 +272,9 @@ regardless of '--message')
   HG: branch 'tag-and-branch-same-name'
   HG: changed .hgtags
   ====
+  note: commit message saved in .hg/last-message.txt
   transaction abort!
   rollback completed
-  note: commit message saved in .hg/last-message.txt
   abort: pretxncommit.unexpectedabort hook exited with status 1
   [255]
   $ cat .hg/last-message.txt
