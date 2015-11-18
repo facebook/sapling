@@ -47,6 +47,13 @@ Test status
   ! missing_content2_missing-tracked
   ! missing_missing_missing-tracked
 
+  $ hg st -A 'set:missing()'
+  ! content1_content1_missing-tracked
+  ! content1_content2_missing-tracked
+  ! content1_missing_missing-tracked
+  ! missing_content2_missing-tracked
+  ! missing_missing_missing-tracked
+
   $ hg st -A 'set:unknown()'
   ? content1_missing_content1-untracked
   ? content1_missing_content3-untracked

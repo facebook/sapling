@@ -159,10 +159,19 @@ def removed(mctx, x):
 
 def deleted(mctx, x):
     """``deleted()``
-    File that is deleted according to :hg:`status`.
+    Alias for ``missing()``.
     """
     # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
+    s = mctx.status().deleted
+    return [f for f in mctx.subset if f in s]
+
+def missing(mctx, x):
+    """``missing()``
+    File that is missing according to :hg:`status`.
+    """
+    # i18n: "missing" is a keyword
+    getargs(x, 0, 0, _("missing takes no arguments"))
     s = mctx.status().deleted
     return [f for f in mctx.subset if f in s]
 
@@ -441,6 +450,7 @@ symbols = {
     'grep': grep,
     'ignored': ignored,
     'hgignore': hgignore,
+    'missing': missing,
     'modified': modified,
     'portable': portable,
     'removed': removed,
@@ -511,7 +521,7 @@ def getfileset(ctx, expr):
 
     # do we need status info?
     if (_intree(['modified', 'added', 'removed', 'deleted',
-                 'unknown', 'ignored', 'clean'], tree) or
+                 'missing', 'unknown', 'ignored', 'clean'], tree) or
         # Using matchctx.existing() on a workingctx requires us to check
         # for deleted files.
         (ctx.rev() is None and _intree(_existingcallers, tree))):

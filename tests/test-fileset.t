@@ -73,6 +73,8 @@ Test files status
   a2
   $ fileset 'deleted()'
   a1
+  $ fileset 'missing()'
+  a1
   $ fileset 'unknown()'
   c3
   $ fileset 'ignored()'
