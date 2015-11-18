@@ -208,8 +208,7 @@ def stripcmd(ui, repo, *revs, **opts):
             repo.dirstate.write(repo.currenttransaction())
 
             # clear resolve state
-            ms = merge.mergestate(repo)
-            ms.reset(repo['.'].node())
+            merge.mergestate.clean(repo, repo['.'].node())
 
             update = False
 
