@@ -42,21 +42,18 @@ def _droponode(data):
 class mergestate(object):
     '''track 3-way merge state of individual files
 
-    it is stored on disk when needed. Two file are used, one with an old
-    format, one with a new format. Both contains similar data, but the new
-    format can store new kinds of field.
+    The merge state is stored on disk when needed. Two files are used: one with
+    an old format (version 1), and one with a new format (version 2). Version 2
+    stores a superset of the data in version 1, including new kinds of records
+    in the future. For more about the new format, see the documentation for
+    `_readrecordsv2`.
 
-    Current new format is a list of arbitrary record of the form:
+    Each record can contain arbitrary content, and has an associated type. This
+    `type` should be a letter. If `type` is uppercase, the record is mandatory:
+    versions of Mercurial that don't support it should abort. If `type` is
+    lowercase, the record can be safely ignored.
 
-        [type][length][content]
-
-    Type is a single character, length is a 4 bytes integer, content is an
-    arbitrary suites of bytes of length `length`.
-
-    Type should be a letter. Capital letter are mandatory record, Mercurial
-    should abort if they are unknown. lower case record can be safely ignored.
-
-    Currently known record:
+    Currently known records:
 
     L: the node of the "local" part of the merge (hexified version)
     O: the node of the "other" part of the merge (hexified version)
@@ -71,6 +68,7 @@ class mergestate(object):
        to resolve or commit
     m: driver-resolved files marked -- only needs to be run before commit
     s: success/skipped -- does not need to be run any more
+
     '''
     statepathv1 = 'merge/state'
     statepathv2 = 'merge/state2'
@@ -226,8 +224,14 @@ class mergestate(object):
     def _readrecordsv2(self):
         """read on disk merge state for version 2 file
 
-        returns list of record [(TYPE, data), ...]
-        """
+        This format is a list of arbitrary records of the form:
+
+          [type][length][content]
+
+        `type` is a single character, `length` is a 4 byte integer, and
+        `content` is an arbitrary byte sequence of length `length`.
+
+        Returns list of records [(TYPE, data), ...]."""
         records = []
         try:
             f = self._repo.vfs(self.statepathv2)
