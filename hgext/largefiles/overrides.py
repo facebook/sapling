@@ -544,7 +544,7 @@ def mergerecordupdates(orig, repo, actions, branchmerge):
 # largefiles. This will handle identical edits without prompting the user.
 def overridefilemerge(origfn, premerge, repo, mynode, orig, fcd, fco, fca,
                       labels=None):
-    if not lfutil.isstandin(orig):
+    if not lfutil.isstandin(orig) or fcd.isabsent() or fco.isabsent():
         return origfn(premerge, repo, mynode, orig, fcd, fco, fca,
                       labels=labels)
 
