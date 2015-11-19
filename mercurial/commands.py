@@ -5704,7 +5704,11 @@ def resolve(ui, repo, *pats, **opts):
 
             # replace filemerge's .orig file with our resolve file
             a = repo.wjoin(f)
-            util.rename(a + ".resolve", a + ".orig")
+            try:
+                util.rename(a + ".resolve", cmdutil.origpath(ui, repo, a))
+            except OSError as inst:
+                if inst.errno != errno.ENOENT:
+                    raise
 
         ms.commit()
 
