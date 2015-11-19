@@ -31,7 +31,7 @@ def _getfsnow(vfs):
     '''Get "now" timestamp on filesystem'''
     tmpfd, tmpname = vfs.mkstemp()
     try:
-        return util.statmtimesec(os.fstat(tmpfd))
+        return os.fstat(tmpfd).st_mtime
     finally:
         os.close(tmpfd)
         vfs.unlink(tmpname)
@@ -471,7 +471,7 @@ class dirstate(object):
     def normal(self, f):
         '''Mark a file normal and clean.'''
         s = os.lstat(self._join(f))
-        mtime = util.statmtimesec(s)
+        mtime = s.st_mtime
         self._addpath(f, 'n', s.st_mode,
                       s.st_size & _rangemask, mtime & _rangemask)
         if f in self._copymap:
@@ -704,7 +704,7 @@ class dirstate(object):
     def _writedirstate(self, st):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
-        now = util.statmtimesec(util.fstat(st)) & _rangemask
+        now = util.fstat(st).st_mtime & _rangemask
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
         st.close()
         self._lastnormaltime = 0
@@ -1078,16 +1078,15 @@ class dirstate(object):
             if not st and state in "nma":
                 dadd(fn)
             elif state == 'n':
-                mtime = util.statmtimesec(st)
                 if (size >= 0 and
                     ((size != st.st_size and size != st.st_size & _rangemask)
                      or ((mode ^ st.st_mode) & 0o100 and checkexec))
                     or size == -2 # other parent
                     or fn in copymap):
                     madd(fn)
-                elif time != mtime and time != mtime & _rangemask:
+                elif time != st.st_mtime and time != st.st_mtime & _rangemask:
                     ladd(fn)
-                elif mtime == lastnormaltime:
+                elif st.st_mtime == lastnormaltime:
                     # fn may have just been marked as normal and it may have
                     # changed in the same second without changing its size.
                     # This can happen if we quickly do multiple commits.
