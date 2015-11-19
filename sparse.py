@@ -347,8 +347,14 @@ def _wraprepo(ui, repo):
                     try:
                         raw = self.getrawprofile(profile, rev)
                     except error.ManifestLookupError:
-                        self.ui.debug("warning: sparse profile '%s' not found "
+                        msg = (
+                            "warning: sparse profile '%s' not found "
                             "in rev %s - ignoring it\n" % (profile, ctx))
+                        if self.ui.configbool(
+                                'sparse', 'missingwarning', True):
+                            self.ui.warn(msg)
+                        else:
+                            self.ui.debug(msg)
                         continue
                     pincludes, pexcludes, subprofs = \
                         self.readsparseconfig(raw)

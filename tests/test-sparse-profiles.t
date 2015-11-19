@@ -210,7 +210,9 @@ Verify resolving conflict removes the temporary files
   foo
   bar
 
-Test checking out a commit that does not contain the sparse profile
+Test checking out a commit that does not contain the sparse profile. The
+warning message can be suppressed by setting missingwarning = false in
+[sparse] section of your config:
 
   $ hg sparse --reset
   $ hg rm *.sparse
@@ -220,14 +222,21 @@ Test checking out a commit that does not contain the sparse profile
   $ ls
   index.html
   readme.txt
-  $ hg up tip --debug | grep warning
+  $ hg up tip | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
+  [1]
   $ ls
   data.py
   index.html
   readme.txt
-  $ hg sparse --disable-profile backend.sparse --debug | grep warning
+  $ hg sparse --disable-profile backend.sparse | grep warning
   warning: sparse profile 'backend.sparse' not found in rev bc6a201ecffe - ignoring it
+  [1]
+  $ cat >> .hg/hgrc <<EOF
+  > [sparse]
+  > missingwarning = false
+  > EOF
+  $ hg sparse --enable-profile backend.sparse
 
   $ cd ..
 
