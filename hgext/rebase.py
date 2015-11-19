@@ -30,8 +30,9 @@ import os, errno
 revtodo = -1
 nullmerge = -2
 revignored = -3
-# To do with obsolescence
+# successor in rebase destination
 revprecursor = -4
+# plain prune (no successor)
 revpruned = -5
 
 cmdtable = {}
