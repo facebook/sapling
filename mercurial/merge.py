@@ -410,7 +410,7 @@ class mergestate(object):
     def _resolve(self, preresolve, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] in 'rd':
-            return True, 0
+            return True, 0, None
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
         octx = self._repo[self._other]
@@ -445,19 +445,36 @@ class mergestate(object):
             self._dirty = True
         elif not r:
             self.mark(dfile, 'r')
-        return complete, r
+
+        action = None
+        if complete:
+            if deleted:
+                if not fcd.isabsent():
+                    # cd: remote picked (or otherwise deleted)
+                    action = 'r'
+                # else: dc: local picked (no action necessary)
+            else:
+                if fcd.isabsent(): # dc: remote picked
+                    action = 'g'
+                elif fco.isabsent(): # cd: local picked
+                    action = 'a'
+                # else: regular merges (no action necessary)
+
+        return complete, r, action
 
     def preresolve(self, dfile, wctx, labels=None):
         """run premerge process for dfile
 
         Returns whether the merge is complete, and the exit code."""
-        return self._resolve(True, dfile, wctx, labels=labels)
+        complete, r, action = self._resolve(True, dfile, wctx, labels=labels)
+        return complete, r
 
     def resolve(self, dfile, wctx, labels=None):
         """run merge process (assuming premerge was run) for dfile
 
         Returns the exit code of the merge."""
-        return self._resolve(False, dfile, wctx, labels=labels)[1]
+        complete, r, action = self._resolve(False, dfile, wctx, labels=labels)
+        return r
 
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
