@@ -87,7 +87,7 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
           ('n', '', None, _('ignored  (DEPRECATED)')),
           ('k', 'keep', None, _("do not modify working directory during "
                                 "strip")),
-          ('B', 'bookmark', '', _("remove revs only reachable from given"
+          ('B', 'bookmark', [], _("remove revs only reachable from given"
                                   " bookmark"))],
           _('hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...'))
 def stripcmd(ui, repo, *revs, **opts):
@@ -129,9 +129,7 @@ def stripcmd(ui, repo, *revs, **opts):
 
     wlock = repo.wlock()
     try:
-        bookmarks = None
-        if opts.get('bookmark'):
-            bookmarks = set([opts.get('bookmark')])
+        bookmarks = set(opts.get('bookmark'))
         if bookmarks:
             repomarks = repo._bookmarks
             if not bookmarks.issubset(repomarks):
@@ -146,8 +144,8 @@ def stripcmd(ui, repo, *revs, **opts):
                 nodetobookmarks.setdefault(node, []).append(mark)
             for marks in nodetobookmarks.values():
                 if bookmarks.issuperset(marks):
-                   rsrevs = repair.stripbmrevset(repo, marks[0])
-                   revs.update(set(rsrevs))
+                    rsrevs = repair.stripbmrevset(repo, marks[0])
+                    revs.update(set(rsrevs))
             if not revs:
                 for bookmark in bookmarks:
                     del repomarks[bookmark]
