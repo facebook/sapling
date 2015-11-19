@@ -91,7 +91,7 @@ def perfstatus(ui, repo, **opts):
     #m = match.always(repo.root, repo.getcwd())
     #timer(lambda: sum(map(len, repo.dirstate.status(m, [], False, False,
     #                                                False))))
-    timer, fm = gettimer(ui, **opts)
+    timer, fm = gettimer(ui, opts)
     timer(lambda: sum(map(len, repo.status(unknown=opts['unknown']))))
     fm.end()
 
