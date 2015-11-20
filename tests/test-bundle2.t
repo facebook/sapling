@@ -92,8 +92,6 @@ REQUESTS MISSING MOVES DURING REBASE
    c
   saved backup bundle to $TESTTMP/clientrepo1/.hg/strip-backup/9c11d01510fa-7a2b0d59-backup.hg (glob)
   $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
-  0|||0
-  0|||1
   11a19c2eb2258207a4ebaf0c7223ad340046b4c7|||0
   11a19c2eb2258207a4ebaf0c7223ad340046b4c7|||1
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1

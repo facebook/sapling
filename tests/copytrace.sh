@@ -19,6 +19,7 @@ xdb = $DBNAME
 xdbuser = $DBUSER
 xdbpassword = $DBPASS
 xdbport = $DBPORT
+enablebundle2 = True
 EOF
 }
 
@@ -26,5 +27,8 @@ function initclient() {
   cat >> $1/.hg/hgrc <<EOF
 [copytrace]
 remote = False
+enablebundle2 = True
+enablefilldb = True
+enablecopytracing = True
 EOF
 }

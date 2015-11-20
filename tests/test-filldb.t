@@ -1,3 +1,4 @@
+  $ . "$TESTDIR/copytrace.sh"
   $ extpath=$(dirname $TESTDIR)
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -9,6 +10,7 @@
 Setup repo
 
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ touch a
   $ hg add a
@@ -69,7 +71,9 @@ Amend wrapping
 
   $ cd ..
   $ rm -rf repo
+
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ touch a
   $ touch b
@@ -108,9 +112,6 @@ Rebase wrapping
   $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
   01cdd63d5282e9d0c3267de46b9f95f06786f454|b|d|1
   01cdd63d5282e9d0c3267de46b9f95f06786f454|||0
-  0|a|c|0
-  0|b|d|0
-  0|||1
   111a6d6f8ddc7309891f6e7ede7ba993125c4b54|b|d|1
   111a6d6f8ddc7309891f6e7ede7ba993125c4b54|||0
   2f1222a290f07a1758cc927c57cc22805d6696ed|||0

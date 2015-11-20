@@ -1,3 +1,4 @@
+  $ . "$TESTDIR/copytrace.sh"
   $ extpath=$(dirname $TESTDIR)
   $ cat >> $HGRCPATH << EOF
   > [extensions]
@@ -27,6 +28,7 @@ modified    renamed
 Setup repo
 
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ echo 'foo' > a
   $ echo 'bar' > b
@@ -119,6 +121,7 @@ renamed     renamed
 Setup repo
 
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ echo 'foo' > a
   $ echo 'bar' > b
@@ -186,6 +189,7 @@ Branch rebase
 Setup repo
 
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ echo 'foo' > a
   $ echo 'bar' > b
@@ -251,6 +255,8 @@ Rebase
     b
   R b
 
+  $ cd ..
+  $ rm -rf repo
 
 
 FOURTH TEST
@@ -270,6 +276,7 @@ Branch rebase
 Setup repo
 
   $ hg init repo
+  $ initclient repo
   $ cd repo
   $ echo 'foo' > a
   $ echo 'bar' > b
@@ -301,7 +308,7 @@ Rebase
   $ hg rebase -s 153612 -d 924ff7
   rebasing 3:153612db400b "mv d e"
   rebasing 4:387c04c77e69 "mv e f" (tip)
-  saved backup bundle to $TESTTMP/repo/repo/.hg/strip-backup/153612db400b-1ca39551-backup.hg (glob)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/153612db400b-1ca39551-backup.hg (glob)
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
   @  changeset: b819c5a5ef7911dc41b3d9f866656f61b189ffcf
   |   desc: mv e f
