@@ -1119,6 +1119,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     updated += msupdated
     merged += msmerged
     removed += msremoved
+
+    extraactions = ms.actions()
+    for a in 'rag':
+        actions[a].extend(extraactions[a])
+
     progress(_updating, None, total=numupdates, unit=_files)
 
     return updated, merged, removed, unresolved
