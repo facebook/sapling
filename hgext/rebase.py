@@ -555,11 +555,12 @@ def rebase(ui, repo, **opts):
                 collapsedas = newnode
             clearrebased(ui, repo, state, skipped, collapsedas)
 
-        if currentbookmarks:
-            updatebookmarks(repo, targetnode, nstate, currentbookmarks)
-            if activebookmark not in repo._bookmarks:
-                # active bookmark was divergent one and has been deleted
-                activebookmark = None
+        if True:
+            if currentbookmarks:
+                updatebookmarks(repo, targetnode, nstate, currentbookmarks)
+                if activebookmark not in repo._bookmarks:
+                    # active bookmark was divergent one and has been deleted
+                    activebookmark = None
 
         clearstatus(repo)
         ui.note(_("rebase completed\n"))
