@@ -62,7 +62,7 @@ def _pushb2movedata(pushop, bundler):
     ctxlist = _processctxlist(repo, pushop.remoteheads, pushop.revs)
     if ctxlist:
         try:
-            dic = dbutil.retrieverawdata(repo, ctxlist, askserver=False)
+            dic = dbutil.retrieverawdata(repo, ctxlist)
         except Exception as e:
             _fail(repo, e, "_pushb2movedata")
         data = _encodedict(dic)

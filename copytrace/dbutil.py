@@ -44,6 +44,9 @@ def _sqlcmds(name, remote):
                     'mv CHAR(1) NOT NULL ' + \
                     ');'
 
+    elif name == 'createindex':
+        return 'CREATE INDEX ctxindex ON Moves (repo, hash, mv);'
+
     elif name == 'insertctx':
         if remote:
             return 'INSERT INTO Moves VALUES (%s, %s, %s, %s, %s);'
@@ -64,7 +67,7 @@ def _sqlcmds(name, remote):
         if not remote:
             return 'SELECT DISTINCT hash ' + \
                    'FROM Moves ' + \
-                   'WHERE hash IN (%s);'
+                   'WHERE hash IN (%s) and repo = %s;'
 
     elif name == 'deletectx':
         if remote:
@@ -141,6 +144,7 @@ def _exists(cursor, remote):
     table = cursor.fetchall()
     if not table:
         cursor.execute(_sqlcmds('createtable', remote))
+        cursor.execute(_sqlcmds('createindex', remote))
 
 
 def insertitem(cursor, ctxhash, dic, move, repo):
@@ -242,7 +246,7 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
     return ret
 
 
-def retrieverawdata(repo, ctxlist, askserver=True):
+def retrieverawdata(repo, ctxlist):
     """
     retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or
     copies
@@ -267,17 +271,6 @@ def retrieverawdata(repo, ctxlist, askserver=True):
             dst = 'None'
         ret.setdefault(ctxhash.encode('utf8'), []).append((src.encode('utf8'),
              dst.encode('utf8'), mv.encode('utf8')))
-
-    processed = ret.keys()
-    missing = [f for f in ctxlist if f not in processed]
-
-    # The local database doesn't have the data for this ctx and hasn't tried
-    # to retrieve it yet (askserver)
-    if askserver and not repo.copytraceremote and missing:
-        _requestdata(repo, missing)
-        add = retrieverawdata(repo, missing, move=move,
-                              askserver=False)
-        ret.update(add)
 
     return ret
 
@@ -306,8 +299,8 @@ def checkpresence(repo, ctxlist):
     dbname, conn, cursor = _connect(repo)
     # Returns hash
     cursor.execute(_sqlcmds('retrievehashes', repo.copytraceremote)
-                   % (','.join('?' * len(ctxhashs))),
-                   ctxhashs)
+                   % (','.join('?' * len(ctxhashs)), '?'),
+                   ctxhashs + [repo.root])
     processed = cursor.fetchall()
     _close(conn, cursor)
     processed = [ctx[0].encode('utf8') for ctx in processed]
