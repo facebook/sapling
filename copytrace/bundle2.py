@@ -5,7 +5,8 @@
 
 from mercurial import bundle2, util, exchange, hg, error
 from mercurial.i18n import _
-import dbutil, error
+import dbutil
+import error as dberror
 
 
 # Temporarily used to force to load the module
@@ -64,7 +65,7 @@ def _pushb2movedata(pushop, bundler):
         try:
             dic = dbutil.retrieverawdata(repo, ctxlist)
         except Exception as e:
-            _fail(repo, e, "_pushb2movedata")
+            dberror.logfailure(repo, e, "_pushb2movedata")
         data = _encodedict(dic)
         repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
 
@@ -81,7 +82,7 @@ def _handlemovedatarequest(op, inpart):
     try:
         dbutil.insertrawdata(op.repo, dic)
     except Exception as e:
-        error.logfailure(op.repo, e, "_handlemovedatarequest-push")
+        dberror.logfailure(op.repo, e, "_handlemovedatarequest-push")
 
 
 @exchange.getbundle2partsgenerator('pull:movedata')
@@ -96,7 +97,7 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
         try:
             dic = dbutil.retrieverawdata(repo, ctxlist)
         except Exception as e:
-            _fail(repo, e, "_getbundlemovedata")
+            dberror.logfailure(repo, e, "_getbundlemovedata")
         data = _encodedict(dic)
 
         part = bundler.newpart('pull:movedata', data=data)
@@ -113,7 +114,7 @@ def _handlemovedatarequest(op, inpart):
     try:
         dbutil.insertrawdata(op.repo, dic)
     except Exception as e:
-        error.logfailure(op.repo, e, "_handlemovedatarequest-pull")
+        dberror.logfailure(op.repo, e, "_handlemovedatarequest-pull")
 
 def _processctxlist(repo, remoteheads, localheads):
     """
