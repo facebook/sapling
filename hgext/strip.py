@@ -64,13 +64,19 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
 
         repomarks = repo._bookmarks
         if bookmarks:
-            if repo._activebookmark in bookmarks:
-                bookmarksmod.deactivate(repo)
-            for bookmark in bookmarks:
-                del repomarks[bookmark]
-            repomarks.write()
-            for bookmark in sorted(bookmarks):
-                ui.write(_("bookmark '%s' deleted\n") % bookmark)
+            tr = None
+            try:
+                tr = repo.transaction('strip')
+                if repo._activebookmark in bookmarks:
+                    bookmarksmod.deactivate(repo)
+                for bookmark in bookmarks:
+                    del repomarks[bookmark]
+                repomarks.recordchange(tr)
+                tr.close()
+                for bookmark in sorted(bookmarks):
+                    ui.write(_("bookmark '%s' deleted\n") % bookmark)
+            finally:
+                release(tr)
     finally:
         release(lock, wlock)
 
@@ -147,11 +153,18 @@ def stripcmd(ui, repo, *revs, **opts):
                     rsrevs = repair.stripbmrevset(repo, marks[0])
                     revs.update(set(rsrevs))
             if not revs:
-                for bookmark in bookmarks:
-                    del repomarks[bookmark]
-                repomarks.write()
-                for bookmark in sorted(bookmarks):
-                    ui.write(_("bookmark '%s' deleted\n") % bookmark)
+                lock = tr = None
+                try:
+                    lock = repo.lock()
+                    tr = repo.transaction('bookmark')
+                    for bookmark in bookmarks:
+                        del repomarks[bookmark]
+                    repomarks.recordchange(tr)
+                    tr.close()
+                    for bookmark in sorted(bookmarks):
+                        ui.write(_("bookmark '%s' deleted\n") % bookmark)
+                finally:
+                    release(lock, tr)
 
         if not revs:
             raise error.Abort(_('empty revision set'))
