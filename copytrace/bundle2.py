@@ -66,6 +66,7 @@ def _pushb2movedata(pushop, bundler):
             dic = dbutil.retrieverawdata(repo, ctxlist)
         except Exception as e:
             dberror.logfailure(repo, e, "_pushb2movedata")
+            return
         data = _encodedict(dic)
         repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
 
@@ -98,6 +99,7 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
             dic = dbutil.retrieverawdata(repo, ctxlist)
         except Exception as e:
             dberror.logfailure(repo, e, "_getbundlemovedata")
+            return
         data = _encodedict(dic)
 
         part = bundler.newpart('pull:movedata', data=data)
