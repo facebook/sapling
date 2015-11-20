@@ -555,14 +555,19 @@ def rebase(ui, repo, **opts):
                 collapsedas = newnode
             clearrebased(ui, repo, state, skipped, collapsedas)
 
-        if True:
+        tr = None
+        try:
+            tr = repo.transaction('bookmark')
             if currentbookmarks:
-                updatebookmarks(repo, targetnode, nstate, currentbookmarks)
+                updatebookmarks(repo, targetnode, nstate, currentbookmarks, tr)
                 if activebookmark not in repo._bookmarks:
                     # active bookmark was divergent one and has been deleted
                     activebookmark = None
+            clearstatus(repo)
+            tr.close()
+        finally:
+            release(tr)
 
-        clearstatus(repo)
         ui.note(_("rebase completed\n"))
         util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
         if skipped:
@@ -817,7 +822,7 @@ def updatemq(repo, state, skipped, **opts):
         mq.seriesdirty = True
         mq.savedirty()
 
-def updatebookmarks(repo, targetnode, nstate, originalbookmarks):
+def updatebookmarks(repo, targetnode, nstate, originalbookmarks, tr):
     'Move bookmarks to their correct changesets, and delete divergent ones'
     marks = repo._bookmarks
     for k, v in originalbookmarks.iteritems():
@@ -825,8 +830,7 @@ def updatebookmarks(repo, targetnode, nstate, originalbookmarks):
             # update the bookmarks for revs that have moved
             marks[k] = nstate[v]
             bookmarks.deletedivergent(repo, [targetnode], k)
-
-    marks.write()
+    marks.recordchange(tr)
 
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                 external, activebookmark):
