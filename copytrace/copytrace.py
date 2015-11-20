@@ -9,7 +9,7 @@
 from mercurial import copies, scmutil, util
 import sqlite3
 
-import dbutil
+import dbutil, error
 
 
 def _createctxstack(repo, c, ca):
@@ -17,7 +17,6 @@ def _createctxstack(repo, c, ca):
     c is the more recent context, ca the ancestor to reach
     returns the ctx stack between them
     """
-
     ctxstack = []
     curctx = c
     while curctx != ca:
@@ -47,7 +46,6 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
 
     should returns {bbb: [b, bb]}, {b, [bbb]}
     """
-
     paths = {}
 
     # Retrieve the move data for all the ctx
@@ -149,60 +147,65 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
         diverge      file renamed in both                       {src@ca: [dst]}
         renamedelete file renamed in one, deleted in the other  {src@ca: [dst]}
     """
-    if not c1 or not c2 or c1 == c2:
-        return {}, {}, {}, {}
+    try:
+        if not c1 or not c2 or c1 == c2:
+            return {}, {}, {}, {}
 
-    if c2.node() is None and c1.node() == repo.dirstate.p1():
-        return repo.dirstate.copies(), {}, {}, {}
+        if c2.node() is None and c1.node() == repo.dirstate.p1():
+            return repo.dirstate.copies(), {}, {}, {}
 
-    if c1.rev() == None:
-        c1 = c1.p1()
-    if c2.rev() == None:
-        c2 = c2.p1()
+        if c1.rev() == None:
+            c1 = c1.p1()
+        if c2.rev() == None:
+            c2 = c2.p1()
 
-    # in case of a rebase, ca isn't always a common ancestor
-    anc = c1.ancestor(c2)
-    paths1, renames1 = _branch(repo, c1, anc)
-    paths2, renames2 = _branch(repo, c2, anc)
+        # in case of a rebase, ca isn't always a common ancestor
+        anc = c1.ancestor(c2)
+        paths1, renames1 = _branch(repo, c1, anc)
+        paths2, renames2 = _branch(repo, c2, anc)
 
-    copy = {}
-    renamedelete = {}
-    diverge = {}
+        copy = {}
+        renamedelete = {}
+        diverge = {}
 
-    m1 = c1.manifest()
-    m2 = c2.manifest()
-    ma = ca.manifest()
+        m1 = c1.manifest()
+        m2 = c2.manifest()
+        ma = ca.manifest()
 
-    addedinm1 = m1.filesnotin(ma)
-    addedinm2 = m2.filesnotin(ma)
-    u1 = sorted(addedinm1 - addedinm2)
-    u2 = sorted(addedinm2 - addedinm1)
+        addedinm1 = m1.filesnotin(ma)
+        addedinm2 = m2.filesnotin(ma)
+        u1 = sorted(addedinm1 - addedinm2)
+        u2 = sorted(addedinm2 - addedinm1)
 
-    used = []
-    for f in u1:
-        if not f in paths1:
-            continue
-        used1 = _checkfile(f, paths1[f], renames2, m2, copy, renamedelete)
-        used.extend(used1)
-    for f in u2:
-        if not f in paths2:
-            continue
-        used.extend(_checkfile(f, paths2[f], renames1, m1, copy, renamedelete))
+        used = []
+        for f in u1:
+            if not f in paths1:
+                continue
+            used1 = _checkfile(f, paths1[f], renames2, m2, copy, renamedelete)
+            used.extend(used1)
+        for f in u2:
+            if not f in paths2:
+                continue
+            used.extend(_checkfile(f, paths2[f], renames1, m1, copy, renamedelete))
 
-    for src, dstl in renames1.iteritems():
-        for dst in dstl:
-            if not dst in used:
-                diverge.setdefault(src, []).append(dst)
-    for src, dstl in renames2.iteritems():
-        for dst in dstl:
-            if not dst in used:
-                diverge.setdefault(src, []).append(dst)
+        for src, dstl in renames1.iteritems():
+            for dst in dstl:
+                if not dst in used:
+                    diverge.setdefault(src, []).append(dst)
+        for src, dstl in renames2.iteritems():
+            for dst in dstl:
+                if not dst in used:
+                    diverge.setdefault(src, []).append(dst)
 
-    # puts the copy data into a temporary row of the db to be able to retrieve
-    # it at the commit time of the rebase (concludenode)
-    dbutil.removectx(repo, '0')
-    dbutil.insertdata(repo, '0', {}, copy)
-    return copy, {}, diverge, renamedelete
+        # puts the copy data into a temporary row of the db to be able to retrieve
+        # it at the commit time of the rebase (concludenode)
+        dbutil.removectx(repo, '0')
+        dbutil.insertdata(repo, '0', {}, copy)
+        return copy, {}, diverge, renamedelete
+
+    except Exception as e:
+        error.logfailure(repo, e, "mergecopieswithdb")
+        return orig(repo, c1, c2, ca)
 
 
 def _chain(src, dst, a, b):
@@ -332,15 +335,20 @@ def pathcopieswithdb(orig, x, y, match=None):
     """
     find {dst@y: src@x} copy mapping for directed compare
     """
-    if x == y or not x or not y:
-        return {}
-    a = y.ancestor(x)
-    if a == x:
-        return _forwardrenameswithdb(x, y, match=match)
-    if a == y:
-        return _backwardrenameswithdb(x, y)
-    return _chain(x, y, _backwardrenameswithdb(x, a),
-                   _forwardrenameswithdb(a, y, match=match))
+    try:
+        if x == y or not x or not y:
+            return {}
+        a = y.ancestor(x)
+        if a == x:
+            return _forwardrenameswithdb(x, y, match=match)
+        if a == y:
+            return _backwardrenameswithdb(x, y)
+        return _chain(x, y, _backwardrenameswithdb(x, a),
+                       _forwardrenameswithdb(a, y, match=match))
+
+    except Exception as e:
+        error.logfailure(x._repo, e, "pathcopieswithdb")
+        return orig(x, y, match)
 
 
 def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
@@ -348,11 +356,18 @@ def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
     wraps the command to get the set of revs that will be involved in the
     rebase and checks if they are in the database
     """
-    if rebaseset:
-        rev = rebaseset.first()
-        rebased = repo[rev]
-        ca = rebased.ancestor(dest)
-        ctxlist = list(repo.set("only(%r, %r)" % (dest.rev(), ca.rev())))
-        if ctxlist:
-            dbutil.checkpresence(repo, ctxlist)
-    return orig(repo, dest, rebaseset, collapsef, obsoletenotrebased)
+    try:
+        if rebaseset:
+            rev = rebaseset.first()
+            rebased = repo[rev]
+            ca = rebased.ancestor(dest)
+            ctxlist = list(repo.set("only(%r, %r)" % (dest.rev(), ca.rev())))
+            if ctxlist:
+                dbutil.checkpresence(repo, ctxlist)
+
+    except Exception as e:
+        error.logfailure(repo, e, "buildstate")
+    finally:
+        return orig(repo, dest, rebaseset, collapsef, obsoletenotrebased)
+
+

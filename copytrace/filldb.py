@@ -13,7 +13,7 @@ from mercurial import scmutil
 from mercurial import copies as copiesmod
 import sqlite3
 
-import dbutil
+import dbutil, error
 
 
 def _sortmvcp(repo, ctx, cp, moves, copies):
@@ -33,16 +33,19 @@ def _adddata(repo):
     """
     adds the data for the last commit node in the database
     """
-    ctx = repo['.']
-    pctx = ctx.p1()
-    cp = copiesmod._forwardcopies(pctx, ctx, None)
+    try:
+        ctx = repo['.']
+        pctx = ctx.p1()
+        cp = copiesmod._forwardcopies(pctx, ctx, None)
 
-    moves = {}
-    copies = {}
+        moves = {}
+        copies = {}
 
-    _sortmvcp(repo, ctx, cp, moves, copies)
+        _sortmvcp(repo, ctx, cp, moves, copies)
 
-    dbutil.insertdata(repo, ctx, moves, copies)
+        dbutil.insertdata(repo, ctx, moves, copies)
+    except Exception as e:
+        error.logfailure(repo, e, "_adddata")
 
 
 def commit(orig, ui, repo, commitfunc, pats, opts):
@@ -84,10 +87,19 @@ def concludenode(orig, repo, rev, p1, p2, **kwargs):
     """
     # this allows to trace rename information from the rebase which mercurial
     # doesn't do today
-    cp = dbutil.retrievedatapkg(repo, ['0'], move=False, askserver=False)['0']
-    dbutil.removectx(repo, '0')
-    _markchanges(repo, cp)
-    ret = orig(repo, rev, p1, p2, **kwargs)
+    flag = 0
+    try:
+        cp = dbutil.retrievedatapkg(repo, ['0'], move=False, askserver=False)
+        if '0' in cp.keys():
+            _markchanges(repo, cp['0'])
+            dbutil.removectx(repo, '0')
+    except Exception as e:
+        flag = 1
+        error.logfailure(repo, e, "concludenode")
+    finally:
+        ret = orig(repo, rev, p1, p2, **kwargs)
 
-    _adddata(repo)
-    return ret
+        # don't try if the former calls failed
+        if flag == 0:
+            _adddata(repo)
+        return ret

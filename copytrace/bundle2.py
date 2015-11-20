@@ -5,7 +5,7 @@
 
 from mercurial import bundle2, util, exchange, hg, error
 from mercurial.i18n import _
-import dbutil
+import dbutil, error
 
 
 # Temporarily used to force to load the module
@@ -21,7 +21,7 @@ def pullmoves(repo, nodelist, source="default"):
     # No default server defined
     try:
         remote = hg.peer(repo, {}, source)
-    except:
+    except Exception:
         return
     repo.ui.status(_('pulling move data from %s\n') % util.hidepassword(source))
     pullop = exchange.pulloperation(repo, remote, nodelist, False)
@@ -61,7 +61,10 @@ def _pushb2movedata(pushop, bundler):
     repo = pushop.repo
     ctxlist = _processctxlist(repo, pushop.remoteheads, pushop.revs)
     if ctxlist:
-        dic = dbutil.retrieverawdata(repo, ctxlist, askserver=False)
+        try:
+            dic = dbutil.retrieverawdata(repo, ctxlist, askserver=False)
+        except Exception as e:
+            _fail(repo, e, "_pushb2movedata")
         data = _encodedict(dic)
         repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
 
@@ -75,7 +78,10 @@ def _handlemovedatarequest(op, inpart):
     """
     dic = _decodedict(inpart)
     op.records.add('movedata', {'mvdict': dic})
-    dbutil.insertrawdata(op.repo, dic)
+    try:
+        dbutil.insertrawdata(op.repo, dic)
+    except Exception as e:
+        error.logfailure(op.repo, e, "_handlemovedatarequest-push")
 
 
 @exchange.getbundle2partsgenerator('pull:movedata')
@@ -86,9 +92,11 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
     """
     ctxlist = [repo[node].hex() for node in kwargs.get('movedatareq', [])]
     ctxlist.extend(_processctxlist(repo, common, heads))
-
     if ctxlist:
-        dic = dbutil.retrieverawdata(repo, ctxlist)
+        try:
+            dic = dbutil.retrieverawdata(repo, ctxlist)
+        except Exception as e:
+            _fail(repo, e, "_getbundlemovedata")
         data = _encodedict(dic)
 
         part = bundler.newpart('pull:movedata', data=data)
@@ -102,8 +110,10 @@ def _handlemovedatarequest(op, inpart):
     dic = _decodedict(inpart)
     op.records.add('movedata', {'mvdict': dic})
     op.repo.ui.warn('moves for %d changesets retrieved\n' % len(dic.keys()))
-    dbutil.insertrawdata(op.repo, dic)
-
+    try:
+        dbutil.insertrawdata(op.repo, dic)
+    except Exception as e:
+        error.logfailure(op.repo, e, "_handlemovedatarequest-pull")
 
 def _processctxlist(repo, remoteheads, localheads):
     """
