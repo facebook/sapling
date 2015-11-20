@@ -414,8 +414,9 @@ class mergestate(object):
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
         octx = self._repo[self._other]
-        fcd = wctx[dfile]
-        fco = octx[ofile]
+        fcd = self._filectxorabsent(hash, wctx, dfile)
+        fco = self._filectxorabsent(onode, octx, ofile)
+        # TODO: move this to filectxorabsent
         fca = self._repo.filectx(afile, fileid=anode)
         # "premerge" x flags
         flo = fco.flags()
@@ -429,9 +430,12 @@ class mergestate(object):
                 flags = flo
         if preresolve:
             # restore local
-            f = self._repo.vfs('merge/' + hash)
-            self._repo.wwrite(dfile, f.read(), flags)
-            f.close()
+            if hash != nullhex:
+                f = self._repo.vfs('merge/' + hash)
+                self._repo.wwrite(dfile, f.read(), flags)
+                f.close()
+            else:
+                self._repo.wvfs.unlinkpath(dfile, ignoremissing=True)
             complete, r, deleted = filemerge.premerge(self._repo, self._local,
                                                       lfile, fcd, fco, fca,
                                                       labels=labels)
@@ -461,6 +465,12 @@ class mergestate(object):
                 # else: regular merges (no action necessary)
 
         return complete, r, action
+
+    def _filectxorabsent(self, hexnode, ctx, f):
+        if hexnode == nullhex:
+            return filemerge.absentfilectx(ctx, f)
+        else:
+            return ctx[f]
 
     def preresolve(self, dfile, wctx, labels=None):
         """run premerge process for dfile
