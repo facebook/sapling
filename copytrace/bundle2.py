@@ -75,7 +75,7 @@ def _handlemovedatarequest(op, inpart):
     """
     dic = _decodedict(inpart)
     op.records.add('movedata', {'mvdict': dic})
-    dbutil.insertrawdata(op.repo, dic, remote=True)
+    dbutil.insertrawdata(op.repo, dic)
 
 
 @exchange.getbundle2partsgenerator('pull:movedata')
@@ -88,7 +88,7 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
     ctxlist.extend(_processctxlist(repo, common, heads))
 
     if ctxlist:
-        dic = dbutil.retrieverawdata(repo, ctxlist, remote=True)
+        dic = dbutil.retrieverawdata(repo, ctxlist)
         data = _encodedict(dic)
 
         part = bundler.newpart('pull:movedata', data=data)

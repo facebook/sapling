@@ -17,9 +17,11 @@ SETUP CLIENT REPOS
   $ hg clone serverrepo clientrepo1
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ initclient clientrepo1
   $ hg clone serverrepo clientrepo2
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ initclient clientrepo2
 
 PUSH MOVES FROM CLIENT1
 

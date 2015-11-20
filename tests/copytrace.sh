@@ -13,10 +13,18 @@ DROP TABLE IF EXISTS Moves;' 2>/dev/null
 function initserver() {
   cat >> $1/.hg/hgrc <<EOF
 [copytrace]
+remote = True
 xdbhost = $DBHOST
 xdb = $DBNAME
 xdbuser = $DBUSER
 xdbpassword = $DBPASS
 xdbport = $DBPORT
+EOF
+}
+
+function initclient() {
+  cat >> $1/.hg/hgrc <<EOF
+[copytrace]
+remote = False
 EOF
 }

@@ -10,9 +10,9 @@
 
 from mercurial import scmutil, util, commands
 import bundle2
-import sqlite3
 import time
 
+import sqlite3
 # user servers don't need to have the mysql module
 try:
     import mysql.connector
@@ -20,11 +20,11 @@ except:
     pass
 
 localdb = 'moves.db'
-
+remote = False
 remoteargs = {}
 
 
-def _sqlcmds(name, remote):
+def _sqlcmds(name):
     """
     returns a sql command for the given name and remote (MySQL or sqlite)
     """
@@ -77,10 +77,12 @@ def _sqlcmds(name, remote):
                    'WHERE hash = ? AND repo = ?;'
 
 
-def _connect(repo, remote):
+def _connect(repo):
     """
     Connecting to the local sqlite database or remote MySQL database
     """
+    _initremote(repo)
+
     # Local sqlite db
     if not remote:
         dbname = localdb
@@ -93,8 +95,6 @@ def _connect(repo, remote):
 
     # Remote SQL db
     else:
-        if not remoteargs:
-            _initmysqlargs(repo)
         dbname = remoteargs['database']
         retry = 3
         while True:
@@ -113,20 +113,23 @@ def _connect(repo, remote):
         cursor = conn.cursor()
         cursor.execute("SET wait_timeout=%s" % waittimeout)
 
-    _exists(cursor, remote)
+    _exists(cursor)
     return dbname, conn, cursor
 
 
-def _initmysqlargs(repo):
+def _initremote(repo):
     """
-    gets the MySQL config from ui
+    detects if its the server or the client
     """
+    global remote
     ui = repo.ui
-    remoteargs['host'] = ui.config("copytrace", "xdbhost")
-    remoteargs['database'] = ui.config("copytrace", "xdb")
-    remoteargs['user'] = ui.config("copytrace", "xdbuser")
-    remoteargs['port'] = ui.configint("copytrace", "xdbport")
-    remoteargs['password'] = ui.config("copytrace", "xdbpassword")
+    remote = ui.configbool("copytrace", "remote", False)
+    if remote and not remoteargs:
+        remoteargs['host'] = ui.config("copytrace", "xdbhost")
+        remoteargs['database'] = ui.config("copytrace", "xdb")
+        remoteargs['user'] = ui.config("copytrace", "xdbuser")
+        remoteargs['port'] = ui.configint("copytrace", "xdbport")
+        remoteargs['password'] = ui.config("copytrace", "xdbpassword")
 
 
 def _close(conn, cursor):
@@ -134,26 +137,26 @@ def _close(conn, cursor):
     conn.close()
 
 
-def _exists(cursor, remote):
+def _exists(cursor):
     """
     checks the existence of the Moves table and creates it if it doesn't
     """
     try:
-        cursor.execute(_sqlcmds('tableexists', remote))
+        cursor.execute(_sqlcmds('tableexists'))
         table = cursor.fetchall()
         if not table:
-            cursor.execute(_sqlcmds('createtable', remote))
+            cursor.execute(_sqlcmds('createtable'))
     except:
         raise util.Abort('could not create the %s Moves table ' %
                          'remote' if remote else 'local')
 
 
-def insertitem(cursor, ctxhash, dic, move, remote, repo):
+def insertitem(cursor, ctxhash, dic, move, repo):
     """
     inserts {dst:src} in the database using the cursor
     """
     mv = '1' if move else '0'
-    insertcmd = _sqlcmds('insertctx', remote)
+    insertcmd = _sqlcmds('insertctx')
 
     # No rename in this ctx
     if dic == {}:
@@ -166,12 +169,12 @@ def insertitem(cursor, ctxhash, dic, move, remote, repo):
             cursor.execute(insertcmd, insertdata)
 
 
-def insertdata(repo, ctx, mvdict, cpdict, remote=False):
+def insertdata(repo, ctx, mvdict, cpdict):
     """
     inserts the mvdict/cpdict = {dst: src} data in the database with '1' if it
     is a move, '0' if it is a copy
     """
-    dbname, conn, cursor = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo)
 
     # '0'is used as temp data storage
     if ctx == '0':
@@ -179,8 +182,8 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     else:
         ctxhash = str(ctx.hex())
     try:
-        insertitem(cursor, ctxhash, mvdict, True, remote, repo)
-        insertitem(cursor, ctxhash, cpdict, False, remote, repo)
+        insertitem(cursor, ctxhash, mvdict, True, repo)
+        insertitem(cursor, ctxhash, cpdict, False, repo)
         conn.commit()
     except:
         raise util.Abort('could not insert data into the %s database' % dbname)
@@ -188,12 +191,12 @@ def insertdata(repo, ctx, mvdict, cpdict, remote=False):
     _close(conn, cursor)
 
 
-def insertrawdata(repo, dic, remote=False):
+def insertrawdata(repo, dic):
     """
     inserts dict = {ctxhash: [src, dst, mv]} for moves and copies into the
     database
     """
-    dbname, conn, cursor = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo)
     try:
         for ctxhash, mvlist in dic.iteritems():
             for src, dst, mv in mvlist:
@@ -201,7 +204,7 @@ def insertrawdata(repo, dic, remote=False):
                     src = None
                     dst = None
                 insertdata = (repo.root, ctxhash, src, dst, mv)
-                cursor.execute(_sqlcmds('insertctx', remote), insertdata)
+                cursor.execute(_sqlcmds('insertctx'), insertdata)
         conn.commit()
     except:
         raise util.Abort('could not insert data into the %s database' % dbname)
@@ -209,7 +212,7 @@ def insertrawdata(repo, dic, remote=False):
     _close(conn, cursor)
 
 
-def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
+def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
@@ -217,10 +220,10 @@ def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
     mv = '1' if move else '0'
     token = '%s' if remote else '?'
 
-    dbname, conn, cursor = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo)
     try:
         # Returns : hash, src, dst
-        cursor.execute(_sqlcmds('retrievemoves', remote) %
+        cursor.execute(_sqlcmds('retrievemoves') %
                   (','.join([token] * len(ctxlist)), token, token),
                   ctxlist + [mv, repo.root])
     except:
@@ -246,23 +249,22 @@ def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
     # to retrieve it yet (firstcheck)
     if askserver and not remote and missing:
         _requestdata(repo, missing)
-        add = retrievedatapkg(repo, missing, move=move, remote=remote,
-                              askserver=False)
+        add = retrievedatapkg(repo, missing, move=move, askserver=False)
         ret.update(add)
 
     return ret
 
 
-def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
+def retrieverawdata(repo, ctxlist, askserver=True):
     """
     retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or
     copies
     """
-    dbname, conn, cursor = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo)
     token = '%s' if remote else '?'
     try:
         # Returns: hash, src, dst, mv
-        cursor.execute(_sqlcmds('retrieveraw', remote) %
+        cursor.execute(_sqlcmds('retrieveraw') %
                        (','.join([token] * len(ctxlist)), token),
                        ctxlist + [repo.root])
     except:
@@ -288,18 +290,18 @@ def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
     # to retrieve it yet (askserver)
     if askserver and not remote and missing:
         _requestdata(repo, missing)
-        add = retrieverawdata(repo, missing, move=move, remote=remote,
+        add = retrieverawdata(repo, missing, move=move,
                               askserver=False)
         ret.update(add)
 
     return ret
 
 
-def removectx(repo, ctx, remote=False):
+def removectx(repo, ctx):
     """
     removes the data concerning the ctx in the database
     """
-    dbname, conn, cursor = _connect(repo, remote)
+    dbname, conn, cursor = _connect(repo)
     # '0'is used as temp data storage
     if ctx == '0':
         ctxhash = '0'
@@ -307,7 +309,7 @@ def removectx(repo, ctx, remote=False):
         ctxhash = str(ctx.hex())
     deletedata = [ctxhash, repo.root]
     try:
-        cursor.execute(_sqlcmds('deletectx', remote), deletedata)
+        cursor.execute(_sqlcmds('deletectx'), deletedata)
         conn.commit()
     except:
         raise util.Abort('could not delete ctx from the %s database' % dbname)
@@ -320,10 +322,10 @@ def checkpresence(repo, ctxlist):
     checks if the ctx in ctxlist are in the local database or requests for it
     """
     ctxhashs = [ctx.hex() for ctx in ctxlist]
-    dbname, conn, cursor = _connect(repo, False)
+    dbname, conn, cursor = _connect(repo)
     try:
         # Returns hash
-        cursor.execute(_sqlcmds('retrievehashes', False)
+        cursor.execute(_sqlcmds('retrievehashes')
                        % (','.join('?' * len(ctxhashs))),
                        ctxhashs)
     except:
