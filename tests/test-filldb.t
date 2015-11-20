@@ -118,3 +118,20 @@ Rebase wrapping
   2f1222a290f07a1758cc927c57cc22805d6696ed|||1
   a003d50a0eea20c381b92e9200e323f3c945c473|a|c|1
   a003d50a0eea20c381b92e9200e323f3c945c473|||0
+
+Manually adding missing move data
+  $ hg update -q .^
+  $ hg mv c e
+  $ hg commit -m "mv c e" -q
+  $ rm .hg/moves.db
+  $ hg rebase -d 111a6d
+  rebasing 3:2aac4892fdfa "mv c e" (tip)
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2aac4892fdfa-55937866-backup.hg (glob)
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
+  111a6d6f8ddc7309891f6e7ede7ba993125c4b54|b|d|1
+  111a6d6f8ddc7309891f6e7ede7ba993125c4b54|||0
+  2aac4892fdfa122108364670f6cd740a1e0bbd05|c|e|1
+  2aac4892fdfa122108364670f6cd740a1e0bbd05|||0
+  502dd38c92fc5edffa608131206446b1fbee879b|c|e|1
+  502dd38c92fc5edffa608131206446b1fbee879b|||0
+

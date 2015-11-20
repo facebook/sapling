@@ -8,7 +8,7 @@
 # GNU General Public License version 2 or any later version.
 
 
-from mercurial import scmutil, util, commands
+from mercurial import scmutil, util, commands, copies
 import bundle2
 import time
 
@@ -242,6 +242,14 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
         _requestdata(repo, missing)
         add = retrievedatapkg(repo, missing, move=move, askserver=False)
         ret.update(add)
+        addk = add.keys()
+        missing = [f for f in missing if f not in addk]
+
+    if missing:
+        _addmissingmoves(repo, missing)
+        add2 = retrievedatapkg(repo, missing, move=move,
+                                  askserver=False)
+        ret.update(add2)
 
     return ret
 
@@ -314,3 +322,22 @@ def _requestdata(repo, nodelist):
     Requests missing ctx data to a server
     """
     bundle2.pullmoves(repo, nodelist)
+
+
+def _addmissingmoves(repo, ctxlist):
+    """
+    Manually add missing moves
+    """
+    # This should only concern client draft commits made before the extension
+    for ctxhash in ctxlist:
+        ctx = repo[ctxhash]
+        m = ctx.manifest()
+        cp = copies._forwardcopies(ctx.p1(), ctx)
+        mvdict = {}
+        cpdict = {}
+        for dst, src in cp.iteritems():
+            if src in m:
+                cpdict[dst] = src
+            else:
+                mvdict[dst] = src
+        insertdata(repo, ctx, mvdict, cpdict)
