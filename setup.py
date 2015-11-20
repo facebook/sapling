@@ -46,5 +46,8 @@ setup(
         'upgradegeneraldelta',
         'writecg2',
     ],
-    packages=['crecord']
+    packages=[
+        'copytrace',
+        'crecord'
+    ]
 )
