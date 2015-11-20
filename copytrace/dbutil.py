@@ -205,7 +205,7 @@ def insertrawdata(repo, dic):
     _close(conn, cursor)
 
 
-def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
+def retrievedatapkg(repo, ctxlist, move=False, askserver=True, addmissing=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
@@ -234,7 +234,7 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
                  src.encode('utf8')
 
     processed = ret.keys()
-    missing = [f for f in ctxlist if f not in processed]
+    missing = [f for f in ctxlist if f not in processed and f != '0']
 
     # The local database doesn't have the data for this ctx and hasn't tried
     # to retrieve it yet (firstcheck)
@@ -245,10 +245,10 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True):
         addk = add.keys()
         missing = [f for f in missing if f not in addk]
 
-    if missing:
+    if addmissing and missing:
         _addmissingmoves(repo, missing)
         add2 = retrievedatapkg(repo, missing, move=move,
-                                  askserver=False)
+                                  askserver=False, addmissing=False)
         ret.update(add2)
 
     return ret
