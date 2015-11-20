@@ -11,10 +11,17 @@
 from mercurial import scmutil, util, commands
 import bundle2
 import sqlite3
+import time
 
+# user servers don't need to have the mysql module
+try:
+    import mysql.connector
+except:
+    pass
 
 localdb = 'moves.db'
-remotedb = 'moves.db'  # Will be modified to the XDB database
+
+remoteargs = {}
 
 
 def _sqlcmds(name, remote):
@@ -23,9 +30,12 @@ def _sqlcmds(name, remote):
     """
 
     if name == 'tableexists':
-        return "SELECT name " + \
-               "FROM sqlite_master " + \
-               "WHERE type='table' AND name='Moves';"
+        if remote:
+            return "SHOW TABLES LIKE 'Moves';"
+        else:
+            return "SELECT name " + \
+                   "FROM sqlite_master " + \
+                   "WHERE type='table' AND name='Moves';"
 
     elif name == 'createtable':
         return 'CREATE TABLE Moves(' + \
@@ -37,7 +47,10 @@ def _sqlcmds(name, remote):
                     ');'
 
     elif name == 'insertctx':
-        return 'INSERT INTO Moves VALUES (?, ?, ?, ?, ?);'
+        if remote:
+            return 'INSERT INTO Moves VALUES (%s, %s, %s, %s, %s);'
+        else:
+            return 'INSERT INTO Moves VALUES (?, ?, ?, ?, ?);'
 
     elif name == 'retrievemoves':
         return 'SELECT DISTINCT hash, source, destination ' + \
@@ -50,29 +63,70 @@ def _sqlcmds(name, remote):
                'WHERE hash IN (%s) and repo = %s;'
 
     elif name == 'retrievehashes':
-        return 'SELECT DISTINCT hash ' + \
-               'FROM Moves ' + \
-               'WHERE hash IN (%s);'
+        if not remote:
+            return 'SELECT DISTINCT hash ' + \
+                   'FROM Moves ' + \
+                   'WHERE hash IN (%s);'
 
     elif name == 'deletectx':
-        return 'DELETE FROM Moves ' + \
-               'WHERE hash = ? AND repo = ?;'
+        if remote:
+                return 'DELETE FROM Moves ' + \
+                   'WHERE hash = %s AND repo = %s;'
+        else:
+            return 'DELETE FROM Moves ' + \
+                   'WHERE hash = ? AND repo = ?;'
 
 
 def _connect(repo, remote):
-    if remote:
-        dbname = remotedb
-    else:
+    """
+    Connecting to the local sqlite database or remote MySQL database
+    """
+    # Local sqlite db
+    if not remote:
         dbname = localdb
 
-    try:
-        conn = sqlite3.connect(repo.vfs.join(dbname))
+        try:
+            conn = sqlite3.connect(repo.vfs.join(dbname))
+            cursor = conn.cursor()
+        except:
+            raise util.Abort('could not reach the local %s database' % dbname)
+
+    # Remote SQL db
+    else:
+        if not remoteargs:
+            _initmysqlargs(repo)
+        dbname = remoteargs['database']
+        retry = 3
+        while True:
+            try:
+                conn = mysql.connector.connect(force_ipv6=True, **remoteargs)
+                break
+            except mysql.connector.errors.Error:
+                # mysql can be flakey occasionally, so do some minimal
+                # retrying.
+                retry -= 1
+                if retry == 0:
+                    raise
+                time.sleep(0.2)
+        waittimeout = '300'
+        waittimeout = conn.converter.escape("%s" % waittimeout)
         cursor = conn.cursor()
-    except:
-        raise util.Abort('could not reach the local %s database' % dbname)
+        cursor.execute("SET wait_timeout=%s" % waittimeout)
 
     _exists(cursor, remote)
     return dbname, conn, cursor
+
+
+def _initmysqlargs(repo):
+    """
+    gets the MySQL config from ui
+    """
+    ui = repo.ui
+    remoteargs['host'] = ui.config("copytrace", "xdbhost")
+    remoteargs['database'] = ui.config("copytrace", "xdb")
+    remoteargs['user'] = ui.config("copytrace", "xdbuser")
+    remoteargs['port'] = ui.configint("copytrace", "xdbport")
+    remoteargs['password'] = ui.config("copytrace", "xdbpassword")
 
 
 def _close(conn, cursor):
@@ -161,13 +215,14 @@ def retrievedatapkg(repo, ctxlist, move=False, remote=False, askserver=True):
     """
     # Do we want moves or copies
     mv = '1' if move else '0'
+    token = '%s' if remote else '?'
 
     dbname, conn, cursor = _connect(repo, remote)
     try:
         # Returns : hash, src, dst
-        cursor.execute(_sqlcmds('retrievemoves', remote)
-                      % (','.join(['?'] * len(ctxlist)), '?', '?'),
-                      ctxlist + [mv, repo.root])
+        cursor.execute(_sqlcmds('retrievemoves', remote) %
+                  (','.join([token] * len(ctxlist)), token, token),
+                  ctxlist + [mv, repo.root])
     except:
         raise util.Abort('could not access data from the %s database' % dbname)
 
@@ -204,10 +259,11 @@ def retrieverawdata(repo, ctxlist, remote=False, askserver=True):
     copies
     """
     dbname, conn, cursor = _connect(repo, remote)
+    token = '%s' if remote else '?'
     try:
         # Returns: hash, src, dst, mv
         cursor.execute(_sqlcmds('retrieveraw', remote) %
-                       (','.join(['?'] * len(ctxlist)), '?'),
+                       (','.join([token] * len(ctxlist)), token),
                        ctxlist + [repo.root])
     except:
         raise util.Abort('could not access data from the %s database' % dbname)

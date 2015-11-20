@@ -4,3 +4,4 @@
 ^build/
 ^.*\.egg-info/
 ^dist/
+tests/getdb\.sh
