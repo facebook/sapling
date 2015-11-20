@@ -1180,13 +1180,20 @@ def movebookmarks(ui, repo, mapping, oldtopmost, newtopmost):
             # nothing to move
         moves.append((bk, new[-1]))
     if moves:
-        marks = repo._bookmarks
-        for mark, new in moves:
-            old = marks[mark]
-            ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
-                    % (mark, node.short(old), node.short(new)))
-            marks[mark] = new
-        marks.write()
+        lock = tr = None
+        try:
+            lock = repo.lock()
+            tr = repo.transaction('histedit')
+            marks = repo._bookmarks
+            for mark, new in moves:
+                old = marks[mark]
+                ui.note(_('histedit: moving bookmarks %s from %s to %s\n')
+                        % (mark, node.short(old), node.short(new)))
+                marks[mark] = new
+            marks.recordchange(tr)
+            tr.close()
+        finally:
+            release(tr, lock)
 
 def cleanupnode(ui, repo, name, nodes):
     """strip a group of nodes from the repository
