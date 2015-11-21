@@ -53,10 +53,13 @@ def hg(cmd, repo=None):
     fullcmd += cmd
     return check_output(fullcmd, stderr=STDOUT)
 
-def perf(revset, target=None):
+def perf(revset, target=None, contexts=False):
     """run benchmark for this very revset"""
     try:
-        output = hg(['perfrevset', revset], repo=target)
+        args = ['perfrevset', revset]
+        if contexts:
+            args.append('--contexts')
+        output = hg(args, repo=target)
         return parseoutput(output)
     except CalledProcessError as exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
@@ -238,6 +241,9 @@ parser.add_option("", "--variants",
                   default=','.join(DEFAULTVARIANTS),
                   help="comma separated list of variant to test "
                        "(eg: plain,min,sorted) (plain = no modification)")
+parser.add_option('', '--contexts',
+                  action='store_true',
+                  help='obtain changectx from results instead of integer revs')
 
 (options, args) = parser.parse_args()
 
@@ -283,7 +289,7 @@ for r in revs:
         varres = {}
         for var in variants:
             varrset = applyvariants(rset, var)
-            data = perf(varrset, target=options.repo)
+            data = perf(varrset, target=options.repo, contexts=options.contexts)
             varres[var] = data
         res.append(varres)
         printresult(variants, idx, varres, len(revsets),
