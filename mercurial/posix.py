@@ -15,7 +15,6 @@ import os
 import pwd
 import re
 import select
-import socket
 import stat
 import sys
 import tempfile
@@ -554,46 +553,6 @@ class cachestat(object):
 
 def executablepath():
     return None # available on Windows only
-
-class unixdomainserver(socket.socket):
-    def __init__(self, join, subsystem):
-        '''Create a unix domain socket with the given prefix.'''
-        super(unixdomainserver, self).__init__(socket.AF_UNIX)
-        sockname = subsystem + '.sock'
-        self.realpath = self.path = join(sockname)
-        if os.path.islink(self.path):
-            if os.path.exists(self.path):
-                self.realpath = os.readlink(self.path)
-            else:
-                os.unlink(self.path)
-        try:
-            self.bind(self.realpath)
-        except socket.error as err:
-            if err.args[0] == 'AF_UNIX path too long':
-                tmpdir = tempfile.mkdtemp(prefix='hg-%s-' % subsystem)
-                self.realpath = os.path.join(tmpdir, sockname)
-                try:
-                    self.bind(self.realpath)
-                    os.symlink(self.realpath, self.path)
-                except (OSError, socket.error):
-                    self.cleanup()
-                    raise
-            else:
-                raise
-        self.listen(5)
-
-    def cleanup(self):
-        def okayifmissing(f, path):
-            try:
-                f(path)
-            except OSError as err:
-                if err.errno != errno.ENOENT:
-                    raise
-
-        okayifmissing(os.unlink, self.path)
-        if self.realpath != self.path:
-            okayifmissing(os.unlink, self.realpath)
-            okayifmissing(os.rmdir, os.path.dirname(self.realpath))
 
 def statislink(st):
     '''check whether a stat result is a symlink'''
