@@ -463,9 +463,10 @@ def perfrevlog(ui, repo, file_, **opts):
     fm.end()
 
 @command('perfrevset',
-         [('C', 'clear', False, 'clear volatile cache between each call.')]
+         [('C', 'clear', False, 'clear volatile cache between each call.'),
+          ('', 'contexts', False, 'obtain changectx for each revision')]
          + formatteropts, "REVSET")
-def perfrevset(ui, repo, expr, clear=False, **opts):
+def perfrevset(ui, repo, expr, clear=False, contexts=False, **opts):
     """benchmark the execution time of a revset
 
     Use the --clean option if need to evaluate the impact of build volatile
@@ -475,7 +476,10 @@ def perfrevset(ui, repo, expr, clear=False, **opts):
     def d():
         if clear:
             repo.invalidatevolatilesets()
-        for r in repo.revs(expr): pass
+        if contexts:
+            for ctx in repo.set(expr): pass
+        else:
+            for r in repo.revs(expr): pass
     timer(d)
     fm.end()
 
