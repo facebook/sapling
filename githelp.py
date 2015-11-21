@@ -197,9 +197,15 @@ def branch(ui, repo, *args, **kwargs):
             cmd.append(args[0])
     elif opts.get('move'):
         if len(args) > 0:
-            cmd['-m'] = args[0]
             if len(args) > 1:
-                cmd.append(args[1])
+                old = args.pop(0)
+            else:
+                # shell command to output the active bookmark for the active
+                # revision
+                old = '`hg log -T"{activebookmark}" -r .`'
+        new = args[0]
+        cmd['-m'] = old
+        cmd.append(new)
     else:
         if len(args) > 1:
             cmd['-r'] = args[1]

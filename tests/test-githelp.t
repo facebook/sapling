@@ -197,3 +197,11 @@ githelp for whatchanged should show deprecated message
   $ hg githelp -- whatchanged -p
   This command has been deprecated in the git project, thus isn't supported by this tool.
   
+
+githelp for git branch -m renaming
+  $ hg githelp -- git branch -m old new
+  hg bookmark -m old new
+
+When the old name is omitted, git branch -m new renames the current branch.
+  $ hg githelp -- git branch -m new
+  hg bookmark -m `hg log -T"{activebookmark}" -r .` new
