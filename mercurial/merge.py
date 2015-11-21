@@ -509,6 +509,14 @@ class mergestate(object):
         return len([True for f, entry in self._state.iteritems()
                     if entry[0] == 'u'])
 
+    def actions(self):
+        """return lists of actions to perform on the dirstate"""
+        actions = {'r': [], 'a': [], 'g': []}
+        for f, (r, action) in self._results.iteritems():
+            if action is not None:
+                actions[action].append((f, None, "merge result"))
+        return actions
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
