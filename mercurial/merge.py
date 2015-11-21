@@ -490,6 +490,20 @@ class mergestate(object):
         Returns the exit code of the merge."""
         return self._resolve(False, dfile, wctx, labels=labels)[1]
 
+    def counts(self):
+        """return counts for updated, merged and removed files in this
+        session"""
+        updated, merged, removed = 0, 0, 0
+        for r, action in self._results.itervalues():
+            if r is None:
+                updated += 1
+            elif r == 0:
+                if action == 'r':
+                    removed += 1
+                else:
+                    merged += 1
+        return updated, merged, removed
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
