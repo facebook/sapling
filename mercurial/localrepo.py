@@ -517,15 +517,23 @@ class localrepository(object):
         return iter(self.changelog)
 
     def revs(self, expr, *args):
-        '''Return a list of revisions matching the given revset'''
+        '''Find revisions matching a revset.
+
+        The revset is specified as a string ``expr`` that may contain
+        %-formatting to escape certain types. See ``revset.formatspec``.
+
+        Return a revset.abstractsmartset, which is a list-like interface
+        that contains integer revisions.
+        '''
         expr = revset.formatspec(expr, *args)
         m = revset.match(None, expr)
         return m(self)
 
     def set(self, expr, *args):
-        '''
-        Yield a context for each matching revision, after doing arg
-        replacement via revset.formatspec
+        '''Find revisions matching a revset and emit changectx instances.
+
+        This is a convenience wrapper around ``revs()`` that iterates the
+        result and is a generator of changectx instances.
         '''
         for r in self.revs(expr, *args):
             yield self[r]
