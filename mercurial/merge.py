@@ -114,6 +114,7 @@ class mergestate(object):
         else:
             self._mdstate = 'u'
         shutil.rmtree(self._repo.join('merge'), True)
+        self._results = {}
         self._dirty = False
 
     def _read(self):
@@ -150,6 +151,7 @@ class mergestate(object):
                 self._state[bits[0]] = bits[1:]
             elif not rtype.islower():
                 unsupported.add(rtype)
+        self._results = {}
         self._dirty = False
 
         if unsupported:
@@ -466,6 +468,7 @@ class mergestate(object):
                 elif fco.isabsent(): # cd: local picked
                     action = 'a'
                 # else: regular merges (no action necessary)
+            self._results[dfile] = r, action
 
         return complete, r, action
 
