@@ -846,10 +846,12 @@ class ui(object):
             self.write(*msg, **opts)
 
     def edit(self, text, user, extra=None, editform=None, pending=None):
-        if extra is None:
-            extra = {}
-        (fd, name) = tempfile.mkstemp(prefix="hg-editor-", suffix=".txt",
-                                      text=True)
+        extra_defaults = { 'prefix': 'editor' }
+        if extra is not None:
+            extra_defaults.update(extra)
+        extra = extra_defaults
+        (fd, name) = tempfile.mkstemp(prefix='hg-' + extra['prefix'] + '-',
+                                      suffix=".txt", text=True)
         try:
             f = os.fdopen(fd, "w")
             f.write(text)
