@@ -944,7 +944,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     describes how many files were affected by the update.
     """
 
-    updated, merged, removed, unresolved = 0, 0, 0, 0
+    updated, merged, removed = 0, 0, 0
     ms = mergestate.clean(repo, wctx.p1().node(), mctx.node())
     moves = []
     for m, l in actions.items():
@@ -1084,15 +1084,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
             continue
         audit(f)
         complete, r = ms.preresolve(f, wctx, labels=labels)
-        if complete:
-            if r is not None and r > 0:
-                unresolved += 1
-            else:
-                if r is None:
-                    updated += 1
-                else:
-                    merged += 1
-        else:
+        if not complete:
             numupdates += 1
             tocomplete.append((f, args, msg))
 
@@ -1101,16 +1093,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
-        r = ms.resolve(f, wctx, labels=labels)
-        if r is not None and r > 0:
-            unresolved += 1
-        else:
-            if r is None:
-                updated += 1
-            else:
-                merged += 1
+        ms.resolve(f, wctx, labels=labels)
 
     ms.commit()
+
+    unresolved = ms.unresolvedcount()
 
     if usemergedriver and not unresolved and ms.mdstate() != 's':
         if not driverconclude(repo, ms, wctx, labels=labels):
@@ -1120,6 +1107,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
 
         ms.commit()
 
+    msupdated, msmerged, msremoved = ms.counts()
+    updated += msupdated
+    merged += msmerged
+    removed += msremoved
     progress(_updating, None, total=numupdates, unit=_files)
 
     return updated, merged, removed, unresolved
