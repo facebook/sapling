@@ -90,8 +90,10 @@ def createservice(ui, repo, opts):
     if opts.get('port'):
         opts['port'] = util.getport(opts.get('port'))
 
+    alluis = set([ui])
     if repo:
         baseui = repo.baseui
+        alluis.update([repo.baseui, repo.ui])
     else:
         baseui = ui
     optlist = ("name templates style address port prefix ipv6"
@@ -100,9 +102,8 @@ def createservice(ui, repo, opts):
         val = opts.get(o, '')
         if val in (None, ''): # should check against default options instead
             continue
-        baseui.setconfig("web", o, val, 'serve')
-        if repo and repo.ui != baseui:
-            repo.ui.setconfig("web", o, val, 'serve')
+        for u in alluis:
+            u.setconfig("web", o, val, 'serve')
 
     webconf = opts.get('web_conf') or opts.get('webdir_conf')
     if webconf:
