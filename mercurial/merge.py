@@ -504,6 +504,11 @@ class mergestate(object):
                     merged += 1
         return updated, merged, removed
 
+    def unresolvedcount(self):
+        """get unresolved count for this merge (persistent)"""
+        return len([True for f, entry in self._state.iteritems()
+                    if entry[0] == 'u'])
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
