@@ -517,6 +517,11 @@ class mergestate(object):
                 actions[action].append((f, None, "merge result"))
         return actions
 
+    def recordactions(self):
+        """record remove/add/get actions in the dirstate"""
+        branchmerge = self._repo.dirstate.p2() != nullid
+        recordupdates(self._repo, self.actions(), branchmerge)
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
