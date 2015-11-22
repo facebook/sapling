@@ -524,13 +524,13 @@ editors.
   2:0e01aeef5fa8 foo1
   1:578c7455730c a
   0:79b99e9c8e49 b
-  $ cat > $TESTTMP/editor.sh <<EOF
-  > echo ran editor >> $TESTTMP/editorlog.txt
-  > cat \$1 >> $TESTTMP/editorlog.txt
-  > echo END >> $TESTTMP/editorlog.txt
+  $ cat > "$TESTTMP/editor.sh" <<EOF
+  > echo ran editor >> "$TESTTMP/editorlog.txt"
+  > cat \$1 >> "$TESTTMP/editorlog.txt"
+  > echo END >> "$TESTTMP/editorlog.txt"
   > echo merged foos > \$1
   > EOF
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit 1 --commands - 2>&1 <<EOF | fixbundle
+  $ HGEDITOR="sh \"$TESTTMP/editor.sh\"" hg histedit 1 --commands - 2>&1 <<EOF | fixbundle
   > pick 578c7455730c 1 a
   > pick 0e01aeef5fa8 2 foo1
   > fold b7389cc4d66e 3 foo2
