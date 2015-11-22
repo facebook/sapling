@@ -622,11 +622,11 @@ class ui(object):
         a label of "status.modified" for modified files.
         '''
         if self._buffers:
-            self._buffers[-1].extend([str(a) for a in args])
+            self._buffers[-1].extend(a for a in args)
         else:
             self._progclear()
             for a in args:
-                self.fout.write(str(a))
+                self.fout.write(a)
 
     def write_err(self, *args, **opts):
         self._progclear()
@@ -636,7 +636,7 @@ class ui(object):
             if not getattr(self.fout, 'closed', False):
                 self.fout.flush()
             for a in args:
-                self.ferr.write(str(a))
+                self.ferr.write(a)
             # stderr may be buffered under win32 when redirected to files,
             # including stdout.
             if not getattr(self.ferr, 'closed', False):
