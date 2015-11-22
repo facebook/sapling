@@ -424,10 +424,7 @@ class colorui(uimod.ui):
             return super(colorui, self).popbuffer(labeled)
 
         self._bufferstates.pop()
-        if labeled:
-            return ''.join(self.label(a, label) for a, label
-                           in self._buffers.pop())
-        return ''.join(a for a, label in self._buffers.pop())
+        return ''.join(self._buffers.pop())
 
     _colormode = 'ansi'
     def write(self, *args, **opts):
@@ -436,7 +433,11 @@ class colorui(uimod.ui):
 
         label = opts.get('label', '')
         if self._buffers:
-            self._buffers[-1].extend([(str(a), label) for a in args])
+            if self._bufferapplylabels:
+                self._buffers[-1].extend(self.label(str(a), label)
+                                         for a in args)
+            else:
+                self._buffers[-1].extend(str(a) for a in args)
         elif self._colormode == 'win32':
             for a in args:
                 win32print(a, super(colorui, self).write, **opts)
