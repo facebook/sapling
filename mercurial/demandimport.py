@@ -245,6 +245,10 @@ def isenabled():
 
 def enable():
     "enable global demand-loading of modules"
+    # PyPy doesn't work with demand import.
+    if '__pypy__' in sys.builtin_module_names:
+        return
+
     if os.environ.get('HGDEMANDIMPORT') != 'disable':
         builtins.__import__ = _demandimport
 
