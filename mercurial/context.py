@@ -221,9 +221,10 @@ class basectx(object):
         return self._parents[0]
 
     def p2(self):
-        if len(self._parents) == 2:
-            return self._parents[1]
-        return changectx(self._repo, -1)
+        parents = self._parents
+        if len(parents) == 2:
+            return parents[1]
+        return changectx(self._repo, nullrev)
 
     def _fileinfo(self, path):
         if '_manifest' in self.__dict__:
@@ -1152,17 +1153,17 @@ class committablectx(basectx):
         # filesystem doesn't support them
 
         copiesget = self._repo.dirstate.copies().get
-
-        if len(self._parents) < 2:
+        parents = self.parents()
+        if len(parents) < 2:
             # when we have one parent, it's easy: copy from parent
-            man = self._parents[0].manifest()
+            man = parents[0].manifest()
             def func(f):
                 f = copiesget(f, f)
                 return man.flags(f)
         else:
             # merges are tricky: we try to reconstruct the unstored
             # result from the merge (issue1802)
-            p1, p2 = self._parents
+            p1, p2 = parents
             pa = p1.ancestor(p2)
             m1, m2, ma = p1.manifest(), p2.manifest(), pa.manifest()
 
@@ -1192,10 +1193,11 @@ class committablectx(basectx):
         an extra 'a'. This is used by manifests merge to see that files
         are different and by update logic to avoid deleting newly added files.
         """
+        parents = self.parents()
 
-        man1 = self._parents[0].manifest()
+        man1 = parents[0].manifest()
         man = man1.copy()
-        if len(self._parents) > 1:
+        if len(parents) > 1:
             man2 = self.p2().manifest()
             def getman(f):
                 if f in man1:
