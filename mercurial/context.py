@@ -511,10 +511,11 @@ class changectx(basectx):
 
     @propertycache
     def _parents(self):
-        p = self._repo.changelog.parentrevs(self._rev)
-        if p[1] == nullrev:
-            p = p[:-1]
-        return [changectx(self._repo, x) for x in p]
+        repo = self._repo
+        p1, p2 = repo.changelog.parentrevs(self._rev)
+        if p2 == nullrev:
+            return [changectx(repo, p1)]
+        return [changectx(repo, p1), changectx(repo, p2)]
 
     def changeset(self):
         return self._changeset
