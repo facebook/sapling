@@ -94,9 +94,12 @@ class ui(object):
     def __init__(self, src=None):
         # _buffers: used for temporary capture of output
         self._buffers = []
-        # _bufferstates:
-        #   should the temporary capture include stderr and subprocess output
+        # 3-tuple describing how each buffer in the stack behaves.
+        # Values are (capture stderr, capture subprocesses, apply labels).
         self._bufferstates = []
+        # When a buffer is active, defines whether we are expanding labels.
+        # This exists to prevent an extra list lookup.
+        self._bufferapplylabels = None
         self.quiet = self.verbose = self.debugflag = self.tracebackflag = False
         self._reportuntrusted = True
         self._ocfg = config.config() # overlay
@@ -572,15 +575,24 @@ class ui(object):
     def paths(self):
         return paths(self)
 
-    def pushbuffer(self, error=False, subproc=False):
+    def pushbuffer(self, error=False, subproc=False, labeled=False):
         """install a buffer to capture standard output of the ui object
 
         If error is True, the error output will be captured too.
 
         If subproc is True, output from subprocesses (typically hooks) will be
-        captured too."""
+        captured too.
+
+        If labeled is True, any labels associated with buffered
+        output will be handled. By default, this has no effect
+        on the output returned, but extensions and GUI tools may
+        handle this argument and returned styled output. If output
+        is being buffered so it can be captured and parsed or
+        processed, labeled should not be set to True.
+        """
         self._buffers.append([])
-        self._bufferstates.append((error, subproc))
+        self._bufferstates.append((error, subproc, labeled))
+        self._bufferapplylabels = labeled
 
     def popbuffer(self, labeled=False):
         '''pop the last buffer and return the buffered output
@@ -593,6 +605,11 @@ class ui(object):
         processed, labeled should not be set to True.
         '''
         self._bufferstates.pop()
+        if self._bufferstates:
+            self._bufferapplylabels = self._bufferstates[-1][2]
+        else:
+            self._bufferapplylabels = None
+
         return "".join(self._buffers.pop())
 
     def write(self, *args, **opts):
