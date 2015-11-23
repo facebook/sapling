@@ -221,21 +221,7 @@ resolve <file> should re-merge file
 
 test .orig behavior with resolve
 
-  $ hg resolve -q file1 --tool 'f --dump $TESTTMP/repo/file1.orig'
-  */file1~base*: (glob)
-  >>>
-  foo
-  <<<
-  */file1~other*: (glob)
-  >>>
-  foo
-  bar
-  <<<
-  $TESTTMP/repo/file1: (glob)
-  >>>
-  foo
-  baz
-  <<<
+  $ hg resolve -q file1 --tool "sh -c 'f --dump \"$TESTTMP/repo/file1.orig\"'"
   $TESTTMP/repo/file1.orig: (glob)
   >>>
   foo
