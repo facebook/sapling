@@ -11,6 +11,8 @@ Make sure HGMERGE doesn't interfere with the test
   $ status() {
   >     echo "--- status ---"
   >     hg st -A file1 file2 file3
+  >     echo "--- resolve --list ---"
+  >     hg resolve --list file1 file2 file3
   >     for file in file1 file2 file3; do
   >         if [ -f $file ]; then
   >             echo "--- $file ---"
@@ -64,6 +66,8 @@ Non-interactive merge:
   M file2
   M file3
   C file1
+  --- resolve --list ---
+  U file3
   --- file1 ---
   1
   changed
@@ -103,6 +107,8 @@ Interactive merge:
   file2: * (glob)
   M file3
   C file1
+  --- resolve --list ---
+  U file3
   --- file1 ---
   1
   changed
@@ -152,6 +158,8 @@ Interactive merge with bad input:
   M file2
   M file3
   R file1
+  --- resolve --list ---
+  U file3
   *** file1 does not exist
   --- file2 ---
   2
@@ -184,6 +192,7 @@ Interactive merge with not enough input:
   file2: * (glob)
   C file1
   C file3
+  --- resolve --list ---
   --- file1 ---
   1
   changed
@@ -209,6 +218,7 @@ Non-interactive linear update
   A file1
   C file2
   C file3
+  --- resolve --list ---
   --- file1 ---
   1
   changed
