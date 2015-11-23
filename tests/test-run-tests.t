@@ -238,7 +238,7 @@ Running In Debug Mode
   babar
   + echo *SALT* 4 0 (glob)
   *SALT* 4 0 (glob)
-  .+ echo *SALT* 0 0 (glob)
+  *+ echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
   + echo babar
   babar
