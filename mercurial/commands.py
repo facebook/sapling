@@ -4776,7 +4776,7 @@ def summary(ui, repo, **opts):
             _('warning: merge state has unsupported record types: %s\n') % s)
         unresolved = 0
     else:
-        unresolved = [f for f in ms if ms[f] == 'u']
+        unresolved = list(ms.unresolved())
 
     for p in parents:
         # label with log.changeset (instead of log.parent) since this
