@@ -276,7 +276,7 @@ def createcmd(ui, repo, pats, opts):
                 repo.mq.checkapplied = saved
 
     if parent.node() != nullid:
-        desc = "changes to '%s'" % parent.description().split('\n', 1)[0]
+        desc = "changes to: %s" % parent.description().split('\n', 1)[0]
     else:
         desc = '(changes in empty repository)'
 

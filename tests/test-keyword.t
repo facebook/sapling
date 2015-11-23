@@ -1204,7 +1204,7 @@ Test restricted mode with unshelve
   +xxxx
   $ hg shelve -q --name tmp
   $ hg shelve --list --patch
-  tmp             (*)    changes to 'localresolve' (glob)
+  tmp             (*)* changes to: localresolve (glob)
   
   diff --git a/a b/a
   --- a/a
