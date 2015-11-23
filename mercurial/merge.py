@@ -522,6 +522,24 @@ class mergestate(object):
         branchmerge = self._repo.dirstate.p2() != nullid
         recordupdates(self._repo, self.actions(), branchmerge)
 
+    def queueremove(self, f):
+        """queues a file to be removed from the dirstate
+
+        Meant for use by custom merge drivers."""
+        self._results[f] = 0, 'r'
+
+    def queueadd(self, f):
+        """queues a file to be added to the dirstate
+
+        Meant for use by custom merge drivers."""
+        self._results[f] = 0, 'a'
+
+    def queueget(self, f):
+        """queues a file to be marked modified in the dirstate
+
+        Meant for use by custom merge drivers."""
+        self._results[f] = 0, 'g'
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
