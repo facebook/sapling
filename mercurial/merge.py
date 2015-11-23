@@ -986,13 +986,20 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         f1, f2, fa, move, anc = args
         if f == '.hgsubstate': # merged internally
             continue
-        repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
-        fcl = wctx[f1]
-        fco = mctx[f2]
+        if f1 is None:
+            fcl = filemerge.absentfilectx(wctx, fa)
+        else:
+            repo.ui.debug(" preserving %s for resolve of %s\n" % (f1, f))
+            fcl = wctx[f1]
+        if f2 is None:
+            fco = filemerge.absentfilectx(mctx, fa)
+        else:
+            fco = mctx[f2]
         actx = repo[anc]
         if fa in actx:
             fca = actx[fa]
         else:
+            # TODO: move to absentfilectx
             fca = repo.filectx(f1, fileid=nullrev)
         ms.add(fcl, fco, fca, f)
         if f1 != f and move:
