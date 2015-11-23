@@ -10,8 +10,8 @@ Make sure HGMERGE doesn't interfere with the test
 
   $ status() {
   >     echo "--- status ---"
-  >     hg st -A file1 file2
-  >     for file in file1 file2; do
+  >     hg st -A file1 file2 file3
+  >     for file in file1 file2 file3; do
   >         if [ -f $file ]; then
   >             echo "--- $file ---"
   >             cat $file
@@ -25,20 +25,24 @@ Make sure HGMERGE doesn't interfere with the test
 
   $ echo 1 > file1
   $ echo 2 > file2
-  $ hg ci -Am 'added file1 and file2'
+  $ echo 3 > file3
+  $ hg ci -Am 'added files'
   adding file1
   adding file2
+  adding file3
 
   $ hg rm file1
   $ echo changed >> file2
-  $ hg ci -m 'removed file1, changed file2'
+  $ echo changed1 >> file3
+  $ hg ci -m 'removed file1, changed file2, changed file3'
 
   $ hg co 0
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo changed >> file1
   $ hg rm file2
-  $ hg ci -m 'changed file1, removed file2'
+  $ echo changed2 >> file3
+  $ hg ci -m 'changed file1, removed file2, changed file3'
   created new head
 
 
@@ -49,12 +53,16 @@ Non-interactive merge:
   use (c)hanged version or (d)elete? c
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? c
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging file3
+  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ status
   --- status ---
   M file2
+  M file3
   C file1
   --- file1 ---
   1
@@ -62,12 +70,19 @@ Non-interactive merge:
   --- file2 ---
   2
   changed
+  --- file3 ---
+  3
+  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  changed2
+  =======
+  changed1
+  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
 
 
 Interactive merge:
 
   $ hg co -C
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg merge --config ui.interactive=true <<EOF
   > c
@@ -77,23 +92,34 @@ Interactive merge:
   use (c)hanged version or (d)elete? c
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? d
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging file3
+  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ status
   --- status ---
   file2: * (glob)
+  M file3
   C file1
   --- file1 ---
   1
   changed
   *** file2 does not exist
+  --- file3 ---
+  3
+  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  changed2
+  =======
+  changed1
+  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
 
 
 Interactive merge with bad input:
 
   $ hg co -C
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --config ui.interactive=true <<EOF
   > foo
@@ -115,23 +141,34 @@ Interactive merge with bad input:
   unrecognized response
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? c
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  merging file3
+  warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
+  1 files updated, 0 files merged, 1 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
 
   $ status
   --- status ---
   M file2
+  M file3
   R file1
   *** file1 does not exist
   --- file2 ---
   2
   changed
+  --- file3 ---
+  3
+  <<<<<<< local: 13910f48cf7b - test: changed file1, removed file2, changed file3
+  changed2
+  =======
+  changed1
+  >>>>>>> other: 10f9a0a634e8  - test: removed file1, changed file2, changed file3
 
 
 Interactive merge with not enough input:
 
   $ hg co -C
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg merge --config ui.interactive=true <<EOF
   > d
@@ -146,15 +183,19 @@ Interactive merge with not enough input:
   --- status ---
   file2: * (glob)
   C file1
+  C file3
   --- file1 ---
   1
   changed
   *** file2 does not exist
+  --- file3 ---
+  3
+  changed2
 
 Non-interactive linear update
 
   $ hg co -C 0
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
   $ hg update 1 -y
@@ -162,14 +203,18 @@ Non-interactive linear update
   use (c)hanged version or (d)elete? c
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? c
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ status
   --- status ---
   A file1
   C file2
+  C file3
   --- file1 ---
   1
   changed
   --- file2 ---
   2
   changed
+  --- file3 ---
+  3
+  changed1
