@@ -181,6 +181,18 @@ from mercurial.i18n import _
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+class _constraints(object):
+    # aborts if there are multiple rules for one node
+    noduplicates = 'noduplicates'
+    # abort if the node does belong to edited stack
+    forceother = 'forceother'
+    # abort if the node doesn't belong to edited stack
+    noother = 'noother'
+
+    @classmethod
+    def known(cls):
+        return set([v for k, v in cls.__dict__.items() if k[0] != '_'])
+
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
@@ -336,14 +348,8 @@ class histeditaction(object):
 
     def constraints(self):
         """Return a set of constrains that this action should be verified for
-
-           Available constraints:
-               noduplicates - aborts if there are multiple rules for one node
-               noother - abort if the node doesn't belong to edited stack
-               forceother - abort if the node does belong to edited stack
         """
-
-        return set(['noduplicates', 'noother'])
+        return set([_constraints.noduplicates, _constraints.noother])
 
     def nodetoverify(self):
         """Returns a node associated with the action that will be used for
@@ -648,7 +654,7 @@ class fold(histeditaction):
 
 class base(histeditaction):
     def constraints(self):
-        return set(['forceother'])
+        return set([_constraints.forceother])
 
     def run(self):
         if self.repo['.'].node() != self.node:
@@ -1087,7 +1093,6 @@ def verifyrules(rules, state, ctxs):
     Will abort if there are to many or too few rules, a malformed rule,
     or a rule on a changeset outside of the user-given range.
     """
-    known_constraints = ['noother', 'noduplicates']
     parsed = []
     expected = set(c.hex() for c in ctxs)
     seen = set()
@@ -1101,21 +1106,21 @@ def verifyrules(rules, state, ctxs):
         action = actiontable[verb].fromrule(state, rest)
         constraints = action.constraints()
         for constraint in constraints:
-            if constraint not in known_constraints:
+            if constraint not in _constraints.known():
                 error.Abort(_('unknown constraint "%s"') % constraint)
 
         nodetoverify = action.nodetoverify()
         if nodetoverify is not None:
             ha = node.hex(nodetoverify)
-            if 'noother' in constraints and ha not in expected:
+            if _constraints.noother in constraints and ha not in expected:
                 raise error.Abort(
                     _('may not use "%s" with changesets '
                       'other than the ones listed') % verb)
-            if 'forceother' in constraints and ha in expected:
+            if _constraints.forceother in constraints and ha in expected:
                 raise error.Abort(
                     _('may not use "%s" with changesets '
                       'within the edited list') % verb)
-            if 'noduplicates' in constraints and ha in seen:
+            if _constraints.noduplicates in constraints and ha in seen:
                 raise error.Abort(_('duplicated command for changeset %s') %
                         ha[:12])
             seen.add(ha)
