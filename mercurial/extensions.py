@@ -24,8 +24,8 @@ from . import (
 _extensions = {}
 _aftercallbacks = {}
 _order = []
-#  former extensions now in core - we ignore these if found in hgrc
-_builtin = set(['hbisect', 'bookmarks', 'parentrevspec', 'interhg', 'inotify'])
+_builtin = set(['hbisect', 'bookmarks', 'parentrevspec', 'progress', 'interhg',
+                'inotify'])
 
 def extensions(ui=None):
     if ui:
