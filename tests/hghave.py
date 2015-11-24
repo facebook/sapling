@@ -68,7 +68,7 @@ def require(features):
         sys.exit(1)
 
 def matchoutput(cmd, regexp, ignorestatus=False):
-    """Return True if cmd executes successfully and its output
+    """Return the match object if cmd executes successfully and its output
     is matched by the supplied regular expression.
     """
     r = re.compile(regexp)
