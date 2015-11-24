@@ -2,7 +2,7 @@
 '''helper extension to measure performance'''
 
 from mercurial import cmdutil, scmutil, util, commands, obsolete
-from mercurial import repoview, branchmap, merge, copies
+from mercurial import repoview, branchmap, merge, copies, error
 import time, os, sys
 import functools
 
@@ -300,6 +300,8 @@ def perfstartup(ui, repo, **opts):
 @command('perfparents', formatteropts)
 def perfparents(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
+    if len(repo.changelog) < 1000:
+        raise error.Abort("repo needs 1000 commits for this test")
     nl = [repo.changelog.node(i) for i in xrange(1000)]
     def d():
         for n in nl:
