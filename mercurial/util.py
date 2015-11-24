@@ -336,6 +336,59 @@ def version():
     except ImportError:
         return 'unknown'
 
+def versiontuple(v=None, n=4):
+    """Parses a Mercurial version string into an N-tuple.
+
+    The version string to be parsed is specified with the ``v`` argument.
+    If it isn't defined, the current Mercurial version string will be parsed.
+
+    ``n`` can be 2, 3, or 4. Here is how some version strings map to
+    returned values:
+
+    >>> v = '3.6.1+190-df9b73d2d444'
+    >>> versiontuple(v, 2)
+    (3, 6)
+    >>> versiontuple(v, 3)
+    (3, 6, 1)
+    >>> versiontuple(v, 4)
+    (3, 6, 1, '190-df9b73d2d444')
+
+    >>> versiontuple('3.6.1+190-df9b73d2d444+20151118')
+    (3, 6, 1, '190-df9b73d2d444+20151118')
+
+    >>> v = '3.6'
+    >>> versiontuple(v, 2)
+    (3, 6)
+    >>> versiontuple(v, 3)
+    (3, 6, None)
+    >>> versiontuple(v, 4)
+    (3, 6, None, None)
+    """
+    if not v:
+        v = version()
+    parts = v.split('+', 1)
+    if len(parts) == 1:
+        vparts, extra = parts[0], None
+    else:
+        vparts, extra = parts
+
+    vints = []
+    for i in vparts.split('.'):
+        try:
+            vints.append(int(i))
+        except ValueError:
+            break
+    # (3, 6) -> (3, 6, None)
+    while len(vints) < 3:
+        vints.append(None)
+
+    if n == 2:
+        return (vints[0], vints[1])
+    if n == 3:
+        return (vints[0], vints[1], vints[2])
+    if n == 4:
+        return (vints[0], vints[1], vints[2], extra)
+
 # used by parsedate
 defaultdateformats = (
     '%Y-%m-%d %H:%M:%S',
