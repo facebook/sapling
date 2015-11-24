@@ -285,6 +285,9 @@ def _ifail(repo, mynode, orig, fcd, fco, fca, toolconf):
     Rather than attempting to merge files that were modified on both
     branches, it marks them as unresolved. The resolve command must be
     used to resolve these conflicts."""
+    # for change/delete conflicts write out the changed version, then fail
+    if fcd.isabsent():
+        repo.wwrite(fcd.path(), fco.data(), fco.flags())
     return 1, False
 
 def _premerge(repo, fcd, fco, fca, toolconf, files, labels=None):
