@@ -76,3 +76,26 @@ Test disabling the branchcache
   *> wrote served branch cache with 1 labels and 1 nodes (glob)
   *> commit -Aqm a --config perftweaks.disablebranchcache=True exited 0 after * seconds (glob)
 
+  $ cd ..
+
+Test changing the delta heuristic
+(this isn't a good test, but it executes the code path)
+  $ hg init preferdeltaserver
+  $ cd preferdeltaserver
+  $ touch a && hg commit -Aqm a
+  $ touch b && hg commit -Aqm b
+  $ cd ..
+  $ hg init preferdelta
+  $ cd preferdelta
+  $ cat >> .hg/hgrc <<EOF
+  > [perftweaks]
+  > preferdeltas=True
+  > EOF
+  $ hg pull ../preferdeltaserver
+  pulling from ../preferdeltaserver
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
