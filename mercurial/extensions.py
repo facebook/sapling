@@ -101,6 +101,17 @@ def load(ui, name, path):
             if ui.debugflag:
                 ui.traceback()
             mod = importh(name)
+
+    # Before we do anything with the extension, check against minimum stated
+    # compatibility. This gives extension authors a mechanism to have their
+    # extensions short circuit when loaded with a known incompatible version
+    # of Mercurial.
+    minver = getattr(mod, 'minimumhgversion', None)
+    if minver and util.versiontuple(minver, 2) > util.versiontuple(n=2):
+        ui.warn(_('(third party extension %s requires version %s or newer '
+                  'of Mercurial; disabling)\n') % (shortname, minver))
+        return
+
     _extensions[shortname] = mod
     _order.append(shortname)
     for fn in _aftercallbacks.get(shortname, []):

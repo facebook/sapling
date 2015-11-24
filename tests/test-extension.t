@@ -1009,6 +1009,50 @@ Test version number support in 'hg version':
   
     throw  1.twentythree
 
+Refuse to load extensions with minimum version requirements
+
+  $ cat > minversion1.py << EOF
+  > from mercurial import util
+  > util.version = lambda: '3.5.2'
+  > minimumhgversion = '3.6'
+  > EOF
+  $ hg --config extensions.minversion=minversion1.py version
+  (third party extension minversion requires version 3.6 or newer of Mercurial; disabling)
+  Mercurial Distributed SCM (version 3.5.2)
+  (see https://mercurial-scm.org for more information)
+  
+  Copyright (C) 2005-* Matt Mackall and others (glob)
+  This is free software; see the source for copying conditions. There is NO
+  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+  $ cat > minversion2.py << EOF
+  > from mercurial import util
+  > util.version = lambda: '3.6'
+  > minimumhgversion = '3.7'
+  > EOF
+  $ hg --config extensions.minversion=minversion2.py version 2>&1 | egrep '\(third'
+  (third party extension minversion requires version 3.7 or newer of Mercurial; disabling)
+
+Can load version that is only off by point release
+
+  $ cat > minversion2.py << EOF
+  > from mercurial import util
+  > util.version = lambda: '3.6.1'
+  > minimumhgversion = '3.6'
+  > EOF
+  $ hg --config extensions.minversion=minversion3.py version 2>&1 | egrep '\(third'
+  [1]
+
+Can load minimum version identical to current
+
+  $ cat > minversion3.py << EOF
+  > from mercurial import util
+  > util.version = lambda: '3.5'
+  > minimumhgversion = '3.5'
+  > EOF
+  $ hg --config extensions.minversion=minversion3.py version 2>&1 | egrep '\(third'
+  [1]
+
 Restore HGRCPATH
 
   $ HGRCPATH=$ORGHGRCPATH
