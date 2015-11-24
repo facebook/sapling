@@ -302,6 +302,7 @@ def perfparents(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     if len(repo.changelog) < 1000:
         raise error.Abort("repo needs 1000 commits for this test")
+    repo = repo.unfiltered()
     nl = [repo.changelog.node(i) for i in xrange(1000)]
     def d():
         for n in nl:
