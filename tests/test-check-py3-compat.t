@@ -101,7 +101,6 @@
   mercurial/byterange.py not using absolute_import
   mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
-  mercurial/commandserver.py not using absolute_import
   mercurial/context.py not using absolute_import
   mercurial/dirstate.py not using absolute_import
   mercurial/dispatch.py requires print_function

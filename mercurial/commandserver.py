@@ -5,10 +5,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
+from __future__ import absolute_import
+
+import SocketServer
+import errno
+import os
 import struct
-import sys, os, errno, traceback, SocketServer
-import dispatch, encoding, util, error
+import sys
+import traceback
+
+from .i18n import _
+from . import (
+    dispatch,
+    encoding,
+    error,
+    util,
+)
 
 logfile = None
 
