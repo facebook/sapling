@@ -1195,8 +1195,7 @@ def recordupdates(repo, actions, branchmerge):
 
     # re-add
     for f, args, msg in actions.get('a', []):
-        if not branchmerge:
-            repo.dirstate.add(f)
+        repo.dirstate.add(f)
 
     # re-add/mark as modified
     for f, args, msg in actions.get('am', []):
