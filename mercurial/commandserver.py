@@ -16,7 +16,6 @@ import traceback
 
 from .i18n import _
 from . import (
-    dispatch,
     encoding,
     error,
     util,
@@ -186,6 +185,7 @@ class server(object):
     def runcommand(self):
         """ reads a list of \0 terminated arguments, executes
         and writes the return code to the result channel """
+        from . import dispatch  # avoid cycle
 
         length = struct.unpack('>I', self._read(4))[0]
         if not length:

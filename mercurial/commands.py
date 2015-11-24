@@ -23,6 +23,7 @@ import setdiscovery, treediscovery, dagutil, pvec, localrepo, destutil
 import phases, obsolete, exchange, bundle2, repair, lock as lockmod
 import ui as uimod
 import streamclone
+import commandserver
 
 table = {}
 
@@ -6184,7 +6185,6 @@ def serve(ui, repo, **opts):
         s.serve_forever()
 
     if opts["cmdserver"]:
-        import commandserver
         service = commandserver.createservice(ui, repo, opts)
     else:
         service = hgweb.createservice(ui, repo, opts)
