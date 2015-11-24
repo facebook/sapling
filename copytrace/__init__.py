@@ -6,6 +6,15 @@ import copytrace
 import bundle2
 
 
+def uisetup(ui):
+    # Generating this extension in the end so as to have the bundle2 part after
+    # the 'pushrebase' one
+    order = extensions._order
+    order.remove('copytrace')
+    order.append('copytrace')
+    extensions._order = order
+
+
 def extsetup(ui):
     if ui.configbool("copytrace", "enablefilldb", False):
         wrapfunction(cmdutil, 'commit', filldb.commit)
@@ -20,3 +29,9 @@ def extsetup(ui):
     if ui.configbool("copytrace", "enablebundle2", False):
         wrapfunction(exchange, '_pullbundle2extraprepare',
                     bundle2._pullbundle2extraprepare)
+
+        # Generating this part last so as to handle after 'pushrebase' if that
+        # extension is loaded
+        partorder = exchange.b2partsgenorder
+        partorder.insert(len(partorder),
+                         partorder.pop(partorder.index('push:movedata')))

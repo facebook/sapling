@@ -185,14 +185,19 @@ def insertdata(repo, ctx, mvdict, cpdict):
     _close(conn, cursor)
 
 
-def insertrawdata(repo, dic):
+def insertrawdata(repo, dic, mapping={}):
     """
     inserts dict = {ctxhash: [src, dst, mv]} for moves and copies into the
     database
+    mapping is the mapping of {oldhash: newhash} due to push rebase
     """
     dbname, conn, cursor = _connect(repo)
+    movedhashes = mapping.keys()
 
     for ctxhash, mvlist in dic.iteritems():
+        if ctxhash in movedhashes:
+            ctxhash = mapping[ctxhash]
+
         for src, dst, mv in mvlist:
             if src == 'None' and dst == 'None':
                 src = None

@@ -80,8 +80,15 @@ def _handlemovedatarequest(op, inpart):
     """
     dic = _decodedict(inpart)
     op.records.add('movedata', {'mvdict': dic})
+
     try:
-        dbutil.insertrawdata(op.repo, dic)
+        # Retrieves the hashes modified by push-rebase
+        mapping = op.records['b2x:rebase']
+        if not mapping:
+            mapping = {}
+        else:
+            mapping = mapping[0]
+        dbutil.insertrawdata(op.repo, dic, mapping)
     except Exception as e:
         dberror.logfailure(op.repo, e, "_handlemovedatarequest-push")
 
