@@ -406,10 +406,13 @@ def perffncachewrite(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     s = repo.store
     s.fncache._load()
+    lock = repo.lock()
+    tr = repo.transaction('perffncachewrite')
     def d():
         s.fncache._dirty = True
-        s.fncache.write()
+        s.fncache.write(tr)
     timer(d)
+    lock.release()
     fm.end()
 
 @command('perffncacheencode', formatteropts)
