@@ -320,7 +320,6 @@ def _runcatch(req):
     except socket.error as inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
     except: # re-raises
-        myver = util.version()
         # For compatibility checking, we discard the portion of the hg
         # version after the + on the assumption that if a "normal
         # user" is running a build with a + in it the packager
@@ -328,8 +327,7 @@ def _runcatch(req):
         # 'make local' copy of hg (where the version number can be out
         # of date) will be clueful enough to notice the implausible
         # version number and try updating.
-        compare = myver.split('+')[0]
-        ct = tuplever(compare)
+        ct = util.versiontuple(n=2)
         worst = None, ct, ''
         if ui.config('ui', 'supportcontact', None) is None:
             for name, mod in extensions.extensions():
@@ -344,7 +342,7 @@ def _runcatch(req):
                 if testedwith == 'internal':
                     continue
 
-                tested = [tuplever(t) for t in testedwith.split()]
+                tested = [util.versiontuple(t, 2) for t in testedwith.split()]
                 if ct in tested:
                     continue
 
@@ -369,7 +367,8 @@ def _runcatch(req):
             warning = (_("** unknown exception encountered, "
                          "please report by visiting\n** ") + bugtracker + '\n')
         warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
-                    (_("** Mercurial Distributed SCM (version %s)\n") % myver) +
+                    (_("** Mercurial Distributed SCM (version %s)\n") %
+                     util.version()) +
                     (_("** Extensions loaded: %s\n") %
                      ", ".join([x[0] for x in extensions.extensions()])))
         ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
@@ -377,15 +376,6 @@ def _runcatch(req):
         raise
 
     return -1
-
-def tuplever(v):
-    try:
-        # Assertion: tuplever is only used for extension compatibility
-        # checking. Otherwise, the discarding of extra version fields is
-        # incorrect.
-        return tuple([int(i) for i in v.split('.')[0:2]])
-    except ValueError:
-        return tuple()
 
 def aliasargs(fn, givenargs):
     args = getattr(fn, 'args', [])
