@@ -193,7 +193,7 @@ def perfdirstatedirs(ui, repo, **opts):
     fm.end()
 
 @command('perfdirstatefoldmap', formatteropts)
-def perffilefoldmap(ui, repo, **opts):
+def perfdirstatefoldmap(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     dirstate = repo.dirstate
     'a' in dirstate
@@ -308,7 +308,7 @@ def perfparents(ui, repo, **opts):
     fm.end()
 
 @command('perfctxfiles', formatteropts)
-def perfparents(ui, repo, x, **opts):
+def perfctxfiles(ui, repo, x, **opts):
     x = int(x)
     timer, fm = gettimer(ui, opts)
     def d():
@@ -317,7 +317,7 @@ def perfparents(ui, repo, x, **opts):
     fm.end()
 
 @command('perfrawfiles', formatteropts)
-def perfparents(ui, repo, x, **opts):
+def perfrawfiles(ui, repo, x, **opts):
     x = int(x)
     timer, fm = gettimer(ui, opts)
     cl = repo.changelog
