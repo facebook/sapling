@@ -1188,7 +1188,7 @@ class changeset_printer(object):
         if self.buffered:
             self.ui.pushbuffer(labeled=True)
             self._show(ctx, copies, matchfn, props)
-            self.hunk[ctx.rev()] = self.ui.popbuffer(labeled=True)
+            self.hunk[ctx.rev()] = self.ui.popbuffer()
         else:
             self._show(ctx, copies, matchfn, props)
 

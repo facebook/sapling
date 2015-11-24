@@ -594,16 +594,8 @@ class ui(object):
         self._bufferstates.append((error, subproc, labeled))
         self._bufferapplylabels = labeled
 
-    def popbuffer(self, labeled=False):
-        '''pop the last buffer and return the buffered output
-
-        If labeled is True, any labels associated with buffered
-        output will be handled. By default, this has no effect
-        on the output returned, but extensions and GUI tools may
-        handle this argument and returned styled output. If output
-        is being buffered so it can be captured and parsed or
-        processed, labeled should not be set to True.
-        '''
+    def popbuffer(self):
+        '''pop the last buffer and return the buffered output'''
         self._bufferstates.pop()
         if self._bufferstates:
             self._bufferapplylabels = self._bufferstates[-1][2]
