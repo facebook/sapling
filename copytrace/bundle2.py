@@ -70,7 +70,7 @@ def _pushb2movedata(pushop, bundler):
         data = _encodedict(dic)
         repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
 
-        part = bundler.newpart('push:movedata', data=data)
+        part = bundler.newpart('push:movedata', data=data, mandatory=False)
 
 
 @bundle2.parthandler('push:movedata')
@@ -102,7 +102,7 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
             return
         data = _encodedict(dic)
 
-        part = bundler.newpart('pull:movedata', data=data)
+        part = bundler.newpart('pull:movedata', data=data, mandatory=False)
 
 
 @bundle2.parthandler('pull:movedata')
