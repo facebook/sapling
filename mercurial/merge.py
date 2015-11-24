@@ -458,10 +458,13 @@ class mergestate(object):
         if complete:
             action = None
             if deleted:
-                if not fcd.isabsent():
+                if fcd.isabsent():
+                    # dc: local picked. Need to drop if present, which may
+                    # happen on re-resolves.
+                    action = 'f'
+                else:
                     # cd: remote picked (or otherwise deleted)
                     action = 'r'
-                # else: dc: local picked (no action necessary)
             else:
                 if fcd.isabsent(): # dc: remote picked
                     action = 'g'
@@ -511,7 +514,7 @@ class mergestate(object):
 
     def actions(self):
         """return lists of actions to perform on the dirstate"""
-        actions = {'r': [], 'a': [], 'g': []}
+        actions = {'r': [], 'f': [], 'a': [], 'g': []}
         for f, (r, action) in self._results.iteritems():
             if action is not None:
                 actions[action].append((f, None, "merge result"))
