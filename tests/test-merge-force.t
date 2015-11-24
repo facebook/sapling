@@ -270,11 +270,6 @@ the remote side did not touch the file
   >   else
   >     echo '<missing>'
   >   fi
-  >   if test -f ${f}.orig
-  >   then
-  >     echo ${f}.orig:
-  >     cat ${f}.orig
-  >   fi
   > done
   
   C content1_content1_content1_content1-tracked
@@ -357,8 +352,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  content1_content2_content1_content4-tracked.orig:
-  content4
   
   M content1_content2_content1_content4-untracked
   content2
@@ -389,8 +382,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  content1_content2_content2_content4-tracked.orig:
-  content4
   
   M content1_content2_content2_content4-untracked
   content2
@@ -421,8 +412,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  content1_content2_content3_content3-tracked.orig:
-  content3
   
   M content1_content2_content3_content3-untracked
   content2
@@ -435,8 +424,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  content1_content2_content3_content4-tracked.orig:
-  content4
   
   M content1_content2_content3_content4-untracked
   content2
@@ -467,8 +454,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  content1_content2_missing_content4-tracked.orig:
-  content4
   
   M content1_content2_missing_content4-untracked
   content2
@@ -552,8 +537,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  missing_content2_content2_content4-tracked.orig:
-  content4
   
   M missing_content2_content2_content4-untracked
   content2
@@ -577,8 +560,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  missing_content2_content3_content3-tracked.orig:
-  content3
   
   M missing_content2_content3_content3-untracked
   content2
@@ -590,8 +571,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  missing_content2_content3_content4-tracked.orig:
-  content4
   
   M missing_content2_content3_content4-untracked
   content2
@@ -615,8 +594,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  missing_content2_missing_content4-tracked.orig:
-  content4
   
   M missing_content2_missing_content4-untracked
   <<<<<<< local: 0447570f1af6 - test: local
@@ -625,8 +602,6 @@ the remote side did not touch the file
   =======
   content2
   >>>>>>> other: 85100b8c675b  - test: remote
-  missing_content2_missing_content4-untracked.orig:
-  content4
   
   M missing_content2_missing_missing-tracked
   content2
@@ -663,3 +638,32 @@ the remote side did not touch the file
   
   missing_missing_missing_missing-untracked: * (glob)
   <missing>
+
+  $ for f in `python $TESTDIR/generate-working-copy-states.py filelist 3`
+  > do
+  >   if test -f ${f}.orig
+  >   then
+  >     echo ${f}.orig:
+  >     cat ${f}.orig
+  >   fi
+  > done
+  content1_content2_content1_content4-tracked.orig:
+  content4
+  content1_content2_content2_content4-tracked.orig:
+  content4
+  content1_content2_content3_content3-tracked.orig:
+  content3
+  content1_content2_content3_content4-tracked.orig:
+  content4
+  content1_content2_missing_content4-tracked.orig:
+  content4
+  missing_content2_content2_content4-tracked.orig:
+  content4
+  missing_content2_content3_content3-tracked.orig:
+  content3
+  missing_content2_content3_content4-tracked.orig:
+  content4
+  missing_content2_missing_content4-tracked.orig:
+  content4
+  missing_content2_missing_content4-untracked.orig:
+  content4
