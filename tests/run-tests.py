@@ -1726,6 +1726,7 @@ class TestRunner(object):
             slow = {b'svn': 10,
                     b'gendoc': 10,
                     b'check-code-hg': 100,
+                    b'contrib-perf': 200,
                    }
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
