@@ -329,10 +329,6 @@ def perfrawfiles(ui, repo, x, **opts):
 @command('perflookup', formatteropts)
 def perflookup(ui, repo, rev, **opts):
     timer, fm = gettimer(ui, opts)
-
-@command('perflookup', formatteropts)
-def perflookup(ui, repo, rev, **opts):
-    timer, fm = gettimer(ui, opts)
     timer(lambda: len(repo.lookup(rev)))
     fm.end()
 
