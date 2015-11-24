@@ -260,7 +260,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
             return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
     except error.ResponseExpected:
         ui.write("\n")
-        return 1, False
+        return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf)
 
 @internaltool('local', nomerge)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
