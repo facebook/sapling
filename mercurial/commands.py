@@ -190,17 +190,31 @@ def add(ui, repo, *pats, **opts):
 
     .. container:: verbose
 
-       An example showing how new (unknown) files are added
-       automatically by :hg:`add`::
+       Examples:
 
-         $ ls
-         foo.c
-         $ hg status
-         ? foo.c
-         $ hg add
-         adding foo.c
-         $ hg status
-         A foo.c
+         - New (unknown) files are added
+           automatically by :hg:`add`::
+
+             $ ls
+             foo.c
+             $ hg status
+             ? foo.c
+             $ hg add
+             adding foo.c
+             $ hg status
+             A foo.c
+
+         - Specific files to be added can be specified::
+
+             $ ls
+             bar.c  foo.c
+             $ hg status
+             ? bar.c
+             ? foo.c
+             $ hg add bar.c
+             $ hg status
+             A bar.c
+             ? foo.c
 
     Returns 0 if all files are successfully added.
     """

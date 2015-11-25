@@ -372,17 +372,30 @@ Verbose help for add
   
       If no names are given, add all files to the repository.
   
-      An example showing how new (unknown) files are added automatically by "hg
-      add":
+      Examples:
   
-        $ ls
-        foo.c
-        $ hg status
-        ? foo.c
-        $ hg add
-        adding foo.c
-        $ hg status
-        A foo.c
+        - New (unknown) files are added automatically by "hg add":
+  
+            $ ls
+            foo.c
+            $ hg status
+            ? foo.c
+            $ hg add
+            adding foo.c
+            $ hg status
+            A foo.c
+  
+        - Specific files to be added can be specified:
+  
+            $ ls
+            bar.c  foo.c
+            $ hg status
+            ? bar.c
+            ? foo.c
+            $ hg add bar.c
+            $ hg status
+            A bar.c
+            ? foo.c
   
       Returns 0 if all files are successfully added.
   
@@ -1995,9 +2008,10 @@ Dish up an empty repo; serve it cold.
   If no names are given, add all files to the repository.
   </p>
   <p>
-  An example showing how new (unknown) files are added
-  automatically by &quot;hg add&quot;:
+  Examples:
   </p>
+  <ul>
+   <li> New (unknown) files are added   automatically by &quot;hg add&quot;:
   <pre>
   \$ ls (re)
   foo.c
@@ -2008,6 +2022,19 @@ Dish up an empty repo; serve it cold.
   \$ hg status (re)
   A foo.c
   </pre>
+   <li> Specific files to be added can be specified:
+  <pre>
+  \$ ls (re)
+  bar.c  foo.c
+  \$ hg status (re)
+  ? bar.c
+  ? foo.c
+  \$ hg add bar.c (re)
+  \$ hg status (re)
+  A bar.c
+  ? foo.c
+  </pre>
+  </ul>
   <p>
   Returns 0 if all files are successfully added.
   </p>
