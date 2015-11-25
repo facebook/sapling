@@ -30,11 +30,6 @@ while [ "$1" ]; do
         shift
         CLEANUP=
         ;;
-    --debbuilddir )
-        shift
-        DEBBUILDDIR="$1"
-        shift
-        ;;
     * )
         echo "Invalid parameter $1!" 1>&2
         exit 1
