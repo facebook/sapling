@@ -430,7 +430,9 @@ def _wraprepo(ui, repo):
                         subdirs = set()
                         for include in includes:
                             dirname = os.path.dirname(include)
-                            while dirname:
+                            # basename is used to avoid issues with absolute
+                            # paths (which on Windows can include the drive).
+                            while os.path.basename(dirname):
                                 subdirs.add(dirname)
                                 dirname = os.path.dirname(dirname)
 

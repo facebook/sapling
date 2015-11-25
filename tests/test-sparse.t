@@ -25,6 +25,13 @@ Verify basic --include
   $ ls
   hide
 
+Absolute paths outside the repo should just be rejected
+
+  $ hg sparse --include /foo/bar
+  abort: /foo/bar not under root '$TESTTMP/myrepo' (glob)
+  [255]
+  $ hg sparse --include '$TESTTMP/myrepo/hide'
+
 Verify commiting while sparse includes other files
 
   $ echo z > hide
