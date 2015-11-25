@@ -22,8 +22,7 @@ modulepolicy = '@MODULELOADPOLICY@'
 
 # By default, require the C extensions for performance reasons.
 if modulepolicy == '@' 'MODULELOADPOLICY' '@':
-    # TODO change to 'c' once installer is changed.
-    modulepolicy = 'allow'
+    modulepolicy = 'c'
 
 # Environment variable can always force settings.
 modulepolicy = os.environ.get('HGMODULEPOLICY', modulepolicy)
@@ -79,11 +78,9 @@ class hgimporter(object):
             # mercurial/* are C extensions. If the current policy allows the
             # loading of .py modules, the module will be re-imported from
             # mercurial/pure/* below.
-            # TODO uncomment once setup.py is updated to actually install
-            # into mercurial/pure.
-            #if modinfo[2][2] != imp.C_EXTENSION:
-            #    raise ImportError('.py version of %s found where C '
-            #                      'version should exist' % name)
+            if modinfo[2][2] != imp.C_EXTENSION:
+                raise ImportError('.py version of %s found where C '
+                                  'version should exist' % name)
 
         except ImportError:
             if modulepolicy == 'c':
