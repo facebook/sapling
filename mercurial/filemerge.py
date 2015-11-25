@@ -566,8 +566,8 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     if tool in internals and tool.startswith('internal:'):
         # normalize to new-style names (':merge' etc)
         tool = tool[len('internal'):]
-    ui.debug("picked tool '%s' for %s (binary %s symlink %s)\n" %
-               (tool, fd, binary, symlink))
+    ui.debug("picked tool '%s' for %s (binary %s symlink %s changedelete %s)\n"
+             % (tool, fd, binary, symlink, changedelete))
 
     if tool in internals:
         func = internals[tool]
