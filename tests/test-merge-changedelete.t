@@ -13,6 +13,8 @@ Make sure HGMERGE doesn't interfere with the test
   >     hg st -A file1 file2 file3
   >     echo "--- resolve --list ---"
   >     hg resolve --list file1 file2 file3
+  >     echo "--- debugmergestate ---"
+  >     hg debugmergestate
   >     for file in file1 file2 file3; do
   >         if [ -f $file ]; then
   >             echo "--- $file ---"
@@ -68,6 +70,14 @@ Non-interactive merge:
   C file1
   --- resolve --list ---
   U file3
+  --- debugmergestate ---
+  * version 2 records
+  local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
+  other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  file: file3 (record type "F", state "u", hash d5b0a58bc47161b1b8a831084b366f757c4f0b11)
+    local path: file3 (flags "")
+    ancestor path: file3 (node 2661d26c649684b482d10f91960cc3db683c38b4)
+    other path: file3 (node a2644c43e210356772c7772a8674544a62e06beb)
   --- file1 ---
   1
   changed
@@ -109,6 +119,14 @@ Interactive merge:
   C file1
   --- resolve --list ---
   U file3
+  --- debugmergestate ---
+  * version 2 records
+  local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
+  other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  file: file3 (record type "F", state "u", hash d5b0a58bc47161b1b8a831084b366f757c4f0b11)
+    local path: file3 (flags "")
+    ancestor path: file3 (node 2661d26c649684b482d10f91960cc3db683c38b4)
+    other path: file3 (node a2644c43e210356772c7772a8674544a62e06beb)
   --- file1 ---
   1
   changed
@@ -160,6 +178,14 @@ Interactive merge with bad input:
   R file1
   --- resolve --list ---
   U file3
+  --- debugmergestate ---
+  * version 2 records
+  local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
+  other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  file: file3 (record type "F", state "u", hash d5b0a58bc47161b1b8a831084b366f757c4f0b11)
+    local path: file3 (flags "")
+    ancestor path: file3 (node 2661d26c649684b482d10f91960cc3db683c38b4)
+    other path: file3 (node a2644c43e210356772c7772a8674544a62e06beb)
   *** file1 does not exist
   --- file2 ---
   2
@@ -193,6 +219,8 @@ Interactive merge with not enough input:
   C file1
   C file3
   --- resolve --list ---
+  --- debugmergestate ---
+  no merge state found
   --- file1 ---
   1
   changed
@@ -219,6 +247,8 @@ Non-interactive linear update
   C file2
   C file3
   --- resolve --list ---
+  --- debugmergestate ---
+  no merge state found
   --- file1 ---
   1
   changed
