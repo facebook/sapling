@@ -317,7 +317,7 @@ def checkpresence(repo, ctxlist):
     processed = cursor.fetchall()
     _close(conn, cursor)
     processed = [ctx[0].encode('utf8') for ctx in processed]
-    missing = [repo[f].node() for f in ctxlist if f not in processed]
+    missing = [repo[f].hex() for f in ctxlist if f not in processed]
     if missing:
         _requestdata(repo, missing)
 

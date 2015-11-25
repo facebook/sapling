@@ -44,8 +44,8 @@ def _pullmovesbundle2(pullop):
     kwargs = {}
     kwargs['bundlecaps'] = exchange.caps20to10(pullop.repo)
     kwargs['movedatareq'] = pullop.heads
-    kwargs['common'] = pullop.heads
-    kwargs['heads'] = pullop.heads
+    kwargs['common'] = [pullop.repo[-1].node()]
+    kwargs['heads'] = [pullop.repo[-1].node()]
     kwargs['cg'] = False
     bundle = pullop.remote.getbundle('pull', **kwargs)
     try:
@@ -99,7 +99,7 @@ def _getbundlemovedata(bundler, repo, source, bundlecaps=None, heads=None,
     """
     add parts containing the movedata requested to the bundle -- server-side
     """
-    ctxlist = [repo[node].hex() for node in kwargs.get('movedatareq', [])]
+    ctxlist = kwargs.get('movedatareq', [])
     ctxlist.extend(_processctxlist(repo, common, heads))
     if ctxlist:
         try:

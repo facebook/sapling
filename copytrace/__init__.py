@@ -1,5 +1,5 @@
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import extensions, commands, copies, cmdutil, exchange
+from mercurial import extensions, commands, copies, cmdutil, exchange, wireproto
 from hgext import rebase
 import filldb
 import copytrace
@@ -29,6 +29,8 @@ def extsetup(ui):
     if ui.configbool("copytrace", "enablebundle2", False):
         wrapfunction(exchange, '_pullbundle2extraprepare',
                     bundle2._pullbundle2extraprepare)
+        # Adding the options to the ones accepted by bundle2
+        wireproto.gboptsmap['movedatareq'] = 'nodes'
 
         # Generating this part last so as to handle after 'pushrebase' if that
         # extension is loaded
