@@ -168,7 +168,7 @@ def sigs(ui, repo):
             ui.write("%-30s %s\n" % (keystr(ui, k), r))
 
 @command("sigcheck", [], _('hg sigcheck REV'))
-def check(ui, repo, rev):
+def sigcheck(ui, repo, rev):
     """verify all the signatures there may be for a particular revision"""
     mygpg = newgpg(ui)
     rev = repo.lookup(rev)
