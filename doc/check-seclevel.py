@@ -6,9 +6,8 @@ import sys, os
 import optparse
 
 # import from the live mercurial repo
+os.environ['HGMODULEPOLICY'] = 'py'
 sys.path.insert(0, "..")
-# fall back to pure modules if required C extensions are not available
-sys.path.append(os.path.join('..', 'mercurial', 'pure'))
 from mercurial import demandimport; demandimport.enable()
 from mercurial.commands import table
 from mercurial.help import helptable
