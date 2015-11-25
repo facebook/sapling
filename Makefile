@@ -161,8 +161,7 @@ osx:
 	rm -rf dist/mercurial-*.mpkg
 
 deb:
-	mkdir -p packages/debian-unknown
-	contrib/builddeb --distid debian --codename unknown
+	contrib/builddeb
 
 docker-debian-jessie:
 	mkdir -p packages/debian-jessie

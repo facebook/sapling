@@ -8,8 +8,8 @@
 
 BUILD=1
 CLEANUP=1
-DISTID=debian
-CODENAME=jessie
+DISTID=`(lsb_release -is 2> /dev/null | tr '[:upper:]' '[:lower:]') || echo debian`
+CODENAME=`lsb_release -cs 2> /dev/null || echo unknown`
 while [ "$1" ]; do
     case "$1" in
     --distid )
@@ -84,6 +84,7 @@ fi
 if [ "$CLEANUP" ] ; then
     echo
     OUTPUTDIR=${OUTPUTDIR:=packages/$DISTID-$CODENAME}
+    mkdir -p "$OUTPUTDIR"
     find ../mercurial*.deb ../mercurial_*.build ../mercurial_*.changes \
           -type f -newer $control -print0 | \
       xargs -Inarf -0 mv narf "$OUTPUTDIR"
