@@ -483,8 +483,6 @@ packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
             'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
             'hgext.largefiles']
 
-pymodules = []
-
 common_depends = ['mercurial/util.h']
 
 osutil_ldflags = []
@@ -636,7 +634,6 @@ setup(name='mercurial',
       ],
       scripts=scripts,
       packages=packages,
-      py_modules=pymodules,
       ext_modules=extmodules,
       data_files=datafiles,
       package_data=packagedata,
