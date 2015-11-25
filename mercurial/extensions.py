@@ -24,7 +24,8 @@ from . import (
 _extensions = {}
 _aftercallbacks = {}
 _order = []
-_ignore = ['hbisect', 'bookmarks', 'parentrevspec', 'interhg', 'inotify']
+#  former extensions now in core - we ignore these if found in hgrc
+_builtin = set(['hbisect', 'bookmarks', 'parentrevspec', 'interhg', 'inotify'])
 
 def extensions(ui=None):
     if ui:
@@ -75,7 +76,7 @@ def load(ui, name, path):
         shortname = name[6:]
     else:
         shortname = name
-    if shortname in _ignore:
+    if shortname in _builtin:
         return None
     if shortname in _extensions:
         return _extensions[shortname]
