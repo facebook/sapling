@@ -19,6 +19,7 @@ from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
 from mercurial import bookmarks
 from mercurial import commands
+from mercurial import encoding
 from mercurial import context, util as hgutil
 from mercurial import url
 
@@ -135,12 +136,18 @@ class GitHandler(object):
 
     @hgutil.propertycache
     def git(self):
+        # Dulwich is going to try and join unicode ref names against
+        # the repository path to try and read unpacked refs. This
+        # doesn't match hg's bytes-only view of filesystems, we just
+        # have to cope with that. To cope, just decode the gitdir path
+        # in the local encoding and say a prayer that it decodes.
+        gitpath = self.gitdir.decode(encoding.encoding, encoding.encodingmode)
         # make the git data directory
         if os.path.exists(self.gitdir):
-            return Repo(self.gitdir)
+            return Repo(gitpath)
         else:
             os.mkdir(self.gitdir)
-            return Repo.init_bare(self.gitdir)
+            return Repo.init_bare(gitpath)
 
     def init_author_file(self):
         self.author_map = {}
