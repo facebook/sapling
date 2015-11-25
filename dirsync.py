@@ -32,6 +32,7 @@ projectY.dir3 = foo/goo/hoo
 
 from collections import defaultdict
 from mercurial import extensions, localrepo, util
+from mercurial import match as matchmod
 
 testedwith = 'internal'
 
@@ -64,30 +65,44 @@ def _commit(orig, self, *args, **kwargs):
     try:
         maps = getconfigs(self.ui)
         if maps:
-            match = kwargs.get('match', None)
-            status = self.status(match=match)
+            match = args[3] if len(args) >= 4 else kwargs.get('match')
+            match = match or matchmod.always(self.root, '')
+            status = self.status()
+            mirroredfiles = set()
 
             for added in status.added:
                 mirrors = getmirrors(maps, added)
-                if mirrors:
-                    applytomirrors(self, status, added, mirrors, 'a')
+                if mirrors and match(added):
+                    mirroredfiles.update(applytomirrors(self, status, added,
+                        mirrors, 'a'))
 
             for modified in status.modified:
                 mirrors = getmirrors(maps, modified)
-                if mirrors:
-                    applytomirrors(self, status, modified, mirrors, 'm')
+                if mirrors and match(modified):
+                    mirroredfiles.update(applytomirrors(self, status, modified,
+                        mirrors, 'm'))
 
             for removed in status.removed:
                 mirrors = getmirrors(maps, removed)
-                if mirrors:
-                    applytomirrors(self, status, removed, mirrors, 'r')
+                if mirrors and match(removed):
+                    mirroredfiles.update(applytomirrors(self, status, removed,
+                        mirrors, 'r'))
 
+        if not match.always():
+            origmatch = match.matchfn
+            def extramatches(self, path):
+                return path in mirroredfiles or origmatch(path)
+            match.matchfn = extramatches
+            match._files.extend(mirroredfiles)
+            match._fileroots.update(mirroredfiles)
         return orig(self, *args, **kwargs)
     finally:
         wlock.release()
 
 def applytomirrors(repo, status, sourcepath, mirrors, action):
     """Applies the changes that are in the sourcepath to all the mirrors."""
+    mirroredfiles = set()
+
     # Detect which mirror this file comes from
     sourcemirror = None
     for mirror in mirrors:
@@ -106,6 +121,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             continue
 
         mirrorpath = mirror + relpath
+        mirroredfiles.add(mirrorpath)
         if mirrorpath in allchanges:
             wctx = repo[None]
             if (sourcepath not in wctx and mirrorpath not in wctx and
@@ -153,3 +169,5 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             util.unlink(fulltarget)
             dirstate.remove(mirrorpath)
             repo.ui.status("mirrored remove of '%s' to '%s'\n" % (sourcepath, mirrorpath))
+
+    return mirroredfiles

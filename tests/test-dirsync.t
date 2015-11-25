@@ -271,3 +271,78 @@ Test that rebasing applies the same change to both
   @@ -1,1 +1,1 @@
   -a
   +b
+
+  $ cd ..
+
+Test committing part of the working copy
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ cat >> .hg/hgrc <<EOF
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ mkdir dir1 dir2
+  $ echo a > dir1/a
+  $ echo b > dir1/b
+  $ hg add dir1
+  adding dir1/a
+  adding dir1/b
+  $ hg commit -Am "add dir1/a" dir1/a
+  mirrored adding 'dir1/a' to 'dir2/a'
+  $ hg status
+  A dir1/b
+  $ hg log -r . --stat
+  changeset:   0:9eb46ceb8af3
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add dir1/a
+  
+   dir1/a |  1 +
+   dir2/a |  1 +
+   2 files changed, 2 insertions(+), 0 deletions(-)
+  
+
+  $ echo a >> dir2/a
+  $ hg commit --amend -m "add dir1/a" dir2/a
+  mirrored changes in 'dir2/a' to 'dir1/a'
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/9eb46ceb8af3-2c09d2e4-amend-backup.hg (glob)
+  $ hg status
+  A dir1/b
+  $ hg log -r . --stat
+  changeset:   0:50bf2325c501
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add dir1/a
+  
+   dir1/a |  2 ++
+   dir2/a |  2 ++
+   2 files changed, 4 insertions(+), 0 deletions(-)
+  
+
+  $ echo a >> dir1/a
+  $ hg commit --amend -m "add dir1/a" dir2/a
+  nothing changed
+  [1]
+
+  $ hg commit --amend -m "add dir1/a"
+  mirrored adding 'dir1/b' to 'dir2/b'
+  mirrored changes in 'dir1/a' to 'dir2/a'
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/50bf2325c501-ac54e4d9-amend-backup.hg (glob)
+  $ hg status
+  $ hg log -r . --stat
+  changeset:   0:5245011388b8
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add dir1/a
+  
+   dir1/a |  3 +++
+   dir1/b |  1 +
+   dir2/a |  3 +++
+   dir2/b |  1 +
+   4 files changed, 8 insertions(+), 0 deletions(-)
+  
