@@ -88,7 +88,7 @@ def _commit(orig, self, *args, **kwargs):
                     mirroredfiles.update(applytomirrors(self, status, removed,
                         mirrors, 'r'))
 
-        if not match.always():
+        if mirroredfiles and not match.always():
             origmatch = match.matchfn
             def extramatches(self, path):
                 return path in mirroredfiles or origmatch(path)
