@@ -770,6 +770,56 @@ def histedit(ui, repo, *freeargs, **opts):
     such ambiguous situation. See :hg:`help revsets` for detail about
     selecting revisions.
 
+    .. container:: verbose
+
+       Examples:
+
+         - A number of changes have been made.
+           Revision 3 is no longer needed.
+
+           Start history editing from revision 3::
+
+             hg histedit -r 3
+
+           An editor opens, containing the list of revisions,
+           with specific actions specified::
+
+             pick 5339bf82f0ca 3 Zworgle the foobar
+             pick 8ef592ce7cc4 4 Bedazzle the zerlog
+             pick 0a9639fcda9d 5 Morgify the cromulancy
+
+           Additional information about the possible actions
+           to take appears below the list of revisions.
+
+           To remove revision 3 from the history,
+           its action (at the beginning of the relevant line)
+           is changed to 'drop'::
+
+             drop 5339bf82f0ca 3 Zworgle the foobar
+             pick 8ef592ce7cc4 4 Bedazzle the zerlog
+             pick 0a9639fcda9d 5 Morgify the cromulancy
+
+         - A number of changes have been made.
+           Revision 2 and 4 need to be swapped.
+
+           Start history editing from revision 2::
+
+             hg histedit -r 2
+
+           An editor opens, containing the list of revisions,
+           with specific actions specified::
+
+             pick 252a1af424ad 2 Blorb a morgwazzle
+             pick 5339bf82f0ca 3 Zworgle the foobar
+             pick 8ef592ce7cc4 4 Bedazzle the zerlog
+
+           To swap revision 2 and 4, its lines are swapped
+           in the editor::
+
+             pick 8ef592ce7cc4 4 Bedazzle the zerlog
+             pick 5339bf82f0ca 3 Zworgle the foobar
+             pick 252a1af424ad 2 Blorb a morgwazzle
+
     Returns 0 on success, 1 if user intervention is required (not only
     for intentional "edit" command, but also for resolving unexpected
     conflicts).
