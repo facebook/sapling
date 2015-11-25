@@ -162,7 +162,7 @@ osx:
 
 deb:
 	mkdir -p packages/debian-unknown
-	contrib/builddeb --release unknown
+	contrib/builddeb --codename unknown
 
 docker-debian-jessie:
 	mkdir -p packages/debian-jessie
