@@ -123,8 +123,6 @@ REBASING ON ANOTHER DRAFT BRANCH -- SERVER HAS NO MOVE DATA -- LOCAL DATA ERASED
   $ rm .hg/moves.db
   $ hg rebase -s 165d58 -d 756b29
   rebasing 5:165d58c1c606 "mv c e" (tip)
-  pulling move data from $TESTTMP/serverrepo
-  moves for 0 changesets retrieved
   note: possible conflict - c was renamed multiple times to:
    d
    e

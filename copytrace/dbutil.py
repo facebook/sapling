@@ -214,6 +214,10 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True, addmissing=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
+    # Checks if the database has the data, else, asks it to the server, or adds
+    # it manually
+    checkpresence(repo, ctxlist, askserver)
+
     dbname, conn, cursor = _connect(repo)
 
     # Do we want moves or copies
@@ -237,24 +241,6 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True, addmissing=True):
         else:
             ret.setdefault(ctxhash.encode('utf8'), {})[dst.encode('utf8')] = \
                  src.encode('utf8')
-
-    processed = ret.keys()
-    missing = [f for f in ctxlist if f not in processed and f != '0']
-
-    # The local database doesn't have the data for this ctx and hasn't tried
-    # to retrieve it yet (firstcheck)
-    if askserver and not repo.copytraceremote and missing:
-        _requestdata(repo, missing)
-        add = retrievedatapkg(repo, missing, move=move, askserver=False)
-        ret.update(add)
-        addk = add.keys()
-        missing = [f for f in missing if f not in addk]
-
-    if addmissing and missing:
-        _addmissingmoves(repo, missing)
-        add2 = retrievedatapkg(repo, missing, move=move,
-                                  askserver=False, addmissing=False)
-        ret.update(add2)
 
     return ret
 
@@ -304,15 +290,16 @@ def removectx(repo, ctx):
     _close(conn, cursor)
 
 
-def checkpresence(repo, ctxlist):
+def checkpresence(repo, ctxhashs, askserver=True):
     """
-    checks if the ctx in ctxlist are in the local database or requests for it
+    checks if the ctx in ctxhashs are in the local database or requests for it
     """
-    ctxhashs = [ctx.hex() for ctx in ctxlist]
-    missing = _processmissing(repo, ctxhashs, mutable=False)
-    # Requests the missing data to the server
-    if missing:
-        _requestdata(repo, missing)
+    if askserver:
+        missing = _processmissing(repo, ctxhashs, mutable=False)
+        # Requests the missing data to the server
+        if missing and not repo.copytraceremote:
+            _requestdata(repo, missing)
+
     missing = _processmissing(repo, ctxhashs)
     # Manually adds the still missing data
     if missing:
@@ -332,9 +319,9 @@ def _processmissing(repo, ctxhashs, mutable=True):
     _close(conn, cursor)
     processed = [ctx[0].encode('utf8') for ctx in processed]
     if mutable:
-        missing = [f for f in ctxhashs if f not in processed]
+        missing = [f for f in ctxhashs if f not in processed and f != '0']
     else:
-        missing = [f for f in ctxhashs if f not in processed and \
+        missing = [f for f in ctxhashs if f not in processed and f != '0' and \
                   not repo[f].mutable()]
     return missing
 

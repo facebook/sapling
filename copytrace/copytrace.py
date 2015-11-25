@@ -363,7 +363,7 @@ def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
             ca = rebased.ancestor(dest)
             ctxlist = list(repo.set("only(%r, %r)" % (dest.rev(), ca.rev())))
             if ctxlist:
-                dbutil.checkpresence(repo, ctxlist)
+                dbutil.checkpresence(repo, [ctx.hex() for ctx in ctxlist])
 
     except Exception as e:
         error.logfailure(repo, e, "buildstate")
