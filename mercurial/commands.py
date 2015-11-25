@@ -247,6 +247,46 @@ def addremove(ui, repo, *pats, **opts):
     not specified, -s/--similarity defaults to 100 and only renames of
     identical files are detected.
 
+    .. container:: verbose
+
+       Examples:
+
+         - A number of files (bar.c and foo.c) are new,
+           while foobar.c has been removed (without using :hg:`remove`)
+           from the repository::
+
+             $ ls
+             bar.c foo.c
+             $ hg status
+             ! foobar.c
+             ? bar.c
+             ? foo.c
+             $ hg addremove
+             adding bar.c
+             adding foo.c
+             removing foobar.c
+             $ hg status
+             A bar.c
+             A foo.c
+             R foobar.c
+
+         - A file foobar.c was moved to foo.c without using :hg:`rename`.
+           Afterwards, it was edited slightly::
+
+             $ ls
+             foo.c
+             $ hg status
+             ! foobar.c
+             ? foo.c
+             $ hg addremove --similarity 90
+             removing foobar.c
+             adding foo.c
+             recording removal of foobar.c as rename to foo.c (94% similar)
+             $ hg status -C
+             A foo.c
+               foobar.c
+             R foobar.c
+
     Returns 0 if all files are successfully added.
     """
     try:
