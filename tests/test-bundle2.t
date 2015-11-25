@@ -99,3 +99,40 @@ REQUESTS MISSING MOVES DURING REBASE
   9c11d01510faa13840e36ea2d8acdd0b126cca67|a|c|1
   9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
   $ cd ..
+
+
+REBASING ON ANOTHER DRAFT BRANCH -- SERVER HAS NO MOVE DATA -- LOCAL DATA ERASED
+  $ cd clientrepo1
+  $ hg update -q 89c7ee
+  $ hg mv c d
+  $ hg commit -m "mv c d"
+  $ hg update -q .^
+  $ hg mv c e
+  $ hg commit -q -m "mv c e"
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
+  11a19c2eb2258207a4ebaf0c7223ad340046b4c7|||0
+  11a19c2eb2258207a4ebaf0c7223ad340046b4c7|||1
+  165d58c1c606c35cdad6f4fe1939d578513e6806|c|e|1
+  165d58c1c606c35cdad6f4fe1939d578513e6806|||0
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
+  756b298ed880909df1cec4e7c763b22cc22064ff|c|d|1
+  756b298ed880909df1cec4e7c763b22cc22064ff|||0
+  9c11d01510faa13840e36ea2d8acdd0b126cca67|a|c|1
+  9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
+  $ rm .hg/moves.db
+  $ hg rebase -s 165d58 -d 756b29
+  rebasing 5:165d58c1c606 "mv c e" (tip)
+  pulling move data from $TESTTMP/serverrepo
+  moves for 0 changesets retrieved
+  note: possible conflict - c was renamed multiple times to:
+   d
+   e
+  saved backup bundle to $TESTTMP/clientrepo1/.hg/strip-backup/165d58c1c606-75cf2f0e-backup.hg (glob)
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
+  165d58c1c606c35cdad6f4fe1939d578513e6806|c|e|1
+  165d58c1c606c35cdad6f4fe1939d578513e6806|||0
+  756b298ed880909df1cec4e7c763b22cc22064ff|c|d|1
+  756b298ed880909df1cec4e7c763b22cc22064ff|||0
+  fa511326cccaa2c9933c752bd0009407f7cfcd2d|||0
+  fa511326cccaa2c9933c752bd0009407f7cfcd2d|||1

@@ -309,6 +309,20 @@ def checkpresence(repo, ctxlist):
     checks if the ctx in ctxlist are in the local database or requests for it
     """
     ctxhashs = [ctx.hex() for ctx in ctxlist]
+    missing = _processmissing(repo, ctxhashs, mutable=False)
+    # Requests the missing data to the server
+    if missing:
+        _requestdata(repo, missing)
+    missing = _processmissing(repo, ctxhashs)
+    # Manually adds the still missing data
+    if missing:
+        _addmissingmoves(repo, missing)
+
+
+def _processmissing(repo, ctxhashs, mutable=True):
+    """
+    returns the list of missing hashes
+    """
     dbname, conn, cursor = _connect(repo)
     # Returns hash
     cursor.execute(_sqlcmds('retrievehashes', repo.copytraceremote)
@@ -317,9 +331,12 @@ def checkpresence(repo, ctxlist):
     processed = cursor.fetchall()
     _close(conn, cursor)
     processed = [ctx[0].encode('utf8') for ctx in processed]
-    missing = [repo[f].hex() for f in ctxlist if f not in processed]
-    if missing:
-        _requestdata(repo, missing)
+    if mutable:
+        missing = [f for f in ctxhashs if f not in processed]
+    else:
+        missing = [f for f in ctxhashs if f not in processed and \
+                  not repo[f].mutable()]
+    return missing
 
 
 def _requestdata(repo, nodelist):
