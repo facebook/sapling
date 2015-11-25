@@ -5,7 +5,8 @@ file that was modified in the remote changeset, left untouched in the
 local changeset, and then modified in the working copy to match the
 remote content, then finally forgotten.
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 Create base changeset
 
@@ -214,7 +215,7 @@ Merge with remote
   warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
-  39 files updated, 3 files merged, 8 files removed, 10 files unresolved
+  18 files updated, 28 files merged, 8 files removed, 10 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
@@ -226,14 +227,39 @@ Interestingly, one untracked file got merged and added, which corresponds to the
 odd 'if force and branchmerge and different' case in manifestmerge().
 
   $ hg resolve -l
+  R content1_content2_content1_content1-untracked
+  R content1_content2_content1_content2-untracked
   U content1_content2_content1_content4-tracked
+  R content1_content2_content1_content4-untracked
+  R content1_content2_content1_missing-tracked
+  R content1_content2_content1_missing-untracked
   R content1_content2_content2_content1-tracked
+  R content1_content2_content2_content1-untracked
+  R content1_content2_content2_content2-untracked
   U content1_content2_content2_content4-tracked
+  R content1_content2_content2_content4-untracked
+  R content1_content2_content2_missing-tracked
+  R content1_content2_content2_missing-untracked
   R content1_content2_content3_content1-tracked
+  R content1_content2_content3_content1-untracked
+  R content1_content2_content3_content2-untracked
   U content1_content2_content3_content3-tracked
+  R content1_content2_content3_content3-untracked
   U content1_content2_content3_content4-tracked
+  R content1_content2_content3_content4-untracked
+  R content1_content2_content3_missing-tracked
+  R content1_content2_content3_missing-untracked
   R content1_content2_missing_content1-tracked
+  R content1_content2_missing_content1-untracked
+  R content1_content2_missing_content2-untracked
   U content1_content2_missing_content4-tracked
+  R content1_content2_missing_content4-untracked
+  R content1_content2_missing_missing-tracked
+  R content1_content2_missing_missing-untracked
+  R content1_missing_content1_content4-tracked
+  R content1_missing_content3_content3-tracked
+  R content1_missing_content3_content4-tracked
+  R content1_missing_missing_content4-tracked
   U missing_content2_content2_content4-tracked
   U missing_content2_content3_content3-tracked
   U missing_content2_content3_content4-tracked
@@ -260,17 +286,20 @@ almost as strange.
 missing_missing_content3_missing-tracked becomes removed ('R'), even though
 the remote side did not touch the file
 
-  $ for f in `python $TESTDIR/generate-working-copy-states.py filelist 3`
-  > do
-  >   echo
-  >   hg status -A $f
-  >   if test -f $f
-  >   then
-  >     cat $f
-  >   else
-  >     echo '<missing>'
-  >   fi
-  > done
+  $ checkstatus() {
+  >   for f in `python $TESTDIR/generate-working-copy-states.py filelist 3`
+  >   do
+  >     echo
+  >     hg status -A $f
+  >     if test -f $f
+  >     then
+  >       cat $f
+  >     else
+  >       echo '<missing>'
+  >     fi
+  >   done
+  > }
+  $ checkstatus 2>&1 | tee $TESTTMP/status1
   
   C content1_content1_content1_content1-tracked
   content1
@@ -667,3 +696,87 @@ the remote side did not touch the file
   content4
   missing_content2_missing_content4-untracked.orig:
   content4
+
+Re-resolve and check status
+
+  $ hg resolve --unmark --all
+  $ hg resolve --all --tool :local
+  (no more unresolved files)
+  $ hg resolve --unmark --all
+  $ hg resolve --all --tool internal:merge3
+  remote changed content1_content2_content1_content1-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content1_content2-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content1_content4-tracked
+  remote changed content1_content2_content1_content4-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content1_missing-tracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content1_missing-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content2_content1-tracked
+  remote changed content1_content2_content2_content1-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content2_content2-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content2_content4-tracked
+  remote changed content1_content2_content2_content4-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content2_missing-tracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content2_missing-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content3_content1-tracked
+  remote changed content1_content2_content3_content1-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content3_content2-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content3_content3-tracked
+  remote changed content1_content2_content3_content3-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_content3_content4-tracked
+  remote changed content1_content2_content3_content4-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content3_missing-tracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_content3_missing-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_missing_content1-tracked
+  remote changed content1_content2_missing_content1-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_missing_content2-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  merging content1_content2_missing_content4-tracked
+  remote changed content1_content2_missing_content4-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_missing_missing-tracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  remote changed content1_content2_missing_missing-untracked which local deleted
+  use (c)hanged version or leave (d)eleted? c
+  local changed content1_missing_content1_content4-tracked which remote deleted
+  use (c)hanged version or (d)elete? c
+  local changed content1_missing_content3_content3-tracked which remote deleted
+  use (c)hanged version or (d)elete? c
+  local changed content1_missing_content3_content4-tracked which remote deleted
+  use (c)hanged version or (d)elete? c
+  local changed content1_missing_missing_content4-tracked which remote deleted
+  use (c)hanged version or (d)elete? c
+  merging missing_content2_content2_content4-tracked
+  merging missing_content2_content3_content3-tracked
+  merging missing_content2_content3_content4-tracked
+  merging missing_content2_missing_content4-tracked
+  merging missing_content2_missing_content4-untracked
+  warning: conflicts while merging content1_content2_content1_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging content1_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content2_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content3_content3-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
+  [1]
+  $ checkstatus > $TESTTMP/status2 2>&1
+  $ diff -U8 $TESTTMP/status1 $TESTTMP/status2

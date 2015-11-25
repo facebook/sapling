@@ -997,8 +997,11 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     for m, l in actions.items():
         l.sort()
 
-    # prescan for merges
-    for f, args, msg in actions['m']:
+    # 'cd' and 'dc' actions are treated like other merge conflicts
+    mergeactions = sorted(actions['cd'])
+    mergeactions.extend(sorted(actions['dc']))
+    mergeactions.extend(actions['m'])
+    for f, args, msg in mergeactions:
         f1, f2, fa, move, anc = args
         if f == '.hgsubstate': # merged internally
             continue
@@ -1111,7 +1114,6 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         util.setflags(repo.wjoin(f), 'l' in flags, 'x' in flags)
         updated += 1
 
-    mergeactions = actions['m']
     # the ordering is important here -- ms.mergedriver will raise if the merge
     # driver has changed, and we want to be able to bypass it when overwrite is
     # True
@@ -1419,8 +1421,12 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             else:
                 _checkcollision(repo, wc.manifest(), actions)
 
-        # Prompt and create actions. TODO: Move this towards resolve phase.
+        # Prompt and create actions. Most of this is in the resolve phase
+        # already, but we can't handle .hgsubstate in filemerge or
+        # subrepo.submerge yet so we have to keep prompting for it.
         for f, args, msg in sorted(actions['cd']):
+            if f != '.hgsubstate':
+                continue
             if repo.ui.promptchoice(
                 _("local changed %s which remote deleted\n"
                   "use (c)hanged version or (d)elete?"
@@ -1432,6 +1438,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                 actions['a'].append((f, None, "prompt keep"))
 
         for f, args, msg in sorted(actions['dc']):
+            if f != '.hgsubstate':
+                continue
             f1, f2, fa, move, anc = args
             flags = p2[f2].flags()
             if repo.ui.promptchoice(

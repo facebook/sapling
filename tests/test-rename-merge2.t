@@ -679,12 +679,12 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
-  remote changed a which local deleted
-  use (c)hanged version or leave (d)eleted? c
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: prompt recreating -> g
-  getting a
+   a: prompt deleted/changed -> m (premerge)
+  picked tool ':prompt' for a (binary False symlink False)
+  remote changed a which local deleted
+  use (c)hanged version or leave (d)eleted? c
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
@@ -703,7 +703,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
   merge tool returned: 0
-  1 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 3 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
   M a
@@ -721,11 +721,13 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: bdb19105162a
-  local changed a which remote deleted
-  use (c)hanged version or (d)elete? c
+   preserving a for resolve of a
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: prompt keep -> am
+   a: prompt changed/deleted -> m (premerge)
+  picked tool ':prompt' for a (binary False symlink False)
+  local changed a which remote deleted
+  use (c)hanged version or (d)elete? c
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
@@ -744,7 +746,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 3 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   --------------
   M b
