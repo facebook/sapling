@@ -2562,7 +2562,7 @@ def debugmergestate(ui, repo, *args):
                 driver, mdstate = record.split('\0', 1)
                 ui.write(('merge driver: %s (state "%s")\n')
                          % (driver, mdstate))
-            elif rtype in 'FD':
+            elif rtype in 'FDC':
                 r = record.split('\0')
                 f, state, hash, lfile, afile, anode, ofile = r[0:7]
                 if version == 1:
@@ -2571,7 +2571,7 @@ def debugmergestate(ui, repo, *args):
                 else:
                     onode, flags = r[7:9]
                 ui.write(('file: %s (record type "%s", state "%s", hash %s)\n')
-                         % (f, rtype, state, hash))
+                         % (f, rtype, state, _hashornull(hash)))
                 ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
                 ui.write(('  ancestor path: %s (node %s)\n')
                          % (afile, _hashornull(anode)))
