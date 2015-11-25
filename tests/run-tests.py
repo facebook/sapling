@@ -154,6 +154,7 @@ if 'java' in sys.platform:
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
+    'slowtimeout': ('HGTEST_SLOWTIMEOUT', 500),
     'port': ('HGTEST_PORT', 20059),
     'shell': ('HGTEST_SHELL', 'sh'),
 }
@@ -236,6 +237,9 @@ def getparser():
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
+    parser.add_option("--slowtimeout", type="int",
+        help="kill errant slow tests after SLOWTIMEOUT seconds"
+             " (default: $%s or %d)" % defaults['slowtimeout'])
     parser.add_option("--time", action="store_true",
         help="time how long each test takes")
     parser.add_option("--json", action="store_true",
@@ -327,7 +331,11 @@ def parseargs(args, parser):
         if options.timeout != defaults['timeout']:
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
+        if options.slowtimeout != defaults['slowtimeout']:
+            sys.stderr.write(
+                'warning: --slowtimeout option ignored with --debug\n')
         options.timeout = 0
+        options.slowtimeout = 0
     if options.py3k_warnings:
         if PYTHON3:
             parser.error(
@@ -430,7 +438,8 @@ class Test(unittest.TestCase):
                  debug=False,
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
-                 py3kwarnings=False, shell=None):
+                 py3kwarnings=False, shell=None,
+                 slowtimeout=defaults['slowtimeout']):
         """Create a test from parameters.
 
         path is the full path to the file defining the test.
@@ -444,7 +453,9 @@ class Test(unittest.TestCase):
         output.
 
         timeout controls the maximum run time of the test. It is ignored when
-        debug is True.
+        debug is True. See slowtimeout for tests with #require slow.
+
+        slowtimeout overrides timeout if the test has #require slow.
 
         startport controls the starting port number to use for this test. Each
         test will reserve 3 port numbers for execution. It is the caller's
@@ -469,6 +480,7 @@ class Test(unittest.TestCase):
         self._keeptmpdir = keeptmpdir
         self._debug = debug
         self._timeout = timeout
+        self._slowtimeout = slowtimeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
@@ -922,7 +934,12 @@ class TTest(Test):
             print(stdout)
             sys.exit(1)
 
-        return ret == 0
+        if ret != 0:
+            return False
+
+        if 'slow' in reqs:
+            self._timeout = self._slowtimeout
+        return True
 
     def _parsetest(self, lines):
         # We generate a shell script which outputs unique markers to line

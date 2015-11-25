@@ -401,6 +401,36 @@ test --tmpdir support
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
+timeouts
+========
+  $ cat > test-timeout.t <<EOF
+  >   $ sleep 2
+  >   $ echo pass
+  >   pass
+  > EOF
+  > echo '#require slow' > test-slow-timeout.t
+  > cat test-timeout.t >> test-slow-timeout.t
+  $ run-tests.py --with-hg=`which hg` --timeout=1 --slowtimeout=3 \
+  > test-timeout.t test-slow-timeout.t
+  s
+  ERROR: test-timeout.t output changed
+  !
+  Skipped test-slow-timeout.t: skipped
+  Failed test-timeout.t: timed out
+  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+  $ run-tests.py --with-hg=`which hg` --timeout=1 --slowtimeout=3 \
+  > test-timeout.t test-slow-timeout.t --allow-slow-tests
+  .
+  ERROR: test-timeout.t output changed
+  !
+  Failed test-timeout.t: timed out
+  # Ran 2 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+  $ rm test-timeout.t test-slow-timeout.t
+
 test for --time
 ==================
 
