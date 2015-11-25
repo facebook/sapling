@@ -162,11 +162,11 @@ osx:
 
 deb:
 	mkdir -p packages/debian-unknown
-	contrib/builddeb --codename unknown
+	contrib/builddeb --distid debian --codename unknown
 
 docker-debian-jessie:
 	mkdir -p packages/debian-jessie
-	contrib/dockerdeb jessie
+	contrib/dockerdeb debian jessie
 
 fedora20:
 	mkdir -p packages/fedora20
