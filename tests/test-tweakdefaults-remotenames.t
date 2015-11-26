@@ -70,3 +70,37 @@ Test that hg pull --update aborts without --dest
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   (leaving bookmark bm)
 
+Test that setting a defaultdest allows --update and --rebase to work
+  $ hg pull --update --config tweakdefaults.defaultdest=two
+  pulling from $TESTTMP/repo
+  searching for changes
+  no changes found
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
+  o  5413b62180b7 bm
+  |
+  o  083f922fc4a9  default/three default/default
+  |
+  @  301d76bdc3ae  default/two
+  |
+  o  8f0162e483d0  default/one
+  
+  $ echo d > d
+  $ hg commit -qAm d
+  $ hg pull --rebase --config tweakdefaults.defaultdest=three
+  pulling from $TESTTMP/repo
+  searching for changes
+  no changes found
+  rebasing 4:50f3f60b4841 "d" (tip)
+  saved backup bundle to * (glob)
+  $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
+  @  ba0f83735c95
+  |
+  | o  5413b62180b7 bm
+  |/
+  o  083f922fc4a9  default/three default/default
+  |
+  o  301d76bdc3ae  default/two
+  |
+  o  8f0162e483d0  default/one
+  
