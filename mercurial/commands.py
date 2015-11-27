@@ -4779,6 +4779,10 @@ def log(ui, repo, *pats, **opts):
 
           hg log -k bug --template "{rev}\\n"
 
+      - the full hash identifier of the working directory parent::
+
+          hg log -r . --template "{node}\\n"
+
       - list available log templates::
 
           hg log -T list
