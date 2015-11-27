@@ -4219,6 +4219,9 @@ def identify(ui, repo, source=None, rev=None,
 
           hg id -r tip http://selenic.com/hg/
 
+    See :hg:`log` for generating more information about specific revisions,
+    including full hash identifiers.
+
     Returns 0 if successful.
     """
 
