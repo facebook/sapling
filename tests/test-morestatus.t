@@ -6,6 +6,13 @@
   > [extensions]
   > morestatus=$TESTTMP/morestatus.py
   > EOF
+  $ cat >> $TESTTMP/breakupdate.py << EOF
+  > import sys
+  > from mercurial import merge
+  > def extsetup(ui):
+  >     merge.applyupdates = lambda *args, **kwargs: sys.exit()
+  > EOF
+  $ breakupdateflag="--config extensions.breakupdate=$TESTTMP/breakupdate.py"
 
 Test An empty repo should return no extra output
   $ hg init repo
@@ -194,3 +201,41 @@ Test non-conflicted merge state
 Test hg status is normal after merge commit (no output)
   $ hg commit -m 'merge commit' -q
   $ hg status
+
+Test interrupted update state, without active bookmark and REV is a hash
+  $ hg update $breakupdateflag -C 2977a57ce863
+  $ hg status
+  
+  # The repository is in an unfinished *update* state.
+  # To continue:                hg update -C 2977a57ce863
+  # To abort:                   hg update .
+
+Test interrupted update state, with active bookmark and REV is a bookmark
+  $ hg bookmark b1
+  $ hg bookmark -r 79361b8cdbb5 b2
+  $ hg update $breakupdateflag b2
+  $ hg status
+  
+  # The repository is in an unfinished *update* state.
+  # To continue:                hg update b2
+  # To abort:                   hg update b1
+
+Test update state can be reset using bookmark
+  $ hg update $breakupdateflag b1 -q
+  $ hg bookmark -d b1 -q
+  $ hg status
+
+Test interrupted update state, without active bookmark and REV is specified using date
+  $ echo a >> a
+  $ hg commit --date "1234567890 0" -m m -q
+  $ hg update $breakupdateflag --date 1970-1-1 -q
+  $ hg status
+  
+  # The repository is in an unfinished *update* state.
+  # To continue:                hg update --date 1970-1-1 -q
+  # To abort:                   hg update .
+
+Test update state can be reset using .
+  $ hg update . -q
+  $ hg status
+

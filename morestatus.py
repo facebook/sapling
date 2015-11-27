@@ -10,11 +10,14 @@ This extension will wrap the status command to make it show more context about
 the state of the repo
 """
 
-from mercurial import  commands
+from mercurial import commands
 from mercurial.extensions import wrapcommand
 from mercurial.i18n import _
 from mercurial import merge as mergemod
 from mercurial import scmutil
+
+
+UPDATEARGS = 'updateargs'
 
 
 def prefixlines(raw):
@@ -48,25 +51,34 @@ def helpmessage(ui, continuecmd, abortcmd):
             'To abort:                   %s') % (continuecmd, abortcmd)
     ui.warn(prefixlines(msg))
 
-def rebasemsg(ui):
+def rebasemsg(repo, ui):
     helpmessage(ui, 'hg rebase --continue', 'hg rebase --abort')
 
-def histeditmsg(ui):
+def histeditmsg(repo, ui):
     helpmessage(ui, 'hg histedit --continue', 'hg histedit --abort')
 
-def unshelvemsg(ui):
+def unshelvemsg(repo, ui):
     helpmessage(ui, 'hg unshelve --continue', 'hg unshelve --abort')
 
-def graftmsg(ui):
+def graftmsg(repo, ui):
      # tweakdefaults requires `update` to have a rev hence the `.`
     helpmessage(ui, 'hg graft --continue', 'hg update .')
 
-def mergemsg(ui):
+def updatemsg(repo, ui):
+    previousargs = repo.vfs.tryread(UPDATEARGS)
+    if previousargs:
+        continuecmd = 'hg ' + previousargs
+    else:
+        continuecmd = 'hg update ' + repo.vfs.read('updatestate')[:12]
+    abortcmd = 'hg update ' + (repo._activebookmark or '.')
+    helpmessage(ui, continuecmd, abortcmd)
+
+def mergemsg(repo, ui):
      # tweakdefaults requires `update` to have a rev hence the `.`
     helpmessage(ui, 'hg commit', 'hg update --clean .    (warning: this will '
             'erase all uncommitted changed)')
 
-def bisectmsg(ui):
+def bisectmsg(repo, ui):
     msg = _('To mark the commit good:       hg bisect --good\n'
             'To mark the commit bad:        hg bisect --bad\n'
             'To abort:                      hg bisect --reset\n')
@@ -84,6 +96,7 @@ STATES = (
     ('bisect', fileexistspredicate('bisect.state'), bisectmsg),
     ('graft', fileexistspredicate('graftstate'), graftmsg),
     ('unshelve', fileexistspredicate('unshelverebasestate'), unshelvemsg),
+    ('update', fileexistspredicate('updatestate'), updatemsg),
     ('rebase', fileexistspredicate('rebasestate'), rebasemsg),
     # The merge state is part of a list that will be iterated over. It needs to
     # be last because some of the other unfinished states may also be in a merge
@@ -95,6 +108,20 @@ STATES = (
 def extsetup(ui):
     if ui.configbool('morestatus', 'show', False) and not ui.plain():
         wrapcommand(commands.table, 'status', statuscmd)
+        # Write down `hg update` args to show the continue command in
+        # interrupted update state.
+        ui.setconfig('hooks', 'pre-update.morestatus', saveupdateargs)
+        ui.setconfig('hooks', 'post-update.morestatus', cleanupdateargs)
+
+def saveupdateargs(repo, args, **kwargs):
+    # args is a string containing all flags and arguments
+    repo.vfs.write(UPDATEARGS, args)
+
+def cleanupdateargs(repo, **kwargs):
+    try:
+        repo.vfs.unlink(UPDATEARGS)
+    except:
+        pass
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """
@@ -112,7 +139,7 @@ def statuscmd(orig, ui, repo, *pats, **opts):
         ui.warn('\n' + prefixlines(statemsg))
         conflictsmsg(repo, ui)
         if helpfulmsg:
-            helpfulmsg(ui)
+            helpfulmsg(repo, ui)
 
     # TODO(cdelahousse): check to see if current bookmark needs updating. See
     # scmprompt.
@@ -123,4 +150,3 @@ def getrepostate(repo):
     for state, statedetectionpredicate, msgfn in STATES:
         if statedetectionpredicate(repo):
             return (state, statedetectionpredicate, msgfn)
-
