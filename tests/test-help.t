@@ -1028,12 +1028,12 @@ Test help hooks
 
 Test -e / -c / -k combinations
 
-  $ hg help -c progress
-  abort: no such help topic: progress
-  (try "hg help --keyword progress")
+  $ hg help -c schemes
+  abort: no such help topic: schemes
+  (try "hg help --keyword schemes")
   [255]
-  $ hg help -e progress |head -1
-  progress extension - show progress bars for some actions (DEPRECATED)
+  $ hg help -e schemes |head -1
+  schemes extension - extend schemes with shortcuts to repository swarms
   $ hg help -c -k dates |egrep '^(Topics|Extensions|Commands):'
   Commands:
   $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'
