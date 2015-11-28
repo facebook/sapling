@@ -155,6 +155,14 @@ stabilise
   rebasing 11:c13eb81022ca "f"
   $ hg up tip -q
 
+check that extra has accumulated from histedit and rebase
+
+  $ hg log -T '{extras % "{key}={value}\n"}\n' -r tip
+  branch=default
+  histedit_source=cacdfd884a9321ec4e1de275ef3949fa953a1f83
+  rebase_source=c13eb81022caa686a369223fe7f926bc4f7db576
+  
+
 Test dropping of changeset on the top of the stack
 -------------------------------------------------------
 
@@ -168,7 +176,7 @@ dropped changeset to be hidden.
   $ cd droplast
   $ hg histedit -r '40db8afa467b' --commands - << EOF
   > pick 40db8afa467b 10 c
-  > drop b449568bf7fc 11 f
+  > drop 947ece25170f 11 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
@@ -218,7 +226,7 @@ Check that histedit respect immutability
   $ hg ph -pv '.^'
   phase changed for 2 changesets
   $ hg log -G
-  @  13:b449568bf7fc (draft) f
+  @  13:947ece25170f (draft) f
   |
   o  12:40db8afa467b (public) c
   |
@@ -240,17 +248,17 @@ Prepare further testing
   > done
   $ hg phase --force --secret .~2
   $ hg log -G
-  @  18:ee118ab9fa44 (secret) k
+  @  18:14bda137d5b3 (secret) k
   |
-  o  17:3a6c53ee7f3d (secret) j
+  o  17:c62e7241a4f2 (secret) j
   |
-  o  16:b605fb7503f2 (secret) i
+  o  16:9cd3934e05af (secret) i
   |
-  o  15:7395e1ff83bd (draft) h
+  o  15:ee4a24fc4dfa (draft) h
   |
-  o  14:6b70183d2492 (draft) g
+  o  14:d22905de3528 (draft) g
   |
-  o  13:b449568bf7fc (draft) f
+  o  13:947ece25170f (draft) f
   |
   o  12:40db8afa467b (public) c
   |
@@ -268,13 +276,13 @@ New-commit as draft (default)
 
   $ cp -r base simple-draft
   $ cd simple-draft
-  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
-  > edit b449568bf7fc 11 f
-  > pick 6b70183d2492 12 g
-  > pick 7395e1ff83bd 13 h
-  > pick b605fb7503f2 14 i
-  > pick 3a6c53ee7f3d 15 j
-  > pick ee118ab9fa44 16 k
+  $ hg histedit -r '947ece25170f' --commands - << EOF
+  > edit 947ece25170f 11 f
+  > pick d22905de3528 12 g
+  > pick ee4a24fc4dfa 13 h
+  > pick 9cd3934e05af 14 i
+  > pick c62e7241a4f2 15 j
+  > pick 14bda137d5b3 16 k
   > EOF
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   adding f
@@ -290,17 +298,17 @@ New-commit as draft (default)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  24:12e89af74238 (secret) k
+  @  24:12925f763c90 (secret) k
   |
-  o  23:636a8687b22e (secret) j
+  o  23:4545a6e77442 (secret) j
   |
-  o  22:ccaf0a38653f (secret) i
+  o  22:d947a0798e76 (secret) i
   |
-  o  21:11a89d1c2613 (draft) h
+  o  21:28fb35ae4ebb (draft) h
   |
-  o  20:c1dec7ca82ea (draft) g
+  o  20:10b22a5a9645 (draft) g
   |
-  o  19:087281e68428 (draft) f
+  o  19:c5a1db4a69f5 (draft) f
   |
   o  12:40db8afa467b (public) c
   |
@@ -317,13 +325,13 @@ New-commit as draft (default)
   > [phases]
   > new-commit=secret
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
-  > edit b449568bf7fc 11 f
-  > pick 6b70183d2492 12 g
-  > pick 7395e1ff83bd 13 h
-  > pick b605fb7503f2 14 i
-  > pick 3a6c53ee7f3d 15 j
-  > pick ee118ab9fa44 16 k
+  $ hg histedit -r '947ece25170f' --commands - << EOF
+  > edit 947ece25170f 11 f
+  > pick d22905de3528 12 g
+  > pick ee4a24fc4dfa 13 h
+  > pick 9cd3934e05af 14 i
+  > pick c62e7241a4f2 15 j
+  > pick 14bda137d5b3 16 k
   > EOF
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   adding f
@@ -339,17 +347,17 @@ New-commit as draft (default)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  24:12e89af74238 (secret) k
+  @  24:12925f763c90 (secret) k
   |
-  o  23:636a8687b22e (secret) j
+  o  23:4545a6e77442 (secret) j
   |
-  o  22:ccaf0a38653f (secret) i
+  o  22:d947a0798e76 (secret) i
   |
-  o  21:11a89d1c2613 (draft) h
+  o  21:28fb35ae4ebb (draft) h
   |
-  o  20:c1dec7ca82ea (draft) g
+  o  20:10b22a5a9645 (draft) g
   |
-  o  19:087281e68428 (draft) f
+  o  19:c5a1db4a69f5 (draft) f
   |
   o  12:40db8afa467b (public) c
   |
@@ -366,13 +374,13 @@ It seems more important to present the secret phase.
 
   $ cp -r base reorder
   $ cd reorder
-  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
-  > pick b449568bf7fc 11 f
-  > pick 3a6c53ee7f3d 15 j
-  > pick 6b70183d2492 12 g
-  > pick b605fb7503f2 14 i
-  > pick 7395e1ff83bd 13 h
-  > pick ee118ab9fa44 16 k
+  $ hg histedit -r '947ece25170f' --commands - << EOF
+  > pick 947ece25170f 11 f
+  > pick c62e7241a4f2 15 j
+  > pick d22905de3528 12 g
+  > pick 9cd3934e05af 14 i
+  > pick ee4a24fc4dfa 13 h
+  > pick 14bda137d5b3 16 k
   > EOF
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -381,17 +389,17 @@ It seems more important to present the secret phase.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  23:558246857888 (secret) k
+  @  23:9e712162b2c1 (secret) k
   |
-  o  22:28bd44768535 (secret) h
+  o  22:490861543602 (secret) h
   |
-  o  21:d5395202aeb9 (secret) i
+  o  21:86aeda50b70d (secret) i
   |
-  o  20:21edda8e341b (secret) g
+  o  20:b2fa360bc090 (secret) g
   |
-  o  19:5ab64f3a4832 (secret) j
+  o  19:e10fb4e3eb8e (secret) j
   |
-  o  13:b449568bf7fc (draft) f
+  o  13:947ece25170f (draft) f
   |
   o  12:40db8afa467b (public) c
   |
@@ -413,13 +421,13 @@ Note that there is a few reordering in this series for more extensive test
   > [phases]
   > new-commit=secret
   > EOF
-  $ hg histedit -r 'b449568bf7fc' --commands - << EOF
-  > pick 7395e1ff83bd 13 h
-  > fold b449568bf7fc 11 f
-  > pick 6b70183d2492 12 g
-  > fold 3a6c53ee7f3d 15 j
-  > pick b605fb7503f2 14 i
-  > fold ee118ab9fa44 16 k
+  $ hg histedit -r '947ece25170f' --commands - << EOF
+  > pick ee4a24fc4dfa 13 h
+  > fold 947ece25170f 11 f
+  > pick d22905de3528 12 g
+  > fold c62e7241a4f2 15 j
+  > pick 9cd3934e05af 14 i
+  > fold 14bda137d5b3 16 k
   > EOF
   0 files updated, 0 files merged, 6 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -435,29 +443,29 @@ Note that there is a few reordering in this series for more extensive test
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  27:f9daec13fb98 (secret) i
+  @  27:769e8ee8708e (secret) i
   |
-  o  24:49807617f46a (secret) g
+  o  24:3de6dbab1b62 (secret) g
   |
-  o  21:050280826e04 (draft) h
+  o  21:1d51647632b2 (draft) h
   |
   o  12:40db8afa467b (public) c
   |
   o  0:cb9a9f314b8b (public) a
   
-  $ hg co 49807617f46a
+  $ hg co 3de6dbab1b62
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo wat >> wat
   $ hg add wat
   $ hg ci -m 'add wat'
   created new head
-  $ hg merge f9daec13fb98
+  $ hg merge 769e8ee8708e
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge'
   $ echo not wat > wat
   $ hg ci -m 'modify wat'
-  $ hg histedit 050280826e04
+  $ hg histedit 1d51647632b2
   abort: cannot edit history that contains merges
   [255]
   $ cd ..
