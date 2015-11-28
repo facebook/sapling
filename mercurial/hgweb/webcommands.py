@@ -792,7 +792,7 @@ def filediff(web, req, tmpl):
         style = req.form['style'][0]
 
     diffs = webutil.diffs(web.repo, tmpl, ctx, None, [path], parity, style)
-    if fctx:
+    if fctx is not None:
         rename = webutil.renamelink(fctx)
         ctx = fctx
     else:
