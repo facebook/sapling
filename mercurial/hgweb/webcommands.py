@@ -854,6 +854,7 @@ def comparison(web, req, tmpl):
             return [_('(binary file %s, hash: %s)') % (mt, hex(f.filenode()))]
         return f.data().splitlines()
 
+    fctx = None
     parent = ctx.p1()
     leftrev = parent.rev()
     leftnode = parent.node()
@@ -869,10 +870,14 @@ def comparison(web, req, tmpl):
             leftlines = filelines(pfctx)
     else:
         rightlines = ()
-        fctx = ctx.parents()[0][path]
-        leftlines = filelines(fctx)
+        pfctx = ctx.parents()[0][path]
+        leftlines = filelines(pfctx)
 
     comparison = webutil.compare(tmpl, context, leftlines, rightlines)
+    if fctx is not None:
+        ctx = fctx
+    else:
+        ctx = ctx
     return tmpl('filecomparison',
                 file=path,
                 node=hex(ctx.node()),
@@ -884,8 +889,8 @@ def comparison(web, req, tmpl):
                 author=ctx.user(),
                 rename=rename,
                 branch=webutil.nodebranchnodefault(ctx),
-                parent=webutil.parents(fctx),
-                child=webutil.children(fctx),
+                parent=webutil.parents(ctx),
+                child=webutil.children(ctx),
                 tags=webutil.nodetagsdict(web.repo, ctx.node()),
                 bookmarks=webutil.nodebookmarksdict(web.repo, ctx.node()),
                 leftrev=leftrev,
