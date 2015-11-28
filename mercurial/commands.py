@@ -3831,10 +3831,10 @@ def graft(ui, repo, *revs, **opts):
             if opts.get('dry_run'):
                 continue
 
-            source = ctx.extra().get('source')
-            extra = {}
+            extra = ctx.extra().copy()
+            del extra['branch']
+            source = extra.get('source')
             if source:
-                extra['source'] = source
                 extra['intermediate-source'] = ctx.hex()
             else:
                 extra['source'] = ctx.hex()
