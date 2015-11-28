@@ -838,7 +838,6 @@ def comparison(web, req, tmpl):
     if 'file' not in req.form:
         raise ErrorResponse(HTTP_NOT_FOUND, 'file not given')
     path = webutil.cleanpath(web.repo, req.form['file'][0])
-    rename = path in ctx and webutil.renamelink(ctx[path]) or []
 
     parsecontext = lambda v: v == 'full' and -1 or int(v)
     if 'context' in req.form:
@@ -875,8 +874,10 @@ def comparison(web, req, tmpl):
 
     comparison = webutil.compare(tmpl, context, leftlines, rightlines)
     if fctx is not None:
+        rename = webutil.renamelink(fctx)
         ctx = fctx
     else:
+        rename = []
         ctx = ctx
     return tmpl('filecomparison',
                 file=path,
