@@ -49,7 +49,7 @@ testedwith = 'internal'
     ] + commands.logopts + commands.walkopts,
     _('[OPTION]... [FILE]'),
     inferrepo=True)
-def graphlog(ui, repo, *pats, **opts):
+def glog(ui, repo, *pats, **opts):
     """show revision history alongside an ASCII revision graph
 
     Print a revision history alongside a revision graph drawn with
