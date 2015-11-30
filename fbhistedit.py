@@ -58,6 +58,12 @@ def defineactions():
             command = rule
             return cls(state, command)
 
+        def constraints(self):
+            return set()
+
+        def nodetoverify(self):
+            return None
+
         def run(self):
             state = self.state
             repo, ctxnode = state.repo, state.parentctxnode
@@ -113,48 +119,6 @@ def defineactions():
 
     return stop, execute, executerelative
 
-# HACK:
-# The following function verifyrules and bootstrap continue are copied from
-# histedit.py as we have no proper way of fixing up the x/exec specialcase.
-def verifyrules(orig, rules, repo, ctxs):
-    """Verify that there exists exactly one edit rule per given changeset.
-
-    Will abort if there are to many or too few rules, a malformed rule,
-    or a rule on a changeset outside of the user-given range.
-    """
-    histedit = extensions.find('histedit')
-    parsed = []
-    expected = set(c.hex() for c in ctxs)
-    seen = set()
-    for r in rules:
-        if ' ' not in r:
-            raise util.Abort(_('malformed line "%s"') % r)
-        action, rest = r.split(' ', 1)
-        # Our x/exec specialcasing
-        if action in ['x', 'exec', 'xr', 'execr']:
-            parsed.append([action, rest])
-        else:
-            ha = rest.strip().split(' ', 1)[0]
-            try:
-                ha = repo[ha].hex()
-            except error.RepoError:
-                raise util.Abort(_('unknown changeset %s listed') % ha[:12])
-            if ha not in expected:
-                raise util.Abort(
-                    _('may not use changesets other than the ones listed'))
-            if ha in seen:
-                raise util.Abort(_('duplicated command for changeset %s') %
-                        ha[:12])
-            seen.add(ha)
-            if action not in histedit.actiontable:
-                raise util.Abort(_('unknown action "%s"') % action)
-            parsed.append([action, ha])
-    missing = sorted(expected - seen)  # sort to stabilize output
-    if missing:
-        raise util.Abort(_('missing rules for changeset %s') % missing[0],
-                         hint=_('do you want to use the drop action?'))
-    return parsed
-
 def extsetup(ui):
     histedit = extensions.find('histedit')
     histedit.editcomment = _("""# Edit history between %s and %s
@@ -180,5 +144,3 @@ def extsetup(ui):
     histedit.actiontable['exec'] = execute
     histedit.actiontable['xr'] = executerel
     histedit.actiontable['execr'] = executerel
-
-    extensions.wrapfunction(histedit, 'verifyrules', verifyrules)
