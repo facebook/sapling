@@ -1423,7 +1423,8 @@ def cat(ui, repo, file1, *pats, **opts):
 @command('^clone',
     [('U', 'noupdate', None, _('the clone will include an empty working '
                                'directory (only a repository)')),
-    ('u', 'updaterev', '', _('revision, tag or branch to check out'), _('REV')),
+    ('u', 'updaterev', '', _('revision, tag, or branch to check out'),
+        _('REV')),
     ('r', 'rev', [], _('include the specified changeset'), _('REV')),
     ('b', 'branch', [], _('clone only the specified branch'), _('BRANCH')),
     ('', 'pull', None, _('use pull protocol to copy metadata')),
