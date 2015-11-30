@@ -288,6 +288,8 @@ class mergestate(object):
 
     @util.propertycache
     def otherctx(self):
+        if self._other is None:
+            raise RuntimeError("localctx accessed but self._local isn't set")
         return self._repo[self._other]
 
     def active(self):
