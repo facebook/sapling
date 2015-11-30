@@ -24,6 +24,7 @@ regular clone of an existing zlib repo should still use zlib
   $ sort b/.hg/requires
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
 
@@ -33,6 +34,7 @@ pulled clone of zlib should use lz4
   $ sort alz4/.hg/requires
   dotencode
   fncache
+  generaldelta
   lz4revlog
   revlogv1
   store
@@ -50,6 +52,7 @@ disable lz4, then clone
   $ sort w/.hg/requires
   dotencode
   fncache
+  generaldelta
   revlogv1
   store
 
@@ -61,6 +64,7 @@ attempt to disable lz4 should be ignored for hardlinked clone
   $ sort azlib/.hg/requires
   dotencode
   fncache
+  generaldelta
   lz4revlog
   revlogv1
   store
@@ -87,6 +91,7 @@ a new repo should use lz4 by default
   $ sort .hg/requires
   dotencode
   fncache
+  generaldelta
   lz4revlog
   revlogv1
   store
