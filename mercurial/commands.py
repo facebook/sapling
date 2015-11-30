@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, bin, nullid, nullrev, short
+from node import hex, bin, nullhex, nullid, nullrev, short
 from lock import release
 from i18n import _
 import os, re, difflib, time, tempfile, errno, shlex
@@ -2539,6 +2539,12 @@ def debugmergestate(ui, repo, *args):
 
     Use --verbose to print out information about whether v1 or v2 merge state
     was chosen."""
+    def _hashornull(h):
+        if h == nullhex:
+            return 'null'
+        else:
+            return h
+
     def printrecords(version):
         ui.write(('* version %s records\n') % version)
         if version == 1:
@@ -2567,8 +2573,10 @@ def debugmergestate(ui, repo, *args):
                 ui.write(('file: %s (record type "%s", state "%s", hash %s)\n')
                          % (f, rtype, state, hash))
                 ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
-                ui.write(('  ancestor path: %s (node %s)\n') % (afile, anode))
-                ui.write(('  other path: %s (node %s)\n') % (ofile, onode))
+                ui.write(('  ancestor path: %s (node %s)\n')
+                         % (afile, _hashornull(anode)))
+                ui.write(('  other path: %s (node %s)\n')
+                         % (ofile, _hashornull(onode)))
             else:
                 ui.write(('unrecognized entry: %s\t%s\n')
                          % (rtype, record.replace('\0', '\t')))

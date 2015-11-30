@@ -84,7 +84,7 @@ insert unsupported advisory merge record
   unrecognized entry: x	advisory record
   file: e (record type "F", state "u", hash 58e6b3a414a1e090dfc6029add0f3555ccba127f)
     local path: e (flags "")
-    ancestor path: e (node 0000000000000000000000000000000000000000)
+    ancestor path: e (node null)
     other path: e (node 6b67ccefd5ce6de77e7ead4f5292843a0255329f)
   $ hg resolve -l
   U e
@@ -97,7 +97,7 @@ insert unsupported mandatory merge record
   other: e860deea161a2f77de56603b340ebbb4536308ae
   file: e (record type "F", state "u", hash 58e6b3a414a1e090dfc6029add0f3555ccba127f)
     local path: e (flags "")
-    ancestor path: e (node 0000000000000000000000000000000000000000)
+    ancestor path: e (node null)
     other path: e (node 6b67ccefd5ce6de77e7ead4f5292843a0255329f)
   unrecognized entry: X	mandatory record
   $ hg resolve -l
