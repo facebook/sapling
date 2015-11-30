@@ -2965,21 +2965,17 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
     wlock = repo.wlock()
     try:
         dirstate = repo.dirstate
-
+        changedfiles = None
         # See command doc for what minimal does.
         if opts.get('minimal'):
+            manifestfiles = set(ctx.manifest().keys())
             dirstatefiles = set(dirstate)
-            ctxfiles = set(ctx.manifest().keys())
-            for file in (dirstatefiles | ctxfiles):
-                indirstate = file in dirstatefiles
-                inctx = file in ctxfiles
+            manifestonly = manifestfiles - dirstatefiles
+            dsonly = dirstatefiles - manifestfiles
+            dsnotadded = set(f for f in dsonly if dirstate[f] != 'a')
+            changedfiles =  manifestonly | dsnotadded
 
-                if indirstate and not inctx and dirstate[file] != 'a':
-                    dirstate.drop(file)
-                elif inctx and not indirstate:
-                    dirstate.normallookup(file)
-        else:
-            dirstate.rebuild(ctx.node(), ctx.manifest())
+        dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
     finally:
         wlock.release()
 

@@ -639,17 +639,22 @@ class dirstate(object):
 
     def rebuild(self, parent, allfiles, changedfiles=None):
         if changedfiles is None:
+            # Rebuild entire dirstate
             changedfiles = allfiles
-        oldmap = self._map
-        self.clear()
-        for f in allfiles:
-            if f not in changedfiles:
-                self._map[f] = oldmap[f]
+            lastnormaltime = self._lastnormaltime
+            self.clear()
+            self._lastnormaltime = lastnormaltime
+
+        for f in changedfiles:
+            mode = 0o666
+            if f in allfiles and 'x' in allfiles.flags(f):
+                mode = 0o777
+
+            if f in allfiles:
+                self._map[f] = dirstatetuple('n', mode, -1, 0)
             else:
-                if 'x' in allfiles.flags(f):
-                    self._map[f] = dirstatetuple('n', 0o777, -1, 0)
-                else:
-                    self._map[f] = dirstatetuple('n', 0o666, -1, 0)
+                self._map.pop(f, None)
+
         self._pl = (parent, nullid)
         self._dirty = True
 

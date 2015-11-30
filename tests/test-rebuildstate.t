@@ -115,7 +115,7 @@ dirstate
   $ hg debugrebuilddirstate --minimal
   $ hg debugdirstate --nodates
   r   0          0 * bar (glob)
-  n   0         -1 * foo (glob)
+  n 644         -1 * foo (glob)
   a   0         -1 * qux (glob)
   $ hg status -A
   A qux
