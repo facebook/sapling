@@ -684,7 +684,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    a: prompt deleted/changed -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   remote changed a which local deleted
-  use (c)hanged version or leave (d)eleted? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -727,7 +727,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    a: prompt changed/deleted -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   local changed a which remote deleted
-  use (c)hanged version or (d)elete? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? c
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b

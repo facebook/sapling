@@ -812,7 +812,7 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg ci -m aa
   $ hg merge -q bar
   local changed aa which remote deleted
-  use (c)hanged version or (d)elete? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? c
   $ hg ci -m 'merge bar (with conflicts)'
   $ hg log --config diff.git=1 -pr .
   changeset:   33:97a298b0c59f

@@ -83,7 +83,7 @@ Test disabling copy tracing
   $ hg rebase --keep -d 1 -b 2 --config extensions.rebase= --config experimental.disablecopytrace=True
   rebasing 2:add3f11052fa "other" (tip)
   remote changed a which local deleted
-  use (c)hanged version or leave (d)eleted? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
 
   $ cat b
   1
