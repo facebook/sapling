@@ -49,9 +49,13 @@ existing attend and ignore options and defaults::
 To ignore global commands like :hg:`version` or :hg:`help`, you have
 to specify them in your user configuration file.
 
-The --pager=... option can also be used to control when the pager is
-used. Use a boolean value like yes, no, on, off, or use auto for
-normal behavior.
+To control whether the pager is used at all for an individual command,
+you can use --pager=<value>::
+
+  - use as needed: `auto`.
+  - require the pager: `yes` or `on`.
+  - suppress the pager: `no` or `off` (any unrecognized value
+  will also work).
 
 '''
 
