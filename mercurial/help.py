@@ -27,11 +27,12 @@ def listexts(header, exts, indent=1, showdeprecated=False):
     '''return a text listing of the given extensions'''
     rst = []
     if exts:
-        rst.append('\n%s\n\n' % header)
         for name, desc in sorted(exts.iteritems()):
             if not showdeprecated and any(w in desc for w in _exclkeywords):
                 continue
             rst.append('%s:%s: %s\n' % (' ' * indent, name, desc))
+    if rst:
+        rst.insert(0, '\n%s\n\n' % header)
     return rst
 
 def extshelp(ui):
