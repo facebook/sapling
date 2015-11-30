@@ -103,8 +103,9 @@ class mergestate(object):
         self._state = {}
         self._local = None
         self._other = None
-        if 'otherctx' in vars(self):
-            del self.otherctx
+        for var in ('localctx', 'otherctx'):
+            if var in vars(self):
+                delattr(self, var)
         if node:
             self._local = node
             self._other = other
@@ -126,8 +127,9 @@ class mergestate(object):
         self._state = {}
         self._local = None
         self._other = None
-        if 'otherctx' in vars(self):
-            del self.otherctx
+        for var in ('localctx', 'otherctx'):
+            if var in vars(self):
+                delattr(self, var)
         self._readmergedriver = None
         self._mdstate = 's'
         unsupported = set()
@@ -285,6 +287,12 @@ class mergestate(object):
                 hint=_("revert merge driver change or abort merge"))
 
         return configmergedriver
+
+    @util.propertycache
+    def localctx(self):
+        if self._local is None:
+            raise RuntimeError("localctx accessed but self._local isn't set")
+        return self._repo[self._local]
 
     @util.propertycache
     def otherctx(self):
