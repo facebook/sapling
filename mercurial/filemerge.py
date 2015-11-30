@@ -249,15 +249,18 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
                   "$$ &Changed $$ &Deleted") % fd, 0)
             choice = ['other', 'local'][index]
         else:
-            index = ui.promptchoice(_("no tool found to merge %s\n"
-                                      "keep (l)ocal or take (o)ther?"
-                                      "$$ &Local $$ &Other") % fd, 0)
-            choice = ['local', 'other'][index]
+            index = ui.promptchoice(
+                _("no tool found to merge %s\n"
+                  "keep (l)ocal, take (o)ther, or leave (u)nresolved?"
+                  "$$ &Local $$ &Other $$ &Unresolved") % fd, 0)
+            choice = ['local', 'other', 'unresolved'][index]
 
         if choice == 'other':
             return _iother(repo, mynode, orig, fcd, fco, fca, toolconf)
-        else:
+        elif choice == 'local':
             return _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf)
+        elif choice == 'unresolved':
+            return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf)
     except error.ResponseExpected:
         ui.write("\n")
         return _ifail(repo, mynode, orig, fcd, fco, fca, toolconf)

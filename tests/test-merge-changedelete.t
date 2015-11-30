@@ -422,7 +422,7 @@ Force prompts with no input (should be similar to :fail)
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? 
   no tool found to merge file3
-  keep (l)ocal or take (o)ther? 
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -474,7 +474,7 @@ Force prompts
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? c
   no tool found to merge file3
-  keep (l)ocal or take (o)ther? l
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? l
   0 files updated, 3 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ status
@@ -607,7 +607,7 @@ invocations.)
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? 
   no tool found to merge file3
-  keep (l)ocal or take (o)ther? 
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   
@@ -636,7 +636,7 @@ invocations.)
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? 
   no tool found to merge file3
-  keep (l)ocal or take (o)ther? 
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   
@@ -655,7 +655,7 @@ invocations.)
   remote changed file2 which local deleted
   use (c)hanged version or leave (d)eleted? 
   no tool found to merge file3
-  keep (l)ocal or take (o)ther? 
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? 
   --- diff of status ---
   (status identical)
   
