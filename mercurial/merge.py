@@ -479,7 +479,10 @@ class mergestate(object):
                 if fcd.isabsent(): # dc: remote picked
                     action = 'g'
                 elif fco.isabsent(): # cd: local picked
-                    action = 'a'
+                    if dfile in self.localctx:
+                        action = 'am'
+                    else:
+                        action = 'a'
                 # else: regular merges (no action necessary)
             self._results[dfile] = r, action
 
@@ -524,7 +527,7 @@ class mergestate(object):
 
     def actions(self):
         """return lists of actions to perform on the dirstate"""
-        actions = {'r': [], 'f': [], 'a': [], 'g': []}
+        actions = {'r': [], 'f': [], 'a': [], 'am': [], 'g': []}
         for f, (r, action) in self._results.iteritems():
             if action is not None:
                 actions[action].append((f, None, "merge result"))
@@ -631,7 +634,7 @@ def _checkcollision(repo, wmf, actions):
 
     if actions:
         # k, dr, e and rd are no-op
-        for m in 'a', 'f', 'g', 'cd', 'dc':
+        for m in 'a', 'am', 'f', 'g', 'cd', 'dc':
             for f, args, msg in actions[m]:
                 pmmf.add(f)
         for f, args, msg in actions['r']:
@@ -1065,6 +1068,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
 
+    # re-add/mark as modified (manifest only, just log it)
+    for f, args, msg in actions['am']:
+        repo.ui.debug(" %s: %s -> am\n" % (f, msg))
+        z += 1
+        progress(_updating, z, item=f, total=numupdates, unit=_files)
+
     # keep (noop, just log it)
     for f, args, msg in actions['k']:
         repo.ui.debug(" %s: %s -> k\n" % (f, msg))
@@ -1187,6 +1196,13 @@ def recordupdates(repo, actions, branchmerge):
     # re-add
     for f, args, msg in actions.get('a', []):
         if not branchmerge:
+            repo.dirstate.add(f)
+
+    # re-add/mark as modified
+    for f, args, msg in actions.get('am', []):
+        if branchmerge:
+            repo.dirstate.normallookup(f)
+        else:
             repo.dirstate.add(f)
 
     # exec change
@@ -1390,7 +1406,7 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
             followcopies)
         # Convert to dictionary-of-lists format
-        actions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+        actions = dict((m, []) for m in 'a am f g cd dc r dm dg m e k'.split())
         for f, (m, args, msg) in actionbyfile.iteritems():
             if m not in actions:
                 actions[m] = []
@@ -1411,6 +1427,8 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
                   "use (c)hanged version or (d)elete?"
                   "$$ &Changed $$ &Delete") % f, 0):
                 actions['r'].append((f, None, "prompt delete"))
+            elif f in p1:
+                actions['am'].append((f, None, "prompt keep"))
             else:
                 actions['a'].append((f, None, "prompt keep"))
 

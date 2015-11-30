@@ -725,7 +725,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   use (c)hanged version or (d)elete? c
    preserving b for resolve of b
    preserving rev for resolve of rev
-   a: prompt keep -> a
+   a: prompt keep -> am
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False)
   merging b
