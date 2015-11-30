@@ -11,6 +11,7 @@ import errno
 import getpass
 import inspect
 import os
+import re
 import socket
 import sys
 import tempfile
@@ -764,10 +765,23 @@ class ui(object):
 
         This returns tuple "(message, choices)", and "choices" is the
         list of tuple "(response character, text without &)".
+
+        >>> ui.extractchoices("awake? $$ &Yes $$ &No")
+        ('awake? ', [('y', 'Yes'), ('n', 'No')])
+        >>> ui.extractchoices("line\\nbreak? $$ &Yes $$ &No")
+        ('line\\nbreak? ', [('y', 'Yes'), ('n', 'No')])
+        >>> ui.extractchoices("want lots of $$money$$?$$Ye&s$$N&o")
+        ('want lots of $$money$$?', [('s', 'Yes'), ('o', 'No')])
         """
-        parts = prompt.split('$$')
-        msg = parts[0].rstrip(' ')
-        choices = [p.strip(' ') for p in parts[1:]]
+
+        # Sadly, the prompt string may have been built with a filename
+        # containing "$$" so let's try to find the first valid-looking
+        # prompt to start parsing. Sadly, we also can't rely on
+        # choices containing spaces, ASCII, or basically anything
+        # except an ampersand followed by a character.
+        m = re.match(r'(?s)(.+?)\$\$([^\$]*&[^ \$].*)', prompt)
+        msg = m.group(1)
+        choices = [p.strip(' ') for p in m.group(2).split('$$')]
         return (msg,
                 [(s[s.index('&') + 1].lower(), s.replace('&', '', 1))
                  for s in choices])
