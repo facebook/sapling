@@ -474,7 +474,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         doc = gettext(mod.__doc__).splitlines()[0]
 
         rst = listexts(_("'%s' is provided by the following "
-                              "extension:") % cmd, {ext: doc}, indent=4)
+                              "extension:") % cmd, {ext: doc}, indent=4,
+                       showdeprecated=True)
         rst.append('\n')
         rst.append(_('(use "hg help extensions" for information on enabling '
                    'extensions)\n'))
