@@ -1692,7 +1692,7 @@ def remote(repo, subset, x):
 
     from . import hg # avoid start-up nasties
     # i18n: "remote" is a keyword
-    l = getargs(x, 0, 2, _("remote takes one, two or no arguments"))
+    l = getargs(x, 0, 2, _("remote takes zero, one, or two arguments"))
 
     q = '.'
     if len(l) > 0:

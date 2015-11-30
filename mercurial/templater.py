@@ -336,7 +336,7 @@ def diff(context, mapping, args):
     specifying files to include or exclude."""
     if len(args) > 2:
         # i18n: "diff" is a keyword
-        raise error.ParseError(_("diff expects one, two or no arguments"))
+        raise error.ParseError(_("diff expects zero, one, or two arguments"))
 
     def getpatterns(i):
         if i < len(args):
