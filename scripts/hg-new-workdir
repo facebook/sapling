@@ -49,10 +49,13 @@ if [[ -d $src/.hg/svn ]]; then
   cp -R $src/.hg/svn $dst/.hg/
 fi
 
+if [[ -e $src/.hg/sparse  ]]; then
+  echo "Copying sparse profile..."
+  cp $src/.hg/sparse $dst/.hg/
+fi
 
 echo "Updating new repository..."
-cd "$dst"
-hg update tip
+hg --cwd "$dst" update $(hg --cwd "$src" log -r . -T '{node}')
 
 echo "Set up new Mercurial Working Directory in '$dst' based on '$src'..."
 
