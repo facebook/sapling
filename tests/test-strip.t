@@ -552,12 +552,19 @@ Strip adds, removes, modifies with --keep
   $ echo b > b
   $ echo d > d
   $ hg strip --keep tip
-  saved backup bundle to $TESTTMP/test/.hg/strip-backup/57e364c8a475-4cfed93c-backup.hg (glob)
+  saved backup bundle to $TESTTMP/test/.hg/strip-backup/*-backup.hg (glob)
   $ hg status
   M b
   ! bar
   ? c
   ? d
+
+... after updating the dirstate
+  $ hg add c
+  $ hg commit -mc
+  $ hg rm c
+  $ hg commit -mc
+  $ hg strip --keep '.^' -q
   $ cd ..
 
 stripping many nodes on a complex graph (issue3299)
