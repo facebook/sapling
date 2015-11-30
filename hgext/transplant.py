@@ -607,7 +607,7 @@ def _dotransplant(ui, repo, *revs, **opts):
             return
         if not (opts.get('source') or revs or
                 opts.get('merge') or opts.get('branch')):
-            raise error.Abort(_('no source URL, branch revision or revision '
+            raise error.Abort(_('no source URL, branch revision, or revision '
                                'list provided'))
         if opts.get('all'):
             if not opts.get('branch'):
