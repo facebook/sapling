@@ -1408,7 +1408,7 @@ class revlog(object):
         base = chainbase = curr
         chainlen = None
         offset = self.end(prev)
-        d = None
+        delta = None
         if self._basecache is None:
             self._basecache = (prev, self.chainbase(prev))
         basecache = self._basecache
@@ -1427,41 +1427,41 @@ class revlog(object):
             if cachedelta and self._generaldelta and self._lazydeltabase:
                 # Assume what we received from the server is a good choice
                 # build delta will reuse the cache
-                d = builddelta(cachedelta[0])
+                delta = builddelta(cachedelta[0])
             elif self._generaldelta:
                 if p2r != nullrev and self._aggressivemergedeltas:
-                    d = builddelta(p1r)
-                    d2 = builddelta(p2r)
-                    p1good = self._isgooddelta(d, textlen)
-                    p2good = self._isgooddelta(d2, textlen)
+                    delta = builddelta(p1r)
+                    delta2 = builddelta(p2r)
+                    p1good = self._isgooddelta(delta, textlen)
+                    p2good = self._isgooddelta(delta2, textlen)
                     if p1good and p2good:
                         # If both are good deltas, choose the smallest
-                        if d2[1] < d[1]:
-                            d = d2
+                        if delta2[1] < delta[1]:
+                            delta = delta2
                     elif p2good:
                         # If only p2 is good, use it
-                        d = d2
+                        delta = delta2
                     elif p1good:
                         pass
                     else:
                         # Neither is good, try against prev to hopefully save us
                         # a fulltext.
-                        d = builddelta(prev)
+                        delta = builddelta(prev)
                 else:
                     # Pick whichever parent is closer to us (to minimize the
                     # chance of having to build a fulltext). Since
                     # nullrev == -1, any non-merge commit will always pick p1r.
                     drev = p2r if p2r > p1r else p1r
-                    d = builddelta(drev)
+                    delta = builddelta(drev)
                     # If the chosen delta will result in us making a full text,
                     # give it one last try against prev.
-                    if drev != prev and not self._isgooddelta(d, textlen):
-                        d = builddelta(prev)
+                    if drev != prev and not self._isgooddelta(delta, textlen):
+                        delta = builddelta(prev)
             else:
-                d = builddelta(prev)
-            dist, l, data, base, chainbase, chainlen, compresseddeltalen = d
+                delta = builddelta(prev)
+            dist, l, data, base, chainbase, chainlen, compresseddeltalen = delta
 
-        if not self._isgooddelta(d, textlen):
+        if not self._isgooddelta(delta, textlen):
             text = buildtext()
             data = self.compress(text)
             l = len(data[1]) + len(data[0])
