@@ -1106,8 +1106,8 @@ the hunk is left unchanged.
                         applied[newhunk.filename()].append(newhunk)
             else:
                 fixoffset += chunk.removed - chunk.added
-    return sum([h for h in applied.itervalues()
-               if h[0].special() or len(h) > 1], [])
+    return (sum([h for h in applied.itervalues()
+               if h[0].special() or len(h) > 1], []), {})
 class hunk(object):
     def __init__(self, desc, num, lr, context):
         self.number = num

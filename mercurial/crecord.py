@@ -454,7 +454,7 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
     uiheaders = [uiheader(h) for h in headers]
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
-    chunkselector(ui, uiheaders)
+    ret = chunkselector(ui, uiheaders)
     appliedhunklist = []
     for hdr in uiheaders:
         if (hdr.applied and
@@ -472,7 +472,7 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
                 else:
                     fixoffset += hnk.removed - hnk.added
 
-    return appliedhunklist
+    return (appliedhunklist, ret)
 
 def gethw():
     """
@@ -501,6 +501,7 @@ def chunkselector(ui, headerlist):
         raise error.Abort(chunkselector.initerr)
     # ncurses does not restore signal handler for SIGTSTP
     signal.signal(signal.SIGTSTP, f)
+    return chunkselector.opts
 
 def testdecorator(testfn, f):
     def u(*args, **kwargs):
@@ -521,6 +522,7 @@ def testchunkselector(testfn, ui, headerlist):
         while True:
             if chunkselector.handlekeypressed(testcommands.pop(0), test=True):
                 break
+    return chunkselector.opts
 
 class curseschunkselector(object):
     def __init__(self, headerlist, ui):
@@ -528,6 +530,7 @@ class curseschunkselector(object):
         self.headerlist = patch(headerlist)
 
         self.ui = ui
+        self.opts = {}
 
         self.errorstr = None
         # list of all chunks

@@ -70,11 +70,11 @@ def recordfilter(ui, originalhunks, operation=None):
     testfile = ui.config('experimental', 'crecordtest', None)
     oldwrite = setupwrapcolorwrite(ui)
     try:
-        newchunks = filterchunks(ui, originalhunks, usecurses, testfile,
-                                 operation)
+        newchunks, newopts = filterchunks(ui, originalhunks, usecurses,
+                                          testfile, operation)
     finally:
         ui.write = oldwrite
-    return newchunks
+    return newchunks, newopts
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
@@ -121,9 +121,10 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
 
         # 1. filter patch, so we have intending-to apply subset of it
         try:
-            chunks = filterfn(ui, originalchunks)
+            chunks, newopts = filterfn(ui, originalchunks)
         except patch.PatchError as err:
             raise error.Abort(_('error parsing patch: %s') % err)
+        opts.update(newopts)
 
         # We need to keep a backup of files that have been newly added and
         # modified during the recording process because there is a previous
@@ -3201,7 +3202,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
 
         try:
 
-            chunks = recordfilter(repo.ui, originalchunks)
+            chunks, opts = recordfilter(repo.ui, originalchunks)
             if reversehunks:
                 chunks = patch.reversehunks(chunks)
 
