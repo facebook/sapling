@@ -659,7 +659,7 @@ def unshelvecontinue(ui, repo, state, opts):
     with repo.lock():
         checkparents(repo, state)
         ms = merge.mergestate.read(repo)
-        if [f for f in ms if ms[f] == 'u']:
+        if list(ms.unresolved()):
             raise error.Abort(
                 _("unresolved conflicts, can't continue"),
                 hint=_("see 'hg resolve', then 'hg unshelve --continue'"))
