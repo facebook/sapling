@@ -1,6 +1,9 @@
   $ . "$TESTDIR/copytrace.sh"
   $ extpath=$(dirname $TESTDIR)
   $ cat >> $HGRCPATH << EOF
+  > [ui]
+  > ssh = python "$RUNTESTDIR/dummyssh"
+  > username = nobody <no.reply@fb.com>
   > [extensions]
   > copytrace=$extpath/copytrace
   > rebase=
@@ -14,11 +17,13 @@ SETUP SERVER REPO
 
 SETUP CLIENT REPOS
 
-  $ hg clone serverrepo clientrepo1
+  $ hg clone ssh://user@dummy/serverrepo clientrepo1
+  no changes found
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ initclient clientrepo1
-  $ hg clone serverrepo clientrepo2
+  $ hg clone ssh://user@dummy/serverrepo clientrepo2
+  no changes found
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ initclient clientrepo2
@@ -41,20 +46,20 @@ PUSH MOVES FROM CLIENT1
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1
   $ hg push
-  pushing to $TESTTMP/serverrepo
+  pushing to ssh://user@dummy/serverrepo
   searching for changes
   moves for 3 changesets pushed
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 3 changes to 3 files
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 3 changesets with 3 changes to 3 files
   $ cd ..
 
 PULLS IN CLIENT2
 
   $ cd clientrepo2
   $ hg pull
-  pulling from $TESTTMP/serverrepo
+  pulling from ssh://user@dummy/serverrepo
   requesting all changes
   adding changesets
   adding manifests
@@ -84,7 +89,7 @@ REQUESTS MISSING MOVES DURING REBASE
   9c11d01510faa13840e36ea2d8acdd0b126cca67|a|c|1
   9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
   $ hg rebase -s 9c11d0 -d 274c7e
-  pulling move data from $TESTTMP/serverrepo
+  pulling move data from ssh://user@dummy/serverrepo
   moves for 1 changesets retrieved
   rebasing 3:9c11d01510fa "mv a c" (tip)
   note: possible conflict - a was renamed multiple times to:
