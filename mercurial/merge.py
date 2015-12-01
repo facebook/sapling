@@ -444,7 +444,7 @@ class mergestate(object):
     def unresolved(self):
         """Obtain the paths of unresolved files."""
 
-        for f, entry in self._state.items():
+        for f, entry in self._state.iteritems():
             if entry[0] == 'u':
                 yield f
 
