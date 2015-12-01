@@ -3731,7 +3731,14 @@ def graft(ui, repo, *revs, **opts):
 
     Returns 0 on successful completion.
     '''
+    wlock = None
+    try:
+        wlock = repo.wlock()
+        return _dograft(ui, repo, *revs, **opts)
+    finally:
+        release(wlock)
 
+def _dograft(ui, repo, *revs, **opts):
     revs = list(revs)
     revs.extend(opts['rev'])
 
@@ -3837,7 +3844,6 @@ def graft(ui, repo, *revs, **opts):
         if not revs:
             return -1
 
-    wlock = repo.wlock()
     try:
         for pos, ctx in enumerate(repo.set("%ld", revs)):
             desc = '%d:%s "%s"' % (ctx.rev(), ctx,
@@ -3904,7 +3910,9 @@ def graft(ui, repo, *revs, **opts):
                     _('note: graft of %d:%s created no changes to commit\n') %
                     (ctx.rev(), ctx))
     finally:
-        wlock.release()
+        # TODO: get rid of this meaningless try/finally enclosing.
+        # this is kept only to reduce changes in a patch.
+        pass
 
     # remove state when we complete successfully
     if not opts.get('dry_run'):
