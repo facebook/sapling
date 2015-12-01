@@ -209,8 +209,10 @@ Aborting lock does not prevent fncache writes
   > 
   > def lockexception(orig, vfs, lockname, wait, releasefn, *args, **kwargs):
   >     def releasewrap():
+  >         l.held = False # ensure __del__ is a noop
   >         raise error.Abort("forced lock failure")
-  >     return orig(vfs, lockname, wait, releasewrap, *args, **kwargs)
+  >     l = orig(vfs, lockname, wait, releasewrap, *args, **kwargs)
+  >     return l
   > 
   > def reposetup(ui, repo):
   >     wrapfunction(repo, '_lock', lockexception)
@@ -225,7 +227,6 @@ Aborting lock does not prevent fncache writes
   $ touch y
   $ hg ci -qAm y
   abort: forced lock failure
-  Exception mercurial.error.Abort: Abort('forced lock failure',) in <bound method lock.__del__ of <mercurial.lock.lock object at *>> ignored (glob)
   [255]
   $ cat .hg/store/fncache
   data/y.i
