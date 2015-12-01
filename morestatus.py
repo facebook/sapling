@@ -28,7 +28,7 @@ def prefixlines(raw):
 
 
 def conflictsmsg(repo, ui):
-    mergestate = mergemod.mergestate(repo)
+    mergestate = mergemod.mergestate.read(repo)
     if not mergestate.active():
         return
 
