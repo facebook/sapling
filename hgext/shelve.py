@@ -226,6 +226,7 @@ def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
     wlock = repo.wlock()
     try:
+        cmdutil.checkunfinished(repo)
         return _docreatecmd(ui, repo, pats, opts)
     finally:
         lockmod.release(wlock)
@@ -808,8 +809,6 @@ def shelvecmd(ui, repo, *pats, **opts):
     To delete specific shelved changes, use ``--delete``. To delete
     all shelved changes, use ``--cleanup``.
     '''
-    cmdutil.checkunfinished(repo)
-
     allowables = [
         ('addremove', set(['create'])), # 'create' is pseudo action
         ('cleanup', set(['cleanup'])),
