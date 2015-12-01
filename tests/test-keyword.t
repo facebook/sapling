@@ -141,8 +141,8 @@ Commit with several checks
   committing manifest
   committing changelog
   overwriting a expanding keywords
-  running hook commit.test: cp a hooktest
   committed changeset 1:ef63ca68695bc9495032c6fda1350c71e6d256e9
+  running hook commit.test: cp a hooktest
   $ hg status
   ? hooktest
   $ hg debugrebuildstate

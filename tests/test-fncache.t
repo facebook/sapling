@@ -205,7 +205,7 @@ Aborting lock does not prevent fncache writes
   $ cat > exceptionext.py <<EOF
   > import os
   > from mercurial import commands, error
-  > from mercurial.extensions import wrapfunction
+  > from mercurial.extensions import wrapcommand, wrapfunction
   > 
   > def lockexception(orig, vfs, lockname, wait, releasefn, *args, **kwargs):
   >     def releasewrap():
@@ -219,6 +219,22 @@ Aborting lock does not prevent fncache writes
   > 
   > cmdtable = {}
   > 
+  > # wrap "commit" command to prevent wlock from being '__del__()'-ed
+  > # at the end of dispatching (for intentional "forced lcok failure")
+  > def commitwrap(orig, ui, repo, *pats, **opts):
+  >     repo = repo.unfiltered() # to use replaced repo._lock certainly
+  >     wlock = repo.wlock()
+  >     try:
+  >         return orig(ui, repo, *pats, **opts)
+  >     finally:
+  >         # multiple 'relase()' is needed for complete releasing wlock,
+  >         # because "forced" abort at last releasing store lock
+  >         # prevents wlock from being released at same 'lockmod.release()'
+  >         for i in range(wlock.held):
+  >             wlock.release()
+  > 
+  > def extsetup(ui):
+  >     wrapcommand(commands.table, "commit", commitwrap)
   > EOF
   $ extpath=`pwd`/exceptionext.py
   $ hg init fncachetxn

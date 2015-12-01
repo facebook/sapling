@@ -81,10 +81,10 @@ pretxncommit and commit hooks can see both parents of merge
   pretxncommit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b HG_PENDING=$TESTTMP/a
   2:ee9deb46ab31
   pretxnclose hook: HG_PENDING=$TESTTMP/a HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
+  created new head
   txnclose hook: HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
   commit hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   commit.b hook: HG_NODE=ee9deb46ab31e4cc3310f3cf0c3d668e4d8fffc2 HG_PARENT1=cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
-  created new head
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -563,9 +563,9 @@ make sure --traceback works
   foo
   committing manifest
   committing changelog
+  committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
   calling hook commit.auto: hgext_hookext.autohook
   Automatically installed hook
-  committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
 
   $ hg showconfig hooks
   hooks.commit.auto=<function autohook at *> (glob)

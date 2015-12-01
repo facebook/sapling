@@ -1576,6 +1576,15 @@ def commit(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if nothing changed.
     """
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        return _docommit(ui, repo, *pats, **opts)
+    finally:
+        release(lock, wlock)
+
+def _docommit(ui, repo, *pats, **opts):
     if opts.get('interactive'):
         opts.pop('interactive')
         cmdutil.dorecord(ui, repo, commit, None, False,
