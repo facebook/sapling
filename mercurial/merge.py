@@ -567,8 +567,7 @@ class mergestate(object):
 
     def unresolvedcount(self):
         """get unresolved count for this merge (persistent)"""
-        return len([True for f, entry in self._state.iteritems()
-                    if entry[0] == 'u'])
+        return len(list(self.unresolved()))
 
     def actions(self):
         """return lists of actions to perform on the dirstate"""
