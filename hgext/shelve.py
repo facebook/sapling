@@ -224,7 +224,13 @@ def _aborttransaction(repo):
 
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
+    wlock = repo.wlock()
+    try:
+        return _docreatecmd(ui, repo, pats, opts)
+    finally:
+        lockmod.release(wlock)
 
+def _docreatecmd(ui, repo, pats, opts):
     def mutableancestors(ctx):
         """return all mutable ancestors for ctx (included)
 
@@ -285,9 +291,8 @@ def createcmd(ui, repo, pats, opts):
 
     name = opts['name']
 
-    wlock = lock = tr = None
+    lock = tr = None
     try:
-        wlock = repo.wlock()
         lock = repo.lock()
 
         # use an uncommitted transaction to generate the bundle to avoid
@@ -346,7 +351,7 @@ def createcmd(ui, repo, pats, opts):
 
         _aborttransaction(repo)
     finally:
-        lockmod.release(tr, lock, wlock)
+        lockmod.release(tr, lock)
 
 def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
