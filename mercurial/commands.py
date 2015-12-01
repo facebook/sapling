@@ -574,6 +574,15 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
     Returns 0 on success, 1 if nothing to backout or there are unresolved
     files.
     '''
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        return _dobackout(ui, repo, node, rev, commit, **opts)
+    finally:
+        release(lock, wlock)
+
+def _dobackout(ui, repo, node=None, rev=None, commit=False, **opts):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
@@ -612,7 +621,6 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
         parent = p1
 
     # the backout should appear on the same branch
-    wlock = repo.wlock()
     try:
         branch = repo.dirstate.branch()
         bheads = repo.branchheads(branch)
@@ -675,7 +683,9 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
             finally:
                 ui.setconfig('ui', 'forcemerge', '', '')
     finally:
-        wlock.release()
+        # TODO: get rid of this meaningless try/finally enclosing.
+        # this is kept only to reduce changes in a patch.
+        pass
     return 0
 
 @command('bisect',
