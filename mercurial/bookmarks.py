@@ -165,10 +165,19 @@ def readactive(repo):
             raise
         return None
     try:
-        # No readline() in osutil.posixfile, reading everything is cheap
+        # No readline() in osutil.posixfile, reading everything is
+        # cheap.
+        # Note that it's possible for readlines() here to raise
+        # IOError, since we might be reading the active mark over
+        # static-http which only tries to load the file when we try
+        # to read from it.
         mark = encoding.tolocal((file.readlines() or [''])[0])
         if mark == '' or mark not in repo._bookmarks:
             mark = None
+    except IOError as inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        return None
     finally:
         file.close()
     return mark
