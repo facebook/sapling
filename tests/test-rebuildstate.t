@@ -67,4 +67,59 @@ status
   ? baz
   C foo
 
-  $ cd ..
+Test debugdirstate --minimal where a file is not in parent manifest
+but in the dirstate
+  $ touch foo bar qux
+  $ hg add qux
+  $ hg remove bar
+  $ hg status -A
+  A qux
+  R bar
+  ? baz
+  C foo
+  $ hg debugadddrop --normal-lookup baz
+  $ hg debugdirstate --nodates
+  r   0          0 * bar (glob)
+  n   0         -1 * baz (glob)
+  n 644          0 * foo (glob)
+  a   0         -1 * qux (glob)
+  $ hg debugrebuilddirstate --minimal
+  $ hg debugdirstate --nodates
+  r   0          0 * bar (glob)
+  n 644          0 * foo (glob)
+  a   0         -1 * qux (glob)
+  $ hg status -A
+  A qux
+  R bar
+  ? baz
+  C foo
+
+Test debugdirstate --minimal where file is in the parent manifest but not the
+dirstate
+  $ hg manifest
+  bar
+  foo
+  $ hg status -A
+  A qux
+  R bar
+  ? baz
+  C foo
+  $ hg debugdirstate --nodates
+  r   0          0 * bar (glob)
+  n 644          0 * foo (glob)
+  a   0         -1 * qux (glob)
+  $ hg debugadddrop --drop foo
+  $ hg debugdirstate --nodates
+  r   0          0 * bar (glob)
+  a   0         -1 * qux (glob)
+  $ hg debugrebuilddirstate --minimal
+  $ hg debugdirstate --nodates
+  r   0          0 * bar (glob)
+  n   0         -1 * foo (glob)
+  a   0         -1 * qux (glob)
+  $ hg status -A
+  A qux
+  R bar
+  ? baz
+  C foo
+
