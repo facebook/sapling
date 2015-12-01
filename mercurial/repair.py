@@ -203,6 +203,18 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 repo.ui.popbuffer()
             f.close()
 
+        for m in updatebm:
+            bm[m] = repo[newbmtarget].node()
+        lock = tr = None
+        try:
+            lock = repo.lock()
+            tr = repo.transaction('repair')
+            bm.recordchange(tr)
+            tr.close()
+        finally:
+            tr.release()
+            lock.release()
+
         # remove undo files
         for undovfs, undofile in repo.undofiles():
             try:
@@ -212,9 +224,6 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                     ui.warn(_('error removing %s: %s\n') %
                             (undovfs.join(undofile), str(e)))
 
-        for m in updatebm:
-            bm[m] = repo[newbmtarget].node()
-        bm.write()
     except: # re-raises
         if backupfile:
             ui.warn(_("strip failed, full bundle stored in '%s'\n")
