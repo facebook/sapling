@@ -4557,11 +4557,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     if opts.get('exact') and opts.get('prefix'):
         raise error.Abort(_('cannot use --exact with --prefix'))
 
-    if update:
-        cmdutil.checkunfinished(repo)
-    if (opts.get('exact') or not opts.get('force')) and update:
-        cmdutil.bailifchanged(repo)
-
     base = opts["base"]
     wlock = dsguard = lock = tr = None
     msgs = []
@@ -4571,6 +4566,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     try:
         try:
             wlock = repo.wlock()
+
+            if update:
+                cmdutil.checkunfinished(repo)
+            if (opts.get('exact') or not opts.get('force')) and update:
+                cmdutil.bailifchanged(repo)
+
             if not opts.get('no_commit'):
                 lock = repo.lock()
                 tr = repo.transaction('import')
