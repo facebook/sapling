@@ -532,9 +532,10 @@ ui.merge specifies internal:prompt:
   # hg update -C 1
   $ hg merge -r 2 --config ui.merge=internal:prompt
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? l
-  0 files updated, 1 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ aftermerge
   # cat f
   revision 1
@@ -542,7 +543,7 @@ ui.merge specifies internal:prompt:
   # hg stat
   M f
   # hg resolve --list
-  R f
+  U f
 
 ui.merge specifies :prompt, with 'leave unresolved' chosen
 
@@ -619,8 +620,8 @@ prompt with EOF
   U f
   $ hg resolve --all --config ui.merge=internal:prompt
   no tool found to merge f
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? l
-  (no more unresolved files)
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  [1]
   $ aftermerge
   # cat f
   revision 1
@@ -629,7 +630,7 @@ prompt with EOF
   M f
   ? f.orig
   # hg resolve --list
-  R f
+  U f
 
 ui.merge specifies internal:dump:
 

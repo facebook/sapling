@@ -253,7 +253,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
             index = ui.promptchoice(
                 _("no tool found to merge %s\n"
                   "keep (l)ocal, take (o)ther, or leave (u)nresolved?"
-                  "$$ &Local $$ &Other $$ &Unresolved") % fd, 0)
+                  "$$ &Local $$ &Other $$ &Unresolved") % fd, 2)
             choice = ['local', 'other', 'unresolved'][index]
 
         if choice == 'other':

@@ -474,9 +474,10 @@ Force prompts
   remote changed file2 which local deleted
   use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
   no tool found to merge file3
-  keep (l)ocal, take (o)ther, or leave (u)nresolved? l
-  0 files updated, 3 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  keep (l)ocal, take (o)ther, or leave (u)nresolved? u
+  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ status
   --- status ---
   M file2
@@ -485,7 +486,7 @@ Force prompts
   --- resolve --list ---
   R file1
   R file2
-  R file3
+  U file3
   --- debugmergestate ---
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
@@ -498,7 +499,7 @@ Force prompts
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)
-  file: file3 (record type "F", state "r", hash d5b0a58bc47161b1b8a831084b366f757c4f0b11)
+  file: file3 (record type "F", state "u", hash d5b0a58bc47161b1b8a831084b366f757c4f0b11)
     local path: file3 (flags "")
     ancestor path: file3 (node 2661d26c649684b482d10f91960cc3db683c38b4)
     other path: file3 (node a2644c43e210356772c7772a8674544a62e06beb)
