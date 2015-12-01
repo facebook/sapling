@@ -1556,19 +1556,12 @@ class localrepository(object):
             if merge and cctx.deleted():
                 raise error.Abort(_("cannot commit merge with missing files"))
 
-            unresolved, driverresolved = False, False
             ms = mergemod.mergestate(self)
-            for f in status.modified:
-                if f in ms:
-                    if ms[f] == 'u':
-                        unresolved = True
-                    elif ms[f] == 'd':
-                        driverresolved = True
 
-            if unresolved:
+            if list(ms.unresolved()):
                 raise error.Abort(_('unresolved merge conflicts '
                                     '(see "hg help resolve")'))
-            if driverresolved or ms.mdstate() != 's':
+            if ms.mdstate() != 's' or list(ms.driverresolved()):
                 raise error.Abort(_('driver-resolved merge conflicts'),
                                   hint=_('run "hg resolve --all" to resolve'))
 
