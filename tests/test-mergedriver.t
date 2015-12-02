@@ -86,15 +86,15 @@ merge driver that always takes other versions
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
-  file: bar.txt (state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
 mark a file driver-resolved, and leave others unresolved
@@ -141,11 +141,11 @@ XXX 1 file merged!
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
-  file: bar.txt (state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -159,11 +159,11 @@ XXX 1 file merged!
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
-  file: bar.txt (state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -209,11 +209,11 @@ implicitly makes them resolved
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "m")
-  file: bar.txt (state "d", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "D", state "d", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -257,18 +257,18 @@ XXX shouldn't output a warning
   * preprocess called
   warning: preprocess hook failed
   * conclude called
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg debugmergestate
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-special.py (state "s")
-  file: bar.txt (state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -308,11 +308,11 @@ XXX shouldn't output a warning
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-exit.py (state "m")
-  file: bar.txt (state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -356,11 +356,11 @@ raise an error
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-mark-and-raise.py (state "u")
-  file: bar.txt (state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
@@ -472,7 +472,7 @@ this should invoke the merge driver
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   merge driver: python:$TESTTMP/mergedriver-raise.py (state "u")
-  file: foo.txt (state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node 802224e80e899817a159d494c123fb421ac3efee)
     other path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -504,11 +504,11 @@ test merge with automatic commit afterwards -- e.g. graft
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
-  file: bar.txt (state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
-  file: foo.txt (state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+  file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
     other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
