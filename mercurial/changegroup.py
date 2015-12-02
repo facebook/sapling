@@ -312,6 +312,7 @@ class cg1unpacker(object):
         - number of heads stays the same: 1
         """
         repo = repo.unfiltered()
+        wasempty = (len(repo.changelog) == 0)
         def csmap(x):
             repo.ui.debug("add changeset %s\n" % short(x))
             return len(cl)
@@ -386,7 +387,7 @@ class cg1unpacker(object):
             self.callback = None
             pr = prog(_('files'), efiles)
             newrevs, newfiles = _addchangegroupfiles(
-                repo, self, revmap, trp, pr, needfiles)
+                repo, self, revmap, trp, pr, needfiles, wasempty)
             revisions += newrevs
             files += newfiles
 
@@ -903,7 +904,7 @@ def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
     return changegroupsubset(repo, basenodes, repo.heads(), source)
 
-def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
+def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles, wasempty):
     revisions = 0
     files = 0
     while True:
