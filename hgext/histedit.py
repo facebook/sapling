@@ -939,7 +939,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         if not rules:
             comment = editcomment % (node.short(state.parentctxnode),
                                      node.short(state.topmost))
-            rules = ruleeditor(repo, ui, state.rules, comment)
+            rules = ruleeditor(repo, ui, state.actions, comment)
         else:
             if rules == '-':
                 f = sys.stdin
@@ -1022,7 +1022,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         ctxs = [repo[r] for r in revs]
         if not rules:
             comment = editcomment % (node.short(root), node.short(topmost))
-            rules = ruleeditor(repo, ui, [['pick', c] for c in ctxs], comment)
+            actions = [pick(state, r) for r in revs]
+            rules = ruleeditor(repo, ui, actions, comment)
         else:
             if rules == '-':
                 f = sys.stdin
@@ -1161,12 +1162,12 @@ def makedesc(repo, action, rev):
     maxlen = max(maxlen, 22) # avoid truncating hash
     return util.ellipsis(line, maxlen)
 
-def ruleeditor(repo, ui, rules, editcomment=""):
+def ruleeditor(repo, ui, actions, editcomment=""):
     """open an editor to edit rules
 
     rules are in the format [ [act, ctx], ...] like in state.rules
     """
-    rules = '\n'.join([makedesc(repo, act, rev) for [act, rev] in rules])
+    rules = '\n'.join([act.torule() for act in actions])
     rules += '\n\n'
     rules += editcomment
     rules = ui.edit(rules, ui.username(), {'prefix': 'histedit'})
