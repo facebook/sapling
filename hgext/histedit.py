@@ -1214,7 +1214,7 @@ def verifyactions(actions, state, ctxs):
     if missing:
         raise error.Abort(_('missing rules for changeset %s') %
                 missing[0][:12],
-                hint=_('do you want to use the drop action?'))
+                hint=_('use "drop %s" to discard the change') % missing[0][:12])
 
 def newnodestoabort(state):
     """process the list of replacements to return

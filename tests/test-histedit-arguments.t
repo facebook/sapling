@@ -164,7 +164,7 @@ Test that missing revisions are detected
   > pick 08d98a8350f3 4 five
   > EOF
   abort: missing rules for changeset c8e68270e35a
-  (do you want to use the drop action?)
+  (use "drop c8e68270e35a" to discard the change)
   [255]
 
 Test that extra revisions are detected
