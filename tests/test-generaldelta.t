@@ -7,6 +7,7 @@ inserted due to big distance from its paren revision (zero).
   $ cd repo
   $ echo foo > foo
   $ echo bar > bar
+  $ echo baz > baz
   $ hg commit -q -Am boo
   $ hg clone --pull . ../gdrepo -q --config format.generaldelta=yes
   $ for r in 1 2 3; do
@@ -82,35 +83,35 @@ delta coming from the server base delta server are not recompressed.
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 5 changes to 2 files (+2 heads)
+  added 4 changesets with 6 changes to 3 files (+2 heads)
   updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg clone repo --pull --config format.generaldelta=1 full
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 5 changes to 2 files (+2 heads)
+  added 4 changesets with 6 changes to 3 files (+2 heads)
   updating to branch default
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R repo debugindex -m
      rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      77      0       0 0273e8a1b972 000000000000 000000000000
-       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
-       2       134      77      2       2 de950093e41b 0273e8a1b972 000000000000
-       3       211      57      2       3 db74c7cde4d0 0273e8a1b972 000000000000
+       0         0     104      0       0 cef96823c800 000000000000 000000000000
+       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       161      57      0       2 134fdc6fd680 cef96823c800 000000000000
+       3       218     104      3       3 723508934dad cef96823c800 000000000000
   $ hg -R usegd debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      77     -1       0 0273e8a1b972 000000000000 000000000000
-       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
-       2       134      77     -1       2 de950093e41b 0273e8a1b972 000000000000
-       3       211      57      2       3 db74c7cde4d0 0273e8a1b972 000000000000
+       0         0     104     -1       0 cef96823c800 000000000000 000000000000
+       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       161      57      1       2 134fdc6fd680 cef96823c800 000000000000
+       3       218     104     -1       3 723508934dad cef96823c800 000000000000
   $ hg -R full debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
-       0         0      77     -1       0 0273e8a1b972 000000000000 000000000000
-       1        77      57      0       1 e0c49f5ef780 0273e8a1b972 000000000000
-       2       134      57      0       2 de950093e41b 0273e8a1b972 000000000000
-       3       191      57      0       3 db74c7cde4d0 0273e8a1b972 000000000000
+       0         0     104     -1       0 cef96823c800 000000000000 000000000000
+       1       104      57      0       1 58ab9a8d541d cef96823c800 000000000000
+       2       161      57      0       2 134fdc6fd680 cef96823c800 000000000000
+       3       218      57      0       3 723508934dad cef96823c800 000000000000
 
 Test format.aggressivemergedeltas
 
