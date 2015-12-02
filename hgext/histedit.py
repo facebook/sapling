@@ -1157,7 +1157,7 @@ def verifyrules(rules, state, ctxs):
         constraints = action.constraints()
         for constraint in constraints:
             if constraint not in _constraints.known():
-                error.Abort(_('unknown constraint "%s"') % constraint)
+                raise error.Abort(_('unknown constraint "%s"') % constraint)
 
         nodetoverify = action.nodetoverify()
         if nodetoverify is not None:
