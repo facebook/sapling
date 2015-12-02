@@ -829,6 +829,11 @@ def histedit(ui, repo, *freeargs, **opts):
         state.wlock = repo.wlock()
         state.lock = repo.lock()
         _histedit(ui, repo, state, *freeargs, **opts)
+    except error.Abort:
+        if repo.vfs.exists('histedit-last-edit.txt'):
+            ui.warn(_('warning: histedit rules saved '
+                      'to: .hg/histedit-last-edit.txt\n'))
+        raise
     finally:
         release(state.lock, state.wlock)
 
@@ -957,6 +962,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
+        if repo.vfs.exists('histedit-last-edit.txt'):
+            repo.vfs.unlink('histedit-last-edit.txt')
         topmost, empty = repo.dirstate.parents()
         if outg:
             if freeargs:

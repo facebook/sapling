@@ -460,8 +460,24 @@ Attempting to fold a change into a public change should not work:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   reverting a
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  warning: histedit rules saved to: .hg/histedit-last-edit.txt
   abort: cannot fold into public change 18aa70c8ad22
   [255]
+  $ cat .hg/histedit-last-edit.txt
+  fold 0012be4a27ea 2 extend a
+  
+  # Edit history between 0012be4a27ea and 0012be4a27ea
+  #
+  # Commits are listed from least to most recent
+  #
+  # Commands:
+  #  p, fold = use commit
+  #  e, edit = use commit, but stop for amending
+  #  f, fold = use commit, but combine it with the one above
+  #  r, roll = like fold, but discard this commit's description
+  #  d, drop = remove commit from history
+  #  m, mess = edit commit message without changing commit content
+  #
 TODO: this abort shouldn't be required, but it is for now to leave the repo in
 a clean state.
   $ hg histedit --abort
