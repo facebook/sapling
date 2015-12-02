@@ -8,6 +8,7 @@
 from mercurial.i18n import _
 from mercurial import util, sshpeer, hg, error, util, wireproto
 import os, socket, lz4, time, grp, io
+import errno
 
 # Statistics for debugging
 fetchcost = 0
@@ -520,14 +521,29 @@ class localcache(object):
                 path = os.path.join(root, file)
                 key = os.path.relpath(path, cachepath)
                 count += 1
-                stat = os.stat(path)
+                try:
+                    stat = os.stat(path)
+                except OSError as e:
+                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        raise
+                    msg = _("warning: file %s was removed by another process\n")
+                    ui.warn(msg % path)
+                    continue
+
                 originalsize += stat.st_size
 
                 if key in keepkeys or stat.st_atime > limit:
                     queue.put((stat.st_atime, path, stat))
                     size += stat.st_size
                 else:
-                    os.remove(path)
+                    try:
+                        os.remove(path)
+                    except OSError as e:
+                        if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                            raise
+                        msg = _("warning: file %s was removed by another process\n")
+                        ui.warn(msg % path)
+                        continue
                     removed += 1
         ui.progress(_removing, None)
 
@@ -539,7 +555,13 @@ class localcache(object):
             while queue and size > limit and size > 0:
                 ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
                 atime, oldpath, stat = queue.get()
-                os.remove(oldpath)
+                try:
+                    os.remove(oldpath)
+                except OSError as e:
+                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        raise
+                    msg = _("warning: file %s was removed by another process\n")
+                    ui.warn(msg % oldpath)
                 size -= stat.st_size
                 removed += 1
                 removedexcess += stat.st_size
