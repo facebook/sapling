@@ -20,6 +20,7 @@ from mercurial import templatekw, repoview, revset, hg, patch, verify
 from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
+import traceback
 
 try:
     from mercurial import streamclone
@@ -524,7 +525,12 @@ def gcclient(ui, cachepath):
     for path in repos:
         ui.progress(_analyzing, count, unit="repos", total=len(repos))
         count += 1
-        path = ui.expandpath(path)
+        try:
+            path = ui.expandpath(os.path.normpath(path))
+        except TypeError as e:
+            ui.warn("warning: malformed path: %r:%s\n" % (path, e))
+            traceback.print_exc()
+            continue
         try:
             peer = hg.peer(ui, {}, path)
         except error.RepoError:
