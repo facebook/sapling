@@ -833,7 +833,7 @@ def histedit(ui, repo, *freeargs, **opts):
         release(state.lock, state.wlock)
 
 def _histedit(ui, repo, state, *freeargs, **opts):
-    # TODO only abort if we try and histedit mq patches, not just
+    # TODO only abort if we try to histedit mq patches, not just
     # blanket if mq patches are applied somewhere
     mq = getattr(repo, 'mq', None)
     if mq and mq.applied:
