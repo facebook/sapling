@@ -1434,34 +1434,23 @@ class revlog(object):
                     # Try against prev to hopefully save us a fulltext.
                     delta = builddelta(prev)
             elif self._generaldelta:
-                if p2r != nullrev and self._aggressivemergedeltas:
-                    delta = builddelta(p1r)
-                    delta2 = builddelta(p2r)
-                    p1good = self._isgooddelta(delta, textlen)
-                    p2good = self._isgooddelta(delta2, textlen)
-                    if p1good and p2good:
-                        # If both are good deltas, choose the smallest
-                        if delta2[1] < delta[1]:
-                            delta = delta2
-                    elif p2good:
-                        # If only p2 is good, use it
-                        delta = delta2
-                    elif p1good:
-                        pass
-                    else:
-                        # Neither is good, try against prev to hopefully save us
-                        # a fulltext.
-                        delta = builddelta(prev)
-                else:
+                parents = [p1r, p2r]
+                if not self._aggressivemergedeltas:
                     # Pick whichever parent is closer to us (to minimize the
                     # chance of having to build a fulltext). Since
                     # nullrev == -1, any non-merge commit will always pick p1r.
-                    drev = p2r if p2r > p1r else p1r
-                    delta = builddelta(drev)
-                    # If the chosen delta will result in us making a full text,
-                    # give it one last try against prev.
-                    if drev != prev and not self._isgooddelta(delta, textlen):
-                        delta = builddelta(prev)
+                    parents = [max(parents)]
+                pdeltas = []
+                for p in parents:
+                    pd = builddelta(p)
+                    if self._isgooddelta(pd, textlen):
+                        pdeltas.append(pd)
+                if pdeltas:
+                    delta = min(pdeltas, key=lambda x: x[1])
+                elif prev not in parents:
+                    # Neither is good, try against prev to hopefully save us
+                    # a fulltext.
+                    delta = builddelta(prev)
             else:
                 delta = builddelta(prev)
         if delta is not None:
