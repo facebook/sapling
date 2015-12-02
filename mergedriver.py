@@ -8,6 +8,8 @@
 
 from __future__ import absolute_import
 
+import errno
+
 from mercurial.i18n import _
 
 from mercurial import (
@@ -77,9 +79,15 @@ def _rundriver(repo, ms, op, wctx, labels):
         r = True
         raised = True
     except (IOError, error.HookLoadError) as inst:
-        ui.warn(_("%s\n") % inst)
-        r = True
-        raised = True
+        if isinstance(inst, IOError) and inst.errno == errno.ENOENT:
+            # this will usually happen when transitioning from not having a
+            # merge driver to having one -- don't fail for this important use
+            # case
+            r, raised = False, False
+        else:
+            ui.warn(_("%s\n") % inst)
+            r = True
+            raised = True
 
     return r, raised
 

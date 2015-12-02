@@ -418,21 +418,28 @@ test some other failure modes
   $ hg merge 1 --config experimental.mergedriver=fail
   abort: merge driver must be a python hook
   [255]
+this should proceed as if there's no merge driver
   $ hg merge 1 --config experimental.mergedriver=python:fail
   loading preprocess hook failed:
-  [Errno 2] No such file or directory: '$TESTTMP/repo1/fail'
-  warning: merge driver failed to preprocess files
+  merging bar.txt
+  merging foo.txt
+  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
+  $ hg debugmergestate | grep 'merge driver:'
+  merge driver: python:fail (state "s")
   $ hg update --clean 2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 ensure the right path to load the merge driver hook
   $ hg -R repo1 merge 1 --config experimental.mergedriver=python:fail
   loading preprocess hook failed:
-  [Errno 2] No such file or directory: '$TESTTMP/repo1/fail'
-  warning: merge driver failed to preprocess files
+  merging bar.txt
+  merging foo.txt
+  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  warning: conflicts while merging foo.txt! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
