@@ -1459,6 +1459,7 @@ class revlog(object):
                         delta = builddelta(prev)
             else:
                 delta = builddelta(prev)
+        if delta is not None:
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = delta
 
         if not self._isgooddelta(delta, textlen):
