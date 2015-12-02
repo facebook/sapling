@@ -215,10 +215,10 @@ editcomment = _("""# Edit history between %s and %s
 """)
 
 class histeditstate(object):
-    def __init__(self, repo, parentctxnode=None, rules=None, keep=None,
+    def __init__(self, repo, parentctxnode=None, actions=None, keep=None,
             topmost=None, replacements=None, lock=None, wlock=None):
         self.repo = repo
-        self.rules = rules
+        self.actions = actions
         self.keep = keep
         self.topmost = topmost
         self.parentctxnode = parentctxnode
@@ -248,7 +248,9 @@ class histeditstate(object):
             parentctxnode, rules, keep, topmost, replacements, backupfile = data
 
         self.parentctxnode = parentctxnode
-        self.rules = rules
+        rules = "\n".join(["%s %s" % (verb, rest) for [verb, rest] in rules])
+        actions = parserules(rules, self)
+        self.actions = actions
         self.keep = keep
         self.topmost = topmost
         self.replacements = replacements
@@ -260,10 +262,9 @@ class histeditstate(object):
         fp.write('%s\n' % node.hex(self.parentctxnode))
         fp.write('%s\n' % node.hex(self.topmost))
         fp.write('%s\n' % self.keep)
-        fp.write('%d\n' % len(self.rules))
-        for rule in self.rules:
-            fp.write('%s\n' % rule[0]) # action
-            fp.write('%s\n' % rule[1]) # remainder
+        fp.write('%d\n' % len(self.actions))
+        for action in self.actions:
+            fp.write('%s\n' % action.tostate())
         fp.write('%d\n' % len(self.replacements))
         for replacement in self.replacements:
             fp.write('%s%s\n' % (node.hex(replacement[0]), ''.join(node.hex(r)
@@ -327,13 +328,6 @@ class histeditstate(object):
 
     def inprogress(self):
         return self.repo.vfs.exists('histedit-state')
-
-    @property
-    def actions(self):
-        actions = []
-        for (act, rest) in self.rules:
-            actions.append(actiontable[act].fromrule(self, rest))
-        return actions
 
 
 class histeditaction(object):
@@ -953,10 +947,11 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 f = open(rules)
             rules = f.read()
             f.close()
-        rules = [l for l in (r.strip() for r in rules.splitlines())
-                 if l and not l.startswith('#')]
-        rules = verifyrules(rules, state, [repo[c] for [_a, c] in state.rules])
-        state.rules = rules
+        actions = parserules(rules, state)
+        ctxs = [repo[act.nodetoverify()] \
+                for act in state.actions if act.nodetoverify()]
+        verifyactions(actions, state, ctxs)
+        state.actions = actions
         state.write()
         return
     elif goal == 'abort':
@@ -1037,14 +1032,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 f = open(rules)
             rules = f.read()
             f.close()
-        rules = [l for l in (r.strip() for r in rules.splitlines())
-                 if l and not l.startswith('#')]
-        rules = verifyrules(rules, state, ctxs)
+        actions = parserules(rules, state)
+        verifyactions(actions, state, ctxs)
 
         parentctxnode = repo[root].parents()[0].node()
 
         state.parentctxnode = parentctxnode
-        state.rules = rules
+        state.actions = actions
         state.topmost = topmost
         state.replacements = replacements
 
@@ -1062,12 +1056,10 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             zip(actions, actions[1:] + [None])):
         if action.verb == 'fold' and nextact and nextact.verb == 'fold':
             state.actions[idx].__class__ = _multifold
-            state.rules[idx] = '_multifold', action.nodetoverify() # TODO remove this
 
     while state.actions:
         state.write()
         actobj = state.actions.pop(0)
-        state.rules.pop(0) # TODO remove this
         ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
                                                    actobj.torule()))
         parentctx, replacement_ = actobj.run()
@@ -1121,7 +1113,6 @@ def bootstrapcontinue(ui, state, opts):
     repo = state.repo
     if state.actions:
         actobj = state.actions.pop(0)
-        state.rules.pop(0) # TODO remove this
 
         if _isdirtywc(repo):
             actobj.continuedirty()
@@ -1171,23 +1162,33 @@ def ruleeditor(repo, ui, actions, editcomment=""):
 
     return rules
 
-def verifyrules(rules, state, ctxs):
-    """Verify that there exists exactly one edit rule per given changeset.
-
-    Will abort if there are to many or too few rules, a malformed rule,
-    or a rule on a changeset outside of the user-given range.
-    """
-    parsed = []
-    expected = set(c.hex() for c in ctxs)
-    seen = set()
+def parserules(rules, state):
+    """Read the histedit rules string and return list of action objects """
+    rules = [l for l in (r.strip() for r in rules.splitlines())
+                if l and not l.startswith('#')]
+    actions = []
     for r in rules:
         if ' ' not in r:
             raise error.Abort(_('malformed line "%s"') % r)
         verb, rest = r.split(' ', 1)
 
-        if verb not in actiontable or verb.startswith('_'):
+        if verb not in actiontable:
             raise error.Abort(_('unknown action "%s"') % verb)
+
         action = actiontable[verb].fromrule(state, rest)
+        actions.append(action)
+    return actions
+
+def verifyactions(actions, state, ctxs):
+    """Verify that there exists exactly one action per given changeset and
+    other constraints.
+
+    Will abort if there are to many or too few rules, a malformed rule,
+    or a rule on a changeset outside of the user-given range.
+    """
+    expected = set(c.hex() for c in ctxs)
+    seen = set()
+    for action in actions:
         action.verify()
         constraints = action.constraints()
         for constraint in constraints:
@@ -1200,23 +1201,20 @@ def verifyrules(rules, state, ctxs):
             if _constraints.noother in constraints and ha not in expected:
                 raise error.Abort(
                     _('may not use "%s" with changesets '
-                      'other than the ones listed') % verb)
+                      'other than the ones listed') % action.verb)
             if _constraints.forceother in constraints and ha in expected:
                 raise error.Abort(
                     _('may not use "%s" with changesets '
-                      'within the edited list') % verb)
+                      'within the edited list') % action.verb)
             if _constraints.noduplicates in constraints and ha in seen:
                 raise error.Abort(_('duplicated command for changeset %s') %
                         ha[:12])
             seen.add(ha)
-            rest = ha
-        parsed.append([verb, rest])
     missing = sorted(expected - seen)  # sort to stabilize output
     if missing:
         raise error.Abort(_('missing rules for changeset %s') %
                 missing[0][:12],
                 hint=_('do you want to use the drop action?'))
-    return parsed
 
 def newnodestoabort(state):
     """process the list of replacements to return
