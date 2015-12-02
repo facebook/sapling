@@ -1145,23 +1145,6 @@ def between(repo, old, new, keep):
                              hint=_('see "hg help phases" for details'))
     return [c.node() for c in ctxs]
 
-def makedesc(repo, action, rev):
-    """build a initial action line for a ctx
-
-    line are in the form:
-
-      <action> <hash> <rev> <summary>
-    """
-    ctx = repo[rev]
-    summary = ''
-    if ctx.description():
-        summary = ctx.description().splitlines()[0]
-    line = '%s %s %d %s' % (action, ctx, ctx.rev(), summary)
-    # trim to 80 columns so it's not stupidly wide in my editor
-    maxlen = repo.ui.configint('histedit', 'linelen', default=80)
-    maxlen = max(maxlen, 22) # avoid truncating hash
-    return util.ellipsis(line, maxlen)
-
 def ruleeditor(repo, ui, actions, editcomment=""):
     """open an editor to edit rules
 
