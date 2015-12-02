@@ -1057,17 +1057,19 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
     # preprocess rules so that we can hide inner folds from the user
     # and only show one editor
-    rules = state.rules[:]
-    for idx, ((action, ha), (nextact, unused)) in enumerate(
-            zip(rules, rules[1:] + [(None, None)])):
-        if action == 'fold' and nextact == 'fold':
-            state.rules[idx] = '_multifold', ha
+    actions = state.actions[:]
+    for idx, (action, nextact) in enumerate(
+            zip(actions, actions[1:] + [None])):
+        if action.verb == 'fold' and nextact and nextact.verb == 'fold':
+            state.actions[idx].__class__ = _multifold
+            state.rules[idx] = '_multifold', action.nodetoverify() # TODO remove this
 
-    while state.rules:
+    while state.actions:
         state.write()
-        action, ha = state.rules.pop(0)
-        ui.debug('histedit: processing %s %s\n' % (action, ha[:12]))
-        actobj = actiontable[action].fromrule(state, ha)
+        actobj = state.actions.pop(0)
+        state.rules.pop(0) # TODO remove this
+        ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
+                                                   actobj.torule()))
         parentctx, replacement_ = actobj.run()
         state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
@@ -1117,10 +1119,9 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
-    if state.rules:
-        action, currentnode = state.rules.pop(0)
-
-        actobj = actiontable[action].fromrule(state, currentnode)
+    if state.actions:
+        actobj = state.actions.pop(0)
+        state.rules.pop(0) # TODO remove this
 
         if _isdirtywc(repo):
             actobj.continuedirty()
@@ -1370,8 +1371,8 @@ def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if os.path.exists(os.path.join(repo.path, 'histedit-state')):
         state = histeditstate(repo)
         state.read()
-        histedit_nodes = set([repo[rulehash].node() for (action, rulehash)
-                             in state.rules if rulehash in repo])
+        histedit_nodes = set([action.nodetoverify() for action
+                             in state.actions if action.nodetoverify()])
         strip_nodes = set([repo[n].node() for n in nodelist])
         common_nodes = histedit_nodes & strip_nodes
         if common_nodes:
@@ -1386,11 +1387,11 @@ def summaryhook(ui, repo):
         return
     state = histeditstate(repo)
     state.read()
-    if state.rules:
+    if state.actions:
         # i18n: column positioning for "hg summary"
         ui.write(_('hist:   %s (histedit --continue)\n') %
                  (ui.label(_('%d remaining'), 'histedit.remaining') %
-                  len(state.rules)))
+                  len(state.actions)))
 
 def extsetup(ui):
     cmdutil.summaryhooks.add('histedit', summaryhook)
