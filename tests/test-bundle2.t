@@ -44,7 +44,8 @@
   remote: added 1 changesets with 1 changes to 1 files
   remote: transaction abort!
   remote: rollback completed
-  abort: pretxnclose.abort hook exited with status 1
+  remote: pretxnclose.abort hook exited with status 1
+  abort: push failed on remote
   [255]
   $ mv ../master/.hg/hgrc_good ../master/.hg/hgrc
   $ hg -R ../master bookmarks
@@ -79,7 +80,8 @@ Test lazily acquiring the lock during unbundle
   $ hg push ssh://user@dummy/lazylock
   pushing to ssh://user@dummy/lazylock
   searching for changes
-  abort: Lock should not be taken
+  remote: Lock should not be taken
+  abort: push failed on remote
   [255]
 
 - Push with lazy locking on (hook passes)

@@ -40,7 +40,8 @@ Test verify sql lock is not held during prelockrebase hook
   pushing to ssh://user@dummy/master
   searching for changes
   remote: error: prepushrebase hook failed: lock was FREE
-  abort: lock was FREE
+  remote: lock was FREE
+  abort: push failed on remote
   [255]
 
   $ cd ../master
