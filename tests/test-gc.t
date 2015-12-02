@@ -47,3 +47,11 @@
   finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
   $ find master/.hg/remotefilelogcache -type f | wc -l | sed -e 's/ //g'
   1
+
+  $ cp $CACHEDIR/repos $CACHEDIR/repos.bak
+  $ echo " " > $CACHEDIR/repos
+  $ hg gc
+  warning: no valid repos in repofile
+  $ mv $CACHEDIR/repos.bak $CACHEDIR/repos
+
+

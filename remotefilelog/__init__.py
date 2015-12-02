@@ -555,7 +555,11 @@ def gcclient(ui, cachepath):
         os.umask(oldumask)
 
     # prune cache
-    localcache.gc(keepkeys)
+    if localcache is not None:
+        localcache.gc(keepkeys)
+    else:
+        ui.warn(_("warning: no valid repos in repofile\n"))
+
 
 def log(orig, ui, repo, *pats, **opts):
     follow = opts.get('follow')
