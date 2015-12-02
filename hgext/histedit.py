@@ -346,13 +346,18 @@ class histeditaction(object):
     def fromrule(cls, state, rule):
         """Parses the given rule, returning an instance of the histeditaction.
         """
-        repo = state.repo
         rulehash = rule.strip().split(' ', 1)[0]
+        return cls(state, node.bin(rulehash))
+
+    def verify(self):
+        """ Verifies semantic correctness of the rule"""
+        repo = self.repo
+        ha = node.hex(self.node)
         try:
-            node = repo[rulehash].node()
+            self.node = repo[ha].node()
         except error.RepoError:
-            raise error.Abort(_('unknown changeset %s listed') % rulehash[:12])
-        return cls(state, node)
+            raise error.Abort(_('unknown changeset %s listed')
+                              % ha[:12])
 
     def constraints(self):
         """Return a set of constrains that this action should be verified for
@@ -1175,6 +1180,7 @@ def verifyrules(rules, state, ctxs):
         if verb not in actiontable or verb.startswith('_'):
             raise error.Abort(_('unknown action "%s"') % verb)
         action = actiontable[verb].fromrule(state, rest)
+        action.verify()
         constraints = action.constraints()
         for constraint in constraints:
             if constraint not in _constraints.known():
