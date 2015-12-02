@@ -13,10 +13,13 @@ import os
 from pipes import quote
 
 from mercurial import cmdutil
+from mercurial import commands
 from mercurial import error
 from mercurial import extensions
 from mercurial import hg
 from mercurial import lock
+from mercurial import node
+from mercurial import scmutil
 from mercurial import util
 from mercurial.i18n import _
 
@@ -144,3 +147,93 @@ def extsetup(ui):
     histedit.actiontable['exec'] = execute
     histedit.actiontable['xr'] = executerel
     histedit.actiontable['execr'] = executerel
+
+    if ui.config('experimental', 'histeditng'):
+        rebase = extensions.find('rebase')
+        extensions.wrapcommand(rebase.cmdtable, 'rebase', _rebase,
+                               synopsis=' [-i]')
+
+        aliases, entry = cmdutil.findcmd('rebase', rebase.cmdtable)
+        newentry = list(entry)
+        options = newentry[1]
+        # dirty hack because we need to change an existing switch
+        for idx, opt in enumerate(options):
+            if opt[0] == 'i':
+                del options[idx]
+        options.append(('i', 'interactive', False, 'interactive rebase'))
+        rebase.cmdtable['rebase'] = tuple(newentry)
+
+
+def _rebase(orig, ui, repo, **opts):
+    histedit = extensions.find('histedit')
+
+    contf = opts.get('continue')
+    abortf = opts.get('abort')
+
+    if (contf or abortf) and \
+            not repo.vfs.exists('rebasestate') and\
+            repo.vfs.exists('histedit.state'):
+        msg = _("no rebase in progress")
+        hint = _('If you want to continue or abort an interactive rebase please'
+                 'use "histedit --continue/--abort" instead.')
+        raise util.Abort(msg, hint=hint)
+
+    if not opts.get('interactive'):
+        return orig(ui, repo, **opts)
+
+
+    # the argument parsing has as lot of copy-paste from rebase.py
+    # Validate input and define rebasing points
+    destf = opts.get('dest', None)
+    srcf = opts.get('source', None)
+    basef = opts.get('base', None)
+    revf = opts.get('rev', [])
+    keepf = opts.get('keep', False)
+
+    src = None
+
+    if contf or abortf:
+        raise util.Abort('no interactive rebase in progress')
+    if destf:
+        dest = scmutil.revsingle(repo, destf)
+    else:
+        raise util.Abort("you must specify a destination (-d) for the rebase")
+
+    if srcf and basef:
+        raise error.Abort(_('cannot specify both a source and a base'))
+    if revf:
+        raise util.Abort('--rev not supported with interactive rebase')
+    elif srcf:
+        src = scmutil.revsingle(repo, srcf)
+    else:
+        base = scmutil.revrange(repo, [basef or '.'])
+        if not base:
+            ui.status(_('empty "base" revision set - '
+                        "can't compute rebase set\n"))
+            return 1
+        commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
+        if commonanc is not None:
+            src = repo.revs('min((%d::(%ld) - %d)::)',
+                            commonanc, base, commonanc).first()
+        else:
+            src = None
+
+    if src is None:
+        raise util.Abort('no revisions to rebase')
+    src = repo[src].node()
+
+    topmost, empty = repo.dirstate.parents()
+    revs = histedit.between(repo, src, topmost, keepf)
+    ctxs = [repo[r] for r in revs]
+    rules = [['base', repo[dest]]] + [['pick', ctx] for ctx in ctxs]
+    editcomment = """#
+# Interactive rebase is just a wrapper over histedit (adding the 'base' line as
+# the first rule). To continue or abort it you should use:
+# "hg histedit --continue" and "--abort"
+#
+"""
+    editcomment += histedit.editcomment % (node.short(src), node.short(topmost))
+    histedit.ruleeditor(repo, ui, rules, editcomment=editcomment)
+
+    return histedit.histedit(ui, repo, node.hex(src), keep=keepf,
+                             commands=repo.join('histedit-last-edit.txt'))
