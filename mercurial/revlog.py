@@ -1427,7 +1427,12 @@ class revlog(object):
             if cachedelta and self._generaldelta and self._lazydeltabase:
                 # Assume what we received from the server is a good choice
                 # build delta will reuse the cache
-                delta = builddelta(cachedelta[0])
+                candidatedelta = builddelta(cachedelta[0])
+                if self._isgooddelta(candidatedelta, textlen):
+                    delta = candidatedelta
+                elif prev != candidatedelta[3]:
+                    # Try against prev to hopefully save us a fulltext.
+                    delta = builddelta(prev)
             elif self._generaldelta:
                 if p2r != nullrev and self._aggressivemergedeltas:
                     delta = builddelta(p1r)
