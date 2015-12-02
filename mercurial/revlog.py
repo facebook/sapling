@@ -1424,22 +1424,23 @@ class revlog(object):
 
         # should we try to build a delta?
         if prev != nullrev:
+            tested = set()
             if cachedelta and self._generaldelta and self._lazydeltabase:
                 # Assume what we received from the server is a good choice
                 # build delta will reuse the cache
                 candidatedelta = builddelta(cachedelta[0])
+                tested.add(candidatedelta[3])
                 if self._isgooddelta(candidatedelta, textlen):
                     delta = candidatedelta
-                elif prev != candidatedelta[3]:
-                    # Try against prev to hopefully save us a fulltext.
-                    delta = builddelta(prev)
-            elif self._generaldelta:
+            if delta is None and self._generaldelta:
                 parents = [p1r, p2r]
-                if not self._aggressivemergedeltas:
+                # exclude already lazy tested base if any
+                parents = [p for p in parents if p not in tested]
+                if parents and not self._aggressivemergedeltas:
                     # Pick whichever parent is closer to us (to minimize the
-                    # chance of having to build a fulltext). Since
-                    # nullrev == -1, any non-merge commit will always pick p1r.
+                    # chance of having to build a fulltext).
                     parents = [max(parents)]
+                tested.update(parents)
                 pdeltas = []
                 for p in parents:
                     pd = builddelta(p)
@@ -1447,11 +1448,9 @@ class revlog(object):
                         pdeltas.append(pd)
                 if pdeltas:
                     delta = min(pdeltas, key=lambda x: x[1])
-                elif prev not in parents:
-                    # Neither is good, try against prev to hopefully save us
-                    # a fulltext.
-                    delta = builddelta(prev)
-            else:
+            if delta is None and prev not in tested:
+                # other approach failed try against prev to hopefully save us a
+                # fulltext.
                 delta = builddelta(prev)
         if delta is not None:
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = delta
