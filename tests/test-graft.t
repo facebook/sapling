@@ -195,6 +195,11 @@ Graft out of order, skipping a merge and a duplicate
   (use hg resolve and hg graft --continue)
   [255]
 
+Summary should mention graft:
+
+  $ hg summary |grep graft
+  commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
+
 Commit while interrupted should fail:
 
   $ hg ci -m 'commit interrupted graft'

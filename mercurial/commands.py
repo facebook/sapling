@@ -6272,6 +6272,8 @@ def summary(ui, repo, **opts):
     t = ', '.join(t)
     cleanworkdir = False
 
+    if repo.vfs.exists('graftstate'):
+        t += _(' (graft in progress)')
     if repo.vfs.exists('updatestate'):
         t += _(' (interrupted update)')
     elif len(parents) > 1:
