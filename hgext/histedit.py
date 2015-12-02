@@ -544,6 +544,20 @@ def abortdirty():
             '--continue, or abort with histedit --abort'))
 
 
+actiontable = {}
+actionlist = []
+
+def addhisteditaction(verbs):
+    def wrap(cls):
+        cls.verb = verbs[0]
+        for verb in verbs:
+            actiontable[verb] = cls
+        actionlist.append(cls)
+        return cls
+    return wrap
+
+
+@addhisteditaction(['pick', 'p'])
 class pick(histeditaction):
     def run(self):
         rulectx = self.repo[self.node]
@@ -553,6 +567,7 @@ class pick(histeditaction):
 
         return super(pick, self).run()
 
+@addhisteditaction(['edit', 'e'])
 class edit(histeditaction):
     def run(self):
         repo = self.repo
@@ -567,6 +582,7 @@ class edit(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.edit')
 
+@addhisteditaction(['fold', 'f'])
 class fold(histeditaction):
     def continuedirty(self):
         repo = self.repo
@@ -677,6 +693,7 @@ class base(histeditaction):
         basectx = self.repo['.']
         return basectx, []
 
+@addhisteditaction(['_multifold'])
 class _multifold(fold):
     """fold subclass used for when multiple folds happen in a row
 
@@ -689,6 +706,7 @@ class _multifold(fold):
     def skipprompt(self):
         return True
 
+@addhisteditaction(["roll", "r"])
 class rollup(fold):
     def mergedescs(self):
         return False
@@ -696,11 +714,13 @@ class rollup(fold):
     def skipprompt(self):
         return True
 
+@addhisteditaction(["drop", "d"])
 class drop(histeditaction):
     def run(self):
         parentctx = self.repo[self.state.parentctxnode]
         return parentctx, [(self.node, tuple())]
 
+@addhisteditaction(["mess", "m"])
 class message(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
@@ -731,20 +751,6 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
         raise error.Abort(msg, hint=hint)
     return repo.lookup(roots[0])
 
-actiontable = {'p': pick,
-               'pick': pick,
-               'e': edit,
-               'edit': edit,
-               'f': fold,
-               'fold': fold,
-               '_multifold': _multifold,
-               'r': rollup,
-               'roll': rollup,
-               'd': drop,
-               'drop': drop,
-               'm': message,
-               'mess': message,
-               }
 
 @command('histedit',
     [('', 'commands', '',
@@ -1379,4 +1385,4 @@ def extsetup(ui):
         ['histedit-state', False, True, _('histedit in progress'),
          _("use 'hg histedit --continue' or 'hg histedit --abort'")])
     if ui.configbool("experimental", "histeditng"):
-        actiontable.update({'b': base, 'base': base})
+        globals()['base'] = addhisteditaction(['base', 'b'])(base)
