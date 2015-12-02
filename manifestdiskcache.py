@@ -13,8 +13,7 @@ On writes, we spawn a second process (to avoid penalizing interactive use) to
 check if we should prune the cache.  The pruning is guided by several
 configuration variables:
 
-manifestdiskcache.pinned-revsets: revsets to pin in the cache.  NOTE: This is
-not implemented yet.
+manifestdiskcache.pinned-revsets: revsets to pin in the cache.
 
 manifestdiskcache.cache-size: the upper limit for the size of the cache.
 
@@ -31,8 +30,8 @@ err
 
 '''
 
-from mercurial import changegroup, cmdutil, error, extensions, localrepo
-from mercurial import manifest, revlog, util
+from mercurial import bookmarks, changegroup, cmdutil, error, extensions
+from mercurial import localrepo, manifest, revlog, util
 from mercurial.node import bin, hex
 from mercurial.i18n import _
 
@@ -90,8 +89,13 @@ command = cmdutil.command(cmdtable)
     'prunemanifestdiskcache', [],
     _('hg prunemanifestdiskcache'))
 def prunemanifestdiskcache(ui, repo):
+    masterrevset = _masterrevset(ui, repo)
+
     # retrieve the options.
-    pinnedrevsets = ui.config(CONFIG_KEY, 'pinned-revsets', None)
+    pinnedrevsets = ui.config(CONFIG_KEY,
+                              'pinned-revsets',
+                              "{0} or (draft() and date(-3))".format(
+                                  masterrevset))
     cachesizelimit = ui.configbytes(CONFIG_KEY, 'cache-size', '5g')
     runsbetween = ui.configint(CONFIG_KEY, 'runs-between-prunes', 100)
     secondsbetween = ui.configint(CONFIG_KEY, 'seconds-between-prunes', 86400)
@@ -129,6 +133,18 @@ def prunemanifestdiskcache(ui, repo):
         # update the file timestamp.
         os.utime(markerpath, None)
 
+    # fined all the pinned revs.
+    changelog = repo.changelog
+    revs = set()
+    if pinnedrevsets:
+        try:
+            revs = repo.revs(pinnedrevsets)
+        except error.ParseError:
+            util.Abort("Cannot parse {0}.pinned-revsets.".format(CONFIG_KEY))
+
+    pinnednodes = set(hex(changelog.read(changelog.node(rev))[0])
+                      for rev in revs)
+
     # enumerate all the existing cache entries, ordered by time ascending.
     entries = []
     for dirpath, dirs, files in opener.walk(CACHE_SUBDIR):
@@ -147,6 +163,10 @@ def prunemanifestdiskcache(ui, repo):
                     pass
                 continue
 
+            if fname in pinnednodes:
+                # pinned rev, move on.
+                continue
+
             try:
                 stat = os.stat(path)
             except OSError:
@@ -160,8 +180,6 @@ def prunemanifestdiskcache(ui, repo):
         os.getpid(),
         "\n".join(["{0}".format(entry)
                    for entry in entries])))
-
-    # TODO: remove entries that pinnedrevsets wants us to keep.
 
     # accumulate up to cachesize, then remove the remainder.
     accumsize = 0
@@ -320,3 +338,33 @@ class repowithmdc(localrepo.localrepository):
     def _applyopenerreqs(self):
         super(repowithmdc, self)._applyopenerreqs()
         self.svfs.options[CONFIG_KEY] = True
+
+def _reposnames(ui):
+    # '' is local repo. This also defines an order precedence for master.
+    repos = ui.configlist(CONFIG_KEY, 'repos', ['', 'remote/', 'default/'])
+    names = ui.configlist(CONFIG_KEY, 'names', ['@', 'master', 'stable'])
+
+    for repo in repos:
+        for name in names:
+            yield repo + name
+
+def _masterrevset(ui, repo):
+    """
+    Try to find the name of ``master`` -- usually a bookmark.
+
+    Defaults to 'tip' if no suitable local or remote bookmark is found.
+    """
+
+    masterstring = ui.config(CONFIG_KEY, 'master')
+    if masterstring:
+        return masterstring
+
+    names = set(bookmarks.bmstore(repo).keys())
+    if util.safehasattr(repo, 'names') and 'remotebookmarks' in repo.names:
+        names.update(set(repo.names['remotebookmarks'].listnames(repo)))
+
+    for name in _reposnames(ui):
+        if name in names:
+            return name
+
+    return 'tip'
