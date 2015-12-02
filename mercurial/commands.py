@@ -3867,9 +3867,17 @@ def graft(ui, repo, *revs, **opts):
                     # write out state for --continue
                     nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
                     repo.vfs.write('graftstate', ''.join(nodelines))
+                    extra = ''
+                    if opts.get('user'):
+                        extra += ' --user %s' % opts['user']
+                    if opts.get('date'):
+                        extra += ' --date %s' % opts['date']
+                    if opts.get('log'):
+                        extra += ' --log'
+                    hint=_('use hg resolve and hg graft --continue%s') % extra
                     raise error.Abort(
                         _("unresolved conflicts, can't continue"),
-                        hint=_('use hg resolve and hg graft --continue'))
+                        hint=hint)
             else:
                 cont = False
 

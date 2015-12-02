@@ -138,7 +138,7 @@ Graft out of order, skipping a merge and a duplicate
   grafting 4:9c233e8e184d "4"
   grafting 3:4c60f11aa304 "3"
 
-  $ HGEDITOR=cat hg graft 1 5 4 3 'merge()' 2 --debug
+  $ HGEDITOR=cat hg graft 1 5 'merge()' 2 --debug
   skipping ungraftable merge revision 6
   scanning for duplicate grafts
   skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
@@ -174,6 +174,8 @@ Graft out of order, skipping a merge and a duplicate
   e
   committing manifest
   committing changelog
+  $ HGEDITOR=cat hg graft 4 3 --log --debug
+  scanning for duplicate grafts
   grafting 4:9c233e8e184d "4"
     searching for copies back to rev 1
   resolving manifests
@@ -192,7 +194,7 @@ Graft out of order, skipping a merge and a duplicate
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use hg resolve and hg graft --continue --log)
   [255]
 
 Summary should mention graft:
