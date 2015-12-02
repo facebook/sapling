@@ -31,6 +31,12 @@ class remotefilectx(context.filectx):
             return self._changeid
         elif '_changectx' in self.__dict__:
             return self._changectx.rev()
+        elif '_descendantrev' in self.__dict__:
+            # this file context was created from a revision with a known
+            # descendant, we can (lazily) correct for linkrev aliases
+            linknode = self._adjustlinknode(self._path, self._filelog,
+                                            self._filenode, self._descendantrev)
+            return self._repo.changelog.rev(linknode)
         else:
             return self.linkrev()
 
@@ -46,6 +52,29 @@ class remotefilectx(context.filectx):
 
         ancestormap = self.ancestormap()
         p1, p2, linknode, copyfrom = ancestormap[self._fileid]
+        rev = self._repo.changelog.nodemap.get(linknode)
+        if rev is not None:
+            return rev
+
+        # TODO: look up alternate histories in historical blob files
+        return None
+
+    def introrev(self):
+        """return the rev of the changeset which introduced this file revision
+
+        This method is different from linkrev because it take into account the
+        changeset the filectx was created from. It ensures the returned
+        revision is one of its ancestors. This prevents bugs from
+        'linkrev-shadowing' when a file revision is used by multiple
+        changesets.
+        """
+        lkr = self.linkrev()
+        attrs = vars(self)
+        noctx = not ('_changeid' in attrs or '_changectx' in attrs)
+        if noctx or self.rev() == lkr:
+            return lkr
+        linknode = self._adjustlinknode(self._path, self._filelog, self._filenode,
+                                        self.rev(), inclusive=True)
         return self._repo.changelog.rev(linknode)
 
     def renamed(self):
@@ -77,19 +106,9 @@ class remotefilectx(context.filectx):
 
     def ancestormap(self):
         if not self._ancestormap:
-            # Get the history relative to the current commit when possible.
-            # Don't just use self.changectx() because it calls ancestormap,
-            # which results in infinite recursion.
-            relativeto = None
-            if '_changeid' in self.__dict__:
-                relativeto = self._repo.changelog.node(self._changeid)
-            self._ancestormap = self.filelog().ancestormap(self._filenode,
-                relativeto=relativeto)
+            self._ancestormap = self.filelog().ancestormap(self._filenode)
 
         return self._ancestormap
-
-    def introrev(self):
-        return self.linkrev()
 
     def parents(self):
         repo = self._repo
@@ -102,6 +121,7 @@ class remotefilectx(context.filectx):
             flog = repo.file(path)
             p1ctx = remotefilectx(repo, path, fileid=p1, filelog=flog,
                                   ancestormap=ancestormap)
+            p1ctx._descendantrev = self.rev()
             results.append(p1ctx)
 
         if p2 != nullid:
@@ -109,39 +129,109 @@ class remotefilectx(context.filectx):
             flog = repo.file(path)
             p2ctx = remotefilectx(repo, path, fileid=p2, filelog=flog,
                                   ancestormap=ancestormap)
+            p2ctx._descendantrev = self.rev()
             results.append(p2ctx)
 
         return results
 
+    def _adjustlinknode(self, path, filelog, fnode, srcrev, inclusive=False):
+        """return the first ancestor of <srcrev> introducing <fnode>
+
+        If the linkrev of the file revision does not point to an ancestor of
+        srcrev, we'll walk down the ancestors until we find one introducing
+        this file revision.
+
+        :repo: a localrepository object (used to access changelog and manifest)
+        :path: the file path
+        :fnode: the nodeid of the file revision
+        :filelog: the filelog of this path
+        :srcrev: the changeset revision we search ancestors from
+        :inclusive: if true, the src revision will also be checked
+
+        Note: This is based on adjustlinkrev in core, but it's quite different.
+
+        adjustlinkrev depends on the fact that the linkrev is the bottom most
+        node, and uses that as a stopping point for the ancestor traversal. We
+        can't do that here because the linknode is not guaranteed to be the
+        bottom most one.
+
+        In our code here, we actually know what a bunch of potential ancestor
+        linknodes are, so instead of stopping the cheap-ancestor-traversal when
+        we get to a linkrev, we stop when we see any of the known linknodes.
+        """
+        repo = self._repo
+        cl = repo.unfiltered().changelog
+        ma = repo.manifest
+        ancestormap = self.ancestormap()
+        p1, p2, linknode, copyfrom = ancestormap[fnode]
+
+        # hack to reuse ancestor computation when searching for renames
+        memberanc = getattr(self, '_ancestrycontext', None)
+        iteranc = None
+        if srcrev is None:
+            # wctx case, used by workingfilectx during mergecopy
+            revs = [p.rev() for p in self._repo[None].parents()]
+            inclusive = True # we skipped the real (revless) source
+        else:
+            revs = [srcrev]
+        if memberanc is None:
+            memberanc = cl.ancestors(revs, inclusive=inclusive)
+
+        # Build a list of linknodes that are known to be ancestors of fnode
+        knownancestors = set()
+        queue = collections.deque(p for p in (p1, p2) if p != nullid)
+        while queue:
+            current = queue.pop()
+            p1, p2, anclinknode, copyfrom = ancestormap[current]
+            queue.extend(p for p in (p1, p2) if p != nullid)
+            knownancestors.add(anclinknode)
+
+        # Check if this linknode is an ancestor of srcrev
+        for anc in memberanc:
+            ancnode = cl.node(anc)
+            if ancnode == linknode:
+                return linknode
+            # Stop if we reach a node in history that is past the desired fnode.
+            elif ancnode in knownancestors:
+                break
+
+        iteranc = cl.ancestors(revs, inclusive=inclusive)
+        for a in iteranc:
+            ac = cl.read(a) # get changeset data (we avoid object creation)
+            if path in ac[3]: # checking the 'files' field.
+                # The file has been touched, check if the content is
+                # similar to the one we search for.
+                if fnode == ma.readfast(ac[0]).get(path):
+                    return cl.node(a)
+
+        return linknode
+
     def ancestors(self, followfirst=False):
         repo = self._repo
-        ancestormap = self.ancestormap()
         clrev = repo.changelog.rev
 
         ancestors = []
-        queue = [(self.path(), self.filenode())]
+        queue = collections.deque((self,))
         while queue:
-            path, node = queue.pop(0)
-            p1, p2, linknode, copyfrom = ancestormap[node]
-            ancestors.append((path, node, clrev(linknode)))
+            current = queue.pop()
+            ancestors.append(current)
 
-            if p1 != nullid:
-                queue.append((copyfrom or path, p1))
-
-            if p2 != nullid and not followfirst:
-                queue.append((path, p2))
+            parents = current.parents()
+            first = True
+            for p in parents:
+                if first or not followfirst:
+                    queue.append(p)
+                first = False
 
         # Remove self
         ancestors.pop(0)
 
         # Sort by linkrev
         # The copy tracing algorithm depends on these coming out in order
-        ancestors = sorted(ancestors, reverse=True, key=lambda x:x[2])
+        ancestors = sorted(ancestors, reverse=True, key=lambda x:x.linkrev())
 
-        for path, node, _ in ancestors:
-            flog = repo.file(path)
-            yield remotefilectx(repo, path, fileid=node, filelog=flog,
-                                ancestormap=ancestormap)
+        for ancestor in ancestors:
+            yield ancestor
 
     def ancestor(self, fc2, actx):
         # the easy case: no (relevant) renames
@@ -180,13 +270,8 @@ class remotefilectx(context.filectx):
 
     def annotate(self, follow=False, linenumber=None, diffopts=None):
         # use linkrev to find the first changeset where self appeared
-        if self.rev() != self.linkrev():
-            base = self.filectx(self.filenode())
-        else:
-            base = self
-
         fetch = []
-        ancestors = base.ancestors()
+        ancestors = self.ancestors()
         for ancestor in ancestors:
             fetch.append((ancestor.path(), hex(ancestor.filenode())))
 

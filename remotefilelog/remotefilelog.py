@@ -112,10 +112,10 @@ class remotefilelog(object):
                 if copyfrom:
                     p1flog = remotefilelog(self.opener, copyfrom, self.repo)
 
-                pancestors.update(p1flog.ancestormap(realp1, relativeto=linknode))
+                pancestors.update(p1flog.ancestormap(realp1))
                 queue.append(realp1)
             if p2 != nullid:
-                pancestors.update(self.ancestormap(p2, relativeto=linknode))
+                pancestors.update(self.ancestormap(p2))
                 queue.append(p2)
 
             visited = set()
@@ -288,89 +288,47 @@ class remotefilelog(object):
 
         raise error.LookupError(id, self.filename, _('no node'))
 
-    def ancestormap(self, node, relativeto=None):
-        # ancestormaps are a bit complex, and here's why:
-        #
-        # The key for filelog blobs contains the hash for the file path and for
-        # the file version.  But these hashes do not include information about
-        # the linknodes included in the blob. So it's possible to have multiple
-        # blobs with the same key but different linknodes (for example, if you
-        # rebase you will have the exact same file version, but with a different
-        # linknode). So when reading the ancestormap (which contains linknodes)
-        # we need to make sure all the linknodes are valid in this repo, so we
-        # read through all versions that have ever existed, and pick one that
-        # contains valid linknodes. If we can't find one locally, we then try
-        # the server.
-
+    def ancestormap(self, node):
         hexnode = hex(node)
 
         localcache = self.repo.fileservice.localcache
         reponame = self.repo.name
-        for i in range(0,2):
-            cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
-            try:
-                raw = localcache.read(cachekey)
-                mapping = self._ancestormap(node, raw, relativeto, fromserver=True)
-                if mapping:
-                    return mapping
-            except KeyError:
-                pass
 
-            localkey = fileserverclient.getlocalkey(self.filename, hexnode)
-            localpath = os.path.join(self.localpath, localkey)
-            try:
-                raw = _readfile(localpath)
-                mapping = self._ancestormap(node, raw, relativeto)
-                if mapping:
-                    return mapping
-            except IOError:
-                pass
+        # Check the local cache of remote data
+        cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
+        try:
+            raw = localcache.read(cachekey)
+            mapping = self._ancestormap(node, raw)
+            if mapping:
+                return mapping
+        except KeyError:
+            pass
 
-            # past versions may contain valid linknodes
-            try:
-                filename = os.path.basename(localpath)
-                directory = os.path.dirname(localpath)
-                alternates = [f for f in os.listdir(directory) if
-                         len(f) > 40 and f.startswith(filename)]
-                alternates = sorted(alternates, key=lambda x: int(x[40:]))
+        # Check our local commit data
+        localkey = fileserverclient.getlocalkey(self.filename, hexnode)
+        localpath = os.path.join(self.localpath, localkey)
+        try:
+            raw = _readfile(localpath)
+            mapping = self._ancestormap(node, raw)
+            if mapping:
+                return mapping
+        except IOError:
+            pass
 
-                for alternate in alternates:
-                    alternatepath = os.path.join(directory, alternate)
-                    try:
-                        raw = _readfile(alternatepath)
-                        mapping = self._ancestormap(node, raw, relativeto)
-                        if mapping:
-                            return mapping
-                    except IOError:
-                        pass
-            except OSError:
-                # Directory doesn't exist. Oh well
-                pass
-
-            # If exists locally, but with a bad history, adjust the linknodes
-            # manually.
-            if relativeto and os.path.exists(localpath):
-                raw = _readfile(localpath)
-                mapping = self._ancestormap(node, raw, relativeto,
-                    adjustlinknodes=True)
-                if mapping:
-                    return mapping
-
-            # Fallback to the server cache
-            self.repo.fileservice.prefetch([(self.filename, hexnode)],
-                force=True)
-            try:
-                raw = localcache.read(cachekey)
-                mapping = self._ancestormap(node, raw, relativeto, fromserver=True)
-                if mapping:
-                    return mapping
-            except KeyError:
-                pass
+        # Fallback to the server cache
+        self.repo.fileservice.prefetch([(self.filename, hexnode)],
+            force=True)
+        try:
+            raw = localcache.read(cachekey)
+            mapping = self._ancestormap(node, raw)
+            if mapping:
+                return mapping
+        except KeyError:
+            pass
 
         raise error.LookupError(node, self.filename, _('no valid file history'))
 
-    def _ancestormap(self, node, raw, relativeto, fromserver=False,
-            adjustlinknodes=False):
+    def _ancestormap(self, node, raw):
         index, size = self._parsesize(raw)
         start = index + 1 + size
 
@@ -387,100 +345,7 @@ class remotefilelog(object):
             mapping[currentnode] = (p1, p2, linknode, copyfrom)
             start = divider + 1
 
-        # check that all linknodes are valid
-        def validmap(node):
-            queue = [node]
-
-            repo = self.repo
-
-            # When writing new file revisions, we need a ancestormap
-            # that contains only linknodes that are ancestors of the new commit.
-            # Otherwise it's possible that a linknode in the ancestormap might
-            # be stripped, resulting in a permanently broken map.
-            if relativeto:
-                # If we're starting from a hidden node, allow hidden ancestors.
-                if relativeto not in repo and relativeto in repo.unfiltered():
-                    repo = repo.unfiltered()
-
-                p1, p2, linknode, copyfrom = mapping[node]
-                if not linknode in repo:
-                    return False
-
-                cl = repo.changelog
-                common = cl.ancestor(linknode, relativeto)
-                if common != linknode:
-                    # Invalid key, unless it's from the server
-                    return fromserver
-
-            # Also check that the linknodes actually exist.
-            while queue:
-                node = queue.pop(0)
-                p1, p2, linknode, copyfrom = mapping[node]
-                if not linknode in repo:
-                    return False
-                if p1 != nullid:
-                    queue.append(p1)
-                if p2 != nullid:
-                    queue.append(p2)
-
-            return True
-
-        if not validmap(node):
-            if adjustlinknodes and relativeto:
-                return self._fixmappinglinknodes(mapping, node, relativeto)
-            return None
-
         return mapping
-
-    def _fixmappinglinknodes(self, mapping, node, relativeto):
-        """Takes a known-invalid mapping and does the minimal amount of work to
-        produce a valid mapping, given the desired relative commit."""
-        repo = self.repo
-        cl = repo.unfiltered().changelog
-        ma = repo.manifest
-
-        newmapping = {}
-
-        # Given a file node and a source commit, fills in the newmapping
-        # with the valid history of that file node, relative to the source
-        # commit.
-        # Can't use recursion here since it might exceed the callstack depth.
-        stack = [(self.filename, node, relativeto, False)]
-        while stack:
-            path, fnode, source, autoaccept = stack.pop()
-            if fnode == nullid or fnode in newmapping:
-                continue
-
-            p1, p2, linknode, copyfrom = mapping[fnode]
-            if (autoaccept or (linknode in cl.nodemap and
-                cl.ancestor(linknode, source) == linknode)):
-                newmapping[fnode] = p1, p2, linknode, copyfrom
-                stack.append((path, p2, linknode, True))
-                stack.append((copyfrom or path, p1, linknode, True))
-            else:
-                srcrev = cl.rev(source)
-                iteranc = cl.ancestors([srcrev], inclusive=True)
-                for a in iteranc:
-                    ac = cl.read(a) # get changeset data (we avoid object creation)
-                    if path in ac[3]: # checking the 'files' field.
-                        # The file has been touched, check if the filenode is
-                        # the same one we're searching for.
-                        if fnode == ma.readfast(ac[0]).get(path):
-                            linknode = cl.node(a)
-                            newmapping[fnode] = p1, p2, linknode, copyfrom
-                            stack.append((path, p2, linknode, False))
-                            stack.append((copyfrom or path, p1, linknode, False))
-                            break
-                else:
-                    # This shouldn't happen, but if for some reason we are unable to
-                    # resolve a correct mapping, give up and let the _ancestormap()
-                    # above try a new method.
-                    msg = ("remotefilelog: unable to find valid history for "
-                        "%s:%s" % (path, hex(fnode)))
-                    repo.ui.warn(msg)
-                    return None
-
-        return newmapping
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:
