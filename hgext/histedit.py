@@ -359,6 +359,23 @@ class histeditaction(object):
             raise error.Abort(_('unknown changeset %s listed')
                               % ha[:12])
 
+    def torule(self):
+        """build a histedit rule line for an action
+
+        by default lines are in the form:
+        <hash> <rev> <summary>
+        """
+        ctx = self.repo[self.node]
+        summary = ''
+        if ctx.description():
+            summary = ctx.description().splitlines()[0]
+        line = '%s %s %d %s' % (self.verb, ctx, ctx.rev(), summary)
+        # trim to 75 columns by default so it's not stupidly wide in my editor
+        # (the 5 more are left for verb)
+        maxlen = self.repo.ui.configint('histedit', 'linelen', default=80)
+        maxlen = max(maxlen, 22) # avoid truncating hash
+        return util.ellipsis(line, maxlen)
+
     def constraints(self):
         """Return a set of constrains that this action should be verified for
         """
