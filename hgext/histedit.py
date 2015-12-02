@@ -328,6 +328,14 @@ class histeditstate(object):
     def inprogress(self):
         return self.repo.vfs.exists('histedit-state')
 
+    @property
+    def actions(self):
+        actions = []
+        for (act, rest) in self.rules:
+            actions.append(actiontable[act].fromrule(self, rest))
+        return actions
+
+
 class histeditaction(object):
     def __init__(self, state, node):
         self.state = state
