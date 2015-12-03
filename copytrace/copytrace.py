@@ -14,8 +14,7 @@ import dbutil, error
 
 def _createctxstack(repo, c, ca):
     """
-    c is the more recent context, ca the ancestor to reach
-    returns the ctx stack between them
+    returns the ctx stack from c (most recent) to a (ancestor to reach)
     """
     ctxstack = []
     curctx = c
@@ -34,8 +33,8 @@ def _createctxstack(repo, c, ca):
 def _forwardrenamesandpaths(repo, ctxstack, m):
     """
     m the most recent manifest
-    returns {dst@c2, [src@ca, ...]} the full path of renames from src to dst
-            {src@anc, [dst]}
+    returns {dst@c, [src@ca, ...]} the full path of renames from src to dst
+            {src@ca, [dst@c]}
     e.g.
 
         bbb
@@ -179,14 +178,17 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
 
         used = []
         for f in u1:
+            # the file was created and not moved from @ca
             if not f in paths1:
                 continue
             used1 = _checkfile(f, paths1[f], renames2, m2, copy, renamedelete)
             used.extend(used1)
         for f in u2:
+            # the file was created and not moved from @ca
             if not f in paths2:
                 continue
-            used.extend(_checkfile(f, paths2[f], renames1, m1, copy, renamedelete))
+            used2 = _checkfile(f, paths2[f], renames1, m1, copy, renamedelete)
+            used.extend(used2)
 
         for src, dstl in renames1.iteritems():
             for dst in dstl:
@@ -210,7 +212,7 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
 
 def _chain(src, dst, a, b):
     """
-    chain two sets of copies a->b, renames are okay if move = True
+    chains two sets of copies a->b
     """
     t = a.copy()
     for bdst, bsrc in b.iteritems():
@@ -250,8 +252,8 @@ def _dirstaterenames(ctx):
 
 def _processrenames(repo, ctx, datapkg, renamed, move=False):
     """
-    Adds the renames {dst: src} to the 'renamed' dictionary if the source is
-     in files
+    adds the renames {dst: src} to the 'renamed' dictionary if the source is
+    in files
     """
     data = datapkg[ctx.hex()]
     movedsrc = []
@@ -273,7 +275,7 @@ def _processrenames(repo, ctx, datapkg, renamed, move=False):
 
 def _forwardrenameswithdb(a, b, match=None, move=False):
     """
-    find {dst@b: src@a} renames mapping where a is an ancestor of b
+    finds {dst@b: src@a} renames mapping where a is an ancestor of b
     if move = True, copies are not considered
     """
     if move:
@@ -315,7 +317,7 @@ def _forwardrenameswithdb(a, b, match=None, move=False):
 
 def _backwardrenameswithdb(a, b):
     """
-    find {src@b: dst@a} moves mapping where b is an ancestor of a
+    finds {src@b: dst@a} moves mapping where b is an ancestor of a
     """
     # Even though we're not taking copies into account, 1:n rename situations
     # can still exist (e.g. hg cp a b; hg mv a c). In those cases we
@@ -333,7 +335,7 @@ def _backwardrenameswithdb(a, b):
 
 def pathcopieswithdb(orig, x, y, match=None):
     """
-    find {dst@y: src@x} copy mapping for directed compare
+    finds {dst@y: src@x} copy mapping for directed compare
     """
     try:
         if x == y or not x or not y:

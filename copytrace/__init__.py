@@ -19,12 +19,27 @@ def uisetup(ui):
     order.append('copytrace')
     extensions._order = order
 
+    # Creating the 'fillmvdb' command
     command('^fillmvdb', [
         ('', 'stop', '-1', _('stopping rev -- not included')),
         ('', 'start', '.', _('starting rev -- included'))
         ] , '') (filldb.fillmvdb)
 
+
 def extsetup(ui):
+    # - Enablefilldb allows the local database to be filled when using commit,
+    # amend or rebase
+    # - Enablebundle2 allows to exchange move data with the server during pulls
+    # and pushs
+    # - Enablecopytracing allows the use of the local database to do 
+    # copytracing during rebases, 'hg st -C', ...
+
+    # /!\
+    # Enablecopytracing should not be used if Enablefilldb and Enablebundle2
+    # are not allowed on every client. It would be very slow since it will
+    # manually calculate and add to the local database all missing moves not
+    # present in the server database
+
     if ui.configbool("copytrace", "enablefilldb", False):
         wrapfunction(cmdutil, 'commit', filldb.commit)
         wrapfunction(cmdutil, 'amend', filldb.amend)
@@ -38,7 +53,7 @@ def extsetup(ui):
     if ui.configbool("copytrace", "enablebundle2", False):
         wrapfunction(exchange, '_pullbundle2extraprepare',
                     bundle2._pullbundle2extraprepare)
-        # Adding the options to the ones accepted by bundle2
+        # Adding the 'movedatareq' arguement to the ones accepted by bundle2
         wireproto.gboptsmap['movedatareq'] = 'nodes'
 
         # Generating this part last so as to handle after 'pushrebase' if that
