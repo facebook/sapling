@@ -27,6 +27,45 @@ should still fail - maybe
   abort: path 'b/b' traverses symbolic link 'b' (glob)
   [255]
 
+  $ hg commit -m 'add symlink b'
+
+
+Test symlink traversing when accessing history:
+-----------------------------------------------
+
+(build a changeset where the path exists as a directory)
+
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mkdir b
+  $ echo c > b/a
+  $ hg add b/a
+  $ hg ci -m 'add directory b'
+  created new head
+
+Test that hg cat does not do anything wrong the working copy has 'b' as directory
+
+  $ hg cat b/a
+  c
+  $ hg cat -r "desc(directory)" b/a
+  c
+  $ hg cat -r "desc(symlink)" b/a
+  b/a: no such file in rev bc151a1f53bd
+  [1]
+
+Test that hg cat does not do anything wrong the working copy has 'b' as a symlink (issue4749)
+
+  $ hg up 'desc(symlink)'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg cat b/a
+  b/a: no such file in rev bc151a1f53bd
+  [1]
+  $ hg cat -r "desc(directory)" b/a
+  c
+  $ hg cat -r "desc(symlink)" b/a
+  b/a: no such file in rev bc151a1f53bd
+  [1]
+
 #endif
 
 

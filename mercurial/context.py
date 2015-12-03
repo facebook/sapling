@@ -271,7 +271,7 @@ class basectx(object):
         r = self._repo
         return matchmod.match(r.root, r.getcwd(), pats,
                               include, exclude, default,
-                              auditor=r.auditor, ctx=self,
+                              auditor=r.nofsauditor, ctx=self,
                               listsubrepos=listsubrepos, badfn=badfn)
 
     def diff(self, ctx2=None, match=None, **opts):
