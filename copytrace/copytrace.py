@@ -370,9 +370,23 @@ def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
             rev = rebaseset.first()
             rebased = repo[rev]
             ca = rebased.ancestor(dest)
-            ctxlist = list(repo.set("only(%r, %r)" % (dest.rev(), ca.rev())))
-            if ctxlist:
-                dbutil.checkpresence(repo, [ctx.hex() for ctx in ctxlist])
+
+            # Checking if the first and last revs are in the database
+            notin = dbutil.checkpresence(repo, [dest.hex(), ca.hex()],
+                                         True, False)
+
+            # If one of them is missing go through all
+            # Else assume that the ones in between should all be in
+            if notin:
+                ctxlist = list(repo.set("only(%r, %r)" %
+                               (dest.rev(), ca.rev())))
+                if ctxlist:
+                    maxi = int(repo.ui.config('copytrace', 'maxquery', '500'))
+                    length = len(ctxlist)
+                    for i in range(0, length, maxi):
+                        subctx = ctxlist[i:min(i+maxi, length)]
+                        dbutil.checkpresence(repo,
+                             [ctx.hex() for ctx in subctx], True, False)
 
     except Exception as e:
         error.logfailure(repo, e, "buildstate")

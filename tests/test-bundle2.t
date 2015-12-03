@@ -90,7 +90,7 @@ REQUESTS MISSING MOVES DURING REBASE
   9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
   $ hg rebase -s 9c11d0 -d 274c7e
   pulling move data from ssh://user@dummy/serverrepo
-  moves for 1 changesets retrieved
+  moves for 2 changesets retrieved
   rebasing 3:9c11d01510fa "mv a c" (tip)
   note: possible conflict - a was renamed multiple times to:
    b
@@ -103,6 +103,8 @@ REQUESTS MISSING MOVES DURING REBASE
   274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
   9c11d01510faa13840e36ea2d8acdd0b126cca67|a|c|1
   9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1
   $ cd ..
 
 
@@ -125,8 +127,12 @@ REBASING ON ANOTHER DRAFT BRANCH -- SERVER HAS NO MOVE DATA -- LOCAL DATA ERASED
   756b298ed880909df1cec4e7c763b22cc22064ff|||0
   9c11d01510faa13840e36ea2d8acdd0b126cca67|a|c|1
   9c11d01510faa13840e36ea2d8acdd0b126cca67|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1
   $ rm .hg/moves.db
   $ hg rebase -s 165d58 -d 756b29
+  pulling move data from ssh://user@dummy/serverrepo
+  moves for 1 changesets retrieved
   rebasing 5:165d58c1c606 "mv c e" (tip)
   note: possible conflict - c was renamed multiple times to:
    d
@@ -137,5 +143,7 @@ REBASING ON ANOTHER DRAFT BRANCH -- SERVER HAS NO MOVE DATA -- LOCAL DATA ERASED
   165d58c1c606c35cdad6f4fe1939d578513e6806|||0
   756b298ed880909df1cec4e7c763b22cc22064ff|c|d|1
   756b298ed880909df1cec4e7c763b22cc22064ff|||0
+  89c7ee4b298e2371d470910ff5a4ecce28ee49d9|b|c|1
+  89c7ee4b298e2371d470910ff5a4ecce28ee49d9|||0
   fa511326cccaa2c9933c752bd0009407f7cfcd2d|||0
   fa511326cccaa2c9933c752bd0009407f7cfcd2d|||1

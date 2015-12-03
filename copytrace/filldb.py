@@ -128,7 +128,8 @@ def _fillctx(repo, ctxlist):
     check the presence of the ctx move data or adds it returning its parents
     """
     try:
-        added = dbutil.checkpresence(repo, ctxlist, askserver=False)
+        added = dbutil.checkpresence(repo, ctxlist, askserver=False,
+                                     addmissing=True)
         # The ctx was already processed, we don't check its parents
         if not added:
             return []
@@ -142,4 +143,4 @@ def _fillctx(repo, ctxlist):
                 parents.append(ctx.p2())
             return parents
     except:
-        repo.ui.warn("%s failed\n" % curctx.hex())
+        repo.ui.warn("%s failed\n" % ''.join(ctxlist))

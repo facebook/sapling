@@ -216,13 +216,13 @@ def insertrawdata(repo, dic, mapping={}):
     _close(conn, cursor)
 
 
-def retrievedatapkg(repo, ctxlist, move=False, askserver=True, addmissing=True):
+def retrievedatapkg(repo, ctxlist, move=False, askserver=False, addmissing=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
     # Checks if the database has the data, else, asks it to the server, or adds
     # it manually
-    checkpresence(repo, ctxlist, askserver)
+    checkpresence(repo, ctxlist, askserver, addmissing)
 
     dbname, conn, cursor = _connect(repo)
 
@@ -317,20 +317,23 @@ def removectx(repo, ctx):
     _close(conn, cursor)
 
 
-def checkpresence(repo, ctxhashs, askserver=True):
+def checkpresence(repo, ctxhashs, askserver=False, addmissing=False):
     """
     checks if the ctx in ctxhashs are in the local database or requests for it
     """
+    missing = []
+
     if askserver:
         missing = _processmissing(repo, ctxhashs, mutable=False)
         # Requests the missing data to the server
         if missing and not repo.copytraceremote:
             _requestdata(repo, missing)
 
-    missing = _processmissing(repo, ctxhashs)
-    # Manually adds the still missing data
-    if missing:
-        _addmissingmoves(repo, missing)
+    if addmissing:
+        missing = _processmissing(repo, ctxhashs)
+        # Manually adds the still missing data
+        if missing:
+            _addmissingmoves(repo, missing)
 
     return missing
 
