@@ -85,19 +85,23 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
     return paths, renames
 
 
-def _checkfile(f, pathf, renames2, m2, copy, renamedelete):
+def _checkfile(f, pathf, renames2, c2, ancr, ma, copy, renamedelete,
+               rebased=False):
     """
     f the file to check
     pathf its path from the ancestor to c1
+    ancr the rev number of the ancestor
+    ma the manifest of ca
     renames2 the {src, [dst]} moves between ancestor and c2
-    m2 the manifest in c2
     copy and renamedelete the structures to complete
     > check what happened to the file f from c1 in the c2 branch
     > returns the 'used' files in renames2 so that they are not considered as
     divergent
     """
+    m2 = c2.manifest()
     used = []
     of = pathf[0]
+
     # the original file was renamed in the other branch
     if of in renames2.keys():
         intersect = [val for val in pathf if val in renames2[of]]
@@ -121,7 +125,9 @@ def _checkfile(f, pathf, renames2, m2, copy, renamedelete):
         used.append(f)
     # the original file is still in c2
     else:
-        copy[f] = of
+        # The file was modified in the other branch or before in this branch
+        if c2.filectx(of).linkrev() > ancr or (rebased and of not in ma):
+            copy[f] = of
         used.append(f)
 
     return used
@@ -162,7 +168,6 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
         anc = c1.ancestor(c2)
         paths1, renames1 = _branch(repo, c1, anc)
         paths2, renames2 = _branch(repo, c2, anc)
-
         copy = {}
         renamedelete = {}
         diverge = {}
@@ -181,13 +186,15 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
             # the file was created and not moved from @ca
             if not f in paths1:
                 continue
-            used1 = _checkfile(f, paths1[f], renames2, m2, copy, renamedelete)
+            used1 = _checkfile(f, paths1[f], renames2, c2, anc.rev(), ma,
+                               copy, renamedelete)
             used.extend(used1)
         for f in u2:
             # the file was created and not moved from @ca
             if not f in paths2:
                 continue
-            used2 = _checkfile(f, paths2[f], renames1, m1, copy, renamedelete)
+            used2 = _checkfile(f, paths2[f], renames1, c1, anc.rev(), ma,
+                               copy, renamedelete, rebased=True)
             used.extend(used2)
 
         for src, dstl in renames1.iteritems():
