@@ -16,9 +16,9 @@
   $ touch 1
   $ hg commit -qAm 3
   $ hg debugindex -m
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      44      0       0 a84de0447720 000000000000 000000000000
-       1        44      44      1       1 eff23848989b 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 a84de0447720 000000000000 000000000000
+       1        44      44     -1       1 eff23848989b 000000000000 000000000000
   $ cd ..
 
 # Verify pulling out of order filelog linkrevs get reordered.
@@ -31,7 +31,7 @@
   rev: 1 desc: 2
   rev: 0 desc: 1
   $ hg debugindex -m
-     rev    offset  length   base linkrev nodeid       p1           p2
-       0         0      44      0       0 eff23848989b 000000000000 000000000000
-       1        44      44      1       1 a84de0447720 000000000000 000000000000
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0      44     -1       0 eff23848989b 000000000000 000000000000
+       1        44      44     -1       1 a84de0447720 000000000000 000000000000
   $ cd ..
