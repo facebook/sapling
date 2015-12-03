@@ -991,8 +991,15 @@ class GitHandler(object):
                 self.ui.status(_("adding objects\n"))
             return self.git.object_store.generate_pack_contents(have, want)
 
+        def callback(remote_info):
+            if not remote_info:
+                remote_info = ''
+            for line in remote_info.split('\n'):
+                self.ui.status(_("remote: %s\n") % line)
+
         try:
-            new_refs = client.send_pack(path, changed, genpack)
+            new_refs = client.send_pack(path, changed, genpack,
+                                        progress=callback)
             if len(change_totals) > 0:
                 self.ui.status(_("added %d commits with %d trees"
                                  " and %d blobs\n") %
