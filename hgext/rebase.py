@@ -563,10 +563,10 @@ def rebase(ui, repo, **opts):
                 if activebookmark not in repo._bookmarks:
                     # active bookmark was divergent one and has been deleted
                     activebookmark = None
-            clearstatus(repo)
             tr.close()
         finally:
             release(tr)
+        clearstatus(repo)
 
         ui.note(_("rebase completed\n"))
         util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
