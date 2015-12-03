@@ -681,10 +681,19 @@ new tags must be visible in pretxncommit (issue3210)
   $ hg tag -f foo
   ['a', 'foo', 'tip']
 
-new commits must be visible in pretxnchangegroup (issue3428)
+post-init hooks must not crash (issue4983)
+This also creates the `to` repo for the next test block.
 
   $ cd ..
-  $ hg init to
+  $ cat << EOF >> hgrc-with-post-init-hook
+  > [hooks]
+  > post-init = printenv.py post-init
+  > EOF
+  $ HGRCPATH=hgrc-with-post-init-hook hg init to
+  post-init hook: HG_ARGS=init to HG_OPTS={'insecure': None, 'remotecmd': '', 'ssh': ''} HG_PATS=['to'] HG_RESULT=0
+
+new commits must be visible in pretxnchangegroup (issue3428)
+
   $ echo '[hooks]' >> to/.hg/hgrc
   $ echo 'prechangegroup = hg --traceback tip' >> to/.hg/hgrc
   $ echo 'pretxnchangegroup = hg --traceback tip' >> to/.hg/hgrc
