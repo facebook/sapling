@@ -220,22 +220,29 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=False, addmissing=True)
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """
-    # Checks if the database has the data, else, asks it to the server, or adds
-    # it manually
-    checkpresence(repo, ctxlist, askserver, addmissing)
-
     dbname, conn, cursor = _connect(repo)
 
     # Do we want moves or copies
     mv = '1' if move else '0'
     token = '%s' if repo.copytraceremote else '?'
 
-    # Returns : hash, src, dst
-    cursor.execute(_sqlcmds('retrievemoves', repo.copytraceremote) %
-              (','.join([token] * len(ctxlist)), token, token),
-              ctxlist + [mv, repo.root])
+    all_rows = []
+    length = len(ctxlist)
+    maxi = int(repo.ui.config('copytrace', 'maxquery', '500'))
+    # Cutting the query by a thousand so that it doesn't get too big
+    for i in range(0, length, maxi):
+        subctx = ctxlist[i:min(i + maxi, length)]
 
-    all_rows = cursor.fetchall()
+        # Checks if the database has the data, else, asks it to the server,
+        # or adds it manually
+        checkpresence(repo, subctx, askserver, addmissing)
+
+        # Returns : hash, src, dst
+        cursor.execute(_sqlcmds('retrievemoves', repo.copytraceremote) %
+                  (','.join([token] * len(subctx)), token, token),
+                  subctx + [mv, repo.root])
+        all_rows.extend(cursor.fetchall())
+
     _close(conn, cursor)
 
     ret = {}
@@ -275,12 +282,18 @@ def retrieverawdata(repo, ctxlist):
     dbname, conn, cursor = _connect(repo)
     token = '%s' if repo.copytraceremote else '?'
 
-    # Returns: hash, src, dst, mv
-    cursor.execute(_sqlcmds('retrieveraw', repo.copytraceremote) %
-                   (','.join([token] * len(ctxlist)), token),
-                   ctxlist + [repo.root])
+    all_rows = []
+    length = len(ctxlist)
+    maxi = int(repo.ui.config('copytrace', 'maxquery', '500'))
+    # Cutting the query by a thousand so that it doesn't get too big
+    for i in range(0, length, maxi):
+        subctx = ctxlist[i:min(i+maxi, length)]
+        # Returns: hash, src, dst, mv
+        cursor.execute(_sqlcmds('retrieveraw', repo.copytraceremote) %
+                       (','.join([token] * len(subctx)), token),
+                       subctx + [repo.root])
+        all_rows.extend(cursor.fetchall())
 
-    all_rows = cursor.fetchall()
     _close(conn, cursor)
 
     return _builddict(all_rows)
