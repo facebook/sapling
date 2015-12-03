@@ -23,15 +23,22 @@ class pathauditor(object):
     - under top-level .hg
     - starts at the root of a windows drive
     - contains ".."
+
+    More check are also done about the file system states:
     - traverses a symlink (e.g. a/symlink_here/b)
     - inside a nested repository (a callback can be used to approve
       some nested repositories, e.g., subrepositories)
+
+    The file system checks are only done when 'realfs' is set to True (the
+    default). They should be disable then we are auditing path for operation on
+    stored history.
     '''
 
-    def __init__(self, root, callback=None):
+    def __init__(self, root, callback=None, realfs=True):
         self.audited = set()
         self.auditeddir = set()
         self.root = root
+        self._realfs = realfs
         self.callback = callback
         if os.path.lexists(root) and not util.checkcase(root):
             self.normcase = util.normcase
@@ -81,7 +88,8 @@ class pathauditor(object):
             normprefix = os.sep.join(normparts)
             if normprefix in self.auditeddir:
                 break
-            self._checkfs(prefix, path)
+            if self._realfs:
+                self._checkfs(prefix, path)
             prefixes.append(normprefix)
             parts.pop()
             normparts.pop()
