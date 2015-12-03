@@ -60,17 +60,28 @@ def _pushb2movedata(pushop, bundler):
     add parts containing the movedata when pushing new commits -- client-side
     """
     repo = pushop.repo
-    ctxlist = _processctxlist(repo, pushop.remoteheads, pushop.revs)
-    if ctxlist:
-        try:
-            dic = dbutil.retrieverawdata(repo, ctxlist)
-        except Exception as e:
-            dberror.logfailure(repo, e, "_pushb2movedata")
-            return
-        data = _encodedict(dic)
-        repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
 
-        part = bundler.newpart('push:movedata', data=data, mandatory=False)
+    try:
+        # Send the whole database
+        if repo.ui.configbool('copytrace', 'pushmvdb'):
+            dic = dbutil.retrieveallrawdata(repo)
+        # Send the moves related to the pushed commits
+        else:
+            ctxlist = _processctxlist(repo, pushop.remoteheads, pushop.revs)
+            # Moves to send
+            if ctxlist:
+                dic = dbutil.retrieverawdata(repo, ctxlist)
+            # No moves to send
+            else:
+                return
+    except Exception as e:
+        dberror.logfailure(repo, e, "_pushb2movedata")
+        return
+
+    data = _encodedict(dic)
+    repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
+
+    part = bundler.newpart('push:movedata', data=data, mandatory=False)
 
 
 @bundle2.parthandler('push:movedata')
@@ -124,6 +135,7 @@ def _handlemovedatarequest(op, inpart):
         dbutil.insertrawdata(op.repo, dic)
     except Exception as e:
         dberror.logfailure(op.repo, e, "_handlemovedatarequest-pull")
+
 
 def _processctxlist(repo, remoteheads, localheads):
     """

@@ -63,6 +63,12 @@ def _sqlcmds(name, remote):
                'FROM Moves ' + \
                'WHERE hash IN (%s) and repo = %s;'
 
+    elif name == 'retrieveallraw':
+        if not remote:
+            return 'SELECT DISTINCT hash, source, destination, mv ' + \
+                   'FROM Moves ' + \
+                   'WHERE repo = ?'
+
     elif name == 'retrievehashes':
         if not remote:
             return 'SELECT DISTINCT hash ' + \
@@ -245,6 +251,22 @@ def retrievedatapkg(repo, ctxlist, move=False, askserver=True, addmissing=True):
     return ret
 
 
+def _builddict(rows):
+    """
+    building {ctxhash: [src, dst, mv]} from the database rows
+    """
+    ret = {}
+    for ctxhash, src, dst, mv in rows:
+        # No move or No copy
+        if not src and not dst:
+            src = 'None'
+            dst = 'None'
+        ret.setdefault(ctxhash.encode('utf8'), []).append((src.encode('utf8'),
+             dst.encode('utf8'), mv.encode('utf8')))
+
+    return ret
+
+
 def retrieverawdata(repo, ctxlist):
     """
     retrieves {ctxhash: [src, dst, mv]} for ctxhash in ctxlist for moves or
@@ -261,17 +283,22 @@ def retrieverawdata(repo, ctxlist):
     all_rows = cursor.fetchall()
     _close(conn, cursor)
 
-    ret = {}
-    # Building the mvdict and cpdict for each ctxhash:
-    for ctxhash, src, dst, mv in all_rows:
-        # No move or No copy
-        if not src and not dst:
-            src = 'None'
-            dst = 'None'
-        ret.setdefault(ctxhash.encode('utf8'), []).append((src.encode('utf8'),
-             dst.encode('utf8'), mv.encode('utf8')))
+    return _builddict(all_rows)
 
-    return ret
+
+def retrieveallrawdata(repo):
+    """
+    retrieves all {ctxhash: [src, dst, mv]} in the local database
+    """
+    dbname, conn, cursor = _connect(repo)
+
+    # Returns hash, src, dst, mv
+    cursor.execute(_sqlcmds('retrieveallraw', repo.copytraceremote),
+                   [repo.root])
+    all_rows = cursor.fetchall()
+    _close(conn, cursor)
+
+    return _builddict(all_rows)
 
 
 def removectx(repo, ctx):
