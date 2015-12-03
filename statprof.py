@@ -273,7 +273,8 @@ def stop():
         signal.signal(signal.SIGPROF, signal.SIG_IGN)
         state.remaining_prof_time = rpt[0]
 
-        save_data()
+        statprofpath = os.environ.get('STATPROF_DEST')
+        save_data(statprofpath)
 
 def save_data(path=None):
     try:
