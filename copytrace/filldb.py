@@ -103,3 +103,43 @@ def concludenode(orig, repo, rev, p1, p2, **kwargs):
         if flag == 0:
             _adddata(repo)
         return ret
+
+
+def fillmvdb(ui, repo, *pats, **opts):
+    """
+    moves backwards on the tree to adds copytrace data
+    """
+    start = opts.get('start').split(',')
+    stop = int(opts.get('stop'))
+    try:
+        ctxlist = [repo[startctx].hex() for startctx in start]
+        while ctxlist:
+            plist = _fillctx(repo, ctxlist)
+            ctxlist = []
+            for p in plist:
+                if p and p.rev() != stop:
+                    ctxlist.append(p.hex())
+    except:
+        ui.warn(ctxlist)
+
+
+def _fillctx(repo, ctxlist):
+    """
+    check the presence of the ctx move data or adds it returning its parents
+    """
+    try:
+        added = dbutil.checkpresence(repo, ctxlist, askserver=False)
+        # The ctx was already processed, we don't check its parents
+        if not added:
+            return []
+        else:
+            repo.ui.warn("Loop:\n")
+            parents = []
+            for ctxhash in added:
+                ctx = repo[ctxhash]
+                repo.ui.warn("%s added\n" % ctxhash)
+                parents.append(ctx.p1())
+                parents.append(ctx.p2())
+            return parents
+    except:
+        repo.ui.warn("%s failed\n" % curctx.hex())

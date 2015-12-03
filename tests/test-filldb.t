@@ -135,3 +135,60 @@ Manually adding missing move data
   502dd38c92fc5edffa608131206446b1fbee879b|c|e|1
   502dd38c92fc5edffa608131206446b1fbee879b|||0
 
+  $ cd ..
+  $ rm -rf repo
+
+
+
+Setup repo
+
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ touch a
+  $ hg add a
+  $ hg commit -m "add a"
+  $ hg mv a b
+  $ hg commit -m "mv a b"
+  $ hg mv b c
+  $ hg commit -m "mv b c"
+  $ hg update -q .^
+  $ hg mv b d
+  $ hg commit -q -m "mv b d"
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
+  @  changeset: 52af712267d157e71e1f2ab6a52a6bccc5c4874d
+  |   desc: mv b d
+  | o  changeset: 89c7ee4b298e2371d470910ff5a4ecce28ee49d9
+  |/    desc: mv b c
+  o  changeset: 274c7e2c58b0256e17dc0f128380c8600bb0ee43
+  |   desc: mv a b
+  o  changeset: ac82d8b1f7c418c61a493ed229ffaa981bda8e90
+      desc: add a
+  $ rm .hg/moves.db
+  $ hg fillmvdb
+  Loop:
+  52af712267d157e71e1f2ab6a52a6bccc5c4874d added
+  Loop:
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43 added
+  Loop:
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90 added
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
+  52af712267d157e71e1f2ab6a52a6bccc5c4874d|b|d|1
+  52af712267d157e71e1f2ab6a52a6bccc5c4874d|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1
+  $ hg update -q 89c7ee4
+  $ hg fillmvdb
+  Loop:
+  89c7ee4b298e2371d470910ff5a4ecce28ee49d9 added
+  $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|a|b|1
+  274c7e2c58b0256e17dc0f128380c8600bb0ee43|||0
+  52af712267d157e71e1f2ab6a52a6bccc5c4874d|b|d|1
+  52af712267d157e71e1f2ab6a52a6bccc5c4874d|||0
+  89c7ee4b298e2371d470910ff5a4ecce28ee49d9|b|c|1
+  89c7ee4b298e2371d470910ff5a4ecce28ee49d9|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||0
+  ac82d8b1f7c418c61a493ed229ffaa981bda8e90|||1

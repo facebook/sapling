@@ -305,6 +305,7 @@ def checkpresence(repo, ctxhashs, askserver=True):
     if missing:
         _addmissingmoves(repo, missing)
 
+    return missing
 
 def _processmissing(repo, ctxhashs, mutable=True):
     """

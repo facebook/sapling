@@ -1,9 +1,14 @@
 from mercurial.extensions import wrapfunction, wrapcommand
 from mercurial import extensions, commands, copies, cmdutil, exchange, wireproto
 from hgext import rebase
+from mercurial.i18n import _
 import filldb
 import copytrace
 import bundle2
+
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 
 def uisetup(ui):
@@ -14,6 +19,10 @@ def uisetup(ui):
     order.append('copytrace')
     extensions._order = order
 
+    command('^fillmvdb', [
+        ('', 'stop', '-1', _('stopping rev -- not included')),
+        ('', 'start', '.', _('starting rev -- included'))
+        ] , '') (filldb.fillmvdb)
 
 def extsetup(ui):
     if ui.configbool("copytrace", "enablefilldb", False):
