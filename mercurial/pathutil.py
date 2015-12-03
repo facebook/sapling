@@ -111,14 +111,13 @@ class pathauditor(object):
                 raise
         else:
             if stat.S_ISLNK(st.st_mode):
-                raise error.Abort(
-                    _('path %r traverses symbolic link %r')
-                    % (path, prefix))
+                msg = _('path %r traverses symbolic link %r') % (path, prefix)
+                raise error.Abort(msg)
             elif (stat.S_ISDIR(st.st_mode) and
                   os.path.isdir(os.path.join(curpath, '.hg'))):
                 if not self.callback or not self.callback(curpath):
-                    raise error.Abort(_("path '%s' is inside nested "
-                                        "repo %r") % (path, prefix))
+                    msg = _("path '%s' is inside nested repo %r")
+                    raise error.Abort(msg % (path, prefix))
 
     def check(self, path):
         try:
