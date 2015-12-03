@@ -11,8 +11,11 @@ import os, socket, re, time
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
-@command('^rage', [], _('hg rage'))
-def rage(ui, repo):
+@command('^rage',
+    [('p', 'preview', None,
+      _('print information generated locally, no paste or task created'))],
+    _('hg rage'))
+def rage(ui, repo, *pats, **opts):
     """log useful diagnostics and file a task to source control oncall
 
     The rage command is for logging useful diagnostics about various
@@ -59,7 +62,7 @@ def rage(ui, repo):
 
     basic = [
         ('date', time.ctime()),
-        ('unixname', os.getlogin()),
+        ('unixname', os.getenv('LOGNAME')),
         ('hostname', socket.gethostname()),
         ('repo location', repo.root),
         ('active bookmark', bookmarks.readactive(repo)),
@@ -77,6 +80,11 @@ def rage(ui, repo):
     ]
 
     basic_msg = '\n'.join(map(format, basic))
+    detailed_msg = '\n'.join(map(lambda x: format(x, False), detailed))
+    if opts.get('preview'):
+        print(basic_msg + '\n' + detailed_msg)
+        return
+
     prompt = '''Title: [hg rage] %s on %s by %s
 
 Description:
@@ -85,16 +93,15 @@ Description:
 HG: Edit task title and description. Lines beginning with 'HG:' are removed."
 HG: First line is the title followed by the description.
 HG: Feel free to add relevant information.
-''' % (repo.root, socket.gethostname(), os.getlogin(), basic_msg)
+''' % (repo.root, socket.gethostname(), os.getenv('LOGNAME'), basic_msg)
 
     text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
     lines = text.splitlines()
     title = re.sub("(?m)^Title:\s+", "", lines[0])
     desc = re.sub("(?m)^Description:\s+", "", '\n'.join(lines[1:]))
-    detailed_msg = desc + '\n'.join(map(lambda x: format(x, False), detailed))
 
     print 'pasting the rage info:'
-    paste_url = shcmd('arc paste', detailed_msg).split()[1]
+    paste_url = shcmd('arc paste', desc + detailed_msg).split()[1]
     print paste_url
 
     desc += '\ndetailed output @ ' + paste_url
