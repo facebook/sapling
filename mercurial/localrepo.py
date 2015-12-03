@@ -214,6 +214,8 @@ class localrepository(object):
         self.path = self.wvfs.join(".hg")
         self.origroot = path
         self.auditor = pathutil.pathauditor(self.root, self._checknested)
+        self.nofsauditor = pathutil.pathauditor(self.root, self._checknested,
+                                                realfs=False)
         self.vfs = scmutil.vfs(self.path)
         self.opener = self.vfs
         self.baseui = baseui
