@@ -118,19 +118,17 @@ server obsoletes the old head
   $ cd ..
 
 client only pulls down 1 changeset
-("all local heads known remotely" may change if the wire protocol discovery
-commands ever stop saying they have hidden changesets)
 
   $ cd pull-hidden-common-client
   $ hg pull --debug
   pulling from $TESTTMP/pull-hidden-common (glob)
   query 1; heads
   searching for changes
-  all local heads known remotely
-  3 changesets found
+  taking quick initial sample
+  query 2; still undecided: 2, sample size is: 2
+  2 total queries
+  1 changesets found
   list of changesets:
-  96ee1d7354c4ad7372047672c36a1f561e3a6a4c
-  a33779fdfc23063680fc31e9ff637dff6876d3d2
   bec0734cd68e84477ba7fc1d13e6cff53ab70129
   listing keys for "phase"
   listing keys for "bookmarks"
@@ -141,14 +139,12 @@ commands ever stop saying they have hidden changesets)
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory 1 advisory) supported
   adding changesets
-  add changeset 96ee1d7354c4
-  add changeset a33779fdfc23
   add changeset bec0734cd68e
   adding manifests
   adding file changes
   adding foo revisions
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  bundle2-input-part: total payload size 1378
+  bundle2-input-part: total payload size 474
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-bundle: 2 parts total

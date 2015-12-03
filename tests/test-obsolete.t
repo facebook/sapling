@@ -745,8 +745,7 @@ This test issue 3805
   $ hg outgoing
   comparing with $TESTTMP/tmpe/repo-issue3805 (glob)
   searching for changes
-  no changes found
-  [1]
+  1:29f0c6921ddd (draft) [tip ] A
 
 #if serve
 
@@ -760,8 +759,7 @@ This test issue 3805
   $ hg outgoing http://localhost:$HGPORT
   comparing with http://localhost:$HGPORT/
   searching for changes
-  no changes found
-  [1]
+  1:29f0c6921ddd (draft) [tip ] A
 
   $ killdaemons.py
 

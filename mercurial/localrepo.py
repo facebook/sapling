@@ -808,12 +808,13 @@ class localrepository(object):
         return repo[key].branch()
 
     def known(self, nodes):
-        nm = self.changelog.nodemap
-        pc = self._phasecache
+        cl = self.changelog
+        nm = cl.nodemap
+        filtered = cl.filteredrevs
         result = []
         for n in nodes:
             r = nm.get(n)
-            resp = not (r is None or pc.phase(self, r) >= phases.secret)
+            resp = not (r is None or r in filtered)
             result.append(resp)
         return result
 
