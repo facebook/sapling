@@ -653,6 +653,18 @@ class cg1packer(object):
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
         def lookupmflinknode(x):
+            """Callback for looking up the linknode for manifests.
+
+            Returns the linkrev node for the specified manifest.
+
+            SIDE EFFECT:
+
+              fclnodes gets populated with the list of relevant
+              file nodes if we're not using fastpathlinkrev.
+
+            Note that this means you can't trust fclnodes until
+            after manifests have been sent to the client.
+            """
             clnode = mfs[x]
             if not fastpathlinkrev:
                 mdata = ml.readfast(x)
