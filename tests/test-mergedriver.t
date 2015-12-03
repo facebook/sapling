@@ -443,11 +443,36 @@ ensure the right path to load the merge driver hook
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-ensure we fail when the merge driver isn't used
-  $ hg -R repo1 resolve --mark --all
-  abort: merge driver changed since merge started
-  (revert merge driver change or abort merge)
-  [255]
+verify behavior with different merge driver
+  $ hg -R repo1 debugmergestate
+  * version 2 records
+  local: ede3d67b8d0fb0052854c85fb16823c825d21060
+  other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
+  merge driver: python:fail (state "s")
+  file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+    local path: bar.txt (flags "")
+    ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
+    other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+    local path: foo.txt (flags "")
+    ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
+    other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+  $ hg -R repo1 resolve --mark --all --config experimental.mergedriver=
+  (no more unresolved files)
+  $ hg -R repo1 debugmergestate
+  * version 2 records
+  local: ede3d67b8d0fb0052854c85fb16823c825d21060
+  other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
+  file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
+    local path: bar.txt (flags "")
+    ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
+    other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
+    local path: foo.txt (flags "")
+    ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
+    other path: foo.txt (node 0b0743b512ba9b7c5db411597cf374a73b9f00ac)
+  $ hg -R repo1 commit -m merged
+  created new head
 
 this should invoke the merge driver
   $ cd repo1

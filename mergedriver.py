@@ -61,6 +61,13 @@ def wrapconclude(orig, repo, ms, wctx, labels=None):
     ms.commit()
     return True
 
+def wrapmdprop(orig, self):
+    try:
+        return orig(self)
+    except error.ConfigError:
+        # skip this error and go with the new one
+        return self._repo.ui.config('experimental', 'mergedriver')
+
 def _rundriver(repo, ms, op, wctx, labels):
     ui = repo.ui
     mergedriver = ms.mergedriver
@@ -94,3 +101,22 @@ def _rundriver(repo, ms, op, wctx, labels):
 def extsetup(ui):
     extensions.wrapfunction(merge, 'driverpreprocess', wrappreprocess)
     extensions.wrapfunction(merge, 'driverconclude', wrapconclude)
+    wrappropertycache(merge.mergestate, 'mergedriver', wrapmdprop)
+
+def wrappropertycache(cls, propname, wrapper):
+    """Wraps a filecache property. These can't be wrapped using the normal
+    wrapfunction. This should eventually go into upstream Mercurial.
+    """
+    assert callable(wrapper)
+    for currcls in cls.__mro__:
+        if propname in currcls.__dict__:
+            origfn = currcls.__dict__[propname].func
+            assert callable(origfn)
+            def wrap(*args, **kwargs):
+                return wrapper(origfn, *args, **kwargs)
+            currcls.__dict__[propname].func = wrap
+            break
+
+    if currcls is object:
+        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
+                             propname))
