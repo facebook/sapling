@@ -81,25 +81,7 @@ class pathauditor(object):
             normprefix = os.sep.join(normparts)
             if normprefix in self.auditeddir:
                 break
-            curpath = os.path.join(self.root, prefix)
-            try:
-                st = os.lstat(curpath)
-            except OSError as err:
-                # EINVAL can be raised as invalid path syntax under win32.
-                # They must be ignored for patterns can be checked too.
-                if err.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):
-                    raise
-            else:
-                if stat.S_ISLNK(st.st_mode):
-                    raise error.Abort(
-                        _('path %r traverses symbolic link %r')
-                        % (path, prefix))
-                elif (stat.S_ISDIR(st.st_mode) and
-                      os.path.isdir(os.path.join(curpath, '.hg'))):
-                    if not self.callback or not self.callback(curpath):
-                        raise error.Abort(_("path '%s' is inside nested "
-                                           "repo %r")
-                                         % (path, prefix))
+            self._checkfs(prefix, path)
             prefixes.append(normprefix)
             parts.pop()
             normparts.pop()
@@ -108,6 +90,27 @@ class pathauditor(object):
         # only add prefixes to the cache after checking everything: we don't
         # want to add "foo/bar/baz" before checking if there's a "foo/.hg"
         self.auditeddir.update(prefixes)
+
+    def _checkfs(self, prefix, path):
+        """raise exception if a file system backed check fails"""
+        curpath = os.path.join(self.root, prefix)
+        try:
+            st = os.lstat(curpath)
+        except OSError as err:
+            # EINVAL can be raised as invalid path syntax under win32.
+            # They must be ignored for patterns can be checked too.
+            if err.errno not in (errno.ENOENT, errno.ENOTDIR, errno.EINVAL):
+                raise
+        else:
+            if stat.S_ISLNK(st.st_mode):
+                raise error.Abort(
+                    _('path %r traverses symbolic link %r')
+                    % (path, prefix))
+            elif (stat.S_ISDIR(st.st_mode) and
+                  os.path.isdir(os.path.join(curpath, '.hg'))):
+                if not self.callback or not self.callback(curpath):
+                    raise error.Abort(_("path '%s' is inside nested "
+                                        "repo %r") % (path, prefix))
 
     def check(self, path):
         try:
