@@ -13,6 +13,7 @@ import errno
 from mercurial.i18n import _
 
 from mercurial import (
+    commands,
     error,
     extensions,
     hook,
@@ -31,6 +32,9 @@ def wrappreprocess(orig, repo, ms, wctx, labels=None):
         ms._dirty = True
         ms.commit()
         ui.warn(_('warning: merge driver failed to preprocess files\n'))
+        ui.warn(_(
+            '(hg resolve --all to retry, or '
+            'hg resolve --all --skip to skip merge driver)\n'))
         return False
     elif r or list(ms.driverresolved()):
         ms._mdstate = 'm'
@@ -51,6 +55,9 @@ def wrapconclude(orig, repo, ms, wctx, labels=None):
         ms._dirty = True
         ms.commit()
         ui.warn(_('warning: merge driver failed to resolve files\n'))
+        ui.warn(_(
+            '(hg resolve --all to retry, or '
+            'hg resolve --all --skip to skip merge driver)\n'))
         return False
     # assume that driver-resolved files have all been resolved
     driverresolved = list(ms.driverresolved())
@@ -66,7 +73,29 @@ def wrapmdprop(orig, self):
         return orig(self)
     except error.ConfigError:
         # skip this error and go with the new one
+        self._dirty = True
         return self._repo.ui.config('experimental', 'mergedriver')
+
+def wrapresolve(orig, ui, repo, *pats, **opts):
+    backup = None
+    if opts.get('skip'):
+        backup = ui.backupconfig('experimental', 'mergedriver')
+        ui.setconfig('experimental', 'mergedriver', '',
+                     'mergedriver extension')
+        ui.warn(_('warning: skipping merge driver '
+                  '(you will need to regenerate files manually)\n'))
+
+    try:
+        ret = orig(ui, repo, *pats, **opts)
+        # load up and commit the merge state again to make sure the driver gets
+        # written out
+        if backup is not None:
+            ms = merge.mergestate.read(repo)
+            ms.commit()
+        return ret
+    finally:
+        if backup is not None:
+            ui.restoreconfig(backup)
 
 def _rundriver(repo, ms, op, wctx, labels):
     ui = repo.ui
@@ -102,6 +131,9 @@ def extsetup(ui):
     extensions.wrapfunction(merge, 'driverpreprocess', wrappreprocess)
     extensions.wrapfunction(merge, 'driverconclude', wrapconclude)
     wrappropertycache(merge.mergestate, 'mergedriver', wrapmdprop)
+    entry = extensions.wrapcommand(commands.table, 'resolve', wrapresolve)
+    entry[1].append(('', 'skip', None,
+                     _('skip merge driver and assume all files are resolved')))
 
 def wrappropertycache(cls, propname, wrapper):
     """Wraps a filecache property. These can't be wrapped using the normal

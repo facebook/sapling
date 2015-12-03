@@ -348,6 +348,7 @@ raise an error
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -371,22 +372,55 @@ raise an error
   $ hg resolve --list
   R bar.txt
   R foo.txt
+
 this shouldn't abort
   $ hg resolve --unmark --all
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   $ hg resolve --list
   U bar.txt
   U foo.txt
+
+  $ hg resolve --mark --all --skip
+  warning: skipping merge driver (you will need to regenerate files manually)
+  (no more unresolved files)
+  $ hg debugmergestate | grep 'merge driver:'
+  [1]
+
+subsequent resolves shouldn't trigger the merge driver at all
+  $ hg resolve --unmark --all
+  $ hg resolve --mark --all
+  (no more unresolved files)
+  $ hg debugmergestate | grep 'merge driver:'
+  merge driver: python:$TESTTMP/mergedriver-mark-and-raise.py (state "s")
+
+this should go through at this point
+  $ hg commit -m merged
+
+  $ hg update --clean 2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ hg merge 1
+  * preprocess called
+  error: preprocess hook failed: foo
+  warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+
 XXX this is really confused
   $ hg resolve --mark --all
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
   warning: merge driver failed to resolve files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]
   $ hg resolve --list
   R bar.txt
@@ -397,6 +431,16 @@ this should abort
   abort: driver-resolved merge conflicts
   (run "hg resolve --all" to resolve)
   [255]
+
+this should disable the merge driver
+  $ hg help resolve | grep -- '--skip'
+      --skip                skip merge driver and assume all files are resolved
+  $ hg resolve --all --skip
+  warning: skipping merge driver (you will need to regenerate files manually)
+  (no more unresolved files)
+
+this should go through
+  $ hg commit -m merged
 
 this shouldn't invoke the merge driver
   $ hg update --clean 2
@@ -496,6 +540,7 @@ this should invoke the merge driver
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -515,9 +560,11 @@ XXX this is really confused
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   * conclude called
   error: conclude hook failed: bar
   warning: merge driver failed to resolve files
+  (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   [1]
 
 test merge with automatic commit afterwards -- e.g. graft
