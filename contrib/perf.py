@@ -476,9 +476,10 @@ def perfrevlog(ui, repo, file_, **opts):
     timer, fm = gettimer(ui, opts)
     from mercurial import revlog
     dist = opts['dist']
+    _len = getlen(ui)
     def d():
         r = revlog.revlog(lambda fn: open(fn, 'rb'), file_)
-        for x in xrange(0, len(r), dist):
+        for x in xrange(0, _len(r), dist):
             r.revision(r.node(x))
 
     timer(d)
