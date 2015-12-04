@@ -300,13 +300,16 @@ class repoview(object):
         # some cache may be implemented later
         unfi = self._unfilteredrepo
         unfichangelog = unfi.changelog
+        # bypass call to changelog.method
+        unfiindex = unfichangelog.index
+        unfilen = len(unfiindex) - 1
+        unfinode = unfiindex[unfilen - 1][7]
+
         revs = filterrevs(unfi, self.filtername)
         cl = self._clcache
-        newkey = (len(unfichangelog), unfichangelog.tip(), hash(revs),
-                  unfichangelog._delayed)
-        if cl is not None:
-            if newkey != self._clcachekey:
-                cl = None
+        newkey = (unfilen, unfinode, hash(revs), unfichangelog._delayed)
+        if cl is not None and newkey != self._clcachekey:
+            cl = None
         # could have been made None by the previous if
         if cl is None:
             cl = copy.copy(unfichangelog)
