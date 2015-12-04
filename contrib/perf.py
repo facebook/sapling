@@ -15,8 +15,8 @@ command = cmdutil.command(cmdtable)
 def gettimer(ui, opts=None):
     """return a timer function and formatter: (timer, formatter)
 
-    This functions exist to gather the creation of formatter in a single
-    place instead of duplicating it in all performance command."""
+    This function exists to gather the creation of formatter in a single
+    place instead of duplicating it in all performance commands."""
 
     # enforce an idle period before execution to counteract power management
     # experimental config: perf.presleep
