@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import imp
 import os
 import sys
+import zipimport
 
 __all__ = []
 
@@ -59,6 +60,36 @@ class hgimporter(object):
             return mod
 
         mercurial = sys.modules['mercurial']
+
+        # The zip importer behaves sufficiently differently from the default
+        # importer to warrant its own code path.
+        loader = getattr(mercurial, '__loader__', None)
+        if isinstance(loader, zipimport.zipimporter):
+            def ziploader(*paths):
+                """Obtain a zipimporter for a directory under the main zip."""
+                path = os.path.join(loader.archive, *paths)
+                zl = sys.path_importer_cache.get(path)
+                if not zl:
+                    zl = zipimport.zipimporter(path)
+                return zl
+
+            try:
+                if modulepolicy == 'py':
+                    raise ImportError()
+
+                zl = ziploader('mercurial')
+                mod = zl.load_module(name)
+                # Unlike imp, ziploader doesn't expose module metadata that
+                # indicates the type of module. So just assume what we found
+                # is OK (even though it could be a pure Python module).
+            except ImportError:
+                if modulepolicy == 'c':
+                    raise
+                zl = ziploader('mercurial', 'pure')
+                mod = zl.load_module(name)
+
+            sys.modules[name] = mod
+            return mod
 
         # Unlike the default importer which searches special locations and
         # sys.path, we only look in the directory where "mercurial" was
