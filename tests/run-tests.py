@@ -1744,8 +1744,15 @@ class TestRunner(object):
         else:
             # keywords for slow tests
             slow = {b'svn': 10,
-                    b'gendoc': 10,
-                    b'check-code-hg': 100,
+                    b'cvs': 10,
+                    b'hghave': 10,
+                    b'largefiles-update': 10,
+                    b'run-tests': 10,
+                    b'corruption': 10,
+                    b'race': 10,
+                    b'i18n': 10,
+                    b'check': 100,
+                    b'gendoc': 100,
                     b'contrib-perf': 200,
                    }
             def sortkey(f):
