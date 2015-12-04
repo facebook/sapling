@@ -656,21 +656,23 @@ class cg1packer(object):
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
-        def lookupmflinknode(x):
-            """Callback for looking up the linknode for manifests.
+        if fastpathlinkrev:
+            lookupmflinknode = mfs.__getitem__
+        else:
+            def lookupmflinknode(x):
+                """Callback for looking up the linknode for manifests.
 
-            Returns the linkrev node for the specified manifest.
+                Returns the linkrev node for the specified manifest.
 
-            SIDE EFFECT:
+                SIDE EFFECT:
 
-              fclnodes gets populated with the list of relevant
-              file nodes if we're not using fastpathlinkrev.
+                  fclnodes gets populated with the list of relevant
+                  file nodes.
 
-            Note that this means you can't trust fclnodes until
-            after manifests have been sent to the client.
-            """
-            clnode = mfs[x]
-            if not fastpathlinkrev:
+                Note that this means you can't trust fclnodes until
+                after manifests have been sent to the client.
+                """
+                clnode = mfs[x]
                 mdata = ml.readfast(x)
                 for f in mfchangedfiles[x]:
                     try:
@@ -683,7 +685,7 @@ class cg1packer(object):
                     fclnode = fclnodes.setdefault(n, clnode)
                     if clrevorder[clnode] < clrevorder[fclnode]:
                         fclnodes[n] = clnode
-            return clnode
+                return clnode
 
         mfnodes = self.prune(ml, mfs, commonrevs)
         for x in self._packmanifests(mfnodes, lookupmflinknode):
