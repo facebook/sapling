@@ -1489,18 +1489,19 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
     return stats
 
-def graft(repo, ctx, pctx, labels):
+def graft(repo, ctx, pctx, labels, keepparent=False):
     """Do a graft-like merge.
 
     This is a merge where the merge ancestor is chosen such that one
     or more changesets are grafted onto the current changeset. In
     addition to the merge, this fixes up the dirstate to include only
-    a single parent and tries to duplicate any renames/copies
-    appropriately.
+    a single parent (if keepparent is False) and tries to duplicate any
+    renames/copies appropriately.
 
     ctx - changeset to rebase
     pctx - merge base, usually ctx.p1()
     labels - merge labels eg ['local', 'graft']
+    keepparent - keep second parent if any
 
     """
     # If we're grafting a descendant onto an ancestor, be sure to pass
@@ -1514,9 +1515,14 @@ def graft(repo, ctx, pctx, labels):
     stats = update(repo, ctx.node(), True, True, False, pctx.node(),
                    mergeancestor=mergeancestor, labels=labels)
 
-    # drop the second merge parent
+    pother = nullid
+    parents = ctx.parents()
+    if keepparent and len(parents) == 2 and pctx in parents:
+        parents.remove(pctx)
+        pother = parents[0].node()
+
     repo.dirstate.beginparentchange()
-    repo.setparents(repo['.'].node(), nullid)
+    repo.setparents(repo['.'].node(), pother)
     repo.dirstate.write(repo.currenttransaction())
     # fix up dirstate for copies and renames
     copies.duplicatecopies(repo, ctx.rev(), pctx.rev())
