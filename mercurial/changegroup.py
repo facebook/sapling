@@ -698,14 +698,12 @@ class cg1packer(object):
             def linknodes(unused, fname):
                 return fnodes.get(fname, {})
         else:
+            cln = cl.node
             def linknodes(filerevlog, fname):
                 llr = filerevlog.linkrev
-                def genfilenodes():
-                    for r in filerevlog:
-                        linkrev = llr(r)
-                        if linkrev in clrevs:
-                            yield filerevlog.node(r), cl.node(linkrev)
-                return dict(genfilenodes())
+                fln = filerevlog.node
+                revs = ((r, llr(r)) for r in filerevlog)
+                return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
 
         changedfiles = set()
         for x in mfchangedfiles.itervalues():
