@@ -308,10 +308,13 @@ def perfstartup(ui, repo, **opts):
 @command('perfparents', formatteropts)
 def perfparents(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
-    if len(repo.changelog) < 1000:
-        raise error.Abort("repo needs 1000 commits for this test")
+    # control the number of commits perfparents iterates over
+    # experimental config: perf.parentscount
+    count = ui.configint("perf", "parentscount", 1000)
+    if len(repo.changelog) < count:
+        raise error.Abort("repo needs %d commits for this test" % count)
     repo = repo.unfiltered()
-    nl = [repo.changelog.node(i) for i in xrange(1000)]
+    nl = [repo.changelog.node(i) for i in xrange(count)]
     def d():
         for n in nl:
             repo.changelog.parents(n)
