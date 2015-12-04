@@ -1273,10 +1273,13 @@ class TestResult(unittest._TextTestResult):
             self.stop()
         else:
             with iolock:
-                if not self._options.nodiff:
-                    self.stream.write('\nERROR: %s output changed\n' % test)
+                if reason == "timed out":
+                    self.stream.write('t')
+                else:
+                    if not self._options.nodiff:
+                        self.stream.write('\nERROR: %s output changed\n' % test)
+                    self.stream.write('!')
 
-                self.stream.write('!')
                 self.stream.flush()
 
     def addSuccess(self, test):
