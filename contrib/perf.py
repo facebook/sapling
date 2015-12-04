@@ -12,6 +12,11 @@ formatteropts = commands.formatteropts
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+def getlen(ui):
+    if ui.configbool("perf", "stub"):
+        return lambda x: 1
+    return len
+
 def gettimer(ui, opts=None):
     """return a timer function and formatter: (timer, formatter)
 
