@@ -166,7 +166,13 @@ gboptsmap = {'heads':  'nodes',
 # client side
 
 class wirepeer(peer.peerrepository):
+    """Client-side interface for communicating with a peer repository.
 
+    Methods commonly call wire protocol commands of the same name.
+
+    See also httppeer.py and sshpeer.py for protocol-specific
+    implementations of this interface.
+    """
     def batch(self):
         if self.capable('batch'):
             return remotebatch(self)
