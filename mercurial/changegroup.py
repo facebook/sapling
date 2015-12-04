@@ -673,17 +673,16 @@ class cg1packer(object):
             if not fastpathlinkrev:
                 mdata = ml.readfast(x)
                 for f in mfchangedfiles[x]:
-                    if True:
-                        try:
-                            n = mdata[f]
-                        except KeyError:
-                            continue
-                        # record the first changeset introducing this filelog
-                        # version
-                        fclnodes = fnodes.setdefault(f, {})
-                        fclnode = fclnodes.setdefault(n, clnode)
-                        if clrevorder[clnode] < clrevorder[fclnode]:
-                            fclnodes[n] = clnode
+                    try:
+                        n = mdata[f]
+                    except KeyError:
+                        continue
+                    # record the first changeset introducing this filelog
+                    # version
+                    fclnodes = fnodes.setdefault(f, {})
+                    fclnode = fclnodes.setdefault(n, clnode)
+                    if clrevorder[clnode] < clrevorder[fclnode]:
+                        fclnodes[n] = clnode
             return clnode
 
         mfnodes = self.prune(ml, mfs, commonrevs)
