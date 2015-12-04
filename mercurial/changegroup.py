@@ -613,7 +613,8 @@ class cg1packer(object):
         clrevorder = {}
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
-        changedfiles = set()
+        # maps manifest node id -> set(changed files)
+        mfchangedfiles = {}
 
         # Callback for the changelog, used to collect changed files and manifest
         # nodes.
@@ -621,9 +622,12 @@ class cg1packer(object):
         def lookupcl(x):
             c = cl.read(x)
             clrevorder[x] = len(clrevorder)
-            changedfiles.update(c[3])
+            n = c[0]
             # record the first changeset introducing this manifest version
-            mfs.setdefault(c[0], x)
+            mfs.setdefault(n, x)
+            # Record a complete list of potentially-changed files in
+            # this manifest.
+            mfchangedfiles.setdefault(n, set()).update(c[3])
             return x
 
         self._verbosenote(_('uncompressed size of bundle content:\n'))
@@ -668,8 +672,12 @@ class cg1packer(object):
             clnode = mfs[x]
             if not fastpathlinkrev:
                 mdata = ml.readfast(x)
-                for f, n in mdata.iteritems():
-                    if f in changedfiles:
+                for f in mfchangedfiles[x]:
+                    if True:
+                        try:
+                            n = mdata[f]
+                        except KeyError:
+                            continue
                         # record the first changeset introducing this filelog
                         # version
                         fclnodes = fnodes.setdefault(f, {})
@@ -696,6 +704,9 @@ class cg1packer(object):
                 return dict(genfilenodes())
             return fnodes.get(fname, {})
 
+        changedfiles = set()
+        for x in mfchangedfiles.itervalues():
+            changedfiles.update(x)
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
                                         source):
             yield chunk
