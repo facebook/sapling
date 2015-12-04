@@ -79,11 +79,16 @@ from distutils.dist import Distribution
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
+from distutils.command.build_scripts import build_scripts
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
 from distutils.spawn import spawn, find_executable
 from distutils import file_util
-from distutils.errors import CCompilerError, DistutilsExecError
+from distutils.errors import (
+    CCompilerError,
+    DistutilsError,
+    DistutilsExecError,
+)
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
 
@@ -102,6 +107,7 @@ elif sys.version_info[0] >= 3:
 
 scripts = ['hg']
 if os.name == 'nt':
+    # We remove hg.bat if we are able to build hg.exe.
     scripts.append('contrib/win32/hg.bat')
 
 # simplified version of distutils.ccompiler.CCompiler.has_function
@@ -304,6 +310,31 @@ class hgbuildext(build_ext):
             log.warn("Failed to build optional extension '%s' (skipping)",
                      ext.name)
 
+class hgbuildscripts(build_scripts):
+    def run(self):
+        if os.name != 'nt':
+            return build_scripts.run(self)
+
+        exebuilt = False
+        try:
+            self.run_command('build_hgexe')
+            exebuilt = True
+        except (DistutilsError, CCompilerError):
+            log.warn('failed to build optional hg.exe')
+
+        if exebuilt:
+            # Copying hg.exe to the scripts build directory ensures it is
+            # installed by the install_scripts command.
+            hgexecommand = self.get_finalized_command('build_hgexe')
+            dest = os.path.join(self.build_dir, 'hg.exe')
+            self.mkpath(self.build_dir)
+            self.copy_file(hgexecommand.hgexepath, dest)
+
+            # Remove hg.bat because it is redundant with hg.exe.
+            self.scripts.remove('contrib/win32/hg.bat')
+
+        return build_scripts.run(self)
+
 class hgbuildpy(build_py):
     if convert2to3:
         fixer_names = sorted(set(getfixers("lib2to3.fixes") +
@@ -389,6 +420,11 @@ class buildhgexe(build_ext):
                                       libraries=[],
                                       output_dir=self.build_temp)
 
+    @property
+    def hgexepath(self):
+        dir = os.path.dirname(self.get_ext_fullpath('dummy'))
+        return os.path.join(self.build_temp, dir, 'hg.exe')
+
 class hginstalllib(install_lib):
     '''
     This is a specialization of install_lib that replaces the copy_file used
@@ -473,6 +509,7 @@ cmdclass = {'build': hgbuild,
             'build_mo': hgbuildmo,
             'build_ext': hgbuildext,
             'build_py': hgbuildpy,
+            'build_scripts': hgbuildscripts,
             'build_hgextindex': buildhgextindex,
             'install_lib': hginstalllib,
             'install_scripts': hginstallscripts,
