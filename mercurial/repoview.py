@@ -305,16 +305,7 @@ class repoview(object):
         newkey = (len(unfichangelog), unfichangelog.tip(), hash(revs),
                   unfichangelog._delayed)
         if cl is not None:
-            # we need to check curkey too for some obscure reason.
-            # MQ test show a corruption of the underlying repo (in _clcache)
-            # without change in the cachekey.
-            oldfilter = cl.filteredrevs
-            try:
-                cl.filteredrevs = ()  # disable filtering for tip
-                curkey = (len(cl), cl.tip(), hash(oldfilter), cl._delayed)
-            finally:
-                cl.filteredrevs = oldfilter
-            if newkey != self._clcachekey or newkey != curkey:
+            if newkey != self._clcachekey:
                 cl = None
         # could have been made None by the previous if
         if cl is None:
