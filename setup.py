@@ -313,11 +313,6 @@ class hgbuildpy(build_py):
         build_py.finalize_options(self)
 
         if self.distribution.pure:
-            if self.py_modules is None:
-                self.py_modules = []
-            for ext in self.distribution.ext_modules:
-                if ext.name.startswith("mercurial."):
-                    self.py_modules.append("mercurial.pure.%s" % ext.name[10:])
             self.distribution.ext_modules = []
         else:
             h = os.path.join(get_python_inc(), 'Python.h')
@@ -325,14 +320,21 @@ class hgbuildpy(build_py):
                 raise SystemExit('Python headers are required to build '
                                  'Mercurial but weren\'t found in %s' % h)
 
-    def find_modules(self):
-        modules = build_py.find_modules(self)
-        for module in modules:
-            if module[0] == "mercurial.pure":
-                if module[1] != "__init__":
-                    yield ("mercurial", module[1], module[2])
+    def copy_file(self, *args, **kwargs):
+        dst, copied = build_py.copy_file(self, *args, **kwargs)
+
+        if copied and dst.endswith('__init__.py'):
+            if self.distribution.pure:
+                modulepolicy = 'py'
             else:
-                yield module
+                modulepolicy = 'c'
+            content = open(dst, 'rb').read()
+            content = content.replace(b'@MODULELOADPOLICY@',
+                                      modulepolicy.encode(libdir_escape))
+            with open(dst, 'wb') as fh:
+                fh.write(content)
+
+        return dst, copied
 
 class buildhgextindex(Command):
     description = 'generate prebuilt index of hgext (for frozen package)'
@@ -478,6 +480,7 @@ cmdclass = {'build': hgbuild,
             }
 
 packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
+            'mercurial.pure',
             'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
             'hgext.largefiles']
 
