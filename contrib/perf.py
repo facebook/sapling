@@ -29,7 +29,14 @@ def gettimer(ui, opts=None):
     ui.fout = ui.ferr
     # get a formatter
     fm = ui.formatter('perf', opts)
+    # stub function, runs code only once instead of in a loop
+    # experimental config: perf.stub
+    if ui.configbool("perf", "stub"):
+        return functools.partial(stub_timer, fm), fm
     return functools.partial(_timer, fm), fm
+
+def stub_timer(fm, func, title=None):
+    func()
 
 def _timer(fm, func, title=None):
     results = []
