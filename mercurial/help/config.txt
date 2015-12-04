@@ -1319,6 +1319,23 @@ Controls generic server settings.
     Instruct HTTP clients not to send request headers longer than this
     many bytes. (default: 1024)
 
+``bundle1``
+    Whether to allow clients to push and pull using the legacy bundle1
+    exchange format. (default: True)
+
+``bundle1.push``
+    Whether to allow clients to push using the legacy bundle1 exchange
+    format. (default: True)
+
+``bundle1.pull``
+    Whether to allow clients to pull using the legacy bundle1 exchange
+    format. (default: True)
+
+    Large repositories using the *generaldelta* storage format should
+    consider setting this option because converting *generaldelta*
+    repositories to the exchange format required by the bundle1 data
+    format can consume a lot of CPU.
+
 ``smtp``
 --------
 

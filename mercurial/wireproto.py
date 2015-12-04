@@ -30,6 +30,10 @@ from . import (
     util,
 )
 
+bundle2required = _(
+    'incompatible Mercurial client; bundle2 required\n'
+    '(see https://www.mercurial-scm.org/wiki/IncompatibleClient)\n')
+
 class abstractserverproto(object):
     """abstract class that summarizes the protocol API
 
@@ -487,6 +491,14 @@ def options(cmd, keys, others):
                          % (cmd, ",".join(others)))
     return opts
 
+def bundle1allowed(ui, action):
+    """Whether a bundle1 operation is allowed from the server."""
+    v = ui.configbool('server', 'bundle1.%s' % action, None)
+    if v is not None:
+        return v
+
+    return ui.configbool('server', 'bundle1', True)
+
 # list of commands
 commands = {}
 
@@ -652,6 +664,11 @@ def getbundle(repo, proto, others):
         elif keytype != 'plain':
             raise KeyError('unknown getbundle option type %s'
                            % keytype)
+
+    if not bundle1allowed(repo.ui, 'pull'):
+        if not exchange.bundle2requested(opts.get('bundlecaps')):
+            return ooberror(bundle2required)
+
     cg = exchange.getbundle(repo, 'serve', **opts)
     return streamres(proto.groupchunks(cg))
 
@@ -763,6 +780,10 @@ def unbundle(repo, proto, heads):
             proto.getfile(fp)
             fp.seek(0)
             gen = exchange.readbundle(repo.ui, fp, None)
+            if (isinstance(gen, changegroupmod.cg1unpacker)
+                and not bundle1allowed(repo.ui, 'push')):
+                return ooberror(bundle2required)
+
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
                                   proto._client())
             if util.safehasattr(r, 'addpart'):

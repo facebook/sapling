@@ -951,3 +951,86 @@ Test lazily acquiring the lock during unbundle
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+
+  $ cd ..
+
+Servers can disable bundle1 for clone/pull operations
+
+  $ killdaemons.py
+  $ hg init bundle2onlyserver
+  $ cd bundle2onlyserver
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1.pull = false
+  > EOF
+
+  $ touch foo
+  $ hg -q commit -A -m initial
+
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  requesting all changes
+  abort: remote error:
+  incompatible Mercurial client; bundle2 required
+  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [255]
+  $ killdaemons.py
+
+Verify the global server.bundle1 option works
+
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1 = false
+  > EOF
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT not-bundle2
+  requesting all changes
+  abort: remote error:
+  incompatible Mercurial client; bundle2 required
+  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [255]
+  $ killdaemons.py
+
+Verify bundle1 pushes can be disabled
+
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1.push = false
+  > [web]
+  > allow_push = *
+  > push_ssl = false
+  > EOF
+
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid -E error.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ cd ..
+
+  $ hg clone http://localhost:$HGPORT bundle2-only
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd bundle2-only
+  $ echo commit > foo
+  $ hg commit -m commit
+  $ hg --config experimental.bundle2-exp=false push
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  abort: remote error:
+  incompatible Mercurial client; bundle2 required
+  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [255]
+
+  $ hg push
+  pushing to http://localhost:$HGPORT/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
