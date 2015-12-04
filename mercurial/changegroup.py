@@ -694,8 +694,11 @@ class cg1packer(object):
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
 
-        def linknodes(filerevlog, fname):
-            if fastpathlinkrev:
+        if not fastpathlinkrev:
+            def linknodes(unused, fname):
+                return fnodes.get(fname, {})
+        else:
+            def linknodes(filerevlog, fname):
                 llr = filerevlog.linkrev
                 def genfilenodes():
                     for r in filerevlog:
@@ -703,7 +706,6 @@ class cg1packer(object):
                         if linkrev in clrevs:
                             yield filerevlog.node(r), cl.node(linkrev)
                 return dict(genfilenodes())
-            return fnodes.get(fname, {})
 
         changedfiles = set()
         for x in mfchangedfiles.itervalues():
