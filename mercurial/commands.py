@@ -1585,6 +1585,22 @@ def commit(ui, repo, *pats, **opts):
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     Returns 0 on success, 1 if nothing changed.
+
+    .. container:: verbose
+
+      Examples:
+
+      - commit all files ending in .py:
+
+          hg commit --include 'set:**.py'
+
+      - commit all non-binary files:
+
+          hg commit --exclude 'set:binary()'
+
+      - amend the current commit and set the date to now:
+
+          hg commit --amend --date now
     """
     wlock = lock = None
     try:
