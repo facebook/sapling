@@ -177,11 +177,9 @@ def runhg(cmd, env):
 
 version = ''
 
-# Execute hg out of this directory with a custom environment which
-# includes the pure Python modules in mercurial/pure. We also take
-# care to not use any hgrc files and do no localization.
-pypath = ['mercurial', os.path.join('mercurial', 'pure')]
-env = {'PYTHONPATH': os.pathsep.join(pypath),
+# Execute hg out of this directory with a custom environment which takes care
+# to not use any hgrc files and do no localization.
+env = {'HGMODULEPOLICY': 'py',
        'HGRCPATH': '',
        'LANGUAGE': 'C'}
 if 'LD_LIBRARY_PATH' in os.environ:
