@@ -29,7 +29,16 @@ from . import (
 posixfile = open
 normpath = os.path.normpath
 samestat = os.path.samestat
-oslink = os.link
+try:
+    oslink = os.link
+except AttributeError:
+    # Some platforms build Python without os.link on systems that are
+    # vaguely unix-like but don't have hardlink support. For those
+    # poor souls, just say we tried and that it failed so we fall back
+    # to copies.
+    def oslink(src, dst):
+        raise OSError(errno.EINVAL,
+                      'hardlinks not supported: %s to %s' % (src, dst))
 unlink = os.unlink
 rename = os.rename
 removedirs = os.removedirs
