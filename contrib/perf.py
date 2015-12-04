@@ -368,10 +368,12 @@ def perfnodelookup(ui, repo, rev, **opts):
 
 @command('perflog',
          [('', 'rename', False, 'ask log to follow renames')] + formatteropts)
-def perflog(ui, repo, **opts):
+def perflog(ui, repo, rev=None, **opts):
+    if rev is None:
+        rev=[]
     timer, fm = gettimer(ui, opts)
     ui.pushbuffer()
-    timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
+    timer(lambda: commands.log(ui, repo, rev=rev, date='', user='',
                                copies=opts.get('rename')))
     ui.popbuffer()
     fm.end()
@@ -391,10 +393,12 @@ def perfmoonwalk(ui, repo, **opts):
     fm.end()
 
 @command('perftemplating', formatteropts)
-def perftemplating(ui, repo, **opts):
+def perftemplating(ui, repo, rev=None, **opts):
+    if rev is None:
+        rev=[]
     timer, fm = gettimer(ui, opts)
     ui.pushbuffer()
-    timer(lambda: commands.log(ui, repo, rev=[], date='', user='',
+    timer(lambda: commands.log(ui, repo, rev=rev, date='', user='',
                                template='{date|shortdate} [{rev}:{node|short}]'
                                ' {author|person}: {desc|firstline}\n'))
     ui.popbuffer()
