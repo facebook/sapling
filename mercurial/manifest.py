@@ -617,7 +617,7 @@ class treemanifest(object):
 
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
-        assert 'd' not in flags
+        assert 't' not in flags
         self._load()
         dir, subpath = _splittopdir(f)
         if dir:
@@ -815,7 +815,7 @@ class treemanifest(object):
 
     def parse(self, text, readsubtree):
         for f, n, fl in _parse(text):
-            if fl == 'd':
+            if fl == 't':
                 f = f + '/'
                 self._dirs[f] = readsubtree(self._subpath(f), n)
             elif '/' in f:
@@ -846,7 +846,7 @@ class treemanifest(object):
         """
         self._load()
         flags = self.flags
-        dirs = [(d[:-1], self._dirs[d]._node, 'd') for d in self._dirs]
+        dirs = [(d[:-1], self._dirs[d]._node, 't') for d in self._dirs]
         files = [(f, self._files[f], flags(f)) for f in self._files]
         return _text(sorted(dirs + files), usemanifestv2)
 
