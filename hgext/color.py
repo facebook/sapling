@@ -419,13 +419,6 @@ def configstyles(ui):
             _styles[status] = ' '.join(good)
 
 class colorui(uimod.ui):
-    def popbuffer(self):
-        if self._colormode is None:
-            return super(colorui, self).popbuffer()
-
-        self._bufferstates.pop()
-        return ''.join(self._buffers.pop())
-
     _colormode = 'ansi'
     def write(self, *args, **opts):
         if self._colormode is None:
