@@ -1428,7 +1428,7 @@ class revlog(object):
                 # Assume what we received from the server is a good choice
                 # build delta will reuse the cache
                 candidatedelta = builddelta(cachedelta[0])
-                tested.add(candidatedelta[3])
+                tested.add(cachedelta[0])
                 if self._isgooddelta(candidatedelta, textlen):
                     delta = candidatedelta
             if delta is None and self._generaldelta:
