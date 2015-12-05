@@ -1450,11 +1450,12 @@ class revlog(object):
             if delta is None and prev not in tested:
                 # other approach failed try against prev to hopefully save us a
                 # fulltext.
-                delta = builddelta(prev)
+                candidatedelta = builddelta(prev)
+                if self._isgooddelta(candidatedelta, textlen):
+                    delta = candidatedelta
         if delta is not None:
             dist, l, data, base, chainbase, chainlen, compresseddeltalen = delta
-
-        if not self._isgooddelta(delta, textlen):
+        else:
             text = buildtext()
             data = self.compress(text)
             l = len(data[1]) + len(data[0])
