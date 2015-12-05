@@ -276,14 +276,14 @@ Turning off treemanifest config has no effect
   $ hg debugindex .hg/store/meta/dir1/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     125     -1       4 63c9c0557d24 000000000000 000000000000
-       1       125     131     -1       5 23d12a1f6e0e 000000000000 000000000000
+       1       125     109      0       5 23d12a1f6e0e 000000000000 000000000000
   $ echo 2 > dir1/a
   $ hg --config experimental.treemanifest=False ci -qm 'modify dir1/a'
   $ hg debugindex .hg/store/meta/dir1/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     125     -1       4 63c9c0557d24 000000000000 000000000000
-       1       125     131     -1       5 23d12a1f6e0e 000000000000 000000000000
-       2       256      55      1       6 3cb2d87b4250 23d12a1f6e0e 000000000000
+       1       125     109      0       5 23d12a1f6e0e 000000000000 000000000000
+       2       234      55      1       6 3cb2d87b4250 23d12a1f6e0e 000000000000
 
 Create deeper repo with tree manifests.
 

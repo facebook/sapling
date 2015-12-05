@@ -266,13 +266,13 @@ Cannot produce streaming clone bundles with "hg bundle"
 packed1 is produced properly
 
   $ hg -R test debugcreatestreamclonebundle packed.hg
-  writing 2667 bytes for 6 files
+  writing 2663 bytes for 6 files
   bundle requirements: generaldelta, revlogv1
 
   $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2830, sha1=c28255110a88ffa52ddc44985cad295b1ab349bc
+  packed.hg: size=2826, sha1=e139f97692a142b19cdcff64a69697d5307ce6d4
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 06 00 00 |HGS1UN..........|
-  0010: 00 00 00 00 0a 6b 00 16 67 65 6e 65 72 61 6c 64 |.....k..generald|
+  0010: 00 00 00 00 0a 67 00 16 67 65 6e 65 72 61 6c 64 |.....g..generald|
   0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
   0030: 74 61 2f 61 64 69 66 66 65 72 65 6e 74 66 69 6c |ta/adifferentfil|
 

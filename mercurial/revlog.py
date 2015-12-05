@@ -1432,9 +1432,9 @@ class revlog(object):
                 if self._isgooddelta(candidatedelta, textlen):
                     delta = candidatedelta
             if delta is None and self._generaldelta:
-                parents = [p1r, p2r]
                 # exclude already lazy tested base if any
-                parents = [p for p in parents if p not in tested]
+                parents = [p for p in (p1r, p2r)
+                           if p != nullrev and p not in tested]
                 if parents and not self._aggressivemergedeltas:
                     # Pick whichever parent is closer to us (to minimize the
                     # chance of having to build a fulltext).

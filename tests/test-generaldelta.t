@@ -133,8 +133,8 @@ Test format.aggressivemergedeltas
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
-       1        59      59     -1       1 315c023f341d 000000000000 000000000000
-       2       118      65      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
+       1        59      61      0       1 315c023f341d 000000000000 000000000000
+       2       120      65      1       2 2ab389a983eb 315c023f341d 8dde941edb6e
 
   $ hg strip -q -r . --config extensions.strip=
 
@@ -145,8 +145,8 @@ Test format.aggressivemergedeltas
   $ hg debugindex -m
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      59     -1       0 8dde941edb6e 000000000000 000000000000
-       1        59      59     -1       1 315c023f341d 000000000000 000000000000
-       2       118      62      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
+       1        59      61      0       1 315c023f341d 000000000000 000000000000
+       2       120      62      0       2 2ab389a983eb 315c023f341d 8dde941edb6e
 
 Test that strip bundle use bundle2
   $ hg --config extensions.strip= strip .
