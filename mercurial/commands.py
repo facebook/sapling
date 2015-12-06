@@ -1590,15 +1590,15 @@ def commit(ui, repo, *pats, **opts):
 
       Examples:
 
-      - commit all files ending in .py:
+      - commit all files ending in .py::
 
           hg commit --include "set:**.py"
 
-      - commit all non-binary files:
+      - commit all non-binary files::
 
           hg commit --exclude "set:binary()"
 
-      - amend the current commit and set the date to now:
+      - amend the current commit and set the date to now::
 
           hg commit --amend --date now
     """
