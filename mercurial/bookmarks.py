@@ -105,6 +105,8 @@ class bmstore(dict):
         We also store a backup of the previous state in undo.bookmarks that
         can be copied back on rollback.
         '''
+        msg = 'bm.write() is deprecated, use bm.recordchange(transaction)'
+        self._repo.ui.deprecwarn(msg, '3.7')
         if self._clean:
             return
         repo = self._repo
