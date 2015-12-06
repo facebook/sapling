@@ -453,7 +453,8 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
                     symbols = [n.name for n in node.names]
 
                 if symbols and fullname not in allowsymbolimports:
-                    yield msg('direct symbol import from %s', fullname)
+                    yield msg('direct symbol import %s from %s',
+                              ', '.join(symbols), fullname)
 
                 if symbols and seennonsymbolrelative:
                     yield msg('symbol import follows non-symbol import: %s',

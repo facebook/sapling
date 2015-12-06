@@ -117,8 +117,8 @@ Run additional tests for the import checker
   testpackage/importalias.py:2: ui module must be "as" aliased to uimod
   testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
   testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted
-  testpackage/importfromrelative.py:2: direct symbol import from testpackage.unsorted
-  testpackage/importsymbolfromsub.py:2: direct symbol import from testpackage.subpackage
+  testpackage/importfromrelative.py:2: direct symbol import foo from testpackage.unsorted
+  testpackage/importsymbolfromsub.py:2: direct symbol import nonmodule from testpackage.subpackage
   testpackage/latesymbolimport.py:3: symbol import follows non-symbol import: mercurial.node
   testpackage/multiple.py:2: multiple imported names: os, sys
   testpackage/multiplegroups.py:3: multiple "from . import" statements
@@ -129,7 +129,7 @@ Run additional tests for the import checker
   testpackage/subpackage/levelpriority.py:3: higher-level import should come first: testpackage
   testpackage/subpackage/localimport.py:7: multiple "from .. import" statements
   testpackage/subpackage/localimport.py:8: import should be relative: testpackage.subpackage.levelpriority
-  testpackage/symbolimport.py:2: direct symbol import from testpackage.unsorted
+  testpackage/symbolimport.py:2: direct symbol import foo from testpackage.unsorted
   testpackage/unsorted.py:3: imports not lexically sorted: os < sys
   [1]
 
