@@ -5364,6 +5364,8 @@ def paths(ui, repo, search=None):
             else:
                 ui.write("%s = %s\n" % (name,
                                         util.hidepassword(path.loc)))
+                for subopt, value in sorted(path.suboptions.items()):
+                    ui.write('%s:%s = %s\n' % (name, subopt, value))
 
 @command('phase',
     [('p', 'public', False, _('set changeset phase to public')),

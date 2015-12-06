@@ -69,3 +69,26 @@ Pushing to a path that isn't defined should not fall back to default
   $ hg --cwd b push doesnotexist
   abort: repository doesnotexist does not exist!
   [255]
+
+:pushurl is used when defined
+
+  $ hg -q clone a pushurlsource
+  $ hg -q clone a pushurldest
+  $ cd pushurlsource
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > default = https://example.com/not/relevant
+  > default:pushurl = file://`pwd`/../pushurldest
+  > EOF
+
+  $ touch pushurl
+  $ hg -q commit -A -m 'add pushurl'
+  $ hg push
+  pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+
+  $ cd ..

@@ -1063,7 +1063,7 @@ class paths(dict):
     def __init__(self, ui):
         dict.__init__(self)
 
-        for name, loc in ui.configitems('paths'):
+        for name, loc in ui.configitems('paths', ignoresub=True):
             # No location is the same as not existing.
             if not loc:
                 continue
@@ -1071,7 +1071,8 @@ class paths(dict):
             # TODO ignore default-push once all consumers stop referencing it
             # since it is handled specifically below.
 
-            self[name] = path(ui, name, rawloc=loc)
+            loc, sub = ui.configsuboptions('paths', name)
+            self[name] = path(ui, name, rawloc=loc, suboptions=sub)
 
         # Handle default-push, which is a one-off that defines the push URL for
         # the "default" path.
@@ -1120,10 +1121,48 @@ class paths(dict):
 
         assert False
 
+_pathsuboptions = {}
+
+def pathsuboption(option, attr):
+    """Decorator used to declare a path sub-option.
+
+    Arguments are the sub-option name and the attribute it should set on
+    ``path`` instances.
+
+    The decorated function will receive as arguments a ``ui`` instance,
+    ``path`` instance, and the string value of this option from the config.
+    The function should return the value that will be set on the ``path``
+    instance.
+
+    This decorator can be used to perform additional verification of
+    sub-options and to change the type of sub-options.
+    """
+    def register(func):
+        _pathsuboptions[option] = (attr, func)
+        return func
+    return register
+
+@pathsuboption('pushurl', 'pushloc')
+def pushurlpathoption(ui, path, value):
+    u = util.url(value)
+    # Actually require a URL.
+    if not u.scheme:
+        ui.warn(_('(paths.%s:pushurl not a URL; ignoring)\n') % path.name)
+        return None
+
+    # Don't support the #foo syntax in the push URL to declare branch to
+    # push.
+    if u.fragment:
+        ui.warn(_('("#fragment" in paths.%s:pushurl not supported; '
+                  'ignoring)\n') % path.name)
+        u.fragment = None
+
+    return str(u)
+
 class path(object):
     """Represents an individual path and its configuration."""
 
-    def __init__(self, ui, name, rawloc=None, pushloc=None):
+    def __init__(self, ui, name, rawloc=None, suboptions=None):
         """Construct a path from its config options.
 
         ``ui`` is the ``ui`` instance the path is coming from.
@@ -1151,7 +1190,6 @@ class path(object):
         self.name = name
         self.rawloc = rawloc
         self.loc = str(u)
-        self.pushloc = pushloc
 
         # When given a raw location but not a symbolic name, validate the
         # location is valid.
@@ -1159,12 +1197,38 @@ class path(object):
             raise ValueError('location is not a URL or path to a local '
                              'repo: %s' % rawloc)
 
+        suboptions = suboptions or {}
+
+        # Now process the sub-options. If a sub-option is registered, its
+        # attribute will always be present. The value will be None if there
+        # was no valid sub-option.
+        for suboption, (attr, func) in _pathsuboptions.iteritems():
+            if suboption not in suboptions:
+                setattr(self, attr, None)
+                continue
+
+            value = func(ui, self, suboptions[suboption])
+            setattr(self, attr, value)
+
     def _isvalidlocalpath(self, path):
         """Returns True if the given path is a potentially valid repository.
         This is its own function so that extensions can change the definition of
         'valid' in this case (like when pulling from a git repo into a hg
         one)."""
         return os.path.isdir(os.path.join(path, '.hg'))
+
+    @property
+    def suboptions(self):
+        """Return sub-options and their values for this path.
+
+        This is intended to be used for presentation purposes.
+        """
+        d = {}
+        for subopt, (attr, _func) in _pathsuboptions.iteritems():
+            value = getattr(self, attr)
+            if value is not None:
+                d[subopt] = value
+        return d
 
 # we instantiate one globally shared progress bar to avoid
 # competing progress bars when multiple UI objects get created

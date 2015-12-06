@@ -44,6 +44,59 @@
   [1]
   $ cd ..
 
+sub-options for an undeclared path are ignored
+
+  $ hg init suboptions
+  $ cd suboptions
+
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > path0 = https://example.com/path0
+  > path1:pushurl = https://example.com/path1
+  > EOF
+  $ hg paths
+  path0 = https://example.com/path0
+
+unknown sub-options aren't displayed
+
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > path0 = https://example.com/path0
+  > path0:foo = https://example.com/path1
+  > EOF
+
+  $ hg paths
+  path0 = https://example.com/path0
+
+:pushurl must be a URL
+
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > default = /path/to/nothing
+  > default:pushurl = /not/a/url
+  > EOF
+
+  $ hg paths
+  (paths.default:pushurl not a URL; ignoring)
+  default = /path/to/nothing
+
+#fragment is not allowed in :pushurl
+
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > default = https://example.com/repo
+  > invalid = https://example.com/repo
+  > invalid:pushurl = https://example.com/repo#branch
+  > EOF
+
+  $ hg paths
+  ("#fragment" in paths.invalid:pushurl not supported; ignoring)
+  default = https://example.com/repo
+  invalid = https://example.com/repo
+  invalid:pushurl = https://example.com/repo
+
+  $ cd ..
+
 'file:' disables [paths] entries for clone destination
 
   $ cat >> $HGRCPATH <<EOF
