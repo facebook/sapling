@@ -171,6 +171,12 @@ subrepoopts = [
      _('recurse into subrepositories'))
 ]
 
+debugrevlogopts = [
+    ('c', 'changelog', False, _('open changelog')),
+    ('m', 'manifest', False, _('open manifest')),
+    ('', 'dir', False, _('open directory manifest')),
+]
+
 # Commands start here, listed alphabetically
 
 @command('^add',
@@ -2219,11 +2225,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
         ui.write(line)
         ui.write("\n")
 
-@command('debugdata',
-    [('c', 'changelog', False, _('open changelog')),
-     ('m', 'manifest', False, _('open manifest')),
-     ('', 'dir', False, _('open directory manifest'))],
-    _('-c|-m|FILE REV'))
+@command('debugdata', debugrevlogopts, _('-c|-m|FILE REV'))
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
     if opts.get('changelog') or opts.get('manifest'):
@@ -2429,11 +2431,8 @@ def debugignore(ui, repo, *values, **opts):
     else:
         raise error.Abort(_("no ignore patterns found"))
 
-@command('debugindex',
-    [('c', 'changelog', False, _('open changelog')),
-     ('m', 'manifest', False, _('open manifest')),
-     ('', 'dir', False, _('open directory manifest')),
-     ('f', 'format', 0, _('revlog format'), _('FORMAT'))],
+@command('debugindex', debugrevlogopts +
+    [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
     _('[-f FORMAT] -c|-m|FILE'),
     optionalrepo=True)
 def debugindex(ui, repo, file_=None, **opts):
@@ -3036,11 +3035,8 @@ def debugrename(ui, repo, file1, *pats, **opts):
         else:
             ui.write(_("%s not renamed\n") % rel)
 
-@command('debugrevlog',
-    [('c', 'changelog', False, _('open changelog')),
-     ('m', 'manifest', False, _('open manifest')),
-     ('', 'dir', False, _('open directory manifest')),
-     ('d', 'dump', False, _('dump index data'))],
+@command('debugrevlog', debugrevlogopts +
+    [('d', 'dump', False, _('dump index data'))],
     _('-c|-m|FILE'),
     optionalrepo=True)
 def debugrevlog(ui, repo, file_=None, **opts):
