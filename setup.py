@@ -479,6 +479,25 @@ class hginstallscripts(install_scripts):
     def run(self):
         install_scripts.run(self)
 
+        # It only makes sense to replace @LIBDIR@ with the install path if
+        # the install path is known. For wheels, the logic below calculates
+        # the libdir to be "../..". This is because the internal layout of a
+        # wheel archive looks like:
+        #
+        #   mercurial-3.6.1.data/scripts/hg
+        #   mercurial/__init__.py
+        #
+        # When installing wheels, the subdirectories of the "<pkg>.data"
+        # directory are translated to system local paths and files therein
+        # are copied in place. The mercurial/* files are installed into the
+        # site-packages directory. However, the site-packages directory
+        # isn't known until wheel install time. This means we have no clue
+        # at wheel generation time what the installed site-packages directory
+        # will be. And, wheels don't appear to provide the ability to register
+        # custom code to run during wheel installation. This all means that
+        # we can't reliably set the libdir in wheels: the default behavior
+        # of looking in sys.path must do.
+
         if (os.path.splitdrive(self.install_dir)[0] !=
             os.path.splitdrive(self.install_lib)[0]):
             # can't make relative paths from one drive to another, so use an
@@ -498,6 +517,14 @@ class hginstallscripts(install_scripts):
 
             # skip binary files
             if b('\0') in data:
+                continue
+
+            # During local installs, the shebang will be rewritten to the final
+            # install path. During wheel packaging, the shebang has a special
+            # value.
+            if data.startswith(b'#!python'):
+                log.info('not rewriting @LIBDIR@ in %s because install path '
+                         'not known' % outfile)
                 continue
 
             data = data.replace(b('@LIBDIR@'), libdir.encode(libdir_escape))
