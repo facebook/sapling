@@ -1081,7 +1081,7 @@ class paths(dict):
             # bit weird, but is allowed for backwards compatibility.
             if 'default' not in self:
                 self['default'] = path('default', rawloc=defaultpush)
-            self['default']._pushloc = defaultpush
+            self['default'].pushloc = defaultpush
 
     def getpath(self, name, default=None):
         """Return a ``path`` from a string, falling back to a default.
@@ -1149,7 +1149,7 @@ class path(object):
         self.name = name
         self.rawloc = rawloc
         self.loc = str(u)
-        self._pushloc = pushloc
+        self.pushloc = pushloc
 
         # When given a raw location but not a symbolic name, validate the
         # location is valid.
@@ -1163,10 +1163,6 @@ class path(object):
         'valid' in this case (like when pulling from a git repo into a hg
         one)."""
         return os.path.isdir(os.path.join(path, '.hg'))
-
-    @property
-    def pushloc(self):
-        return self._pushloc or self.loc
 
 # we instantiate one globally shared progress bar to avoid
 # competing progress bars when multiple UI objects get created

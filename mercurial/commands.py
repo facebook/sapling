@@ -5639,7 +5639,8 @@ def push(ui, repo, dest=None, **opts):
     if not path:
         raise error.Abort(_('default repository not configured!'),
                          hint=_('see the "path" section in "hg help config"'))
-    dest, branches = path.pushloc, (path.branch, opts.get('branch') or [])
+    dest = path.pushloc or path.loc
+    branches = (path.branch, opts.get('branch') or [])
     ui.status(_('pushing to %s\n') % util.hidepassword(dest))
     revs, checkout = hg.addbranchrevs(repo, repo, branches, opts.get('rev'))
     other = hg.peer(repo, opts, dest)
