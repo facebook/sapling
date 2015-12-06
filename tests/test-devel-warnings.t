@@ -47,6 +47,12 @@
   >         repair.strip(repo.ui, repo, [repo['.'].node()])
   >     finally:
   >         lo.release()
+  > @command('oldanddeprecated', [], '')
+  > def oldanddeprecated(ui, repo):
+  >     """test deprecation warning API"""
+  >     def foobar(ui):
+  >         ui.deprecwarn('foorbar is deprecated, go shopping', '42.1337')
+  >     foobar(ui)
   > 
   > def oldstylerevset(repo, subset, x):
   >     return list(subset)
@@ -114,5 +120,22 @@
   $ hg log -r "oldstyle()" -T '{rev}\n'
   devel-warn: revset "oldstyle" use list instead of smartset, (upgrade your code) at: */mercurial/revset.py:* (mfunc) (glob)
   0
+  $ hg oldanddeprecated
+  devel-warn: foorbar is deprecated, go shopping
+  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:53 (oldanddeprecated)
 
+  $ hg oldanddeprecated --traceback
+  devel-warn: foorbar is deprecated, go shopping
+  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
+   */hg:* in <module> (glob)
+   */mercurial/dispatch.py:* in run (glob)
+   */mercurial/dispatch.py:* in dispatch (glob)
+   */mercurial/dispatch.py:* in _runcatch (glob)
+   */mercurial/dispatch.py:* in _dispatch (glob)
+   */mercurial/dispatch.py:* in runcommand (glob)
+   */mercurial/dispatch.py:* in _runcommand (glob)
+   */mercurial/dispatch.py:* in checkargs (glob)
+   */mercurial/dispatch.py:* in <lambda> (glob)
+   */mercurial/util.py:* in check (glob)
+   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
   $ cd ..

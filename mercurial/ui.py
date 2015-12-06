@@ -1060,6 +1060,16 @@ class ui(object):
             self.write_err('%s at: %s:%s (%s)\n'
                            % ((msg,) + calframe[stacklevel][1:4]))
 
+    def deprecwarn(self, msg, version):
+        """issue a deprecation warning
+
+        - msg: message explaining what is deprecated and how to upgrade,
+        - version: last version where the API will be supported,
+        """
+        msg += ("\n(compatibility will be dropped after Mercurial-%s,"
+                " update your code.)") % version
+        self.develwarn(msg, stacklevel=2)
+
 class paths(dict):
     """Represents a collection of paths and their configs.
 
