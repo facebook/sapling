@@ -1,6 +1,6 @@
 
   $ cat << EOF > buggylocking.py
-  > """A small extension that acquire locks in the wrong order
+  > """A small extension that tests our developer warnings
   > """
   > 
   > from mercurial import cmdutil, repair, revset
