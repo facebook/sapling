@@ -1071,7 +1071,7 @@ class paths(dict):
             # TODO ignore default-push once all consumers stop referencing it
             # since it is handled specifically below.
 
-            self[name] = path(name, rawloc=loc)
+            self[name] = path(ui, name, rawloc=loc)
 
         # Handle default-push, which is a one-off that defines the push URL for
         # the "default" path.
@@ -1080,7 +1080,7 @@ class paths(dict):
             # "default-push" can be defined without "default" entry. This is a
             # bit weird, but is allowed for backwards compatibility.
             if 'default' not in self:
-                self['default'] = path('default', rawloc=defaultpush)
+                self['default'] = path(ui, 'default', rawloc=defaultpush)
             self['default'].pushloc = defaultpush
 
     def getpath(self, name, default=None):
@@ -1112,7 +1112,8 @@ class paths(dict):
         except KeyError:
             # Try to resolve as a local path or URI.
             try:
-                return path(None, rawloc=name)
+                # We don't pass sub-options in, so no need to pass ui instance.
+                return path(None, None, rawloc=name)
             except ValueError:
                 raise error.RepoError(_('repository %s does not exist') %
                                         name)
@@ -1122,9 +1123,10 @@ class paths(dict):
 class path(object):
     """Represents an individual path and its configuration."""
 
-    def __init__(self, name, rawloc=None, pushloc=None):
+    def __init__(self, ui, name, rawloc=None, pushloc=None):
         """Construct a path from its config options.
 
+        ``ui`` is the ``ui`` instance the path is coming from.
         ``name`` is the symbolic name of the path.
         ``rawloc`` is the raw location, as defined in the config.
         ``pushloc`` is the raw locations pushes should be made to.
