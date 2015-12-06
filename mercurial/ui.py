@@ -1044,15 +1044,21 @@ class ui(object):
         '''
         return msg
 
-    def develwarn(self, msg):
-        """issue a developer warning message"""
+    def develwarn(self, msg, stacklevel=1):
+        """issue a developer warning message
+
+        Use 'stacklevel' to report the offender some layers further up in the
+        stack.
+        """
         msg = 'devel-warn: ' + msg
+        stacklevel += 1 # get in develwarn
         if self.tracebackflag:
-            util.debugstacktrace(msg, 2, self.ferr, self.fout)
+            util.debugstacktrace(msg, stacklevel, self.ferr, self.fout)
         else:
             curframe = inspect.currentframe()
             calframe = inspect.getouterframes(curframe, 2)
-            self.write_err('%s at: %s:%s (%s)\n' % ((msg,) + calframe[2][1:4]))
+            self.write_err('%s at: %s:%s (%s)\n'
+                           % ((msg,) + calframe[stacklevel][1:4]))
 
 class paths(dict):
     """Represents a collection of paths and their configs.
