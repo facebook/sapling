@@ -85,6 +85,16 @@ Run additional tests for the import checker
   >     import testpackage.subpackage.levelpriority
   > EOF
 
+  $ cat > testpackage/importmodulefromsub.py << EOF
+  > from __future__ import absolute_import
+  > from .subpackage import foo  # not a "direct symbol import"
+  > EOF
+
+  $ cat > testpackage/importsymbolfromsub.py << EOF
+  > from __future__ import absolute_import
+  > from .subpackage import foo, nonmodule
+  > EOF
+
   $ cat > testpackage/sortedentries.py << EOF
   > from __future__ import absolute_import
   > from . import (
@@ -108,6 +118,7 @@ Run additional tests for the import checker
   testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
   testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted
   testpackage/importfromrelative.py:2: direct symbol import from testpackage.unsorted
+  testpackage/importsymbolfromsub.py:2: direct symbol import from testpackage.subpackage
   testpackage/latesymbolimport.py:3: symbol import follows non-symbol import: mercurial.node
   testpackage/multiple.py:2: multiple imported names: os, sys
   testpackage/multiplegroups.py:3: multiple "from . import" statements

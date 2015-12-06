@@ -321,7 +321,7 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
                 # lookup
                 yield dottedpath
 
-def verify_import_convention(module, source):
+def verify_import_convention(module, source, localmods):
     """Verify imports match our established coding convention.
 
     We have 2 conventions: legacy and modern. The modern convention is in
@@ -334,11 +334,11 @@ def verify_import_convention(module, source):
     absolute = usingabsolute(root)
 
     if absolute:
-        return verify_modern_convention(module, root)
+        return verify_modern_convention(module, root, localmods)
     else:
         return verify_stdlib_on_own_line(root)
 
-def verify_modern_convention(module, root, root_col_offset=0):
+def verify_modern_convention(module, root, localmods, root_col_offset=0):
     """Verify a file conforms to the modern import convention rules.
 
     The rules of the modern convention are:
@@ -365,6 +365,7 @@ def verify_modern_convention(module, root, root_col_offset=0):
       and readability problems. See `requirealias`.
     """
     topmodule = module.split('.')[0]
+    fromlocal = fromlocalfunc(module, localmods)
 
     # Whether a local/non-stdlib import has been performed.
     seenlocal = False
@@ -380,7 +381,7 @@ def verify_modern_convention(module, root, root_col_offset=0):
             return (fmt % args, node.lineno)
         if newscope:
             # Check for local imports in function
-            for r in verify_modern_convention(module, node,
+            for r in verify_modern_convention(module, node, localmods,
                                               node.col_offset + 4):
                 yield r
         elif isinstance(node, ast.Import):
@@ -443,10 +444,18 @@ def verify_modern_convention(module, root, root_col_offset=0):
             # Direct symbol import is only allowed from certain modules and
             # must occur before non-symbol imports.
             if node.module and node.col_offset == root_col_offset:
-                if fullname not in allowsymbolimports:
+                found = fromlocal(node.module, node.level)
+                if found and found[2]:  # node.module is a package
+                    prefix = found[0] + '.'
+                    symbols = [n.name for n in node.names
+                               if not fromlocal(prefix + n.name)]
+                else:
+                    symbols = [n.name for n in node.names]
+
+                if symbols and fullname not in allowsymbolimports:
                     yield msg('direct symbol import from %s', fullname)
 
-                if seennonsymbolrelative:
+                if symbols and seennonsymbolrelative:
                     yield msg('symbol import follows non-symbol import: %s',
                               fullname)
 
@@ -577,7 +586,7 @@ def main(argv):
         src = f.read()
         used_imports[modname] = sorted(
             imported_modules(src, modname, localmods, ignore_nested=True))
-        for error, lineno in verify_import_convention(modname, src):
+        for error, lineno in verify_import_convention(modname, src, localmods):
             any_errors = True
             print '%s:%d: %s' % (source_path, lineno, error)
         f.close()
