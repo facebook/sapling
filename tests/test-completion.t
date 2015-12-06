@@ -80,6 +80,7 @@ Show debug commands if there are no other candidates
   debugdag
   debugdata
   debugdate
+  debugdeltachain
   debugdirstate
   debugdiscovery
   debugextensions
@@ -243,6 +244,7 @@ Show all commands + options
   debugdag: tags, branches, dots, spaces
   debugdata: changelog, manifest, dir
   debugdate: extended
+  debugdeltachain: changelog, manifest, dir, template
   debugdirstate: nodates, datesort
   debugdiscovery: old, nonheads, ssh, remotecmd, insecure
   debugextensions: template

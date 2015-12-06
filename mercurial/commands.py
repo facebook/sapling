@@ -2501,6 +2501,117 @@ def debugindexdot(ui, repo, file_=None, **opts):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
+@command('debugdeltachain',
+    debugrevlogopts + formatteropts,
+    _('-c|-m|FILE'),
+    optionalrepo=True)
+def debugdeltachain(ui, repo, file_=None, **opts):
+    """dump information about delta chains in a revlog
+
+    Output can be templatized. Available template keywords are:
+
+       rev          revision number
+       chainid      delta chain identifier (numbered by unique base)
+       chainlen     delta chain length to this revision
+       prevrev      previous revision in delta chain
+       deltatype    role of delta / how it was computed
+       compsize     compressed size of revision
+       uncompsize   uncompressed size of revision
+       chainsize    total size of compressed revisions in chain
+       chainratio   total chain size divided by uncompressed revision size
+                    (new delta chains typically start at ratio 2.00)
+       lindist      linear distance from base revision in delta chain to end
+                    of this revision
+       extradist    total size of revisions not part of this delta chain from
+                    base of delta chain to end of this revision; a measurement
+                    of how much extra data we need to read/seek across to read
+                    the delta chain for this revision
+       extraratio   extradist divided by chainsize; another representation of
+                    how much unrelated data is needed to load this delta chain
+    """
+    r = cmdutil.openrevlog(repo, 'debugdeltachain', file_, opts)
+    index = r.index
+    generaldelta = r.version & revlog.REVLOGGENERALDELTA
+
+    def revinfo(rev):
+        iterrev = rev
+        e = index[iterrev]
+        chain = []
+        compsize = e[1]
+        uncompsize = e[2]
+        chainsize = 0
+
+        if generaldelta:
+            if e[3] == e[5]:
+                deltatype = 'p1'
+            elif e[3] == e[6]:
+                deltatype = 'p2'
+            elif e[3] == rev - 1:
+                deltatype = 'prev'
+            elif e[3] == rev:
+                deltatype = 'base'
+            else:
+                deltatype = 'other'
+        else:
+            if e[3] == rev:
+                deltatype = 'base'
+            else:
+                deltatype = 'prev'
+
+        while iterrev != e[3]:
+            chain.append(iterrev)
+            chainsize += e[1]
+            if generaldelta:
+                iterrev = e[3]
+            else:
+                iterrev -= 1
+            e = index[iterrev]
+        else:
+            chainsize += e[1]
+            chain.append(iterrev)
+
+        chain.reverse()
+        return compsize, uncompsize, deltatype, chain, chainsize
+
+    fm = ui.formatter('debugdeltachain', opts)
+
+    fm.plain('    rev  chain# chainlen     prev   delta       '
+             'size    rawsize  chainsize     ratio   lindist extradist '
+             'extraratio\n')
+
+    chainbases = {}
+    for rev in r:
+        comp, uncomp, deltatype, chain, chainsize = revinfo(rev)
+        chainbase = chain[0]
+        chainid = chainbases.setdefault(chainbase, len(chainbases) + 1)
+        basestart = r.start(chainbase)
+        revstart = r.start(rev)
+        lineardist = revstart + comp - basestart
+        extradist = lineardist - chainsize
+        try:
+            prevrev = chain[-2]
+        except IndexError:
+            prevrev = -1
+
+        chainratio = float(chainsize) / float(uncomp)
+        extraratio = float(extradist) / float(chainsize)
+
+        fm.startitem()
+        fm.write('rev chainid chainlen prevrev deltatype compsize '
+                 'uncompsize chainsize chainratio lindist extradist '
+                 'extraratio',
+                 '%7d %7d %8d %8d %7s %10d %10d %10d %9.5f %9d %9d %10.5f\n',
+                 rev, chainid, len(chain), prevrev, deltatype, comp,
+                 uncomp, chainsize, chainratio, lineardist, extradist,
+                 extraratio,
+                 rev=rev, chainid=chainid, chainlen=len(chain),
+                 prevrev=prevrev, deltatype=deltatype, compsize=comp,
+                 uncompsize=uncomp, chainsize=chainsize,
+                 chainratio=chainratio, lindist=lineardist,
+                 extradist=extradist, extraratio=extraratio)
+
+    fm.end()
+
 @command('debuginstall', [], '', norepo=True)
 def debuginstall(ui):
     '''test Mercurial installation

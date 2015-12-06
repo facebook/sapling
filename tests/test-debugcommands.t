@@ -44,6 +44,32 @@ Test debugindex, with and without the --debug flag
      rev flag   offset   length     size  .....   link     p1     p2                                   nodeid (re)
        0 0000        0        3        2   ....      0     -1     -1 b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3 (re)
 
+debugdelta chain basic output
+
+  $ hg debugdeltachain -m
+      rev  chain# chainlen     prev   delta       size    rawsize  chainsize     ratio   lindist extradist extraratio
+        0       1        1       -1    base         44         43         44   1.02326        44         0    0.00000
+
+  $ hg debugdeltachain -m -T '{rev} {chainid} {chainlen}\n'
+  0 1 1
+
+  $ hg debugdeltachain -m -Tjson
+  [
+   {
+    "chainid": 1,
+    "chainlen": 1,
+    "chainratio": 1.02325581395,
+    "chainsize": 44,
+    "compsize": 44,
+    "deltatype": "base",
+    "extradist": 0,
+    "extraratio": 0.0,
+    "lindist": 44,
+    "prevrev": -1,
+    "rev": 0,
+    "uncompsize": 43
+   }
+  ]
 
 Test max chain len
   $ cat >> $HGRCPATH << EOF

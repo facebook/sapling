@@ -812,6 +812,8 @@ Test list of internal help commands
                  description
    debugdata     dump the contents of a data file revision
    debugdate     parse and display a date
+   debugdeltachain
+                 dump information about delta chains in a revlog
    debugdirstate
                  show the contents of the current dirstate
    debugdiscovery
