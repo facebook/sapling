@@ -280,6 +280,39 @@ class ui(object):
                                "%s.%s = %s\n" % (section, n, uvalue))
         return value
 
+    def configsuboptions(self, section, name, default=None, untrusted=False):
+        """Get a config option and all sub-options.
+
+        Some config options have sub-options that are declared with the
+        format "key:opt = value". This method is used to return the main
+        option and all its declared sub-options.
+
+        Returns a 2-tuple of ``(option, sub-options)``, where `sub-options``
+        is a dict of defined sub-options where keys and values are strings.
+        """
+        data = self._data(untrusted)
+        main = data.get(section, name, default)
+        if self.debugflag and not untrusted and self._reportuntrusted:
+            uvalue = self._ucfg.get(section, name)
+            if uvalue is not None and uvalue != main:
+                self.debug('ignoring untrusted configuration option '
+                           '%s.%s = %s\n' % (section, name, uvalue))
+
+        sub = {}
+        prefix = '%s:' % name
+        for k, v in data.items(section):
+            if k.startswith(prefix):
+                sub[k[len(prefix):]] = v
+
+        if self.debugflag and not untrusted and self._reportuntrusted:
+            for k, v in sub.items():
+                uvalue = self._ucfg.get(section, '%s:%s' % (name, k))
+                if uvalue is not None and uvalue != v:
+                    self.debug('ignoring untrusted configuration option '
+                               '%s:%s.%s = %s\n' % (section, name, k, uvalue))
+
+        return main, sub
+
     def configpath(self, section, name, default=None, untrusted=False):
         'get a path config item, expanded relative to repo root or config file'
         v = self.config(section, name, default, untrusted)
