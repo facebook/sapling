@@ -2487,16 +2487,11 @@ def debugindex(ui, repo, file_=None, **opts):
                     i, r.flags(i), r.start(i), r.length(i), r.rawsize(i),
                     base, r.linkrev(i), pr[0], pr[1], shortfn(node)))
 
-@command('debugindexdot', [], _('FILE'), optionalrepo=True)
-def debugindexdot(ui, repo, file_):
+@command('debugindexdot', debugrevlogopts,
+    _('-c|-m|FILE'), optionalrepo=True)
+def debugindexdot(ui, repo, file_=None, **opts):
     """dump an index DAG as a graphviz dot file"""
-    r = None
-    if repo:
-        filelog = repo.file(file_)
-        if len(filelog):
-            r = filelog
-    if not r:
-        r = revlog.revlog(scmutil.opener(os.getcwd(), audit=False), file_)
+    r = cmdutil.openrevlog(repo, 'debugindexdot', file_, opts)
     ui.write(("digraph G {\n"))
     for i in r:
         node = r.node(i)

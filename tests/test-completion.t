@@ -251,7 +251,7 @@ Show all commands + options
   debuggetbundle: head, common, type
   debugignore: 
   debugindex: changelog, manifest, dir, format
-  debugindexdot: 
+  debugindexdot: changelog, manifest, dir
   debuginstall: 
   debugknown: 
   debuglabelcomplete: 
