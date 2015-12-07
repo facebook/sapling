@@ -29,8 +29,10 @@
 # $ hg forget *_*_*-untracked
 # $ rm *_*_missing-*
 
-import sys
+from __future__ import absolute_import
+
 import os
+import sys
 
 # Generates pairs of (filename, contents), where 'contents' is a list
 # describing the file's content at each revision (or in the working copy).
