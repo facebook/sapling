@@ -1,13 +1,22 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 """
 Small and dumb HTTP server for use in tests.
 """
 
-from optparse import OptionParser
-import BaseHTTPServer, SimpleHTTPServer, signal, sys
+import optparse
+import BaseHTTPServer
+import signal
+import SimpleHTTPServer
+import sys
 
-from mercurial import cmdutil
+from mercurial import (
+    cmdutil,
+)
+
+OptionParser = optparse.OptionParser
 
 class simplehttpservice(object):
     def __init__(self, host, port):
