@@ -219,7 +219,6 @@
   tests/test-url.py not using absolute_import
   tests/test-url.py requires print_function
   tests/test-walkrepo.py requires print_function
-  tests/test-wireproto.py not using absolute_import
   tests/test-wireproto.py requires print_function
   tests/tinyproxy.py not using absolute_import
   tests/tinyproxy.py requires print_function

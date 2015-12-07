@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 from mercurial import wireproto
 
 class proto(object):
