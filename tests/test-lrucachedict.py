@@ -34,5 +34,13 @@ def test_lrucachedict():
     d.clear()
     printifpresent(d, ['b', 'c', 'd', 'e', 'f'])
 
+    # Now test dicts that aren't full.
+    d = util.lrucachedict(4)
+    d['a'] = 1
+    d['b'] = 2
+    d['a']
+    d['b']
+    printifpresent(d, ['a', 'b'])
+
 if __name__ == '__main__':
     test_lrucachedict()

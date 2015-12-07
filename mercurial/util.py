@@ -510,34 +510,178 @@ class sortdict(dict):
         self._list.insert(index, key)
         dict.__setitem__(self, key, val)
 
+class _lrucachenode(object):
+    """A node in a doubly linked list.
+
+    Holds a reference to nodes on either side as well as a key-value
+    pair for the dictionary entry.
+    """
+    __slots__ = ('next', 'prev', 'key', 'value')
+
+    def __init__(self):
+        self.next = None
+        self.prev = None
+
+        self.key = _notset
+        self.value = None
+
+    def markempty(self):
+        """Mark the node as emptied."""
+        self.key = _notset
+
 class lrucachedict(object):
-    '''cache most recent gets from or sets to this dictionary'''
-    def __init__(self, maxsize):
+    """Dict that caches most recent accesses and sets.
+
+    The dict consists of an actual backing dict - indexed by original
+    key - and a doubly linked circular list defining the order of entries in
+    the cache.
+
+    The head node is the newest entry in the cache. If the cache is full,
+    we recycle head.prev and make it the new head. Cache accesses result in
+    the node being moved to before the existing head and being marked as the
+    new head node.
+
+    NOTE: construction of this class doesn't scale well if the cache size
+    is in the thousands. Avoid creating hundreds or thousands of instances
+    with large capacities.
+    """
+    def __init__(self, max):
         self._cache = {}
-        self._maxsize = maxsize
-        self._order = collections.deque()
 
-    def __getitem__(self, key):
-        value = self._cache[key]
-        self._order.remove(key)
-        self._order.append(key)
-        return value
+        self._head = head = _lrucachenode()
+        head.prev = head
+        head.next = head
+        self._size = 1
+        self._capacity = max
 
-    def __setitem__(self, key, value):
-        if key not in self._cache:
-            if len(self._cache) >= self._maxsize:
-                del self._cache[self._order.popleft()]
+    def __len__(self):
+        return len(self._cache)
+
+    def __contains__(self, k):
+        return k in self._cache
+
+    def __iter__(self):
+        # We don't have to iterate in cache order, but why not.
+        n = self._head
+        for i in range(len(self._cache)):
+            yield n.key
+            n = n.next
+
+    def __getitem__(self, k):
+        node = self._cache[k]
+        self._movetohead(node)
+        return node.value
+
+    def __setitem__(self, k, v):
+        node = self._cache.get(k)
+        # Replace existing value and mark as newest.
+        if node is not None:
+            node.value = v
+            self._movetohead(node)
+            return
+
+        if self._size < self._capacity:
+            node = self._addcapacity()
         else:
-            self._order.remove(key)
-        self._cache[key] = value
-        self._order.append(key)
+            # Grab the last/oldest item.
+            node = self._head.prev
 
-    def __contains__(self, key):
-        return key in self._cache
+        # At capacity. Kill the old entry.
+        if node.key is not _notset:
+            del self._cache[node.key]
+
+        node.key = k
+        node.value = v
+        self._cache[k] = node
+        # And mark it as newest entry. No need to adjust order since it
+        # is already self._head.prev.
+        self._head = node
+
+    def __delitem__(self, k):
+        node = self._cache.pop(k)
+        node.markempty()
+
+        # Temporarily mark as newest item before re-adjusting head to make
+        # this node the oldest item.
+        self._movetohead(node)
+        self._head = node.next
+
+    # Additional dict methods.
+
+    def get(self, k, default=None):
+        try:
+            return self._cache[k]
+        except KeyError:
+            return default
 
     def clear(self):
+        n = self._head
+        while n.key is not _notset:
+            n.markempty()
+            n = n.next
+
         self._cache.clear()
-        self._order = collections.deque()
+
+    def _movetohead(self, node):
+        """Mark a node as the newest, making it the new head.
+
+        When a node is accessed, it becomes the freshest entry in the LRU
+        list, which is denoted by self._head.
+
+        Visually, let's make ``N`` the new head node (* denotes head):
+
+            previous/oldest <-> head <-> next/next newest
+
+            ----<->--- A* ---<->-----
+            |                       |
+            E <-> D <-> N <-> C <-> B
+
+        To:
+
+            ----<->--- N* ---<->-----
+            |                       |
+            E <-> D <-> C <-> B <-> A
+
+        This requires the following moves:
+
+           C.next = D  (node.prev.next = node.next)
+           D.prev = C  (node.next.prev = node.prev)
+           E.next = N  (head.prev.next = node)
+           N.prev = E  (node.prev = head.prev)
+           N.next = A  (node.next = head)
+           A.prev = N  (head.prev = node)
+        """
+        head = self._head
+        # C.next = D
+        node.prev.next = node.next
+        # D.prev = C
+        node.next.prev = node.prev
+        # N.prev = E
+        node.prev = head.prev
+        # N.next = A
+        # It is tempting to do just "head" here, however if node is
+        # adjacent to head, this will do bad things.
+        node.next = head.prev.next
+        # E.next = N
+        node.next.prev = node
+        # A.prev = N
+        node.prev.next = node
+
+        self._head = node
+
+    def _addcapacity(self):
+        """Add a node to the circular linked list.
+
+        The new node is inserted before the head node.
+        """
+        head = self._head
+        node = _lrucachenode()
+        head.prev.next = node
+        node.prev = head.prev
+        node.next = head
+        head.prev = node
+        self._size += 1
+        return node
 
 def lrucachefunc(func):
     '''cache most recent results of function calls'''

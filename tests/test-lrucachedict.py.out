@@ -29,3 +29,7 @@ d['f']: vf
 'd' in d: False
 'e' in d: False
 'f' in d: False
+'a' in d: True
+d['a']: 1
+'b' in d: True
+d['b']: 2
