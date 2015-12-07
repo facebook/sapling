@@ -7,6 +7,6 @@ run pyflakes on all tracked files ending in .py or without a file ending
 
   $ hg locate 'set:**.py or grep("^!#.*python")' 2>/dev/null \
   > | xargs pyflakes 2>/dev/null | "$TESTDIR/filterpyflakes.py"
-  tests/filterpyflakes.py:58: undefined name 'undefinedname'
+  tests/filterpyflakes.py:61: undefined name 'undefinedname'
   
 

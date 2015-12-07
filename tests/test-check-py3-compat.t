@@ -143,7 +143,6 @@
   mercurial/util.py not using absolute_import
   mercurial/windows.py not using absolute_import
   setup.py not using absolute_import
-  tests/filterpyflakes.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py not using absolute_import
   tests/generate-working-copy-states.py requires print_function

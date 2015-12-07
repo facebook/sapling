@@ -2,7 +2,10 @@
 
 # Filter output by pyflakes to control which warnings we check
 
-import sys, re
+from __future__ import absolute_import
+
+import re
+import sys
 
 def makekey(typeandline):
     """
