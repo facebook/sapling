@@ -75,6 +75,8 @@ perfstatus
                  benchmark the time to parse the on-disk markers for a repo
    perflog       (no help text available)
    perflookup    (no help text available)
+   perflrucachedict
+                 (no help text available)
    perfmanifest  (no help text available)
    perfmergecalculate
                  (no help text available)
@@ -139,6 +141,11 @@ perfstatus
   $ hg perflog 2>&1 | filter_perf_output
   $ hg perflookup 2 2>&1 | filter_perf_output
   ! result: 20
+  $ hg perflrucache 2>&1 | filter_perf_output
+  ! init
+  ! gets
+  ! sets
+  ! mixed
   $ hg perfmanifest 2 2>&1 | filter_perf_output
   $ hg perfmergecalculate -r 3 2>&1 | filter_perf_output
   $ hg perfmoonwalk 2>&1 | filter_perf_output

@@ -4,6 +4,7 @@
 from mercurial import cmdutil, scmutil, util, commands, obsolete
 from mercurial import repoview, branchmap, merge, copies, error
 import time, os, sys
+import random
 import functools
 
 formatteropts = commands.formatteropts
@@ -582,3 +583,80 @@ def perfloadmarkers(ui, repo):
     timer, fm = gettimer(ui)
     timer(lambda: len(obsolete.obsstore(repo.svfs)))
     fm.end()
+
+@command('perflrucachedict', formatteropts +
+    [('', 'size', 4, 'size of cache'),
+     ('', 'gets', 10000, 'number of key lookups'),
+     ('', 'sets', 10000, 'number of key sets'),
+     ('', 'mixed', 10000, 'number of mixed mode operations'),
+     ('', 'mixedgetfreq', 50, 'frequency of get vs set ops in mixed mode')],
+    norepo=True)
+def perflrucache(ui, size=4, gets=10000, sets=10000, mixed=10000,
+                 mixedgetfreq=50, **opts):
+    def doinit():
+        for i in xrange(10000):
+            util.lrucachedict(size)
+
+    values = []
+    for i in xrange(size):
+        values.append(random.randint(0, sys.maxint))
+
+    # Get mode fills the cache and tests raw lookup performance with no
+    # eviction.
+    getseq = []
+    for i in xrange(gets):
+        getseq.append(random.choice(values))
+
+    def dogets():
+        d = util.lrucachedict(size)
+        for v in values:
+            d[v] = v
+        for key in getseq:
+            value = d[key]
+            value # silence pyflakes warning
+
+    # Set mode tests insertion speed with cache eviction.
+    setseq = []
+    for i in xrange(sets):
+        setseq.append(random.randint(0, sys.maxint))
+
+    def dosets():
+        d = util.lrucachedict(size)
+        for v in setseq:
+            d[v] = v
+
+    # Mixed mode randomly performs gets and sets with eviction.
+    mixedops = []
+    for i in xrange(mixed):
+        r = random.randint(0, 100)
+        if r < mixedgetfreq:
+            op = 0
+        else:
+            op = 1
+
+        mixedops.append((op, random.randint(0, size * 2)))
+
+    def domixed():
+        d = util.lrucachedict(size)
+
+        for op, v in mixedops:
+            if op == 0:
+                try:
+                    d[v]
+                except KeyError:
+                    pass
+            else:
+                d[v] = v
+
+    benches = [
+        (doinit, 'init'),
+        (dogets, 'gets'),
+        (dosets, 'sets'),
+        (domixed, 'mixed')
+    ]
+
+    for fn, title in benches:
+        timer, fm = gettimer(ui, opts)
+        timer(fn, title=title)
+        fm.end()
+
