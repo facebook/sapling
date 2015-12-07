@@ -4,7 +4,7 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd a
   $ echo '[paths]' >> .hg/hgrc
-  $ echo 'dupe = ../b' >> .hg/hgrc
+  $ echo 'dupe = ../b#tip' >> .hg/hgrc
   $ echo 'expand = $SOMETHING/bar' >> .hg/hgrc
   $ hg in dupe
   comparing with $TESTTMP/b (glob)
@@ -17,25 +17,25 @@
   [1]
   $ cd a
   $ hg paths
-  dupe = $TESTTMP/b (glob)
+  dupe = $TESTTMP/b#tip (glob)
   expand = $TESTTMP/a/$SOMETHING/bar (glob)
   $ SOMETHING=foo hg paths
-  dupe = $TESTTMP/b (glob)
+  dupe = $TESTTMP/b#tip (glob)
   expand = $TESTTMP/a/foo/bar (glob)
 #if msys
   $ SOMETHING=//foo hg paths
-  dupe = $TESTTMP/b (glob)
+  dupe = $TESTTMP/b#tip (glob)
   expand = /foo/bar
 #else
   $ SOMETHING=/foo hg paths
-  dupe = $TESTTMP/b (glob)
+  dupe = $TESTTMP/b#tip (glob)
   expand = /foo/bar
 #endif
   $ hg paths -q
   dupe
   expand
   $ hg paths dupe
-  $TESTTMP/b (glob)
+  $TESTTMP/b#tip (glob)
   $ hg paths -q dupe
   $ hg paths unknown
   not found!
