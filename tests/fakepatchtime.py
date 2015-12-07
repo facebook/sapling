@@ -1,7 +1,13 @@
 # extension to emulate invoking 'patch.internalpatch()' at the time
 # specified by '[fakepatchtime] fakenow'
 
-from mercurial import extensions, patch as patchmod, util
+from __future__ import absolute_import
+
+from mercurial import (
+    extensions,
+    patch as patchmod,
+    util,
+)
 
 def internalpatch(orig, ui, repo, patchobj, strip,
                   prefix='', files=None,
