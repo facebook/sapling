@@ -5,7 +5,15 @@
 #   - 'workingctx._checklookup()' (= 'repo.status()')
 #   - 'committablectx.markcommitted()'
 
-from mercurial import context, dirstate, extensions, parsers, util
+from __future__ import absolute_import
+
+from mercurial import (
+    context,
+    dirstate,
+    extensions,
+    parsers,
+    util,
+)
 
 def pack_dirstate(fakenow, orig, dmap, copymap, pl, now):
     # execute what original parsers.pack_dirstate should do actually
