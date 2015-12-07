@@ -1,6 +1,21 @@
-from mercurial import ancestor, commands, hg, ui, util
+from __future__ import absolute_import
+
+import binascii
+import getopt
+import math
+import os
+import random
+import sys
+import time
+
 from mercurial.node import nullrev
-import binascii, getopt, math, os, random, sys, time
+from mercurial import (
+    ancestor,
+    commands,
+    hg,
+    ui,
+    util,
+)
 
 def buildgraph(rng, nodes=100, rootprob=0.05, mergeprob=0.2, prevprob=0.7):
     '''nodes: total number of nodes in the graph

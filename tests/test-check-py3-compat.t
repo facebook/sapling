@@ -174,7 +174,6 @@
   tests/sitecustomize.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import
   tests/svnxml.py not using absolute_import
-  tests/test-ancestor.py not using absolute_import
   tests/test-ancestor.py requires print_function
   tests/test-atomictempfile.py not using absolute_import
   tests/test-batching.py not using absolute_import
