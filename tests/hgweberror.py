@@ -1,6 +1,10 @@
 # A dummy extension that installs an hgweb command that throws an Exception.
 
-from mercurial.hgweb import webcommands
+from __future__ import absolute_import
+
+from mercurial.hgweb import (
+    webcommands,
+)
 
 def raiseerror(web, req, tmpl):
     '''Dummy web command that raises an uncaught Exception.'''

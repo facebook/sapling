@@ -147,7 +147,6 @@
   tests/generate-working-copy-states.py requires print_function
   tests/get-with-headers.py requires print_function
   tests/heredoctest.py requires print_function
-  tests/hgweberror.py not using absolute_import
   tests/hypothesishelpers.py not using absolute_import
   tests/hypothesishelpers.py requires print_function
   tests/killdaemons.py not using absolute_import
