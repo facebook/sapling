@@ -143,7 +143,6 @@
   mercurial/util.py not using absolute_import
   mercurial/windows.py not using absolute_import
   setup.py not using absolute_import
-  tests/autodiff.py not using absolute_import
   tests/dumbhttp.py not using absolute_import
   tests/fakedirstatewritetime.py not using absolute_import
   tests/fakepatchtime.py not using absolute_import

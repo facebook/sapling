@@ -1,7 +1,13 @@
 # Extension dedicated to test patch.diff() upgrade modes
-#
-#
-from mercurial import cmdutil, scmutil, patch, error
+
+from __future__ import absolute_import
+
+from mercurial import (
+    cmdutil,
+    error,
+    patch,
+    scmutil,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
