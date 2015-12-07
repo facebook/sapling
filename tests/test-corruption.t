@@ -23,8 +23,11 @@
 
   $ hg strip -r 1 --config extensions.hgsql=!
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/d34c38483be9-3839604f-backup.hg (glob)
+- The huge number in the output below is because we're trying to apply rev 0
+(which contains the generaldelta bit in the offset int) to a non-rev 0
+location (so the generaldelta bit isn't stripped before the comparison)
   $ hg log -l 1 2>&1 | egrep 'Corruption'
-  hgext_hgsql.CorruptionException: revision offset doesn't match prior length (4295032832 offset vs 3 length): data/z.i
+  hgext_hgsql.CorruptionException: revision offset doesn't match prior length (12884967424 offset vs 3 length): data/z.i
 
 # Recover middle commit, but on top, then try syncing (succeeds)
 
