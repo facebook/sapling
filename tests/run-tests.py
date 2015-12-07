@@ -267,6 +267,8 @@ def getparser():
                       help='run statprof on run-tests')
     parser.add_option('--allow-slow-tests', action='store_true',
                       help='allow extremely slow tests')
+    parser.add_option('--showchannels', action='store_true',
+                      help='show scheduling channels')
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -346,6 +348,9 @@ def parseargs(args, parser):
         options.whitelisted = parselistfiles(options.whitelist, 'whitelist')
     else:
         options.whitelisted = {}
+
+    if options.showchannels:
+        options.nodiff = True
 
     return (options, args)
 
@@ -1418,7 +1423,7 @@ class TestSuite(unittest.TestSuite):
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
                  retest=False, keywords=None, loop=False, runs_per_test=1,
-                 loadtest=None,
+                 loadtest=None, showchannels=False,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1455,6 +1460,7 @@ class TestSuite(unittest.TestSuite):
         self._loop = loop
         self._runs_per_test = runs_per_test
         self._loadtest = loadtest
+        self._showchannels = showchannels
 
     def run(self, result):
         # We have a number of filters that need to be applied. We do this
@@ -1501,7 +1507,14 @@ class TestSuite(unittest.TestSuite):
         done = queue.Queue()
         running = 0
 
+        channels = [""] * self._jobs
+
         def job(test, result):
+            for n, v in enumerate(channels):
+                if not v:
+                    channel = n
+                    break
+            channels[channel] = "=" + test.name[5:].split(".")[0]
             try:
                 test(result)
                 done.put(None)
@@ -1510,8 +1523,32 @@ class TestSuite(unittest.TestSuite):
             except: # re-raises
                 done.put(('!', test, 'run-test raised an error, see traceback'))
                 raise
+            channels[channel] = ''
+
+        def stat():
+            count = 0
+            while channels:
+                d = '\n%03s  ' % count
+                for n, v in enumerate(channels):
+                    if v:
+                        d += v[0]
+                        channels[n] = v[1:] or '.'
+                    else:
+                        d += ' '
+                    d += ' '
+                with iolock:
+                    sys.stdout.write(d + '  ')
+                    sys.stdout.flush()
+                for x in xrange(10):
+                    if channels:
+                        time.sleep(.1)
+                count += 1
 
         stoppedearly = False
+
+        if self._showchannels:
+            statthread = threading.Thread(target=stat, name="stat")
+            statthread.start()
 
         try:
             while tests or running:
@@ -1552,6 +1589,8 @@ class TestSuite(unittest.TestSuite):
         except KeyboardInterrupt:
             for test in runtests:
                 test.abort()
+
+        channels = []
 
         return result
 
@@ -1942,6 +1981,7 @@ class TestRunner(object):
                               keywords=kws,
                               loop=self.options.loop,
                               runs_per_test=self.options.runs_per_test,
+                              showchannels=self.options.showchannels,
                               tests=tests, loadtest=self._gettest)
             verbosity = 1
             if self.options.verbose:
