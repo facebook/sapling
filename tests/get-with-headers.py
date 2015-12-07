@@ -3,18 +3,15 @@
 """This does HTTP GET requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
-import httplib, sys
+from __future__ import absolute_import
+
+import httplib
+import json
+import os
+import sys
 
 try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        json = None
-
-try:
-    import msvcrt, os
+    import msvcrt
     msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
     msvcrt.setmode(sys.stderr.fileno(), os.O_BINARY)
 except ImportError:
@@ -58,11 +55,6 @@ def request(host, path, show):
         # Pretty print JSON. This also has the beneficial side-effect
         # of verifying emitted JSON is well-formed.
         if formatjson:
-            if not json:
-                print 'no json module not available'
-                print 'did you forget a #require json?'
-                sys.exit(1)
-
             # json.dumps() will print trailing newlines. Eliminate them
             # to make tests easier to write.
             data = json.loads(data)

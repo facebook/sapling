@@ -145,7 +145,6 @@
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
-  tests/get-with-headers.py not using absolute_import
   tests/get-with-headers.py requires print_function
   tests/heredoctest.py not using absolute_import
   tests/heredoctest.py requires print_function
