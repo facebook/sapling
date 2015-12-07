@@ -1,9 +1,20 @@
+from __future__ import absolute_import
+
 import os
-from mercurial import hg, ui
-from mercurial.scmutil import walkrepos
-from mercurial.util import checklink
-from os import mkdir, chdir
-from os.path import join as pjoin
+
+from mercurial import (
+    hg,
+    scmutil,
+    ui,
+    util,
+)
+
+chdir = os.chdir
+mkdir = os.mkdir
+pjoin = os.path.join
+
+walkrepos = scmutil.walkrepos
+checklink = util.checklink
 
 u = ui.ui()
 sym = checklink('.')
