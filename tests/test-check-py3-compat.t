@@ -146,7 +146,6 @@
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
   tests/get-with-headers.py requires print_function
-  tests/heredoctest.py not using absolute_import
   tests/heredoctest.py requires print_function
   tests/hghave.py not using absolute_import
   tests/hgweberror.py not using absolute_import
