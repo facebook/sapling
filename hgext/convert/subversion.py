@@ -1041,7 +1041,7 @@ class svn_source(converter_source):
             relpaths.append(p.strip('/'))
         args = [self.baseurl, relpaths, start, end, limit,
                 discover_changed_paths, strict_node_history]
-        # undocumented feature: debugsvnlog can be disabled
+        # developer config: convert.svn.debugsvnlog
         if not self.ui.configbool('convert', 'svn.debugsvnlog', True):
             return directlogstream(*args)
         arg = encodeargs(args)
