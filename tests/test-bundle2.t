@@ -22,7 +22,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ grep generaldelta shallow-generaldelta/.hg/requires
   generaldelta
-  $ hgcloneshallow ssh://user@dummy/master shallow-plain -q --pull --config format.generaldelta=False --config experimental.bundle2-exp=True
+  $ hgcloneshallow ssh://user@dummy/master shallow-plain -q --pull --config format.usegeneraldelta=False --config format.generaldelta=False --config experimental.bundle2-exp=True
   $ grep generaldelta shallow-plain/.hg/requires
   [1]
 
