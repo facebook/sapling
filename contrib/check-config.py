@@ -50,6 +50,11 @@ def main(args):
             if m:
                 documented[m.group(1)] = 1
 
+            # like convert
+            m = re.match(r'^\s*:(\S+\.\S+):\s+', l)
+            if m:
+                documented[m.group(1)] = 1
+
             # quoted in help or docstrings
             m = re.match(r'.*?``([-a-z_]+\.[-a-z_]+)``', l)
             if m:
