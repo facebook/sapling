@@ -541,7 +541,12 @@ def gcclient(ui, cachepath):
         reponame = peer._repo.name
         if not localcache:
             localcache = peer._repo.fileservice.localcache
-        keep = peer._repo.revs("(parents(draft()) + heads(all())) & public()")
+
+        # We want to keep:
+        # 1. All parents of draft commits
+        # 2. Recent heads in the repo
+        # 3. The tip commit (since it might be an old head, but we still want it)
+        keep = peer._repo.revs("(parents(draft()) + (heads(all()) & date(-7)) + tip) & public()")
         for r in keep:
             m = peer._repo[r].manifest()
             for filename, filenode in m.iteritems():
