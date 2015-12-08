@@ -493,6 +493,11 @@ static PyObject *parse_dirstate(PyObject *self, PyObject *args)
 
 	/* read filenames */
 	while (pos >= 40 && pos < len) {
+		if (pos + 17 > len) {
+			PyErr_SetString(PyExc_ValueError,
+					"overflow in dirstate");
+			goto quit;
+		}
 		cur = str + pos;
 		/* unpack header */
 		state = *cur;

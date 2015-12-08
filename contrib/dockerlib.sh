@@ -14,8 +14,8 @@ function checkdocker() {
   fi
 
   $DOCKER -h 2> /dev/null | grep -q Jansens && { echo "Error: $DOCKER is the Docking System Tray - install docker.io instead"; exit 1; }
-  $DOCKER version | grep -q "^Client version:" || { echo "Error: unexpected output from \"$DOCKER version\""; exit 1; }
-  $DOCKER version | grep -q "^Server version:" || { echo "Error: could not get docker server version - check it is running and your permissions"; exit 1; }
+  $DOCKER version | grep -Eq "^Client( version)?:" || { echo "Error: unexpected output from \"$DOCKER version\""; exit 1; }
+  $DOCKER version | grep -Eq "^Server( version)?:" || { echo "Error: could not get docker server version - check it is running and your permissions"; exit 1; }
 }
 
 # Construct a container and leave its name in $CONTAINER for future use.
@@ -35,8 +35,8 @@ function initcontainer() {
         # running docker. This is *very likely* to fail at some point.
         echo RUN useradd $DBUILDUSER -u 1000
     else
-        echo RUN groupadd $DBUILDUSER -g `id -g` --non-unique
-        echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER --non-unique
+        echo RUN groupadd $DBUILDUSER -g `id -g` -o
+        echo RUN useradd $DBUILDUSER -u `id -u` -g $DBUILDUSER -o
     fi
   ) | $DOCKER build --tag $CONTAINER -
 }
