@@ -308,3 +308,62 @@ Test non-sparse repos work while sparse is loaded
   $ hg clone ../nonsparserepo ../nonsparserepo2
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Test debugrebuilddirstate
+  $ cd ../sparserepo
+  $ touch included
+  $ touch excluded
+  $ hg add included excluded
+  $ hg commit -m 'a commit' -q
+  $ cp .hg/dirstate ../dirstateboth
+  $ hg sparse -X excluded
+  $ cp ../dirstateboth .hg/dirstate
+  $ hg debugrebuilddirstate
+  $ hg debugdirstate
+  n 644         -1 1970-01-01 00:00:00 included
+
+Test debugdirstate --minimal where file is in the parent manifest but not the
+dirstate
+  $ hg sparse -X included
+  $ hg debugdirstate
+  $ cp .hg/dirstate ../dirstateallexcluded
+  $ hg sparse --reset
+  $ hg sparse -X excluded
+  $ cp ../dirstateallexcluded .hg/dirstate
+  $ touch includedadded
+  $ hg add includedadded
+  $ hg debugdirstate --nodates
+  a   0         -1 unset               includedadded
+  $ hg debugrebuilddirstate --minimal
+  $ hg debugdirstate --nodates
+  n 644         -1 * included (glob)
+  a   0         -1 * includedadded (glob)
+
+Test debugdirstate --minimal where a file is not in parent manifest
+but in the dirstate. This should take into account excluded files in the
+manifest
+  $ cp ../dirstateboth .hg/dirstate
+  $ touch includedadded
+  $ hg add includedadded
+  $ touch excludednomanifest
+  $ hg add excludednomanifest
+  $ cp .hg/dirstate ../moreexcluded
+  $ hg forget excludednomanifest
+  $ rm excludednomanifest
+  $ hg sparse -X excludednomanifest
+  $ cp ../moreexcluded .hg/dirstate
+  $ hg manifest
+  excluded
+  included
+We have files in the dirstate that are included and excluded. Some are in the
+manifest and some are not.
+  $ hg debugdirstate --nodates
+  n 644          0 * excluded (glob)
+  a   0         -1 * excludednomanifest (glob)
+  n 644          0 * included (glob)
+  a   0         -1 * includedadded (glob)
+  $ hg debugrebuilddirstate --minimal
+  $ hg debugdirstate --nodates
+  n 644          0 * included (glob)
+  a   0         -1 * includedadded (glob)
+

@@ -274,6 +274,13 @@ def _setupdirstate(ui):
             allfiles = allfiles.matches(matcher)
             if changedfiles:
                 changedfiles = [f for f in changedfiles if matcher(f)]
+
+            if changedfiles is not None:
+                # In _rebuild, these files will be deleted from the dirstate
+                # when they are not found to be in allfiles
+                dirstatefilestoremove = set(f for f in self if not matcher(f))
+                changedfiles = dirstatefilestoremove.union(changedfiles)
+
         return orig(self, parent, allfiles, changedfiles)
     extensions.wrapfunction(dirstate.dirstate, 'rebuild', _rebuild)
 
