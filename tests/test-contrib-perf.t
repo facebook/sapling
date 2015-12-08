@@ -4,10 +4,9 @@ Set vars:
 
   $ CONTRIBDIR="$TESTDIR/../contrib"
 
-Prepare repo-a:
+Prepare repo:
 
-  $ hg init repo-a
-  $ cd repo-a
+  $ hg init
 
   $ echo this is file a > a
   $ hg add a
@@ -30,7 +29,7 @@ Prepare repo-a:
 
 perfstatus
 
-  $ cat > .hg/hgrc << EOF
+  $ cat >> $HGRCPATH << EOF
   > [extensions]
   > perfstatusext=$CONTRIBDIR/perf.py
   > EOF
