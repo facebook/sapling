@@ -1,4 +1,4 @@
-#require test-repo slow
+#require test-repo
 
 Set vars:
 
@@ -32,6 +32,10 @@ perfstatus
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > perfstatusext=$CONTRIBDIR/perf.py
+  > [perf]
+  > presleep=0
+  > stub=on
+  > parentscount=1
   > EOF
   $ hg help perfstatusext
   perfstatusext extension - helper extension to measure performance
@@ -99,82 +103,46 @@ perfstatus
    perfwalk      (no help text available)
   
   (use "hg help -v perfstatusext" to show built-in aliases and global options)
-  $ filter_perf_output () {
-  >     egrep -v 'wall' || true
-  > }
-  $ hg perfaddremove 2>&1 | filter_perf_output
-  $ hg perfancestors 2>&1 | filter_perf_output
-  $ hg perfancestorset 2 2>&1 | filter_perf_output
-  $ hg perfannotate a 2>&1 | filter_perf_output
-  ! result: 3
-  $ hg perfbranchmap 2>&1 | filter_perf_output
-  ! base
-  ! immutable
-  ! served
-  ! visible
-  ! None
-  $ hg perfcca 2>&1 | filter_perf_output
-  ! result: <mercurial.scmutil.casecollisionauditor object at 0x*> (glob)
-  $ hg perfchangeset 2 2>&1 | filter_perf_output
-  $ hg perfctxfiles 2 2>&1 | filter_perf_output
-  $ hg perfdiffwd 2>&1 | filter_perf_output
-  ! diffopts: none
-  ! diffopts: -w
-  ! diffopts: -b
-  ! diffopts: -B
-  ! diffopts: -wB
-  $ hg perfdirfoldmap 2>&1 | filter_perf_output
-  $ hg perfdirs 2>&1 | filter_perf_output
-  $ hg perfdirstate 2>&1 | filter_perf_output
-  $ hg perfdirstatedirs 2>&1 | filter_perf_output
-  $ hg perfdirstatefoldmap 2>&1 | filter_perf_output
-  $ hg perfdirstatewrite 2>&1 | filter_perf_output
-  $ hg perffncacheencode 2>&1 | filter_perf_output
-  $ hg perffncacheload 2>&1 | filter_perf_output
-  $ hg perffncachewrite 2>&1 | filter_perf_output
+  $ hg perfaddremove
+  $ hg perfancestors
+  $ hg perfancestorset 2
+  $ hg perfannotate a
+  $ hg perfbranchmap
+  $ hg perfcca
+  $ hg perfchangeset 2
+  $ hg perfctxfiles 2
+  $ hg perfdiffwd
+  $ hg perfdirfoldmap
+  $ hg perfdirs
+  $ hg perfdirstate
+  $ hg perfdirstatedirs
+  $ hg perfdirstatefoldmap
+  $ hg perfdirstatewrite
+  $ hg perffncacheencode
+  $ hg perffncacheload
+  $ hg perffncachewrite
   transaction abort!
   rollback completed
-  $ hg perfheads 2>&1 | filter_perf_output
-  $ hg perfindex 2>&1 | filter_perf_output
-  $ hg perfloadmarkers 2>&1 | filter_perf_output
-  $ hg perflog 2>&1 | filter_perf_output
-  $ hg perflookup 2 2>&1 | filter_perf_output
-  ! result: 20
-  $ hg perflrucache 2>&1 | filter_perf_output
-  ! init
-  ! gets
-  ! sets
-  ! mixed
-  $ hg perfmanifest 2 2>&1 | filter_perf_output
-  $ hg perfmergecalculate -r 3 2>&1 | filter_perf_output
-  $ hg perfmoonwalk 2>&1 | filter_perf_output
-  $ hg perfnodelookup 2 2>&1 | filter_perf_output
-  $ hg perfpathcopies 1 2 2>&1 | filter_perf_output
-  $ hg perfrawfiles 2 2>&1 | filter_perf_output
-  $ hg perfrevlog .hg/store/data/a.i 2>&1 | filter_perf_output
-  $ hg perfrevrange 2>&1 | filter_perf_output
-  $ hg perfrevset 'all()' 2>&1 | filter_perf_output
-  $ hg perfstartup 2>&1 | filter_perf_output
-  $ hg perfstatus 2>&1 | filter_perf_output
-  $ hg perftags 2>&1 | filter_perf_output
-  ! result: 1
-  $ hg perftemplating 2>&1 | filter_perf_output
-  $ hg perfvolatilesets 2>&1 | filter_perf_output
-  ! bumped
-  ! divergent
-  ! extinct
-  ! obsolete
-  ! suspended
-  ! unstable
-  ! base
-  ! immutable
-  ! served
-  ! visible
-  $ hg perfwalk 2>&1 | filter_perf_output
-  ! result: 1
-
-perf parents needs a bigger repo, use the main repo
-  $ hg perfparents \
-  > --config extensions.perfstatusext=$CONTRIBDIR/perf.py \
-  > -R $TESTDIR/.. 2>&1 |grep -v 'obsolete feature' | filter_perf_output
+  $ hg perfheads
+  $ hg perfindex
+  $ hg perfloadmarkers
+  $ hg perflog
+  $ hg perflookup 2
+  $ hg perflrucache
+  $ hg perfmanifest 2
+  $ hg perfmergecalculate -r 3
+  $ hg perfmoonwalk
+  $ hg perfnodelookup 2
+  $ hg perfpathcopies 1 2
+  $ hg perfrawfiles 2
+  $ hg perfrevlog .hg/store/data/a.i
+  $ hg perfrevrange
+  $ hg perfrevset 'all()'
+  $ hg perfstartup
+  $ hg perfstatus
+  $ hg perftags
+  $ hg perftemplating
+  $ hg perfvolatilesets
+  $ hg perfwalk
+  $ hg perfparents
 
