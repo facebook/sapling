@@ -746,7 +746,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
                 dropped.append(file)
 
     # Apply changes to disk
-    typeactions = dict((m, []) for m in 'a f g cd dc r dm dg m e k'.split())
+    typeactions = dict((m, []) for m in 'a f g am cd dc r dm dg m e k'.split())
     for f, (m, args, msg) in actions.iteritems():
         if m not in typeactions:
             typeactions[m] = []
