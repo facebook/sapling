@@ -23,6 +23,7 @@
   $ cat .hg/requires
   dotencode
   fncache
+  generaldelta
   remotefilelog
   revlogv1
   store
@@ -48,6 +49,7 @@
   $ cat .hg/requires
   dotencode
   fncache
+  generaldelta
   remotefilelog
   revlogv1
   store
@@ -84,6 +86,7 @@
   $ cat shallow3/.hg/requires
   dotencode
   fncache
+  generaldelta
   remotefilelog
   revlogv1
   store

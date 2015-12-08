@@ -26,6 +26,7 @@ Shallow clone from full
   $ cat .hg/requires
   dotencode
   fncache
+  generaldelta
   remotefilelog
   revlogv1
   store
