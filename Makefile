@@ -1,4 +1,5 @@
 PYTHON=python
+TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 
 help:
 	@echo 'Commonly used make targets:'
