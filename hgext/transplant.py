@@ -20,6 +20,7 @@ from mercurial.node import short
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
 from mercurial import revset, templatekw, exchange
+from mercurial import lock as lockmod
 
 class TransplantError(error.Abort):
     pass
@@ -127,9 +128,8 @@ class transplanter(object):
         diffopts = patch.difffeatureopts(self.ui, opts)
         diffopts.git = True
 
-        lock = wlock = tr = None
+        lock = tr = None
         try:
-            wlock = repo.wlock()
             lock = repo.lock()
             tr = repo.transaction('transplant')
             for rev in revs:
@@ -224,7 +224,6 @@ class transplanter(object):
                 tr.release()
             if lock:
                 lock.release()
-            wlock.release()
 
     def filter(self, filter, node, changelog, patchfile):
         '''arbitrarily rewrite changeset before applying it'''
@@ -345,7 +344,6 @@ class transplanter(object):
                 merge = True
 
         extra = {'transplant_source': node}
-        wlock = repo.wlock()
         try:
             p1, p2 = repo.dirstate.parents()
             if p1 != parent:
@@ -367,7 +365,9 @@ class transplanter(object):
 
             return n, node
         finally:
-            wlock.release()
+            # TODO: get rid of this meaningless try/finally enclosing.
+            # this is kept only to reduce changes in a patch.
+            pass
 
     def readseries(self):
         nodes = []
@@ -572,6 +572,14 @@ def transplant(ui, repo, *revs, **opts):
     and then resume where you left off by calling :hg:`transplant
     --continue/-c`.
     '''
+    wlock = None
+    try:
+        wlock = repo.wlock()
+        return _dotransplant(ui, repo, *revs, **opts)
+    finally:
+        lockmod.release(wlock)
+
+def _dotransplant(ui, repo, *revs, **opts):
     def incwalk(repo, csets, match=util.always):
         for node in csets:
             if match(node):
