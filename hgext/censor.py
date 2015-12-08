@@ -28,6 +28,7 @@ revisions if they are allowed by the "censor.policy=ignore" config option.
 from mercurial.node import short
 from mercurial import cmdutil, error, filelog, revlog, scmutil, util
 from mercurial.i18n import _
+from mercurial import lock as lockmod
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -42,6 +43,15 @@ testedwith = 'internal'
      ('t', 'tombstone', '', _('replacement tombstone data'), _('TEXT'))],
     _('-r REV [-t TEXT] [FILE]'))
 def censor(ui, repo, path, rev='', tombstone='', **opts):
+    wlock = lock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        return _docensor(ui, repo, path, rev, tombstone, **opts)
+    finally:
+        lockmod.release(lock, wlock)
+
+def _docensor(ui, repo, path, rev='', tombstone='', **opts):
     if not path:
         raise error.Abort(_('must specify file path to censor'))
     if not rev:
