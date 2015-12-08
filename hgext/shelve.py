@@ -473,7 +473,6 @@ def pathtofiles(repo, files):
 
 def unshelveabort(ui, repo, state, opts):
     """subcommand that abort an in-progress unshelve"""
-    wlock = repo.wlock()
     lock = None
     try:
         checkparents(repo, state)
@@ -497,7 +496,7 @@ def unshelveabort(ui, repo, state, opts):
     finally:
         shelvedstate.clear(repo)
         ui.warn(_("unshelve of '%s' aborted\n") % state.name)
-        lockmod.release(lock, wlock)
+        lockmod.release(lock)
 
 def mergefiles(ui, repo, wctx, shelvectx):
     """updates to wctx and merges the changes from shelvectx into the
@@ -533,7 +532,6 @@ def unshelvecontinue(ui, repo, state, opts):
     """subcommand to continue an in-progress unshelve"""
     # We're finishing off a merge. First parent is our original
     # parent, second is the temporary "fake" commit we're unshelving.
-    wlock = repo.wlock()
     lock = None
     try:
         checkparents(repo, state)
@@ -571,7 +569,7 @@ def unshelvecontinue(ui, repo, state, opts):
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)
     finally:
-        lockmod.release(lock, wlock)
+        lockmod.release(lock)
 
 @command('unshelve',
          [('a', 'abort', None,
