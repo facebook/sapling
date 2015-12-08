@@ -62,7 +62,7 @@ def main(args):
 
             # look for ignore markers
             m = re.search(r'# (?:internal|experimental|deprecated|developer)'
-                          ' config: (\S+.\S+)$', l)
+                          ' config: (\S+\.\S+)$', l)
             if m:
                 documented[m.group(1)] = 1
 
