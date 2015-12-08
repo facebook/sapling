@@ -52,7 +52,8 @@ def getdiffstatus(repo, diffid):
         return 'Could not not call "arc call-conduit": %s' % e
 
 def showphabstatus(repo, ctx, templ, **args):
-    """Return the diff approval status for a given hg rev"""
+    """:phabstatus: String. Return the diff approval status for a given hg rev
+    """
     descr = ctx.description()
     match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)', descr)
     revstr = match.group(1) if match else ''

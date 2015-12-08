@@ -10,7 +10,7 @@ from mercurial import templatekw
 import re
 
 def showphabdiff(repo, ctx, templ, **args):
-    """Return the phabricator diff id for a given hg rev"""
+    """:phabdiff: String. Return the phabricator diff id for a given hg rev"""
     descr = ctx.description()
     match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)', descr)
     return match.group(1) if match else ''
