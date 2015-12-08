@@ -166,32 +166,29 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
 
         # in case of a rebase, ca isn't always a common ancestor
         anc = c1.ancestor(c2)
+        manc = anc.manifest()
+        ma = ca.manifest()
+
         paths1, renames1 = _branch(repo, c1, anc)
         paths2, renames2 = _branch(repo, c2, anc)
         copy = {}
         renamedelete = {}
         diverge = {}
 
-        m1 = c1.manifest()
-        m2 = c2.manifest()
-        ma = ca.manifest()
-
-        addedinm1 = m1.filesnotin(ma)
-        addedinm2 = m2.filesnotin(ma)
-        u1 = sorted(addedinm1 - addedinm2)
-        u2 = sorted(addedinm2 - addedinm1)
-
         used = []
-        for f in u1:
-            # the file was created and not moved from @ca
-            if not f in paths1:
+        for f in paths1.keys():
+            # the file was created and then moved (original file not in anc)
+            if not paths1[f][0] in manc:
+                used.append(f)
                 continue
             used1 = _checkfile(f, paths1[f], renames2, c2, anc.rev(), ma,
                                copy, renamedelete)
             used.extend(used1)
-        for f in u2:
-            # the file was created and not moved from @ca
-            if not f in paths2:
+
+        for f in paths2.keys():
+            # the file was created and then moved (original file not in anc)
+            if not paths2[f][0] in manc:
+                used.append(f)
                 continue
             used2 = _checkfile(f, paths2[f], renames1, c1, anc.rev(), ma,
                                copy, renamedelete, rebased=True)
