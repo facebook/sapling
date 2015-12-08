@@ -5286,6 +5286,13 @@ def parents(ui, repo, file_=None, **opts):
     last changed (before the working directory revision or the
     argument to --rev if given) is printed.
 
+    This command is equivalent to::
+
+        hg log -r "parents()" or
+        hg log -r "parents(REV)" or
+        hg log -r "max(file(FILE))" or
+        hg log -r "max(::REV and file(FILE))"
+
     See :hg:`summary` and :hg:`help revsets` for related information.
 
     Returns 0 on success.
