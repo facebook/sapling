@@ -40,13 +40,13 @@ def main(args):
             if m:
                 confsect = m.group(1)
                 continue
-            m = re.match(r'^\s+(?:#\s*)?([a-z._]+) = ', l)
+            m = re.match(r'^\s+(?:#\s*)?(\S+) = ', l)
             if m:
                 name = confsect + '.' + m.group(1)
                 documented[name] = 1
 
             # like the bugzilla extension
-            m = re.match(r'^\s*([a-z]+\.[a-z]+)$', l)
+            m = re.match(r'^\s*(\S+\.\S+)$', l)
             if m:
                 documented[m.group(1)] = 1
 
@@ -56,7 +56,7 @@ def main(args):
                 documented[m.group(1)] = 1
 
             # quoted in help or docstrings
-            m = re.match(r'.*?``([-a-z_]+\.[-a-z_]+)``', l)
+            m = re.match(r'.*?``(\S+\.\S+)``', l)
             if m:
                 documented[m.group(1)] = 1
 
