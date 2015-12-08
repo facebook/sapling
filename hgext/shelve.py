@@ -616,6 +616,13 @@ def unshelve(ui, repo, *shelved, **opts):
        than ``maxbackups`` backups are kept, if same timestamp
        prevents from deciding exact order of them, for safety.
     """
+    wlock = repo.wlock()
+    try:
+        return _dounshelve(ui, repo, *shelved, **opts)
+    finally:
+        lockmod.release(wlock)
+
+def _dounshelve(ui, repo, *shelved, **opts):
     abortf = opts['abort']
     continuef = opts['continue']
     if not abortf and not continuef:
@@ -656,11 +663,10 @@ def unshelve(ui, repo, *shelved, **opts):
         raise error.Abort(_("shelved change '%s' not found") % basename)
 
     oldquiet = ui.quiet
-    wlock = lock = tr = None
+    lock = tr = None
     forcemerge = ui.backupconfig('ui', 'forcemerge')
     try:
         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''), 'unshelve')
-        wlock = repo.wlock()
         lock = repo.lock()
 
         tr = repo.transaction('unshelve', report=lambda x: None)
@@ -755,7 +761,7 @@ def unshelve(ui, repo, *shelved, **opts):
         ui.quiet = oldquiet
         if tr:
             tr.release()
-        lockmod.release(lock, wlock)
+        lockmod.release(lock)
         ui.restoreconfig(forcemerge)
 
 @command('shelve',
