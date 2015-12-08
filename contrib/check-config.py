@@ -13,14 +13,16 @@ import sys
 foundopts = {}
 documented = {}
 
-configre = (r"""ui\.config(|int|bool|list)\(['"](\S+)['"], ?"""
-            r"""['"](\S+)['"](,\s(?:default=)?(\S+?))?\)""")
+configre = (r"""ui\.config(|int|bool|list)\(['"](\S+)['"],\s*"""
+            r"""['"](\S+)['"](,\s+(?:default=)?(\S+?))?\)""")
+configpartialre = (r"""ui\.config""")
 
 def main(args):
     for f in args:
         sect = ''
         prevname = ''
         confsect = ''
+        carryover = ''
         for l in open(f):
 
             # check topic-like bits
@@ -67,7 +69,8 @@ def main(args):
                 documented[m.group(1)] = 1
 
             # look for code-like bits
-            m = re.search(configre, l)
+            line = carryover + l
+            m = re.search(configre, line, re.MULTILINE)
             if m:
                 ctype = m.group(1)
                 if not ctype:
@@ -83,6 +86,13 @@ def main(args):
                     print "conflict on %s: %r != %r" % (name, (ctype, default),
                                                         foundopts[name])
                 foundopts[name] = (ctype, default)
+                carryover = ''
+            else:
+                m = re.search(configpartialre, line)
+                if m:
+                    carryover = line
+                else:
+                    carryover = ''
 
     for name in sorted(foundopts):
         if name not in documented:
