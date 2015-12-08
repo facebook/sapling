@@ -1341,8 +1341,12 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
         fp1, fp2, xp1, xp2 = p1.node(), p2.node(), str(p1), str(p2)
 
         ### check phase
-        if not overwrite and len(pl) > 1:
-            raise error.Abort(_("outstanding uncommitted merge"))
+        if not overwrite:
+            if len(pl) > 1:
+                raise error.Abort(_("outstanding uncommitted merge"))
+            ms = mergestate.read(repo)
+            if list(ms.unresolved()):
+                raise error.Abort(_("outstanding merge conflicts"))
         if branchmerge:
             if pas == [p2]:
                 raise error.Abort(_("merging with a working directory ancestor"

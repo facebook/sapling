@@ -154,6 +154,26 @@ resolve -m should abort when no merge in progress
   abort: resolve command not applicable when not merging
   [255]
 
+can not update or merge when there are unresolved conflicts
+
+  $ hg up -qC 0
+  $ echo quux >> file1
+  $ hg up 1
+  merging file1
+  warning: conflicts while merging file1! (edit, then use 'hg resolve --mark')
+  1 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
+  $ hg up 0
+  abort: outstanding merge conflicts
+  [255]
+  $ hg merge 2
+  abort: outstanding merge conflicts
+  [255]
+  $ hg merge --force 2
+  abort: outstanding merge conflicts
+  [255]
+
 set up conflict-free merge
 
   $ hg up -qC 3

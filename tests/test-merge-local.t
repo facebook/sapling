@@ -59,6 +59,9 @@ Local merge with bad merge tool:
   use 'hg resolve' to retry unresolved file merges
   [1]
 
+  $ hg resolve -m
+  (no more unresolved files)
+
   $ hg co 0
   merging zzz1_merge_ok
   merging zzz2_merge_bad
@@ -83,6 +86,9 @@ Local merge with bad merge tool:
 
 Local merge with conflicts:
 
+  $ hg resolve -m
+  (no more unresolved files)
+
   $ hg co
   merging zzz1_merge_ok
   merging zzz2_merge_bad
@@ -90,6 +96,9 @@ Local merge with conflicts:
   3 files updated, 1 files merged, 2 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
+
+  $ hg resolve -m
+  (no more unresolved files)
 
   $ hg co 0 --config 'ui.origbackuppath=.hg/origbackups'
   merging zzz1_merge_ok
@@ -123,6 +132,9 @@ Are orig files from the last commit where we want them?
 Local merge without conflicts:
 
   $ hg revert zzz2_merge_bad
+
+  $ hg resolve -m
+  (no more unresolved files)
 
   $ hg co
   merging zzz1_merge_ok
