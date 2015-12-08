@@ -1471,6 +1471,8 @@ class localrepository(object):
         wlock = lock = tr = None
         try:
             wlock = self.wlock()
+            lock = self.lock() # for recent changelog (see issue4368)
+
             wctx = self[None]
             merge = len(wctx.parents()) > 1
 
@@ -1598,7 +1600,6 @@ class localrepository(object):
                 subrepo.writestate(self, newstate)
 
             p1, p2 = self.dirstate.parents()
-            lock = self.lock()
             hookp1, hookp2 = hex(p1), (p2 != nullid and hex(p2) or '')
             try:
                 self.hook("precommit", throw=True, parent1=hookp1,
