@@ -82,12 +82,12 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
     return paths, renames
 
 
-def _checkfile(f, pathf, renames2, c2, ancr, ma, copy, renamedelete,
+def _checkfile(f, pathf, renames2, c2, anc, ma, copy, renamedelete,
                rebased=False):
     """
     f the file to check
     pathf its path from the ancestor to c1
-    ancr the rev number of the ancestor
+    anc the most recent ancestor to both c1 and c2
     ma the manifest of ca
     renames2 the {src, [dst]} moves between ancestor and c2
     copy and renamedelete the structures to complete
@@ -123,7 +123,7 @@ def _checkfile(f, pathf, renames2, c2, ancr, ma, copy, renamedelete,
     # the original file is still in c2
     else:
         # The file was modified in the other branch or before in this branch
-        if c2.filectx(of).linkrev() > ancr or (rebased and of not in ma):
+        if c2.filectx(of) != anc.filectx(of) or (rebased and of not in ma):
             copy[f] = of
         used.append(f)
 
@@ -178,7 +178,7 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
             if not paths1[f][0] in manc:
                 used.append(f)
                 continue
-            used1 = _checkfile(f, paths1[f], renames2, c2, anc.rev(), ma,
+            used1 = _checkfile(f, paths1[f], renames2, c2, anc, ma,
                                copy, renamedelete)
             used.extend(used1)
 
@@ -187,7 +187,7 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
             if not paths2[f][0] in manc:
                 used.append(f)
                 continue
-            used2 = _checkfile(f, paths2[f], renames1, c1, anc.rev(), ma,
+            used2 = _checkfile(f, paths2[f], renames1, c1, anc, ma,
                                copy, renamedelete, rebased=True)
             used.extend(used2)
 
