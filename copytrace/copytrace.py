@@ -20,12 +20,9 @@ def _createctxstack(repo, c, ca):
     curctx = c
     while curctx != ca:
         ctxstack.append(curctx)
-        # merge case
-        if curctx.p2():
-            raise util.Abort('cannot handle merge')
         curctx = curctx.p1()
-        if not curctx:
-            raise util.Abort('could not find the ancestor')
+        if curctx.rev() < ca.rev():
+            raise error.CopyTraceException('could not find the ancestor')
 
     return ctxstack
 
@@ -209,6 +206,9 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
         dbutil.insertdata(repo, '0', {}, copy)
         return copy, {}, diverge, renamedelete
 
+    except error.CopyTraceException as e:
+        error.logfailure(repo, e, "mergecopieswithdb", False)
+        return orig(repo, c1, c2, ca)
     except Exception as e:
         error.logfailure(repo, e, "mergecopieswithdb")
         return orig(repo, c1, c2, ca)
@@ -352,6 +352,9 @@ def pathcopieswithdb(orig, x, y, match=None):
         return _chain(x, y, _backwardrenameswithdb(x, a),
                        _forwardrenameswithdb(a, y, match=match))
 
+    except error.CopyTraceException as e:
+        error.logfailure(x._repo, e, "pathcopieswithdb", False)
+        return orig(x, y, match)
     except Exception as e:
         error.logfailure(x._repo, e, "pathcopieswithdb")
         return orig(x, y, match)

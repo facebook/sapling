@@ -335,3 +335,70 @@ Rebase
   A e
     b
   R b
+
+FIFTH TEST
+
+Merge, copytracing on p1(), falling back on p2()
+
+Setup repo
+
+  $ hg init repo
+  $ initclient repo
+  $ cd repo
+  $ echo 'foo' > a
+  $ echo 'bar' > b
+  $ hg add a b
+  $ hg commit -m "added a b"
+  $ hg mv a c
+  $ hg commit -m "mv a c"
+  $ hg mv c d
+  $ hg commit -q -m "mv c d"
+  $ hg update -q .^^
+  $ hg mv b e
+  $ hg commit -q -m "mv b e"
+  $ hg merge -r 37a712
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg commit -q -m "merge"
+  $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
+  @    changeset: b57a3c695116db648adb7dac3599102b2376a98e
+  |\    desc: merge
+  | o  changeset: 43ae8660512a13d9abae45b11ddd26095d5465fc
+  | |   desc: mv b e
+  o |  changeset: 37a71206ae2f2bd965718ccb631facd4aa140ac8
+  | |   desc: mv c d
+  o |  changeset: 924ff7a09e4cbf4d4c5cdd0c1ef4cb665c17188c
+  |/    desc: mv a c
+  o  changeset: cc218bc7593246156e761e5477a5db40e26aabde
+      desc: added a b
+
+  $ hg status -C --rev cc218bc
+  A d
+    a
+  A e
+    b
+  R a
+  R b
+  $ hg status -C --rev cc218bc --config extensions.copytrace=!
+  A d
+    a
+  A e
+    b
+  R a
+  R b
+  $ hg status -C --rev 37a7120
+  A e
+    b
+  R b
+  $ hg status -C --rev 37a7120 --config extensions.copytrace=!
+  A e
+    b
+  R b
+  $ hg status -C --rev 43ae866
+  A d
+    a
+  R a
+  $ hg status -C --rev 43ae866 --config extensions.copytrace=!
+  A d
+    a
+  R a
