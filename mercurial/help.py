@@ -124,6 +124,8 @@ def topicmatch(ui, kw):
             if doclines:
                 summary = doclines[0]
             cmdname = cmd.partition('|')[0].lstrip('^')
+            if filtercmd(ui, cmdname, kw, docs):
+                continue
             results['commands'].append((cmdname, summary))
     for name, docs in itertools.chain(
         extensions.enabled(False).iteritems(),

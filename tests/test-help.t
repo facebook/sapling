@@ -1041,6 +1041,16 @@ Test help hooks
       helphook1
       helphook2
 
+help -c should only show debug --debug
+
+  $ hg help -c --debug|grep debug|wc -l|grep '^\s*0\s*$'
+  [1]
+
+help -c should only show deprecated for -v
+
+  $ hg help -c -v|grep DEPRECATED|wc -l|grep '^\s*0\s*$'
+  [1]
+
 Test -e / -c / -k combinations
 
   $ hg help -c schemes
@@ -1083,12 +1093,10 @@ Test keyword search help
   
   Commands:
   
-   bookmarks                    create a new bookmark or list existing bookmarks
-   clone                        make a copy of an existing repository
-   debugapplystreamclonebundle  apply a stream clone bundle file
-   debugcreatestreamclonebundle create a stream clone bundle file
-   paths                        show aliases for remote repositories
-   update                       update working directory (or switch revisions)
+   bookmarks create a new bookmark or list existing bookmarks
+   clone     make a copy of an existing repository
+   paths     show aliases for remote repositories
+   update    update working directory (or switch revisions)
   
   Extensions:
   
