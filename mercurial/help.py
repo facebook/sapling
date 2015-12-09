@@ -328,7 +328,7 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         return rst
 
 
-    def helplist(select=None):
+    def helplist(select=None, **opts):
         # list of commands
         if name == "shortlist":
             header = _('basic commands:\n\n')
@@ -374,7 +374,9 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             else:
                 rst.append(' :%s: %s\n' % (f, h[f]))
 
-        if not name:
+        ex = opts.get
+        anyopts = (ex('keyword') or not (ex('command') or ex('extension')))
+        if not name and anyopts:
             exts = listexts(_('enabled extensions:'), extensions.enabled())
             if exts:
                 rst.append('\n')
@@ -491,8 +493,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
 
     rst = []
     kw = opts.get('keyword')
-    if kw:
-        matches = topicmatch(ui, name)
+    if kw or name is None and any(opts[o] for o in opts):
+        matches = topicmatch(ui, name or '')
         helpareas = []
         if opts.get('extension'):
             helpareas += [('extensions', _('Extensions'))]
@@ -539,6 +541,6 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
         # program name
         if not ui.quiet:
             rst = [_("Mercurial Distributed SCM\n"), '\n']
-        rst.extend(helplist())
+        rst.extend(helplist(None, **opts))
 
     return ''.join(rst)

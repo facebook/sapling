@@ -854,7 +854,7 @@ def _dispatch(req):
     if options['version']:
         return commands.version_(ui)
     if options['help']:
-        return commands.help_(ui, cmd, command=True)
+        return commands.help_(ui, cmd, command=cmd is not None)
     elif not cmd:
         return commands.help_(ui, 'shortlist')
 

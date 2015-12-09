@@ -1043,16 +1043,25 @@ Test help hooks
 
 help -c should only show debug --debug
 
-  $ hg help -c --debug|grep debug|wc -l|grep '^\s*0\s*$'
+  $ hg help -c --debug|egrep debug|wc -l|egrep '^\s*0\s*$'
   [1]
 
 help -c should only show deprecated for -v
 
-  $ hg help -c -v|grep DEPRECATED|wc -l|grep '^\s*0\s*$'
+  $ hg help -c -v|egrep DEPRECATED|wc -l|egrep '^\s*0\s*$'
   [1]
 
 Test -e / -c / -k combinations
 
+  $ hg help -c|egrep '^\S|debug'
+  Commands:
+  $ hg help -e|egrep '^\S'
+  Extensions:
+  $ hg help -k|egrep '^\S'
+  Topics:
+  Commands:
+  Extensions:
+  Extension Commands:
   $ hg help -c schemes
   abort: no such help topic: schemes
   (try "hg help --keyword schemes")
