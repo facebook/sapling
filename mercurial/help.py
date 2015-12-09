@@ -84,6 +84,13 @@ def indicateomitted(rst, omitted, notomitted=None):
     if notomitted:
         rst.append('\n\n.. container:: notomitted\n\n    %s\n\n' % notomitted)
 
+def filtercmd(ui, cmd, kw, doc):
+    if not ui.debugflag and cmd.startswith("debug") and kw != "debug":
+        return True
+    if not ui.verbose and doc and any(w in doc for w in _exclkeywords):
+        return True
+    return False
+
 def topicmatch(ui, kw):
     """Return help topics matching kw.
 
@@ -340,10 +347,8 @@ def help_(ui, name, unknowncmd=False, full=True, **opts):
             if name == "shortlist" and not f.startswith("^"):
                 continue
             f = f.lstrip("^")
-            if not ui.debugflag and f.startswith("debug") and name != "debug":
-                continue
             doc = e[0].__doc__
-            if not ui.verbose and doc and any(w in doc for w in _exclkeywords):
+            if filtercmd(ui, f, name, doc):
                 continue
             doc = gettext(doc)
             if not doc:
