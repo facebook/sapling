@@ -9,7 +9,7 @@
 
 
 from mercurial import scmutil, util, commands, copies
-import bundle2
+import bundle2, error
 import time
 
 import sqlite3
@@ -344,6 +344,9 @@ def checkpresence(repo, ctxhashs, askserver=False, addmissing=False):
 
     if addmissing:
         missing = _processmissing(repo, ctxhashs)
+        # Checks that not too many hashs have to be manually added
+        if len(missing) > int(repo.ui.config('copytrace', 'maxadded', '100')):
+            raise error.CopyTraceException("too much missing data")
         # Manually adds the still missing data
         if missing:
             _addmissingmoves(repo, missing)

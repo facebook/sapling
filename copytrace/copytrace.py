@@ -388,6 +388,8 @@ def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
                         dbutil.checkpresence(repo,
                              [ctx.hex() for ctx in subctx], True, False)
 
+    except error.CopyTraceException as e:
+        error.logfailure(repo, e, "buildstate", False)
     except Exception as e:
         error.logfailure(repo, e, "buildstate")
     finally:
