@@ -14,4 +14,7 @@ def logfailure(repo, e, funcname, warning=True):
     if warning:
         warnmsg = ui.config('copytrace', 'exceptionmsg',
                 _("** unknown exception encountered with copytracing **\n"))
-        repo.ui.warn(warnmsg)
+        ui.warn(warnmsg)
+    else:
+        if ui.verbose:
+            ui.warn("An error was encountered. Falling back to old copytracing")

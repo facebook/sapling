@@ -372,7 +372,8 @@ Setup repo
   o  changeset: cc218bc7593246156e761e5477a5db40e26aabde
       desc: added a b
 
-  $ hg status -C --rev cc218bc
+Checking that the copytrace goes without error in the merge case using verbose
+  $ hg status --verbose -C --rev cc218bc
   A d
     a
   A e
@@ -386,7 +387,7 @@ Setup repo
     b
   R a
   R b
-  $ hg status -C --rev 37a7120
+  $ hg status --verbose -C --rev 37a7120
   A e
     b
   R b
@@ -394,7 +395,7 @@ Setup repo
   A e
     b
   R b
-  $ hg status -C --rev 43ae866
+  $ hg status --verbose -C --rev 43ae866
   A d
     a
   R a

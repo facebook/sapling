@@ -19,8 +19,21 @@ def _createctxstack(repo, c, ca):
     ctxstack = []
     curctx = c
     while curctx != ca:
+        p1 = curctx.p1()
+        p2 = curctx.p2()
+        # Merge case
+        if p2:
+            # ca is in the p2 branch of the merge
+            if p2 == ca or (ca in p2.ancestors() and ca not in p1.ancestors()):
+                # Adding the moves from the p2 branch from ca to p2
+                ctxstack.extend(_createctxstack(repo, p2, ca))
+                # Adding the moves from the whole p1 branch
+                commonanc = p1.ancestor(p2)
+                ctxstack.extend(_createctxstack(repo, p1, commonanc))
+                return ctxstack
+
         ctxstack.append(curctx)
-        curctx = curctx.p1()
+        curctx = p1
         if curctx.rev() < ca.rev():
             raise error.CopyTraceException('could not find the ancestor')
 
