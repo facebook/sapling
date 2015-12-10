@@ -41,6 +41,10 @@ Committing some changes
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a
   
+Check that commit -i works with no changes
+  $ hg commit -i
+  no changes to record
+
 Committing only one file
 
   $ echo "a" >> a

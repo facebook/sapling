@@ -451,7 +451,7 @@ def filterpatch(ui, chunks, chunkselector, operation=None):
 
     # if there are no changed files
     if len(headers) == 0:
-        return []
+        return [], {}
     uiheaders = [uiheader(h) for h in headers]
     # let user choose headers/hunks/lines, and mark their applied flags
     # accordingly
