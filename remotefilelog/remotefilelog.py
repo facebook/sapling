@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import fileserverclient
-import collections, os, shutil
+import collections, errno, os, shutil
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import revlog, mdiff, filelog, ancestor, error
 from mercurial.i18n import _
@@ -28,7 +28,11 @@ def _readfile(path):
 def _writefile(path, content):
     dirname = os.path.dirname(path)
     if not os.path.exists(dirname):
-        os.makedirs(dirname)
+        try:
+            os.makedirs(dirname)
+        except OSError, ex:
+            if ex.errno != errno.EEXIST:
+                raise
 
     f = open(path, "w")
     try:

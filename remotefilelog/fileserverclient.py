@@ -19,7 +19,11 @@ fetchmisses = 0
 _downloading = _('downloading')
 
 def makedirs(root, path, owner):
-    os.makedirs(path)
+    try:
+        os.makedirs(path)
+    except OSError, ex:
+        if ex.errno != errno.EEXIST:
+            raise
 
     while path != root:
         stat = os.stat(path)

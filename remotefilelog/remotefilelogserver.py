@@ -12,7 +12,7 @@ from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 import shallowrepo
-import stat, os, lz4, time
+import errno, stat, os, lz4, time
 
 try:
     from mercurial import streamclone
@@ -207,7 +207,12 @@ def _loadfileblob(repo, cachepath, path, node):
         try:
             dirname = os.path.dirname(filecachepath)
             if not os.path.exists(dirname):
-                os.makedirs(dirname)
+                try:
+                    os.makedirs(dirname)
+                except OSError, ex:
+                    if ex.errno != errno.EEXIST:
+                        raise
+
             f = None
             try:
                 f = util.atomictempfile(filecachepath, "w")
