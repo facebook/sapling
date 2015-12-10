@@ -55,9 +55,9 @@
   $ mv $CACHEDIR/repos.bak $CACHEDIR/repos
 
 
-  $ echo "asdas\0das" >> $CACHEDIR/repos
+  $ printf "asdas\0das" >> $CACHEDIR/repos
   $ hg gc
-  warning: malformed path: 'asdas\x00das':must be encoded string without NULL bytes, not str
+  warning: malformed path: * (glob)
   Traceback (most recent call last):
     File * (glob)
       path = ui.expandpath(os.path.normpath(path))
@@ -71,5 +71,5 @@
       return os.path.isdir(os.path.join(path, '.hg'))
     File * (glob)
       st = os.stat(s)
-  TypeError: must be encoded string without NULL bytes, not str
+  TypeError: * (glob)
   finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
