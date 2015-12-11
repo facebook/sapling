@@ -237,9 +237,9 @@ def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None,
     finally:
         repo.shallowmatch = original
 
-def addchangegroupfiles(orig, repo, source, revmap, trp, pr, needfiles):
+def addchangegroupfiles(orig, repo, source, revmap, trp, pr, *args):
     if not requirement in repo.requirements:
-        return orig(repo, source, revmap, trp, pr, needfiles)
+        return orig(repo, source, revmap, trp, pr, *args)
 
     files = 0
     visited = set()
