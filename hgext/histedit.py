@@ -902,11 +902,6 @@ def histedit(ui, repo, *freeargs, **opts):
         state.wlock = repo.wlock()
         state.lock = repo.lock()
         _histedit(ui, repo, state, *freeargs, **opts)
-    except error.Abort:
-        if repo.vfs.exists('histedit-last-edit.txt'):
-            ui.warn(_('warning: histedit rules saved '
-                      'to: .hg/histedit-last-edit.txt\n'))
-        raise
     finally:
         release(state.lock, state.wlock)
 
@@ -987,7 +982,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         actions = parserules(rules, state)
         ctxs = [repo[act.nodetoverify()] \
                 for act in state.actions if act.nodetoverify()]
-        verifyactions(actions, state, ctxs)
+        warnverifyactions(ui, repo, actions, state, ctxs)
         state.actions = actions
         state.write()
         return
@@ -1070,7 +1065,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
             rules = f.read()
             f.close()
         actions = parserules(rules, state)
-        verifyactions(actions, state, ctxs)
+        warnverifyactions(ui, repo, actions, state, ctxs)
 
         parentctxnode = repo[root].parents()[0].node()
 
@@ -1221,6 +1216,15 @@ def parserules(rules, state):
         action = actiontable[verb].fromrule(state, rest)
         actions.append(action)
     return actions
+
+def warnverifyactions(ui, repo, actions, state, ctxs):
+    try:
+        verifyactions(actions, state, ctxs)
+    except error.Abort:
+        if repo.vfs.exists('histedit-last-edit.txt'):
+            ui.warn(_('warning: histedit rules saved '
+                      'to: .hg/histedit-last-edit.txt\n'))
+        raise
 
 def verifyactions(actions, state, ctxs):
     """Verify that there exists exactly one action per given changeset and
