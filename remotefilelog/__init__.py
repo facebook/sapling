@@ -67,21 +67,26 @@ def uisetup(ui):
 def cloneshallow(orig, ui, repo, *args, **opts):
     if opts.get('shallow'):
         repos = []
-        def clone_shallow(orig, self, *args, **kwargs):
-            repos.append(self.unfiltered())
-            # set up the client hooks so the post-clone update works
-            setupclient(self.ui, self.unfiltered())
+        def pull_shallow(orig, self, *args, **kwargs):
+            if shallowrepo.requirement not in self.requirements:
+                repos.append(self.unfiltered())
+                # set up the client hooks so the post-clone update works
+                setupclient(self.ui, self.unfiltered())
 
-            # setupclient fixed the class on the repo itself
-            # but we also need to fix it on the repoview
-            if isinstance(self, repoview.repoview):
-                self.__class__.__bases__ = (self.__class__.__bases__[0],
-                                            self.unfiltered().__class__)
-            self.requirements.add(shallowrepo.requirement)
-            self._writerequirements()
-            return orig(self, *args, **kwargs)
-        wrapfunction(localrepo.localrepository, 'clone', clone_shallow)
+                # setupclient fixed the class on the repo itself
+                # but we also need to fix it on the repoview
+                if isinstance(self, repoview.repoview):
+                    self.__class__.__bases__ = (self.__class__.__bases__[0],
+                                                self.unfiltered().__class__)
+                self.requirements.add(shallowrepo.requirement)
+                self._writerequirements()
 
+                # Since setupclient hadn't been called, exchange.pull was not
+                # wrapped. So we need to manually invoke our version of it.
+                return exchangepull(orig, self, *args, **kwargs)
+            else:
+                return orig(self, *args, **kwargs)
+        wrapfunction(exchange, 'pull', pull_shallow)
 
         # Wrap the stream logic to add requirements and to pass include/exclude
         # patterns around.
