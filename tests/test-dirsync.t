@@ -289,7 +289,7 @@ Test committing part of the working copy
   $ hg add dir1
   adding dir1/a
   adding dir1/b
-  $ hg commit -Am "add dir1/a" dir1/a
+  $ hg commit -Am "add dir1/a" "re:dir1/a"
   mirrored adding 'dir1/a' to 'dir2/a'
   $ hg status
   A dir1/b

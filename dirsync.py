@@ -90,7 +90,7 @@ def _commit(orig, self, *args, **kwargs):
 
         if mirroredfiles and not match.always():
             origmatch = match.matchfn
-            def extramatches(self, path):
+            def extramatches(path):
                 return path in mirroredfiles or origmatch(path)
             match.matchfn = extramatches
             match._files.extend(mirroredfiles)
