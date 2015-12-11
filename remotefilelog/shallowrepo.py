@@ -143,7 +143,7 @@ def wraprepo(repo):
 
         if lookup:
             files = []
-            parents = repo.parents()
+            parents = repo[None].parents()
             for fname in lookup:
                 for ctx in parents:
                     if fname in ctx:
