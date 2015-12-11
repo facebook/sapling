@@ -32,7 +32,7 @@ without changegroup2 support
   >     del packermap['02']
   > EOF
 
-  $ hginit master --config format.generaldelta=True
+  $ hginit master
   $ grep generaldelta master/.hg/requires
   generaldelta
   $ cd master
@@ -50,7 +50,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
 
   $ cd ..
 
-  $ hgcloneshallow ssh://user@dummy/master shallow -q --pull --config format.generaldelta=True --config experimental.bundle2-exp=True
+  $ hgcloneshallow ssh://user@dummy/master shallow -q --pull --config experimental.bundle2-exp=True
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow
   $ cat >> .hg/hgrc << EOF
