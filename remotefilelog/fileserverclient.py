@@ -137,7 +137,6 @@ def _getfilesbatch(
 
 def _getfiles(
     remote, receivemissing, fallbackpath, progresstick, missed, idmap):
-    remote._callstream("getfiles")
     i = 0
     while i < len(missed):
         # issue a batch of requests
@@ -156,8 +155,6 @@ def _getfiles(
         for j in range(start, end):
             receivemissing(remote.pipei, missed[j])
             progresstick()
-    remote.cleanup()
-    remote = None
 
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
@@ -173,6 +170,21 @@ class fileserverclient(object):
 
         self.localcache = localcache(repo)
         self.remotecache = cacheconnection()
+        self.remoteserver = None
+
+    def _connect(self):
+        fallbackpath = self.repo.fallbackpath
+        if not self.remoteserver:
+            if not fallbackpath:
+                raise util.Abort("no remotefilelog server "
+                    "configured - is your .hg/hgrc trusted?")
+            self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
+        elif (isinstance(self.remoteserver, sshpeer.sshpeer) and
+                 self.remoteserver.subprocess.poll() != None):
+            # The ssh connection died, so recreate it.
+            self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
+
+        return self.remoteserver
 
     def request(self, fileids):
         """Takes a list of filename/node pairs and fetches them from the
@@ -245,14 +257,16 @@ class fileserverclient(object):
                 verbose = self.ui.verbose
                 self.ui.verbose = False
                 try:
-                    if not fallbackpath:
-                        raise util.Abort("no remotefilelog server configured - "
-                            "is your .hg/hgrc trusted?")
-                    remote = hg.peer(self.ui, {}, fallbackpath)
+                    oldremote = self.remoteserver
+                    remote = self._connect()
+
                     # TODO: deduplicate this with the constant in shallowrepo
                     if remote.capable("remotefilelog"):
                         if not isinstance(remote, sshpeer.sshpeer):
                             raise util.Abort('remotefilelog requires ssh servers')
+                        # If it's a new connection, issue the getfiles command
+                        if oldremote != remote:
+                            remote._callstream("getfiles")
                         _getfiles(remote, self.receivemissing, fallbackpath,
                                   progresstick, missed, idmap)
                     elif remote.capable("getfile"):
@@ -334,6 +348,10 @@ class fileserverclient(object):
 
         if self.remotecache.connected:
             self.remotecache.close()
+
+        if self.remoteserver and util.safehasattr(self.remoteserver, 'cleanup'):
+            self.remoteserver.cleanup()
+            self.remoteserver = None
 
     def prefetch(self, fileids, force=False):
         """downloads the given file versions to the cache
