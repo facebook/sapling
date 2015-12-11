@@ -136,7 +136,7 @@ def _getfilesbatch(
             progresstick()
 
 def _getfiles(
-    remote, receivemissing, fallbackpath, progresstick, missed, idmap):
+    remote, receivemissing, progresstick, missed, idmap):
     i = 0
     while i < len(missed):
         # issue a batch of requests
@@ -213,8 +213,6 @@ class fileserverclient(object):
         total = count
         self.ui.progress(_downloading, 0, total=count)
 
-        fallbackpath = repo.fallbackpath
-
         missed = []
         count = 0
         while True:
@@ -267,8 +265,8 @@ class fileserverclient(object):
                         # If it's a new connection, issue the getfiles command
                         if oldremote != remote:
                             remote._callstream("getfiles")
-                        _getfiles(remote, self.receivemissing, fallbackpath,
-                                  progresstick, missed, idmap)
+                        _getfiles(remote, self.receivemissing, progresstick,
+                                  missed, idmap)
                     elif remote.capable("getfile"):
                         batchdefault = 100 if remote.capable('batch') else 10
                         batchsize = self.ui.configint(
