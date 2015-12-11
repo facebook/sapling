@@ -8,6 +8,7 @@
 '''Cache manifests on disk to speed up access.
 
 This extension intercepts reads and writes of manifests to cache them on disk.
+Enable by setting the config variable manifestdiskcache.enabled to True.
 
 On writes, we spawn a second process (to avoid penalizing interactive use) to
 check if we should prune the cache.  The pruning is guided by several
@@ -337,7 +338,8 @@ class manifestwithdc(manifest.manifest):
 class repowithmdc(localrepo.localrepository):
     def _applyopenerreqs(self):
         super(repowithmdc, self)._applyopenerreqs()
-        self.svfs.options[CONFIG_KEY] = True
+        self.svfs.options[CONFIG_KEY] = self.ui.configbool(
+            CONFIG_KEY, 'enabled', False)
 
 def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.
