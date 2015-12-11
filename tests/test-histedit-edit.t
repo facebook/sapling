@@ -57,6 +57,13 @@ log before edit
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a
   
+dirty a file
+  $ echo a > g
+  $ hg histedit 177f92b77385 --commands - 2>&1 << EOF
+  > EOF
+  abort: uncommitted changes
+  [255]
+  $ echo g > g
 
 edit the history
   $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
