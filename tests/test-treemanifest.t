@@ -388,3 +388,56 @@ within that.
   $ mv oldmf2 .hg/store/meta/b/foo
   $ mv oldmf3 .hg/store/meta/b/bar/orange
 
+Add some more changes to the deep repo
+  $ echo narf >> b/bar/fruits.txt
+  $ hg ci -m narf
+  $ echo troz >> b/bar/orange/fly/gnat.py
+  $ hg ci -m troz
+
+Test cloning a treemanifest repo over http.
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ cd ..
+We can clone even with the knob turned off and we'll get a treemanifest repo.
+  $ hg clone --config experimental.treemanifest=False \
+  >   http://localhost:$HGPORT deepclone
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 10 changes to 8 files
+  updating to branch default
+  8 files updated, 0 files merged, 0 files removed, 0 files unresolved
+No server errors.
+  $ cat deeprepo/errors.log
+requires got updated to include treemanifest
+  $ cat deepclone/.hg/requires | grep treemanifest
+  treemanifest
+Tree manifest revlogs exist.
+  $ find deepclone/.hg/store/meta | sort
+  deepclone/.hg/store/meta
+  deepclone/.hg/store/meta/a
+  deepclone/.hg/store/meta/a/00manifest.i
+  deepclone/.hg/store/meta/b
+  deepclone/.hg/store/meta/b/00manifest.i
+  deepclone/.hg/store/meta/b/bar
+  deepclone/.hg/store/meta/b/bar/00manifest.i
+  deepclone/.hg/store/meta/b/bar/orange
+  deepclone/.hg/store/meta/b/bar/orange/00manifest.i
+  deepclone/.hg/store/meta/b/bar/orange/fly
+  deepclone/.hg/store/meta/b/bar/orange/fly/00manifest.i
+  deepclone/.hg/store/meta/b/foo
+  deepclone/.hg/store/meta/b/foo/00manifest.i
+  deepclone/.hg/store/meta/b/foo/apple
+  deepclone/.hg/store/meta/b/foo/apple/00manifest.i
+  deepclone/.hg/store/meta/b/foo/apple/bees
+  deepclone/.hg/store/meta/b/foo/apple/bees/00manifest.i
+Verify passes.
+  $ cd deepclone
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
+  $ cd ..

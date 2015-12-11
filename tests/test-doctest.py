@@ -11,6 +11,7 @@ def testmod(name, optionflags=0, testtarget=None):
         mod = getattr(mod, testtarget)
     doctest.testmod(mod, optionflags=optionflags)
 
+testmod('mercurial.changegroup')
 testmod('mercurial.changelog')
 testmod('mercurial.dagparser', optionflags=doctest.NORMALIZE_WHITESPACE)
 testmod('mercurial.dispatch')
