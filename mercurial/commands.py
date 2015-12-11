@@ -5360,7 +5360,7 @@ def paths(ui, repo, search=None):
     if search:
         for name, path in sorted(ui.paths.iteritems()):
             if name == search:
-                ui.status("%s\n" % util.hidepassword(path.loc))
+                ui.status("%s\n" % util.hidepassword(path.rawloc))
                 return
         if not ui.quiet:
             ui.warn(_("not found!\n"))
@@ -5371,7 +5371,7 @@ def paths(ui, repo, search=None):
                 ui.write("%s\n" % name)
             else:
                 ui.write("%s = %s\n" % (name,
-                                        util.hidepassword(path.loc)))
+                                        util.hidepassword(path.rawloc)))
                 for subopt, value in sorted(path.suboptions.items()):
                     ui.write('%s:%s = %s\n' % (name, subopt, value))
 
