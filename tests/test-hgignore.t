@@ -55,6 +55,23 @@ Should display baz only:
   ? a.c
   ? syntax
 
+Ensure that comments work:
+
+  $ touch 'foo#bar' 'quux#' 'baz\#wat'
+  $ cat <<'EOF' >> .hgignore
+  > # full-line comment
+  >   # whitespace-only comment line
+  > syntax# pattern, no whitespace, then comment
+  > a.c  # pattern, then whitespace, then comment
+  > baz\\# # escaped comment character
+  > foo\#b # escaped comment character
+  > quux\## escaped comment character at end of name
+  > EOF
+  $ hg status
+  A dir/b.o
+  ? .hgignore
+  $ rm 'foo#bar' 'quux#' 'baz\#wat'
+
 Check it does not ignore the current directory '.':
 
   $ echo "^\." > .hgignore
