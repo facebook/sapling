@@ -654,9 +654,11 @@ def readpatternfile(filepath, warn):
         if "#" in line:
             global _commentre
             if not _commentre:
-                _commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
+                _commentre = util.re.compile(r'((?:^|[^\\])(?:\\\\)*)#.*')
             # remove comments prefixed by an even number of escapes
-            line = _commentre.sub(r'\1', line)
+            m = _commentre.search(line)
+            if m:
+                line = line[:m.end(1)]
             # fixup properly escaped comments that survived the above
             line = line.replace("\\#", "#")
         line = line.rstrip()
