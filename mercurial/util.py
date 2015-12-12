@@ -806,8 +806,9 @@ def checksignature(func):
 
     return check
 
-def copyfile(src, dest, hardlink=False):
-    "copy a file, preserving mode and atime/mtime"
+def copyfile(src, dest, hardlink=False, copystat=False):
+    '''copy a file, preserving mode and optionally other stat info like
+    atime/mtime'''
     if os.path.lexists(dest):
         unlink(dest)
     # hardlinks are problematic on CIFS, quietly ignore this flag
@@ -820,10 +821,16 @@ def copyfile(src, dest, hardlink=False):
             pass # fall back to normal copy
     if os.path.islink(src):
         os.symlink(os.readlink(src), dest)
+        # copytime is ignored for symlinks, but in general copytime isn't needed
+        # for them anyway
     else:
         try:
             shutil.copyfile(src, dest)
-            shutil.copymode(src, dest)
+            if copystat:
+                # copystat also copies mode
+                shutil.copystat(src, dest)
+            else:
+                shutil.copymode(src, dest)
         except shutil.Error as inst:
             raise Abort(str(inst))
 
