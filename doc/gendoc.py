@@ -4,10 +4,12 @@ where DOC is the name of a document
 """
 
 import os, sys, textwrap
+
+# This script is executed during installs and may not have C extensions
+# available. Relax C module requirements.
+os.environ['HGMODULEPOLICY'] = 'allow'
 # import from the live mercurial repo
 sys.path.insert(0, "..")
-# fall back to pure modules if required C extensions are not available
-sys.path.append(os.path.join('..', 'mercurial', 'pure'))
 from mercurial import demandimport; demandimport.enable()
 from mercurial import minirst
 from mercurial.commands import table, globalopts
