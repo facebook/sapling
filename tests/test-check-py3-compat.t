@@ -103,7 +103,6 @@
   mercurial/commands.py not using absolute_import
   mercurial/commandserver.py not using absolute_import
   mercurial/context.py not using absolute_import
-  mercurial/destutil.py not using absolute_import
   mercurial/dirstate.py not using absolute_import
   mercurial/dispatch.py requires print_function
   mercurial/encoding.py not using absolute_import
