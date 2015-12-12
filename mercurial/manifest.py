@@ -740,9 +740,12 @@ class treemanifest(object):
     def _matches(self, match):
         '''recursively generate a new manifest filtered by the match argument.
         '''
-        ret = treemanifest(self._dir)
 
-        if not match.visitdir(self._dir[:-1] or '.'):
+        visit = match.visitdir(self._dir[:-1] or '.')
+        if visit == 'all':
+            return self.copy()
+        ret = treemanifest(self._dir)
+        if not visit:
             return ret
 
         self._load()
