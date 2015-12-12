@@ -7,7 +7,7 @@
 
 from node import hex, bin, nullid, nullrev, short
 from i18n import _
-import os, sys, errno, re, tempfile, cStringIO, shutil
+import os, sys, errno, re, tempfile, cStringIO
 import util, scmutil, templater, patch, error, templatekw, revlog, copies
 import match as matchmod
 import repair, graphmod, revset, phases, obsolete, pathutil
@@ -166,8 +166,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                                                dir=backupdir)
                 os.close(fd)
                 ui.debug('backup %r as %r\n' % (f, tmpname))
-                util.copyfile(repo.wjoin(f), tmpname)
-                shutil.copystat(repo.wjoin(f), tmpname)
+                util.copyfile(repo.wjoin(f), tmpname, copystat=True)
                 backups[f] = tmpname
 
             fp = cStringIO.StringIO()
@@ -216,15 +215,12 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                         # to be treated as unmodified
                         dirstate.normallookup(realname)
 
-                    util.copyfile(tmpname, repo.wjoin(realname))
-                    # Our calls to copystat() here and above are a
-                    # hack to trick any editors that have f open that
-                    # we haven't modified them.
+                    # copystat=True here and above are a hack to trick any
+                    # editors that have f open that we haven't modified them.
                     #
-                    # Also note that this racy as an editor could
-                    # notice the file's mtime before we've finished
-                    # writing it.
-                    shutil.copystat(tmpname, repo.wjoin(realname))
+                    # Also note that this racy as an editor could notice the
+                    # file's mtime before we've finished writing it.
+                    util.copyfile(tmpname, repo.wjoin(realname), copystat=True)
                     os.unlink(tmpname)
                 if tobackup:
                     os.rmdir(backupdir)
