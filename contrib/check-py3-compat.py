@@ -17,6 +17,10 @@ def check_compat(f):
     with open(f, 'rb') as fh:
         content = fh.read()
 
+    # Ignore empty files.
+    if not content.strip():
+        return
+
     root = ast.parse(content)
     futures = set()
     haveprint = False

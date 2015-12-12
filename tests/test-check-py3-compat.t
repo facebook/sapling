@@ -15,7 +15,6 @@
   contrib/fixpax.py requires print_function
   contrib/hgclient.py not using absolute_import
   contrib/hgclient.py requires print_function
-  contrib/hgfixes/__init__.py not using absolute_import
   contrib/hgfixes/fix_bytes.py not using absolute_import
   contrib/hgfixes/fix_bytesmod.py not using absolute_import
   contrib/hgfixes/fix_leftover_imports.py not using absolute_import
@@ -125,7 +124,6 @@
   mercurial/mdiff.py not using absolute_import
   mercurial/obsolete.py not using absolute_import
   mercurial/patch.py not using absolute_import
-  mercurial/pure/__init__.py not using absolute_import
   mercurial/pure/base85.py not using absolute_import
   mercurial/pure/bdiff.py not using absolute_import
   mercurial/pure/diffhelpers.py not using absolute_import
