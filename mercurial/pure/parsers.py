@@ -5,8 +5,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.node import nullid
-import struct, zlib, cStringIO
+from __future__ import absolute_import
+
+import cStringIO
+import struct
+import zlib
+
+from .node import nullid
 
 _pack = struct.pack
 _unpack = struct.unpack
