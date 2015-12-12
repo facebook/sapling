@@ -67,10 +67,20 @@ The header is followed by the markers. Marker format depend of the version. See
 comment associated with each format for details.
 
 """
-import errno, struct
-import util, base85, node, parsers, error
-import phases
-from i18n import _
+from __future__ import absolute_import
+
+import errno
+import struct
+
+from .i18n import _
+from . import (
+    base85,
+    error,
+    node,
+    parsers,
+    phases,
+    util,
+)
 
 _pack = struct.pack
 _unpack = struct.unpack

@@ -122,7 +122,6 @@
   mercurial/mail.py requires print_function
   mercurial/manifest.py not using absolute_import
   mercurial/mdiff.py not using absolute_import
-  mercurial/obsolete.py not using absolute_import
   mercurial/patch.py not using absolute_import
   mercurial/pure/base85.py not using absolute_import
   mercurial/pure/bdiff.py not using absolute_import
