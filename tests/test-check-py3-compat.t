@@ -122,7 +122,6 @@
   mercurial/manifest.py not using absolute_import
   mercurial/mdiff.py not using absolute_import
   mercurial/patch.py not using absolute_import
-  mercurial/pure/osutil.py not using absolute_import
   mercurial/pure/parsers.py not using absolute_import
   mercurial/pvec.py not using absolute_import
   mercurial/py3kcompat.py not using absolute_import
