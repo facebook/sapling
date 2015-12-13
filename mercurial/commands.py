@@ -5407,14 +5407,15 @@ def paths(ui, repo, search=None):
             ui.warn(_("not found!\n"))
         return 1
     else:
-        for name, path in sorted(ui.paths.iteritems()):
-            if ui.quiet:
-                ui.write("%s\n" % name)
-            else:
-                ui.write("%s = %s\n" % (name,
-                                        util.hidepassword(path.rawloc)))
-                for subopt, value in sorted(path.suboptions.items()):
-                    ui.write('%s:%s = %s\n' % (name, subopt, value))
+        pathitems = sorted(ui.paths.iteritems())
+
+    for name, path in pathitems:
+        if ui.quiet:
+            ui.write("%s\n" % name)
+        else:
+            ui.write("%s = %s\n" % (name, util.hidepassword(path.rawloc)))
+            for subopt, value in sorted(path.suboptions.items()):
+                ui.write('%s:%s = %s\n' % (name, subopt, value))
 
 @command('phase',
     [('p', 'public', False, _('set changeset phase to public')),
