@@ -57,7 +57,10 @@ Should display baz only:
 
 Ensure that comments work:
 
-  $ touch 'foo#bar' 'quux#' 'baz\#wat'
+  $ touch 'foo#bar' 'quux#'
+#if no-windows
+  $ touch 'baz\#wat'
+#endif
   $ cat <<'EOF' >> .hgignore
   > # full-line comment
   >   # whitespace-only comment line
@@ -70,7 +73,10 @@ Ensure that comments work:
   $ hg status
   A dir/b.o
   ? .hgignore
-  $ rm 'foo#bar' 'quux#' 'baz\#wat'
+  $ rm 'foo#bar' 'quux#'
+#if no-windows
+  $ rm 'baz\#wat'
+#endif
 
 Check it does not ignore the current directory '.':
 
