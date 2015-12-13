@@ -23,11 +23,16 @@ import imp, socket, urllib
 import gc
 import bz2
 import zlib
+import hashlib
 
 if os.name == 'nt':
     import windows as platform
 else:
     import posix as platform
+
+md5 = hashlib.md5
+sha1 = hashlib.sha1
+sha512 = hashlib.sha512
 
 cachestat = platform.cachestat
 checkexec = platform.checkexec
@@ -95,23 +100,13 @@ os.stat_float_times(False)
 def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
 
-from hashlib import md5, sha1
-
 DIGESTS = {
     'md5': md5,
     'sha1': sha1,
+    'sha512': sha512,
 }
 # List of digest types from strongest to weakest
-DIGESTS_BY_STRENGTH = ['sha1', 'md5']
-
-try:
-    import hashlib
-    DIGESTS.update({
-        'sha512': hashlib.sha512,
-    })
-    DIGESTS_BY_STRENGTH.insert(0, 'sha512')
-except ImportError:
-    pass
+DIGESTS_BY_STRENGTH = ['sha512', 'sha1', 'md5']
 
 for k in DIGESTS_BY_STRENGTH:
     assert k in DIGESTS
