@@ -270,13 +270,13 @@ if sys.platform == 'darwin':
             # OS X percent-encodes any bytes that aren't valid utf-8
             s = ''
             pos = 0
-            l = len(s)
+            l = len(path)
             while pos < l:
                 try:
                     c = encoding.getutf8char(path, pos)
                     pos += len(c)
                 except ValueError:
-                    c = '%%%%02X' % path[pos]
+                    c = '%%%02X' % ord(path[pos])
                     pos += 1
                 s += c
 
