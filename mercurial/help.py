@@ -255,7 +255,7 @@ addtopicsymbols('templates', '.. functionsmarker', templater.funcs)
 addtopicsymbols('hgweb', '.. webcommandsmarker', webcommands.commands,
                 dedent=True)
 
-def help_(ui, name, unknowncmd=False, full=True, **opts):
+def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
     '''
     Generate the help for 'name' as unformatted restructured text. If
     'name' is None, describe the commands available.

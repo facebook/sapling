@@ -4367,11 +4367,16 @@ def help_(ui, name=None, **opts):
         keep.append(sys.platform.lower())
 
     section = None
+    subtopic = None
     if name and '.' in name:
         name, section = name.split('.', 1)
         section = section.lower()
+        if '.' in section:
+            subtopic, section = section.split('.', 1)
+        else:
+            subtopic = section
 
-    text = help.help_(ui, name, **opts)
+    text = help.help_(ui, name, subtopic=subtopic, **opts)
 
     formatted, pruned = minirst.format(text, textwidth, keep=keep,
                                        section=section)
