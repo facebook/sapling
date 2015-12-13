@@ -9,22 +9,14 @@ if getattr(sys, 'version_info', (0, 0, 0)) < (2, 6, 0, 'final'):
     raise SystemExit("Mercurial requires Python 2.6 or later.")
 
 if sys.version_info[0] >= 3:
-    def b(s):
-        '''A helper function to emulate 2.6+ bytes literals using string
-        literals.'''
-        return s.encode('latin1')
     printf = eval('print')
     libdir_escape = 'unicode_escape'
 else:
     libdir_escape = 'string_escape'
-    def b(s):
-        '''A helper function to emulate 2.6+ bytes literals using string
-        literals.'''
-        return s
     def printf(*args, **kwargs):
         f = kwargs.get('file', sys.stdout)
         end = kwargs.get('end', '\n')
-        f.write(b(' ').join(args) + end)
+        f.write(b' '.join(args) + end)
 
 # Solaris Python packaging brain damage
 try:
@@ -172,12 +164,12 @@ def runhg(cmd, env):
     # fine, we don't want to load it anyway.  Python may warn about
     # a missing __init__.py in mercurial/locale, we also ignore that.
     err = [e for e in err.splitlines()
-           if not e.startswith(b('not trusting file')) \
-              and not e.startswith(b('warning: Not importing')) \
-              and not e.startswith(b('obsolete feature not enabled'))]
+           if not e.startswith(b'not trusting file') \
+              and not e.startswith(b'warning: Not importing') \
+              and not e.startswith(b'obsolete feature not enabled')]
     if err:
         printf("stderr from '%s':" % (' '.join(cmd)), file=sys.stderr)
-        printf(b('\n').join([b('  ') + e for e in err]), file=sys.stderr)
+        printf(b'\n'.join([b'  ' + e for e in err]), file=sys.stderr)
         return ''
     return out
 
@@ -516,7 +508,7 @@ class hginstallscripts(install_scripts):
             fp.close()
 
             # skip binary files
-            if b('\0') in data:
+            if b'\0' in data:
                 continue
 
             # During local installs, the shebang will be rewritten to the final
@@ -527,7 +519,7 @@ class hginstallscripts(install_scripts):
                          'not known' % outfile)
                 continue
 
-            data = data.replace(b('@LIBDIR@'), libdir.encode(libdir_escape))
+            data = data.replace(b'@LIBDIR@', libdir.encode(libdir_escape))
             fp = open(outfile, 'wb')
             fp.write(data)
             fp.close()
