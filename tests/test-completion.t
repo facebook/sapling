@@ -286,7 +286,7 @@ Show all commands + options
   manifest: rev, all, template
   outgoing: force, rev, newest-first, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos
   parents: rev, style, template
-  paths: 
+  paths: template
   phase: public, draft, secret, force, rev
   recover: 
   rename: after, force, include, exclude, dry-run

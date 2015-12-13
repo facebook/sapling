@@ -10,6 +10,9 @@ with no paths:
   $ hg paths unknown
   not found!
   [1]
+  $ hg paths -Tjson
+  [
+  ]
 
 with paths:
 
@@ -52,6 +55,48 @@ with paths:
   [1]
   $ hg paths -q unknown
   [1]
+
+formatter output with paths:
+
+  $ echo 'dupe:pushurl = https://example.com/dupe' >> .hg/hgrc
+  $ hg paths -Tjson
+  [
+   {
+    "name": "dupe",
+    "pushurl": "https://example.com/dupe",
+    "url": "$TESTTMP/b#tip"
+   },
+   {
+    "name": "expand",
+    "url": "$TESTTMP/a/$SOMETHING/bar"
+   }
+  ]
+  $ hg paths -Tjson dupe
+  [
+   {
+    "name": "dupe",
+    "pushurl": "https://example.com/dupe",
+    "url": "$TESTTMP/b#tip"
+   }
+  ]
+  $ hg paths -Tjson -q unknown
+  [
+  ]
+  [1]
+
+password should be masked in plain output, but not in machine-readable output:
+
+  $ echo 'insecure = http://foo:insecure@example.com/' >> .hg/hgrc
+  $ hg paths insecure
+  http://foo:***@example.com/
+  $ hg paths -Tjson insecure
+  [
+   {
+    "name": "insecure",
+    "url": "http://foo:insecure@example.com/"
+   }
+  ]
+
   $ cd ..
 
 sub-options for an undeclared path are ignored

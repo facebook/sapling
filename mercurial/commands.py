@@ -5365,8 +5365,8 @@ def parents(ui, repo, file_=None, **opts):
             displayer.show(repo[n])
     displayer.close()
 
-@command('paths', [], _('[NAME]'), optionalrepo=True)
-def paths(ui, repo, search=None):
+@command('paths', formatteropts, _('[NAME]'), optionalrepo=True)
+def paths(ui, repo, search=None, **opts):
     """show aliases for remote repositories
 
     Show definition of symbolic path name NAME. If no name is given,
@@ -5403,6 +5403,11 @@ def paths(ui, repo, search=None):
     else:
         pathitems = sorted(ui.paths.iteritems())
 
+    fm = ui.formatter('paths', opts)
+    if fm:
+        hidepassword = str
+    else:
+        hidepassword = util.hidepassword
     if ui.quiet:
         namefmt = '%s\n'
     else:
@@ -5410,13 +5415,16 @@ def paths(ui, repo, search=None):
     showsubopts = not search and not ui.quiet
 
     for name, path in pathitems:
-        if not search:
-            ui.write(namefmt % name)
-        if not ui.quiet:
-            ui.write("%s\n" % util.hidepassword(path.rawloc))
+        fm.startitem()
+        fm.condwrite(not search, 'name', namefmt, name)
+        fm.condwrite(not ui.quiet, 'url', '%s\n', hidepassword(path.rawloc))
         for subopt, value in sorted(path.suboptions.items()):
+            assert subopt not in ('name', 'url')
             if showsubopts:
-                ui.write('%s:%s = %s\n' % (name, subopt, value))
+                fm.plain('%s:%s = ' % (name, subopt))
+            fm.condwrite(showsubopts, subopt, '%s\n', value)
+
+    fm.end()
 
     if search and not pathitems:
         if not ui.quiet:
