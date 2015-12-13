@@ -1054,8 +1054,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
             fp = makefileobj(repo, template, node, desc=desc, total=total,
                              seqno=seqno, revwidth=revwidth, mode='wb',
                              modemap=filemode)
-            if fp != template:
-                shouldclose = True
+            shouldclose = True
         if fp and not getattr(fp, 'name', '<unnamed>').startswith('<'):
             repo.ui.note("%s\n" % fp.name)
 
