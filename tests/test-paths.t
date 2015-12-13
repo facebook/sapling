@@ -3,6 +3,16 @@
   updating to branch default
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd a
+
+with no paths:
+
+  $ hg paths
+  $ hg paths unknown
+  not found!
+  [1]
+
+with paths:
+
   $ echo '[paths]' >> .hg/hgrc
   $ echo 'dupe = ../b#tip' >> .hg/hgrc
   $ echo 'expand = $SOMETHING/bar' >> .hg/hgrc

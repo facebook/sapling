@@ -5398,24 +5398,29 @@ def paths(ui, repo, search=None):
     Returns 0 on success.
     """
     if search:
-        for name, path in sorted(ui.paths.iteritems()):
-            if name == search:
-                if not ui.quiet:
-                    ui.write("%s\n" % util.hidepassword(path.rawloc))
-                return
-        if not ui.quiet:
-            ui.warn(_("not found!\n"))
-        return 1
+        pathitems = [(name, path) for name, path in ui.paths.iteritems()
+                     if name == search]
     else:
         pathitems = sorted(ui.paths.iteritems())
 
     for name, path in pathitems:
+        if search and not ui.quiet:
+            ui.write("%s\n" % util.hidepassword(path.rawloc))
+        if search:
+            continue
         if ui.quiet:
             ui.write("%s\n" % name)
         else:
             ui.write("%s = %s\n" % (name, util.hidepassword(path.rawloc)))
             for subopt, value in sorted(path.suboptions.items()):
                 ui.write('%s:%s = %s\n' % (name, subopt, value))
+
+    if search and not pathitems:
+        if not ui.quiet:
+            ui.warn(_("not found!\n"))
+        return 1
+    else:
+        return 0
 
 @command('phase',
     [('p', 'public', False, _('set changeset phase to public')),
