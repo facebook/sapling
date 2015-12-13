@@ -242,7 +242,7 @@ static PyObject *lmiter_iterentriesnext(PyObject *o)
 	hash = nodeof(l);
 	consumed = pl + 41;
 	flags = PyString_FromStringAndSize(l->start + consumed,
-									   l->len - consumed - 1);
+					   l->len - consumed - 1);
 	if (!path || !hash || !flags) {
 		goto done;
 	}
