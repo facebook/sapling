@@ -1056,7 +1056,7 @@ def export(repo, revs, template='hg-%h.patch', fp=None, switch_parent=False,
                              modemap=filemode)
             if fp != template:
                 shouldclose = True
-        if fp and fp != sys.stdout and util.safehasattr(fp, 'name'):
+        if fp and not getattr(fp, 'name', '<unnamed>').startswith('<'):
             repo.ui.note("%s\n" % fp.name)
 
         if not fp:

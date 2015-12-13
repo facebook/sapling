@@ -137,6 +137,25 @@ Exporting revision -2 to a file:
    foo-9
   +foo-10
 
+No filename should be printed if stdout is specified explicitly:
+
+  $ hg export -v 1 -o -
+  # HG changeset patch
+  # User test
+  # Date 0 0
+  #      Thu Jan 01 00:00:00 1970 +0000
+  # Node ID d1c9656e973cfb5aebd5499bbd2cb350e3b12266
+  # Parent  871558de6af2e8c244222f8eea69b782c94ce3df
+  foo-1
+  
+  diff -r 871558de6af2 -r d1c9656e973c foo
+  --- a/foo	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/foo	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   foo-0
+  +foo-1
+  exporting patch:
+
 Checking if only alphanumeric characters are used in the file name (%m option):
 
   $ echo "line" >> foo
