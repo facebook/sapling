@@ -235,13 +235,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
     destvfs.write('sharedpath', sharedpath)
 
     r = repository(ui, destwvfs.base)
-
-    default = srcrepo.ui.config('paths', 'default')
-    if default:
-        fp = r.vfs("hgrc", "w", text=True)
-        fp.write("[paths]\n")
-        fp.write("default = %s\n" % default)
-        fp.close()
+    postshare(srcrepo, r, bookmarks=bookmarks)
 
     if update:
         r.ui.status(_("updating working directory\n"))
@@ -257,8 +251,24 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
                 continue
         _update(r, uprev)
 
+def postshare(sourcerepo, destrepo, bookmarks=True):
+    """Called after a new shared repo is created.
+
+    The new repo only has a requirements file and pointer to the source.
+    This function configures additional shared data.
+
+    Extensions can wrap this function and write additional entries to
+    destrepo/.hg/shared to indicate additional pieces of data to be shared.
+    """
+    default = sourcerepo.ui.config('paths', 'default')
+    if default:
+        fp = destrepo.vfs("hgrc", "w", text=True)
+        fp.write("[paths]\n")
+        fp.write("default = %s\n" % default)
+        fp.close()
+
     if bookmarks:
-        fp = r.vfs('shared', 'w')
+        fp = destrepo.vfs('shared', 'w')
         fp.write('bookmarks\n')
         fp.close()
 
