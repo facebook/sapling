@@ -206,6 +206,11 @@ helptable = sorted([
      internalshelp),
 ])
 
+# Maps topics with sub-topics to a list of their sub-topics.
+subtopics = {
+    'internals': internalstable,
+}
+
 # Map topics to lists of callable taking the current topic help and
 # returning the updated version
 helphooks = {}
@@ -433,11 +438,19 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
         return rst
 
     def helptopic(name, subtopic=None):
-        for names, header, doc in helptable:
-            if name in names:
-                break
-        else:
-            raise error.UnknownCommand(name)
+        # Look for sub-topic entry first.
+        header, doc = None, None
+        if subtopic and name in subtopics:
+            for names, header, doc in subtopics[name]:
+                if subtopic in names:
+                    break
+
+        if not header:
+            for names, header, doc in helptable:
+                if name in names:
+                    break
+            else:
+                raise error.UnknownCommand(name)
 
         rst = [minirst.section(header)]
 
