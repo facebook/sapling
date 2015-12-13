@@ -591,6 +591,7 @@ except ImportError:
 
 packagedata = {'mercurial': ['locale/*/LC_MESSAGES/hg.mo',
                              'help/*.txt',
+                             'help/internals/*.txt',
                              'default.d/*.rc',
                              'dummycert.pem']}
 
