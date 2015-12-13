@@ -140,6 +140,7 @@ Exporting revision -2 to a file:
 No filename should be printed if stdout is specified explicitly:
 
   $ hg export -v 1 -o -
+  exporting patch:
   # HG changeset patch
   # User test
   # Date 0 0
@@ -154,7 +155,6 @@ No filename should be printed if stdout is specified explicitly:
   @@ -1,1 +1,2 @@
    foo-0
   +foo-1
-  exporting patch:
 
 Checking if only alphanumeric characters are used in the file name (%m option):
 

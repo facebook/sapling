@@ -462,12 +462,7 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
             fp = repo.ui.fout
         else:
             fp = repo.ui.fin
-        if util.safehasattr(fp, 'fileno'):
-            return os.fdopen(os.dup(fp.fileno()), mode)
-        else:
-            # if this fp can't be duped properly, return
-            # a dummy object that can be closed
-            return _unclosablefile(fp)
+        return _unclosablefile(fp)
     if util.safehasattr(pat, 'write') and writable:
         return pat
     if util.safehasattr(pat, 'read') and 'r' in mode:
