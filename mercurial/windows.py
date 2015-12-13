@@ -5,11 +5,23 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import osutil, encoding
-import errno, msvcrt, os, re, stat, sys, _winreg
+from __future__ import absolute_import
 
+import _winreg
+import errno
+import msvcrt
+import os
+import re
+import stat
+import sys
 import win32
+
+from .i18n import _
+from . import (
+    encoding,
+    osutil,
+)
+
 executablepath = win32.executablepath
 getuser = win32.getuser
 hidewindow = win32.hidewindow

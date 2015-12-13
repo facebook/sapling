@@ -127,7 +127,6 @@
   mercurial/scmutil.py not using absolute_import
   mercurial/scmwindows.py not using absolute_import
   mercurial/store.py not using absolute_import
-  mercurial/windows.py not using absolute_import
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
