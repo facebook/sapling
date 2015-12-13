@@ -263,7 +263,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
 
     import commands # avoid cycle
 
-    def helpcmd(name):
+    def helpcmd(name, subtopic=None):
         try:
             aliases, entry = cmdutil.findcmd(name, commands.table,
                                              strict=unknowncmd)
@@ -432,7 +432,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
                            % (name and " " + name or ""))
         return rst
 
-    def helptopic(name):
+    def helptopic(name, subtopic=None):
         for names, header, doc in helptable:
             if name in names:
                 break
@@ -460,7 +460,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
             pass
         return rst
 
-    def helpext(name):
+    def helpext(name, subtopic=None):
         try:
             mod = extensions.find(name)
             doc = gettext(mod.__doc__) or _('no help text available')
@@ -496,7 +496,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
                        ' extensions)\n'))
         return rst
 
-    def helpextcmd(name):
+    def helpextcmd(name, subtopic=None):
         cmd, ext, mod = extensions.disabledcmd(ui, name,
                                                ui.configbool('ui', 'strict'))
         doc = gettext(mod.__doc__).splitlines()[0]
@@ -545,7 +545,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
             queries = (helptopic, helpcmd, helpext, helpextcmd)
         for f in queries:
             try:
-                rst = f(name)
+                rst = f(name, subtopic)
                 break
             except error.UnknownCommand:
                 pass
