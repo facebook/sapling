@@ -5403,16 +5403,19 @@ def paths(ui, repo, search=None):
     else:
         pathitems = sorted(ui.paths.iteritems())
 
+    if ui.quiet:
+        namefmt = '%s\n'
+    else:
+        namefmt = '%s = '
+    showsubopts = not search and not ui.quiet
+
     for name, path in pathitems:
-        if search and not ui.quiet:
+        if not search:
+            ui.write(namefmt % name)
+        if not ui.quiet:
             ui.write("%s\n" % util.hidepassword(path.rawloc))
-        if search:
-            continue
-        if ui.quiet:
-            ui.write("%s\n" % name)
-        else:
-            ui.write("%s = %s\n" % (name, util.hidepassword(path.rawloc)))
-            for subopt, value in sorted(path.suboptions.items()):
+        for subopt, value in sorted(path.suboptions.items()):
+            if showsubopts:
                 ui.write('%s:%s = %s\n' % (name, subopt, value))
 
     if search and not pathitems:
