@@ -2308,9 +2308,9 @@ def removeauth(u):
     u.user = u.passwd = None
     return str(u)
 
-def isatty(fd):
+def isatty(fp):
     try:
-        return fd.isatty()
+        return fp.isatty()
     except AttributeError:
         return False
 
