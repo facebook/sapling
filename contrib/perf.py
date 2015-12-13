@@ -306,7 +306,11 @@ def perfstartup(ui, repo, **opts):
     timer, fm = gettimer(ui, opts)
     cmd = sys.argv[0]
     def d():
-        os.system("HGRCPATH= %s version -q > /dev/null" % cmd)
+        if os.name != 'nt':
+            os.system("HGRCPATH= %s version -q > /dev/null" % cmd)
+        else:
+            os.environ['HGRCPATH'] = ''
+            os.system("%s version -q > NUL" % cmd)
     timer(d)
     fm.end()
 
