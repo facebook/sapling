@@ -438,6 +438,19 @@ def makefilename(repo, pat, node, desc=None,
         raise error.Abort(_("invalid format spec '%%%s' in output filename") %
                          inst.args[0])
 
+class _unclosablefile(object):
+    def __init__(self, fp):
+        self._fp = fp
+
+    def close(self):
+        pass
+
+    def __iter__(self):
+        return iter(self._fp)
+
+    def __getattr__(self, attr):
+        return getattr(self._fp, attr)
+
 def makefileobj(repo, pat, node=None, desc=None, total=None,
                 seqno=None, revwidth=None, mode='wb', modemap=None,
                 pathname=None):
@@ -454,17 +467,7 @@ def makefileobj(repo, pat, node=None, desc=None, total=None,
         else:
             # if this fp can't be duped properly, return
             # a dummy object that can be closed
-            class wrappedfileobj(object):
-                noop = lambda x: None
-                def __init__(self, f):
-                    self.f = f
-                def __getattr__(self, attr):
-                    if attr == 'close':
-                        return self.noop
-                    else:
-                        return getattr(self.f, attr)
-
-            return wrappedfileobj(fp)
+            return _unclosablefile(fp)
     if util.safehasattr(pat, 'write') and writable:
         return pat
     if util.safehasattr(pat, 'read') and 'r' in mode:
