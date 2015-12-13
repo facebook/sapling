@@ -407,7 +407,7 @@ def jsonescape(s):
 
     if not _jsonmap:
         for x in xrange(32):
-            _jsonmap[chr(x)] = "\u%04x" %x
+            _jsonmap[chr(x)] = "\\u%04x" % x
         for x in xrange(32, 256):
             c = chr(x)
             _jsonmap[c] = c
