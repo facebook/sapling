@@ -5,8 +5,15 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import error
-import unicodedata, locale, os
+from __future__ import absolute_import
+
+import locale
+import os
+import unicodedata
+
+from . import (
+    error,
+)
 
 # These unicode characters are ignored by HFS+ (Apple Technote 1150,
 # "Unicode Subtleties"), so we need to ignore them in some places for
@@ -194,7 +201,7 @@ def trim(s, width, ellipsis='', leftside=False):
     'ellipsis' is always placed at trimmed side.
 
     >>> ellipsis = '+++'
-    >>> from mercurial import encoding
+    >>> from . import encoding
     >>> encoding.encoding = 'utf-8'
     >>> t= '1234567890'
     >>> print trim(t, 12, ellipsis=ellipsis)
@@ -290,7 +297,7 @@ def _asciilower(s):
 def asciilower(s):
     # delay importing avoids cyclic dependency around "parsers" in
     # pure Python build (util => i18n => encoding => parsers => util)
-    import parsers
+    from . import parsers
     impl = getattr(parsers, 'asciilower', _asciilower)
     global asciilower
     asciilower = impl
@@ -306,7 +313,7 @@ def _asciiupper(s):
 def asciiupper(s):
     # delay importing avoids cyclic dependency around "parsers" in
     # pure Python build (util => i18n => encoding => parsers => util)
-    import parsers
+    from . import parsers
     impl = getattr(parsers, 'asciiupper', _asciiupper)
     global asciiupper
     asciiupper = impl

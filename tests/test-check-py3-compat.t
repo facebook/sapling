@@ -104,7 +104,6 @@
   mercurial/context.py not using absolute_import
   mercurial/dirstate.py not using absolute_import
   mercurial/dispatch.py requires print_function
-  mercurial/encoding.py not using absolute_import
   mercurial/exchange.py not using absolute_import
   mercurial/help.py not using absolute_import
   mercurial/httpclient/__init__.py not using absolute_import
