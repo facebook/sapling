@@ -43,6 +43,10 @@ class channeledoutput(object):
         self.out = out
         self.channel = channel
 
+    @property
+    def name(self):
+        return '<%c-channel>' % self.channel
+
     def write(self, data):
         if not data:
             return
@@ -74,6 +78,10 @@ class channeledinput(object):
         self.in_ = in_
         self.out = out
         self.channel = channel
+
+    @property
+    def name(self):
+        return '<%c-channel>' % self.channel
 
     def read(self, size=-1):
         if size < 0:
