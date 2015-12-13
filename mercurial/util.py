@@ -13,26 +13,47 @@ This contains helper routines that are independent of the SCM core and
 hide platform-specific details from the core.
 """
 
-import i18n
-_ = i18n._
-import error, osutil, encoding, parsers
-import errno, shutil, sys, tempfile, traceback
-import re as remod
-import os, time, datetime, calendar, textwrap, signal, collections
-import imp, socket, urllib
-import gc
+from __future__ import absolute_import
+
 import bz2
-import zlib
+import calendar
+import collections
+import datetime
+import errno
+import gc
 import hashlib
+import imp
+import os
+import re as remod
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
+import textwrap
+import time
+import traceback
+import urllib
+import zlib
+
+from . import (
+    encoding,
+    error,
+    i18n,
+    osutil,
+    parsers,
+)
 
 if os.name == 'nt':
-    import windows as platform
+    from . import windows as platform
 else:
-    import posix as platform
+    from . import posix as platform
 
 md5 = hashlib.md5
 sha1 = hashlib.sha1
 sha512 = hashlib.sha512
+_ = i18n._
 
 cachestat = platform.cachestat
 checkexec = platform.checkexec
@@ -200,7 +221,6 @@ except NameError:
         def buffer(sliceable, offset=0):
             return memoryview(sliceable)[offset:]
 
-import subprocess
 closefds = os.name == 'posix'
 
 _chunksize = 4096
@@ -326,7 +346,7 @@ def popen4(cmd, env=None, newlines=False, bufsize=-1):
 def version():
     """Return version information if available."""
     try:
-        import __version__
+        from . import __version__
         return __version__.version
     except ImportError:
         return 'unknown'
