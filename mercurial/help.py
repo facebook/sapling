@@ -146,11 +146,13 @@ def topicmatch(ui, kw):
                 results['extensioncommands'].append((cmdname, cmddoc))
     return results
 
-def loaddoc(topic):
+def loaddoc(topic, subdir=None):
     """Return a delayed loader for help/topic.txt."""
 
     def loader(ui):
         docdir = os.path.join(util.datapath, 'help')
+        if subdir:
+            docdir = os.path.join(docdir, subdir)
         path = os.path.join(docdir, topic + ".txt")
         doc = gettext(util.readfile(path))
         for rewriter in helphooks.get(topic, []):
