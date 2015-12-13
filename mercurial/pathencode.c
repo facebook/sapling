@@ -517,8 +517,7 @@ PyObject *lowerencode(PyObject *self, PyObject *args)
 	newlen = _lowerencode(NULL, 0, path, len);
 	ret = PyString_FromStringAndSize(NULL, newlen);
 	if (ret)
-		newlen = _lowerencode(PyString_AS_STRING(ret), newlen,
-				      path, len);
+		_lowerencode(PyString_AS_STRING(ret), newlen, path, len);
 
 	return ret;
 }
