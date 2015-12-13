@@ -111,6 +111,7 @@ Short help:
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
+   internals     Technical implementation topics
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
@@ -187,6 +188,7 @@ Short help:
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
+   internals     Technical implementation topics
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
@@ -773,6 +775,7 @@ Test that default list of commands omits extension commands
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
+   internals     Technical implementation topics
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
@@ -862,6 +865,14 @@ Test list of internal help commands
   
   (use "hg help -v debug" to show built-in aliases and global options)
 
+internals topic renders index of available sub-topics
+
+  $ hg help internals
+  Technical implementation topics
+  """""""""""""""""""""""""""""""
+  
+       bundles       container for exchange of repository data
+       changegroups  representation of revlog data
 
 Test list of commands with command with no help text
 
@@ -1528,6 +1539,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   Configuring hgweb
+  </td></tr>
+  <tr><td>
+  <a href="/help/internals">
+  internals
+  </a>
+  </td><td>
+  Technical implementation topics
   </td></tr>
   <tr><td>
   <a href="/help/merge-tools">

@@ -1062,6 +1062,10 @@ help/ shows help topics
         "topic": "hgweb"
       },
       {
+        "summary": "Technical implementation topics",
+        "topic": "internals"
+      },
+      {
         "summary": "Merge Tools",
         "topic": "merge-tools"
       },

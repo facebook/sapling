@@ -161,6 +161,21 @@ def loaddoc(topic, subdir=None):
 
     return loader
 
+internalstable = sorted([
+    (['bundles'], _('container for exchange of repository data'),
+     loaddoc('bundles', subdir='internals')),
+    (['changegroups'], _('representation of revlog data'),
+     loaddoc('changegroups', subdir='internals')),
+])
+
+def internalshelp(ui):
+    """Generate the index for the "internals" topic."""
+    lines = []
+    for names, header, doc in internalstable:
+        lines.append(' :%s: %s' % (names[0], header))
+
+    return '\n'.join(lines)
+
 helptable = sorted([
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
     (["dates"], _("Date Formats"), loaddoc('dates')),
@@ -187,6 +202,8 @@ helptable = sorted([
     (["phases"], _("Working with Phases"), loaddoc('phases')),
     (['scripting'], _('Using Mercurial from scripts and automation'),
      loaddoc('scripting')),
+    (['internals'], _("Technical implementation topics"),
+     internalshelp),
 ])
 
 # Map topics to lists of callable taking the current topic help and

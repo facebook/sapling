@@ -349,6 +349,7 @@ Testing -h/--help:
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
+   internals     Technical implementation topics
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
@@ -431,6 +432,7 @@ Testing -h/--help:
    glossary      Glossary
    hgignore      Syntax for Mercurial Ignore Files
    hgweb         Configuring hgweb
+   internals     Technical implementation topics
    merge-tools   Merge Tools
    multirevs     Specifying Multiple Revisions
    patterns      File Name Patterns
