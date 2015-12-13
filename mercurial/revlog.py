@@ -11,12 +11,29 @@ This provides efficient delta storage with O(1) retrieve and append
 and O(changes) merge between branches.
 """
 
-# import stuff from node for others to import from revlog
+from __future__ import absolute_import
+
 import collections
-from node import bin, hex, nullid, nullrev
-from i18n import _
-import ancestor, mdiff, parsers, error, util, templatefilters
-import struct, zlib, errno
+import errno
+import struct
+import zlib
+
+# import stuff from node for others to import from revlog
+from .node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+)
+from .i18n import _
+from . import (
+    ancestor,
+    error,
+    mdiff,
+    parsers,
+    templatefilters,
+    util,
+)
 
 _pack = struct.pack
 _unpack = struct.unpack

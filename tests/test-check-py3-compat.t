@@ -122,7 +122,6 @@
   mercurial/patch.py not using absolute_import
   mercurial/pvec.py not using absolute_import
   mercurial/py3kcompat.py not using absolute_import
-  mercurial/revlog.py not using absolute_import
   mercurial/scmposix.py not using absolute_import
   mercurial/scmutil.py not using absolute_import
   mercurial/scmwindows.py not using absolute_import
