@@ -5,10 +5,14 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import util
-import mdiff
-import bdiff
+from __future__ import absolute_import
+
+from .i18n import _
+from . import (
+    bdiff,
+    mdiff,
+    util,
+)
 
 def _findexactmatches(repo, added, removed):
     '''find renamed files that have no changes

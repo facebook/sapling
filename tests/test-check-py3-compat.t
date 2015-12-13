@@ -126,7 +126,6 @@
   mercurial/scmposix.py not using absolute_import
   mercurial/scmutil.py not using absolute_import
   mercurial/scmwindows.py not using absolute_import
-  mercurial/similar.py not using absolute_import
   mercurial/store.py not using absolute_import
   mercurial/windows.py not using absolute_import
   setup.py not using absolute_import
