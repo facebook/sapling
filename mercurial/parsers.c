@@ -1995,19 +1995,19 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 
 		for (i = 0; i < 2; i++) {
 			int p = parents[i];
-			long nsp, sp;
+			long sp;
 			int dp;
 
 			if (p == -1)
 				continue;
 
 			dp = depth[p];
-			nsp = sp = seen[p];
+			sp = seen[p];
 			if (dp <= dv) {
 				depth[p] = dv + 1;
 				if (sp != sv) {
 					interesting[sv] += 1;
-					nsp = seen[p] = sv;
+					seen[p] = sv;
 					if (sp) {
 						interesting[sp] -= 1;
 						if (interesting[sp] == 0)
@@ -2016,7 +2016,7 @@ static PyObject *find_deepest(indexObject *self, PyObject *revs)
 				}
 			}
 			else if (dv == dp - 1) {
-				nsp = sp | sv;
+				long nsp = sp | sv;
 				if (nsp == sp)
 					continue;
 				seen[p] = nsp;
