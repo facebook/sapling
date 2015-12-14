@@ -1333,16 +1333,23 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	if (phaseslist == NULL)
 		goto release;
 	for (i = 0; i < len; i++) {
+		PyObject *phaseval;
+
 		phase = phases[i];
 		/* We only store the sets of phase for non public phase, the public phase
 		 * is computed as a difference */
 		if (phase != 0) {
 			phaseset = PyList_GET_ITEM(phasessetlist, phase);
 			rev = PyInt_FromLong(i);
+			if (rev == NULL)
+				goto release;
 			PySet_Add(phaseset, rev);
 			Py_XDECREF(rev);
 		}
-		PyList_SET_ITEM(phaseslist, i, PyInt_FromLong(phase));
+		phaseval = PyInt_FromLong(phase);
+		if (phaseval == NULL)
+			goto release;
+		PyList_SET_ITEM(phaseslist, i, phaseval);
 	}
 	ret = PyList_New(2);
 	if (ret == NULL)
