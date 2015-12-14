@@ -92,8 +92,8 @@ Stack of non-conflicting commits should be accepted
   running python * user@dummy 'hg -R server serve --stdio' (glob)
   sending hello command
   sending between command
-  remote: 362
-  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch stream bundle2=HG20%0Ab2x%253Arebase%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
+  remote: 388
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash batch streamreqs=generaldelta,revlogv1 bundle2=HG20%0Ab2x%253Arebase%0Achangegroup%3D01%2C02%0Adigests%3Dmd5%2Csha1%2Csha512%0Aerror%3Dabort%2Cunsupportedcontent%2Cpushraced%2Cpushkey%0Ahgtagsfnodes%0Alistkeys%0Apushkey%0Aremote-changegroup%3Dhttp%2Chttps unbundle=HG10GZ,HG10BZ,HG10UN httpheader=1024
   remote: 1
   query 1; heads
   sending batch command
@@ -547,8 +547,8 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: summary:     b
   remote: 
   remote: Checking if lock exists (it should not):
-  remote: ls: cannot access .hg/store/lock: No such file or directory
-  remote: prepushrebase hook exited with status 2
+  remote: ls: .hg/store/lock: No such file or directory
+  remote: prepushrebase hook exited with status 1
   abort: push failed on remote
   [255]
 
@@ -569,6 +569,7 @@ Test that hooks are fired with the correct variables
   > txnclose = python "$RUNTESTDIR/printenv.py" txnclose
   > pretxnclose = python "$RUNTESTDIR/printenv.py" pretxnclose
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
+  > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
   > pushrebase = $TESTDIR/../pushrebase.py
   > EOF
@@ -590,8 +591,11 @@ Test that hooks are fired with the correct variables
   > [extensions]
   > pushrebase = $TESTDIR/../pushrebase.py
   > EOF
+  $ hg update master
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark master)
   $ echo >> file && hg ci -Aqm first
-  $ hg push --to master
+  $ hg push --to master -B master
   pushing to $TESTTMP/hookserver
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
@@ -599,10 +603,15 @@ Test that hooks are fired with the correct variables
   pushing 1 commit:
       4fcee35c508c  first
   pretxnchangegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
-  pretxnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
-  txnclose hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  prepushkey hook: HG_BUNDLE2=1 HG_KEY=4fcee35c508c1019667f72cae9b843efa8908701 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=1 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  prepushkey hook: HG_BUNDLE2=1 HG_KEY=master HG_NAMESPACE=bookmarks HG_NEW=4fcee35c508c1019667f72cae9b843efa8908701 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_OLD=e95be919ac60f0c114075e32a0a4301afabadb60 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  pretxnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   changegroup hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
   incoming hook: HG_BUNDLE2=1 HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
+  updating bookmark master
+
+
   $ cd ../
 
 Test date rewriting
