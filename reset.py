@@ -7,6 +7,7 @@ from mercurial.node import short, hex
 from mercurial import extensions, merge, scmutil, hg
 from mercurial import cmdutil, obsolete, repair, util, bundlerepo, error
 from mercurial import exchange, phases
+from mercurial import lock as lockmod
 import struct, os, glob, binascii
 
 cmdtable = {}
@@ -203,8 +204,15 @@ def _moveto(repo, bookmark, ctx, clean=False):
 
     # Move bookmark over
     if bookmark:
-        repo._bookmarks[bookmark] = ctx.node()
-        repo._bookmarks.write()
+        lock = tr = None
+        try:
+            lock = repo.lock()
+            tr = repo.transaction('reset')
+            repo._bookmarks[bookmark] = ctx.node()
+            repo._bookmarks.recordchange(tr)
+            tr.close()
+        finally:
+           lockmod.release(lock, tr)
 
 def _deleteunreachable(repo, ctx):
     """Deletes all ancestor and descendant commits of the given revision that
