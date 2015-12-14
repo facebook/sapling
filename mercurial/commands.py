@@ -6493,6 +6493,18 @@ def summary(ui, repo, **opts):
     if draft or secret:
         ui.status(_('phases: %s\n') % ', '.join(t))
 
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        for trouble in ("unstable", "divergent", "bumped"):
+            numtrouble = len(repo.revs(trouble + "()"))
+            # We write all the possibilities to ease translation
+            troublemsg = {
+               "unstable": _("unstable: %d changeset"),
+               "divergent": _("divergent: %d changeset"),
+               "bumped": _("bumped: %d changeset"),
+            }
+            if numtrouble > 0:
+                ui.status(troublemsg[trouble] % numtrouble + "\n")
+
     cmdutil.summaryhooks(ui, repo)
 
     if opts.get('remote'):

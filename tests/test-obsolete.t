@@ -238,6 +238,14 @@ And that we can't push bumped changeset
 Fixing "bumped" situation
 We need to create a clone of 5 and add a special marker with a flag
 
+  $ hg summary
+  parent: 5:5601fb93a350 tip
+   add new_3_c
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
+  phases: 1 draft
+  bumped: 1 changeset
   $ hg up '5^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg revert -ar 5
@@ -465,6 +473,14 @@ detect outgoing obsolete and unstable
   94b33453f93bdb8d457ef9b770851a618bf413e1 0 {6f96419950729f3671185b847352890f074f7557} (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   $ hg log -r 'obsolete()'
   4:94b33453f93b (draft) [ ] add original_d
+  $ hg summary
+  parent: 5:cda648ca50f5 tip
+   add original_e
+  branch: default
+  commit: (clean)
+  update: 1 new changesets, 2 branch heads (merge)
+  phases: 3 draft
+  unstable: 1 changeset
   $ hg log -G -r '::unstable()'
   @  5:cda648ca50f5 (draft) [tip ] add original_e
   |
