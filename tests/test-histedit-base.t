@@ -55,9 +55,6 @@ Rebase B onto H
   > pick 32af7686d403 D
   > EOF
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  7:0937e82309df47d14176ee15e45dbec5fbdef340:draft 'D'
@@ -84,8 +81,6 @@ Rebase back and drop something
   > pick 0937e82309df D
   > EOF
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  6:476cc3e4168da2d036b141f7f7dcff7f8e3fe846:draft 'D'
@@ -109,7 +104,6 @@ Split stack
   > base cd010b8cd998
   > pick 476cc3e4168d D
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
@@ -153,7 +147,6 @@ Abort
   > drop d7a6f907a822 D
   > pick 591369deedfd X
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging B
   warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
@@ -182,7 +175,6 @@ Continue
   > drop d7a6f907a822 D
   > pick 591369deedfd X
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging B
   warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue

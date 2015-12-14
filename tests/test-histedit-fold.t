@@ -55,11 +55,8 @@ log before edit
   > pick 055a42cdd887 d
   > EOF
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
@@ -118,8 +115,6 @@ rollup will fold without preserving the folded commit's message
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HGEDITOR=$OLDHGEDITOR
@@ -493,10 +488,8 @@ into the hook command.
   > pick 6c795aa153cb a
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
@@ -540,7 +533,6 @@ editors.
   reverting foo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging foo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

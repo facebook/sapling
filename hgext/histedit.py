@@ -409,7 +409,7 @@ class histeditaction(object):
         parentctx, but does not commit them."""
         repo = self.repo
         rulectx = repo[self.node]
-        hg.update(repo, self.state.parentctxnode)
+        hg.update(repo, self.state.parentctxnode, quietempty=True)
         stats = applychanges(repo.ui, repo, rulectx, {})
         if stats and stats[3] > 0:
             raise error.InterventionRequired(_('Fix up the change and run '

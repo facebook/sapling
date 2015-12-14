@@ -86,8 +86,6 @@ edit the history
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 rules should end up in .hg/histedit-last-edit.txt:
   $ cat .hg/histedit-last-edit.txt
@@ -140,8 +138,6 @@ put things back
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   5:7eca9b5b1148
@@ -186,9 +182,6 @@ slightly different this time
   > EOF
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   5:38b92f448761
   |  tag:         tip
@@ -230,7 +223,6 @@ keep prevents stripping dead revs
   > pick de71b079d9ce e
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
@@ -421,7 +413,6 @@ Now, let's try to fold the second commit into the first:
   removing initial-dir/initial-file (glob)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)
   saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)

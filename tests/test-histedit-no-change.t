@@ -96,7 +96,6 @@ editing a changeset without any actual change would corrupt the repository
   $ continueediting true "(leaving commit message unaltered)"
   % finalize changeset editing (leaving commit message unaltered)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
 check state of working copy

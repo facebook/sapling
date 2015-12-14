@@ -142,7 +142,6 @@ qnew should fail while we're in the middle of the edit step
   [255]
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   6:b5f70786f9b0
