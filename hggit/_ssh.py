@@ -14,10 +14,13 @@ def generate_ssh_vendor(ui):
 
     class _Vendor(SSHVendor):
         def run_command(self, host, command, username=None, port=None):
-            # newer dulwich changes the way they pass command and parameters
-            # around, so we detect that here and reformat it back to what
-            # hg-git expects (e.g. "command 'arg1 arg2'")
-            if len(command) > 1:
+            if isinstance(command, basestring):
+                # 0.12.x dulwich sends the raw string
+                command = [command]
+            elif len(command) > 1:
+                # 0.11.x dulwich sends an array of [command arg1 arg2 ...], so
+                # we detect that here and reformat it back to what hg-git
+                # expects (e.g. "command 'arg1 arg2'")
                 command = ["%s '%s'" % (command[0], ' '.join(command[1:]))]
             sshcmd = ui.config("ui", "ssh", "ssh")
             args = util.sshargs(sshcmd, host, username, port)
