@@ -1286,19 +1286,21 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	long phase;
 
 	if (!PyArg_ParseTuple(args, "O", &roots))
-		goto release_none;
+		goto done;
 	if (roots == NULL || !PyList_Check(roots))
-		goto release_none;
+		goto done;
 
 	phases = calloc(len, 1); /* phase per rev: {0: public, 1: draft, 2: secret} */
-	if (phases == NULL)
-		goto release_none;
+	if (phases == NULL) {
+		PyErr_NoMemory();
+		goto done;
+	}
 	/* Put the phase information of all the roots in phases */
 	numphase = PyList_GET_SIZE(roots)+1;
 	minrevallphases = len + 1;
 	phasessetlist = PyList_New(numphase);
 	if (phasessetlist == NULL)
-		goto release_none;
+		goto done;
 
 	PyList_SET_ITEM(phasessetlist, 0, Py_None);
 	Py_INCREF(Py_None);
@@ -1307,13 +1309,13 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 		phaseroots = PyList_GET_ITEM(roots, i);
 		phaseset = PySet_New(NULL);
 		if (phaseset == NULL)
-			goto release_phasesetlist;
+			goto release;
 		PyList_SET_ITEM(phasessetlist, i+1, phaseset);
 		if (!PyList_Check(phaseroots))
-			goto release_phasesetlist;
+			goto release;
 		minrevphase = add_roots_get_min(self, phaseroots, i+1, phases);
 		if (minrevphase == -2) /* Error from add_roots_get_min */
-			goto release_phasesetlist;
+			goto release;
 		minrevallphases = MIN(minrevallphases, minrevphase);
 	}
 	/* Propagate the phase information from the roots to the revs */
@@ -1322,14 +1324,14 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 		for (i = minrevallphases; i < len; i++) {
 			if (index_get_parents(self, i, parents,
 					      (int)len - 1) < 0)
-				goto release_phasesetlist;
+				goto release;
 			set_phase_from_parents(phases, parents[0], parents[1], i);
 		}
 	}
 	/* Transform phase list to a python list */
 	phaseslist = PyList_New(len);
 	if (phaseslist == NULL)
-		goto release_phasesetlist;
+		goto release;
 	for (i = 0; i < len; i++) {
 		phase = phases[i];
 		/* We only store the sets of phase for non public phase, the public phase
@@ -1344,21 +1346,19 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 	}
 	ret = PyList_New(2);
 	if (ret == NULL)
-		goto release_phaseslist;
+		goto release;
 
 	PyList_SET_ITEM(ret, 0, phaseslist);
 	PyList_SET_ITEM(ret, 1, phasessetlist);
 	/* We don't release phaseslist and phasessetlist as we return them to
 	 * python */
-	goto release_phases;
+	goto done;
 
-release_phaseslist:
+release:
 	Py_XDECREF(phaseslist);
-release_phasesetlist:
 	Py_XDECREF(phasessetlist);
-release_phases:
+done:
 	free(phases);
-release_none:
 	return ret;
 }
 
