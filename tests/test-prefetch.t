@@ -161,3 +161,13 @@
   $ clearcache
   $ hg status
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+
+# Prefetch during addrename detection
+  $ hg up -q --clean tip
+  $ hg revert --all
+  $ mv x x2
+  $ mv y y2
+  $ mv z z2
+  $ clearcache
+  $ hg addremove -s 50 > /dev/null
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)

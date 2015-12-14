@@ -236,6 +236,18 @@ def onetimeclientsetup(ui):
         return orig(self, files)
     wrapfunction(context.workingctx, '_checklookup', checklookup)
 
+    # Prefetch the logic that compares added and removed files for renames
+    def findrenames(orig, repo, matcher, added, removed, *args, **kwargs):
+        if shallowrepo.requirement in repo.requirements:
+            files = []
+            parentctx = repo['.']
+            for f in removed:
+                files.append((f, hex(parentctx.filenode(f))))
+            # batch fetch the needed files from the server
+            repo.fileservice.prefetch(files)
+        return orig(repo, matcher, added, removed, *args, **kwargs)
+    wrapfunction(scmutil, '_findrenames', findrenames)
+
     # prefetch files before mergecopies check
     def computenonoverlap(orig, repo, c1, c2, addedinm1, addedinm2):
         u1, u2 = orig(repo, c1, c2, addedinm1, addedinm2)
