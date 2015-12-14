@@ -51,6 +51,7 @@ class unionrevlog(revlog.revlog):
             rev = self.revlog2.index[rev2]
             # rev numbers - in revlog2, very different from self.rev
             _start, _csize, _rsize, base, linkrev, p1rev, p2rev, node = rev
+            flags = _start & 0xFFFF
 
             if linkmapper is None: # link is to same revlog
                 assert linkrev == rev2 # we never link back
@@ -69,7 +70,7 @@ class unionrevlog(revlog.revlog):
             p1node = self.revlog2.node(p1rev)
             p2node = self.revlog2.node(p2rev)
 
-            e = (None, None, None, base,
+            e = (flags, None, None, base,
                  link, self.rev(p1node), self.rev(p2node), node)
             self.index.insert(-1, e)
             self.nodemap[node] = n

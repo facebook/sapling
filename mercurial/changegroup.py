@@ -32,6 +32,7 @@ from . import (
 
 _CHANGEGROUPV1_DELTA_HEADER = "20s20s20s20s"
 _CHANGEGROUPV2_DELTA_HEADER = "20s20s20s20s20s"
+_CHANGEGROUPV3_DELTA_HEADER = ">20s20s20s20s20sH"
 
 def readexactly(stream, n):
     '''read n bytes from stream.read and abort if less was available'''
@@ -246,7 +247,8 @@ class cg1unpacker(object):
             deltabase = p1
         else:
             deltabase = prevnode
-        return node, p1, p2, deltabase, cs
+        flags = 0
+        return node, p1, p2, deltabase, cs, flags
 
     def deltachunk(self, prevnode):
         l = self._chunklength()
@@ -255,9 +257,9 @@ class cg1unpacker(object):
         headerdata = readexactly(self._stream, self.deltaheadersize)
         header = struct.unpack(self.deltaheader, headerdata)
         delta = readexactly(self._stream, l - self.deltaheadersize)
-        node, p1, p2, deltabase, cs = self._deltaheader(header, prevnode)
+        node, p1, p2, deltabase, cs, flags = self._deltaheader(header, prevnode)
         return {'node': node, 'p1': p1, 'p2': p2, 'cs': cs,
-                'deltabase': deltabase, 'delta': delta}
+                'deltabase': deltabase, 'delta': delta, 'flags': flags}
 
     def getchunks(self):
         """returns all the chunks contains in the bundle
@@ -296,6 +298,7 @@ class cg1unpacker(object):
         # no new manifest will be created and the manifest group will
         # be empty during the pull
         self.manifestheader()
+        repo.manifest.narrowdebug = repo.ui.warn
         repo.manifest.addgroup(self, revmap, trp)
         repo.ui.progress(_('manifests'), None)
 
@@ -495,15 +498,23 @@ class cg2unpacker(cg1unpacker):
 
     def _deltaheader(self, headertuple, prevnode):
         node, p1, p2, deltabase, cs = headertuple
-        return node, p1, p2, deltabase, cs
+        flags = 0
+        return node, p1, p2, deltabase, cs, flags
 
 class cg3unpacker(cg2unpacker):
     """Unpacker for cg3 streams.
 
-    cg3 streams add support for exchanging treemanifests, so the only
-    thing that changes is the version number.
+    cg3 streams add support for exchanging treemanifests and revlog
+    flags, so the only changes from cg2 are the delta header and
+    version number.
     """
+    deltaheader = _CHANGEGROUPV3_DELTA_HEADER
+    deltaheadersize = struct.calcsize(deltaheader)
     version = '03'
+
+    def _deltaheader(self, headertuple, prevnode):
+        node, p1, p2, deltabase, cs, flags = headertuple
+        return node, p1, p2, deltabase, cs, flags
 
 class headerlessfixup(object):
     def __init__(self, fh, h):
@@ -841,14 +852,16 @@ class cg1packer(object):
             delta = revlog.revdiff(base, rev)
         p1n, p2n = revlog.parents(node)
         basenode = revlog.node(base)
-        meta = self.builddeltaheader(node, p1n, p2n, basenode, linknode)
+        flags = revlog.flags(rev)
+        meta = self.builddeltaheader(node, p1n, p2n, basenode, linknode, flags)
         meta += prefix
         l = len(meta) + len(delta)
         yield chunkheader(l)
         yield meta
         yield delta
-    def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         # do nothing with basenode, it is implicitly the previous one in HG10
+        # do nothing with flags, it is implicitly 0 for cg1 and cg2
         return struct.pack(self.deltaheader, node, p1n, p2n, linknode)
 
 class cg2packer(cg1packer):
@@ -871,11 +884,13 @@ class cg2packer(cg1packer):
             return prev
         return dp
 
-    def builddeltaheader(self, node, p1n, p2n, basenode, linknode):
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
+        # Do nothing with flags, it is implicitly 0 in cg1 and cg2
         return struct.pack(self.deltaheader, node, p1n, p2n, basenode, linknode)
 
 class cg3packer(cg2packer):
     version = '03'
+    deltaheader = _CHANGEGROUPV3_DELTA_HEADER
 
     def _packmanifests(self, mfnodes, tmfnodes, lookuplinknode):
         # Note that debug prints are super confusing in this code, as
@@ -894,6 +909,9 @@ class cg3packer(cg2packer):
             for chunk in self.group(nodes, dirlog(name), nodes.get):
                 yield chunk
 
+    def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
+        return struct.pack(
+            self.deltaheader, node, p1n, p2n, basenode, linknode, flags)
 
 packermap = {'01': (cg1packer, cg1unpacker),
              # cg2 adds support for exchanging generaldelta

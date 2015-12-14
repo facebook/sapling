@@ -1572,6 +1572,7 @@ class revlog(object):
                 cs = chunkdata['cs']
                 deltabase = chunkdata['deltabase']
                 delta = chunkdata['delta']
+                flags = chunkdata['flags'] or REVIDX_DEFAULT_FLAGS
 
                 content.append(node)
 
@@ -1602,8 +1603,7 @@ class revlog(object):
                         raise error.CensoredBaseError(self.indexfile,
                                                       self.node(baserev))
 
-                flags = REVIDX_DEFAULT_FLAGS
-                if self._peek_iscensored(baserev, delta, flush):
+                if not flags and self._peek_iscensored(baserev, delta, flush):
                     flags |= REVIDX_ISCENSORED
 
                 # We assume consumers of addrevisioncb will want to retrieve
