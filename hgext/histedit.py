@@ -602,7 +602,7 @@ class edit(histeditaction):
     def run(self):
         repo = self.repo
         rulectx = repo[self.node]
-        hg.update(repo, self.state.parentctxnode)
+        hg.update(repo, self.state.parentctxnode, quietempty=True)
         applychanges(repo.ui, repo, rulectx, {})
         raise error.InterventionRequired(
             _('Make changes as needed, you may commit or record as needed '

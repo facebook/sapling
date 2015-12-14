@@ -146,7 +146,6 @@ check state of working copy
   When you are finished, run hg histedit --continue to resume.
   $ continueediting true "(leaving commit message unaltered)"
   % finalize changeset editing (leaving commit message unaltered)
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ graphlog "log after first edit"
@@ -212,7 +211,6 @@ aborting and not changing files can skip mentioning updating (no) files
   $ startediting 1 1 "(not changing anything)" # edit the 3rd of 3 changesets
   % start editing the history (not changing anything)
   | edit 292aec348d9e 6 closebranch
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Make changes as needed, you may commit or record as needed now.
   When you are finished, run hg histedit --continue to resume.
   $ hg histedit --abort
