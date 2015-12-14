@@ -1266,15 +1266,15 @@ def recordupdates(repo, actions, branchmerge):
         else:
             repo.dirstate.normal(f)
 
-def update(repo, node, branchmerge, force, partial, ancestor=None,
-           mergeancestor=False, labels=None):
+def update(repo, node, branchmerge, force, ancestor=None,
+           mergeancestor=False, labels=None, matcher=None):
     """
     Perform a merge between the working directory and the given node
 
     node = the node to update to, or None if unspecified
     branchmerge = whether to merge between branches
     force = whether to force branch merging or file overwriting
-    partial = a function to filter file lists (dirstate not updated)
+    matcher = a matcher to filter file lists (dirstate not updated)
     mergeancestor = whether it is merging with an ancestor. If true,
       we should accept the incoming changes for any prompts that occur.
       If false, merging with an ancestor (fast-forward) is only allowed
@@ -1313,6 +1313,13 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
 
     onode = node
     wlock = repo.wlock()
+    # If we're doing a partial update, we need to skip updating
+    # the dirstate, so make a note of any partial-ness to the
+    # update here.
+    if matcher is None or matcher.always():
+        partial = False
+    else:
+        partial = True
     try:
         wc = repo[None]
         pl = wc.parents()
@@ -1407,6 +1414,10 @@ def update(repo, node, branchmerge, force, partial, ancestor=None,
             followcopies = True
 
         ### calculate phase
+        if matcher is None or matcher.always():
+            partial = False
+        else:
+            partial = matcher.matchfn
         actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
             followcopies)
@@ -1516,7 +1527,7 @@ def graft(repo, ctx, pctx, labels, keepparent=False):
     # which local deleted".
     mergeancestor = repo.changelog.isancestor(repo['.'].node(), ctx.node())
 
-    stats = update(repo, ctx.node(), True, True, False, pctx.node(),
+    stats = update(repo, ctx.node(), True, True, pctx.node(),
                    mergeancestor=mergeancestor, labels=labels)
 
     pother = nullid

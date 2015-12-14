@@ -637,7 +637,7 @@ def updaterepo(repo, node, overwrite):
     When overwrite is set, changes are clobbered, merged else
 
     returns stats (see pydoc mercurial.merge.applyupdates)"""
-    return mergemod.update(repo, node, False, overwrite, None,
+    return mergemod.update(repo, node, False, overwrite,
                            labels=['working copy', 'destination'])
 
 def update(repo, node):
@@ -662,7 +662,7 @@ def clean(repo, node, show_stats=True):
 def merge(repo, node, force=None, remind=True):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, True, force, False)
+    stats = mergemod.update(repo, node, True, force)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "

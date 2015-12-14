@@ -632,7 +632,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, target):
     # Update to target and merge it with local
     if repo['.'].rev() != p1:
         repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
-        merge.update(repo, p1, False, True, False)
+        merge.update(repo, p1, False, True)
     else:
         repo.ui.debug(" already in target\n")
     repo.dirstate.write(repo.currenttransaction())
@@ -641,7 +641,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, target):
         repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
-    stats = merge.update(repo, rev, True, True, False, base, collapse,
+    stats = merge.update(repo, rev, True, True, base, collapse,
                         labels=['dest', 'source'])
     if collapse:
         copies.duplicatecopies(repo, rev, target)
@@ -958,7 +958,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
         if cleanup:
             # Update away from the rebase if necessary
             if needupdate(repo, state):
-                merge.update(repo, originalwd, False, True, False)
+                merge.update(repo, originalwd, False, True)
 
             # Strip from the first rebased revision
             rebased = filter(lambda x: x >= 0 and x != target, state.values())

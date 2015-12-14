@@ -636,8 +636,7 @@ def _dobackout(ui, repo, node=None, rev=None, commit=False, **opts):
             try:
                 ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                              'backout')
-                stats = mergemod.update(repo, parent, True, True, False,
-                                        node, False)
+                stats = mergemod.update(repo, parent, True, True, node, False)
                 repo.setparents(op1, op2)
                 dsguard.close()
                 hg._showstats(repo, stats)

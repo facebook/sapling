@@ -183,9 +183,9 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
                 # Equivalent to hg.revert
-                choices = lambda key: key in backups
+                m = scmutil.matchfiles(repo, backups.keys())
                 mergemod.update(repo, repo.dirstate.p1(),
-                        False, True, choices)
+                        False, True, matcher=m)
 
             # 3b. (apply)
             if dopatch:

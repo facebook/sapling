@@ -1364,8 +1364,11 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         err = 0
     return err
 
-def mergeupdate(orig, repo, node, branchmerge, force, partial,
+def mergeupdate(orig, repo, node, branchmerge, force,
                 *args, **kwargs):
+    matcher = kwargs.get('matcher', None)
+    # note if this is a partial update
+    partial = matcher and not matcher.always()
     wlock = repo.wlock()
     try:
         # branch |       |         |
@@ -1405,7 +1408,7 @@ def mergeupdate(orig, repo, node, branchmerge, force, partial,
 
         oldstandins = lfutil.getstandinsstate(repo)
 
-        result = orig(repo, node, branchmerge, force, partial, *args, **kwargs)
+        result = orig(repo, node, branchmerge, force, *args, **kwargs)
 
         newstandins = lfutil.getstandinsstate(repo)
         filelist = lfutil.getlfilestoupdate(oldstandins, newstandins)

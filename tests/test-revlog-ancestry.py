@@ -17,10 +17,10 @@ def addcommit(name, time):
     commit(name, time)
 
 def update(rev):
-    merge.update(repo, rev, False, True, False)
+    merge.update(repo, rev, False, True)
 
 def merge_(rev):
-    merge.update(repo, rev, True, False, False)
+    merge.update(repo, rev, True, False)
 
 if __name__ == '__main__':
     addcommit("A", 0)
@@ -82,4 +82,3 @@ if __name__ == '__main__':
     print '\nDescendants of 5 and 4'
     for r in repo.changelog.descendants([5, 4]):
         print r,
-
