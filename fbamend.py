@@ -152,6 +152,7 @@ def amend(ui, repo, *pats, **opts):
                 orig(ui, repo, *args, **kwargs)
         extensions.wrapfunction(repair, 'strip', fakestrip)
 
+    tr = None
     wlock = None
     lock = None
     try:
@@ -199,12 +200,14 @@ def amend(ui, repo, *pats, **opts):
                     newbookmarks[preamendname] = repo._bookmarks[oldname]
                     del newbookmarks[oldname]
 
-        newbookmarks.write()
+        tr = repo.transaction('fixupamend')
+        newbookmarks.recordchange(tr)
+        tr.close()
 
         if rebase and haschildren:
             fixupamend(ui, repo)
     finally:
-        lockmod.release(wlock, lock)
+        lockmod.release(wlock, lock, tr)
 
 def fixupamend(ui, repo):
     """rebases any children found on the preamend commit and strips the
@@ -212,6 +215,7 @@ def fixupamend(ui, repo):
     """
     wlock = None
     lock = None
+    tr = None
     try:
         wlock = repo.wlock()
         lock = repo.lock()
@@ -239,7 +243,9 @@ def fixupamend(ui, repo):
         for bookmark in oldbookmarks:
             repo._bookmarks.pop(bookmark)
 
-        repo._bookmarks.write()
+        tr = repo.transaction('fixupamend')
+        repo._bookmarks.recordchange(tr)
+        tr.close()
 
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
            # clean up the original node if inhibit kept it alive
@@ -252,7 +258,7 @@ def fixupamend(ui, repo):
         if active:
             bmactivate(repo, active)
     finally:
-        lockmod.release(wlock, lock)
+        lockmod.release(wlock, lock, tr)
 
 def _preamendname(repo, node):
     suffix = '.preamend'
