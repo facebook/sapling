@@ -637,7 +637,9 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             srcpeer.close()
     return srcpeer, destpeer
 
-def _showstats(repo, stats):
+def _showstats(repo, stats, quietempty=False):
+    if quietempty and not any(stats):
+        return
     repo.ui.status(_("%d files updated, %d files merged, "
                      "%d files removed, %d files unresolved\n") % stats)
 
