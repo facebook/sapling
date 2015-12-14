@@ -441,8 +441,44 @@ def wraprepo(repo):
             outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
             return outofsync, sqlheads, sqlbookmarks, tip
 
+        def synclimiter(self):
+            """Attempts to acquire the lock used to rate limit how many
+            read-only clients perform database syncs at the same time. If None
+            is returned, it means the limiter was not acquired, and readonly
+            clients should not attempt to perform a sync."""
+            try:
+                wait = False
+                return self._lock(self.svfs, "synclimiter", wait, None,
+                               None, _('repository %s') % self.origroot)
+            except error.LockHeld:
+                return None
+
         def syncdb(self, waitforlock=False):
-            ui = self.ui
+            """Attempts to sync the local repository with the latest bits in the
+            database.
+
+            If `waitforlock` is False, the sync is on a best effort basis,
+            and the repo may not actually be up-to-date afterwards. If
+            `waitforlock` is True, we guarantee that the repo is up-to-date when
+            this function returns, otherwise an exception will be thrown."""
+            if waitforlock:
+                return self._syncdb(waitforlock)
+            else:
+                # For operations that do not require the absolute latest bits,
+                # only let one process update the repo at a time.
+                limiter = self.synclimiter()
+                if not limiter:
+                    # Someone else is already checking and updating the repo
+                    self.ui.debug("skipping database sync because another "
+                                  "process is already syncing\n")
+                    return
+
+                try:
+                    return self._syncdb(waitforlock)
+                finally:
+                    limiter.release()
+
+        def _syncdb(self, waitforlock):
             if not self.needsync()[0]:
                 ui.debug("syncing not needed\n")
                 return

@@ -26,9 +26,12 @@
 
   $ cd master2
   $ printf "[hooks]\npresyncdb.sleep = sleep 2\n" >> .hg/hgrc
-  $ hg log -l 2 --template "first:{rev}\n" &
+  $ hg log -l 2 --template "first:{rev}\n" --debug &
   $ sleep 0.2
-  $ hg log -l 2 --template "second:{rev}\n"
+  syncing with mysql
+  running hook presyncdb.sleep: sleep 2
+  $ hg log -l 2 --template "second:{rev}\n" --debug
+  skipping database sync because another process is already syncing
   second:0
   $ sleep 4
   first:1
