@@ -1411,8 +1411,10 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 	}
 
 	nothead = calloc(len, 1);
-	if (nothead == NULL)
+	if (nothead == NULL) {
+		PyErr_NoMemory();
 		goto bail;
+	}
 
 	for (i = 0; i < len; i++) {
 		int isfiltered;
