@@ -1209,11 +1209,11 @@ help -c should only show deprecated for -v
 
 Test -e / -c / -k combinations
 
-  $ hg help -c|egrep '^\S|debug'
+  $ hg help -c|egrep '^[A-Z].*:|^ debug'
   Commands:
-  $ hg help -e|egrep '^\S'
+  $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
-  $ hg help -k|egrep '^\S'
+  $ hg help -k|egrep '^[A-Z].*:'
   Topics:
   Commands:
   Extensions:
