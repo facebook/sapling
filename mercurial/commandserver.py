@@ -215,8 +215,11 @@ class server(object):
             self.repo.invalidateall()
 
         for ui in uis:
-            # any kind of interaction must use server channels
-            ui.setconfig('ui', 'nontty', 'true', 'commandserver')
+            # any kind of interaction must use server channels, but chg may
+            # replace channels by fully functional tty files. so nontty is
+            # enforced only if cin is a channel.
+            if not util.safehasattr(self.cin, 'fileno'):
+                ui.setconfig('ui', 'nontty', 'true', 'commandserver')
 
         req = dispatch.request(args[:], copiedui, self.repo, self.cin,
                                self.cout, self.cerr)
