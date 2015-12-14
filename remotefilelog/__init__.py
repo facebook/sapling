@@ -206,6 +206,22 @@ def onetimeclientsetup(ui):
         return orig(repo, actions, wctx, mctx, overwrite, labels=labels)
     wrapfunction(merge, 'applyupdates', applyupdates)
 
+    # Prefetch merge checkunknownfiles
+    def checkunknownfiles(orig, repo, wctx, mctx, force, actions,
+                          *args, **kwargs):
+        if shallowrepo.requirement in repo.requirements:
+            files = []
+            for f, (m, actionargs, msg) in actions.iteritems():
+                if m in ('c', 'dc', 'cm'):
+                    files.append((f, hex(mctx.filenode(f))))
+                elif m == 'dg':
+                    f2 = actionargs[0]
+                    files.append((f2, hex(mctx.filenode(f2))))
+            # batch fetch the needed files from the server
+            repo.fileservice.prefetch(files)
+        return orig(repo, wctx, mctx, force, actions, *args, **kwargs)
+    wrapfunction(merge, '_checkunknownfiles', checkunknownfiles)
+
     # prefetch files before mergecopies check
     def computenonoverlap(orig, repo, c1, c2, addedinm1, addedinm2):
         u1, u2 = orig(repo, c1, c2, addedinm1, addedinm2)

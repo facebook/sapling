@@ -127,3 +127,27 @@
   (run 'hg update' to get a working copy)
   prefetching file contents
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
+
+  $ cd ..
+
+# Prefetch unknown files during checkout
+  $ hgcloneshallow ssh://user@dummy/master shallow2
+  streaming all changes
+  2 files to transfer, 528 bytes of data
+  transferred 528 bytes in 0.0 seconds * (glob)
+  searching for changes
+  no changes found
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ cd shallow2
+  $ hg up -q null
+  $ echo x > x
+  $ echo y > y
+  $ echo z > z
+  $ clearcache
+  $ hg up tip
+  x: untracked file differs
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
