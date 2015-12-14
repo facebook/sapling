@@ -187,7 +187,6 @@ abort editing session, after first forcibly updating away
   hist:   2 remaining (histedit --continue)
 
   $ hg histedit --abort 2>&1 | fixbundle
-  [1]
 
 modified files should survive the abort when we've moved away already
   $ hg st
