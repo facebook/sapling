@@ -663,12 +663,12 @@ def update(repo, node):
 # naming conflict in clone()
 _update = update
 
-def clean(repo, node, show_stats=True):
+def clean(repo, node, show_stats=True, quietempty=False):
     """forcibly switch the working directory to node, clobbering changes"""
     stats = updaterepo(repo, node, True)
     util.unlinkpath(repo.join('graftstate'), ignoremissing=True)
     if show_stats:
-        _showstats(repo, stats)
+        _showstats(repo, stats, quietempty)
     return stats[3] > 0
 
 def merge(repo, node, force=None, remind=True):
