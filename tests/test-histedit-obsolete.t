@@ -56,7 +56,6 @@ Enable obsolete
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg histedit 1 --commands - --verbose <<EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
@@ -109,7 +108,6 @@ create an hidden revision
   > pick cacdfd884a93 8 f
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
   @  11:c13eb81022ca f
   |
@@ -123,7 +121,6 @@ check hidden revision are ignored (6 have hidden children 7 and 8)
   > pick b346ab9a313d 6 c
   > pick c13eb81022ca 8 f
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
 
@@ -144,7 +141,6 @@ Test that rewriting leaving instability behind is allowed
   [1]
   $ echo c >> c
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -r 'unstable()'
   11:c13eb81022ca f (no-eol)
@@ -199,7 +195,6 @@ With rewritten ancestors
   > drop 1b3b05f35ff0 13 h
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  17:ee6544123ab8 c
   |
@@ -290,7 +285,6 @@ New-commit as draft (default)
   [1]
   $ echo f >> f
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  24:12925f763c90 (secret) k
   |
@@ -334,7 +328,6 @@ New-commit as draft (default)
   [1]
   $ echo f >> f
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  24:12925f763c90 (secret) k
   |
@@ -372,7 +365,6 @@ It seems more important to present the secret phase.
   > pick 14bda137d5b3 16 k
   > EOF
   0 files updated, 0 files merged, 5 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  23:9e712162b2c1 (secret) k
   |
@@ -421,7 +413,6 @@ Note that there is a few reordering in this series for more extensive test
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  27:769e8ee8708e (secret) i
   |

@@ -53,7 +53,6 @@ show the edit commands offered by outgoing
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 show the error from unrelated repos
@@ -85,7 +84,6 @@ show the error from unrelated repos
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
 test sensitivity to branch in URL:
@@ -109,7 +107,6 @@ test sensitivity to branch in URL:
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test to check number of roots in outgoing revisions
 

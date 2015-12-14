@@ -77,7 +77,6 @@
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg histedit 1 --commands - --verbose << EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
@@ -138,7 +137,6 @@
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg histedit 1 --commands - --verbose << EOF | grep histedit
   > pick b346ab9a313d 1 c
   > pick cacdfd884a93 3 f

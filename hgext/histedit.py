@@ -1081,7 +1081,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.replacements.extend(replacement_)
     state.write()
 
-    hg.update(repo, state.parentctxnode)
+    hg.update(repo, state.parentctxnode, quietempty=True)
 
     mapping, tmpnodes, created, ntm = processreplacement(state)
     if mapping:

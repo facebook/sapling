@@ -60,7 +60,6 @@ edit the history
   > pick 055a42cdd887 d
   > EOF
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
   $ hg log --graph

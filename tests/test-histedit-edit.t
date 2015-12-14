@@ -141,7 +141,6 @@ qnew should fail while we're in the middle of the edit step
   (use 'hg histedit --continue' or 'hg histedit --abort')
   [255]
   $ HGEDITOR='echo foobaz > ' hg histedit --continue 2>&1 | fixbundle
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   6:b5f70786f9b0
@@ -261,7 +260,6 @@ check histedit_source
   HG: user: test
   HG: branch 'default'
   HG: added f
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/b5f70786f9b0-c28d9c86-backup.hg (glob)
 
   $ hg status
@@ -282,7 +280,6 @@ say we'll change the message, but don't.
   > EOF
   $ HGEDITOR="sh ../edit.sh" hg histedit tip 2>&1 | fixbundle
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
   changeset:   6:1fd3b2fe7754
@@ -405,7 +402,6 @@ then, check "modify the message" itself
   > mess 1fd3b2fe7754 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
   changeset:   6:62feedb1200e
@@ -433,7 +429,6 @@ rollback should not work after a histedit
   When you are finished, run hg histedit --continue to resume.
   [1]
   $ HGEDITOR=true hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)
 
   $ hg log -G

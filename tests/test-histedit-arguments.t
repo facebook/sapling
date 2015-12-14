@@ -71,7 +71,6 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Run on a revision not ancestors of the current working directory.
 --------------------------------------------------------------------
@@ -92,7 +91,6 @@ Test that we pick the minimum of a revrange
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up --quiet
 
   $ HGEDITOR=cat hg histedit 'tip:2' --commands - << EOF
@@ -100,7 +98,6 @@ Test that we pick the minimum of a revrange
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up --quiet
 
 Test config specified default
@@ -110,7 +107,6 @@ Test config specified default
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Run on a revision not descendants of the initial parent
 --------------------------------------------------------------------
@@ -142,7 +138,6 @@ temporarily.
   $ mv .hg/histedit-state.back .hg/histedit-state
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-backup.hg (glob)
   $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 2::
   @  4 f5ed five
@@ -251,7 +246,6 @@ short hash. This tests issue3893.
   HG: branch 'default'
   HG: changed alpha
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
 
@@ -295,7 +289,6 @@ Test that trimming description using multi-byte characters
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test --continue with --keep
 
@@ -426,7 +419,6 @@ Default base revision should stop at public changesets
   > pick 463b8c0d2973
   > pick 8cdc02b9bc63
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Default base revision should stop at branchpoint
 
@@ -435,7 +427,6 @@ Default base revision should stop at branchpoint
   > pick 931820154288
   > pick 4c35cdf97d5e
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Default base revision should stop at merge commit
 
@@ -444,4 +435,3 @@ Default base revision should stop at merge commit
   > pick 6f2f0241f119
   > pick 8cde254db839
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved

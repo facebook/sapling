@@ -57,7 +57,6 @@ log before edit
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
   $ hg logt --graph
@@ -115,7 +114,6 @@ rollup will fold without preserving the folded commit's message
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HGEDITOR=$OLDHGEDITOR
 
@@ -243,7 +241,6 @@ tip before edit
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 tip after edit
   $ hg log --rev .
@@ -306,7 +303,6 @@ should effectively drop the changes from +6.
   (no more unresolved files)
   $ hg histedit --continue
   251d831eeec5: empty changeset
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/*-backup.hg (glob)
   $ hg logt --graph
   @  1:617f94f13c0f +4
@@ -384,7 +380,6 @@ dropped revision.
   HG: branch 'default'
   HG: changed file
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/55c8d8dc79ce-4066cd98-backup.hg (glob)
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-a35700fc-backup.hg (glob)
   $ hg logt -G
@@ -444,7 +439,6 @@ Folding with initial rename (issue3729)
   reverting b.txt
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg logt --follow b.txt
   1:cf858d235c76 rename
@@ -490,7 +484,6 @@ into the hook command.
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
   $ hg logt
@@ -536,7 +529,6 @@ editors.
   merging foo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg logt
   2:e8bedbda72c1 merged foos
   1:578c7455730c a

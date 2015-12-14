@@ -167,7 +167,6 @@ just continue this time
   (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   7b4e2f4b7bcd: empty changeset
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
   $ hg log --graph
@@ -247,7 +246,6 @@ second edit also fails, but just continue
   (no more unresolved files)
   $ hg histedit --continue 2>&1 | fixbundle
   7b4e2f4b7bcd: empty changeset
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 post message fix
   $ hg log --graph

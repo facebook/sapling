@@ -54,7 +54,6 @@ Rebase B onto H
   > pick 5fddd98957c8 C
   > pick 32af7686d403 D
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  7:0937e82309df47d14176ee15e45dbec5fbdef340:draft 'D'
@@ -80,7 +79,6 @@ Rebase back and drop something
   > drop f778d1cbddac C
   > pick 0937e82309df D
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  6:476cc3e4168da2d036b141f7f7dcff7f8e3fe846:draft 'D'
@@ -104,7 +102,6 @@ Split stack
   > base cd010b8cd998
   > pick 476cc3e4168d D
   > EOF
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg tglog
   @  6:d7a6f907a822c4ce6f15662ae45a42aa46d3818a:draft 'D'
@@ -182,7 +179,6 @@ Continue
   $ hg resolve --mark B
   (no more unresolved files)
   $ hg histedit --continue | fixbundle
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg tglog
   @  6:03772da75548bb42a8f1eacd8c91d0717a147fcd:draft 'X'
   |
