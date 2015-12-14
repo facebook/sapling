@@ -652,10 +652,10 @@ def updaterepo(repo, node, overwrite):
     return mergemod.update(repo, node, False, overwrite,
                            labels=['working copy', 'destination'])
 
-def update(repo, node):
+def update(repo, node, quietempty=False):
     """update the working directory to node, merging linear changes"""
     stats = updaterepo(repo, node, False)
-    _showstats(repo, stats)
+    _showstats(repo, stats, quietempty)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges\n"))
     return stats[3] > 0
