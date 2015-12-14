@@ -1213,7 +1213,7 @@ Test -e / -c / -k combinations
   Commands:
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
-  $ hg help -k|egrep '^[A-Z].*:'
+  $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:

@@ -143,6 +143,8 @@ def topicmatch(ui, kw):
                     cmddoc = gettext(entry[0].__doc__).splitlines()[0]
                 else:
                     cmddoc = _('(no help text available)')
+                if filtercmd(ui, cmdname, kw, cmddoc):
+                    continue
                 results['extensioncommands'].append((cmdname, cmddoc))
     return results
 
