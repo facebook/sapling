@@ -15,5 +15,19 @@ def showphabdiff(repo, ctx, templ, **args):
     match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)', descr)
     return match.group(1) if match else ''
 
+def showtasks(**args):
+    """:tasks: String. Return the phabricator diff id for a given hg rev"""
+    descr = args['ctx'].description()
+    match = re.search('Tasks: (\d+)(,\s*\d+)*', descr)
+
+    if match:
+        tasksline = match.group(0)
+        tasks = re.findall("\d+", tasksline)
+        tasks = ["T%s" % task for task in tasks]
+        return templatekw.showlist('task', tasks, **args)
+    else:
+        return ''
+
 def extsetup(ui):
     templatekw.keywords['phabdiff'] = showphabdiff
+    templatekw.keywords['tasks'] = showtasks
