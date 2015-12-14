@@ -136,26 +136,6 @@ def wraprepo(repo):
                 results = [(path, hex(fnode)) for (path, fnode) in files]
                 repo.fileservice.prefetch(results)
 
-    # Wrap dirstate.status here so we can prefetch all file nodes in
-    # the lookup set before localrepo.status uses them.
-    def status(orig, match, subrepos, ignored, clean, unknown):
-        lookup, status = orig(match, subrepos, ignored, clean, unknown)
-
-        if lookup:
-            files = []
-            parents = repo[None].parents()
-            for fname in lookup:
-                for ctx in parents:
-                    if fname in ctx:
-                        fnode = ctx.filenode(fname)
-                        files.append((fname, hex(fnode)))
-
-            repo.fileservice.prefetch(files)
-
-        return lookup, status
-
-    wrapfunction(repo.dirstate, 'status', status)
-
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, '')

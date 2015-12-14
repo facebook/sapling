@@ -222,6 +222,20 @@ def onetimeclientsetup(ui):
         return orig(repo, wctx, mctx, force, actions, *args, **kwargs)
     wrapfunction(merge, '_checkunknownfiles', checkunknownfiles)
 
+    # Prefetch files before status attempts to look at their size and contents
+    def checklookup(orig, self, files):
+        repo = self._repo
+        if shallowrepo.requirement in repo.requirements:
+            prefetchfiles = []
+            for parent in self._parents:
+                for f in files:
+                    if f in parent:
+                        prefetchfiles.append((f, hex(parent.filenode(f))))
+            # batch fetch the needed files from the server
+            repo.fileservice.prefetch(prefetchfiles)
+        return orig(self, files)
+    wrapfunction(context.workingctx, '_checklookup', checklookup)
+
     # prefetch files before mergecopies check
     def computenonoverlap(orig, repo, c1, c2, addedinm1, addedinm2):
         u1, u2 = orig(repo, c1, c2, addedinm1, addedinm2)

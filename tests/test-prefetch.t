@@ -131,6 +131,7 @@
   $ cd ..
 
 # Prefetch unknown files during checkout
+
   $ hgcloneshallow ssh://user@dummy/master shallow2
   streaming all changes
   2 files to transfer, 528 bytes of data
@@ -151,3 +152,12 @@
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
   abort: untracked files in working directory differ from files in requested revision
   [255]
+  $ hg revert --all
+
+# Test batch fetching of lookup files during hg status
+  $ hg up --clean tip
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg debugrebuilddirstate
+  $ clearcache
+  $ hg status
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
