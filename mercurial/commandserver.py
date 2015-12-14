@@ -214,6 +214,11 @@ class server(object):
             self.repo.ui = self.repo.dirstate._ui = repoui
             self.repo.invalidateall()
 
+        # reset last-print time of progress bar per command
+        # (progbar is singleton, we don't have to do for all uis)
+        if copiedui._progbar:
+            copiedui._progbar.resetstate()
+
         for ui in uis:
             # any kind of interaction must use server channels, but chg may
             # replace channels by fully functional tty files. so nontty is
