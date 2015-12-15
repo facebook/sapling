@@ -4574,8 +4574,17 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     Import a list of patches and commit them individually (unless
     --no-commit is specified).
 
-    Because import first applies changes to the working directory,
-    import will abort if there are outstanding changes.
+    To read a patch from standard input, use "-" as the patch name. If
+    a URL is specified, the patch will be downloaded from there.
+
+    Import first applies changes to the working directory (unless
+    --bypass is specified), import will abort if there are outstanding
+    changes.
+
+    Use --bypass to apply and commit patches directly to the
+    repository, without affecting the working directory. Without
+    --exact, patches will be applied on top of the working directory
+    parent revision.
 
     You can import a patch straight from a mail message. Even patches
     as attachments work (to use the body part, it must have type
@@ -4595,14 +4604,6 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     the patch. This may happen due to character set problems or other
     deficiencies in the text patch format.
 
-    Use --bypass to apply and commit patches directly to the
-    repository, not touching the working directory. Without --exact,
-    patches will be applied on top of the working directory parent
-    revision.
-
-    With -s/--similarity, hg will attempt to discover renames and
-    copies in the patch in the same way as :hg:`addremove`.
-
     Use --partial to ensure a changeset will be created from the patch
     even if some hunks fail to apply. Hunks that fail to apply will be
     written to a <target-file>.rej file. Conflicts can then be resolved
@@ -4613,14 +4614,15 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     cleanly, :hg:`import --partial` will create an empty changeset,
     importing only the patch metadata.
 
+    With -s/--similarity, hg will attempt to discover renames and
+    copies in the patch in the same way as :hg:`addremove`.
+
     It is possible to use external patch programs to perform the patch
     by setting the ``ui.patch`` configuration option. For the default
     internal tool, the fuzz can also be configured via ``patch.fuzz``.
     See :hg:`help config` for more information about configuration
     files and how to use these options.
 
-    To read a patch from standard input, use "-" as the patch name. If
-    a URL is specified, the patch will be downloaded from it.
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     .. container:: verbose
