@@ -143,6 +143,9 @@ as running ``hg histedit 836302820282``. If you need plan to push to a
 repository that Mercurial does not detect to be related to the source
 repo, you can add a ``--force`` option.
 
+Config
+------
+
 Histedit rule lines are truncated to 80 characters by default. You
 can customize this behavior by setting a different length in your
 configuration file::
@@ -156,6 +159,14 @@ revset in your configuration file::
 
   [histedit]
   defaultrev = only(.) & draft()
+
+By default each edited revision needs to be present in histedit commands.
+To remove revision you need to use ``drop`` operation. You can configure
+the drop to be implicit for missing commits by adding:
+
+  [histedit]
+  dropmissing = True
+
 """
 
 try:
@@ -1225,10 +1236,17 @@ def verifyactions(actions, state, ctxs):
                         ha[:12])
             seen.add(ha)
     missing = sorted(expected - seen)  # sort to stabilize output
-    if missing:
+
+    if state.repo.ui.configbool('histedit', 'dropmissing'):
+        drops = [drop(state, node.bin(n)) for n in missing]
+        # put the in the beginning so they execute immediately and
+        # don't show in the edit-plan in the future
+        actions[:0] = drops
+    elif missing:
         raise error.Abort(_('missing rules for changeset %s') %
                 missing[0][:12],
-                hint=_('use "drop %s" to discard the change') % missing[0][:12])
+                hint=_('use "drop %s" to discard, see also: '
+                       '"hg help -e histedit.config"') % missing[0][:12])
 
 def newnodestoabort(state):
     """process the list of replacements to return

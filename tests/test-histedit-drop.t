@@ -148,4 +148,26 @@ Drop the last changeset
      summary:     a
   
 
-  $ cd ..
+  $ hg histedit cb9a9f314b8b --commands - 2>&1 << EOF | fixbundle
+  > pick cb9a9f314b8b a
+  > pick ee283cb5f2d5 e
+  > EOF
+  abort: missing rules for changeset a4f7421b80f7
+  (use "drop a4f7421b80f7" to discard, see also: "hg help -e histedit.config")
+  $ hg --config histedit.dropmissing=True histedit  cb9a9f314b8b --commands - 2>&1 << EOF | fixbundle
+  > pick cb9a9f314b8b a
+  > pick ee283cb5f2d5 e
+  > EOF
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg log --graph
+  @  changeset:   1:e99c679bf03e
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     e
+  |
+  o  changeset:   0:cb9a9f314b8b
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  

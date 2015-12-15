@@ -159,7 +159,7 @@ Test that missing revisions are detected
   > pick 08d98a8350f3 4 five
   > EOF
   abort: missing rules for changeset c8e68270e35a
-  (use "drop c8e68270e35a" to discard the change)
+  (use "drop c8e68270e35a" to discard, see also: "hg help -e histedit.config")
   [255]
 
 Test that extra revisions are detected
