@@ -841,9 +841,13 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
             # remote did change but ended up with same content
             del actions[f] # don't get = keep local deleted
 
-def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force, partial,
-                     acceptremote, followcopies):
+def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
+                     acceptremote, followcopies, matcher=None):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
+    if matcher is None or matcher.always():
+        partial = False
+    else:
+        partial = matcher.matchfn
 
     if len(ancestors) == 1: # default
         actions, diverge, renamedelete = manifestmerge(
@@ -1414,13 +1418,9 @@ def update(repo, node, branchmerge, force, ancestor=None,
             followcopies = True
 
         ### calculate phase
-        if matcher is None or matcher.always():
-            partial = False
-        else:
-            partial = matcher.matchfn
         actionbyfile, diverge, renamedelete = calculateupdates(
-            repo, wc, p2, pas, branchmerge, force, partial, mergeancestor,
-            followcopies)
+            repo, wc, p2, pas, branchmerge, force, mergeancestor,
+            followcopies, matcher=matcher)
         # Convert to dictionary-of-lists format
         actions = dict((m, []) for m in 'a am f g cd dc r dm dg m e k'.split())
         for f, (m, args, msg) in actionbyfile.iteritems():

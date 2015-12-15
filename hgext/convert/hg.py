@@ -192,7 +192,6 @@ class mercurial_sink(converter_sink):
             self.repo, p1ctx, p2ctx, anc,
             True,  # branchmerge
             True,  # force
-            False, # partial
             False, # acceptremote
             False, # followcopies
         )

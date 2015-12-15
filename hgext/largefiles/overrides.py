@@ -458,11 +458,11 @@ def overridecheckunknownfile(origfn, repo, wctx, mctx, f, f2=None):
 # writing the files into the working copy and lfcommands.updatelfiles
 # will update the largefiles.
 def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
-                             partial, acceptremote, followcopies):
+                             acceptremote, followcopies, matcher=None):
     overwrite = force and not branchmerge
     actions, diverge, renamedelete = origfn(
-        repo, p1, p2, pas, branchmerge, force, partial, acceptremote,
-        followcopies)
+        repo, p1, p2, pas, branchmerge, force, acceptremote,
+        followcopies, matcher=matcher)
 
     if overwrite:
         return actions, diverge, renamedelete
