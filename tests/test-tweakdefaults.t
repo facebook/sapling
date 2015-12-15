@@ -119,7 +119,6 @@ Rebase fast forwards bookmark
   
   $ hg rebase -d 2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  devel-warn: bookmarks write with no wlock at: * (glob)
 
   $ hg log -G -T '{rev} {desc} {bookmarks}\n'
   @  2 b mybook

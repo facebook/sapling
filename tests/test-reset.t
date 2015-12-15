@@ -23,7 +23,6 @@ Soft reset should leave pending changes
   
   $ hg reset .^
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
   
@@ -40,7 +39,6 @@ Clean reset should overwrite all changes
   $ hg commit -qAm y
   $ hg reset --clean .^
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
   $ hg diff
 
 Reset should recover from backup bundles (with correct phase)
@@ -111,7 +109,6 @@ Reset without a bookmark
   $ hg reset .^
   resetting without an active bookmark
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
   $ hg book foo
 
 Reset to bookmark with - in the name
@@ -125,7 +122,6 @@ Reset to bookmark with - in the name
   $ hg book foo-bar -r .^
   $ hg reset foo-bar
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
   $ hg book -d foo-bar
 
 Verify file status after reset
@@ -145,14 +141,12 @@ Verify file status after reset
   $ hg commit -m 'to be reset'
   $ hg reset .^
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-375e6009-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
   $ hg status
   M x
   ! toberemoved
   ? tobeadded
   $ hg reset -C 66ee28d0328c
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34fb347b2aae-c2a02721-backup.hg (glob)
-  devel-warn: transaction with no lock at: * (glob)
 
 Reset + Evolve tests
 
@@ -174,7 +168,6 @@ Reset + Evolve tests
 Reset prunes commits
 
   $ hg reset -C 66ee28d0328c^
-  devel-warn: transaction with no lock at: * (glob)
   2 changesets pruned
   $ hg log -r 66ee28d0328c
   abort: hidden revision '66ee28d0328c'!
