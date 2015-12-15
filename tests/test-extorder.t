@@ -36,3 +36,5 @@ Conflicting deps
 
   $ echo "dummyext2 = dummyext1" >> .hg/hgrc
   $ hg id
+  abort: extorder: conflicting extension order
+  [255]
