@@ -683,15 +683,17 @@ def driverconclude(repo, ms, wctx, labels=None):
     This is currently not implemented -- it's an extension point."""
     return True
 
-def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
+def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                   acceptremote, followcopies):
     """
     Merge p1 and p2 with ancestor pa and generate merge action list
 
     branchmerge and force are as passed in to update
-    partial = function to filter file lists
+    matcher = matcher to filter file lists
     acceptremote = accept the incoming changes without prompting
     """
+    if matcher is not None and matcher.always():
+        matcher = None
 
     copy, movewithdir, diverge, renamedelete = {}, {}, {}, {}
 
@@ -705,7 +707,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     repo.ui.note(_("resolving manifests\n"))
     repo.ui.debug(" branchmerge: %s, force: %s, partial: %s\n"
-                  % (bool(branchmerge), bool(force), bool(partial)))
+                  % (bool(branchmerge), bool(force), bool(matcher)))
     repo.ui.debug(" ancestor: %s, local: %s, remote: %s\n" % (pa, wctx, p2))
 
     m1, m2, ma = wctx.manifest(), p2.manifest(), pa.manifest()
@@ -724,7 +726,7 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, partial,
 
     actions = {}
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
-        if partial and not partial(f):
+        if matcher and not matcher(f):
             continue
         if n1 and n2: # file exists on both local and remote side
             if f not in ma:
@@ -844,14 +846,9 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
                      acceptremote, followcopies, matcher=None):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
-    if matcher is None or matcher.always():
-        partial = False
-    else:
-        partial = matcher.matchfn
-
     if len(ancestors) == 1: # default
         actions, diverge, renamedelete = manifestmerge(
-            repo, wctx, mctx, ancestors[0], branchmerge, force, partial,
+            repo, wctx, mctx, ancestors[0], branchmerge, force, matcher,
             acceptremote, followcopies)
         _checkunknownfiles(repo, wctx, mctx, force, actions)
 
@@ -866,7 +863,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
         for ancestor in ancestors:
             repo.ui.note(_('\ncalculating bids for ancestor %s\n') % ancestor)
             actions, diverge1, renamedelete1 = manifestmerge(
-                repo, wctx, mctx, ancestor, branchmerge, force, partial,
+                repo, wctx, mctx, ancestor, branchmerge, force, matcher,
                 acceptremote, followcopies)
             _checkunknownfiles(repo, wctx, mctx, force, actions)
 
