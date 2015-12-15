@@ -146,7 +146,7 @@ def pull(orig, ui, repo, *args, **opts):
     else:
         dest = opts.get('dest')
 
-    if not dest:
+    if (isrebase or update) and not dest:
         dest = ui.config('tweakdefaults', 'defaultdest')
 
     if isrebase and update:
