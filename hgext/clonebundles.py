@@ -47,7 +47,7 @@ To work, this extension requires the following of server operators:
 * Generating bundle files of repository content (typically periodically,
   such as once per day).
 * A file server that clients have network access to and that Python knows
-  how to talk to through its normal URL handling facility (typically a
+  how to talk to through its normal URL handling facility (typically an
   HTTP server).
 * A process for keeping the bundles manifest in sync with available bundle
   files.
