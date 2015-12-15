@@ -4665,6 +4665,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     if date:
         opts['date'] = util.parsedate(date)
 
+    exact = opts.get('exact')
     update = not opts.get('bypass')
     if not update and opts.get('no_commit'):
         raise error.Abort(_('cannot use --no-commit with --bypass'))
@@ -4676,10 +4677,11 @@ def import_(ui, repo, patch1=None, *patches, **opts):
         raise error.Abort(_('similarity must be between 0 and 100'))
     if sim and not update:
         raise error.Abort(_('cannot use --similarity with --bypass'))
-    if opts.get('exact') and opts.get('edit'):
-        raise error.Abort(_('cannot use --exact with --edit'))
-    if opts.get('exact') and opts.get('prefix'):
-        raise error.Abort(_('cannot use --exact with --prefix'))
+    if exact:
+        if opts.get('edit'):
+            raise error.Abort(_('cannot use --exact with --edit'))
+        if opts.get('prefix'):
+            raise error.Abort(_('cannot use --exact with --prefix'))
 
     base = opts["base"]
     wlock = dsguard = lock = tr = None
@@ -4693,8 +4695,8 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
             if update:
                 cmdutil.checkunfinished(repo)
-            if (opts.get('exact') or not opts.get('force')) and update:
-                cmdutil.bailifchanged(repo)
+                if (exact or not opts.get('force')):
+                    cmdutil.bailifchanged(repo)
 
             if not opts.get('no_commit'):
                 lock = repo.lock()
@@ -4720,7 +4722,7 @@ def import_(ui, repo, patch1=None, *patches, **opts):
                     if msg:
                         haspatch = True
                         ui.note(msg + '\n')
-                    if update or opts.get('exact'):
+                    if update or exact:
                         parents = repo[None].parents()
                     else:
                         parents = [repo[node]]
