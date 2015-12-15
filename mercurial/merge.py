@@ -722,12 +722,13 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                 break
 
     # Compare manifests
+    if matcher is not None:
+        m1 = m1.matches(matcher)
+        m2 = m2.matches(matcher)
     diff = m1.diff(m2)
 
     actions = {}
     for f, ((n1, fl1), (n2, fl2)) in diff.iteritems():
-        if matcher and not matcher(f):
-            continue
         if n1 and n2: # file exists on both local and remote side
             if f not in ma:
                 fa = copy.get(f, None)
