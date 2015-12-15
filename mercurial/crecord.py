@@ -53,6 +53,14 @@ except NameError:
         raise error.Abort(
             _('the python curses/wcurses module is not available/installed'))
 
+def checkcurses(ui):
+    """Return True if the user wants to use curses
+
+    This method returns True if curses is found (and that python is built with
+    it) and that the user has the correct flag for the ui.
+    """
+    return curses and ui.configbool('experimental', 'crecord', False)
+
 _origstdout = sys.__stdout__ # used by gethw()
 
 class patchnode(object):
