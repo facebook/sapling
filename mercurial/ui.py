@@ -42,7 +42,6 @@ username =
 # (see "hg help extensions" for more info)
 #
 # pager =
-# progress =
 # color =""",
 
     'cloned':
@@ -86,7 +85,6 @@ default = %s
 # (see "hg help extensions" for more info)
 #
 # blackbox =
-# progress =
 # color =
 # pager =""",
 }
