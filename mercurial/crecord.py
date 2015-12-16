@@ -47,13 +47,6 @@ except ImportError:
         # compiled with curses
         curses = False
 
-try:
-    curses
-except NameError:
-    if os.name != 'nt':  # Temporary hack to get running on Windows again
-        raise error.Abort(
-            _('the python curses/wcurses module is not available/installed'))
-
 def checkcurses(ui):
     """Return True if the user wants to use curses
 
