@@ -107,5 +107,4 @@ path variables are expanded (~ is the same as $TESTTMP)
 
   $ python wixxml.py templates
   Not installed:
-    templates/map-cmdline.status
   Not tracked:

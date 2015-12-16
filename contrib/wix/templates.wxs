@@ -34,6 +34,7 @@
           <File Name="map-cmdline.default" />
           <File Name="map-cmdline.bisect" />
           <File Name="map-cmdline.xml" />
+          <File Name="map-cmdline.status" />
           <File Name="map-cmdline.phases" />
         </Component>
 
