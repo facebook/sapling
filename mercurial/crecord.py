@@ -30,15 +30,18 @@ from . import (
 # locale encoding correctly.  --immerrr
 locale.setlocale(locale.LC_ALL, '')
 
-# os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
-if os.name == 'posix':
+try:
     import curses
     import fcntl
     import termios
-else:
+    curses.error
+    fcntl.ioctl
+    termios.TIOCGWINSZ
+except ImportError:
     # I have no idea if wcurses works with crecord...
     try:
         import wcurses as curses
+        curses.error
     except ImportError:
         # wcurses is not shipped on Windows by default
         pass
