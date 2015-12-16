@@ -211,7 +211,10 @@ def onetimeclientsetup(ui):
                           *args, **kwargs):
         if shallowrepo.requirement in repo.requirements:
             files = []
+            sparsematch = repo.sparsematch(mctx.rev())
             for f, (m, actionargs, msg) in actions.iteritems():
+                if sparsematch and not sparsematch(f):
+                    continue
                 if m in ('c', 'dc', 'cm'):
                     files.append((f, hex(mctx.filenode(f))))
                 elif m == 'dg':
