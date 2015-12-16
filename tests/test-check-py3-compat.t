@@ -2,7 +2,7 @@
 
   $ cd "$TESTDIR"/..
 
-  $ hg files 'set:(**.py)' | xargs python contrib/check-py3-compat.py
+  $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
   contrib/casesmash.py not using absolute_import
   contrib/check-code.py not using absolute_import
   contrib/check-code.py requires print_function
