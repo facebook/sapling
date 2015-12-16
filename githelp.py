@@ -867,9 +867,9 @@ def stash(ui, repo, *args, **kwargs):
     elif action == 'drop':
         cmd['-d'] = None
         if len(args) > 1:
-            cmd['--name'] = args[1]
+            cmd.append(args[1])
         else:
-            cmd['--name'] = '<shelve name>'
+            cmd.append('<shelve name>')
     elif action == 'pop' or action == 'apply':
         cmd = Command('unshelve')
         if len(args) > 1:

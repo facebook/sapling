@@ -193,6 +193,14 @@ githelp for show with too many arguments
   $ hg githelp -- show argone argtwo
   hg show argone
 
+githelp for stash drop without name
+  $ hg githelp -- git stash drop
+  hg shelve -d <shelve name>
+
+githelp for stash drop with name
+  $ hg githelp -- git stash drop xyz
+  hg shelve -d xyz
+
 githelp for whatchanged should show deprecated message
   $ hg githelp -- whatchanged -p
   This command has been deprecated in the git project, thus isn't supported by this tool.
