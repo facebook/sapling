@@ -183,7 +183,7 @@ experimental.clonebundles
 experimental.clonebundleprefers
    List of "key=value" properties the client prefers in bundles. Downloaded
    bundle manifests will be sorted by the preferences in this list. e.g.
-   the value "BUNDLESPEC=gzip-v1, BUNDLESPEC=bzip2=v1" will prefer a gzipped
+   the value "BUNDLESPEC=gzip-v1, BUNDLESPEC=bzip2-v1" will prefer a gzipped
    version 1 bundle type then bzip2 version 1 bundle type.
 
    If not defined, the order in the manifest will be used and the first
