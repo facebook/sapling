@@ -43,8 +43,9 @@ except ImportError:
         import wcurses as curses
         curses.error
     except ImportError:
-        # wcurses is not shipped on Windows by default
-        pass
+        # wcurses is not shipped on Windows by default, or python is not
+        # compiled with curses
+        curses = False
 
 try:
     curses
