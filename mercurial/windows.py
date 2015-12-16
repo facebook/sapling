@@ -14,12 +14,12 @@ import os
 import re
 import stat
 import sys
-import win32
 
 from .i18n import _
 from . import (
     encoding,
     osutil,
+    win32,
 )
 
 executablepath = win32.executablepath
