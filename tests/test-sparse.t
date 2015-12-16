@@ -100,4 +100,3 @@ pulled
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
   $ hg rebase -d 2 --keep
   rebasing 1:876b1317060d "x2" (foo)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
