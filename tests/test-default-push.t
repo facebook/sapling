@@ -75,10 +75,16 @@ Pushing to a path that isn't defined should not fall back to default
   $ hg -q clone a pushurlsource
   $ hg -q clone a pushurldest
   $ cd pushurlsource
+
+Windows needs a leading slash to make a URL that passes all of the checks
+  $ WD=`pwd`
+#if windows
+  $ WD="/$WD"
+#endif
   $ cat > .hg/hgrc << EOF
   > [paths]
   > default = https://example.com/not/relevant
-  > default:pushurl = file://`pwd`/../pushurldest
+  > default:pushurl = file://$WD/../pushurldest
   > EOF
 
   $ touch pushurl
