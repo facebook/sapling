@@ -547,8 +547,8 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: summary:     b
   remote: 
   remote: Checking if lock exists (it should not):
-  remote: ls: .hg/store/lock: No such file or directory
-  remote: prepushrebase hook exited with status 1
+  remote: ls: *.hg/store/lock: No such file or directory (glob)
+  remote: prepushrebase hook exited with status * (glob)
   abort: push failed on remote
   [255]
 
@@ -673,6 +673,30 @@ Test date rewriting
   |/
   o  a 1970-01-01 00:00 +0000
   
+Test date rewriting with a merge commit
+
+  $ hg up -q 0
+  $ echo x >> x
+  $ hg commit -qAm x
+  $ hg up -q 3
+  $ echo y >> y
+  $ hg commit -qAm y
+  $ hg merge -q 4
+  $ hg commit -qm merge
+  $ hg push --to master
+  pushing to $TESTTMP/rewritedate
+  searching for changes
+  pushing 3 commits:
+      a5f9a9a43049  x
+      c1392466a61e  y
+      4514adb1f536  merge
+  3 new commits from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 0 changes to 2 files (+1 heads)
+  3 new obsolescence markers
+
   $ cd ..
 
 Test force pushes

@@ -382,7 +382,8 @@ def _graft(repo, rev, mapping):
         # because Mercurial constructs new commits by applying our specified
         # files on top of a copy of the p1 manifest, so we only need the diff
         # against p1.
-        files = rev.manifest().diff(repo[oldp1].manifest()).keys()
+        bundlerepo = rev._repo
+        files = rev.manifest().diff(bundlerepo[oldp1].manifest()).keys()
     else:
         files = rev.files()
 
