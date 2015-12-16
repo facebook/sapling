@@ -1,0 +1,29 @@
+How to run Facebook experimental extensions tests
+=================================================
+
+Running the tests
+-----------------
+
+To run the tests, `cd` into this directory (./tests/) and run the `run-tests.py`
+script from the core Mercurial repository (tests directory too).
+
+For example if you have a 'hg-crew' repository checked out next to this one,
+use:
+
+  ../../hg-crew/tests/run-tests.py
+
+Obtaining the test runners
+--------------------------
+
+If you do not already have a copy of the Mercurial repository, you can obtains
+one with:
+
+  $ hg clone http://selenic.com/hg/
+
+Running against various Mercurial versions
+------------------------------------------
+
+By default, the test runners will run against the version of Mercurial in the
+repository it lives in. you can run againts other version of Mercurial using
+the --with-hg=PATH flag. For example to run against the installed version of
+Mercurial you can use --with-hg=`which hg`
