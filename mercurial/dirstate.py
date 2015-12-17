@@ -712,7 +712,12 @@ class dirstate(object):
             for f, e in self._map.iteritems():
                 if e[0] == 'n' and e[3] == now:
                     import time # to avoid useless import
-                    time.sleep(delaywrite)
+                    # rather than sleep n seconds, sleep until the next
+                    # multiple of n seconds
+                    clock = time.time()
+                    start = int(clock) - (int(clock) % delaywrite)
+                    end = start + delaywrite
+                    time.sleep(end - clock)
                     break
 
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
