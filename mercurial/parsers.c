@@ -1351,15 +1351,7 @@ static PyObject *compute_phases_map_sets(indexObject *self, PyObject *args)
 			goto release;
 		PyList_SET_ITEM(phaseslist, i, phaseval);
 	}
-	ret = PyList_New(2);
-	if (ret == NULL)
-		goto release;
-
-	PyList_SET_ITEM(ret, 0, phaseslist);
-	PyList_SET_ITEM(ret, 1, phasessetlist);
-	/* We don't release phaseslist and phasessetlist as we return them to
-	 * python */
-	goto done;
+	ret = PyTuple_Pack(2, phaseslist, phasessetlist);
 
 release:
 	Py_XDECREF(phaseslist);
