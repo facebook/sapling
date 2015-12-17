@@ -2146,7 +2146,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
                                             'ignoreblanklines')
     if formatchanging:
         buildopts['text'] = opts and opts.get('text')
-        buildopts['nobinary'] = get('nobinary')
+        buildopts['nobinary'] = get('nobinary', forceplain=False)
         buildopts['noprefix'] = get('noprefix', forceplain=False)
 
     return mdiff.diffopts(**buildopts)
