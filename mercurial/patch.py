@@ -1491,7 +1491,6 @@ def parsepatch(originalchunks):
                 self.toline += len(self.before) + h.added
                 self.before = []
                 self.hunk = []
-                self.proc = ''
             self.context = context
 
         def addhunk(self, hunk):

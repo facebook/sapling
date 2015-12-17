@@ -327,6 +327,124 @@ Modify end of plain file, no EOL
   record this change to 'plain'? [Ynesfdaq?] y
   
 
+Record showfunc should preserve function across sections
+
+  $ cat > f1.py <<EOF
+  > def annotate(ui, repo, *pats, **opts):
+  >     """show changeset information by line for each file
+  > 
+  >     List changes in files, showing the revision id responsible for
+  >     each line.
+  > 
+  >     This command is useful for discovering when a change was made and
+  >     by whom.
+  > 
+  >     If you include -f/-u/-d, the revision number is suppressed unless
+  >     you also include -the revision number is suppressed unless
+  >     you also include -n.
+  > 
+  >     Without the -a/--text option, annotate will avoid processing files
+  >     it detects as binary. With -a, annotate will annotate the file
+  >     anyway, although the results will probably be neither useful
+  >     nor desirable.
+  > 
+  >     Returns 0 on success.
+  >     """
+  >     return 0
+  > def archive(ui, repo, dest, **opts):
+  >     '''create an unversioned archive of a repository revision
+  > 
+  >     By default, the revision used is the parent of the working
+  >     directory; use -r/--rev to specify a different revision.
+  > 
+  >     The archive type is automatically detected based on file
+  >     extension (to override, use -t/--type).
+  > 
+  >     .. container:: verbose
+  > 
+  >     Valid types are:
+  > EOF
+  $ hg add f1.py
+  $ hg commit -m funcs
+  $ cat > f1.py <<EOF
+  > def annotate(ui, repo, *pats, **opts):
+  >     """show changeset information by line for each file
+  > 
+  >     List changes in files, showing the revision id responsible for
+  >     each line
+  > 
+  >     This command is useful for discovering when a change was made and
+  >     by whom.
+  > 
+  >     Without the -a/--text option, annotate will avoid processing files
+  >     it detects as binary. With -a, annotate will annotate the file
+  >     anyway, although the results will probably be neither useful
+  >     nor desirable.
+  > 
+  >     Returns 0 on success.
+  >     """
+  >     return 0
+  > def archive(ui, repo, dest, **opts):
+  >     '''create an unversioned archive of a repository revision
+  > 
+  >     By default, the revision used is the parent of the working
+  >     directory; use -r/--rev to specify a different revision.
+  > 
+  >     The archive type is automatically detected based on file
+  >     extension (or override using -t/--type).
+  > 
+  >     .. container:: verbose
+  > 
+  >     Valid types are:
+  > EOF
+  $ hg commit -i -m interactive <<EOF
+  > y
+  > y
+  > y
+  > y
+  > EOF
+  diff --git a/f1.py b/f1.py
+  3 hunks, 6 lines changed
+  examine changes to 'f1.py'? [Ynesfdaq?] y
+  
+  @@ -2,8 +2,8 @@ def annotate(ui, repo, *pats, **opts):
+       """show changeset information by line for each file
+   
+       List changes in files, showing the revision id responsible for
+  -    each line.
+  +    each line
+   
+       This command is useful for discovering when a change was made and
+       by whom.
+   
+  record change 1/3 to 'f1.py'? [Ynesfdaq?] y
+  
+  @@ -6,11 +6,7 @@ def annotate(ui, repo, *pats, **opts):
+   
+       This command is useful for discovering when a change was made and
+       by whom.
+   
+  -    If you include -f/-u/-d, the revision number is suppressed unless
+  -    you also include -the revision number is suppressed unless
+  -    you also include -n.
+  -
+       Without the -a/--text option, annotate will avoid processing files
+       it detects as binary. With -a, annotate will annotate the file
+       anyway, although the results will probably be neither useful
+  record change 2/3 to 'f1.py'? [Ynesfdaq?] y
+  
+  @@ -26,7 +22,7 @@ def archive(ui, repo, dest, **opts):
+       directory; use -r/--rev to specify a different revision.
+   
+       The archive type is automatically detected based on file
+  -    extension (to override, use -t/--type).
+  +    extension (or override using -t/--type).
+   
+       .. container:: verbose
+   
+  record change 3/3 to 'f1.py'? [Ynesfdaq?] y
+  
+
 Modify end of plain file, add EOL
 
   $ echo >> plain
@@ -406,13 +524,13 @@ changes numbering
   
 
   $ hg tip -p
-  changeset:   11:21df83db12b8
+  changeset:   13:f941910cff62
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     begin-and-end
   
-  diff -r ddb8b281c3ff -r 21df83db12b8 plain
+  diff -r 33abe24d946c -r f941910cff62 plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,4 +1,4 @@
@@ -427,7 +545,7 @@ changes numbering
    10
   -11
   -7264f99c5f5ff3261504828afa4fb4d406c3af54
-  diff -r ddb8b281c3ff -r 21df83db12b8 plain2
+  diff -r 33abe24d946c -r f941910cff62 plain2
   --- a/plain2	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain2	Thu Jan 01 00:00:10 1970 +0000
   @@ -1,1 +1,2 @@
@@ -478,13 +596,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   12:99337501826f
+  changeset:   14:4915f538659b
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     end-only
   
-  diff -r 21df83db12b8 -r 99337501826f plain
+  diff -r f941910cff62 -r 4915f538659b plain
   --- a/plain	Thu Jan 01 00:00:10 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:11 1970 +0000
   @@ -7,4 +7,4 @@
@@ -516,13 +634,13 @@ Record beginning
   
 
   $ hg tip -p
-  changeset:   13:bbd45465d540
+  changeset:   15:1b1f93d4b94b
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:12 1970 +0000
   summary:     begin-only
   
-  diff -r 99337501826f -r bbd45465d540 plain
+  diff -r 4915f538659b -r 1b1f93d4b94b plain
   --- a/plain	Thu Jan 01 00:00:11 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:12 1970 +0000
   @@ -1,6 +1,3 @@
@@ -624,13 +742,13 @@ Record beginning, middle, and test that format-breaking diffopts are ignored
   
 
   $ hg tip -p
-  changeset:   15:f34a7937ec33
+  changeset:   17:41cf3f5c55ae
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     middle-only
   
-  diff -r 82c065d0b850 -r f34a7937ec33 plain
+  diff -r a69d252246e1 -r 41cf3f5c55ae plain
   --- a/plain	Thu Jan 01 00:00:13 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:14 1970 +0000
   @@ -1,5 +1,10 @@
@@ -666,13 +784,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   16:f9900b71a04c
+  changeset:   18:58a72f46bc24
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     end-only
   
-  diff -r f34a7937ec33 -r f9900b71a04c plain
+  diff -r 41cf3f5c55ae -r 58a72f46bc24 plain
   --- a/plain	Thu Jan 01 00:00:14 1970 +0000
   +++ b/plain	Thu Jan 01 00:00:15 1970 +0000
   @@ -9,3 +9,5 @@
@@ -705,13 +823,13 @@ Record end
   
 
   $ hg tip -p
-  changeset:   18:61be427a9deb
+  changeset:   20:e0f6b99f6c49
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:16 1970 +0000
   summary:     subdir-change
   
-  diff -r a7ffae4d61cb -r 61be427a9deb subdir/a
+  diff -r abd26b51de37 -r e0f6b99f6c49 subdir/a
   --- a/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   +++ b/subdir/a	Thu Jan 01 00:00:16 1970 +0000
   @@ -1,1 +1,2 @@
@@ -813,13 +931,13 @@ s, all
   
 
   $ hg tip -p
-  changeset:   20:b3df3dda369a
+  changeset:   22:6afbbefacf35
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     x
   
-  diff -r 6e02d6c9906d -r b3df3dda369a subdir/f2
+  diff -r b73c401c693c -r 6afbbefacf35 subdir/f2
   --- a/subdir/f2	Thu Jan 01 00:00:17 1970 +0000
   +++ b/subdir/f2	Thu Jan 01 00:00:18 1970 +0000
   @@ -1,1 +1,2 @@
@@ -838,13 +956,13 @@ f
   
 
   $ hg tip -p
-  changeset:   21:38ec577f126b
+  changeset:   23:715028a33949
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:19 1970 +0000
   summary:     y
   
-  diff -r b3df3dda369a -r 38ec577f126b subdir/f1
+  diff -r 6afbbefacf35 -r 715028a33949 subdir/f1
   --- a/subdir/f1	Thu Jan 01 00:00:18 1970 +0000
   +++ b/subdir/f1	Thu Jan 01 00:00:19 1970 +0000
   @@ -1,1 +1,2 @@
@@ -877,7 +995,7 @@ Preserve chmod +x
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   22:3261adceb075
+  changeset:   24:db967c1e5884
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
@@ -915,7 +1033,7 @@ Preserve execute permission on original
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   23:b429867550db
+  changeset:   25:88903aef81c3
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
@@ -955,7 +1073,7 @@ Preserve chmod -x
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   24:0b082130c20a
+  changeset:   26:7af84b6cf560
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
@@ -1096,7 +1214,7 @@ Mock "Preserve chmod -x"
 Abort early when a merge is in progress
 
   $ hg up 4
-  1 files updated, 0 files merged, 6 files removed, 0 files unresolved
+  1 files updated, 0 files merged, 7 files removed, 0 files unresolved
 
   $ touch iwillmergethat
   $ hg add iwillmergethat
@@ -1108,7 +1226,7 @@ Abort early when a merge is in progress
   $ hg ci -m'new head'
 
   $ hg up default
-  6 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  7 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ hg merge thatbranch
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -1390,7 +1508,7 @@ Ignore win32text deprecation warning for now:
   $ hg status -A subdir/f1
   C subdir/f1
   $ hg tip -p
-  changeset:   28:* (glob)
+  changeset:   30:* (glob)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:24 1970 +0000
@@ -1460,7 +1578,7 @@ The #if execbit block above changes the hash here on some systems
   $ hg status -A plain3
   C plain3
   $ hg tip
-  changeset:   30:* (glob)
+  changeset:   32:* (glob)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
@@ -1525,7 +1643,7 @@ Add new file from within a subdirectory
   
 The #if execbit block above changes the hashes here on some systems
   $ hg tip -p
-  changeset:   32:* (glob)
+  changeset:   34:* (glob)
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:23 1970 +0000
