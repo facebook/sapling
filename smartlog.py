@@ -12,6 +12,7 @@ from hgext import pager
 from mercurial.node import hex, short, nullrev
 from mercurial.i18n import _
 import errno, os, re
+import inspect
 
 pager.attended.append('smartlog')
 
@@ -460,9 +461,13 @@ Excludes:
         enabled = True
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-        showparents = [ctx.node() for ctx in repo[None].parents()]
-        cmdutil.displaygraph(ui, revdag, displayer, showparents,
-                     graphmod.asciiedges, None, None)
+        if 'repo' in inspect.getargspec(cmdutil.displaygraph).args:
+            cmdutil.displaygraph(ui, repo, revdag, displayer,
+                         graphmod.asciiedges, None, None)
+        else:
+            showparents = [ctx.node() for ctx in repo[None].parents()]
+            cmdutil.displaygraph(ui, revdag, displayer, showparents,
+                         graphmod.asciiedges, None, None)
 
         try:
             with open(repo.join('completionhints'), 'w+') as f:
