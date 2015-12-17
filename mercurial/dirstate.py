@@ -662,13 +662,6 @@ class dirstate(object):
         if not self._dirty:
             return
 
-        # enough 'delaywrite' prevents 'pack_dirstate' from dropping
-        # timestamp of each entries in dirstate, because of 'now > mtime'
-        delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
-        if delaywrite > 0:
-            import time # to avoid useless import
-            time.sleep(delaywrite)
-
         filename = self._filename
         if tr is False: # not explicitly specified
             if (self._ui.configbool('devel', 'all-warnings')
@@ -710,6 +703,14 @@ class dirstate(object):
         # use the modification time of the newly created temporary file as the
         # filesystem's notion of 'now'
         now = util.fstat(st).st_mtime & _rangemask
+
+        # enough 'delaywrite' prevents 'pack_dirstate' from dropping
+        # timestamp of each entries in dirstate, because of 'now > mtime'
+        delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
+        if delaywrite > 0:
+            import time # to avoid useless import
+            time.sleep(delaywrite)
+
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
         st.close()
         self._lastnormaltime = 0
