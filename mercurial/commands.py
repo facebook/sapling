@@ -241,9 +241,9 @@ def addremove(ui, repo, *pats, **opts):
     Add all new files and remove all missing files from the
     repository.
 
-    New files are ignored if they match any of the patterns in
-    ``.hgignore``. As with add, these changes take effect at the next
-    commit.
+    Unless names are given, new files are ignored if they match any of
+    the patterns in ``.hgignore``. As with add, these changes take
+    effect at the next commit.
 
     Use the -s/--similarity option to detect renamed files. This
     option takes a percentage between 0 (disabled) and 100 (files must
