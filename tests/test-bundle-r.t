@@ -174,6 +174,9 @@ should fail
   4 changesets found
   $ hg -R test bundle --base 2 test-bundle-all.hg
   6 changesets found
+  $ hg -R test bundle --base 2 --all test-bundle-all-2.hg
+  ignoring --base because --all was specified
+  9 changesets found
   $ hg -R test bundle --base 3 -r tip test-bundle-should-fail.hg
   1 changesets found
 

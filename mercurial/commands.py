@@ -1347,6 +1347,8 @@ def bundle(ui, repo, fname, dest=None, **opts):
         if dest:
             raise error.Abort(_("--all is incompatible with specifying "
                                 "a destination"))
+        if opts.get('base'):
+            ui.warn(_("ignoring --base because --all was specified\n"))
         base = ['null']
     else:
         base = scmutil.revrange(repo, opts.get('base'))
