@@ -174,9 +174,9 @@ def internalshelp(ui):
     """Generate the index for the "internals" topic."""
     lines = []
     for names, header, doc in internalstable:
-        lines.append(' :%s: %s' % (names[0], header))
+        lines.append(' :%s: %s\n' % (names[0], header))
 
-    return '\n'.join(lines)
+    return ''.join(lines)
 
 helptable = sorted([
     (["config", "hgrc"], _("Configuration Files"), loaddoc('config')),
