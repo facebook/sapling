@@ -11,6 +11,7 @@
 #include <Python.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 
@@ -19,6 +20,7 @@
 #include <io.h>
 #else
 #include <dirent.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -648,6 +650,69 @@ bail:
 	return NULL;
 }
 
+/*
+ * recvfds() simply does not release GIL during blocking io operation because
+ * command server is known to be single-threaded.
+ */
+
+static ssize_t recvfdstobuf(int sockfd, int **rfds, void *cbuf, size_t cbufsize)
+{
+	char dummy[1];
+	struct iovec iov = {dummy, sizeof(dummy)};
+	struct msghdr msgh = {0};
+	struct cmsghdr *cmsg;
+
+	msgh.msg_iov = &iov;
+	msgh.msg_iovlen = 1;
+	msgh.msg_control = cbuf;
+	msgh.msg_controllen = (socklen_t)cbufsize;
+	if (recvmsg(sockfd, &msgh, 0) < 0)
+		return -1;
+
+	for (cmsg = CMSG_FIRSTHDR(&msgh); cmsg;
+	     cmsg = CMSG_NXTHDR(&msgh, cmsg)) {
+		if (cmsg->cmsg_level != SOL_SOCKET ||
+		    cmsg->cmsg_type != SCM_RIGHTS)
+			continue;
+		*rfds = (int *)CMSG_DATA(cmsg);
+		return (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
+	}
+
+	*rfds = cbuf;
+	return 0;
+}
+
+static PyObject *recvfds(PyObject *self, PyObject *args)
+{
+	int sockfd;
+	int *rfds = NULL;
+	ssize_t rfdscount, i;
+	char cbuf[256];
+	PyObject *rfdslist = NULL;
+
+	if (!PyArg_ParseTuple(args, "i", &sockfd))
+		return NULL;
+
+	rfdscount = recvfdstobuf(sockfd, &rfds, cbuf, sizeof(cbuf));
+	if (rfdscount < 0)
+		return PyErr_SetFromErrno(PyExc_OSError);
+
+	rfdslist = PyList_New(rfdscount);
+	if (!rfdslist)
+		goto bail;
+	for (i = 0; i < rfdscount; i++) {
+		PyObject *obj = PyInt_FromLong(rfds[i]);
+		if (!obj)
+			goto bail;
+		PyList_SET_ITEM(rfdslist, i, obj);
+	}
+	return rfdslist;
+
+bail:
+	Py_XDECREF(rfdslist);
+	return NULL;
+}
+
 #endif /* ndef _WIN32 */
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -816,6 +881,8 @@ static PyMethodDef methods[] = {
 	{"statfiles", (PyCFunction)statfiles, METH_VARARGS | METH_KEYWORDS,
 	 "stat a series of files or symlinks\n"
 "Returns None for non-existent entries and entries of other types.\n"},
+	{"recvfds", (PyCFunction)recvfds, METH_VARARGS,
+	 "receive list of file descriptors via socket\n"},
 #endif
 #ifdef __APPLE__
 	{
