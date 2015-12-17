@@ -193,7 +193,8 @@ def add(ui, repo, *pats, **opts):
     The files will be added to the repository at the next commit. To
     undo an add before that, see :hg:`forget`.
 
-    If no names are given, add all files to the repository.
+    If no names are given, add all files to the repository (except
+    files matching ``.hgignore``).
 
     .. container:: verbose
 
