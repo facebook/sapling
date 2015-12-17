@@ -330,6 +330,9 @@ def annotate(ui, repo, *pats, **opts):
     This command is useful for discovering when a change was made and
     by whom.
 
+    If you include --file, --user, or --date, the revision number is
+    suppressed unless you also include --number.
+
     Without the -a/--text option, annotate will avoid processing files
     it detects as binary. With -a, annotate will annotate the file
     anyway, although the results will probably be neither useful
