@@ -1300,13 +1300,14 @@ def branches(ui, repo, active=False, closed=False, **opts):
 def bundle(ui, repo, fname, dest=None, **opts):
     """create a changegroup file
 
-    Generate a compressed changegroup file collecting changesets not
-    known to be in another repository.
+    Generate a changegroup file collecting changesets to be added
+    to a repository.
 
-    If you omit the destination repository, then hg assumes the
-    destination will have all the nodes you specify with --base
-    parameters. To create a bundle containing all changesets, use
-    -a/--all (or --base null).
+    To create a bundle containing all changesets, use -a/--all
+    (or --base null). Otherwise, hg assumes the destination will have
+    all the nodes you specify with --base parameters. Otherwise, hg
+    will assume the repository has all the nodes in destination, or
+    default-push/default if no destination is specified.
 
     You can change bundle format with the -t/--type option. You can
     specify a compression, a bundle version or both using a dash
