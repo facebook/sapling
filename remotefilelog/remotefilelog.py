@@ -8,7 +8,7 @@
 import fileserverclient
 import collections, errno, os, shutil
 from mercurial.node import bin, hex, nullid, nullrev
-from mercurial import revlog, mdiff, filelog, ancestor, error
+from mercurial import revlog, mdiff, filelog, ancestor, error, util
 from mercurial.i18n import _
 
 def _readfile(path):
@@ -34,7 +34,9 @@ def _writefile(path, content):
             if ex.errno != errno.EEXIST:
                 raise
 
-    f = open(path, "w")
+    # atomictempfile doesn't pick up the fact that we changed the umask, so we
+    # need to set it manually.
+    f = util.atomictempfile(path, 'w', createmode=~os.umask(0))
     try:
         f.write(content)
     finally:
@@ -146,15 +148,12 @@ class remotefilelog(object):
         key = fileserverclient.getlocalkey(self.filename, hex(node))
         path = os.path.join(self.localpath, key)
 
-        # if this node already exists, save the old version in case
-        # we ever delete this new commit in the future
         oldumask = os.umask(0o002)
         try:
+            # if this node already exists, save the old version for
+            # recovery/debugging purposes.
             if os.path.exists(path):
-                filename = os.path.basename(path)
-                directory = os.path.dirname(path)
-                files = [f for f in os.listdir(directory) if f.startswith(filename)]
-                shutil.copyfile(path, path + str(len(files)))
+                shutil.copyfile(path, path + '_old')
 
             _writefile(path, _createfileblob())
         finally:

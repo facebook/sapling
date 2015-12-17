@@ -125,7 +125,7 @@ the server supports our custom getfiles method.
   $ ls -l .hg/store/data/395df8f7c51f007019cb30201c49e884b46b92fa
   total * (glob)
   -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a (glob)
-  -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a1 (glob)
+  -rw-rw-r--* 69a1b67522704ec122181c0890bd16e9d3e7516a_old (glob)
   $ cd ..
 
 # push from shallow to full
