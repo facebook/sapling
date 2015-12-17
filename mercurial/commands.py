@@ -6729,6 +6729,7 @@ def tags(ui, repo, **opts):
 
     This lists both regular and local tags. When the -v/--verbose
     switch is used, a third column "local" is printed for local tags.
+    When the -q/--quiet switch is used, only the tag name is printed.
 
     Returns 0 on success.
     """
