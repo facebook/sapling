@@ -464,7 +464,7 @@ def archive(ui, repo, dest, **opts):
     directory; use -r/--rev to specify a different revision.
 
     The archive type is automatically detected based on file
-    extension (or override using -t/--type).
+    extension (to override, use -t/--type).
 
     .. container:: verbose
 
