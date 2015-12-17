@@ -325,7 +325,7 @@ def annotate(ui, repo, *pats, **opts):
     """show changeset information by line for each file
 
     List changes in files, showing the revision id responsible for
-    each line
+    each line.
 
     This command is useful for discovering when a change was made and
     by whom.
