@@ -1344,6 +1344,9 @@ def bundle(ui, repo, fname, dest=None, **opts):
                           hint=_('use "hg debugcreatestreamclonebundle"'))
 
     if opts.get('all'):
+        if dest:
+            raise error.Abort(_("--all is incompatible with specifying "
+                                "a destination"))
         base = ['null']
     else:
         base = scmutil.revrange(repo, opts.get('base'))
