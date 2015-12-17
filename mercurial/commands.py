@@ -1187,7 +1187,7 @@ def branch(ui, repo, label=None, **opts):
 
     Use the command :hg:`update` to switch to an existing branch. Use
     :hg:`commit --close-branch` to mark this branch head as closed.
-    When all heads of the branch are closed, the branch will be
+    When all heads of a branch are closed, the branch will be
     considered closed.
 
     Returns 0 on success.
