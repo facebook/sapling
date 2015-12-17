@@ -116,6 +116,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
+        diffopts.showfunc = True
         originaldiff =  patch.diff(repo, changes=status, opts=diffopts)
         originalchunks = patch.parsepatch(originaldiff)
 

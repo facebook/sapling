@@ -318,7 +318,7 @@ Modify end of plain file, no EOL
   1 hunks, 1 lines changed
   examine changes to 'plain'? [Ynesfdaq?] y
   
-  @@ -9,3 +9,4 @@
+  @@ -9,3 +9,4 @@ 8
    9
    10
    11
@@ -342,7 +342,7 @@ Modify end of plain file, add EOL
   1 hunks, 1 lines changed
   examine changes to 'plain'? [Ynesfdaq?] y
   
-  @@ -9,4 +9,4 @@
+  @@ -9,4 +9,4 @@ 8
    9
    10
    11
@@ -387,7 +387,7 @@ changes numbering
    4
   record change 1/3 to 'plain'? [Ynesfdaq?] y
   
-  @@ -8,5 +8,3 @@
+  @@ -8,5 +8,3 @@ 7
    8
    9
    10
@@ -656,7 +656,7 @@ Record end
   1 hunks, 2 lines changed
   examine changes to 'plain'? [Ynesfdaq?] y
   
-  @@ -9,3 +9,5 @@
+  @@ -9,3 +9,5 @@ 6
    7
    8
    9
@@ -946,7 +946,7 @@ Preserve chmod -x
   1 hunks, 1 lines changed
   examine changes to 'subdir/f1'? [Ynesfdaq?] y
   
-  @@ -2,3 +2,4 @@
+  @@ -2,3 +2,4 @@ a
    a
    a
    b
@@ -1379,7 +1379,7 @@ Ignore win32text deprecation warning for now:
   1 hunks, 1 lines changed
   examine changes to 'subdir/f1'? [Ynesfdaq?] y
   
-  @@ -3,3 +3,4 @@
+  @@ -3,3 +3,4 @@ a
    a
    b
    c
@@ -1418,7 +1418,7 @@ Test --user when ui.username not set
   1 hunks, 1 lines changed
   examine changes to 'subdir/f1'? [Ynesfdaq?] y
   
-  @@ -4,3 +4,4 @@
+  @@ -4,3 +4,4 @@ a
    b
    c
    d
@@ -1449,7 +1449,7 @@ Moving files
   1 hunks, 1 lines changed
   examine changes to 'plain' and 'plain3'? [Ynesfdaq?] y
   
-  @@ -11,3 +11,4 @@
+  @@ -11,3 +11,4 @@ 8
    9
    10
    11

@@ -91,7 +91,7 @@ record
   1 hunks, 1 lines changed
   \x1b[0;33mexamine changes to 'a'? [Ynesfdaq?]\x1b[0m y (esc)
   
-  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
+  \x1b[0;35m@@ -2,7 +2,7 @@ c\x1b[0m (esc)
    c
    a
    a
@@ -121,7 +121,7 @@ qrecord
   1 hunks, 1 lines changed
   \x1b[0;33mexamine changes to 'a'? [Ynesfdaq?]\x1b[0m y (esc)
   
-  \x1b[0;35m@@ -2,7 +2,7 @@\x1b[0m (esc)
+  \x1b[0;35m@@ -2,7 +2,7 @@ c\x1b[0m (esc)
    c
    a
    a
