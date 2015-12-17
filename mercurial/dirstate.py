@@ -708,8 +708,12 @@ class dirstate(object):
         # timestamp of each entries in dirstate, because of 'now > mtime'
         delaywrite = self._ui.configint('debug', 'dirstate.delaywrite', 0)
         if delaywrite > 0:
-            import time # to avoid useless import
-            time.sleep(delaywrite)
+            # do we have any files to delay for?
+            for f, e in self._map.iteritems():
+                if e[0] == 'n' and e[3] == now:
+                    import time # to avoid useless import
+                    time.sleep(delaywrite)
+                    break
 
         st.write(parsers.pack_dirstate(self._map, self._copymap, self._pl, now))
         st.close()
