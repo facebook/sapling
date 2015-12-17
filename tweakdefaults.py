@@ -279,7 +279,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     for a non-match that becomes a match), use the --all flag.
 
     Returns 0 if a match is found, 1 otherwise."""
-    return commands.grep(ui, repo, pattern, **opts)
+    return commands.grep(ui, repo, pattern, *pats, **opts)
 
 del commands.table['grep']
 @command('grep',
