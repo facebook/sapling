@@ -3541,7 +3541,7 @@ def diff(ui, repo, *pats, **opts):
     between those revisions. If only one revision is specified then
     that revision is compared to the working directory, and, when no
     revisions are specified, the working directory files are compared
-    to its parent.
+    to its first parent.
 
     Alternatively you can specify -c/--change with a revision to see
     the changes in that changeset relative to its first parent.

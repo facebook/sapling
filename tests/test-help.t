@@ -505,7 +505,7 @@ Test command without options
       When two revision arguments are given, then changes are shown between
       those revisions. If only one revision is specified then that revision is
       compared to the working directory, and, when no revisions are specified,
-      the working directory files are compared to its parent.
+      the working directory files are compared to its first parent.
   
       Alternatively you can specify -c/--change with a revision to see the
       changes in that changeset relative to its first parent.
