@@ -4,9 +4,11 @@ Changegroups
 Changegroups are representations of repository revlog data, specifically
 the changelog, manifest, and filelogs.
 
-There are 2 versions of changegroups: ``1`` and ``2``. From a
-high-level, they are almost exactly the same, with the only difference
-being a header on entries in the changeset segment.
+There are 3 versions of changegroups: ``1``, ``2``, and ``3``. From a
+high-level, versions ``1`` and ``2`` are almost exactly the same, with
+the only difference being a header on entries in the changeset
+segment. Version ``3`` adds support for exchanging treemanifests and
+includes revlog flags in the delta header.
 
 Changegroups consists of 3 logical segments::
 
@@ -60,8 +62,8 @@ Each *chunk*'s data consists of the following::
 The *length* field is the byte length of the remaining 3 logical pieces
 of data. The *delta* is a diff from an existing entry in the changelog.
 
-The *delta header* is different between versions ``1`` and ``2`` of the
-changegroup format.
+The *delta header* is different between versions ``1``, ``2``, and
+``3`` of the changegroup format.
 
 Version 1::
 
@@ -80,6 +82,15 @@ Version 2::
    | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) |
    |            |             |             |            |            |
    +------------------------------------------------------------------+
+
+Version 3::
+
+   +------------------------------------------------------------------------------+
+   |            |             |             |            |            |           |
+   |    node    |   p1 node   |   p2 node   | base node  | link node  | flags     |
+   | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) | (2 bytes) |
+   |            |             |             |            |            |           |
+   +------------------------------------------------------------------------------+
 
 The *mdiff header* consists of 3 32-bit big-endian signed integers
 describing offsets at which to apply the following delta content::
@@ -124,6 +135,10 @@ corresponding to an individual file whose data is being described::
    | filelog0 | filelog1 | filelog2 | ... |
    |          |          |          |     |
    +--------------------------------------+
+
+In version ``3`` of the changegroup format, filelogs may include
+directory logs when treemanifests are in use. directory logs are
+identified by having a trailing '/' on their filename (see below).
 
 The final filelog sub-segment is followed by an *empty chunk* to denote
 the end of the segment and the overall changegroup.
