@@ -19,7 +19,8 @@
   <?define doc.style.css = {172F8262-98E0-4711-BD39-4DAE0D77EF05} ?>
 
   <!-- help.wxs -->
-  <?define helpFolder.guid = {9FA957DB-6DFE-44f2-AD03-293B2791CF17} ?>
+  <?define help.root.guid = {9FA957DB-6DFE-44f2-AD03-293B2791CF17} ?>
+  <?define help.internals.guid = {2DD7669D-0DB8-4C39-9806-78E6475E7ACC} ?>
 
   <!-- i18n.wxs -->
   <?define i18nFolder.guid = {1BF8026D-CF7C-4174-AEE6-D6B7BF119248} ?>

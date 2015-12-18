@@ -124,7 +124,7 @@
         <ComponentRef Id='COPYING' />
         <ComponentRef Id='mercurial.rc' />
         <ComponentRef Id='mergetools.rc' />
-        <ComponentRef Id='helpFolder' />
+        <ComponentGroupRef Id='helpFolder' />
         <ComponentGroupRef Id='templatesFolder' />
         <MergeRef Id='VCRuntime' />
         <MergeRef Id='VCRuntimePolicy' />
