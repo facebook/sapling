@@ -138,7 +138,7 @@ def rebase(ui, repo, **opts):
     a named branch with two heads. You will need to explicitly specify source
     and/or destination.
 
-    If a rebase is interrupted to manually resolve a merge, it can be
+    If a rebase is interrupted to manually resolve a conflict, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
     .. container:: verbose
