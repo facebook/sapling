@@ -1166,13 +1166,13 @@ def _matchfiles(repo, subset, x):
 
     # This directly read the changelog data as creating changectx for all
     # revisions is quite expensive.
-    getchangeset = repo.changelog.read
+    getfiles = repo.changelog.readfiles
     wdirrev = node.wdirrev
     def matches(x):
         if x == wdirrev:
             files = repo[x].files()
         else:
-            files = getchangeset(x)[3]
+            files = getfiles(x)
         for f in files:
             if m(f):
                 return True
