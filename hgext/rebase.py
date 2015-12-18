@@ -128,11 +128,11 @@ def rebase(ui, repo, **opts):
       3. Use ``--base`` to select a changeset; rebase will find ancestors
       and their descendants which are not also ancestors of the destination.
 
-    By default, rebase recreates the changesets in the source branch
-    as descendants of dest and then destroys the originals. Use
-    ``--keep`` to preserve the original source changesets. Some
-    changesets in the source branch (e.g. merges from the destination
-    branch) may be dropped if they no longer contribute any change.
+    Rebase will destroy original changesets unless you use ``--keep``.
+    It will also move your bookmarks (even if you do).
+
+    Some changesets may be dropped if they do not contribute changes
+    (e.g. merges from the destination branch).
 
     One result of the rules for selecting the destination changeset
     and source branch is that, unlike ``merge``, rebase will do
