@@ -134,12 +134,9 @@ def rebase(ui, repo, **opts):
     Some changesets may be dropped if they do not contribute changes
     (e.g. merges from the destination branch).
 
-    One result of the rules for selecting the destination changeset
-    and source branch is that, unlike ``merge``, rebase will do
-    nothing if you are at the branch tip of a named branch
-    with two heads. You need to explicitly specify source and/or
-    destination (or ``update`` to the other head, if it's the head of
-    the intended source branch).
+    Unlike ``merge``, rebase will do nothing if you are at the branch tip of
+    a named branch with two heads. You will need to explicitly specify source
+    and/or destination.
 
     If a rebase is interrupted to manually resolve a merge, it can be
     continued with --continue/-c or aborted with --abort/-a.
