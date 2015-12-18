@@ -18,4 +18,8 @@ Test histgrep and check that it respects the specified file
   $ hg commit -m "Added some files"
   $ hg histgrep ababagalamaga histgrepfile1
   histgrepdir/histgrepfile1:0:ababagalamaga
+  $ hg histgrep ababagalamaga
+  abort: cannot run histgrep on the whole repo, please provide filenames
+  (this is disabled to avoid insanely slow greps over the whole repo)
+  [255]
   $ cd ..

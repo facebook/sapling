@@ -279,6 +279,11 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     for a non-match that becomes a match), use the --all flag.
 
     Returns 0 if a match is found, 1 otherwise."""
+    if not pats:
+        mess = _('cannot run histgrep on the whole repo, please provide filenames')
+        hint = _('this is disabled to avoid insanely slow greps over the whole repo')
+        raise util.Abort(mess, hint=hint)
+
     return commands.grep(ui, repo, pattern, *pats, **opts)
 
 del commands.table['grep']
