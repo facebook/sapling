@@ -525,6 +525,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
             r.clearcaches()
         r._chunkraw(chain[0], chain[-1])
 
+    @util.nogc
     def dodecompress(data, chain):
         if not cache:
             r.clearcaches()

@@ -542,8 +542,8 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
 
     .. note::
 
-      backout cannot be used to fix either an unwanted or
-      incorrect merge.
+       backout cannot be used to fix either an unwanted or
+       incorrect merge.
 
     .. container:: verbose
 
@@ -3818,8 +3818,8 @@ def graft(ui, repo, *revs, **opts):
 
     .. note::
 
-      The -c/--continue option does not reapply earlier options, except
-      for --force.
+       The -c/--continue option does not reapply earlier options, except
+       for --force.
 
     .. container:: verbose
 
@@ -5623,9 +5623,9 @@ def push(ui, repo, dest=None, **opts):
 
     .. note::
 
-      Extra care should be taken with the -f/--force option,
-      which will push all new heads on all branches, an action which will
-      almost always cause confusion for collaborators.
+       Extra care should be taken with the -f/--force option,
+       which will push all new heads on all branches, an action which will
+       almost always cause confusion for collaborators.
 
     If -r/--rev is used, the specified revision and all its ancestors
     will be pushed to the remote repository.
