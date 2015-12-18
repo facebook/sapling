@@ -118,22 +118,15 @@ def rebase(ui, repo, **opts):
     destination changeset is not modified by rebasing, but new
     changesets are added as its descendants.)
 
-    You can specify which changesets to rebase in two ways: as a
-    "source" changeset or as a "base" changeset. Both are shorthand
-    for a topologically related set of changesets (the "source
-    branch"). If you specify source (``-s/--source``), rebase will
-    rebase that changeset and all of its descendants onto dest. If you
-    specify base (``-b/--base``), rebase will select ancestors of base
-    back to but not including the common ancestor with dest. Thus,
-    ``-b`` is less precise but more convenient than ``-s``: you can
-    specify any changeset in the source branch, and rebase will select
-    the whole branch. If you specify neither ``-s`` nor ``-b``, rebase
-    uses the parent of the working directory as the base.
+    There are three ways to select changesets::
 
-    For advanced usage, a third way is available through the ``--rev``
-    option. It allows you to specify an arbitrary set of changesets to
-    rebase. Descendants of revs you specify with this option are not
-    automatically included in the rebase.
+      1. Explicitly select them using ``--rev``.
+
+      2. Use ``--source`` to select a root changeset and include all of its
+      descendants.
+
+      3. Use ``--base`` to select a changeset; rebase will find ancestors
+      and their descendants which are not also ancestors of the destination.
 
     By default, rebase recreates the changesets in the source branch
     as descendants of dest and then destroys the originals. Use
