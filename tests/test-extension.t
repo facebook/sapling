@@ -206,7 +206,7 @@ Check absolute/relative import of extension specific modules
   > from extroot.bar import s
   > buf.append('from extroot.bar import s: %s' % s)
   > EOF
-  $ hg --config extensions.extroot=$TESTTMP/extroot root
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.extroot=$TESTTMP/extroot root)
   (extroot) from extroot.bar import *: this is extroot.bar
   (extroot) import extroot.sub1.baz: this is extroot.sub1.baz
   (extroot) import extroot: this is extroot.__init__
