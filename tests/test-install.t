@@ -42,6 +42,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking username...
   no problems detected
 
+#if test-repo
   $ cat >> wixxml.py << EOF
   > import os, subprocess, sys
   > import xml.etree.ElementTree as ET
@@ -66,7 +67,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   > def hgdirectory(relpath):
   >     '''generator of tracked files, rooted at relpath'''
   >     hgdir = "%s/../mercurial" % (testdir)
-  >     args = ['hg', '--cwd', hgdir, 'files', '--rev', '.', relpath]
+  >     args = ['hg', '--cwd', hgdir, 'files', relpath]
   >     proc = subprocess.Popen(args, stdout=subprocess.PIPE,
   >                             stderr=subprocess.PIPE)
   >     output = proc.communicate()[0]
@@ -108,3 +109,5 @@ path variables are expanded (~ is the same as $TESTTMP)
   $ python wixxml.py templates
   Not installed:
   Not tracked:
+
+#endif
