@@ -1082,15 +1082,21 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         if action.verb == 'fold' and nextact and nextact.verb == 'fold':
             state.actions[idx].__class__ = _multifold
 
+    total = len(state.actions)
+    pos = 0
     while state.actions:
         state.write()
         actobj = state.actions.pop(0)
+        pos += 1
+        ui.progress(_("editing"), pos, actobj.torule(),
+                    _('changes'), total)
         ui.debug('histedit: processing %s %s\n' % (actobj.verb,\
                                                    actobj.torule()))
         parentctx, replacement_ = actobj.run()
         state.parentctxnode = parentctx.node()
         state.replacements.extend(replacement_)
     state.write()
+    ui.progress(_("editing"), None)
 
     hg.update(repo, state.parentctxnode, quietempty=True)
 

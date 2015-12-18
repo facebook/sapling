@@ -234,10 +234,14 @@ tip before edit
   summary:     f
   
 
-  $ hg histedit e860deea161a --commands - 2>&1 <<EOF | fixbundle
+  $ hg --config progress.debug=1 --debug \
+  > histedit e860deea161a --commands - 2>&1 <<EOF | \
+  > egrep 'editing|unresolved'
   > pick e860deea161a e
   > fold a00ad806cb55 f
   > EOF
+  editing: pick e860deea161a 4 e 1/2 changes (50.00%)
+  editing: fold a00ad806cb55 5 f 2/2 changes (100.00%)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
