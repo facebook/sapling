@@ -110,13 +110,8 @@ def rebase(ui, repo, **opts):
     useful for linearizing *local* changes relative to a master
     development tree.
 
-    You should not rebase changesets that have already been shared
-    with others. Doing so will force everybody else to perform the
-    same rebase or they will end up with duplicated changesets after
-    pulling in your rebased changesets.
-
-    In its default configuration, Mercurial will prevent you from
-    rebasing published changes. See :hg:`help phases` for details.
+    Published commits cannot be rebased (see :hg:`help phases`).
+    To copy commits, see :hg:`help graft`.
 
     If you don't specify a destination changeset (``-d/--dest``),
     rebase uses the current branch tip as the destination. (The
