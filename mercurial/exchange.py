@@ -1399,10 +1399,14 @@ def _pullobsolete(pullop):
         remoteobs = pullop.remote.listkeys('obsolete')
         if 'dump0' in remoteobs:
             tr = pullop.gettransaction()
+            markers = []
             for key in sorted(remoteobs, reverse=True):
                 if key.startswith('dump'):
                     data = base85.b85decode(remoteobs[key])
-                    pullop.repo.obsstore.mergemarkers(tr, data)
+                    version, newmarks = obsolete._readmarkers(data)
+                    markers += newmarks
+            if markers:
+                pullop.repo.obsstore.add(tr, markers)
             pullop.repo.invalidatevolatilesets()
     return tr
 
