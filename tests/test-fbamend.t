@@ -7,6 +7,13 @@ Test functionality is present
   > fbamend=$TESTTMP/fbamend.py
   > rebase=
   > EOF
+  $ mkcommit() {
+  >    echo "$1" > "$1"
+  >    hg add "$1"
+  >    echo "add $1" > msg
+  >    hg ci -l msg
+  > }
+
 
   $ hg help commit | grep -- --fixup
       --fixup               (with --amend) rebase children commits from a
@@ -438,4 +445,63 @@ Test hg amend works with a logfile
   abort: options --message and --logfile are mutually exclusive
   [255]
   $ rm alogfile
+
+Test fbamend with inhibit
+  $ $PYTHON -c 'import inhibit' || exit 80
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > inhibit=
+  > EOF
+  $ cd ..
+  $ hg init inhibitrepo
+  $ cd inhibitrepo
+  $ mkcommit a
+  $ mkcommit b
+  $ mkcommit c
+  $ hg log --template '{node|short} {desc}' --graph
+  @  4538525df7e2 add c
+  |
+  o  7c3bad9141dc add b
+  |
+  o  1f0dee641bb7 add a
+  
+  $ hg up .^ -q
+  $ echo "hello" > b
+  $ hg amend
+  user education
+  second line
+  warning: the commit's children were left behind
+  (use 'hg amend --fixup' to rebase them)
+  $ hg amend --fixup
+  rebasing the children of f2d4abddbbcd.preamend
+  rebasing 2:4538525df7e2 "add c"
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/4538525df7e2-0bcb0716-backup.hg (glob)
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/7c3bad9141dc-81844e36-preamend-backup.hg (glob)
+  $ hg log --template '{node|short} {desc}' --graph
+  o  084836c39cc1 add c
+  |
+  @  f2d4abddbbcd add b
+  |
+  o  1f0dee641bb7 add a
+  
+  $ hg up tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkcommit d
+  $ hg up .^ -q
+  $ echo "hello" > c
+  $ hg amend --rebase
+  rebasing the children of 6d41fcaa1aa4.preamend
+  rebasing 3:3a033d20b13a "add d"
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/3a033d20b13a-c275a49d-backup.hg (glob)
+  saved backup bundle to $TESTTMP/inhibitrepo/.hg/strip-backup/084836c39cc1-e86e0471-preamend-backup.hg (glob)
+  $ hg log --template '{node|short} {desc}' --graph
+  o  cc9fcfa87676 add d
+  |
+  @  6d41fcaa1aa4 add c
+  |
+  o  f2d4abddbbcd add b
+  |
+  o  1f0dee641bb7 add a
+  
+
 
