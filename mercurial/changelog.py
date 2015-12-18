@@ -360,6 +360,17 @@ class changelog(revlog.revlog):
         files = l[3:]
         return (manifest, user, (time, timezone), files, desc, extra)
 
+    def readfiles(self, node):
+        """
+        short version of read that only returns the files modified by the cset
+        """
+        text = self.revision(node)
+        if not text:
+            return []
+        last = text.index("\n\n")
+        l = text[:last].split('\n')
+        return l[3:]
+
     def add(self, manifest, files, desc, transaction, p1, p2,
                   user, date=None, extra=None):
         # Convert to UTF-8 encoded bytestrings as the very first
