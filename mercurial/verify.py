@@ -58,6 +58,7 @@ class verifier(object):
         self.revlogv1 = repo.changelog.version != revlog.REVLOGV0
         self.lrugetctx = util.lrucachefunc(repo.changectx)
         self.refersmf = False
+        self.fncachewarned = False
 
     def verify(self):
         repo = self.repo
@@ -256,7 +257,6 @@ class verifier(object):
             elif size > 0 or not revlogv1:
                 storefiles.add(_normpath(f))
 
-        fncachewarned = False
         files = sorted(set(filenodes) | set(filelinkrevs))
         total = len(files)
         for i, f in enumerate(files):
@@ -283,7 +283,7 @@ class verifier(object):
                     storefiles.remove(ff)
                 except KeyError:
                     warn(_(" warning: revlog '%s' not in fncache!") % ff)
-                    fncachewarned = True
+                    self.fncachewarned = True
 
             checklog(fl, f, lr)
             seen = {}
@@ -353,7 +353,7 @@ class verifier(object):
                        (len(files), len(cl), revisions))
         if warnings[0]:
             ui.warn(_("%d warnings encountered!\n") % warnings[0])
-        if fncachewarned:
+        if self.fncachewarned:
             ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
                       'corrupt fncache\n'))
         if errors[0]:
