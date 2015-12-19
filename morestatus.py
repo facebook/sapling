@@ -88,7 +88,7 @@ def fileexistspredicate(filename):
     return lambda repo: repo.vfs.exists(filename)
 
 def mergepredicate(repo):
-    return len(repo.parents()) > 1
+    return len(repo[None].parents()) > 1
 
 STATES = (
     # (state, predicate to detect states, helpful message function)
