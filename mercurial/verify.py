@@ -60,6 +60,10 @@ class verifier(object):
         self.refersmf = False
         self.fncachewarned = False
 
+    def warn(self, msg):
+        self.ui.warn(msg + "\n")
+        self.warnings[0] += 1
+
     def verify(self):
         repo = self.repo
         mflinkrevs = {}
@@ -96,9 +100,6 @@ class verifier(object):
                 inst = repr(inst)
             err(linkrev, "%s: %s" % (msg, inst), filename)
 
-        def warn(msg):
-            ui.warn(msg + "\n")
-            warnings[0] += 1
 
         def checklog(obj, name, linkrev):
             if not len(obj) and (havecl or havemf):
@@ -113,9 +114,9 @@ class verifier(object):
 
             if obj.version != revlog.REVLOGV0:
                 if not revlogv1:
-                    warn(_("warning: `%s' uses revlog format 1") % name)
+                    self.warn(_("warning: `%s' uses revlog format 1") % name)
             elif revlogv1:
-                warn(_("warning: `%s' uses revlog format 0") % name)
+                self.warn(_("warning: `%s' uses revlog format 0") % name)
 
         def checkentry(obj, i, node, seen, linkrevs, f):
             lr = obj.linkrev(obj.rev(node))
@@ -133,7 +134,8 @@ class verifier(object):
                                         if lrugetctx(l)[f].filenode() == node]
                         except Exception:
                             pass
-                    warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
+                    self.warn(_(" (expected %s)") %
+                              " ".join(map(str, linkrevs)))
                 lr = None # can't be trusted
 
             try:
@@ -282,7 +284,7 @@ class verifier(object):
                 try:
                     storefiles.remove(ff)
                 except KeyError:
-                    warn(_(" warning: revlog '%s' not in fncache!") % ff)
+                    self.warn(_(" warning: revlog '%s' not in fncache!") % ff)
                     self.fncachewarned = True
 
             checklog(fl, f, lr)
@@ -324,8 +326,8 @@ class verifier(object):
                                     found = True
                                     break
                             if not found:
-                                warn(_("warning: copy source of '%s' not"
-                                       " in parents of %s") % (f, ctx))
+                                self.warn(_("warning: copy source of '%s' not"
+                                            " in parents of %s") % (f, ctx))
                         fl2 = repo.file(rp[0])
                         if not len(fl2):
                             err(lr, _("empty or missing copy source revlog "
@@ -347,7 +349,7 @@ class verifier(object):
         ui.progress(_('checking'), None)
 
         for f in storefiles:
-            warn(_("warning: orphan revlog '%s'") % f)
+            self.warn(_("warning: orphan revlog '%s'") % f)
 
         ui.status(_("%d files, %d changesets, %d total revisions\n") %
                        (len(files), len(cl), revisions))
