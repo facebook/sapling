@@ -24,7 +24,7 @@ from . import (
 def verify(repo):
     lock = repo.lock()
     try:
-        return verifier().verify(repo)
+        return verifier(repo).verify()
     finally:
         lock.release()
 
@@ -47,19 +47,31 @@ def _validpath(repo, path):
     return True
 
 class verifier(object):
-    def verify(self, repo):
-        repo = repo.unfiltered()
+    def __init__(self, repo):
+        self.repo = repo.unfiltered()
+        self.ui = repo.ui
+        self.badrevs = set()
+        self.errors = [0]
+        self.warnings = [0]
+        self.havecl = len(repo.changelog) > 0
+        self.havemf = len(repo.manifest) > 0
+        self.revlogv1 = repo.changelog.version != revlog.REVLOGV0
+        self.lrugetctx = util.lrucachefunc(repo.changectx)
+        self.refersmf = False
+
+    def verify(self):
+        repo = self.repo
         mflinkrevs = {}
         filelinkrevs = {}
         filenodes = {}
         revisions = 0
-        badrevs = set()
-        errors = [0]
-        warnings = [0]
+        badrevs = self.badrevs
+        errors = self.errors
+        warnings = self.warnings
         ui = repo.ui
         cl = repo.changelog
         mf = repo.manifest
-        lrugetctx = util.lrucachefunc(repo.changectx)
+        lrugetctx = self.lrugetctx
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
@@ -142,16 +154,15 @@ class verifier(object):
         if os.path.exists(repo.sjoin("journal")):
             ui.warn(_("abandoned transaction found - run hg recover\n"))
 
-        revlogv1 = cl.version != revlog.REVLOGV0
+        revlogv1 = self.revlogv1
         if ui.verbose or not revlogv1:
             ui.status(_("repository uses revlog format %d\n") %
                            (revlogv1 and 1 or 0))
 
-        havecl = len(cl) > 0
-        havemf = len(mf) > 0
+        havecl = self.havecl
+        havemf = self.havemf
 
         ui.status(_("checking changesets\n"))
-        refersmf = False
         seen = {}
         checklog(cl, "changelog", 0)
         total = len(repo)
@@ -164,18 +175,18 @@ class verifier(object):
                 changes = cl.read(n)
                 if changes[0] != nullid:
                     mflinkrevs.setdefault(changes[0], []).append(i)
-                    refersmf = True
+                    self.refersmf = True
                 for f in changes[3]:
                     if _validpath(repo, f):
                         filelinkrevs.setdefault(_normpath(f), []).append(i)
             except Exception as inst:
-                refersmf = True
+                self.refersmf = True
                 exc(i, _("unpacking changeset %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
         ui.status(_("checking manifests\n"))
         seen = {}
-        if refersmf:
+        if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
             checklog(mf, "manifest", 0)
