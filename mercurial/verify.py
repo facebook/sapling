@@ -75,6 +75,14 @@ class verifier(object):
         self.ui.warn(" " + msg + "\n")
         self.errors[0] += 1
 
+    def exc(self, linkrev, msg, inst, filename=None):
+        if isinstance(inst, KeyboardInterrupt):
+            self.ui.warn(_("interrupted"))
+            raise
+        if not str(inst):
+            inst = repr(inst)
+        self.err(linkrev, "%s: %s" % (msg, inst), filename)
+
     def verify(self):
         repo = self.repo
         mflinkrevs = {}
@@ -91,16 +99,6 @@ class verifier(object):
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
-
-
-        def exc(linkrev, msg, inst, filename=None):
-            if isinstance(inst, KeyboardInterrupt):
-                ui.warn(_("interrupted"))
-                raise
-            if not str(inst):
-                inst = repr(inst)
-            self.err(linkrev, "%s: %s" % (msg, inst), filename)
-
 
         def checklog(obj, name, linkrev):
             if not len(obj) and (havecl or havemf):
@@ -148,7 +146,7 @@ class verifier(object):
                     self.err(lr, _("unknown parent 2 %s of %s") %
                              (short(p2), short(node)), f)
             except Exception as inst:
-                exc(lr, _("checking parents of %s") % short(node), inst, f)
+                self.exc(lr, _("checking parents of %s") % short(node), inst, f)
 
             if node in seen:
                 self.err(lr, _("duplicate revision %d (%d)") %
@@ -186,7 +184,7 @@ class verifier(object):
                         filelinkrevs.setdefault(_normpath(f), []).append(i)
             except Exception as inst:
                 self.refersmf = True
-                exc(i, _("unpacking changeset %s") % short(n), inst)
+                self.exc(i, _("unpacking changeset %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
         ui.status(_("checking manifests\n"))
@@ -214,7 +212,7 @@ class verifier(object):
                             filenodes.setdefault(
                                 _normpath(f), {}).setdefault(fn, lr)
             except Exception as inst:
-                exc(lr, _("reading manifest delta %s") % short(n), inst)
+                self.exc(lr, _("reading manifest delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
         ui.status(_("crosschecking files in changesets and manifests\n"))
@@ -316,7 +314,7 @@ class verifier(object):
                     if ui.config("censor", "policy", "abort") == "abort":
                         self.err(lr, _("censored file data"), f)
                 except Exception as inst:
-                    exc(lr, _("unpacking %s") % short(n), inst, f)
+                    self.exc(lr, _("unpacking %s") % short(n), inst, f)
 
                 # check renames
                 try:
@@ -342,7 +340,7 @@ class verifier(object):
                         else:
                             fl2.rev(rp[1])
                 except Exception as inst:
-                    exc(lr, _("checking rename of %s") % short(n), inst, f)
+                    self.exc(lr, _("checking rename of %s") % short(n), inst, f)
 
             # cross-check
             if f in filenodes:
