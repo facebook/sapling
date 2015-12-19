@@ -1438,7 +1438,7 @@ class revlog(object):
         # We work around this issue by inserting a seek() before writing.
         # Note: This is likely not necessary on Python 3.
         ifh.seek(0, os.SEEK_END)
-	 if dfh:
+        if dfh:
             dfh.seek(0, os.SEEK_END)
 
         curr = len(self) - 1
