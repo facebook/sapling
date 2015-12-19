@@ -13,6 +13,7 @@ Test functionality is present
   > manifestdiskcache=$TESTTMP/manifestdiskcache.py
   > [manifestdiskcache]
   > logging=True
+  > enabled=True
   > EOF
   $ echo "abcabc" > abcabc
   $ hg add abcabc
@@ -42,6 +43,7 @@ Test that we prune the cache.
   > manifestdiskcache=$TESTTMP/manifestdiskcache.py
   > [manifestdiskcache]
   > logging=True
+  > enabled=True
   > EOF
   $ echo "abcabc" > abcabc
   $ hg add abcabc
@@ -66,6 +68,7 @@ Test that we prune the cache.
   > cache-size=431
   > runs-between-prunes=1
   > pinned-revsets=
+  > enabled=True
   > EOF
   $ echo "jkljkl" > jkljkl
   $ hg add jkljkl
@@ -92,6 +95,8 @@ Test that a corrupt cache does not interfere with correctness.
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > manifestdiskcache=$TESTTMP/manifestdiskcache.py
+  > [manifestdiskcache]
+  > enabled=True
   > EOF
   $ echo "abcabc" > abcabc
   $ hg add abcabc
@@ -136,6 +141,7 @@ Test that we can pin a revision in the cache.
   > [manifestdiskcache]
   > cache-size=0
   > runs-between-prunes=1
+  > enabled=True
   > EOF
   $ hg diff -r .^ --nodates
   diff -r 53f12ffb3d86 defdef
