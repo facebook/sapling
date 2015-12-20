@@ -76,9 +76,6 @@ class verifier(object):
         self.errors[0] += 1
 
     def exc(self, linkrev, msg, inst, filename=None):
-        if isinstance(inst, KeyboardInterrupt):
-            self.ui.warn(_("interrupted"))
-            raise
         if not str(inst):
             inst = repr(inst)
         self.err(linkrev, "%s: %s" % (msg, inst), filename)
