@@ -977,6 +977,51 @@ Servers can disable bundle1 for clone/pull operations
   (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [255]
   $ killdaemons.py
+  $ cd ..
+
+bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
+
+  $ hg --config format.usegeneraldelta=false init notgdserver
+  $ cd notgdserver
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1gd.pull = false
+  > EOF
+
+  $ touch foo
+  $ hg -q commit -A -m initial
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2-1
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ killdaemons.py
+  $ cd ../bundle2onlyserver
+
+bundle1 pull can be disabled for generaldelta repos only
+
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1gd.pull = false
+  > EOF
+
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  requesting all changes
+  abort: remote error:
+  incompatible Mercurial client; bundle2 required
+  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [255]
+
+  $ killdaemons.py
 
 Verify the global server.bundle1 option works
 
@@ -993,6 +1038,42 @@ Verify the global server.bundle1 option works
   (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
   [255]
   $ killdaemons.py
+
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1gd = false
+  > EOF
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2
+  requesting all changes
+  abort: remote error:
+  incompatible Mercurial client; bundle2 required
+  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  [255]
+
+  $ killdaemons.py
+
+  $ cd ../notgdserver
+  $ cat > .hg/hgrc << EOF
+  > [server]
+  > bundle1gd = false
+  > EOF
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid
+  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ hg --config experimental.bundle2-exp=false clone http://localhost:$HGPORT/ not-bundle2-2
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ killdaemons.py
+  $ cd ../bundle2onlyserver
 
 Verify bundle1 pushes can be disabled
 

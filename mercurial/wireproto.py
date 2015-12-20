@@ -491,11 +491,32 @@ def options(cmd, keys, others):
                          % (cmd, ",".join(others)))
     return opts
 
-def bundle1allowed(ui, action):
-    """Whether a bundle1 operation is allowed from the server."""
+def bundle1allowed(repo, action):
+    """Whether a bundle1 operation is allowed from the server.
+
+    Priority is:
+
+    1. server.bundle1gd.<action> (if generaldelta active)
+    2. server.bundle1.<action>
+    3. server.bundle1gd (if generaldelta active)
+    4. server.bundle1
+    """
+    ui = repo.ui
+    gd = 'generaldelta' in repo.requirements
+
+    if gd:
+        v = ui.configbool('server', 'bundle1gd.%s' % action, None)
+        if v is not None:
+            return v
+
     v = ui.configbool('server', 'bundle1.%s' % action, None)
     if v is not None:
         return v
+
+    if gd:
+        v = ui.configbool('server', 'bundle1gd', None)
+        if v is not None:
+            return v
 
     return ui.configbool('server', 'bundle1', True)
 
@@ -665,7 +686,7 @@ def getbundle(repo, proto, others):
             raise KeyError('unknown getbundle option type %s'
                            % keytype)
 
-    if not bundle1allowed(repo.ui, 'pull'):
+    if not bundle1allowed(repo, 'pull'):
         if not exchange.bundle2requested(opts.get('bundlecaps')):
             return ooberror(bundle2required)
 
@@ -781,7 +802,7 @@ def unbundle(repo, proto, heads):
             fp.seek(0)
             gen = exchange.readbundle(repo.ui, fp, None)
             if (isinstance(gen, changegroupmod.cg1unpacker)
-                and not bundle1allowed(repo.ui, 'push')):
+                and not bundle1allowed(repo, 'push')):
                 return ooberror(bundle2required)
 
             r = exchange.unbundle(repo, gen, their_heads, 'serve',
