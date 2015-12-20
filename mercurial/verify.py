@@ -51,8 +51,8 @@ class verifier(object):
         self.repo = repo.unfiltered()
         self.ui = repo.ui
         self.badrevs = set()
-        self.errors = [0]
-        self.warnings = [0]
+        self.errors = 0
+        self.warnings = 0
         self.havecl = len(repo.changelog) > 0
         self.havemf = len(repo.manifest) > 0
         self.revlogv1 = repo.changelog.version != revlog.REVLOGV0
@@ -62,7 +62,7 @@ class verifier(object):
 
     def warn(self, msg):
         self.ui.warn(msg + "\n")
-        self.warnings[0] += 1
+        self.warnings += 1
 
     def err(self, linkrev, msg, filename=None):
         if linkrev is not None:
@@ -73,7 +73,7 @@ class verifier(object):
         if filename:
             msg = "%s@%s" % (filename, msg)
         self.ui.warn(" " + msg + "\n")
-        self.errors[0] += 1
+        self.errors += 1
 
     def exc(self, linkrev, msg, inst, filename=None):
         if not str(inst):
@@ -87,8 +87,6 @@ class verifier(object):
         filenodes = {}
         revisions = 0
         badrevs = self.badrevs
-        errors = self.errors
-        warnings = self.warnings
         ui = repo.ui
         cl = repo.changelog
         mf = repo.manifest
@@ -352,13 +350,13 @@ class verifier(object):
 
         ui.status(_("%d files, %d changesets, %d total revisions\n") %
                        (len(files), len(cl), revisions))
-        if warnings[0]:
-            ui.warn(_("%d warnings encountered!\n") % warnings[0])
+        if self.warnings:
+            ui.warn(_("%d warnings encountered!\n") % self.warnings)
         if self.fncachewarned:
             ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
                       'corrupt fncache\n'))
-        if errors[0]:
-            ui.warn(_("%d integrity errors encountered!\n") % errors[0])
+        if self.errors:
+            ui.warn(_("%d integrity errors encountered!\n") % self.errors)
             if badrevs:
                 ui.warn(_("(first damaged changeset appears to be %d)\n")
                         % min(badrevs))
