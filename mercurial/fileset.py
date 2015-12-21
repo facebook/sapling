@@ -248,7 +248,13 @@ def clean(mctx, x):
 
 def func(mctx, a, b):
     if a[0] == 'symbol' and a[1] in symbols:
-        return symbols[a[1]](mctx, b)
+        funcname = a[1]
+        enabled = mctx._existingenabled
+        mctx._existingenabled = funcname in _existingcallers
+        try:
+            return symbols[funcname](mctx, b)
+        finally:
+            mctx._existingenabled = enabled
 
     keep = lambda fn: getattr(fn, '__doc__', None) is not None
 
@@ -497,6 +503,7 @@ class matchctx(object):
         self.ctx = ctx
         self.subset = subset
         self._status = status
+        self._existingenabled = False
     def status(self):
         return self._status
     def matcher(self, patterns):
@@ -504,6 +511,7 @@ class matchctx(object):
     def filter(self, files):
         return [f for f in files if f in self.subset]
     def existing(self):
+        assert self._existingenabled, 'unexpected existing() invocation'
         if self._status is not None:
             removed = set(self._status[3])
             unknown = set(self._status[4] + self._status[5])
