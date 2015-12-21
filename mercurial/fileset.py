@@ -137,11 +137,17 @@ def listset(mctx, a, b):
 #  x - argument in tree form
 symbols = {}
 
-def predicate(decl):
+# filesets using matchctx.status()
+_statuscallers = []
+
+def predicate(decl, callstatus=False):
     """Return a decorator for fileset predicate function
 
     'decl' argument is the declaration (including argument list like
     'adds(pattern)') or the name (for internal use only) of predicate.
+
+    Optional 'callstatus' argument indicates whether predicate implies
+    'matchctx.status()' at runtime or not (False, by default).
     """
     def decorator(func):
         i = decl.find('(')
@@ -150,12 +156,14 @@ def predicate(decl):
         else:
             name = decl
         symbols[name] = func
+        if callstatus:
+            _statuscallers.append(name)
         if func.__doc__:
             func.__doc__ = "``%s``\n    %s" % (decl, func.__doc__.strip())
         return func
     return decorator
 
-@predicate('modified()')
+@predicate('modified()', callstatus=True)
 def modified(mctx, x):
     """File that is modified according to :hg:`status`.
     """
@@ -164,7 +172,7 @@ def modified(mctx, x):
     s = mctx.status().modified
     return [f for f in mctx.subset if f in s]
 
-@predicate('added()')
+@predicate('added()', callstatus=True)
 def added(mctx, x):
     """File that is added according to :hg:`status`.
     """
@@ -173,7 +181,7 @@ def added(mctx, x):
     s = mctx.status().added
     return [f for f in mctx.subset if f in s]
 
-@predicate('removed()')
+@predicate('removed()', callstatus=True)
 def removed(mctx, x):
     """File that is removed according to :hg:`status`.
     """
@@ -182,7 +190,7 @@ def removed(mctx, x):
     s = mctx.status().removed
     return [f for f in mctx.subset if f in s]
 
-@predicate('deleted()')
+@predicate('deleted()', callstatus=True)
 def deleted(mctx, x):
     """Alias for ``missing()``.
     """
@@ -191,7 +199,7 @@ def deleted(mctx, x):
     s = mctx.status().deleted
     return [f for f in mctx.subset if f in s]
 
-@predicate('missing()')
+@predicate('missing()', callstatus=True)
 def missing(mctx, x):
     """File that is missing according to :hg:`status`.
     """
@@ -200,7 +208,7 @@ def missing(mctx, x):
     s = mctx.status().deleted
     return [f for f in mctx.subset if f in s]
 
-@predicate('unknown()')
+@predicate('unknown()', callstatus=True)
 def unknown(mctx, x):
     """File that is unknown according to :hg:`status`. These files will only be
     considered if this predicate is used.
@@ -210,7 +218,7 @@ def unknown(mctx, x):
     s = mctx.status().unknown
     return [f for f in mctx.subset if f in s]
 
-@predicate('ignored()')
+@predicate('ignored()', callstatus=True)
 def ignored(mctx, x):
     """File that is ignored according to :hg:`status`. These files will only be
     considered if this predicate is used.
@@ -220,7 +228,7 @@ def ignored(mctx, x):
     s = mctx.status().ignored
     return [f for f in mctx.subset if f in s]
 
-@predicate('clean()')
+@predicate('clean()', callstatus=True)
 def clean(mctx, x):
     """File that is clean according to :hg:`status`.
     """
@@ -523,8 +531,7 @@ def getfileset(ctx, expr):
     tree = parse(expr)
 
     # do we need status info?
-    if (_intree(['modified', 'added', 'removed', 'deleted',
-                 'missing', 'unknown', 'ignored', 'clean'], tree) or
+    if (_intree(_statuscallers, tree) or
         # Using matchctx.existing() on a workingctx requires us to check
         # for deleted files.
         (ctx.rev() is None and _intree(_existingcallers, tree))):
