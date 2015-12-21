@@ -339,6 +339,11 @@ class revlog(object):
             return False
 
     def clearcaches(self):
+        self._cache = None
+        self._basecache = None
+        self._chunkcache = (0, '')
+        self._pcache = {}
+
         try:
             self._nodecache.clearcaches()
         except AttributeError:
