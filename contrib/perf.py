@@ -2,12 +2,14 @@
 '''helper extension to measure performance'''
 
 from mercurial import cmdutil, scmutil, util, commands, obsolete
-from mercurial import repoview, branchmap, merge, copies, error
+from mercurial import repoview, branchmap, merge, copies, error, revlog
+from mercurial import mdiff
 import time, os, sys
 import random
 import functools
 
 formatteropts = commands.formatteropts
+revlogopts = commands.debugrevlogopts
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -487,6 +489,96 @@ def perfrevlog(ui, repo, file_, **opts):
 
     timer(d)
     fm.end()
+
+@command('perfrevlogrevision', revlogopts + formatteropts +
+         [('', 'cache', False, 'use caches instead of clearing')],
+         '-c|-m|FILE REV')
+def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
+    """Benchmark obtaining a revlog revision.
+
+    Obtaining a revlog revision consists of roughly the following steps:
+
+    1. Compute the delta chain
+    2. Obtain the raw chunks for that delta chain
+    3. Decompress each raw chunk
+    4. Apply binary patches to obtain fulltext
+    5. Verify hash of fulltext
+
+    This command measures the time spent in each of these phases.
+    """
+    if opts.get('changelog') or opts.get('manifest'):
+        file_, rev = None, file_
+    elif rev is None:
+        raise error.CommandError('perfrevlogrevision', 'invalid arguments')
+
+    r = cmdutil.openrevlog(repo, 'perfrevlogrevision', file_, opts)
+    node = r.lookup(rev)
+    rev = r.rev(node)
+
+    def dodeltachain(rev):
+        if not cache:
+            r.clearcaches()
+        r._deltachain(rev)
+
+    def doread(chain):
+        if not cache:
+            r.clearcaches()
+        r._chunkraw(chain[0], chain[-1])
+
+    def dodecompress(data, chain):
+        if not cache:
+            r.clearcaches()
+
+        start = r.start
+        length = r.length
+        inline = r._inline
+        iosize = r._io.size
+        buffer = util.buffer
+        offset = start(chain[0])
+
+        for rev in chain:
+            chunkstart = start(rev)
+            if inline:
+                chunkstart += (rev + 1) * iosize
+            chunklength = length(rev)
+            b = buffer(data, chunkstart - offset, chunklength)
+            revlog.decompress(b)
+
+    def dopatch(text, bins):
+        if not cache:
+            r.clearcaches()
+        mdiff.patches(text, bins)
+
+    def dohash(text):
+        if not cache:
+            r.clearcaches()
+        r._checkhash(text, node, rev)
+
+    def dorevision():
+        if not cache:
+            r.clearcaches()
+        r.revision(node)
+
+    chain = r._deltachain(rev)[0]
+    data = r._chunkraw(chain[0], chain[-1])
+    bins = r._chunks(chain)
+    text = str(bins[0])
+    bins = bins[1:]
+    text = mdiff.patches(text, bins)
+
+    benches = [
+        (lambda: dorevision(), 'full'),
+        (lambda: dodeltachain(rev), 'deltachain'),
+        (lambda: doread(chain), 'read'),
+        (lambda: dodecompress(data, chain), 'decompress'),
+        (lambda: dopatch(text, bins), 'patch'),
+        (lambda: dohash(text), 'hash'),
+    ]
+
+    for fn, title in benches:
+        timer, fm = gettimer(ui, opts)
+        timer(fn, title=title)
+        fm.end()
 
 @command('perfrevset',
          [('C', 'clear', False, 'clear volatile cache between each call.'),

@@ -91,6 +91,8 @@ perfstatus
                  (no help text available)
    perfrawfiles  (no help text available)
    perfrevlog    (no help text available)
+   perfrevlogrevision
+                 Benchmark obtaining a revlog revision.
    perfrevrange  (no help text available)
    perfrevset    benchmark the execution time of a revset
    perfstartup   (no help text available)
@@ -136,6 +138,7 @@ perfstatus
   $ hg perfpathcopies 1 2
   $ hg perfrawfiles 2
   $ hg perfrevlog .hg/store/data/a.i
+  $ hg perfrevlogrevision -m 0
   $ hg perfrevrange
   $ hg perfrevset 'all()'
   $ hg perfstartup
