@@ -474,16 +474,20 @@ def perfdiffwd(ui, repo, **opts):
         timer(d, title)
     fm.end()
 
-@command('perfrevlog',
-         [('d', 'dist', 100, 'distance between the revisions')] + formatteropts,
-         "[INDEXFILE]")
-def perfrevlog(ui, repo, file_, **opts):
+@command('perfrevlog', revlogopts + formatteropts +
+         [('d', 'dist', 100, 'distance between the revisions')],
+         '-c|-m|FILE')
+def perfrevlog(ui, repo, file_=None, **opts):
+    """Benchmark reading a series of revisions from a revlog.
+
+    By default, we read every ``-d/--dist`` revision from 0 to tip of
+    the specified revlog.
+    """
     timer, fm = gettimer(ui, opts)
-    from mercurial import revlog
     dist = opts['dist']
     _len = getlen(ui)
     def d():
-        r = revlog.revlog(lambda fn: open(fn, 'rb'), file_)
+        r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
         for x in xrange(0, _len(r), dist):
             r.revision(r.node(x))
 

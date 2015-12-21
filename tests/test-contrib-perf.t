@@ -90,7 +90,7 @@ perfstatus
    perfpathcopies
                  (no help text available)
    perfrawfiles  (no help text available)
-   perfrevlog    (no help text available)
+   perfrevlog    Benchmark reading a series of revisions from a revlog.
    perfrevlogrevision
                  Benchmark obtaining a revlog revision.
    perfrevrange  (no help text available)
