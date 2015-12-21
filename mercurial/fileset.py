@@ -510,6 +510,8 @@ def _intree(funcs, tree):
 # filesets using matchctx.existing()
 _existingcallers = [
     'binary',
+    'encoding',
+    'eol',
     'exec',
     'grep',
     'size',

@@ -297,16 +297,34 @@ Test with a revision
   >>> open('mac', 'wb').write("mac\r")
   $ hg add dos mixed mac
 
+(remove a1, to examine safety of 'eol' on removed files)
+  $ rm a1
+
   $ fileset 'eol(dos)'
   dos
   mixed
   $ fileset 'eol(unix)'
+  mixed
   .hgsub
   .hgsubstate
-  a1
   b1
   b2
   c1
-  mixed
   $ fileset 'eol(mac)'
   mac
+
+Test safety of 'encoding' on removed files
+
+  $ fileset 'encoding("ascii")'
+  dos
+  mac
+  mixed
+  .hgsub
+  .hgsubstate
+  1k
+  2k
+  b1
+  b2
+  b2link
+  bin
+  c1
