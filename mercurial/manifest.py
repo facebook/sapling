@@ -1035,3 +1035,8 @@ class manifest(revlog.revlog):
         # Save nodeid so parent manifest can calculate its nodeid
         m.setnode(n)
         return n
+
+    def clearcaches(self):
+        super(manifest, self).clearcaches()
+        self._mancache.clear()
+        self._dirlogcache = {'': self}
