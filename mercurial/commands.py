@@ -2542,9 +2542,7 @@ def debugdeltachain(ui, repo, file_=None, **opts):
     generaldelta = r.version & revlog.REVLOGGENERALDELTA
 
     def revinfo(rev):
-        iterrev = rev
-        e = index[iterrev]
-        chain = []
+        e = index[rev]
         compsize = e[1]
         uncompsize = e[2]
         chainsize = 0
@@ -2566,19 +2564,11 @@ def debugdeltachain(ui, repo, file_=None, **opts):
             else:
                 deltatype = 'prev'
 
-        while iterrev != e[3]:
-            chain.append(iterrev)
-            chainsize += e[1]
-            if generaldelta:
-                iterrev = e[3]
-            else:
-                iterrev -= 1
+        chain = r._deltachain(rev)[0]
+        for iterrev in chain:
             e = index[iterrev]
-        else:
             chainsize += e[1]
-            chain.append(iterrev)
 
-        chain.reverse()
         return compsize, uncompsize, deltatype, chain, chainsize
 
     fm = ui.formatter('debugdeltachain', opts)
