@@ -475,20 +475,23 @@ def perfdiffwd(ui, repo, **opts):
     fm.end()
 
 @command('perfrevlog', revlogopts + formatteropts +
-         [('d', 'dist', 100, 'distance between the revisions')],
+         [('d', 'dist', 100, 'distance between the revisions'),
+          ('s', 'startrev', 0, 'revision to start reading at')],
          '-c|-m|FILE')
-def perfrevlog(ui, repo, file_=None, **opts):
+def perfrevlog(ui, repo, file_=None, startrev=0, **opts):
     """Benchmark reading a series of revisions from a revlog.
 
     By default, we read every ``-d/--dist`` revision from 0 to tip of
     the specified revlog.
+
+    The start revision can be defined via ``-s/--startrev``.
     """
     timer, fm = gettimer(ui, opts)
     dist = opts['dist']
     _len = getlen(ui)
     def d():
         r = cmdutil.openrevlog(repo, 'perfrevlog', file_, opts)
-        for x in xrange(0, _len(r), dist):
+        for x in xrange(startrev, _len(r), dist):
             r.revision(r.node(x))
 
     timer(d)
