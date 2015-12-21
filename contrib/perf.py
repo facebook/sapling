@@ -273,8 +273,7 @@ def perfmanifest(ui, repo, rev, **opts):
     ctx = scmutil.revsingle(repo, rev, rev)
     t = ctx.manifestnode()
     def d():
-        repo.manifest._mancache.clear()
-        repo.manifest._cache = None
+        repo.manifest.clearcaches()
         repo.manifest.read(t)
     timer(d)
     fm.end()
