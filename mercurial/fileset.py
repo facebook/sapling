@@ -140,7 +140,10 @@ symbols = {}
 # filesets using matchctx.status()
 _statuscallers = []
 
-def predicate(decl, callstatus=False):
+# filesets using matchctx.existing()
+_existingcallers = []
+
+def predicate(decl, callstatus=False, callexisting=False):
     """Return a decorator for fileset predicate function
 
     'decl' argument is the declaration (including argument list like
@@ -148,6 +151,10 @@ def predicate(decl, callstatus=False):
 
     Optional 'callstatus' argument indicates whether predicate implies
     'matchctx.status()' at runtime or not (False, by default).
+
+    Optional 'callexisting' argument indicates whether predicate
+    implies 'matchctx.existing()' at runtime or not (False, by
+    default).
     """
     def decorator(func):
         i = decl.find('(')
@@ -158,6 +165,8 @@ def predicate(decl, callstatus=False):
         symbols[name] = func
         if callstatus:
             _statuscallers.append(name)
+        if callexisting:
+            _existingcallers.append(name)
         if func.__doc__:
             func.__doc__ = "``%s``\n    %s" % (decl, func.__doc__.strip())
         return func
@@ -259,7 +268,7 @@ def getargs(x, min, max, err):
         raise error.ParseError(err)
     return l
 
-@predicate('binary()')
+@predicate('binary()', callexisting=True)
 def binary(mctx, x):
     """File that appears to be binary (contains NUL bytes).
     """
@@ -267,7 +276,7 @@ def binary(mctx, x):
     getargs(x, 0, 0, _("binary takes no arguments"))
     return [f for f in mctx.existing() if util.binary(mctx.ctx[f].data())]
 
-@predicate('exec()')
+@predicate('exec()', callexisting=True)
 def exec_(mctx, x):
     """File that is marked as executable.
     """
@@ -275,7 +284,7 @@ def exec_(mctx, x):
     getargs(x, 0, 0, _("exec takes no arguments"))
     return [f for f in mctx.existing() if mctx.ctx.flags(f) == 'x']
 
-@predicate('symlink()')
+@predicate('symlink()', callexisting=True)
 def symlink(mctx, x):
     """File that is marked as a symlink.
     """
@@ -324,7 +333,7 @@ def portable(mctx, x):
     checkwinfilename = util.checkwinfilename
     return [f for f in mctx.subset if checkwinfilename(f) is None]
 
-@predicate('grep(regex)')
+@predicate('grep(regex)', callexisting=True)
 def grep(mctx, x):
     """File contains the given regular expression.
     """
@@ -351,7 +360,7 @@ def _sizetomax(s):
     except ValueError:
         raise error.ParseError(_("couldn't parse size: %s") % s)
 
-@predicate('size(expression)')
+@predicate('size(expression)', callexisting=True)
 def size(mctx, x):
     """File size matches the given expression. Examples:
 
@@ -389,7 +398,7 @@ def size(mctx, x):
 
     return [f for f in mctx.existing() if m(mctx.ctx[f].size())]
 
-@predicate('encoding(name)')
+@predicate('encoding(name)', callexisting=True)
 def encoding(mctx, x):
     """File can be successfully decoded with the given character
     encoding. May not be useful for encodings other than ASCII and
@@ -412,7 +421,7 @@ def encoding(mctx, x):
 
     return s
 
-@predicate('eol(style)')
+@predicate('eol(style)', callexisting=True)
 def eol(mctx, x):
     """File contains newlines of the given style (dos, unix, mac). Binary
     files are excluded, files with mixed line endings match multiple
@@ -515,17 +524,6 @@ def _intree(funcs, tree):
             if _intree(funcs, s):
                 return True
     return False
-
-# filesets using matchctx.existing()
-_existingcallers = [
-    'binary',
-    'encoding',
-    'eol',
-    'exec',
-    'grep',
-    'size',
-    'symlink',
-]
 
 def getfileset(ctx, expr):
     tree = parse(expr)
