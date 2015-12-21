@@ -430,6 +430,41 @@ class revlog(object):
         chaininfocache[rev] = r
         return r
 
+    def _deltachain(self, rev, stoprev=None):
+        """Obtain the delta chain for a revision.
+
+        ``stoprev`` specifies a revision to stop at. If not specified, we
+        stop at the base of the chain.
+
+        Returns a 2-tuple of (chain, stopped) where ``chain`` is a list of
+        revs in ascending order and ``stopped`` is a bool indicating whether
+        ``stoprev`` was hit.
+        """
+        chain = []
+
+        # Alias to prevent attribute lookup in tight loop.
+        index = self.index
+        generaldelta = self._generaldelta
+
+        iterrev = rev
+        e = index[iterrev]
+        while iterrev != e[3] and iterrev != stoprev:
+            chain.append(iterrev)
+            if generaldelta:
+                iterrev = e[3]
+            else:
+                iterrev -= 1
+            e = index[iterrev]
+
+        if iterrev == stoprev:
+            stopped = True
+        else:
+            chain.append(iterrev)
+            stopped = False
+
+        chain.reverse()
+        return chain, stopped
+
     def flags(self, rev):
         return self.index[rev][0] & 0xFFFF
     def rawsize(self, rev):
@@ -1160,26 +1195,9 @@ class revlog(object):
             raise RevlogError(_('incompatible revision flag %x') %
                               (self.flags(rev) & ~REVIDX_KNOWN_FLAGS))
 
-        # build delta chain
-        chain = []
-        index = self.index # for performance
-        generaldelta = self._generaldelta
-        iterrev = rev
-        e = index[iterrev]
-        while iterrev != e[3] and iterrev != cachedrev:
-            chain.append(iterrev)
-            if generaldelta:
-                iterrev = e[3]
-            else:
-                iterrev -= 1
-            e = index[iterrev]
-
-        if iterrev == cachedrev:
-            # cache hit
+        chain, stopped = self._deltachain(rev, stoprev=cachedrev)
+        if stopped:
             text = self._cache[2]
-        else:
-            chain.append(iterrev)
-        chain.reverse()
 
         # drop cache to save memory
         self._cache = None
