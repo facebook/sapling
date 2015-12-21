@@ -1163,7 +1163,6 @@ class revlog(object):
         return mdiff.textdiff(self.revision(rev1),
                               self.revision(rev2))
 
-    @util.nogc
     def revision(self, nodeorrev, _df=None):
         """return an uncompressed revision of a given node or revision
         number.
