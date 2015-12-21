@@ -110,7 +110,7 @@ def decompress(bin):
         except zlib.error as e:
             raise RevlogError(_("revlog decompress error: %s") % str(e))
     if t == 'u':
-        return bin[1:]
+        return util.buffer(bin, 1)
     raise RevlogError(_("unknown compression type %r") % t)
 
 # index v0:
