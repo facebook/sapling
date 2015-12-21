@@ -138,10 +138,10 @@ def listset(mctx, a, b):
 symbols = {}
 
 # filesets using matchctx.status()
-_statuscallers = []
+_statuscallers = set()
 
 # filesets using matchctx.existing()
-_existingcallers = []
+_existingcallers = set()
 
 def predicate(decl, callstatus=False, callexisting=False):
     """Return a decorator for fileset predicate function
@@ -164,9 +164,9 @@ def predicate(decl, callstatus=False, callexisting=False):
             name = decl
         symbols[name] = func
         if callstatus:
-            _statuscallers.append(name)
+            _statuscallers.add(name)
         if callexisting:
-            _existingcallers.append(name)
+            _existingcallers.add(name)
         if func.__doc__:
             func.__doc__ = "``%s``\n    %s" % (decl, func.__doc__.strip())
         return func
