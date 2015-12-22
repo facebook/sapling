@@ -16,6 +16,7 @@ remotebranches extension. Ryan McElroy of Facebook also contributed.
 import os
 import errno
 import shutil
+import UserDict
 
 from mercurial import bookmarks
 from mercurial import commands
@@ -205,6 +206,77 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
         del kwargs['bookmark']
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
+class lazyremotenamedict(UserDict.DictMixin):
+    """Read-only dict-like Class to lazily resolve remotename entries
+
+    We are doing that because remotenames startup was slow.
+    We read the remotenames file once to figure out the potential entries
+    and store them in self.potentialentries. Then when asked to resolve an
+    entry, if it is not in self.potentialentries, then it isn't there, if it
+    is in self.potentialentries we resolve it and store the result in
+    self.cache. We cannot be lazy is when asked all the entries (keys).
+    """
+    def __init__(self, kind, repo):
+        self.cache = {}
+        self.potentialentries = {}
+        self._kind = kind # bookmarks or branches
+        self._repo = repo
+        self._load()
+
+    def _load(self):
+        """Read the remotenames file, store entries matching selected kind"""
+        repo = self._repo
+        alias_default = repo.ui.configbool('remotenames', 'alias.default')
+        for node, nametype, remote, rname in readremotenames(repo):
+            if nametype != self._kind:
+                continue
+            # handle alias_default here
+            if remote != "default" and rname == "default" and alias_default:
+                name = remote
+            else:
+                name = joinremotename(remote, rname)
+            self.potentialentries[name] = (node, nametype, remote, rname)
+
+    def _resolvedata(self, potentialentry):
+        """Check that the node for potentialentry exists and return it"""
+        if not potentialentry in self.potentialentries:
+            return None
+        node, nametype, remote, rname = self.potentialentries[potentialentry]
+        repo = self._repo
+        binnode = bin(node)
+        # if the node doesn't exist, skip it
+        try:
+            repo.changelog.rev(binnode)
+        except LookupError:
+            return None
+        # Skip closed branches
+        if (nametype == 'branches' and _branchesenabled(repo.ui) and
+                repo[binnode].closesbranch()):
+            return None
+        return [binnode]
+
+    def __getitem__(self, key):
+        val = self._fetchandcache(key)
+        if val is not None:
+            return val
+        else:
+            raise KeyError()
+
+    def _fetchandcache(self, key):
+        if key in self.cache:
+            return self.cache[key]
+        val = self._resolvedata(key)
+        if val is not None:
+            self.cache[key] = val
+            return val
+        else:
+            return None
+
+    def keys(self):
+        for u in self.potentialentries.keys():
+            self._fetchandcache(u)
+        return self.cache.keys()
+
 class remotenames(dict):
     """This class encapsulates all the remotenames state. It also contains
     methods to access that state in convenient ways. Remotenames are lazy
@@ -219,9 +291,8 @@ class remotenames(dict):
 
     def clearnames(self):
         """Clear all remote names state"""
-
-        self['bookmarks'] = {}
-        self['branches'] = {}
+        self['bookmarks'] = lazyremotenamedict("bookmarks", self._repo)
+        self['branches'] = lazyremotenamedict("branches", self._repo)
         self._invalidatecache()
         self._loadednames = False
 
@@ -231,43 +302,7 @@ class remotenames(dict):
         self._node2hoists = None
         self._node2branch = None
 
-    def _loadremotenames(self):
-
-        repo = self._repo
-        alias_default = repo.ui.configbool('remotenames', 'alias.default')
-        # About to repopulate remotenames, clear them out
-        self.clearnames()
-
-        for node, nametype, remote, rname in readremotenames(repo):
-            # handle alias_default here
-            if remote != "default" and rname == "default" and alias_default:
-                name = remote
-            else:
-                name = joinremotename(remote, rname)
-
-            binnode = bin(node)
-            # if the node doesn't exist, skip it
-            try:
-                repo.changelog.rev(binnode)
-            except LookupError:
-                continue
-
-            # Skip closed branches
-            if (nametype == 'branches' and _branchesenabled(repo.ui) and
-                    repo[binnode].closesbranch()):
-                continue
-
-            nodes = self[nametype].get(name, [])
-            nodes.append(binnode)
-            self[nametype][name] = nodes
-
-    def _loadremotenameslazily(self):
-        if not self._loadednames:
-            self._loadremotenames()
-            self._loadednames = True
-
     def mark2nodes(self):
-        self._loadremotenameslazily()
         return self['bookmarks']
 
     def node2marks(self):
@@ -301,7 +336,6 @@ class remotenames(dict):
         return self._node2hoists
 
     def branch2nodes(self):
-        self._loadremotenameslazily()
         return self['branches']
 
     def node2branch(self):
