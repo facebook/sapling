@@ -1,5 +1,11 @@
-import sys, os
-import osutil
+from __future__ import absolute_import
+
+import os
+import sys
+
+from . import (
+    osutil,
+)
 
 def _rcfiles(path):
     rcs = [os.path.join(path, 'hgrc')]

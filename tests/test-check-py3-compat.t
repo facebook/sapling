@@ -121,7 +121,6 @@
   mercurial/patch.py not using absolute_import
   mercurial/pvec.py not using absolute_import
   mercurial/py3kcompat.py not using absolute_import
-  mercurial/scmposix.py not using absolute_import
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
