@@ -498,9 +498,9 @@ Test command without options
       Differences between files are shown using the unified diff format.
   
       Note:
-         diff may generate unexpected results for merges, as it will default to
-         comparing against the working directory's first parent changeset if no
-         revisions are specified.
+         "hg diff" may generate unexpected results for merges, as it will
+         default to comparing against the working directory's first parent
+         changeset if no revisions are specified.
   
       When two revision arguments are given, then changes are shown between
       those revisions. If only one revision is specified then that revision is
@@ -558,10 +558,10 @@ Test command without options
       explicitly requested with -u/--unknown or -i/--ignored.
   
       Note:
-         status may appear to disagree with diff if permissions have changed or
-         a merge has occurred. The standard diff format does not report
-         permission changes and diff only reports changes relative to one merge
-         parent.
+         "hg status" may appear to disagree with diff if permissions have
+         changed or a merge has occurred. The standard diff format does not
+         report permission changes and diff only reports changes relative to one
+         merge parent.
   
       If one revision is given, it is used as the base revision. If two
       revisions are given, the differences between them are shown. The --change

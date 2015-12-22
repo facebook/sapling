@@ -542,7 +542,7 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
 
     .. note::
 
-       backout cannot be used to fix either an unwanted or
+       :hg:`backout` cannot be used to fix either an unwanted or
        incorrect merge.
 
     .. container:: verbose
@@ -3523,7 +3523,7 @@ def diff(ui, repo, *pats, **opts):
 
     .. note::
 
-       diff may generate unexpected results for merges, as it will
+       :hg:`diff` may generate unexpected results for merges, as it will
        default to comparing against the working directory's first
        parent changeset if no revisions are specified.
 
@@ -3614,7 +3614,7 @@ def export(ui, repo, *changesets, **opts):
 
     .. note::
 
-       export may generate unexpected diff output for merge
+       :hg:`export` may generate unexpected diff output for merge
        changesets, as it will compare the merge changeset against its
        first parent only.
 
@@ -4963,14 +4963,14 @@ def log(ui, repo, *pats, **opts):
 
     .. note::
 
-       log -p/--patch may generate unexpected diff output for merge
+       :hg:`log --patch` may generate unexpected diff output for merge
        changesets, as it will only compare the merge changeset against
        its first parent. Also, only files different from BOTH parents
        will appear in files:.
 
     .. note::
 
-       for performance reasons, log FILE may omit duplicate changes
+       For performance reasons, :hg:`log FILE` may omit duplicate changes
        made on branches and will not show removals or mode changes. To
        see all such changes, use the --removed switch.
 
@@ -6228,7 +6228,7 @@ def status(ui, repo, *pats, **opts):
 
     .. note::
 
-       status may appear to disagree with diff if permissions have
+       :hg:`status` may appear to disagree with diff if permissions have
        changed or a merge has occurred. The standard diff format does
        not report permission changes and diff only reports changes
        relative to one merge parent.
