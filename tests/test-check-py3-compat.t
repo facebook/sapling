@@ -98,7 +98,6 @@
   hgext/zeroconf/__init__.py not using absolute_import
   i18n/check-translation.py not using absolute_import
   i18n/polib.py not using absolute_import
-  mercurial/byterange.py not using absolute_import
   mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
   mercurial/context.py not using absolute_import

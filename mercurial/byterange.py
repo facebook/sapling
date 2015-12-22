@@ -17,11 +17,25 @@
 
 # $Id: byterange.py,v 1.9 2005/02/14 21:55:07 mstenner Exp $
 
+from __future__ import absolute_import
+
+import email
+import ftplib
+import mimetypes
 import os
+import re
+import socket
 import stat
 import urllib
 import urllib2
-import email.Utils
+
+addclosehook = urllib.addclosehook
+addinfourl = urllib.addinfourl
+splitattr = urllib.splitattr
+splitpasswd = urllib.splitpasswd
+splitport = urllib.splitport
+splituser = urllib.splituser
+unquote = urllib.unquote
 
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
@@ -196,8 +210,6 @@ class FileRangeHandler(urllib2.FileHandler):
     server would.
     """
     def open_local_file(self, req):
-        import mimetypes
-        import email
         host = req.get_host()
         file = req.get_selector()
         localfile = urllib.url2pathname(file)
@@ -233,13 +245,6 @@ class FileRangeHandler(urllib2.FileHandler):
 # Code modifications for range support have been commented as
 # follows:
 # -- range support modifications start/end here
-
-from urllib import splitport, splituser, splitpasswd, splitattr, \
-                   unquote, addclosehook, addinfourl
-import ftplib
-import socket
-import mimetypes
-import email
 
 class FTPRangeHandler(urllib2.FTPHandler):
     def ftp_open(self, req):
@@ -406,7 +411,6 @@ def range_header_to_tuple(range_header):
     if range_header is None:
         return None
     if _rangere is None:
-        import re
         _rangere = re.compile(r'^bytes=(\d{1,})-(\d*)')
     match = _rangere.match(range_header)
     if match:
