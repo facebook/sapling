@@ -123,7 +123,6 @@
   mercurial/py3kcompat.py not using absolute_import
   mercurial/scmposix.py not using absolute_import
   mercurial/scmutil.py not using absolute_import
-  mercurial/scmwindows.py not using absolute_import
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function

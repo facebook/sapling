@@ -1,7 +1,12 @@
-import os
-import osutil
-import util
+from __future__ import absolute_import
+
 import _winreg
+import os
+
+from . import (
+    osutil,
+    util,
+)
 
 def systemrcpath():
     '''return default os-specific hgrc search path'''
