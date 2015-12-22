@@ -5,9 +5,19 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import scmutil, util, parsers, error
-import os, stat, errno
+from __future__ import absolute_import
+
+import errno
+import os
+import stat
+
+from .i18n import _
+from . import (
+    error,
+    parsers,
+    scmutil,
+    util,
+)
 
 _sha = util.sha1
 
