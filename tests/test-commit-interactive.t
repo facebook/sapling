@@ -1116,7 +1116,7 @@ Mock "Preserve chmod +x"
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   22:0d463bd428f5
+  changeset:   24:c26cfe2c4eb0
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:20 1970 +0000
@@ -1152,7 +1152,7 @@ Mock "Preserve execute permission on original"
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   23:0eab41a3e524
+  changeset:   25:a48d2d60adde
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:21 1970 +0000
@@ -1181,7 +1181,7 @@ Mock "Preserve chmod -x"
   1 hunks, 1 lines changed
   examine changes to 'subdir/f1'? [Ynesfdaq?] y
   
-  @@ -2,3 +2,4 @@
+  @@ -2,3 +2,4 @@ a
    a
    a
    b
@@ -1190,7 +1190,7 @@ Mock "Preserve chmod -x"
   
 
   $ hg tip --config diff.git=True -p
-  changeset:   24:f4f718f27b7c
+  changeset:   26:5cc89ae210fa
   tag:         tip
   user:        test
   date:        Thu Jan 01 00:00:22 1970 +0000
