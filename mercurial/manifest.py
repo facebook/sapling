@@ -5,11 +5,21 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import mdiff, parsers, error, revlog, util
-import array, struct
-import os
+from __future__ import absolute_import
+
+import array
 import heapq
+import os
+import struct
+
+from .i18n import _
+from . import (
+    error,
+    mdiff,
+    parsers,
+    revlog,
+    util,
+)
 
 propertycache = util.propertycache
 
