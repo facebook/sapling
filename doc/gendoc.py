@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """usage: %s DOC ...
 
 where DOC is the name of a document
