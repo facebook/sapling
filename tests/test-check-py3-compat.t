@@ -117,7 +117,6 @@
   mercurial/lsprofcalltree.py requires print_function
   mercurial/mail.py requires print_function
   mercurial/manifest.py not using absolute_import
-  mercurial/patch.py not using absolute_import
   mercurial/pvec.py not using absolute_import
   mercurial/py3kcompat.py not using absolute_import
   setup.py not using absolute_import
