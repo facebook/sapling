@@ -418,7 +418,7 @@ timeouts
   > cat test-timeout.t >> test-slow-timeout.t
   $ rt --timeout=1 --slowtimeout=3 test-timeout.t test-slow-timeout.t
   st
-  Skipped test-slow-timeout.t: skipped
+  Skipped test-slow-timeout.t: missing feature: allow slow tests
   Failed test-timeout.t: timed out
   # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -460,7 +460,7 @@ Skips
   > EOF
   $ rt --nodiff
   !.s
-  Skipped test-skip.t: skipped
+  Skipped test-skip.t: missing feature: nail clipper
   Failed test-failure.t: output changed
   # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -468,14 +468,14 @@ Skips
 
   $ rt --keyword xyzzy
   .s
-  Skipped test-skip.t: skipped
+  Skipped test-skip.t: missing feature: nail clipper
   # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
 
 Skips with xml
   $ rt --keyword xyzzy \
   >  --xunit=xunit.xml
   .s
-  Skipped test-skip.t: skipped
+  Skipped test-skip.t: missing feature: nail clipper
   # Ran 2 tests, 2 skipped, 0 warned, 0 failed.
   $ cat xunit.xml
   <?xml version="1.0" encoding="utf-8"?>
@@ -510,7 +510,7 @@ test for --json
   
   ERROR: test-failure.t output changed
   !.s
-  Skipped test-skip.t: skipped
+  Skipped test-skip.t: missing feature: nail clipper
   Failed test-failure.t: output changed
   # Ran 2 tests, 1 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
@@ -558,7 +558,7 @@ Test that failed test accepted through interactive are properly reported:
    This is a noop statement so that
    this test is still more bytes than success.
   Accept this change? [n] ..s
-  Skipped test-skip.t: skipped
+  Skipped test-skip.t: missing feature: nail clipper
   # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
 
   $ cat report.json
@@ -673,7 +673,7 @@ test support for --allow-slow-tests
   > EOF
   $ rt $HGTEST_RUN_TESTS_PURE test-very-slow-test.t
   s
-  Skipped test-very-slow-test.t: skipped
+  Skipped test-very-slow-test.t: missing feature: allow slow tests
   # Ran 0 tests, 1 skipped, 0 warned, 0 failed.
   $ rt $HGTEST_RUN_TESTS_PURE --allow-slow-tests test-very-slow-test.t
   .

@@ -940,11 +940,11 @@ class TTest(Test):
             sys.exit(1)
 
         if ret != 0:
-            return False
+            return False, stdout
 
         if 'slow' in reqs:
             self._timeout = self._slowtimeout
-        return True
+        return True, None
 
     def _parsetest(self, lines):
         # We generate a shell script which outputs unique markers to line
@@ -989,8 +989,9 @@ class TTest(Test):
                 lsplit = l.split()
                 if len(lsplit) < 2 or lsplit[0] != b'#require':
                     after.setdefault(pos, []).append('  !!! invalid #require\n')
-                if not self._hghave(lsplit[1:]):
-                    script = [b"exit 80\n"]
+                haveresult, message = self._hghave(lsplit[1:])
+                if not haveresult:
+                    script = [b'echo "%s"\nexit 80\n' % message]
                     break
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b'#if'):
@@ -999,7 +1000,7 @@ class TTest(Test):
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
                 if skipping is not None:
                     after.setdefault(pos, []).append('  !!! nested #if\n')
-                skipping = not self._hghave(lsplit[1:])
+                skipping = not self._hghave(lsplit[1:])[0]
                 after.setdefault(pos, []).append(l)
             elif l.startswith(b'#else'):
                 if skipping is None:
