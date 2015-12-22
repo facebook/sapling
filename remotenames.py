@@ -26,6 +26,7 @@ from mercurial import exchange
 from mercurial import extensions
 from mercurial import hg
 from mercurial import localrepo
+from mercurial import lock as lockmod
 from mercurial import namespaces
 from mercurial import obsolete
 from mercurial import repoview
@@ -1220,7 +1221,14 @@ def transition(repo, ui):
     for mark in transmarks:
         if mark in localmarks:
             del localmarks[mark]
-    localmarks.write()
+    lock = tr = None
+    try:
+        lock = repo.lock()
+        tr = repo.transaction("remotenames")
+        localmarks.recordchange(tr)
+        tr.close()
+    finally:
+        lockmod.release(lock, tr)
 
     message = ui.config('remotenames', 'transitionmessage')
     if message:
