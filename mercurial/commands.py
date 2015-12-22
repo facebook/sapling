@@ -5750,8 +5750,10 @@ def remove(ui, repo, *pats, **opts):
       -Af       R  R  R  R
       ========= == == == ==
 
-      Note that remove never deletes files in Added [A] state from the
-      working directory, not even if option --force is specified.
+      .. note::
+
+         :hg:`remove` never deletes files in Added [A] state from the
+         working directory, not even if ``--force`` is specified.
 
     Returns 0 on success, 1 if any warnings encountered.
     """

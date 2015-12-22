@@ -2437,8 +2437,11 @@ Dish up an empty repo; serve it cold.
   <td>R</td></tr>
   </table>
   <p>
-  Note that remove never deletes files in Added [A] state from the
-  working directory, not even if option --force is specified.
+  <b>Note:</b> 
+  </p>
+  <p>
+  &quot;hg remove&quot; never deletes files in Added [A] state from the
+  working directory, not even if &quot;--force&quot; is specified.
   </p>
   <p>
   Returns 0 on success, 1 if any warnings encountered.
