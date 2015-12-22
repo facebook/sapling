@@ -5,25 +5,75 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, bin, nullhex, nullid, nullrev, short
-from lock import release
-from i18n import _
-import os, re, difflib, time, tempfile, errno, shlex
-import sys, socket
-import hg, scmutil, util, revlog, copies, error, bookmarks
-import patch, help, encoding, templatekw, discovery
-import archival, changegroup, cmdutil, hbisect
-import sshserver, hgweb
-import extensions
-import merge as mergemod
-import minirst, revset, fileset
-import dagparser, context, simplemerge, graphmod, copies
-import random, operator
-import setdiscovery, treediscovery, dagutil, pvec, localrepo, destutil
-import phases, obsolete, exchange, bundle2, repair, lock as lockmod
-import ui as uimod
-import streamclone
-import commandserver
+from __future__ import absolute_import
+
+import difflib
+import errno
+import operator
+import os
+import random
+import re
+import shlex
+import socket
+import sys
+import tempfile
+import time
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+    nullhex,
+    nullid,
+    nullrev,
+    short,
+)
+from . import (
+    archival,
+    bookmarks,
+    bundle2,
+    changegroup,
+    cmdutil,
+    commandserver,
+    context,
+    copies,
+    dagparser,
+    dagutil,
+    destutil,
+    discovery,
+    encoding,
+    error,
+    exchange,
+    extensions,
+    fileset,
+    graphmod,
+    hbisect,
+    help,
+    hg,
+    hgweb,
+    localrepo,
+    lock as lockmod,
+    merge as mergemod,
+    minirst,
+    obsolete,
+    patch,
+    phases,
+    pvec,
+    repair,
+    revlog,
+    revset,
+    scmutil,
+    setdiscovery,
+    simplemerge,
+    sshserver,
+    streamclone,
+    templatekw,
+    treediscovery,
+    ui as uimod,
+    util,
+)
+
+release = lockmod.release
 
 table = {}
 
@@ -2677,7 +2727,12 @@ def debuginstall(ui):
     ui.status(_("checking installed modules (%s)...\n")
               % os.path.dirname(__file__))
     try:
-        import bdiff, mpatch, base85, osutil
+        from . import (
+            base85,
+            bdiff,
+            mpatch,
+            osutil,
+        )
         dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
     except Exception as inst:
         ui.write(" %s\n" % inst)
@@ -2686,7 +2741,7 @@ def debuginstall(ui):
         problems += 1
 
     # templates
-    import templater
+    from . import templater
     p = templater.templatepaths()
     ui.status(_("checking templates (%s)...\n") % ' '.join(p))
     if p:
