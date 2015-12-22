@@ -133,7 +133,7 @@ def exclone(orig, ui, *args, **opts):
             try:
                 vfs = shareawarevfs(repo)
                 vfs.unlink('bookmarks')
-            except OSError, inst:
+            except OSError as inst:
                 if inst.errno != errno.ENOENT:
                     raise
         finally:
@@ -182,7 +182,7 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if book:
         del kwargs['bookmark']
         if book in repo._bookmarks:
-            raise util.Abort("bookmark '%s' already exists" % book)
+            raise error.Abort("bookmark '%s' already exists" % book)
         ret = orig(ui, repo, node=node, rev=rev, **kwargs)
         commands.bookmark(ui, repo, book)
 
@@ -606,7 +606,7 @@ def expushdiscoverybookmarks(pushop):
 
     if pushop.delete:
         if pushop.delete not in remotemarks:
-            raise util.Abort(_('remote bookmark %s does not exist') %
+            raise error.Abort(_('remote bookmark %s does not exist') %
                              pushop.delete)
         pushop.outbookmarks.append([pushop.delete, remotemarks[pushop.delete],
                                     ''])
@@ -646,7 +646,7 @@ def expushdiscoverybookmarks(pushop):
             if anonheads:
                 msg = _("push would create new anonymous heads (%s)")
                 hint = _("use --allow-anon to override this warning")
-                raise util.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
+                raise error.Abort(msg % ', '.join(sorted(anonheads)), hint=hint)
         return ret
 
     bookmark = pushop.bookmarks[0]
@@ -659,7 +659,7 @@ def expushdiscoverybookmarks(pushop):
     elif not pushop.create:
         msg = _('not creating new remote bookmark')
         hint = _('use --create to create a new bookmark')
-        raise util.Abort(msg, hint=hint)
+        raise error.Abort(msg, hint=hint)
 
     # allow non-fg bookmark move only if --non-forward-move is specified
     if not pushop.nonforwardmove and old != '':
@@ -668,12 +668,12 @@ def expushdiscoverybookmarks(pushop):
         if old not in repo:
             msg = _('remote bookmark revision is not in local repo')
             hint = _('pull and merge or rebase or use --non-forward-move')
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
         foreground = obsolete.foreground(repo, [repo.lookup(old)])
         if repo[rev].node() not in foreground:
             msg = _('pushed rev is not in the foreground of remote bookmark')
             hint = _('use --non-forward-move flag to complete arbitrary moves')
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
         if repo[old] == repo[rev]:
             repo.ui.status(_('remote bookmark already points at pushed rev\n'))
             return
@@ -696,7 +696,7 @@ def expullcmd(orig, ui, repo, source="default", **opts):
     source = revrenames.get(source, source)
 
     if opts.get('update') and opts.get('rebase'):
-        raise util.Abort(_('specify either rebase or update, not both'))
+        raise error.Abort(_('specify either rebase or update, not both'))
 
     if not opts.get('rebase'):
         return orig(ui, repo, source, **opts)
@@ -752,7 +752,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         if flag:
             msg = _('do not specify --delete and '
                     '--%s at the same time') % flag
-            raise util.Abort(msg)
+            raise error.Abort(msg)
         # we want to skip pushing any changesets while deleting a remote
         # bookmark, so we send the null revision
         opts['rev'] = ['null']
@@ -798,7 +798,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
         if ui.configbool('remotenames', 'forceto', False):
             msg = _('must specify --to when pushing')
             hint = _('see configuration option %s') % 'remotenames.forceto'
-            raise util.Abort(msg, hint=hint)
+            raise error.Abort(msg, hint=hint)
 
         if not revs:
             opts['rev'] = _pushrevs(repo, ui, None)
@@ -807,10 +807,10 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
 
     if opts.get('bookmark'):
         msg = _('do not specify --to/-t and --bookmark/-B at the same time')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
     if opts.get('branch'):
         msg = _('do not specify --to/-t and --branch/-b at the same time')
-        raise util.Abort(msg)
+        raise error.Abort(msg)
 
     if revs:
         revs = [repo.lookup(r) for r in scmutil.revrange(repo, revs)]
@@ -819,7 +819,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     if len(revs) != 1:
         msg = _('--to requires exactly one rev to push')
         hint = _('use --rev BOOKMARK or omit --rev for current commit (.)')
-        raise util.Abort(msg, hint=hint)
+        raise error.Abort(msg, hint=hint)
     rev = revs[0]
 
     # big can o' copypasta from commands.push
@@ -830,7 +830,7 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     except error.RepoError:
         if dest == "default-push":
             hint = _('see the "path" section in "hg help config"')
-            raise util.Abort(_("default repository not configured!"),
+            raise error.Abort(_("default repository not configured!"),
                              hint=hint)
         else:
             raise
@@ -958,19 +958,19 @@ def exbookmarks(orig, ui, repo, *args, **opts):
         for name in args:
             if name in disallowed:
                 msg = _("bookmark '%s' not allowed by configuration")
-                raise util.Abort(msg % name)
+                raise error.Abort(msg % name)
 
     if untrack:
         if track:
             msg = _('do not specify --untrack and --track at the same time')
-            raise util.Abort(msg)
+            raise error.Abort(msg)
         _removetracking(repo, args)
         return
 
     if delete or rename or args or inactive:
         if delete and track:
             msg = _('do not specifiy --track and --delete at the same time')
-            raise util.Abort(msg)
+            raise error.Abort(msg)
 
         ret = orig(ui, repo, *args, **opts)
 
@@ -1268,14 +1268,18 @@ def transition(repo, ui):
     if message:
         ui.warn(message + '\n')
 
-def saveremotenames(repo, remotepath, branches={}, bookmarks={}):
+def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
     vfs = shareawarevfs(repo)
     wlock = repo.wlock()
+    if branches is None:
+        branches = {}
+    if bookmarks is None:
+        bookmarks = {}
     try:
         # delete old files
         try:
             vfs.unlink('remotedistance')
-        except OSError, inst:
+        except OSError as inst:
             if inst.errno != errno.ENOENT:
                 raise
 
@@ -1371,12 +1375,12 @@ def invalidatedistancecache(repo):
             shutil.rmtree(vfs.join('cache/distance'))
         else:
             vfs.unlink('cache/distance')
-    except (OSError, IOError), inst:
+    except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
     try:
         vfs.unlink('cache/distance.current')
-    except (OSError, IOError), inst:
+    except (OSError, IOError) as inst:
         if inst.errno != errno.ENOENT:
             error = True
 
