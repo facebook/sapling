@@ -105,7 +105,6 @@
   mercurial/dirstate.py not using absolute_import
   mercurial/dispatch.py requires print_function
   mercurial/exchange.py not using absolute_import
-  mercurial/help.py not using absolute_import
   mercurial/httpclient/__init__.py not using absolute_import
   mercurial/httpclient/_readers.py not using absolute_import
   mercurial/httpclient/socketutil.py not using absolute_import

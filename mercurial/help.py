@@ -5,14 +5,33 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import gettext, _
-import itertools, os, textwrap
-import error
-import extensions, revset, fileset, templatekw, templatefilters, filemerge
-import templater
-import encoding, util, minirst
-import cmdutil
-import hgweb.webcommands as webcommands
+from __future__ import absolute_import
+
+import itertools
+import os
+import textwrap
+
+from .i18n import (
+    _,
+    gettext,
+)
+from . import (
+    cmdutil,
+    encoding,
+    error,
+    extensions,
+    filemerge,
+    fileset,
+    minirst,
+    revset,
+    templatefilters,
+    templatekw,
+    templater,
+    util,
+)
+from .hgweb import (
+    webcommands,
+)
 
 _exclkeywords = [
     "(DEPRECATED)",
@@ -111,7 +130,7 @@ def topicmatch(ui, kw):
             or lowercontains(header)
             or (callable(doc) and lowercontains(doc(ui)))):
             results['topics'].append((names[0], header))
-    import commands # avoid cycle
+    from . import commands # avoid cycle
     for cmd, entry in commands.table.iteritems():
         if len(entry) == 3:
             summary = entry[2]
@@ -268,7 +287,7 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
     'name' is None, describe the commands available.
     '''
 
-    import commands # avoid cycle
+    from . import commands # avoid cycle
 
     def helpcmd(name, subtopic=None):
         try:
