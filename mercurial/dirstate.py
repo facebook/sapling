@@ -5,11 +5,24 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import nullid
-from i18n import _
-import scmutil, util, osutil, parsers, encoding, pathutil, error
-import os, stat, errno
-import match as matchmod
+from __future__ import absolute_import
+
+import errno
+import os
+import stat
+
+from .i18n import _
+from .node import nullid
+from . import (
+    encoding,
+    error,
+    match as matchmod,
+    osutil,
+    parsers,
+    pathutil,
+    scmutil,
+    util,
+)
 
 propertycache = util.propertycache
 filecache = scmutil.filecache
