@@ -5,9 +5,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import builtins
+from __future__ import absolute_import
 
-from numbers import Number
+import builtins
+import numbers
+
+Number = numbers.Number
 
 def bytesformatter(format, args):
     '''Custom implementation of a formatter for bytestrings.
