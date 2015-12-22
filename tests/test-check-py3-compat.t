@@ -105,7 +105,6 @@
   mercurial/httpclient/__init__.py not using absolute_import
   mercurial/httpclient/_readers.py not using absolute_import
   mercurial/httpclient/socketutil.py not using absolute_import
-  mercurial/httpconnection.py not using absolute_import
   mercurial/keepalive.py requires print_function
   mercurial/localrepo.py not using absolute_import
   mercurial/lsprof.py requires print_function

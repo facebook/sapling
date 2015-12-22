@@ -7,16 +7,21 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+
+from __future__ import absolute_import
+
 import logging
+import os
 import socket
 import urllib
 import urllib2
-import os
 
-from mercurial import httpclient
-from mercurial import sslutil
-from mercurial import util
-from mercurial.i18n import _
+from .i18n import _
+from . import (
+    httpclient,
+    sslutil,
+    util,
+)
 
 # moved here from url.py to avoid a cycle
 class httpsendfile(object):
