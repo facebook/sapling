@@ -48,8 +48,13 @@ Uses:
   different branches
 '''
 
-import base85, util
-from node import nullrev
+from __future__ import absolute_import
+
+from .node import nullrev
+from . import (
+    base85,
+    util,
+)
 
 _size = 448 # 70 chars b85-encoded
 _bytes = _size / 8
