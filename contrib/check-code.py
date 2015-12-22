@@ -114,6 +114,7 @@ testpats = [
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
     (r'^stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
+    (r'\[\[\s+[^\]]*\]\]', "don't use '[[ ]]', use '[ ]'"),
     (r'^alias\b.*=', "don't use alias, use a function"),
     (r'if\s*!', "don't use '!' to negate exit status"),
     (r'/dev/u?random', "don't use entropy, use /dev/zero"),
@@ -122,6 +123,9 @@ testpats = [
     (r'sed (-e )?\'(\d+|/[^/]*/)i(?!\\\n)',
      "put a backslash-escaped newline after sed 'i' command"),
     (r'^diff *-\w*u.*$\n(^  \$ |^$)', "prefix diff -u with cmp"),
+    (r'seq ', "don't use 'seq', use $TESTDIR/seq.py"),
+    (r'\butil\.Abort\b', "directly use error.Abort"),
+    (r'\|&', "don't use |&, use 2>&1"),
   ],
   # warnings
   [
@@ -195,7 +199,6 @@ utestfilters = [
 
 pypats = [
   [
-    (r'\([^)]*\*\w[^()]+\w+=', "can't pass varargs with keyword in Py2.5"),
     (r'^\s*def\s*\w+\s*\(.*,\s*\(',
      "tuple parameter unpacking not available in Python 3+"),
     (r'lambda\s*\(.*,.*\)',
@@ -216,14 +219,6 @@ pypats = [
     (r'(\w|\)),\w', "missing whitespace after ,"),
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
-    (r'(\s+)try:\n((?:\n|\1\s.*\n)+?)(\1except.*?:\n'
-     r'((?:\n|\1\s.*\n)+?))+\1finally:',
-     'no try/except/finally in Python 2.4'),
-    (r'(?<!def)(\s+|^|\()next\(.+\)',
-     'no next(foo) in Python 2.4 and 2.5, use foo.next() instead'),
-    (r'(\s+)try:\n((?:\n|\1\s.*\n)*?)\1\s*yield\b.*?'
-     r'((?:\n|\1\s.*\n)+?)\1finally:',
-     'no yield inside try/finally in Python 2.4'),
     (r'.{81}', "line too long"),
     (r' x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
@@ -236,8 +231,9 @@ pypats = [
      "linebreak after :"),
     (r'class\s[^( \n]+:', "old-style class, use class foo(object)"),
     (r'class\s[^( \n]+\(\):',
-     "class foo() not available in Python 2.4, use class foo(object)"),
-    (r'\b(%s)\(' % '|'.join(keyword.kwlist),
+     "class foo() creates old style object, use class foo(object)"),
+    (r'\b(%s)\(' % '|'.join(k for k in keyword.kwlist
+                            if k not in ('print', 'exec')),
      "Python keyword is not a function"),
     (r',]', "unneeded trailing ',' in list"),
 #    (r'class\s[A-Z][^\(]*\((?!Exception)',
@@ -245,14 +241,7 @@ pypats = [
 #    (r'in range\(', "use xrange"),
 #    (r'^\s*print\s+', "avoid using print in core and extensions"),
     (r'[\x80-\xff]', "non-ASCII character literal"),
-    (r'("\')\.format\(', "str.format() not available in Python 2.4"),
-    (r'^\s*with\s+', "with not available in Python 2.4"),
-    (r'\.isdisjoint\(', "set.isdisjoint not available in Python 2.4"),
-    (r'^\s*except.* as .*:', "except as not available in Python 2.4"),
-    (r'^\s*os\.path\.relpath', "relpath not available in Python 2.4"),
-    (r'(?<!def)\s+(any|all|format)\(',
-     "any/all/format not available in Python 2.4", 'no-py24'),
-    (r'if\s.*\selse', "if ... else form not available in Python 2.4"),
+    (r'("\')\.format\(', "str.format() has no bytes counterpart, use %"),
     (r'^\s*(%s)\s\s' % '|'.join(keyword.kwlist),
      "gratuitous whitespace after Python keyword"),
     (r'([\(\[][ \t]\S)|(\S[ \t][\)\]])', "gratuitous whitespace in () or []"),
@@ -279,8 +268,6 @@ pypats = [
      'hasattr(foo, bar) is broken, use util.safehasattr(foo, bar) instead'),
     (r'opener\([^)]*\).read\(',
      "use opener.read() instead"),
-    (r'BaseException', 'not in Python 2.4, use Exception'),
-    (r'os\.path\.relpath', 'os.path.relpath is not in Python 2.5'),
     (r'opener\([^)]*\).write\(',
      "use opener.write() instead"),
     (r'[\s\(](open|file)\([^)]*\)\.read\(',
@@ -295,11 +282,19 @@ pypats = [
     (r'\.debug\(\_', "don't mark debug messages for translation"),
     (r'\.strip\(\)\.split\(\)', "no need to strip before splitting"),
     (r'^\s*except\s*:', "naked except clause", r'#.*re-raises'),
+    (r'^\s*except\s([^\(,]+|\([^\)]+\))\s*,',
+     'legacy exception syntax; use "as" instead of ","'),
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "missing _() in ui message (use () to hide false-positives)"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
     (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
+    (r'os\.path\.join\(.*, *(""|\'\')\)',
+     "use pathutil.normasprefix(path) instead of os.path.join(path, '')"),
+    (r'\s0[0-7]+\b', 'legacy octal syntax; use "0o" prefix instead of "0"'),
+    # XXX only catch mutable arguments on the first line of the definition
+    (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
+    (r'\butil\.Abort\b', "directly use error.Abort"),
   ],
   # warnings
   [
@@ -334,6 +329,7 @@ cpats = [
     (r'(while|if|do|for)\(', "use space after while/if/do/for"),
     (r'return\(', "return is not a function"),
     (r' ;', "no space before ;"),
+    (r'[^;] \)', "no space before )"),
     (r'[)][{]', "space between ) and {"),
     (r'\w+\* \w+', "use int *foo, not int* foo"),
     (r'\W\([^\)]+\) \w+', "use (int)foo, not (int) foo"),
@@ -465,7 +461,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
     try:
         fp = open(f)
-    except IOError, e:
+    except IOError as e:
         print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
         return result
     pre = post = fp.read()
