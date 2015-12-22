@@ -1458,9 +1458,12 @@ def clone(ui, source, dest=None, **opts):
     identifiers with -r/--rev or branches with -b/--branch. The
     resulting clone will contain only the specified changesets and
     their ancestors. These options (or 'clone src#rev dest') imply
-    --pull, even for local source repositories. Note that specifying a
-    tag will include the tagged changeset but not the changeset
-    containing the tag.
+    --pull, even for local source repositories.
+
+    .. note::
+
+       Specifying a tag will include the tagged changeset but not the
+       changeset containing the tag.
 
     If the source repository has a bookmark called '@' set, that
     revision will be checked out in the new repository by default.
@@ -5357,10 +5360,13 @@ def paths(ui, repo, search=None):
     When ``default-push`` is set, it will be used for push and
     ``default`` will be used for pull; otherwise ``default`` is used
     as the fallback for both.  When cloning a repository, the clone
-    source is written as ``default`` in ``.hg/hgrc``.  Note that
-    ``default`` and ``default-push`` apply to all inbound (e.g.
-    :hg:`incoming`) and outbound (e.g. :hg:`outgoing`, :hg:`email` and
-    :hg:`bundle`) operations.
+    source is written as ``default`` in ``.hg/hgrc``.
+
+    .. note::
+
+       ``default`` and ``default-push`` apply to all inbound (e.g.
+       :hg:`incoming`) and outbound (e.g. :hg:`outgoing`, :hg:`email`
+       and :hg:`bundle`) operations.
 
     See :hg:`help urls` for more information.
 
@@ -5833,9 +5839,11 @@ def resolve(ui, repo, *pats, **opts):
     - :hg:`resolve -l`: list files which had or still have conflicts.
       In the printed list, ``U`` = unresolved and ``R`` = resolved.
 
-    Note that Mercurial will not let you commit files with unresolved
-    merge conflicts. You must use :hg:`resolve -m ...` before you can
-    commit after a conflicting merge.
+    .. note::
+
+       Mercurial will not let you commit files with unresolved merge
+       conflicts. You must use :hg:`resolve -m ...` before you can
+       commit after a conflicting merge.
 
     Returns 0 on success, 1 if any files fail a resolve attempt.
     """
