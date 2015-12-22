@@ -111,7 +111,6 @@
   mercurial/keepalive.py requires print_function
   mercurial/localrepo.py not using absolute_import
   mercurial/lsprof.py requires print_function
-  mercurial/lsprofcalltree.py not using absolute_import
   mercurial/lsprofcalltree.py requires print_function
   mercurial/mail.py requires print_function
   setup.py not using absolute_import
