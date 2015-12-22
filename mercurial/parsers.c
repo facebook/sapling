@@ -547,6 +547,44 @@ quit:
 }
 
 /*
+ * Build a set of non-normal entries from the dirstate dmap
+*/
+static PyObject *nonnormalentries(PyObject *self, PyObject *args)
+{
+	PyObject *dmap, *nonnset = NULL, *fname, *v;
+	Py_ssize_t pos;
+
+	if (!PyArg_ParseTuple(args, "O!:nonnormalentries",
+			      &PyDict_Type, &dmap))
+		goto bail;
+
+	nonnset = PySet_New(NULL);
+	if (nonnset == NULL)
+		goto bail;
+
+	pos = 0;
+	while (PyDict_Next(dmap, &pos, &fname, &v)) {
+		dirstateTupleObject *t;
+		if (!dirstate_tuple_check(v)) {
+			PyErr_SetString(PyExc_TypeError,
+					"expected a dirstate tuple");
+			goto bail;
+		}
+		t = (dirstateTupleObject *)v;
+
+		if (t->state == 'n' && t->mtime != -1)
+			continue;
+		if (PySet_Add(nonnset, fname) == -1)
+			goto bail;
+	}
+
+	return nonnset;
+bail:
+	Py_XDECREF(nonnset);
+	return NULL;
+}
+
+/*
  * Efficiently pack a dirstate object into its on-disk format.
  */
 static PyObject *pack_dirstate(PyObject *self, PyObject *args)
@@ -2740,6 +2778,8 @@ PyObject *lowerencode(PyObject *self, PyObject *args);
 
 static PyMethodDef methods[] = {
 	{"pack_dirstate", pack_dirstate, METH_VARARGS, "pack a dirstate\n"},
+	{"nonnormalentries", nonnormalentries, METH_VARARGS,
+	"create a set containing non-normal entries of given dirstate\n"},
 	{"parse_manifest", parse_manifest, METH_VARARGS, "parse a manifest\n"},
 	{"parse_dirstate", parse_dirstate, METH_VARARGS, "parse a dirstate\n"},
 	{"parse_index2", parse_index2, METH_VARARGS, "parse a revlog index\n"},
