@@ -871,8 +871,21 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
 def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
 
-    This command edits changesets between an ANCESTOR and the parent of
-    the working directory.
+    This command lets you edit a linear series of changesets (up to
+    and including the working directory, which should be clean).
+    You can::
+
+    - `pick` to [re]order a changeset
+
+    - `drop` to omit changeset
+
+    - `mess` to reword the changeset commit message
+
+    - `fold` to combine it with the preceding changeset
+
+    - `roll` like fold, but discarding this commit's description
+
+    - `edit` to edit this changeset
 
     The value from the "histedit.defaultrev" config option is used as a
     revset to select the base revision when ANCESTOR is not specified.
