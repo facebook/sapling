@@ -5,17 +5,37 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import re
+from __future__ import absolute_import
 
-from node import nullid, nullrev, wdirid, short, hex, bin
-from i18n import _
-import mdiff, error, util, scmutil, subrepo, patch, encoding, phases
-import match as matchmod
-import os, errno, stat
-import obsolete as obsmod
-import repoview
-import fileset
-import revlog
+import errno
+import os
+import re
+import stat
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+    short,
+    wdirid,
+)
+from . import (
+    encoding,
+    error,
+    fileset,
+    match as matchmod,
+    mdiff,
+    obsolete as obsmod,
+    patch,
+    phases,
+    repoview,
+    revlog,
+    scmutil,
+    subrepo,
+    util,
+)
 
 propertycache = util.propertycache
 
