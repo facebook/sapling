@@ -1149,8 +1149,6 @@ class paths(dict):
                 raise error.RepoError(_('repository %s does not exist') %
                                         name)
 
-        assert False
-
 _pathsuboptions = {}
 
 def pathsuboption(option, attr):
