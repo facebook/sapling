@@ -4607,9 +4607,12 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     by hand before :hg:`commit --amend` is run to update the created
     changeset. This flag exists to let people import patches that
     partially apply without losing the associated metadata (author,
-    date, description, ...). Note that when none of the hunk applies
-    cleanly, :hg:`import --partial` will create an empty changeset,
-    importing only the patch metadata.
+    date, description, ...).
+
+    .. note::
+
+       When no hunks apply cleanly, :hg:`import --partial` will create
+       an empty changeset, importing only the patch metadata.
 
     With -s/--similarity, hg will attempt to discover renames and
     copies in the patch in the same way as :hg:`addremove`.
