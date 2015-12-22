@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # fixpax - fix ownership in bdist_mpkg output
 #
 # Copyright 2015 Matt Mackall <mpm@selenic.com>
