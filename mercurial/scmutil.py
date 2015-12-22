@@ -5,17 +5,34 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-from mercurial.node import wdirrev
-import util, error, osutil, revset, similar, encoding, phases
-import pathutil
-import match as matchmod
-import os, errno, re, glob, tempfile, shutil, stat
+from __future__ import absolute_import
+
+import errno
+import glob
+import os
+import re
+import shutil
+import stat
+import tempfile
+
+from .i18n import _
+from .node import wdirrev
+from . import (
+    encoding,
+    error,
+    match as matchmod,
+    osutil,
+    pathutil,
+    phases,
+    revset,
+    similar,
+    util,
+)
 
 if os.name == 'nt':
-    import scmwindows as scmplatform
+    from . import scmwindows as scmplatform
 else:
-    import scmposix as scmplatform
+    from . import scmposix as scmplatform
 
 systemrcpath = scmplatform.systemrcpath
 userrcpath = scmplatform.userrcpath
