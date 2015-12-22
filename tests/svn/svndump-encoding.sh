@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 #!/bin/sh
+# -*- coding: utf-8 -*-
 #
 # Use this script to generate encoding.svndump
 #
