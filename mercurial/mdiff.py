@@ -5,9 +5,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-import bdiff, mpatch, util, base85, error
-import re, struct, zlib
+from __future__ import absolute_import
+
+import re
+import struct
+import zlib
+
+from .i18n import _
+from . import (
+    base85,
+    bdiff,
+    error,
+    mpatch,
+    util,
+)
 
 def splitnewlines(text):
     '''like str.splitlines, but only split on newlines.'''
