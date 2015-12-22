@@ -5164,7 +5164,7 @@ def merge(ui, repo, node=None, **opts):
     head, the other head is merged with by default. Otherwise, an
     explicit revision with which to merge with must be provided.
 
-    :hg:`resolve` must be used to resolve unresolved files.
+    See :hg:`help resolve` for information on handling file conflicts.
 
     To undo an uncommitted merge, use :hg:`update --clean .` which
     will check out a clean copy of the original merge parent, losing
