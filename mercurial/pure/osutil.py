@@ -105,7 +105,7 @@ if os.name != 'nt':
 
     _libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
     _recvmsg = _libc.recvmsg
-    _recvmsg.restype = ctypes.c_ssize_t
+    _recvmsg.restype = getattr(ctypes, 'c_ssize_t', ctypes.c_long)
     _recvmsg.argtypes = (ctypes.c_int, ctypes.POINTER(_msghdr), ctypes.c_int)
 
     def _CMSG_FIRSTHDR(msgh):
