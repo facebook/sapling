@@ -78,12 +78,8 @@ class ResponseExpected(Abort):
         from .i18n import _
         Abort.__init__(self, _('response expected'))
 
-class OutOfBandError(Exception):
+class OutOfBandError(HintException):
     """Exception raised when a remote repo reports failure"""
-
-    def __init__(self, *args, **kw):
-        Exception.__init__(self, *args)
-        self.hint = kw.get('hint')
 
 class ParseError(Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
