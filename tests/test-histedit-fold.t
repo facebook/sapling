@@ -293,7 +293,8 @@ folded content is dropped during a merge. The folded commit should properly disa
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (fold 251d831eeec5)
+  (hg histedit --continue to resume)
   [1]
 There were conflicts, we keep P1 content. This
 should effectively drop the changes from +6.
@@ -354,7 +355,8 @@ dropped revision.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging file
   warning: conflicts while merging file! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (fold 251d831eeec5)
+  (hg histedit --continue to resume)
   [1]
   $ cat > file << EOF
   > 1

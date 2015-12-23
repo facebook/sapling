@@ -72,7 +72,8 @@ edit the history
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick e860deea161a)
+  (hg histedit --continue to resume)
 
 insert unsupported advisory merge record
   $ hg --config extensions.fakemergerecord=$TESTDIR/fakemergerecord.py fakemergerecord -x

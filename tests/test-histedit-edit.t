@@ -74,8 +74,8 @@ edit the history
   > pick 3c6a8ed2ebe8 g
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (e860deea161a), you may commit or record as needed now.
+  (hg histedit --continue to resume)
 
 edit the plan via the editor
   $ cat >> $TESTTMP/editplan.sh <<EOF
@@ -198,8 +198,8 @@ Stripping necessary commits should not break --abort
   > pick b5f70786f9b0 g
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (1a60820cd1f6), you may commit or record as needed now.
+  (hg histedit --continue to resume)
 
   $ mv .hg/histedit-state .hg/histedit-state.bak
   $ hg strip -q -r b5f70786f9b0
@@ -240,8 +240,8 @@ check histedit_source
   > edit b5f70786f9b0 f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (b5f70786f9b0), you may commit or record as needed now.
+  (hg histedit --continue to resume)
   $ hg status
   A f
 
@@ -432,8 +432,8 @@ rollback should not work after a histedit
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   adding a
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (cb9a9f314b8b), you may commit or record as needed now.
+  (hg histedit --continue to resume)
   [1]
   $ HGEDITOR=true hg histedit --continue
   saved backup bundle to $TESTTMP/r0/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)

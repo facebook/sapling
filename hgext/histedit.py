@@ -423,8 +423,10 @@ class histeditaction(object):
         hg.update(repo, self.state.parentctxnode, quietempty=True)
         stats = applychanges(repo.ui, repo, rulectx, {})
         if stats and stats[3] > 0:
-            raise error.InterventionRequired(_('Fix up the change and run '
-                                            'hg histedit --continue'))
+            raise error.InterventionRequired(
+                _('Fix up the change (%s %s)') %
+                (self.verb, node.short(self.node)),
+                hint=_('hg histedit --continue to resume'))
 
     def continuedirty(self):
         """Continues the action when changes have been applied to the working
@@ -616,9 +618,9 @@ class edit(histeditaction):
         hg.update(repo, self.state.parentctxnode, quietempty=True)
         applychanges(repo.ui, repo, rulectx, {})
         raise error.InterventionRequired(
-            _('Make changes as needed, you may commit or record as needed '
-              'now.\nWhen you are finished, run hg histedit --continue to '
-              'resume.'))
+            _('Editing (%s), you may commit or record as needed now.')
+            % node.short(self.node),
+            hint=_('hg histedit --continue to resume'))
 
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.edit')

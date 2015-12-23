@@ -128,8 +128,8 @@ temporarily.
   > EOF
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   reverting alpha
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (08d98a8350f3), you may commit or record as needed now.
+  (hg histedit --continue to resume)
   [1]
 
   $ mv .hg/histedit-state .hg/histedit-state.back
@@ -308,8 +308,8 @@ Test --continue with --keep
   > edit eb57da33312f 2 three
   > pick f3cfcca30c44 4 x
   > EOF
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (eb57da33312f), you may commit or record as needed now.
+  (hg histedit --continue to resume)
   [1]
   $ echo edit >> alpha
   $ hg histedit -q --continue
@@ -335,8 +335,8 @@ Test that abort fails gracefully on exception
   $ hg histedit . -q --commands - << EOF
   > edit 8fda0c726bf2 6 x
   > EOF
-  Make changes as needed, you may commit or record as needed now.
-  When you are finished, run hg histedit --continue to resume.
+  Editing (8fda0c726bf2), you may commit or record as needed now.
+  (hg histedit --continue to resume)
   [1]
 Corrupt histedit state file
   $ sed 's/8fda0c726bf2/123456789012/' .hg/histedit-state > ../corrupt-histedit

@@ -146,7 +146,8 @@ Abort
   > EOF
   merging B
   warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick 591369deedfd)
+  (hg histedit --continue to resume)
   $ hg histedit --abort | fixbundle
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg tglog
@@ -174,7 +175,8 @@ Continue
   > EOF
   merging B
   warning: conflicts while merging B! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick 591369deedfd)
+  (hg histedit --continue to resume)
   $ echo b2 > B
   $ hg resolve --mark B
   (no more unresolved files)

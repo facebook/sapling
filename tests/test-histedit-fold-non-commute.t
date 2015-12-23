@@ -89,7 +89,8 @@ edit the history
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (fold 39522b764e3d)
+  (hg histedit --continue to resume)
 
 fix up
   $ echo 'I can haz no commute' > e
@@ -123,7 +124,8 @@ fix up
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick 7b4e2f4b7bcd)
+  (hg histedit --continue to resume)
 
 just continue this time
   $ hg revert -r 'p1()' e
@@ -251,7 +253,8 @@ edit the history
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (roll 39522b764e3d)
+  (hg histedit --continue to resume)
 
 fix up
   $ echo 'I can haz no commute' > e
@@ -263,7 +266,8 @@ fix up
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick 7b4e2f4b7bcd)
+  (hg histedit --continue to resume)
 
 just continue this time
   $ hg revert -r 'p1()' e
