@@ -3,7 +3,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > username = nobody <no.reply@fb.com>
-  > ssh = python "$TESTDIR/dummyssh"
+  > ssh = python "$RUNTESTDIR/dummyssh"
   > [experimental]
   > evolution= all
   > rebaseskipobsolete=True
