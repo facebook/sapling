@@ -232,7 +232,8 @@ base on a previously picked changeset
   > base d273e35dcdf2 B
   > pick b2f90fd8aa85 I
   > EOF
-  hg: parse error: may not use "base" with changesets within the edited list
+  hg: parse error: base "643237336533" changeset was not an edited list candidate
+  (only use listed changesets)
 
   $ hg --config experimental.histeditng=False histedit 5 --commands - 2>&1 << EOF | fixbundle
   > base cd010b8cd998 A

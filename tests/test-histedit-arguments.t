@@ -171,7 +171,8 @@ Test that extra revisions are detected
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  hg: parse error: may not use "pick" with changesets other than the ones listed
+  hg: parse error: pick "363035386362" changeset was not a candidate
+  (only use listed changesets)
   [255]
 
 Test malformed line

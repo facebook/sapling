@@ -1302,12 +1302,14 @@ def verifyactions(actions, state, ctxs):
             ha = node.hex(nodetoverify)
             if _constraints.noother in constraints and ha not in expected:
                 raise error.ParseError(
-                    _('may not use "%s" with changesets '
-                      'other than the ones listed') % action.verb)
+                    _('%s "%s" changeset was not a candidate')
+                     % (action.verb, node.short(ha)),
+                    hint=_('only use listed changesets'))
             if _constraints.forceother in constraints and ha in expected:
                 raise error.ParseError(
-                    _('may not use "%s" with changesets '
-                      'within the edited list') % action.verb)
+                    _('%s "%s" changeset was not an edited list candidate')
+                     % (action.verb, node.short(ha)),
+                    hint=_('only use listed changesets'))
             if _constraints.noduplicates in constraints and ha in seen:
                 raise error.ParseError(_(
                         'duplicated command for changeset %s') %

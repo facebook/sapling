@@ -282,7 +282,8 @@ try with --rev
   > pick de71b079d9ce e
   > pick 38b92f448761 c
   > EOF
-  hg: parse error: may not use "pick" with changesets other than the ones listed
+  hg: parse error: pick "646537316230" changeset was not a candidate
+  (only use listed changesets)
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
   |  tag:         tip
