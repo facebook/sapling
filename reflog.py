@@ -111,7 +111,7 @@ def recorddirstateparents(orig, self, tr=False):
         if l == 40:
             oldparents = [st[:20]]
             oldparents.append(st[20:40])
-    except IOError, err:
+    except IOError as err:
         pass
 
     parents = self.parents()
@@ -189,7 +189,7 @@ def reflog(ui, repo, *args, **opts):
     fm.end()
 
     if count == 0:
-        ui.status("no recorded locations\n")
+        ui.status(_("no recorded locations\n"))
 
 class reflog(object):
     def __init__(self, repo, command):
