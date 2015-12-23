@@ -15,11 +15,9 @@
 # will result in both HG_USERVAR_BYPASS_REVIEWERS and HG_USERVAR_DEBUG
 # available to the hook environment.
 
-from mercurial import bundle2, cmdutil, exchange, extensions, hg
-from mercurial import util, error, commands
+from mercurial import bundle2, cmdutil, exchange, extensions
+from mercurial import error, commands
 from mercurial.i18n import _
-from mercurial.extensions import _order
-import errno, urllib
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -32,10 +30,10 @@ def _getbundlesendvars(pushop, bundler):
         for entry in pushop.repo._shellvars:
             try:
                 key, value = entry.split('=', 1)
-            except Exception, e:
-                raise util.Abort(
+            except Exception as e:
+                raise error.Abort(
                     _('passed in variable needs to be of form var= or var=val. '
-                      'Instead, this was given "%s"' % entry))
+                      'Instead, this was given "%s"') % entry)
             part.addparam(key, value, mandatory=False)
 
 # Ugly hack suggested by pyd to ensure pushvars part comes before
@@ -57,11 +55,11 @@ def bundle2getvars(op, part):
         tr.hookargs[key] = value
 
 def push(orig, ui, repo, *args, **opts):
-  repo._shellvars = opts['pushvars']
-  try:
-    return orig(ui, repo, *args, **opts)
-  finally:
-    del repo._shellvars
+    repo._shellvars = opts['pushvars']
+    try:
+        return orig(ui, repo, *args, **opts)
+    finally:
+        del repo._shellvars
 
 def uisetup(ui):
     # remotenames circumvents the default push implementation entirely, so make
@@ -73,4 +71,5 @@ def uisetup(ui):
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'push', push)
-    entry[1].append(('', 'pushvars', [], "variables that can be sent to the server"))
+    entry[1].append(('', 'pushvars', [],
+                    "variables that can be sent to the server"))
