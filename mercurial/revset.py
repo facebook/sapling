@@ -448,7 +448,8 @@ def notset(repo, subset, x):
     return subset - getset(repo, subset, x)
 
 def listset(repo, subset, a, b):
-    raise error.ParseError(_("can't use a list in this context"))
+    raise error.ParseError(_("can't use a list in this context"),
+                           hint=_('see hg help "revsets.x or y"'))
 
 def keyvaluepair(repo, subset, k, v):
     raise error.ParseError(_("can't use a key-value pair in this context"))

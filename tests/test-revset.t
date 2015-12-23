@@ -1163,6 +1163,12 @@ test '0000' != '0' in `_list`
   0
   -1
 
+test ',' in `_list`
+  $ log '0,1'
+  hg: parse error: can't use a list in this context
+  (see hg help "revsets.x or y")
+  [255]
+
 test that chained `or` operations make balanced addsets
 
   $ try '0:1|1:2|2:3|3:4|4:5'
