@@ -77,6 +77,26 @@ edit the history
 
   $ EDITED="$TESTTMP/editedhistory"
   $ cat > $EDITED <<EOF
+  > edit 177f92b77385 c
+  > pick e860deea161a e
+  > pick 652413bf663e f
+  > pick 055a42cdd887 d
+  > EOF
+  $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  Make changes as needed, you may commit or record as needed now.
+  When you are finished, run hg histedit --continue to resume.
+
+rules should end up in .hg/histedit-last-edit.txt:
+  $ cat .hg/histedit-last-edit.txt
+  edit 177f92b77385 c
+  pick e860deea161a e
+  pick 652413bf663e f
+  pick 055a42cdd887 d
+
+  $ hg histedit --abort
+  4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cat > $EDITED <<EOF
   > pick 177f92b77385 c
   > pick e860deea161a e
   > pick 652413bf663e f
@@ -84,13 +104,6 @@ edit the history
   > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-
-rules should end up in .hg/histedit-last-edit.txt:
-  $ cat .hg/histedit-last-edit.txt
-  pick 177f92b77385 c
-  pick e860deea161a e
-  pick 652413bf663e f
-  pick 055a42cdd887 d
 
 log after edit
   $ hg log --graph

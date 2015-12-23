@@ -1031,8 +1031,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)
 
-        if repo.vfs.exists('histedit-last-edit.txt'):
-            repo.vfs.unlink('histedit-last-edit.txt')
         topmost, empty = repo.dirstate.parents()
         if outg:
             if freeargs:
@@ -1146,6 +1144,8 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     state.clear()
     if os.path.exists(repo.sjoin('undo')):
         os.unlink(repo.sjoin('undo'))
+    if repo.vfs.exists('histedit-last-edit.txt'):
+        repo.vfs.unlink('histedit-last-edit.txt')
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
