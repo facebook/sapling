@@ -51,8 +51,11 @@ def _getfsnow(vfs):
 
 def nonnormalentries(dmap):
     '''Compute the nonnormal dirstate entries from the dmap'''
-    return set(fname for fname, e in dmap.iteritems()
-           if e[0] != 'n' or e[3] == -1)
+    try:
+        return parsers.nonnormalentries(dmap)
+    except AttributeError:
+        return set(fname for fname, e in dmap.iteritems()
+                   if e[0] != 'n' or e[3] == -1)
 
 def _trypending(root, vfs, filename):
     '''Open  file to be read according to HG_PENDING environment variable
