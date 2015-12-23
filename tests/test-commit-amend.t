@@ -810,7 +810,9 @@ Amend a merge changeset (with manifest-level conflicts):
   $ hg up -q default
   $ echo aa >> aa
   $ hg ci -m aa
-  $ hg merge -q bar
+  $ hg merge -q bar --config ui.interactive=True << EOF
+  > c
+  > EOF
   local changed aa which remote deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? c
   $ hg ci -m 'merge bar (with conflicts)'
