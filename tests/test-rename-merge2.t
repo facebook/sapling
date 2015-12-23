@@ -684,7 +684,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    a: prompt deleted/changed -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   remote changed a which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -703,11 +703,12 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@02963e448370+ other rev@8dbce441892a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 3 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   --------------
   M a
   M b
+  abort: unresolved merge conflicts (see "hg help resolve")
   --------------
   
   $ tm "up a b" "nm a b" "      " "19 merge b no ancestor, prompt remove a"
@@ -727,7 +728,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    a: prompt changed/deleted -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   local changed a which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -746,11 +747,12 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   my rev@0b76e65c8289+ other rev@bdb19105162a ancestor rev@924404dff337
   launching merge tool: python ../merge *$TESTTMP/t/t/rev* * * (glob)
   merge tool returned: 0
-  0 files updated, 3 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   --------------
   M b
   C a
+  abort: unresolved merge conflicts (see "hg help resolve")
   --------------
   
   $ tm "up a  " "um a b" "      " "20 merge a and b to b, remove a"

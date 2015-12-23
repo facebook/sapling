@@ -240,14 +240,14 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
             index = ui.promptchoice(
                 _("local changed %s which remote deleted\n"
                   "use (c)hanged version, (d)elete, or leave (u)nresolved?"
-                  "$$ &Changed $$ &Delete $$ &Unresolved") % fd, 0)
+                  "$$ &Changed $$ &Delete $$ &Unresolved") % fd, 2)
             choice = ['local', 'other', 'unresolved'][index]
         elif fcd.isabsent():
             index = ui.promptchoice(
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version, leave (d)eleted, or "
                   "leave (u)nresolved?"
-                  "$$ &Changed $$ &Deleted $$ &Unresolved") % fd, 0)
+                  "$$ &Changed $$ &Deleted $$ &Unresolved") % fd, 2)
             choice = ['other', 'local', 'unresolved'][index]
         else:
             index = ui.promptchoice(

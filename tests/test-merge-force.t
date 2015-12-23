@@ -143,55 +143,55 @@ Merge with remote
 
   $ hg merge -f --tool internal:merge3 'desc("remote")'
   local changed content1_missing_content1_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_content3_content3-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_content3_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_missing_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed content1_content2_content1_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_content3-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content1_content4-tracked
   merging content1_content2_content2_content1-tracked
   merging content1_content2_content2_content4-tracked
@@ -215,7 +215,7 @@ Merge with remote
   warning: conflicts while merging missing_content2_content3_content4-tracked! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging missing_content2_missing_content4-tracked! (edit, then use 'hg resolve --mark')
   warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
-  18 files updated, 28 files merged, 8 files removed, 10 files unresolved
+  18 files updated, 3 files merged, 8 files removed, 35 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
@@ -227,39 +227,39 @@ Interestingly, one untracked file got merged and added, which corresponds to the
 odd 'if force and branchmerge and different' case in manifestmerge().
 
   $ hg resolve -l
-  R content1_content2_content1_content1-untracked
-  R content1_content2_content1_content2-untracked
+  U content1_content2_content1_content1-untracked
+  U content1_content2_content1_content2-untracked
   U content1_content2_content1_content4-tracked
-  R content1_content2_content1_content4-untracked
-  R content1_content2_content1_missing-tracked
-  R content1_content2_content1_missing-untracked
+  U content1_content2_content1_content4-untracked
+  U content1_content2_content1_missing-tracked
+  U content1_content2_content1_missing-untracked
   R content1_content2_content2_content1-tracked
-  R content1_content2_content2_content1-untracked
-  R content1_content2_content2_content2-untracked
+  U content1_content2_content2_content1-untracked
+  U content1_content2_content2_content2-untracked
   U content1_content2_content2_content4-tracked
-  R content1_content2_content2_content4-untracked
-  R content1_content2_content2_missing-tracked
-  R content1_content2_content2_missing-untracked
+  U content1_content2_content2_content4-untracked
+  U content1_content2_content2_missing-tracked
+  U content1_content2_content2_missing-untracked
   R content1_content2_content3_content1-tracked
-  R content1_content2_content3_content1-untracked
-  R content1_content2_content3_content2-untracked
+  U content1_content2_content3_content1-untracked
+  U content1_content2_content3_content2-untracked
   U content1_content2_content3_content3-tracked
-  R content1_content2_content3_content3-untracked
+  U content1_content2_content3_content3-untracked
   U content1_content2_content3_content4-tracked
-  R content1_content2_content3_content4-untracked
-  R content1_content2_content3_missing-tracked
-  R content1_content2_content3_missing-untracked
+  U content1_content2_content3_content4-untracked
+  U content1_content2_content3_missing-tracked
+  U content1_content2_content3_missing-untracked
   R content1_content2_missing_content1-tracked
-  R content1_content2_missing_content1-untracked
-  R content1_content2_missing_content2-untracked
+  U content1_content2_missing_content1-untracked
+  U content1_content2_missing_content2-untracked
   U content1_content2_missing_content4-tracked
-  R content1_content2_missing_content4-untracked
-  R content1_content2_missing_missing-tracked
-  R content1_content2_missing_missing-untracked
-  R content1_missing_content1_content4-tracked
-  R content1_missing_content3_content3-tracked
-  R content1_missing_content3_content4-tracked
-  R content1_missing_missing_content4-tracked
+  U content1_content2_missing_content4-untracked
+  U content1_content2_missing_missing-tracked
+  U content1_content2_missing_missing-untracked
+  U content1_missing_content1_content4-tracked
+  U content1_missing_content3_content3-tracked
+  U content1_missing_content3_content4-tracked
+  U content1_missing_missing_content4-tracked
   U missing_content2_content2_content4-tracked
   U missing_content2_content3_content3-tracked
   U missing_content2_content3_content4-tracked
@@ -705,63 +705,63 @@ Re-resolve and check status
   $ hg resolve --unmark --all
   $ hg resolve --all --tool internal:merge3
   remote changed content1_content2_content1_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content1_content4-tracked
   remote changed content1_content2_content1_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content1_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content2_content1-tracked
   remote changed content1_content2_content2_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content2_content4-tracked
   remote changed content1_content2_content2_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content2_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content1-tracked
   remote changed content1_content2_content3_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content3-tracked
   remote changed content1_content2_content3_content3-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_content3_content4-tracked
   remote changed content1_content2_content3_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_content3_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_missing_content1-tracked
   remote changed content1_content2_missing_content1-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_content2-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging content1_content2_missing_content4-tracked
   remote changed content1_content2_missing_content4-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_missing-tracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   remote changed content1_content2_missing_missing-untracked which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   local changed content1_missing_content1_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_content3_content3-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_content3_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_missing_content4-tracked which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   merging missing_content2_content2_content4-tracked
   merging missing_content2_content3_content3-tracked
   merging missing_content2_content3_content4-tracked

@@ -55,12 +55,12 @@ Non-interactive merge:
 
   $ hg merge -y
   local changed file1 which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed file2 which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
-  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
 
@@ -70,18 +70,18 @@ Non-interactive merge:
   M file3
   C file1
   --- resolve --list ---
-  R file1
-  R file2
+  U file1
+  U file2
   U file3
   --- debugmergestate ---
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
-  file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+  file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node b8e02f6433738021a065f94175c7cd23db5f05be)
     other path: file1 (node null)
-  file: file2 (record type "C", state "r", hash null)
+  file: file2 (record type "C", state "u", hash null)
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)
@@ -470,12 +470,12 @@ Force prompts
 
   $ hg merge --tool :prompt
   local changed file1 which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed file2 which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   no tool found to merge file3
   keep (l)ocal, take (o)ther, or leave (u)nresolved? u
-  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ status
@@ -484,18 +484,18 @@ Force prompts
   M file3
   C file1
   --- resolve --list ---
-  R file1
-  R file2
+  U file1
+  U file2
   U file3
   --- debugmergestate ---
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
-  file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+  file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node b8e02f6433738021a065f94175c7cd23db5f05be)
     other path: file1 (node null)
-  file: file2 (record type "C", state "r", hash null)
+  file: file2 (record type "C", state "u", hash null)
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)
@@ -520,12 +520,12 @@ Choose to merge all files
 
   $ hg merge --tool :merge3
   local changed file1 which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed file2 which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging file3
   warning: conflicts while merging file3! (edit, then use 'hg resolve --mark')
-  0 files updated, 2 files merged, 0 files removed, 1 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 3 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ status
@@ -534,18 +534,18 @@ Choose to merge all files
   M file3
   C file1
   --- resolve --list ---
-  R file1
-  R file2
+  U file1
+  U file2
   U file3
   --- debugmergestate ---
   * version 2 records
   local: 13910f48cf7bdb2a0ba6e24b4900e4fdd5739dd4
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
-  file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+  file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node b8e02f6433738021a065f94175c7cd23db5f05be)
     other path: file1 (node null)
-  file: file2 (record type "C", state "r", hash null)
+  file: file2 (record type "C", state "u", hash null)
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)
@@ -679,27 +679,29 @@ Non-interactive linear update
   $ hg rm file2
   $ hg update 1 -y
   local changed file1 which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed file2 which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
-  1 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
   $ status
   --- status ---
   A file1
   C file2
   C file3
   --- resolve --list ---
-  R file1
-  R file2
+  U file1
+  U file2
   --- debugmergestate ---
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
-  file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+  file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node b8e02f6433738021a065f94175c7cd23db5f05be)
     other path: file1 (node null)
-  file: file2 (record type "C", state "r", hash null)
+  file: file2 (record type "C", state "u", hash null)
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)
@@ -878,27 +880,29 @@ Choose to merge all files
   $ hg rm file2
   $ hg update 1 --tool :merge3
   local changed file1 which remote deleted
-  use (c)hanged version, (d)elete, or leave (u)nresolved? c
+  use (c)hanged version, (d)elete, or leave (u)nresolved? u
   remote changed file2 which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
-  1 files updated, 2 files merged, 0 files removed, 0 files unresolved
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
+  1 files updated, 0 files merged, 0 files removed, 2 files unresolved
+  use 'hg resolve' to retry unresolved file merges
+  [1]
   $ status
   --- status ---
   A file1
   C file2
   C file3
   --- resolve --list ---
-  R file1
-  R file2
+  U file1
+  U file2
   --- debugmergestate ---
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
-  file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
+  file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node b8e02f6433738021a065f94175c7cd23db5f05be)
     other path: file1 (node null)
-  file: file2 (record type "C", state "r", hash null)
+  file: file2 (record type "C", state "u", hash null)
     local path: file2 (flags "")
     ancestor path: file2 (node 5d9299349fc01ddd25d0070d149b124d8f10411e)
     other path: file2 (node e7c1328648519852e723de86c0c0525acd779257)

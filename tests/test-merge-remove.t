@@ -103,10 +103,11 @@ Those who use force will lose
 
   $ hg merge -f
   remote changed bar which local deleted
-  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? c
+  use (c)hanged version, leave (d)eleted, or leave (u)nresolved? u
   merging foo1 and foo to foo1
-  0 files updated, 2 files merged, 0 files removed, 0 files unresolved
-  (branch merge, don't forget to commit)
+  0 files updated, 1 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
   $ cat bar
   bleh
   $ hg st
