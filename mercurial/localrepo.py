@@ -4,21 +4,60 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
-from node import hex, nullid, wdirrev, short
-from i18n import _
+
+from __future__ import absolute_import
+
+import errno
+import inspect
+import os
+import random
+import time
 import urllib
-import peer, changegroup, subrepo, pushkey, obsolete, repoview
-import changelog, dirstate, filelog, manifest, context, bookmarks, phases
-import lock as lockmod
-import transaction, store, encoding, exchange, bundle2
-import scmutil, util, extensions, hook, error, revset, cmdutil
-import match as matchmod
-import merge as mergemod
-import tags as tagsmod
-from lock import release
-import weakref, errno, os, time, inspect, random
-import branchmap, pathutil
-import namespaces
+import weakref
+
+from .i18n import _
+from .node import (
+    hex,
+    nullid,
+    short,
+    wdirrev,
+)
+from . import (
+    bookmarks,
+    branchmap,
+    bundle2,
+    changegroup,
+    changelog,
+    cmdutil,
+    context,
+    dirstate,
+    encoding,
+    error,
+    exchange,
+    extensions,
+    filelog,
+    hook,
+    lock as lockmod,
+    manifest,
+    match as matchmod,
+    merge as mergemod,
+    namespaces,
+    obsolete,
+    pathutil,
+    peer,
+    phases,
+    pushkey,
+    repoview,
+    revset,
+    scmutil,
+    store,
+    subrepo,
+    tags as tagsmod,
+    transaction,
+    util,
+)
+
+release = lockmod.release
 propertycache = util.propertycache
 filecache = scmutil.filecache
 
