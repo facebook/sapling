@@ -356,7 +356,11 @@ class histeditaction(object):
         """Parses the given rule, returning an instance of the histeditaction.
         """
         rulehash = rule.strip().split(' ', 1)[0]
-        return cls(state, node.bin(rulehash))
+        try:
+            rev = node.bin(rulehash)
+        except TypeError:
+            raise error.ParseError("invalid changeset %s" % rulehash)
+        return cls(state, rev)
 
     def verify(self, prev):
         """ Verifies semantic correctness of the rule"""

@@ -219,6 +219,17 @@ So one is missing and one appear twice.
   hg: parse error: duplicated command for changeset eb57da33312f
   [255]
 
+Test bogus rev
+---------------------------------------
+
+  $ HGEDITOR=cat hg histedit "tip^^" --commands - << EOF
+  > pick eb57da33312f 2 three
+  > pick 0
+  > pick 08d98a8350f3 4 five
+  > EOF
+  hg: parse error: invalid changeset 0
+  [255]
+
 Test short version of command
 ---------------------------------------
 
