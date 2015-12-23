@@ -203,10 +203,11 @@ def getdag(ui, repo, revs, master):
 
     # Topologically sort the noderev numbers
     order = sortnodes([r[0] for r in results], parentfunc, masters)
+    order = dict((e[1], e[0]) for e in enumerate(order))
 
     # Sort the actual results based on their position in the 'order'
     try:
-        return sorted(results, key=lambda x: order.index(x[0]) , reverse=True)
+        return sorted(results, key=lambda x: order[x[0]], reverse=True)
     except ValueError: # Happend when 'order' is empty
         ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
         return sorted(results, reverse=True)
