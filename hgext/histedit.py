@@ -214,20 +214,31 @@ class _constraints(object):
 # leave the attribute unspecified.
 testedwith = 'internal'
 
-# i18n: command names and abbreviations must remain untranslated
-editcomment = _("""# Edit history between %s and %s
-#
-# Commits are listed from least to most recent
-#
-# Commands:
-#  p, pick = use commit
-#  e, edit = use commit, but stop for amending
-#  f, fold = use commit, but combine it with the one above
-#  r, roll = like fold, but discard this commit's description
-#  d, drop = remove commit from history
-#  m, mess = edit commit message without changing commit content
-#
+def geteditcomment(first, last):
+    """ construct the editor comment
+    The comment includes::
+     - an intro
+     - short commands
+
+    Commands are only included once.
+    """
+    intro = _("""Edit history between %s and %s
+
+Commits are listed from least to most recent
+
+Commands:""")
+    # i18n: command names and abbreviations must remain untranslated
+    verbs = _("""
+ p, pick = use commit
+ e, edit = use commit, but stop for amending
+ f, fold = use commit, but combine it with the one above
+ r, roll = like fold, but discard this commit's description
+ d, drop = remove commit from history
+ m, mess = edit commit message without changing commit content
 """)
+
+    return ''.join(['# %s\n' % l if l else '#\n'
+                    for l in ((intro % (first, last) + verbs).split('\n'))])
 
 class histeditstate(object):
     def __init__(self, repo, parentctxnode=None, actions=None, keep=None,
@@ -976,7 +987,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     elif goal == 'edit-plan':
         state.read()
         if not rules:
-            comment = editcomment % (node.short(state.parentctxnode),
+            comment = geteditcomment(node.short(state.parentctxnode),
                                      node.short(state.topmost))
             rules = ruleeditor(repo, ui, state.actions, comment)
         else:
@@ -1059,7 +1070,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
         ctxs = [repo[r] for r in revs]
         if not rules:
-            comment = editcomment % (node.short(root), node.short(topmost))
+            comment = geteditcomment(node.short(root), node.short(topmost))
             actions = [pick(state, r) for r in revs]
             rules = ruleeditor(repo, ui, actions, comment)
         else:
