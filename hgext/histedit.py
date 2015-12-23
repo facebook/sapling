@@ -214,12 +214,19 @@ class _constraints(object):
 # leave the attribute unspecified.
 testedwith = 'internal'
 
+actiontable = {}
+primaryactions = set()
+secondaryactions = set()
+tertiaryactions = set()
+internalactions = set()
+
 def geteditcomment(first, last):
     """ construct the editor comment
     The comment includes::
      - an intro
      - sorted primary commands
      - sorted short commands
+     - sorted long commands
 
     Commands are only included once.
     """
@@ -227,19 +234,27 @@ def geteditcomment(first, last):
 
 Commits are listed from least to most recent
 
-Commands:""")
-    # i18n: command names and abbreviations must remain untranslated
-    verbs = _("""
- e, edit = use commit, but stop for amending
- m, mess = edit commit message without changing commit content
- p, pick = use commit
- d, drop = remove commit from history
- f, fold = use commit, but combine it with the one above
- r, roll = like fold, but discard this commit's description
+Commands:
 """)
+    actions = []
+    def addverb(v):
+        a = actiontable[v]
+        lines = a.message.split("\n")
+        if len(a.verbs):
+            v = ', '.join(sorted(a.verbs, key=lambda v: len(v)))
+        actions.append(" %s = %s" % (v, lines[0]))
+        actions.extend(['  %s' for l in lines[1:]])
+
+    for v in (
+         sorted(primaryactions) +
+         sorted(secondaryactions) +
+         sorted(tertiaryactions)
+        ):
+        addverb(v)
+    actions.append('')
 
     return ''.join(['# %s\n' % l if l else '#\n'
-                    for l in ((intro % (first, last) + verbs).split('\n'))])
+                    for l in ((intro % (first, last)).split('\n')) + actions])
 
 class histeditstate(object):
     def __init__(self, repo, parentctxnode=None, actions=None, keep=None,
@@ -598,21 +613,30 @@ def abortdirty():
         hint=_('amend, commit, or revert them and run histedit '
             '--continue, or abort with histedit --abort'))
 
-
-actiontable = {}
-actionlist = []
-
-def addhisteditaction(verbs):
+def action(verbs, message, priority=False, internal=False):
     def wrap(cls):
-        cls.verb = verbs[0]
+        assert not priority or not internal
+        verb = verbs[0]
+        if priority:
+            primaryactions.add(verb)
+        elif internal:
+            internalactions.add(verb)
+        elif len(verbs) > 1:
+            secondaryactions.add(verb)
+        else:
+            tertiaryactions.add(verb)
+
+        cls.verb = verb
+        cls.verbs = verbs
+        cls.message = message
         for verb in verbs:
             actiontable[verb] = cls
-        actionlist.append(cls)
         return cls
     return wrap
 
-
-@addhisteditaction(['pick', 'p'])
+@action(['pick', 'p'],
+        _('use commit'),
+        priority=True)
 class pick(histeditaction):
     def run(self):
         rulectx = self.repo[self.node]
@@ -622,7 +646,9 @@ class pick(histeditaction):
 
         return super(pick, self).run()
 
-@addhisteditaction(['edit', 'e'])
+@action(['edit', 'e'],
+        _('use commit, but stop for amending'),
+        priority=True)
 class edit(histeditaction):
     def run(self):
         repo = self.repo
@@ -637,7 +663,8 @@ class edit(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.edit')
 
-@addhisteditaction(['fold', 'f'])
+@action(['fold', 'f'],
+        _('use commit, but combine it with the one above'))
 class fold(histeditaction):
     def verify(self, prev):
         """ Verifies semantic correctness of the fold rule"""
@@ -763,8 +790,8 @@ class base(histeditaction):
         basectx = self.repo['.']
         return basectx, []
 
-@addhisteditaction(['_multifold'])
-class _multifold(fold):
+@action(['_multifold'],
+        _(
     """fold subclass used for when multiple folds happen in a row
 
     We only want to fire the editor for the folded message once when
@@ -772,11 +799,14 @@ class _multifold(fold):
     similar to rollup, but we should preserve both messages so that
     when the last fold operation runs we can show the user all the
     commit messages in their editor.
-    """
+    """),
+        internal=True)
+class _multifold(fold):
     def skipprompt(self):
         return True
 
-@addhisteditaction(["roll", "r"])
+@action(["roll", "r"],
+        _("like fold, but discard this commit's description"))
 class rollup(fold):
     def mergedescs(self):
         return False
@@ -784,13 +814,16 @@ class rollup(fold):
     def skipprompt(self):
         return True
 
-@addhisteditaction(["drop", "d"])
+@action(["drop", "d"],
+        _('remove commit from history'))
 class drop(histeditaction):
     def run(self):
         parentctx = self.repo[self.state.parentctxnode]
         return parentctx, [(self.node, tuple())]
 
-@addhisteditaction(["mess", "m"])
+@action(["mess", "m"],
+        _('edit commit message without changing commit content'),
+        priority=True)
 class message(histeditaction):
     def commiteditor(self):
         return cmdutil.getcommiteditor(edit=True, editform='histedit.mess')
@@ -1476,4 +1509,6 @@ def extsetup(ui):
     cmdutil.afterresolvedstates.append(
         ['histedit-state', _('hg histedit --continue')])
     if ui.configbool("experimental", "histeditng"):
-        globals()['base'] = addhisteditaction(['base', 'b'])(base)
+        globals()['base'] = action(['base', 'b'],
+            _('checkout changeset and apply further changesets from there')
+        )(base)
