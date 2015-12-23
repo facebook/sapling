@@ -81,7 +81,7 @@ class ResponseExpected(Abort):
 class OutOfBandError(HintException):
     """Exception raised when a remote repo reports failure"""
 
-class ParseError(Exception):
+class ParseError(HintException):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
 
 class UnknownIdentifier(ParseError):
