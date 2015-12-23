@@ -76,8 +76,10 @@ def recordbookmarks(orig, self, fp):
             repo.reflog.addentry(bookmarktype, mark, oldvalue, value)
     return orig(self, fp)
 
-def recordremotebookmarks(orig, repo, remotepath, branches, bookmarks={}):
+def recordremotebookmarks(orig, repo, remotepath, branches, bookmarks=None):
     """Records all remote bookmark movements to the reflog."""
+    if bookmarks is None:
+        bookmarks = {}
 
     if bookmarks:
         remotenames = find('remotenames')
