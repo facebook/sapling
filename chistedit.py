@@ -27,17 +27,15 @@ algorithm might still be able to merge these files without conflict.
 from __future__ import print_function
 from hgext import histedit
 from mercurial import cmdutil
-from mercurial import context
 from mercurial import extensions
-from mercurial import localrepo
 from mercurial import node
 from mercurial import scmutil
+from mercurial import error
 from mercurial import util
 from mercurial.i18n import _
 from hgext import color
 
 import functools
-import itertools
 import os
 import sys
 
@@ -118,7 +116,7 @@ def swap(state, oldpos, newpos):
 
     start = min(oldpos, newpos)
     end = max(oldpos, newpos)
-    for r in xrange(start, end+1):
+    for r in xrange(start, end + 1):
         rules[newpos].checkconflicts(rules[r])
         rules[oldpos].checkconflicts(rules[r])
 
@@ -142,9 +140,9 @@ def cycleaction(state, pos, next=False):
 
     index = KEY_LIST.index(current)
     if next:
-        index+=1
+        index += 1
     else:
-        index-=1
+        index -= 1
     changeaction(state, pos, KEY_LIST[index % len(KEY_LIST)])
 
 def event(state, ch):
@@ -157,12 +155,12 @@ def event(state, ch):
     oldpos = state['pos']
     rules = state['rules']
     if ch in KEY_DOWN:
-        newpos = min(oldpos+1, len(rules)-1)
+        newpos = min(oldpos + 1, len(rules) - 1)
         movecursor(state, oldpos, newpos)
         if selected is not None:
             swap(state, oldpos, newpos)
     if ch in KEY_UP:
-        newpos = max(0, oldpos-1)
+        newpos = max(0, oldpos - 1)
         movecursor(state, oldpos, newpos)
         if selected is not None:
             swap(state, oldpos, newpos)
@@ -209,7 +207,7 @@ def addln(win, y, x, line, color=None):
     """Add a line to the given window left padding but 100% filled with
     whitespace characters, so that the color appears on the whole line"""
     maxy, maxx = win.getmaxyx()
-    length = maxx-1-x
+    length = maxx - 1 - x
     line = ("{0:<%d}" % length).format(str(line).strip())[:length]
     if y < 0:
         y = maxy + y
@@ -244,7 +242,7 @@ def main(repo, rules, stdscr):
         win.box(0, 0)
 
         maxy, maxx = win.getmaxyx()
-        length = maxx-3
+        length = maxx - 3
 
         line = "changeset: {0}:{1:<12}".format(ctx.rev(), ctx)
         win.addstr(1, 1, line[:length])
@@ -348,9 +346,9 @@ d/e/f/m/p/r: change action, C: invoke histedit, q: abort
                 return state['rules']
             else:
                 maxy, maxx = stdscr.getmaxyx()
-                commitwin = curses.newwin(8, maxx, maxy-8, 0)
+                commitwin = curses.newwin(8, maxx, maxy - 8, 0)
                 helpwin = curses.newwin(2, maxx, 0, 0)
-                editwin = curses.newwin(maxy-2-8, maxx, 2, 0)
+                editwin = curses.newwin(maxy - 2 - 8, maxx, 2, 0)
                 # start rendering
                 commitwin.erase()
                 helpwin.erase()
@@ -398,23 +396,23 @@ def chistedit(ui, repo, *freeargs, **opts):
         cmdutil.bailifchanged(repo)
 
         if os.path.exists(os.path.join(repo.path, 'histedit-state')):
-            raise util.Abort(_('history edit already in progress, try '
+            raise error.Abort(_('history edit already in progress, try '
                                '--continue or --abort'))
         revs.extend(freeargs)
         if len(revs) != 1:
-            raise util.Abort(
+            raise error.Abort(
                 _('histedit requires exactly one ancestor revision'))
 
         rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
         if len(rr) != 1:
-            raise util.Abort(_('The specified revisions must have '
+            raise error.Abort(_('The specified revisions must have '
                 'exactly one common root'))
         root = rr[0].node()
 
         topmost, empty = repo.dirstate.parents()
         revs = histedit.between(repo, root, topmost, keep)
         if not revs:
-            raise util.Abort(_('%s is not an ancestor of working directory') %
+            raise error.Abort(_('%s is not an ancestor of working directory') %
                              node.short(root))
 
         ctxs = []
@@ -423,11 +421,11 @@ def chistedit(ui, repo, *freeargs, **opts):
         rc = curses.wrapper(functools.partial(main, repo, ctxs))
         curses.echo()
         curses.endwin()
-        if rc == False:
-            ui.write("chistedit aborted\n")
+        if rc is False:
+            ui.write(_("chistedit aborted\n"))
             return 0
         if type(rc) is list:
-            ui.status("running histedit\n")
+            ui.status(_("running histedit\n"))
             rules = makecommands(rc)
             filename = repo.join('chistedit')
             with open(filename, 'w+') as fp:
