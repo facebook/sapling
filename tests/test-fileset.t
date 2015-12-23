@@ -135,6 +135,10 @@ Test files properties
   $ fileset 'size("bar")'
   hg: parse error: couldn't parse size: bar
   [255]
+  $ fileset '(1k, 2k)'
+  hg: parse error: can't use a list in this context
+  (see hg help "filesets.x or y")
+  [255]
   $ fileset 'size(1k)'
   1k
   $ fileset '(1k or 2k) and size("< 2k")'

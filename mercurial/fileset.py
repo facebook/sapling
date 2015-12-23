@@ -128,7 +128,8 @@ def minusset(mctx, x, y):
     return [f for f in xl if f not in yl]
 
 def listset(mctx, a, b):
-    raise error.ParseError(_("can't use a list in this context"))
+    raise error.ParseError(_("can't use a list in this context"),
+                           hint=_('see hg help "filesets.x or y"'))
 
 # symbols are callable like:
 #  fun(mctx, x)
