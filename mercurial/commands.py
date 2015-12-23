@@ -5303,10 +5303,10 @@ def parents(ui, repo, file_=None, **opts):
 
     This command is equivalent to::
 
-        hg log -r "parents()" or
-        hg log -r "parents(REV)" or
-        hg log -r "max(file(FILE))" or
-        hg log -r "max(::REV and file(FILE))"
+        hg log -r "p1()+p2()" or
+        hg log -r "p1(REV)+p2(REV)" or
+        hg log -r "max(::p1() and file(FILE))+max(::p2() and file(FILE))" or
+        hg log -r "max(::p1(REV) and file(FILE))+max(::p2(REV) and file(FILE))"
 
     See :hg:`summary` and :hg:`help revsets` for related information.
 
