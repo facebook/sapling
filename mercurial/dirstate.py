@@ -203,15 +203,7 @@ class dirstate(object):
 
     @rootcache('.hgignore')
     def _ignore(self):
-        files = []
-        if os.path.exists(self._join('.hgignore')):
-            files.append(self._join('.hgignore'))
-        for name, path in self._ui.configitems("ui"):
-            if name == 'ignore' or name.startswith('ignore.'):
-                # we need to use os.path.join here rather than self._join
-                # because path is arbitrary and user-specified
-                files.append(os.path.join(self._rootdir, util.expandpath(path)))
-
+        files = self._ignorefiles()
         if not files:
             return util.never
 
@@ -773,6 +765,17 @@ class dirstate(object):
             if self._ignore(p):
                 return True
         return False
+
+    def _ignorefiles(self):
+        files = []
+        if os.path.exists(self._join('.hgignore')):
+            files.append(self._join('.hgignore'))
+        for name, path in self._ui.configitems("ui"):
+            if name == 'ignore' or name.startswith('ignore.'):
+                # we need to use os.path.join here rather than self._join
+                # because path is arbitrary and user-specified
+                files.append(os.path.join(self._rootdir, util.expandpath(path)))
+        return files
 
     def _walkexplicit(self, match, subrepos):
         '''Get stat data about the files explicitly specified by match.
