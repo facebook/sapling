@@ -53,13 +53,13 @@ path variables are expanded (~ is the same as $TESTTMP)
   > 
   > def directory(node, relpath):
   >     '''generator of files in the xml node, rooted at relpath'''
-  >     dirs = node.findall('./wix:Directory', ns)
+  >     dirs = node.findall('./{%(wix)s}Directory' % ns)
   > 
   >     for d in dirs:
   >         for subfile in directory(d, relpath + d.attrib['Name'] + '/'):
   >             yield subfile
   > 
-  >     files = node.findall('./wix:Component/wix:File', ns)
+  >     files = node.findall('./{%(wix)s}Component/{%(wix)s}File' % ns)
   > 
   >     for f in files:
   >         yield relpath + f.attrib['Name']
@@ -83,7 +83,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   > 
   > xml = ET.parse("%s/../contrib/wix/%s.wxs" % (testdir, sys.argv[1]))
   > root = xml.getroot()
-  > dir = root.find('.//wix:DirectoryRef', ns)
+  > dir = root.find('.//{%(wix)s}DirectoryRef' % ns)
   > 
   > installed = [f for f in directory(dir, '')]
   > 
