@@ -137,6 +137,10 @@ class dirstate(object):
         return self._copymap
 
     @propertycache
+    def _nonnormalset(self):
+        return nonnormalentries(self._map)
+
+    @propertycache
     def _filefoldmap(self):
         try:
             makefilefoldmap = parsers.make_file_foldmap
