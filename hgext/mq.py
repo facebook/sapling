@@ -395,10 +395,12 @@ def newcommit(repo, phase, *args, **kwargs):
 class AbortNoCleanup(error.Abort):
     pass
 
-def makepatchname(existing, title):
+def makepatchname(existing, title, fallbackname):
     """Return a suitable filename for title, adding a suffix to make
     it unique in the existing list"""
     namebase = re.sub('[\s\W_]+', '_', title.lower()).strip('_')
+    if not namebase:
+        namebase = fallbackname
     name = namebase
     i = 0
     while name in existing:
@@ -2101,7 +2103,8 @@ class queue(object):
 
                     if not patchname:
                         patchname = makepatchname(self.fullseries,
-                            repo[r].description().split('\n', 1)[0])
+                            repo[r].description().split('\n', 1)[0],
+                            '%d.diff' % r)
                     checkseries(patchname)
                     self.checkpatchname(patchname, force)
                     self.fullseries.insert(0, patchname)
