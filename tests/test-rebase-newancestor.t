@@ -128,7 +128,9 @@ wrong.
 
 Full rebase all the way back from branching point:
 
-  $ hg rebase -r 'only(dev,default)' -d default
+  $ hg rebase -r 'only(dev,default)' -d default --config ui.interactive=True << EOF
+  > c
+  > EOF
   rebasing 1:1d1a643d390e "dev: create branch"
   note: rebase of 1:1d1a643d390e created no changes to commit
   rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
@@ -157,7 +159,9 @@ Grafty cherry picking rebasing:
   $ cd ../ancestor-merge-2
 
   $ hg phase -fdr0:
-  $ hg rebase -r 'children(only(dev,default))' -d default
+  $ hg rebase -r 'children(only(dev,default))' -d default --config ui.interactive=True << EOF
+  > c
+  > EOF
   rebasing 2:ec2c14fb2984 "dev: f-dev stuff"
   rebasing 4:4b019212aaf6 "dev: merge default"
   remote changed f-default which local deleted
