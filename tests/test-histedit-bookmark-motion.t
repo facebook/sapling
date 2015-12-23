@@ -70,12 +70,13 @@
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
   $ hg histedit 1 --commands - --verbose << EOF | grep histedit
   > pick 177f92b77385 2 c
@@ -130,12 +131,13 @@
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
   $ hg histedit 1 --commands - --verbose << EOF | grep histedit
   > pick b346ab9a313d 1 c

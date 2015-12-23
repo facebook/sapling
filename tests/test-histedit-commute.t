@@ -64,12 +64,13 @@ show the edit commands offered
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
 
 edit the history
@@ -342,12 +343,13 @@ Verify that revsetalias entries work with histedit:
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
 
 should also work if a commit message is missing

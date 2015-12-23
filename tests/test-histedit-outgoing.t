@@ -46,12 +46,13 @@ show the edit commands offered by outgoing
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
   $ cd ..
 
@@ -77,12 +78,13 @@ show the error from unrelated repos
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
   $ cd ..
 
@@ -100,12 +102,13 @@ test sensitivity to branch in URL:
   # Commits are listed from least to most recent
   #
   # Commands:
-  #  p, pick = use commit
+  #
   #  e, edit = use commit, but stop for amending
+  #  m, mess = edit commit message without changing commit content
+  #  p, pick = use commit
+  #  d, drop = remove commit from history
   #  f, fold = use commit, but combine it with the one above
   #  r, roll = like fold, but discard this commit's description
-  #  d, drop = remove commit from history
-  #  m, mess = edit commit message without changing commit content
   #
 
 test to check number of roots in outgoing revisions
