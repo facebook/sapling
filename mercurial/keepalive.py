@@ -107,15 +107,17 @@ EXTRA ATTRIBUTES AND METHODS
 
 # $Id: keepalive.py,v 1.14 2006/04/04 21:00:32 mstenner Exp $
 
+from __future__ import absolute_import
+
 import errno
 import httplib
 import socket
+import sys
 import thread
 import urllib2
 
 DEBUG = None
 
-import sys
 if sys.version_info < (2, 4):
     HANDLE_ERRORS = 1
 else: HANDLE_ERRORS = 0
@@ -616,7 +618,8 @@ def error_handler(url):
     keepalive_handler.close_all()
 
 def continuity(url):
-    from util import md5
+    from . import util
+    md5 = util.md5
     format = '%25s: %s'
 
     # first fetch the file with the normal http handler
@@ -741,7 +744,6 @@ def test(url, N=10):
 
 if __name__ == '__main__':
     import time
-    import sys
     try:
         N = int(sys.argv[1])
         url = sys.argv[2]
