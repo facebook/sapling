@@ -127,6 +127,9 @@ option.
     optparser.add_option("-v", "--verbose",
                          help="enable additional output",
                          action="store_true")
+    optparser.add_option("-d", "--debug",
+                         help="debug mode",
+                         action="store_true")
     optparser.add_option("-f", "--file",
                          help="filename to read in (or '-' for stdin)",
                          action="store", default="")
@@ -152,6 +155,7 @@ option.
 
     ui = uimod.ui()
     ui.setconfig('ui', 'verbose', options.verbose, '--verbose')
+    ui.setconfig('ui', 'debug', options.debug, '--debug')
 
     if options.file:
         if checkfile(ui, options.file, options.initlevel):
