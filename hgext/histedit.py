@@ -867,7 +867,7 @@ def findoutgoing(ui, repo, remote=None, force=False, opts=None):
      ('f', 'force', False,
       _('force outgoing even for unrelated repositories')),
      ('r', 'rev', [], _('first revision to be edited'), _('REV'))],
-     _("[ANCESTOR] | --outgoing [URL]"))
+     _("[OPTIONS] ([ANCESTOR] | --outgoing [URL])"))
 def histedit(ui, repo, *freeargs, **opts):
     """interactively edit changeset history
 
@@ -887,15 +887,18 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `edit` to edit this changeset
 
-    The value from the "histedit.defaultrev" config option is used as a
-    revset to select the base revision when ANCESTOR is not specified.
-    The first revision returned by the revset is used. By default, this
-    selects the editable history that is unique to the ancestry of the
-    working directory.
+    There are a number of ways to select the root changset::
 
-    With --outgoing, this edits changesets not found in the
-    destination repository. If URL of the destination is omitted, the
-    'default-push' (or 'default') path will be used.
+    - Specify ANCESTOR directly
+
+    - Use --outgoing -- it will be the first linear changeset not
+      included in destination. (See :hg:"help default-push")
+
+    - Otherwise, the value from the "histedit.defaultrev" config option
+      is used as a revset to select the base revision when ANCESTOR is not
+      specified. The first revision returned by the revset is used. By
+      default, this selects the editable history that is unique to the
+      ancestry of the working directory.
 
     .. container:: verbose
 
