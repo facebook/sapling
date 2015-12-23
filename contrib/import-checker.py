@@ -180,7 +180,7 @@ def list_stdlib_modules():
     for m in ['msvcrt', '_winreg']:
         yield m
     # These get missed too
-    for m in 'ctypes', 'email', 'multiprocessing':
+    for m in 'ctypes', 'ctypes.util', 'email', 'multiprocessing':
         yield m
     yield 'builtins' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
