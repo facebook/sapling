@@ -5,16 +5,35 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from i18n import _
-from node import hex, nullid
-import errno, urllib, urllib2
-import util, scmutil, changegroup, base85, error
-import discovery, phases, obsolete, bookmarks as bookmod, bundle2, pushkey
-import lock as lockmod
-import streamclone
-import sslutil
-import tags
-import url as urlmod
+from __future__ import absolute_import
+
+import errno
+import urllib
+import urllib2
+
+from .i18n import _
+from .node import (
+    hex,
+    nullid,
+)
+from . import (
+    base85,
+    bookmarks as bookmod,
+    bundle2,
+    changegroup,
+    discovery,
+    error,
+    lock as lockmod,
+    obsolete,
+    phases,
+    pushkey,
+    scmutil,
+    sslutil,
+    streamclone,
+    tags,
+    url as urlmod,
+    util,
+)
 
 # Maps bundle compression human names to internal representation.
 _bundlespeccompressions = {'none': None,
