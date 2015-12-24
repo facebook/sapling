@@ -169,11 +169,7 @@ the drop to be implicit for missing commits by adding:
 
 """
 
-try:
-    import cPickle as pickle
-    pickle.dump # import now
-except ImportError:
-    import pickle
+import pickle
 import errno
 import os
 import sys
