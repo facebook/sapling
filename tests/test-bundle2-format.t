@@ -13,7 +13,7 @@ Create an extension to test bundle2 API
   > code. We still need to be able to test it while it grow up.
   > """
   > 
-  > import sys, os
+  > import sys, os, gc
   > from mercurial import cmdutil
   > from mercurial import util
   > from mercurial import bundle2
@@ -158,6 +158,7 @@ Create an extension to test bundle2 API
   >                 # too zealous. It's important for this test that the break
   >                 # occur while we're in the middle of a part.
   >                 break
+  >         gc.collect()
   >         ui.write('fake timeout complete.\n')
   >         return
   >     try:
