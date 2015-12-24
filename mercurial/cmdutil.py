@@ -3363,6 +3363,17 @@ def clearunfinished(repo):
         if clearable and repo.vfs.exists(f):
             util.unlink(repo.join(f))
 
+afterresolvedstates = [
+    ]
+
+def checkafterresolved(repo):
+    contmsg = _("continue: %s\n")
+    for f, msg in afterresolvedstates:
+        if repo.vfs.exists(f):
+            repo.ui.warn(contmsg % msg)
+            return
+    repo.ui.note(contmsg % _("hg commit"))
+
 class dirstateguard(object):
     '''Restore dirstate at unexpected failure.
 

@@ -6003,6 +6003,7 @@ def resolve(ui, repo, *pats, **opts):
     driverresolvedf = list(ms.driverresolved())
     if not unresolvedf and not driverresolvedf:
         ui.status(_('(no more unresolved files)\n'))
+        cmdutil.checkafterresolved(repo)
     elif not unresolvedf:
         ui.status(_('(no more unresolved files -- '
                     'run "hg resolve --all" to conclude)\n'))
