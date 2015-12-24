@@ -205,9 +205,12 @@ histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'
 
 def desthistedit(ui, repo):
     """Default base revision to edit for `hg histedit`."""
+    # Avoid cycle: scmutil -> revset -> destutil
+    from . import scmutil
+
     default = ui.config('histedit', 'defaultrev', histeditdefaultrevset)
     if default:
-        revs = repo.revs(default)
+        revs = scmutil.revrange(repo, [default])
         if revs:
             # The revset supplied by the user may not be in ascending order nor
             # take the first revision. So do this manually.
