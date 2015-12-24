@@ -391,6 +391,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   [1]
   $ hg resolve --all -t internal:local
   (no more unresolved files)
+  continue: hg rebase --continue
   $ hg rebase -c
   rebasing 8:6215fafa5447 "H2" (tip)
   note: rebase of 8:6215fafa5447 created no changes to commit

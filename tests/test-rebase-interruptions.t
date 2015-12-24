@@ -107,6 +107,7 @@ Solve the conflict and go on:
   $ rm A.orig
   $ hg resolve -m A
   (no more unresolved files)
+  continue: hg rebase --continue
 
   $ hg rebase --continue
   already rebased 1:27547f69f254 "B" as 45396c49d53b

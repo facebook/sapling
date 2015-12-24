@@ -1239,6 +1239,8 @@ def uisetup(ui):
     cmdutil.unfinishedstates.append(
         ['rebasestate', False, False, _('rebase in progress'),
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
+    cmdutil.afterresolvedstates.append(
+        ['rebasestate', _('hg rebase --continue')])
     # ensure rebased rev are not hidden
     extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
     revsetpredicate.setup()

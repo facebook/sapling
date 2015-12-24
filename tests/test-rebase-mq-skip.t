@@ -155,6 +155,7 @@ already has one local mq patch
 
   $ HGMERGE=internal:local hg resolve --all
   (no more unresolved files)
+  continue: hg rebase --continue
 
   $ hg rebase --continue
   already rebased 1:b4bffa6e4776 "r1" (qbase r1) as 057f55ff8f44

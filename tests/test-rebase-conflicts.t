@@ -83,6 +83,7 @@ Conclude rebase:
   $ echo 'resolved merge' >common
   $ hg resolve -m common
   (no more unresolved files)
+  continue: hg rebase --continue
   $ hg rebase --continue
   already rebased 3:3163e20567cc "L1" as 3e046f2ecedb
   rebasing 4:46f0b057b5c0 "L2"

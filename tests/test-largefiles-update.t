@@ -590,6 +590,7 @@ the 1st commit of resuming.
   $ echo "manually modified before 'hg rebase --continue'" > large1
   $ hg resolve -m normal1
   (no more unresolved files)
+  continue: hg rebase --continue
   $ hg rebase --continue --config ui.interactive=True <<EOF
   > c
   > EOF
