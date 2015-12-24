@@ -318,17 +318,23 @@ class GitHandler(object):
 
         self.save_map(self.map_file)
 
+        # also mark public any branches the user specified
+        blist = [self.repo[branch].node() for branch in
+                 self.ui.configlist('git', 'public')]
         if rnode and self.ui.configbool('hggit', 'usephases'):
+            blist.append(rnode)
+
+        if blist:
             lock = self.repo.lock()
             try:
                 tr = self.repo.transaction("phase")
                 try:
                     phases.advanceboundary(self.repo, tr, phases.public,
-                                           [rnode])
+                                           blist)
                 except TypeError:
                     # hg < 3.2
                     phases.advanceboundary(self.repo, phases.public,
-                                           [rnode])
+                                           blist)
                 tr.close()
             finally:
                 if tr is not None:
