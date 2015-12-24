@@ -34,6 +34,11 @@ print "util.system =", f(util.system)
 print "util =", f(util)
 print "util.system =", f(util.system)
 
+from mercurial import hgweb
+print "hgweb =", f(hgweb)
+print "hgweb_mod =", f(hgweb.hgweb_mod)
+print "hgweb =", f(hgweb)
+
 import re as fred
 print "fred =", f(fred)
 
