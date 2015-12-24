@@ -5991,8 +5991,9 @@ def resolve(ui, repo, *pats, **opts):
     Returns 0 on success, 1 if any files fail a resolve attempt.
     """
 
+    flaglist = 'all mark unmark list no_status'.split()
     all, mark, unmark, show, nostatus = \
-        [opts.get(o) for o in 'all mark unmark list no_status'.split()]
+        [opts.get(o) for o in flaglist]
 
     if (show and (mark or unmark)) or (mark and unmark):
         raise error.Abort(_("too many options specified"))
@@ -6121,7 +6122,22 @@ def resolve(ui, repo, *pats, **opts):
         ms.recordactions()
 
         if not didwork and pats:
+            hint = None
+            if not any([p for p in pats if p.find(':') >= 0]):
+                pats = ['path:%s' % p for p in pats]
+                m = scmutil.match(wctx, pats, opts)
+                for f in ms:
+                    if not m(f):
+                        continue
+                    flags = ''.join(['-%s ' % o[0] for o in flaglist
+                                                   if opts.get(o)])
+                    hint = _("(try: hg resolve %s%s)\n") % (
+                             flags,
+                             ' '.join(pats))
+                    break
             ui.warn(_("arguments do not match paths that need resolving\n"))
+            if hint:
+                ui.warn(hint)
         elif ms.mergedriver and ms.mdstate() != 's':
             # run conclude step when either a driver-resolved file is requested
             # or there are no driver-resolved files
