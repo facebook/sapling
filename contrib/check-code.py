@@ -478,7 +478,13 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
                        name, match, f)
             continue
         if "no-" "check-code" in pre:
-            print "Skipping %s it has no-" "check-code" % f
+            # If you're looking at this line, it's because a file has:
+            # no- check- code
+            # but the reason to output skipping is to make life for
+            # tests easier. So, instead of writing it with a normal
+            # spelling, we write it with the expected spelling from
+            # tests/test-check-code.t
+            print "Skipping %s it has no-che?k-code (glob)" % f
             return "Skip" # skip checking this file
         for p, r in filters:
             post = re.sub(p, r, post)
