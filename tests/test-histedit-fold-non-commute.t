@@ -95,6 +95,7 @@ fix up
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
   (no more unresolved files)
+  continue: hg histedit --continue
   $ cat > cat.py <<EOF
   > import sys
   > print open(sys.argv[1]).read()
@@ -128,6 +129,7 @@ just continue this time
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
   (no more unresolved files)
+  continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
   7b4e2f4b7bcd: empty changeset
 
@@ -255,6 +257,7 @@ fix up
   $ echo 'I can haz no commute' > e
   $ hg resolve --mark e
   (no more unresolved files)
+  continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle | grep -v '2 files removed'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -266,6 +269,7 @@ just continue this time
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
   (no more unresolved files)
+  continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
   7b4e2f4b7bcd: empty changeset
 

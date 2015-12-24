@@ -1457,5 +1457,7 @@ def extsetup(ui):
     cmdutil.unfinishedstates.append(
         ['histedit-state', False, True, _('histedit in progress'),
          _("use 'hg histedit --continue' or 'hg histedit --abort'")])
+    cmdutil.afterresolvedstates.append(
+        ['histedit-state', _('hg histedit --continue')])
     if ui.configbool("experimental", "histeditng"):
         globals()['base'] = addhisteditaction(['base', 'b'])(base)

@@ -178,6 +178,7 @@ Continue
   $ echo b2 > B
   $ hg resolve --mark B
   (no more unresolved files)
+  continue: hg histedit --continue
   $ hg histedit --continue | fixbundle
   $ hg tglog
   @  6:03772da75548bb42a8f1eacd8c91d0717a147fcd:draft 'X'
