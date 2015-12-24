@@ -3364,6 +3364,8 @@ def clearunfinished(repo):
             util.unlink(repo.join(f))
 
 afterresolvedstates = [
+    ('graftstate',
+     _('hg graft --continue')),
     ]
 
 def checkafterresolved(repo):

@@ -78,6 +78,7 @@ http://bz.selenic.com/show_bug.cgi?id=4476
   $ echo b3 >> b
   $ hg resolve --mark b
   (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft --continue
   grafting 1:5974126fad84 "b1"
   warning: can't find ancestor for 'b' copied from 'a'!

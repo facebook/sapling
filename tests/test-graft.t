@@ -246,6 +246,7 @@ Fix up:
   $ echo b > e
   $ hg resolve -m e
   (no more unresolved files)
+  continue: hg graft --continue
 
 Continue with a revision should fail:
 
@@ -440,6 +441,7 @@ Resolve conflicted graft
   $ echo b > a
   $ hg resolve -m a
   (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft -c
   grafting 1:5d205f8b35b6 "1"
   $ hg export tip --git
@@ -469,6 +471,7 @@ Resolve conflicted graft with rename
   $ hg resolve --all
   merging a and b to b
   (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft -c
   grafting 2:5c095ad7e90f "2"
   $ hg export tip --git
@@ -759,6 +762,7 @@ graft --continue after --force
   $ echo abc > a
   $ hg resolve -m a
   (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft -c
   grafting 28:50a516bb8b57 "28"
   $ cat a
