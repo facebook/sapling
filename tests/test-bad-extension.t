@@ -32,9 +32,9 @@ show traceback for ImportError of hgext.name if debug is set
   *** failed to import extension badext from $TESTTMP/badext.py: bit bucket overflow
   Traceback (most recent call last):
   Exception: bit bucket overflow
-  could not import hgext.badext2 (No module named badext2): trying badext2
+  could not import hgext.badext2 (No module named *badext2): trying badext2 (glob)
   Traceback (most recent call last):
-  ImportError: No module named badext2
+  ImportError: No module named *badext2 (glob)
   *** failed to import extension badext2: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named badext2
