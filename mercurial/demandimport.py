@@ -184,11 +184,9 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
                 symbol._addref(globalname)
 
         if level >= 0:
-            # Mercurial's enforced import style does not use
-            # "from a import b,c,d" or "from .a import b,c,d" syntax. In
-            # addition, this appears to be giving errors with some modules
-            # for unknown reasons. Since we shouldn't be using this syntax
-            # much, work around the problems.
+            # The "from a import b,c,d" or "from .a import b,c,d"
+            # syntax gives errors with some modules for unknown
+            # reasons. Work around the problem.
             if name:
                 return _hgextimport(_origimport, name, globals, locals,
                                     fromlist, level)
