@@ -1097,22 +1097,8 @@ class paths(dict):
             # No location is the same as not existing.
             if not loc:
                 continue
-
-            # TODO ignore default-push once all consumers stop referencing it
-            # since it is handled specifically below.
-
             loc, sub = ui.configsuboptions('paths', name)
             self[name] = path(ui, name, rawloc=loc, suboptions=sub)
-
-        # Handle default-push, which is a one-off that defines the push URL for
-        # the "default" path.
-        defaultpush = ui.config('paths', 'default-push')
-        if defaultpush:
-            # "default-push" can be defined without "default" entry. This is a
-            # bit weird, but is allowed for backwards compatibility.
-            if 'default' not in self:
-                self['default'] = path(ui, 'default', rawloc=defaultpush)
-            self['default'].pushloc = defaultpush
 
     def getpath(self, name, default=None):
         """Return a ``path`` from a string, falling back to default.
