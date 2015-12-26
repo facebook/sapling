@@ -1115,7 +1115,7 @@ class paths(dict):
             self['default'].pushloc = defaultpush
 
     def getpath(self, name, default=None):
-        """Return a ``path`` from a string, falling back to a default.
+        """Return a ``path`` from a string, falling back to default.
 
         ``name`` can be a named path or locations. Locations are filesystem
         paths or URIs.
@@ -1125,13 +1125,16 @@ class paths(dict):
         """
         # Only fall back to default if no path was requested.
         if name is None:
-            if default:
+            if not default:
+                default = ()
+            elif not isinstance(default, (tuple, list)):
+                default = (default,)
+            for k in default:
                 try:
-                    return self[default]
+                    return self[k]
                 except KeyError:
-                    return None
-            else:
-                return None
+                    continue
+            return None
 
         # Most likely empty string.
         # This may need to raise in the future.
