@@ -460,7 +460,7 @@ Force prompts with no input (should be similar to :fail)
   --- file3 ---
   3
   changed2
-  $ diff -U8 $TESTTMP/fail.status $TESTTMP/prompt.status
+  $ cmp $TESTTMP/fail.status $TESTTMP/prompt.status || diff -U8 $TESTTMP/fail.status $TESTTMP/prompt.status
 
 
 Force prompts
@@ -583,7 +583,7 @@ invocations.)
   >         hg resolve --tool ":$tool" --all --config ui.interactive=True
   >         status > "$TESTTMP/compare.status" 2>&1
   >         echo '--- diff of status ---'
-  >         if diff -U8 "$TESTTMP/$tool.status" "$TESTTMP/compare.status"; then
+  >         if cmp "$TESTTMP/$tool.status" "$TESTTMP/compare.status" || diff -U8 "$TESTTMP/$tool.status" "$TESTTMP/compare.status"; then
   >             echo '(status identical)'
   >         fi
   >         lasttool="$tool"
@@ -868,7 +868,7 @@ Force prompts with no input
   --- file3 ---
   3
   changed1
-  $ diff -U8 $TESTTMP/fail.status $TESTTMP/prompt.status
+  $ cmp $TESTTMP/fail.status $TESTTMP/prompt.status || diff -U8 $TESTTMP/fail.status $TESTTMP/prompt.status
 
 Choose to merge all files
 

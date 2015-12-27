@@ -779,4 +779,4 @@ Re-resolve and check status
   warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   [1]
   $ checkstatus > $TESTTMP/status2 2>&1
-  $ diff -U8 $TESTTMP/status1 $TESTTMP/status2
+  $ cmp $TESTTMP/status1 $TESTTMP/status2 || diff -U8 $TESTTMP/status1 $TESTTMP/status2
