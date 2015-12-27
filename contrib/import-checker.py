@@ -179,9 +179,6 @@ def list_stdlib_modules():
     # consider them stdlib.
     for m in ['msvcrt', '_winreg']:
         yield m
-    # These get missed too
-    for m in 'ctypes', 'email', 'logging', 'multiprocessing':
-        yield m
     yield 'builtins' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
@@ -214,11 +211,12 @@ def list_stdlib_modules():
                     or top == libpath and d in ('hgext', 'mercurial')):
                     del dirs[i]
             for name in files:
-                if name == '__init__.py':
-                    continue
                 if not name.endswith(('.py', '.so', '.pyc', '.pyo', '.pyd')):
                     continue
-                full_path = os.path.join(top, name)
+                if name.startswith('__init__.py'):
+                    full_path = top
+                else:
+                    full_path = os.path.join(top, name)
                 rel_path = full_path[len(libpath) + 1:]
                 mod = dotted_name_of_path(rel_path)
                 yield mod
