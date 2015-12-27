@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 
 import collections
-import os
 
 from .i18n import _
 from .node import (
@@ -143,13 +142,12 @@ def bisect(changelog, state):
 
 def load_state(repo):
     state = {'current': [], 'good': [], 'bad': [], 'skip': []}
-    if os.path.exists(repo.join("bisect.state")):
-        for l in repo.vfs("bisect.state"):
-            kind, node = l[:-1].split()
-            node = repo.lookup(node)
-            if kind not in state:
-                raise error.Abort(_("unknown bisect kind %s") % kind)
-            state[kind].append(node)
+    for l in repo.vfs.tryreadlines("bisect.state"):
+        kind, node = l[:-1].split()
+        node = repo.lookup(node)
+        if kind not in state:
+            raise error.Abort(_("unknown bisect kind %s") % kind)
+        state[kind].append(node)
     return state
 
 
