@@ -206,13 +206,13 @@ Test multiple files/revisions output
   adding file changes
   added 3 changesets with 3 changes to 2 files (+1 heads)
   error: pretxnchangegroup hook failed: end-of-line check failed:
-    d.txt in a7040e68714f should not have CRLF line endings
     b.txt in fbcf9b1025f5 should not have CRLF line endings
+    d.txt in a7040e68714f should not have CRLF line endings
   transaction abort!
   rollback completed
   abort: end-of-line check failed:
-    d.txt in a7040e68714f should not have CRLF line endings
     b.txt in fbcf9b1025f5 should not have CRLF line endings
+    d.txt in a7040e68714f should not have CRLF line endings
   [255]
 
   $ cd ..

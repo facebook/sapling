@@ -201,7 +201,7 @@ class eolfile(object):
                 data = ctx[f].data()
                 if (target == "to-lf" and "\r\n" in data
                     or target == "to-crlf" and singlelf.search(data)):
-                    failed.append((str(ctx), target, f))
+                    failed.append((f, target, str(ctx)))
                 break
         return failed
 
@@ -244,7 +244,7 @@ def _checkhook(ui, repo, node, headsonly):
     if failed:
         eols = {'to-lf': 'CRLF', 'to-crlf': 'LF'}
         msgs = []
-        for node, target, f in failed:
+        for f, target, node in sorted(failed):
             msgs.append(_("  %s in %s should not have %s line endings") %
                         (f, node, eols[target]))
         raise error.Abort(_("end-of-line check failed:\n") + "\n".join(msgs))
