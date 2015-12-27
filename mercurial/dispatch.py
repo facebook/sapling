@@ -120,11 +120,18 @@ def dispatch(req):
     ret = None
     try:
         ret = _runcatch(req)
-        return ret
+    except KeyboardInterrupt:
+        try:
+            req.ui.warn(_("interrupted!\n"))
+        except IOError as inst:
+            if inst.errno != errno.EPIPE:
+                raise
+        ret = -1
     finally:
         duration = time.time() - starttime
         req.ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
                    msg, ret or 0, duration)
+    return ret
 
 def _runcatch(req):
     def catchterm(*args):
@@ -313,11 +320,7 @@ def _runcatch(req):
         else:
             ui.warn(_("abort: %s\n") % inst.strerror)
     except KeyboardInterrupt:
-        try:
-            ui.warn(_("interrupted!\n"))
-        except IOError as inst:
-            if inst.errno != errno.EPIPE:
-                raise
+        raise
     except MemoryError:
         ui.warn(_("abort: out of memory\n"))
     except SystemExit as inst:
