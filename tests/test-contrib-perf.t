@@ -123,8 +123,6 @@ perfstatus
   $ hg perffncacheencode
   $ hg perffncacheload
   $ hg perffncachewrite
-  transaction abort!
-  rollback completed
   $ hg perfheads
   $ hg perfindex
   $ hg perfloadmarkers

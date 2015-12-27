@@ -441,6 +441,7 @@ def perffncachewrite(ui, repo, **opts):
         s.fncache.write(tr)
     timer(d)
     lock.release()
+    tr.close()
     fm.end()
 
 @command('perffncacheencode', formatteropts)
