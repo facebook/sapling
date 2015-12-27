@@ -229,7 +229,7 @@ base on a previously picked changeset
   > base d273e35dcdf2 B
   > pick b2f90fd8aa85 I
   > EOF
-  abort: may not use "base" with changesets within the edited list
+  hg: parse error: may not use "base" with changesets within the edited list
 
   $ hg --config experimental.histeditng=False histedit 5 --commands - 2>&1 << EOF | fixbundle
   > base cd010b8cd998 A
@@ -238,7 +238,7 @@ base on a previously picked changeset
   > pick b2f90fd8aa85 I
   > pick e8c55b19d366 J
   > EOF
-  abort: unknown action "base"
+  hg: parse error: unknown action "base"
 
   $ hg tglog
   @  8:e8c55b19d366b335626e805484110d1d5f6f2ea3:draft 'J'

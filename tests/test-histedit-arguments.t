@@ -158,7 +158,7 @@ Test that missing revisions are detected
   > pick eb57da33312f 2 three
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: missing rules for changeset c8e68270e35a
+  hg: parse error: missing rules for changeset c8e68270e35a
   (use "drop c8e68270e35a" to discard, see also: "hg help -e histedit.config")
   [255]
 
@@ -170,7 +170,7 @@ Test that extra revisions are detected
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: may not use "pick" with changesets other than the ones listed
+  hg: parse error: may not use "pick" with changesets other than the ones listed
   [255]
 
 Test malformed line
@@ -181,7 +181,7 @@ Test malformed line
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: malformed line "pickeb57da33312f2three"
+  hg: parse error: malformed line "pickeb57da33312f2three"
   [255]
 
 Test unknown changeset
@@ -192,7 +192,7 @@ Test unknown changeset
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: unknown changeset 0123456789ab listed
+  hg: parse error: unknown changeset 0123456789ab listed
   [255]
 
 Test unknown command
@@ -203,7 +203,7 @@ Test unknown command
   > pick c8e68270e35a 3 four
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: unknown action "coin"
+  hg: parse error: unknown action "coin"
   [255]
 
 Test duplicated changeset
@@ -216,7 +216,7 @@ So one is missing and one appear twice.
   > pick eb57da33312f 2 three
   > pick 08d98a8350f3 4 five
   > EOF
-  abort: duplicated command for changeset eb57da33312f
+  hg: parse error: duplicated command for changeset eb57da33312f
   [255]
 
 Test short version of command

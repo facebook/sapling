@@ -365,7 +365,7 @@ class histeditaction(object):
         try:
             self.node = repo[ha].node()
         except error.RepoError:
-            raise error.Abort(_('unknown changeset %s listed')
+            raise error.ParseError(_('unknown changeset %s listed')
                               % ha[:12])
 
     def torule(self):
@@ -509,7 +509,7 @@ def collapse(repo, first, last, commitopts, skipprompt=False):
         return None
     for c in ctxs:
         if not c.mutable():
-            raise error.Abort(
+            raise error.ParseError(
                 _("cannot fold into public change %s") % node.short(c.node()))
     base = first.parents()[0]
 
@@ -633,7 +633,7 @@ class fold(histeditaction):
         else:
             c = repo[prev.node]
         if not c.mutable():
-            raise error.Abort(
+            raise error.ParseError(
                 _("cannot fold into public change %s") % node.short(c.node()))
 
 
@@ -1207,11 +1207,11 @@ def parserules(rules, state):
     actions = []
     for r in rules:
         if ' ' not in r:
-            raise error.Abort(_('malformed line "%s"') % r)
+            raise error.ParseError(_('malformed line "%s"') % r)
         verb, rest = r.split(' ', 1)
 
         if verb not in actiontable:
-            raise error.Abort(_('unknown action "%s"') % verb)
+            raise error.ParseError(_('unknown action "%s"') % verb)
 
         action = actiontable[verb].fromrule(state, rest)
         actions.append(action)
@@ -1220,7 +1220,7 @@ def parserules(rules, state):
 def warnverifyactions(ui, repo, actions, state, ctxs):
     try:
         verifyactions(actions, state, ctxs)
-    except error.Abort:
+    except error.ParseError:
         if repo.vfs.exists('histedit-last-edit.txt'):
             ui.warn(_('warning: histedit rules saved '
                       'to: .hg/histedit-last-edit.txt\n'))
@@ -1242,21 +1242,23 @@ def verifyactions(actions, state, ctxs):
         constraints = action.constraints()
         for constraint in constraints:
             if constraint not in _constraints.known():
-                raise error.Abort(_('unknown constraint "%s"') % constraint)
+                raise error.ParseError(_('unknown constraint "%s"') %
+                        constraint)
 
         nodetoverify = action.nodetoverify()
         if nodetoverify is not None:
             ha = node.hex(nodetoverify)
             if _constraints.noother in constraints and ha not in expected:
-                raise error.Abort(
+                raise error.ParseError(
                     _('may not use "%s" with changesets '
                       'other than the ones listed') % action.verb)
             if _constraints.forceother in constraints and ha in expected:
-                raise error.Abort(
+                raise error.ParseError(
                     _('may not use "%s" with changesets '
                       'within the edited list') % action.verb)
             if _constraints.noduplicates in constraints and ha in seen:
-                raise error.Abort(_('duplicated command for changeset %s') %
+                raise error.ParseError(_(
+                        'duplicated command for changeset %s') %
                         ha[:12])
             seen.add(ha)
     missing = sorted(expected - seen)  # sort to stabilize output
@@ -1267,7 +1269,7 @@ def verifyactions(actions, state, ctxs):
         # don't show in the edit-plan in the future
         actions[:0] = drops
     elif missing:
-        raise error.Abort(_('missing rules for changeset %s') %
+        raise error.ParseError(_('missing rules for changeset %s') %
                 missing[0][:12],
                 hint=_('use "drop %s" to discard, see also: '
                        '"hg help -e histedit.config"') % missing[0][:12])
