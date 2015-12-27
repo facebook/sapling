@@ -391,6 +391,8 @@ _jsonmap[0x08] = '\\b'
 _jsonmap[0x0c] = '\\f'
 _jsonmap[0x0d] = '\\r'
 _paranoidjsonmap = _jsonmap[:]
+_paranoidjsonmap[0x3c] = '\\u003c'  # '<' (e.g. escape "</script>")
+_paranoidjsonmap[0x3e] = '\\u003e'  # '>'
 _jsonmap.extend(chr(x) for x in xrange(128, 256))
 
 def jsonescape(s, paranoid=False):
@@ -419,8 +421,8 @@ def jsonescape(s, paranoid=False):
     >>> jsonescape('')
     ''
 
-    If paranoid, non-ascii characters are also escaped. This is suitable for
-    web output.
+    If paranoid, non-ascii and common troublesome characters are also escaped.
+    This is suitable for web output.
 
     >>> jsonescape('escape boundary: \\x7e \\x7f \\xc2\\x80', paranoid=True)
     'escape boundary: ~ \\\\u007f \\\\u0080'
@@ -430,6 +432,8 @@ def jsonescape(s, paranoid=False):
     'utf-8: caf\\\\u00e9'
     >>> jsonescape('non-BMP: \\xf0\\x9d\\x84\\x9e', paranoid=True)
     'non-BMP: \\\\ud834\\\\udd1e'
+    >>> jsonescape('<foo@example.org>', paranoid=True)
+    '\\\\u003cfoo@example.org\\\\u003e'
     '''
 
     if paranoid:
