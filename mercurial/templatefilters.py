@@ -197,15 +197,8 @@ def json(obj):
         return {None: 'null', False: 'false', True: 'true'}[obj]
     elif isinstance(obj, int) or isinstance(obj, float):
         return str(obj)
-    elif isinstance(obj, encoding.localstr):
-        u = encoding.fromlocal(obj).decode('utf-8')  # can round-trip
-        return '"%s"' % jsonescape(u)
     elif isinstance(obj, str):
-        # no encoding.fromlocal() because it may abort if obj can't be decoded
-        u = unicode(obj, encoding.encoding, 'replace')
-        return '"%s"' % jsonescape(u)
-    elif isinstance(obj, unicode):
-        return '"%s"' % jsonescape(obj)
+        return '"%s"' % encoding.jsonescape(obj, paranoid=True)
     elif util.safehasattr(obj, 'keys'):
         out = []
         for k, v in sorted(obj.iteritems()):

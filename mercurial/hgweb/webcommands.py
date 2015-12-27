@@ -1196,7 +1196,8 @@ def graph(web, req, tmpl):
                 canvaswidth=(cols + 1) * bg_height,
                 truecanvasheight=rows * bg_height,
                 canvasheight=canvasheight, bg_height=bg_height,
-                jsdata=lambda **x: graphdata(True, str),
+                # {jsdata} will be passed to |json, so it must be in utf-8
+                jsdata=lambda **x: graphdata(True, encoding.fromlocal),
                 nodes=lambda **x: graphdata(False, str),
                 node=ctx.hex(), changenav=changenav)
 

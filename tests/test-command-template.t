@@ -3542,6 +3542,11 @@ Test broken string escapes:
   hg: parse error: invalid \x escape
   [255]
 
+json filter should escape HTML tags so that the output can be embedded in hgweb:
+
+  $ hg log -T "{'<foo@example.org>'|json}\n" -R a -l1
+  "\u003cfoo@example.org\u003e"
+
 Set up repository for non-ascii encoding tests:
 
   $ hg init nonascii
@@ -3558,11 +3563,12 @@ json filter should try round-trip conversion to utf-8:
   $ HGENCODING=ascii hg log -T "{branch|json}\n" -r0
   "\u00e9"
 
-json filter should not abort if it can't decode bytes:
-(not sure the current behavior is right; we might want to use utf-8b encoding?)
+json filter takes input as utf-8b:
 
   $ HGENCODING=ascii hg log -T "{'`cat utf-8`'|json}\n" -l1
-  "\ufffd\ufffd"
+  "\u00e9"
+  $ HGENCODING=ascii hg log -T "{'`cat latin1`'|json}\n" -l1
+  "\udce9"
 
 utf8 filter:
 
