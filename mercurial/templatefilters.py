@@ -215,23 +215,6 @@ def json(obj):
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
-def _uescape(c):
-    if 0x20 <= ord(c) < 0x80:
-        return c
-    else:
-        return '\\u%04x' % ord(c)
-
-_escapes = [
-    ('\\', '\\\\'), ('"', '\\"'), ('\t', '\\t'), ('\n', '\\n'),
-    ('\r', '\\r'), ('\f', '\\f'), ('\b', '\\b'),
-    ('<', '\\u003c'), ('>', '\\u003e'), ('\0', '\\u0000')
-]
-
-def jsonescape(s):
-    for k, v in _escapes:
-        s = s.replace(k, v)
-    return ''.join(_uescape(c) for c in s)
-
 def lower(text):
     """:lower: Any text. Converts the text to lowercase."""
     return encoding.lower(text)
