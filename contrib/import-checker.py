@@ -61,7 +61,7 @@ def dotted_name_of_path(path, trimpure=False):
     >>> dotted_name_of_path('zlibmodule.so')
     'zlib'
     """
-    parts = path.split('/')
+    parts = path.replace(os.sep, '/').split('/')
     parts[-1] = parts[-1].split('.', 1)[0] # remove .py and .so and .ARCH.so
     if parts[-1].endswith('module'):
         parts[-1] = parts[-1][:-6]
@@ -180,7 +180,7 @@ def list_stdlib_modules():
     for m in ['msvcrt', '_winreg']:
         yield m
     # These get missed too
-    for m in 'ctypes', 'ctypes.util', 'email', 'logging', 'multiprocessing':
+    for m in 'ctypes', 'email', 'logging', 'multiprocessing':
         yield m
     yield 'builtins' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
