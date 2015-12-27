@@ -402,7 +402,6 @@ filters = {
     "isodate": isodate,
     "isodatesec": isodatesec,
     "json": json,
-    "jsonescape": jsonescape,
     "lower": lower,
     "nonempty": nonempty,
     "obfuscate": obfuscate,
