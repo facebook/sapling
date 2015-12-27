@@ -3556,12 +3556,14 @@ Set up repository for non-ascii encoding tests:
   > open('utf-8', 'w').write('\xc3\xa9')
   > EOF
   $ HGENCODING=utf-8 hg branch -q `cat utf-8`
-  $ HGENCODING=utf-8 hg ci -qAm 'non-ascii branch' utf-8
+  $ HGENCODING=utf-8 hg ci -qAm "non-ascii branch: `cat utf-8`" utf-8
 
 json filter should try round-trip conversion to utf-8:
 
   $ HGENCODING=ascii hg log -T "{branch|json}\n" -r0
   "\u00e9"
+  $ HGENCODING=ascii hg log -T "{desc|json}\n" -r0
+  "non-ascii branch: \u00e9"
 
 json filter takes input as utf-8b:
 

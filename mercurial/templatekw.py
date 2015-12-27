@@ -9,6 +9,7 @@ from __future__ import absolute_import
 
 from .node import hex, nullid
 from . import (
+    encoding,
     error,
     hbisect,
     patch,
@@ -257,7 +258,12 @@ def showdate(repo, ctx, templ, **args):
 
 def showdescription(repo, ctx, templ, **args):
     """:desc: String. The text of the changeset description."""
-    return ctx.description().strip()
+    s = ctx.description()
+    if isinstance(s, encoding.localstr):
+        # try hard to preserve utf-8 bytes
+        return encoding.tolocal(encoding.fromlocal(s).strip())
+    else:
+        return s.strip()
 
 def showdiffstat(repo, ctx, templ, **args):
     """:diffstat: String. Statistics of changes with the following format:
