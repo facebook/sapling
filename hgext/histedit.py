@@ -252,19 +252,19 @@ class histeditstate(object):
     def read(self):
         """Load histedit state from disk and set fields appropriately."""
         try:
-            fp = self.repo.vfs('histedit-state', 'r')
+            state = self.repo.vfs.read('histedit-state')
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             raise error.Abort(_('no histedit in progress'))
 
-        try:
-            data = pickle.load(fp)
-            parentctxnode, rules, keep, topmost, replacements = data
-            backupfile = None
-        except pickle.UnpicklingError:
+        if state.startswith('v1\n'):
             data = self._load()
             parentctxnode, rules, keep, topmost, replacements, backupfile = data
+        else:
+            data = pickle.loads(state)
+            parentctxnode, rules, keep, topmost, replacements = data
+            backupfile = None
 
         self.parentctxnode = parentctxnode
         rules = "\n".join(["%s %s" % (verb, rest) for [verb, rest] in rules])
