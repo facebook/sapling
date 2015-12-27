@@ -3547,6 +3547,7 @@ Set up repository for non-ascii encoding tests:
   $ hg init nonascii
   $ cd nonascii
   $ python <<EOF
+  > open('latin1', 'w').write('\xe9')
   > open('utf-8', 'w').write('\xc3\xa9')
   > EOF
   $ HGENCODING=utf-8 hg branch -q `cat utf-8`
@@ -3562,5 +3563,18 @@ json filter should not abort if it can't decode bytes:
 
   $ HGENCODING=ascii hg log -T "{'`cat utf-8`'|json}\n" -l1
   "\ufffd\ufffd"
+
+utf8 filter:
+
+  $ HGENCODING=ascii hg log -T "round-trip: {branch|utf8|hex}\n" -r0
+  round-trip: c3a9
+  $ HGENCODING=latin1 hg log -T "decoded: {'`cat latin1`'|utf8|hex}\n" -l1
+  decoded: c3a9
+  $ HGENCODING=ascii hg log -T "replaced: {'`cat latin1`'|utf8|hex}\n" -l1
+  abort: decoding near * (glob)
+  [255]
+  $ hg log -T "invalid type: {rev|utf8}\n" -r0
+  abort: template filter 'utf8' is not compatible with keyword 'rev'
+  [255]
 
   $ cd ..

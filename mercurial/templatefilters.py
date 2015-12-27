@@ -377,6 +377,10 @@ def emailuser(text):
     """:emailuser: Any text. Returns the user portion of an email address."""
     return util.emailuser(text)
 
+def utf8(text):
+    """:utf8: Any text. Converts from the local character encoding to UTF-8."""
+    return encoding.fromlocal(text)
+
 def xmlescape(text):
     text = (text
             .replace('&', '&amp;')
@@ -422,6 +426,7 @@ filters = {
     "urlescape": urlescape,
     "user": userfilter,
     "emailuser": emailuser,
+    "utf8": utf8,
     "xmlescape": xmlescape,
 }
 
