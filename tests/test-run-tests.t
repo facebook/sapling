@@ -209,8 +209,6 @@ failure w/ keyword
 
 Verify that when a process fails to start we show a useful message
 ==================================================================
-NOTE: there is currently a bug where this shows "2 failed" even though
-it's actually the same test being reported for failure twice.
 
   $ cat > test-serve-fail.t <<EOF
   >   $ echo 'abort: child process failed to start blah'
@@ -219,11 +217,8 @@ it's actually the same test being reported for failure twice.
   
   ERROR: test-serve-fail.t output changed
   !
-  ERROR: test-serve-fail.t output changed
-  !
   Failed test-serve-fail.t: server failed to start (HGPORT=*) (glob)
-  Failed test-serve-fail.t: output changed
-  # Ran 1 tests, 0 skipped, 0 warned, 2 failed.
+  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
   python hash seed: * (glob)
   [1]
   $ rm test-serve-fail.t

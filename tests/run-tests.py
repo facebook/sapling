@@ -585,6 +585,8 @@ class Test(unittest.TestCase):
                 result.testsRun -= 1
             except WarnTest as e:
                 result.addWarn(self, str(e))
+            except ReportedTest as e:
+                pass
             except self.failureException as e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
@@ -1243,6 +1245,9 @@ class IgnoreTest(Exception):
 class WarnTest(Exception):
     """Raised to indicate that a test warned."""
 
+class ReportedTest(Exception):
+    """Raised to indicate that a test already reported."""
+
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
     # Don't worry too much about accessing the non-public _TextTestResult.
@@ -1361,6 +1366,7 @@ class TestResult(unittest._TextTestResult):
                     self.addFailure(
                         test,
                         'server failed to start (HGPORT=%s)' % test._startport)
+                    raise ReportedTest('server failed to start')
                 else:
                     self.stream.write('\n')
                     for line in lines:
