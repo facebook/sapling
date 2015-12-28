@@ -31,25 +31,30 @@ from . import (
 # locale encoding correctly.  --immerrr
 locale.setlocale(locale.LC_ALL, '')
 
-# os.name is one of: 'posix', 'nt', 'dos', 'os2', 'mac', or 'ce'
-if os.name == 'posix':
+try:
     import curses
     import fcntl
     import termios
-else:
+    curses.error
+    fcntl.ioctl
+    termios.TIOCGWINSZ
+except ImportError:
     # I have no idea if wcurses works with crecord...
     try:
         import wcurses as curses
+        curses.error
     except ImportError:
-        # wcurses is not shipped on Windows by default
-        pass
+        # wcurses is not shipped on Windows by default, or python is not
+        # compiled with curses
+        curses = False
 
-try:
-    curses
-except NameError:
-    if os.name != 'nt':  # Temporary hack to get running on Windows again
-        raise error.Abort(
-            _('the python curses/wcurses module is not available/installed'))
+def checkcurses(ui):
+    """Return True if the user wants to use curses
+
+    This method returns True if curses is found (and that python is built with
+    it) and that the user has the correct flag for the ui.
+    """
+    return curses and ui.configbool('experimental', 'crecord', False)
 
 _origstdout = sys.__stdout__ # used by gethw()
 

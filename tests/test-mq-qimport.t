@@ -290,3 +290,26 @@ check qimport phase:
   $ cd ..
 
   $ killdaemons.py
+
+check patch name generation for non-alpha-numeric summary line
+
+  $ cd repo
+
+  $ hg qpop -a -q
+  patch queue now empty
+  $ hg qseries -v
+  0 U imported_patch_b_diff
+  1 U 0
+  2 U this-name-is-better
+  3 U url.diff
+
+  $ echo bb >> b
+  $ hg commit -m '==++--=='
+
+  $ hg qimport -r tip
+  $ hg qseries -v
+  0 A 1.diff
+  1 U imported_patch_b_diff
+  2 U 0
+  3 U this-name-is-better
+  4 U url.diff

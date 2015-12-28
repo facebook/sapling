@@ -66,7 +66,7 @@ def recordfilter(ui, originalhunks, operation=None):
     what kind of filtering they are doing: reverting, committing, shelving, etc.
     *operation* has to be a translated string.
     """
-    usecurses =  ui.configbool('experimental', 'crecord', False)
+    usecurses = crecordmod.checkcurses(ui)
     testfile = ui.config('experimental', 'crecordtest', None)
     oldwrite = setupwrapcolorwrite(ui)
     try:
