@@ -411,7 +411,7 @@ def onetimeclientsetup(ui):
         except FakeException:
             ui.progress(_('checking'), None)
             pass
-    wrapfunction(verify, '_verify', _verify)
+    wrapfunction(verify, 'verify', _verify)
 
     if util.safehasattr(cmdutil, '_revertprefetch'):
         wrapfunction(cmdutil, '_revertprefetch', _revertprefetch)
