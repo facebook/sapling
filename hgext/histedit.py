@@ -621,6 +621,22 @@ class edit(histeditaction):
 
 @addhisteditaction(['fold', 'f'])
 class fold(histeditaction):
+    def verify(self, prev):
+        """ Verifies semantic correctness of the fold rule"""
+        super(fold, self).verify(prev)
+        repo = self.repo
+        state = self.state
+        if not prev:
+            c = repo[self.node].parents()[0]
+        elif not prev.verb in ('pick', 'base'):
+            return
+        else:
+            c = repo[prev.node]
+        if not c.mutable():
+            raise error.Abort(
+                _("cannot fold into public change %s") % node.short(c.node()))
+
+
     def continuedirty(self):
         repo = self.repo
         rulectx = repo[self.node]

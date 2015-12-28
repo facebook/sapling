@@ -451,9 +451,6 @@ Attempting to fold a change into a public change should not work:
   > mv tmp "\$1"
   > EOF
   $ HGEDITOR="sh ../edit.sh" hg histedit 2
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  reverting a
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   warning: histedit rules saved to: .hg/histedit-last-edit.txt
   abort: cannot fold into public change 18aa70c8ad22
   [255]
@@ -472,6 +469,3 @@ Attempting to fold a change into a public change should not work:
   #  d, drop = remove commit from history
   #  m, mess = edit commit message without changing commit content
   #
-TODO: this abort shouldn't be required, but it is for now to leave the repo in
-a clean state.
-  $ hg histedit --abort
