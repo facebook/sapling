@@ -165,7 +165,7 @@ Set up the repo
   <li><a href="/comparison/xyzzy/foo?style=paper">comparison</a></li>
   <li><a href="/annotate/xyzzy/foo?style=paper">annotate</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
-  <a href="/atom-log/a7c1559b7bba/foo" title="subscribe to atom feed">
+  <a href="/atom-log/tip/foo" title="subscribe to atom feed">
    log foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
   <a href="/log/xyzzy/foo?revcount=30&style=paper">less</a>
   <a href="/log/xyzzy/foo?revcount=120&style=paper">more</a>
@@ -353,7 +353,7 @@ Set up the repo
   <li><a href="/comparison/xyzzy/foo?style=coal">comparison</a></li>
   <li><a href="/annotate/xyzzy/foo?style=coal">annotate</a></li>
   <li><a href="/raw-file/xyzzy/foo">raw</a></li>
-  <a href="/atom-log/a7c1559b7bba/foo" title="subscribe to atom feed">
+  <a href="/atom-log/tip/foo" title="subscribe to atom feed">
    log foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
   <a href="/log/xyzzy/foo?revcount=30&style=coal">less</a>
   <a href="/log/xyzzy/foo?revcount=120&style=coal">more</a>
