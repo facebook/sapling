@@ -230,8 +230,13 @@ def _deleteunreachable(repo, ctx):
             markers = []
             for rev in hiderevs:
                 markers.append((repo[rev], ()))
-            obsolete.createmarkers(repo, markers)
-            repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
+            lock = None
+            try:
+                lock = repo.lock()
+                obsolete.createmarkers(repo, markers)
+                repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
+            finally:
+                lockmod.release(lock)
         else:
             repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
 
