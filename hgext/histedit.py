@@ -358,7 +358,7 @@ class histeditaction(object):
         rulehash = rule.strip().split(' ', 1)[0]
         return cls(state, node.bin(rulehash))
 
-    def verify(self):
+    def verify(self, prev):
         """ Verifies semantic correctness of the rule"""
         repo = self.repo
         ha = node.hex(self.node)
@@ -1215,8 +1215,10 @@ def verifyactions(actions, state, ctxs):
     """
     expected = set(c.hex() for c in ctxs)
     seen = set()
+    prev = None
     for action in actions:
-        action.verify()
+        action.verify(prev)
+        prev = action
         constraints = action.constraints()
         for constraint in constraints:
             if constraint not in _constraints.known():
