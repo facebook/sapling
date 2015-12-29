@@ -8,7 +8,7 @@ try:
     from mercurial import ignore
     ignore.readpats
     ignoremod = True
-except ImportError:
+except (AttributeError, ImportError):
     # ignore module was removed in Mercurial 3.5
     ignoremod = False
 from mercurial import match as matchmod
@@ -18,7 +18,7 @@ from mercurial import scmutil
 try:
     from mercurial import pathutil
     pathutil.pathauditor
-except ImportError:
+except (AttributeError, ImportError):
     pathutil = scmutil
 from mercurial import util
 from mercurial.i18n import _

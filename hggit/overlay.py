@@ -240,7 +240,7 @@ class overlaychangectx(context.changectx):
         try:
             from mercurial import phases
             return phases.draft
-        except ImportError:
+        except (AttributeError, ImportError):
             return 1
 
     def totuple(self):
@@ -346,7 +346,7 @@ class overlayrepo(object):
             # Mercurial >= 3.3
             from mercurial import namespaces
             self.names = namespaces.namespaces()
-        except ImportError:
+        except (AttributeError, ImportError):
             pass
 
     def __getitem__(self, n):

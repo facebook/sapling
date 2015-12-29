@@ -1525,7 +1525,7 @@ class GitHandler(object):
             from mercurial import encoding
             old = encoding.encoding
             encoding.encoding = new_encoding
-        except ImportError:
+        except (AttributeError, ImportError):
             old = hgutil._encoding
             hgutil._encoding = new_encoding
         return old
