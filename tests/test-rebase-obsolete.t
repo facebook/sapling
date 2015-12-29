@@ -685,3 +685,30 @@ Even when the chain include missing node
   rebasing 4:ff2c4d47b71d "C"
   note: not rebasing 7:360bbaa7d3ce "O", it has no successor
   rebasing 8:8d47583e023f "P" (tip)
+
+If all the changeset to be rebased are obsolete and present in the destination, we
+should display a friendly error message
+
+  $ hg log -G
+  @  10:121d9e3bc4c6 P
+  |
+  o  9:4be60e099a77 C
+  |
+  o  6:9c48361117de D
+  |
+  o  2:261e70097290 B2
+  |
+  o  0:4a2df7238c3b A
+  
+
+  $ hg up 9
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo "non-relevant change" > nonrelevant
+  $ hg add nonrelevant
+  $ hg commit -m nonrelevant
+  created new head
+  $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=all
+  $ hg rebase -r . -d 10
+  abort: all requested changesets have equivalents or were marked as obsolete
+  (to force the rebase, set the config experimental.rebaseskipobsolete to False)
+  [255]

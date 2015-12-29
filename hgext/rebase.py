@@ -348,6 +348,13 @@ def rebase(ui, repo, **opts):
                 # - split changesets are not rebased if at least one of the
                 # changeset resulting from the split is an ancestor of dest
                 rebaseset = rebasesetrevs - set(obsoletenotrebased)
+                if rebasesetrevs and not rebaseset:
+                    msg = _('all requested changesets have equivalents '
+                            'or were marked as obsolete')
+                    hint = _('to force the rebase, set the config '
+                             'experimental.rebaseskipobsolete to False')
+                    raise error.Abort(msg, hint=hint)
+
             result = buildstate(repo, dest, rebaseset, collapsef,
                                 obsoletenotrebased)
 
