@@ -82,12 +82,12 @@ def replacefilecache(cls, propname, replacement):
                              propname))
 
 def _setupupdates(ui):
-    def _calculateupdates(orig, repo, wctx, mctx, pas, branchmerge, force,
-                          partial, mergeancestor, followcopies):
+    def _calculateupdates(orig, repo, wctx, mctx, ancestors, branchmerge, *arg,
+                          **kwargs):
         """Filter updates to only lay out files that match the sparse rules.
         """
-        actions, diverge, renamedelete = orig(repo, wctx, mctx, pas,
-            branchmerge, force, partial, mergeancestor, followcopies)
+        actions, diverge, renamedelete = orig(repo, wctx, mctx, ancestors,
+                                              branchmerge, *arg, **kwargs)
 
         if not util.safehasattr(repo, 'sparsematch'):
             return actions, diverge, renamedelete
