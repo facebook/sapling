@@ -223,6 +223,20 @@ Verify that when a process fails to start we show a useful message
   [1]
   $ rm test-serve-fail.t
 
+Verify that we can try other ports
+===================================
+  $ hg init inuse
+  $ hg serve -R inuse -p $HGPORT -d --pid-file=blocks.pid
+  $ cat blocks.pid >> $DAEMON_PIDS
+  $ cat > test-serve-inuse.t <<EOF
+  >   $ hg serve -R `pwd`/inuse -p \$HGPORT -d --pid-file=hg.pid
+  >   $ cat hg.pid >> \$DAEMON_PIDS
+  > EOF
+  $ rt test-serve-inuse.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  $ rm test-serve-inuse.t
+
 Running In Debug Mode
 ======================
 

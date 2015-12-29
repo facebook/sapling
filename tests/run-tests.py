@@ -2015,11 +2015,11 @@ class TestRunner(object):
     def _getport(self, count):
         port = self._ports.get(count) # do we have a cached entry?
         if port is None:
-            port = self.options.port + self._portoffset
             portneeded = 3
             # above 100 tries we just give up and let test reports failure
             for tries in xrange(100):
                 allfree = True
+                port = self.options.port + self._portoffset
                 for idx in xrange(portneeded):
                     if not checkportisavailable(port + idx):
                         allfree = False
