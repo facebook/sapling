@@ -74,7 +74,8 @@ def _collectbrokencsets(repo, files, striprev):
     return s
 
 def strip(ui, repo, nodelist, backup=True, topic='backup'):
-
+    # This function operates within a transaction of its own, but does
+    # not take any lock on the repo.
     # Simple way to maintain backwards compatibility for this
     # argument.
     if backup in ['none', 'strip']:
