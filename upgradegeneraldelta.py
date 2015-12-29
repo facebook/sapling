@@ -60,7 +60,7 @@ def _upgrade(ui, repo):
     lock = repo.lock()
     tr = repo.transaction('upgradegeneraldelta')
     try:
-        ui.warn('upgrading repository to generaldelta\n')
+        ui.warn(_('upgrading repository to generaldelta\n'))
         trp = weakref.proxy(tr)
 
         newopts = oldopts.copy()
@@ -74,7 +74,7 @@ def _upgrade(ui, repo):
         chunk = oldmf._chunk
 
         for rev in oldmf:
-            ui.progress('upgrading', rev, total=len(oldmf))
+            ui.progress(_('upgrading'), rev, total=len(oldmf))
             e = i[rev]
             # if the delta base is the rev, this rev is a fulltext
             isdelta = (rev != e[3])
@@ -106,7 +106,7 @@ def _upgrade(ui, repo):
                 f.write('generaldelta\n')
         repo.invalidate()
     finally:
-        ui.progress('upgrading', None)
+        ui.progress(_('upgrading'), None)
         if tr:
             tr.release()
         lock.release()
