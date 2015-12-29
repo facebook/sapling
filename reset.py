@@ -226,19 +226,19 @@ def _deleteunreachable(repo, ctx):
         pass
     hiderevs = repo.revs('::%s - ::(%r)', ctx.rev(), keepheads)
     if hiderevs:
-        if _isevolverepo(repo.ui):
-            markers = []
-            for rev in hiderevs:
-                markers.append((repo[rev], ()))
-            lock = None
-            try:
-                lock = repo.lock()
+        lock = None
+        try:
+            lock = repo.lock()
+            if _isevolverepo(repo.ui):
+                markers = []
+                for rev in hiderevs:
+                    markers.append((repo[rev], ()))
                 obsolete.createmarkers(repo, markers)
                 repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
-            finally:
-                lockmod.release(lock)
-        else:
-            repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
+            else:
+                repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
+        finally:
+            lockmod.release(lock)
 
 ### bookmarks api compatibility layer ###
 def bmactive(repo):
