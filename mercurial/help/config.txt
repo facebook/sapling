@@ -787,7 +787,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   command line are passed as ``$HG_ARGS``. Parsed command line arguments
   are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain string
   representations of the data internally passed to <command>. ``$HG_OPTS``
-  is a  dictionary of options (with unspecified options set to their
+  is a dictionary of options (with unspecified options set to their
   defaults). ``$HG_PATS`` is a list of arguments. If the hook returns
   failure, the command doesn't execute and Mercurial returns the failure
   code.
@@ -1612,7 +1612,7 @@ User interface controls.
     username are expanded.
 
     (default: ``$EMAIL`` or ``username@hostname``. If the username in
-    hgrc is empty, e.g. if the system admin set ``username =``  in the
+    hgrc is empty, e.g. if the system admin set ``username =`` in the
     system hgrc, it has to be specified manually or in a different
     hgrc file)
 
