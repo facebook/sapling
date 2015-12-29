@@ -5,13 +5,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import extensions, util, cmdutil, graphmod, templatekw, scmutil
+from mercurial import  util, cmdutil, graphmod, scmutil
 from mercurial import bookmarks, commands, error, revset
 from mercurial.extensions import wrapfunction
 from hgext import pager
-from mercurial.node import hex, short, nullrev
+from mercurial.node import short, nullrev
 from mercurial.i18n import _
-import errno, os, re
+import re
 import inspect
 
 pager.attended.append('smartlog')
@@ -102,8 +102,8 @@ def sortnodes(nodes, parentfunc, masters):
         elif not xm and ym:
             return -1
         else:
-            # If both children are not in the master line, show the oldest first,
-            # so the graph is approximately in chronological order.
+            # If both children are not in the master line, show the oldest
+            # first, so the graph is approximately in chronological order.
             return x - y
 
     # Process roots, adding children to the queue as they become roots
@@ -163,7 +163,6 @@ def getdag(ui, repo, revs, master):
         mpars = [p.rev() for p in ctx.parents() if
                  p.rev() != nullrev and p.rev() not in parents]
 
-        fake_nodes = []
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
@@ -209,7 +208,10 @@ def getdag(ui, repo, revs, master):
     try:
         return sorted(results, key=lambda x: order[x[0]], reverse=True)
     except ValueError: # Happend when 'order' is empty
-        ui.warn('note: Smartlog encountered an error, so the sorting might be wrong.\n\n')
+        msg = _('note: smartlog encountered an error\n')
+        hint = _('(so the sorting might be wrong.\n\n)')
+        ui.warn(msg)
+        ui.warn(hint)
         return sorted(results, reverse=True)
 
 def _masterrevset(ui, repo, masterstring):
@@ -264,7 +266,7 @@ def smartlogrevset(repo, subset, x):
         scope = revset.getstring(args[0],
                                  _('scope must be either "all" or "recent"'))
         if scope not in ('all', 'recent'):
-            raise util.Abort(_('scope must be either "all" or "recent"'))
+            raise error.Abort(_('scope must be either "all" or "recent"'))
     else:
         scope = 'recent'
     if len(args) > 1:
@@ -339,7 +341,7 @@ def smartlogrevset(repo, subset, x):
                     # local-only (draft) branch
                     rs = 'branch("%s")' % branch
                     branchmaster = repo.revs(rs).first()
-            except:
+            except Exception as e:
                 branchmaster = repo.revs('tip').first()
         else:
             branchmaster = masterrev
@@ -436,10 +438,8 @@ Excludes:
     # because the revsets may cause extra nodes to become visible, which in turn
     # invalidates the changelog instance.
     rev = repo.changelog.rev
-    branchinfo = repo.changelog.branchinfo
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
-    parentrevs = repo.changelog.parentrevs
 
     # get common ancestor
     anc = None
@@ -476,7 +476,7 @@ Excludes:
                     commit_hash = rev[2].node()
                     # Skip fakectxt nodes
                     if commit_hash != '...':
-                        f.write(short(commit_hash) + '\n');
+                        f.write(short(commit_hash) + '\n')
         except IOError:
             # No write access. No big deal.
             pass
@@ -484,5 +484,7 @@ Excludes:
         enabled = False
 
     if hiddenchanges:
-        ui.warn("note: hiding %s old heads without bookmarks " % (hiddenchanges) +
-            "(use --all to see them)\n")
+        msg = _("note: hiding %s old heads without bookmarks\n") % hiddenchanges
+        hint = _("(use --all to see them)\n")
+        ui.warn(msg)
+        ui.warn(hint)
