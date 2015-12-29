@@ -404,7 +404,7 @@ class mergestate(object):
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
-    return (os.path.isfile(repo.wjoin(f))
+    return (repo.wvfs.isfileorlink(f)
         and repo.wvfs.audit.check(f)
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
