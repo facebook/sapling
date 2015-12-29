@@ -56,20 +56,6 @@
 
 
   $ printf "asdas\0das" >> $CACHEDIR/repos
-  $ hg gc
+  $ hg gc 2>&1 | head -n2
   warning: malformed path: * (glob)
   Traceback (most recent call last):
-    File * (glob)
-      path = ui.expandpath(os.path.normpath(path))
-    File * (glob)
-      p = self.paths.getpath(loc)
-    File * (glob)
-      return path(None, rawloc=name)
-    File * (glob)
-      if not name and not u.scheme and not self._isvalidlocalpath(self.loc):
-    File * (glob)
-      return os.path.isdir(os.path.join(path, '.hg'))
-    File * (glob)
-      st = os.stat(s)
-  TypeError: * (glob)
-  finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
