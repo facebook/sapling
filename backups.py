@@ -9,6 +9,8 @@
 from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
 from mercurial import hg, changegroup, exchange
 from mercurial.extensions import wrapfunction
+from mercurial import bundle2
+from mercurial import lock as lockmod
 from hgext import pager
 from mercurial.node import hex, nullrev, nullid, short
 from mercurial.i18n import _
@@ -105,16 +107,24 @@ def backups(ui, repo, *pats, **opts):
         try:
             if chlist:
                 if recovernode:
-                    lock = repo.lock()
+                    tr = lock = None
                     try:
+                        lock = repo.lock()
                         if recovernode in other:
                             ui.status("Unbundling %s\n" % (recovernode))
                             f = hg.openpath(ui, source)
                             gen = exchange.readbundle(ui, f, source)
-                            modheads = changegroup.addchangegroup(repo, gen, 'unbundle', 'bundle:' + source)
+                            tr = repo.transaction("unbundle")
+                            if not isinstance(gen, bundle2.unbundle20):
+                                gen.apply(repo, 'unbundle', 'bundle:' + source)
+                            if isinstance(gen, bundle2.unbundle20):
+                                bundle2.applybundle(repo, gen, tr,
+                                                    source='unbundle',
+                                                    url='bundle:' + source)
+                            tr.close()
                             break
                     finally:
-                        lock.release()
+                        lockmod.release(lock, tr)
                 else:
                     backupdate = os.path.getmtime(source)
                     backupdate = time.strftime('%a %H:%M, %Y-%m-%d', time.localtime(backupdate))
