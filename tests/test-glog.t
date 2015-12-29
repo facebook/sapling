@@ -1429,7 +1429,8 @@ Test log -G options
   >     | sed 's/.*nodetag/nodetag/' > log.nodes
   >   hg log -G --template 'nodetag {rev}\n' "$@" | grep nodetag \
   >     | sed 's/.*nodetag/nodetag/' > glog.nodes
-  >   diff -u log.nodes glog.nodes | grep '^[-+@ ]' || :
+  >   (cmp log.nodes glog.nodes || diff -u log.nodes glog.nodes) \
+  >     | grep '^[-+@ ]' || :
   > }
 
 glog always reorders nodes which explains the difference with log
