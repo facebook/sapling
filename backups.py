@@ -6,15 +6,14 @@
 # GNU General Public License version 2 or any later version.
 """display recently made backups to recover stripped commits"""
 
-from mercurial import extensions, util, cmdutil, commands, error, bundlerepo
+from mercurial import extensions, cmdutil, commands, error, bundlerepo
 from mercurial import hg, changegroup, exchange
-from mercurial.extensions import wrapfunction
 from mercurial import bundle2
 from mercurial import lock as lockmod
 from hgext import pager
-from mercurial.node import hex, nullrev, nullid, short
+from mercurial.node import nullid, short
 from mercurial.i18n import _
-import errno, os, re, glob, time
+import os, glob, time
 
 pager.attended.append('backups')
 
@@ -23,15 +22,16 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 msgwithevolve = """Evolve is enabled so no commit should be stripped unless you
 explicitely called hg strip. hg backups will show you the stripped commits.
-If you are trying to recover a commit hidden from a previous command, use hg 
-reflog to get its sha1 and you will be able to access it directly without 
+If you are trying to recover a commit hidden from a previous command, use hg
+reflog to get its sha1 and you will be able to access it directly without
 recovering a backup."""
+verbosetemplate = "{label('status.modified', node|short)} {desc|firstline}\n"
 
 @command('^backups', [
     ('', 'recover', '', 'brings the specified commit back into the repository')
     ] + commands.logopts, _('hg backups [--recover HASH]'))
 def backups(ui, repo, *pats, **opts):
-    '''lists the commits available in backup bundles 
+    '''lists the commits available in backup bundles
 
     Without any arguments, this command prints a list of the commits in each
     backup bundle.
@@ -76,7 +76,8 @@ def backups(ui, repo, *pats, **opts):
             ui.warn("%s already exists in the repo\n" % recovernode)
             return
     else:
-        ui.status("Recover commits using: hg backups --recover <commit hash>\n", label="status.removed")
+        msg = _("Recover commits using: hg backups --recover <commit hash>\n")
+        ui.status(msg, label="status.removed")
 
     for backup in backups:
         # Much of this is copied from the hg incoming logic
@@ -86,10 +87,13 @@ def backups(ui, repo, *pats, **opts):
         try:
             other = hg.peer(repo, opts, source)
         except error.LookupError as ex:
-            ui.status("\nwarning: unable to open bundle %s - missing parent rev %s\n" %
-                (source, short(ex.name)))
+            msg = _("\nwarning: unable to open bundle %s") % source
+            hint = _("\n(missing parent rev %s)\n") % short(ex.name)
+            ui.warn(msg)
+            ui.warn(hint)
             continue
-        revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get('rev'))
+        revs, checkout = hg.addbranchrevs(repo, other, branches,
+                                          opts.get('rev'))
 
         if revs:
             revs = [other.lookup(rev) for rev in revs]
@@ -97,8 +101,9 @@ def backups(ui, repo, *pats, **opts):
         quiet = ui.quiet
         try:
             ui.quiet = True
-            other, chlist, cleanupfn = bundlerepo.getremotechanges(ui, repo, other,
-                                        revs, opts["bundle"], opts["force"])
+            other, chlist, cleanupfn = bundlerepo.getremotechanges(ui, repo,
+                                        other, revs, opts["bundle"],
+                                        opts["force"])
         except error.LookupError:
             continue
         finally:
@@ -111,7 +116,7 @@ def backups(ui, repo, *pats, **opts):
                     try:
                         lock = repo.lock()
                         if recovernode in other:
-                            ui.status("Unbundling %s\n" % (recovernode))
+                            ui.status(_("Unbundling %s\n") % (recovernode))
                             f = hg.openpath(ui, source)
                             gen = exchange.readbundle(ui, f, source)
                             tr = repo.transaction("unbundle")
@@ -127,10 +132,11 @@ def backups(ui, repo, *pats, **opts):
                         lockmod.release(lock, tr)
                 else:
                     backupdate = os.path.getmtime(source)
-                    backupdate = time.strftime('%a %H:%M, %Y-%m-%d', time.localtime(backupdate))
+                    backupdate = time.strftime('%a %H:%M, %Y-%m-%d',
+                                                time.localtime(backupdate))
                     ui.status("\n%s\n" % (backupdate.ljust(50)))
                     if not ui.verbose:
-                        opts['template'] = "{label('status.modified', node|short)} {desc|firstline}\n"
+                        opts['template'] = verbosetemplate
                     else:
                         ui.status("%s%s\n" % ("bundle:".ljust(13), source))
                     displayer = cmdutil.show_changeset(ui, other, opts, False)
