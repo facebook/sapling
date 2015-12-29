@@ -94,3 +94,35 @@ class funcregistrar(object):
         """Execute exra action for registered function, if needed
         """
         pass
+
+class delayregistrar(object):
+    """Decorator to delay actual registration until uisetup or so
+
+    For example, the decorator class to delay registration by
+    'keyword' funcregistrar can be defined as below::
+
+        class extkeyword(delayregistrar):
+            registrar = keyword
+    """
+    def __init__(self):
+        self._list = []
+
+    registrar = None
+
+    def __call__(self, *args, **kwargs):
+        """Return the decorator to delay actual registration until setup
+        """
+        assert self.registrar is not None
+        def decorator(func):
+            # invocation of self.registrar() here can detect argument
+            # mismatching immediately
+            self._list.append((func, self.registrar(*args, **kwargs)))
+            return func
+        return decorator
+
+    def setup(self):
+        """Execute actual registration
+        """
+        while self._list:
+            func, decorator = self._list.pop(0)
+            decorator(func)
