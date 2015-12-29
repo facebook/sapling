@@ -141,7 +141,6 @@ Rebase works with hyphens
   
   $ hg rebase -d hyphen-dest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  devel-warn: bookmarks write with no wlock at: * (glob)
 
   $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
   @  2 b hyphen-book hyphen-dest mybook
