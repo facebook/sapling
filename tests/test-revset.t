@@ -2189,3 +2189,43 @@ test error message of bad revset
   [255]
 
   $ cd ..
+
+Test registrar.delayregistrar via revset.extpredicate
+
+'extpredicate' decorator shouldn't register any functions until
+'setup()' on it.
+
+  $ cd repo
+
+  $ cat <<EOF > $TESTTMP/custompredicate.py
+  > from mercurial import revset
+  > 
+  > revsetpredicate = revset.extpredicate()
+  > 
+  > @revsetpredicate('custom1()')
+  > def custom1(repo, subset, x):
+  >     return revset.baseset([1])
+  > @revsetpredicate('custom2()')
+  > def custom2(repo, subset, x):
+  >     return revset.baseset([2])
+  > 
+  > def uisetup(ui):
+  >     if ui.configbool('custompredicate', 'enabled'):
+  >         revsetpredicate.setup()
+  > EOF
+  $ cat <<EOF > .hg/hgrc
+  > [extensions]
+  > custompredicate = $TESTTMP/custompredicate.py
+  > EOF
+
+  $ hg debugrevspec "custom1()"
+  hg: parse error: unknown identifier: custom1
+  [255]
+  $ hg debugrevspec "custom2()"
+  hg: parse error: unknown identifier: custom2
+  [255]
+  $ hg debugrevspec "custom1() or custom2()" --config custompredicate.enabled=true
+  1
+  2
+
+  $ cd ..

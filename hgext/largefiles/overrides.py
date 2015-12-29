@@ -812,9 +812,11 @@ def overridepull(orig, ui, repo, source=None, **opts):
         ui.status(_("%d largefiles cached\n") % numcached)
     return result
 
+revsetpredicate = revset.extpredicate()
+
+@revsetpredicate('pulled()')
 def pulledrevsetsymbol(repo, subset, x):
-    """``pulled()``
-    Changesets that just has been pulled.
+    """Changesets that just has been pulled.
 
     Only available with largefiles from pull --lfrev expressions.
 

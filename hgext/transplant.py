@@ -693,9 +693,11 @@ def _dotransplant(ui, repo, *revs, **opts):
         if cleanupfn:
             cleanupfn()
 
+revsetpredicate = revset.extpredicate()
+
+@revsetpredicate('transplanted([set])')
 def revsettransplanted(repo, subset, x):
-    """``transplanted([set])``
-    Transplanted changesets in set, or all transplanted changesets.
+    """Transplanted changesets in set, or all transplanted changesets.
     """
     if x:
         s = revset.getset(repo, subset, x)
@@ -711,7 +713,7 @@ def kwtransplanted(repo, ctx, **args):
     return n and revlog.hex(n) or ''
 
 def extsetup(ui):
-    revset.symbols['transplanted'] = revsettransplanted
+    revsetpredicate.setup()
     templatekw.keywords['transplanted'] = kwtransplanted
     cmdutil.unfinishedstates.append(
         ['series', True, False, _('transplant in progress'),

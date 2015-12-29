@@ -3558,9 +3558,11 @@ def summaryhook(ui, repo):
         # i18n: column positioning for "hg summary"
         ui.note(_("mq:     (empty queue)\n"))
 
+revsetpredicate = revset.extpredicate()
+
+@revsetpredicate('mq()')
 def revsetmq(repo, subset, x):
-    """``mq()``
-    Changesets managed by MQ.
+    """Changesets managed by MQ.
     """
     revset.getargs(x, 0, 0, _("mq takes no arguments"))
     applied = set([repo[r.node].rev() for r in repo.mq.applied])
@@ -3596,7 +3598,7 @@ def extsetup(ui):
         if extmodule.__file__ != __file__:
             dotable(getattr(extmodule, 'cmdtable', {}))
 
-    revset.symbols['mq'] = revsetmq
+    revsetpredicate.setup()
 
 colortable = {'qguard.negative': 'red',
               'qguard.positive': 'yellow',

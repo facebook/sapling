@@ -487,10 +487,35 @@ class predicate(registrar.funcregistrar):
 
     The first string argument of the constructor is used also in
     online help.
+
+    Use 'extpredicate' instead of this to register revset predicate in
+    extensions.
     """
     table = symbols
     formatdoc = "``%s``\n    %s"
     getname = registrar.funcregistrar.parsefuncdecl
+
+class extpredicate(registrar.delayregistrar):
+    """Decorator to register revset predicate in extensions
+
+    Usage::
+
+        revsetpredicate = revset.extpredicate()
+
+        @revsetpredicate('mypredicate(arg1, arg2[, arg3])')
+        def mypredicatefunc(repo, subset, x):
+            '''Explanation of this revset predicate ....
+            '''
+            pass
+
+        def uisetup(ui):
+            revsetpredicate.setup()
+
+    'revsetpredicate' instance above can be used to decorate multiple
+    functions, and 'setup()' on it registers all such functions at
+    once.
+    """
+    registrar = predicate
 
 @predicate('_destupdate')
 def _destupdate(repo, subset, x):

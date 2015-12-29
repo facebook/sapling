@@ -64,6 +64,9 @@ def _destrebase(repo):
     branch = repo[None].branch()
     return repo[branch].rev()
 
+revsetpredicate = revset.extpredicate()
+
+@revsetpredicate('_destrebase')
 def _revsetdestrebase(repo, subset, x):
     # ``_rebasedefaultdest()``
 
@@ -1238,4 +1241,4 @@ def uisetup(ui):
          _("use 'hg rebase --continue' or 'hg rebase --abort'")])
     # ensure rebased rev are not hidden
     extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
-    revset.symbols['_destrebase'] = _revsetdestrebase
+    revsetpredicate.setup()
