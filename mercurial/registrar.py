@@ -70,6 +70,15 @@ class funcregistrar(object):
         """
         return self.decl
 
+    def parsefuncdecl(self):
+        """Parse function declaration and return the name of function in it
+        """
+        i = self.decl.find('(')
+        if i > 0:
+            return self.decl[:i]
+        else:
+            return self.decl
+
     def formatdoc(self, doc):
         """Return formatted document of the registered function for help
 
