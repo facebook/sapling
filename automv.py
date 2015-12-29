@@ -80,6 +80,6 @@ def _markchanges(repo, renames):
         for dst, src in renames.iteritems():
             wctx.copy(src, dst)
     finally:
-       wlock.release()
+        wlock.release()
 
 
