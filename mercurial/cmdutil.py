@@ -877,6 +877,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     p1 = extractdata.get('p1')
     p2 = extractdata.get('p2')
 
+    nocommit = opts.get('no_commit')
+    importbranch = opts.get('import_branch')
     update = not opts.get('bypass')
     strip = opts["strip"]
     prefix = opts["prefix"]
@@ -931,7 +933,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             if p2 != parents[1]:
                 repo.setparents(p1.node(), p2.node())
 
-            if opts.get('exact') or opts.get('import_branch'):
+            if opts.get('exact') or importbranch:
                 repo.dirstate.setbranch(branch or 'default')
 
             partial = opts.get('partial', False)
@@ -946,7 +948,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     rejects = True
 
             files = list(files)
-            if opts.get('no_commit'):
+            if nocommit:
                 if message:
                     msgs.append(message)
             else:
@@ -977,7 +979,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 finally:
                     repo.ui.restoreconfig(allowemptyback)
         else:
-            if opts.get('exact') or opts.get('import_branch'):
+            if opts.get('exact') or importbranch:
                 branch = branch or 'default'
             else:
                 branch = p1.branch()
@@ -1002,7 +1004,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 n = memctx.commit()
             finally:
                 store.close()
-        if opts.get('exact') and opts.get('no_commit'):
+        if opts.get('exact') and nocommit:
             # --exact with --no-commit is still useful in that it does merge
             # and branch bits
             ui.warn(_("warning: can't check exact import with --no-commit\n"))
