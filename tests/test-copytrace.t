@@ -71,9 +71,9 @@ Setup repo
 Rebase
   $ hg rebase -s 90e435664a -d 8762e63a42
   rebasing 1:90e435664a9d "mv a c, mod b"
-  merging c and cc to cc
   note: possible conflict - a was deleted and renamed to:
    aaa
+  merging c and cc to cc
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/90e435664a9d-d4904a7d-backup.hg (glob)
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
