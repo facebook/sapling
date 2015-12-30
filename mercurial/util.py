@@ -622,6 +622,15 @@ class lrucachedict(object):
 
         self._cache.clear()
 
+    def copy(self):
+        result = lrucachedict(self._capacity)
+        n = self._head.prev
+        # Iterate in oldest-to-newest order, so the copy has the right ordering
+        for i in range(len(self._cache)):
+            result[n.key] = n.value
+            n = n.prev
+        return result
+
     def _movetohead(self, node):
         """Mark a node as the newest, making it the new head.
 
