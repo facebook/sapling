@@ -11,8 +11,8 @@ a setting into your environment.
 See :hg:`help config.syntax` and :hg:`help config.files`
 for information about how and where to override things.
 
-Format
-======
+Structure
+=========
 
 The configuration files use a simple ini-file format. A configuration
 file consists of sections, led by a ``[section]`` header and followed
