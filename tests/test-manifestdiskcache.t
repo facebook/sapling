@@ -15,16 +15,22 @@ Test functionality is present
   > logging=True
   > enabled=True
   > EOF
+  $ checkabsent() {
+  > ([ -f $1 ] && echo "FAIL") || echo "OK"
+  > }
+  $ checkpresent() {
+  > ([ -f $1 ] && echo "OK") || echo "FAIL"
+  > }
   $ echo "abcabc" > abcabc
   $ hg add abcabc
   $ hg commit -m "testing 123"
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  $ checkpresent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
   $ echo "defdef" > defdef
   $ hg add defdef
   $ hg commit -m "testing 456"
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  $ checkpresent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
   $ hg diff -r 0 --nodates
   diff -r 53f12ffb3d86 defdef
   --- /dev/null
@@ -48,13 +54,13 @@ Test that we prune the cache.
   $ echo "abcabc" > abcabc
   $ hg add abcabc
   $ hg commit -m "testing 123"
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  $ checkpresent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
   $ echo "defdef" > defdef
   $ hg add defdef
   $ hg commit -m "testing 456"
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  $ checkpresent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
   $ echo "ghighi" > ghighi
   $ hg add ghighi
   $ hg commit -m "testing 789"
@@ -75,16 +81,14 @@ Test that we prune the cache.
   $ hg commit -m "testing 0ab"
 # ensure the prune command completes before we read out the disk.
   $ sleep 1
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  ls: .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33: No such file or directory
-  [1]
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  ls: .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12: No such file or directory
-  [1]
-  $ ls -1 .hg/store/manifestdiskcache/fd/cf/fdcfc1aafe7a6dfe64bbe8358eefd5bd22ca9fb6
-  .hg/store/manifestdiskcache/fd/cf/fdcfc1aafe7a6dfe64bbe8358eefd5bd22ca9fb6
-  $ ls -1 .hg/store/manifestdiskcache/76/03/76035e7b5645d9b4ed6a3b904b23cd7592fdd01a
-  .hg/store/manifestdiskcache/76/03/76035e7b5645d9b4ed6a3b904b23cd7592fdd01a
+  $ checkabsent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
+  $ checkabsent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
+  $ checkpresent .hg/store/manifestdiskcache/fd/cf/fdcfc1aafe7a6dfe64bbe8358eefd5bd22ca9fb6
+  OK
+  $ checkpresent .hg/store/manifestdiskcache/76/03/76035e7b5645d9b4ed6a3b904b23cd7592fdd01a
+  OK
   $ cd ..
 
 Test that a corrupt cache does not interfere with correctness.
@@ -101,13 +105,13 @@ Test that a corrupt cache does not interfere with correctness.
   $ echo "abcabc" > abcabc
   $ hg add abcabc
   $ hg commit -m "testing 123"
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  $ checkpresent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
   $ echo "defdef" > defdef
   $ hg add defdef
   $ hg commit -m "testing 456"
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  $ checkpresent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
   $ echo "garbage" > .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
   $ echo "garbage" > .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
   $ hg diff -r 0 --nodates
@@ -129,12 +133,10 @@ Test that we can pin a revision in the cache.
   $ echo "defdef" > defdef
   $ hg add defdef
   $ hg commit -m "testing 456"
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  ls: .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33: No such file or directory
-  [1]
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  ls: .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12: No such file or directory
-  [1]
+  $ checkabsent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
+  $ checkabsent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
   $ cat >> .hg/hgrc << EOF
   > [extensions]
   > manifestdiskcache=$TESTTMP/manifestdiskcache.py
@@ -150,8 +152,7 @@ Test that we can pin a revision in the cache.
   @@ -0,0 +1,1 @@
   +defdef
   $ sleep 1
-  $ ls -1 .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
-  ls: .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33: No such file or directory
-  [1]
-  $ ls -1 .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
-  .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  $ checkabsent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
+  $ checkpresent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
