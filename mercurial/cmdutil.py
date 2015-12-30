@@ -870,8 +870,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     extractdata = patch.extract(ui, hunk)
     tmpname = extractdata.get('filename')
     message = extractdata.get('message')
-    user = extractdata.get('user')
-    date = extractdata.get('date')
+    user = opts.get('user') or extractdata.get('user')
+    date = opts.get('date') or extractdata.get('date')
     branch = extractdata.get('branch')
     nodeid = extractdata.get('nodeid')
     p1 = extractdata.get('p1')
@@ -969,8 +969,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                 try:
                     if partial:
                         repo.ui.setconfig('ui', 'allowemptycommit', True)
-                    n = repo.commit(message, opts.get('user') or user,
-                                    opts.get('date') or date, match=m,
+                    n = repo.commit(message, user,
+                                    date, match=m,
                                     editor=editor, extra=extra)
                     for idfunc in extrapostimport:
                         extrapostimportmap[idfunc](repo[n])
@@ -995,8 +995,8 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                     editor = getcommiteditor(editform='import.bypass')
                 memctx = context.makememctx(repo, (p1.node(), p2.node()),
                                             message,
-                                            opts.get('user') or user,
-                                            opts.get('date') or date,
+                                            user,
+                                            date,
                                             branch, files, store,
                                             editor=editor)
                 n = memctx.commit()
