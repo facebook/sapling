@@ -104,6 +104,7 @@ path variables are expanded (~ is the same as $TESTTMP)
     help/hgrc.5.txt
     help/internals/bundles.txt
     help/internals/changegroups.txt
+    help/internals/revlogs.txt
   Not tracked:
 
   $ python wixxml.py templates
