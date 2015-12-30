@@ -2,6 +2,7 @@ Test functionality is present
 
   $ extpath=$(dirname $TESTDIR)
   $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTTMP/fbamend.py
@@ -180,8 +181,8 @@ Test that unbookmarked re-amends work well
 Test interaction with histedit
 
   $ echo '[extensions]' >> $HGRCPATH
+  $ echo "fbhistedit=$TESTTMP/fbhistedit.py" >> $HGRCPATH
   $ echo "histedit=" >> $HGRCPATH
-  $ echo "fbhistedit=" >> $HGRCPATH
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
