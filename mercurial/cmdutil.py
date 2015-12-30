@@ -883,7 +883,6 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
     sim = float(opts.get('similarity') or 0)
     if not tmpname:
         return (None, None, False)
-    msg = _('applied to working directory')
 
     rejects = False
 
@@ -1009,6 +1008,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
             ui.warn(_("warning: can't check exact import with --no-commit\n"))
         elif opts.get('exact') and hex(n) != nodeid:
             raise error.Abort(_('patch is damaged or loses information'))
+        msg = _('applied to working directory')
         if n:
             # i18n: refers to a short changeset id
             msg = _('created %s') % short(n)
