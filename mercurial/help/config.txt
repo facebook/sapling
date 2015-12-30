@@ -670,33 +670,41 @@ Example for ``~/.hgrc``::
     Enable or disable the "generaldelta" repository format which improves
     repository compression by allowing "revlog" to store delta against arbitrary
     revision instead of the previous stored one. This provides significant
-    improvement for repositories with branches. Enabled by default. Disabling
-    this option ensures that the on-disk format of newly created repository will
-    be compatible with Mercurial before version 1.9.
+    improvement for repositories with branches.
+
+    Repositories with this on-disk format require Mercurial version 1.9.
+
+    Enabled by default.
 
 ``dotencode``
     Enable or disable the "dotencode" repository format which enhances
     the "fncache" repository format (which has to be enabled to use
     dotencode) to avoid issues with filenames starting with ._ on
-    Mac OS X and spaces on Windows. Enabled by default. Disabling this
-    option ensures that the on-disk format of newly created
-    repositories will be compatible with Mercurial before version 1.7.
+    Mac OS X and spaces on Windows.
+
+    Repositories with this on-disk format require Mercurial version 1.7.
+
+    Enabled by default.
 
 ``usefncache``
     Enable or disable the "fncache" repository format which enhances
     the "store" repository format (which has to be enabled to use
     fncache) to allow longer filenames and avoids using Windows
-    reserved names, e.g. "nul". Enabled by default. Disabling this
-    option ensures that the on-disk format of newly created
-    repositories will be compatible with Mercurial before version 1.1.
+    reserved names, e.g. "nul".
+
+    Repositories with this on-disk format require Mercurial version 1.1.
+
+    Enabled by default.
 
 ``usestore``
     Enable or disable the "store" repository format which improves
     compatibility with systems that fold case or otherwise mangle
-    filenames. Enabled by default. Disabling this option will allow
-    you to store longer filenames in some situations at the expense of
-    compatibility and ensures that the on-disk format of newly created
-    repositories will be compatible with Mercurial before version 0.9.4.
+    filenames. Disabling this option will allow you to store longer filenames
+    in some situations at the expense of compatibility.
+
+    Repositories with this on-disk format require Mercurial version 0.9.4.
+
+    Enabled by default.
 
 ``graph``
 ---------
