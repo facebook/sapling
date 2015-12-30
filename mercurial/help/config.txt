@@ -674,13 +674,13 @@ Example for ``~/.hgrc``::
     this option ensures that the on-disk format of newly created repository will
     be compatible with Mercurial before version 1.9.
 
-``usestore``
-    Enable or disable the "store" repository format which improves
-    compatibility with systems that fold case or otherwise mangle
-    filenames. Enabled by default. Disabling this option will allow
-    you to store longer filenames in some situations at the expense of
-    compatibility and ensures that the on-disk format of newly created
-    repositories will be compatible with Mercurial before version 0.9.4.
+``dotencode``
+    Enable or disable the "dotencode" repository format which enhances
+    the "fncache" repository format (which has to be enabled to use
+    dotencode) to avoid issues with filenames starting with ._ on
+    Mac OS X and spaces on Windows. Enabled by default. Disabling this
+    option ensures that the on-disk format of newly created
+    repositories will be compatible with Mercurial before version 1.7.
 
 ``usefncache``
     Enable or disable the "fncache" repository format which enhances
@@ -690,13 +690,13 @@ Example for ``~/.hgrc``::
     option ensures that the on-disk format of newly created
     repositories will be compatible with Mercurial before version 1.1.
 
-``dotencode``
-    Enable or disable the "dotencode" repository format which enhances
-    the "fncache" repository format (which has to be enabled to use
-    dotencode) to avoid issues with filenames starting with ._ on
-    Mac OS X and spaces on Windows. Enabled by default. Disabling this
-    option ensures that the on-disk format of newly created
-    repositories will be compatible with Mercurial before version 1.7.
+``usestore``
+    Enable or disable the "store" repository format which improves
+    compatibility with systems that fold case or otherwise mangle
+    filenames. Enabled by default. Disabling this option will allow
+    you to store longer filenames in some situations at the expense of
+    compatibility and ensures that the on-disk format of newly created
+    repositories will be compatible with Mercurial before version 0.9.4.
 
 ``graph``
 ---------
