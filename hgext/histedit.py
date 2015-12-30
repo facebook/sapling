@@ -485,7 +485,7 @@ def applychanges(ui, repo, ctx, opts):
     wcpar = repo.dirstate.parents()[0]
     if ctx.p1().node() == wcpar:
         # edits are "in place" we do not need to make any merge,
-        # just applies changes on parent for edition
+        # just applies changes on parent for editing
         cmdutil.revert(ui, repo, ctx, (wcpar, node.nullid), all=True)
         stats = None
     else:
