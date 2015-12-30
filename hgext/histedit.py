@@ -1283,7 +1283,7 @@ def newnodestoabort(state):
     1) the list of final node
     2) the list of temporary node
 
-    This meant to be used on abort as less data are required in this case.
+    This is meant to be used on abort as less data are required in this case.
     """
     replacements = state.replacements
     allsuccs = set()
