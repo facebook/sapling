@@ -213,6 +213,9 @@ class remotefilelog(object):
     def empty(self):
         return False
 
+    def flags(self, rev):
+        return revlog.REVIDX_DEFAULT_FLAGS
+
     def parents(self, node):
         if node == nullid:
             return nullid, nullid

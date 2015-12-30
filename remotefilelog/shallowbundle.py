@@ -186,7 +186,8 @@ class shallowcg1packer(changegroup.cg1packer):
         else:
             delta = revlog.revdiff(prev, node)
         p1, p2 = revlog.parents(node)
-        meta = self.builddeltaheader(node, p1, p2, prev, linknode)
+        flags = revlog.flags(node)
+        meta = self.builddeltaheader(node, p1, p2, prev, linknode, flags)
         meta += prefix
         l = len(meta) + len(delta)
         yield changegroup.chunkheader(l)
