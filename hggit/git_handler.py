@@ -21,6 +21,7 @@ from mercurial import bookmarks
 from mercurial import commands
 from mercurial import context, util as hgutil
 from mercurial import url
+from mercurial import lock as lockmod
 
 import _ssh
 import git2hg
@@ -1308,11 +1309,19 @@ class GitHandler(object):
                         bms[head + suffix] = hgsha
 
             if heads:
-                wlock = self.repo.wlock()
+                tr = lock = wlock = None
                 try:
-                    bms.write()
+                    wlock = self.repo.wlock()
+                    lock = self.repo.lock()
+                    tr = self.repo.transaction('git_handler')
+                    if hgutil.safehasattr(bms, 'recordchange'):
+                        # recordchange was added in mercurial 3.2
+                        bms.recordchange(tr)
+                    else:
+                        bms.write()
+                    tr.close()
                 finally:
-                    wlock.release()
+                    lockmod.release(tr, lock, wlock)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
