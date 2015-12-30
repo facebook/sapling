@@ -30,6 +30,7 @@ from mercurial import localrepo
 from mercurial import lock as lockmod
 from mercurial import namespaces
 from mercurial import obsolete
+from mercurial import repair
 from mercurial import repoview
 from mercurial import revset
 from mercurial import scmutil
@@ -489,6 +490,10 @@ def exnowarnheads(orig, pushop):
         heads.add(repo[rev].node())
     return heads
 
+def exstripbmrevset(orig, repo, mark):
+    return orig(repo, mark) - repo.revs("ancestors(remotenames() and "
+                                        "not bookmark(%s))", mark)
+
 def extsetup(ui):
     extensions.wrapfunction(bookmarks, 'calculateupdate', exbookcalcupdate)
     extensions.wrapfunction(exchange.pushoperation, '__init__', expushop)
@@ -496,6 +501,7 @@ def extsetup(ui):
     extensions.wrapfunction(exchange, 'pull', expull)
     extensions.wrapfunction(repoview, '_getdynamicblockers', blockerhook)
     extensions.wrapfunction(bookmarks, 'updatefromremote', exupdatefromremote)
+    extensions.wrapfunction(repair, 'stripbmrevset', exstripbmrevset)
     if util.safehasattr(bookmarks, 'activate'):
         extensions.wrapfunction(bookmarks, 'activate', exactivate)
     else:
