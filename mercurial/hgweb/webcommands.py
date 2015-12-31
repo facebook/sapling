@@ -1271,8 +1271,20 @@ def help(web, req, tmpl):
 
     u = webutil.wsgiui()
     u.verbose = True
+
+    # Render a page from a sub-topic.
+    if '.' in topicname:
+        # TODO implement support for rendering sections, like
+        # `hg help` works.
+        topic, subtopic = topicname.split('.', 1)
+        if topic not in helpmod.subtopics:
+            raise ErrorResponse(HTTP_NOT_FOUND)
+    else:
+        topic = topicname
+        subtopic = None
+
     try:
-        doc = helpmod.help_(u, topicname)
+        doc = helpmod.help_(u, topic, subtopic=subtopic)
     except error.UnknownCommand:
         raise ErrorResponse(HTTP_NOT_FOUND)
     return tmpl('help', topic=topicname, doc=doc)

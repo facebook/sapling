@@ -2707,6 +2707,246 @@ Sub-topic indexes rendered properly
   </html>
   
 
+Sub-topic topics rendered properly
+
+  $ get-with-headers.py 127.0.0.1:$HGPORT "help/internals.changegroups"
+  200 Script output follows
+  
+  <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US">
+  <head>
+  <link rel="icon" href="/static/hgicon.png" type="image/png" />
+  <meta name="robots" content="index, nofollow" />
+  <link rel="stylesheet" href="/static/style-paper.css" type="text/css" />
+  <script type="text/javascript" src="/static/mercurial.js"></script>
+  
+  <title>Help: internals.changegroups</title>
+  </head>
+  <body>
+  
+  <div class="container">
+  <div class="menu">
+  <div class="logo">
+  <a href="https://mercurial-scm.org/">
+  <img src="/static/hglogo.png" alt="mercurial" /></a>
+  </div>
+  <ul>
+  <li><a href="/shortlog">log</a></li>
+  <li><a href="/graph">graph</a></li>
+  <li><a href="/tags">tags</a></li>
+  <li><a href="/bookmarks">bookmarks</a></li>
+  <li><a href="/branches">branches</a></li>
+  </ul>
+  <ul>
+   <li class="active"><a href="/help">help</a></li>
+  </ul>
+  </div>
+  
+  <div class="main">
+  <h2 class="breadcrumb"><a href="/">Mercurial</a> </h2>
+  <h3>Help: internals.changegroups</h3>
+  
+  <form class="search" action="/log">
+  
+  <p><input name="rev" id="search1" type="text" size="30" /></p>
+  <div id="hint">Find changesets by keywords (author, files, the commit message), revision
+  number or hash, or <a href="/help/revsets">revset expression</a>.</div>
+  </form>
+  <div id="doc">
+  <h1>representation of revlog data</h1>
+  <h2>Changegroups</h2>
+  <p>
+  Changegroups are representations of repository revlog data, specifically
+  the changelog, manifest, and filelogs.
+  </p>
+  <p>
+  There are 3 versions of changegroups: &quot;1&quot;, &quot;2&quot;, and &quot;3&quot;. From a
+  high-level, versions &quot;1&quot; and &quot;2&quot; are almost exactly the same, with
+  the only difference being a header on entries in the changeset
+  segment. Version &quot;3&quot; adds support for exchanging treemanifests and
+  includes revlog flags in the delta header.
+  </p>
+  <p>
+  Changegroups consists of 3 logical segments:
+  </p>
+  <pre>
+  +---------------------------------+
+  |           |          |          |
+  | changeset | manifest | filelogs |
+  |           |          |          |
+  +---------------------------------+
+  </pre>
+  <p>
+  The principle building block of each segment is a *chunk*. A *chunk*
+  is a framed piece of data:
+  </p>
+  <pre>
+  +---------------------------------------+
+  |           |                           |
+  |  length   |           data            |
+  | (32 bits) |       &lt;length&gt; bytes      |
+  |           |                           |
+  +---------------------------------------+
+  </pre>
+  <p>
+  Each chunk starts with a 32-bit big-endian signed integer indicating
+  the length of the raw data that follows.
+  </p>
+  <p>
+  There is a special case chunk that has 0 length (&quot;0x00000000&quot;). We
+  call this an *empty chunk*.
+  </p>
+  <h3>Delta Groups</h3>
+  <p>
+  A *delta group* expresses the content of a revlog as a series of deltas,
+  or patches against previous revisions.
+  </p>
+  <p>
+  Delta groups consist of 0 or more *chunks* followed by the *empty chunk*
+  to signal the end of the delta group:
+  </p>
+  <pre>
+  +------------------------------------------------------------------------+
+  |                |             |               |             |           |
+  | chunk0 length  | chunk0 data | chunk1 length | chunk1 data |    0x0    |
+  |   (32 bits)    |  (various)  |   (32 bits)   |  (various)  | (32 bits) |
+  |                |             |               |             |           |
+  +------------------------------------------------------------+-----------+
+  </pre>
+  <p>
+  Each *chunk*'s data consists of the following:
+  </p>
+  <pre>
+  +-----------------------------------------+
+  |              |              |           |
+  | delta header | mdiff header |   delta   |
+  |  (various)   |  (12 bytes)  | (various) |
+  |              |              |           |
+  +-----------------------------------------+
+  </pre>
+  <p>
+  The *length* field is the byte length of the remaining 3 logical pieces
+  of data. The *delta* is a diff from an existing entry in the changelog.
+  </p>
+  <p>
+  The *delta header* is different between versions &quot;1&quot;, &quot;2&quot;, and
+  &quot;3&quot; of the changegroup format.
+  </p>
+  <p>
+  Version 1:
+  </p>
+  <pre>
+  +------------------------------------------------------+
+  |            |             |             |             |
+  |    node    |   p1 node   |   p2 node   |  link node  |
+  | (20 bytes) |  (20 bytes) |  (20 bytes) |  (20 bytes) |
+  |            |             |             |             |
+  +------------------------------------------------------+
+  </pre>
+  <p>
+  Version 2:
+  </p>
+  <pre>
+  +------------------------------------------------------------------+
+  |            |             |             |            |            |
+  |    node    |   p1 node   |   p2 node   | base node  | link node  |
+  | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) |
+  |            |             |             |            |            |
+  +------------------------------------------------------------------+
+  </pre>
+  <p>
+  Version 3:
+  </p>
+  <pre>
+  +------------------------------------------------------------------------------+
+  |            |             |             |            |            |           |
+  |    node    |   p1 node   |   p2 node   | base node  | link node  | flags     |
+  | (20 bytes) |  (20 bytes) |  (20 bytes) | (20 bytes) | (20 bytes) | (2 bytes) |
+  |            |             |             |            |            |           |
+  +------------------------------------------------------------------------------+
+  </pre>
+  <p>
+  The *mdiff header* consists of 3 32-bit big-endian signed integers
+  describing offsets at which to apply the following delta content:
+  </p>
+  <pre>
+  +-------------------------------------+
+  |           |            |            |
+  |  offset   | old length | new length |
+  | (32 bits) |  (32 bits) |  (32 bits) |
+  |           |            |            |
+  +-------------------------------------+
+  </pre>
+  <p>
+  In version 1, the delta is always applied against the previous node from
+  the changegroup or the first parent if this is the first entry in the
+  changegroup.
+  </p>
+  <p>
+  In version 2, the delta base node is encoded in the entry in the
+  changegroup. This allows the delta to be expressed against any parent,
+  which can result in smaller deltas and more efficient encoding of data.
+  </p>
+  <h3>Changeset Segment</h3>
+  <p>
+  The *changeset segment* consists of a single *delta group* holding
+  changelog data. It is followed by an *empty chunk* to denote the
+  boundary to the *manifests segment*.
+  </p>
+  <h3>Manifest Segment</h3>
+  <p>
+  The *manifest segment* consists of a single *delta group* holding
+  manifest data. It is followed by an *empty chunk* to denote the boundary
+  to the *filelogs segment*.
+  </p>
+  <h3>Filelogs Segment</h3>
+  <p>
+  The *filelogs* segment consists of multiple sub-segments, each
+  corresponding to an individual file whose data is being described:
+  </p>
+  <pre>
+  +--------------------------------------+
+  |          |          |          |     |
+  | filelog0 | filelog1 | filelog2 | ... |
+  |          |          |          |     |
+  +--------------------------------------+
+  </pre>
+  <p>
+  In version &quot;3&quot; of the changegroup format, filelogs may include
+  directory logs when treemanifests are in use. directory logs are
+  identified by having a trailing '/' on their filename (see below).
+  </p>
+  <p>
+  The final filelog sub-segment is followed by an *empty chunk* to denote
+  the end of the segment and the overall changegroup.
+  </p>
+  <p>
+  Each filelog sub-segment consists of the following:
+  </p>
+  <pre>
+  +------------------------------------------+
+  |               |            |             |
+  | filename size |  filename  | delta group |
+  |   (32 bits)   |  (various) |  (various)  |
+  |               |            |             |
+  +------------------------------------------+
+  </pre>
+  <p>
+  That is, a *chunk* consisting of the filename (not terminated or padded)
+  followed by N chunks constituting the *delta group* for this file.
+  </p>
+  
+  </div>
+  </div>
+  </div>
+  
+  <script type="text/javascript">process_dates()</script>
+  
+  
+  </body>
+  </html>
+  
+
   $ killdaemons.py
 
 #endif
