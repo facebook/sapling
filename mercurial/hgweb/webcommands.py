@@ -1256,6 +1256,19 @@ def help(web, req, tmpl):
         return tmpl('helptopics', topics=topics, earlycommands=earlycommands,
                     othercommands=othercommands, title='Index')
 
+    # Render an index of sub-topics.
+    if topicname in helpmod.subtopics:
+        topics = []
+        for entries, summary, _doc in helpmod.subtopics[topicname]:
+            topics.append({
+                'topic': '%s.%s' % (topicname, entries[0]),
+                'basename': entries[0],
+                'summary': summary,
+            })
+
+        return tmpl('helptopics', topics=topics, title=topicname,
+                    subindex=True)
+
     u = webutil.wsgiui()
     u.verbose = True
     try:
