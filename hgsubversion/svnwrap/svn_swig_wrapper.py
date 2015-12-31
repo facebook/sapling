@@ -22,19 +22,19 @@ try:
     from svn import delta
     from svn import ra
 
-    current_bindings = (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
-                        core.SVN_VER_MICRO)
+    subversion_version = (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
+                          core.SVN_VER_MICRO)
 except ImportError:
     raise ImportError('Subversion %d.%d.%d or later required, '
                       'but no bindings were found' % required_bindings)
 
-if current_bindings < required_bindings: # pragma: no cover
+if subversion_version < required_bindings: # pragma: no cover
     raise ImportError('Subversion %d.%d.%d or later required, '
                       'but bindings for %d.%d.%d found' %
-                      (required_bindings + current_bindings))
+                      (required_bindings + subversion_version))
 
 def version():
-    return '%d.%d.%d' % current_bindings, 'SWIG'
+    return '%d.%d.%d' % subversion_version, 'SWIG'
 
 # exported values
 ERR_FS_ALREADY_EXISTS = core.SVN_ERR_FS_ALREADY_EXISTS
