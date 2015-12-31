@@ -4,9 +4,11 @@
 #
 # incomplete, implemented on demand
 
-from mercurial import ancestor
-from mercurial import manifest
-from mercurial import context
+from mercurial import (
+    ancestor,
+    manifest,
+    context,
+)
 from mercurial.node import bin, hex, nullid
 
 def _maybehex(n):
