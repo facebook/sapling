@@ -52,7 +52,7 @@ from mercurial import (
 try:
     from mercurial import exchange
     exchange.push  # existed in first iteration of this file
-except ImportError:
+except (AttributeError, ImportError):
     # We only *use* the exchange module in hg 3.2+, so this is safe
     pass
 
@@ -60,7 +60,7 @@ try:
     from mercurial import ignore
     ignore.readpats
     ignoremod = True
-except ImportError:
+except (AttributeError, ImportError):
     # The ignore module disappeared in Mercurial 3.5
     ignoremod = False
 
