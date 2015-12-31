@@ -17,11 +17,14 @@ from dulwich import diff_tree
 
 from mercurial.i18n import _
 from mercurial.node import hex, bin, nullid
-from mercurial import bookmarks
-from mercurial import commands
-from mercurial import context, util as hgutil
-from mercurial import url
-from mercurial import lock as lockmod
+from mercurial import (
+    bookmarks,
+    commands,
+    context,
+    util as hgutil,
+    lock as lockmod,
+    url,
+)
 
 import _ssh
 import git2hg
