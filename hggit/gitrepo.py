@@ -1,14 +1,7 @@
 from util import isgitsshuri
 from mercurial import util
-try:
-    from mercurial.error import RepoError
-except ImportError:
-    from mercurial.repo import RepoError
-
-try:
-    from mercurial.peer import peerrepository
-except ImportError:
-    from mercurial.repo import repository as peerrepository
+from mercurial.error import RepoError
+from mercurial.peer import peerrepository
 
 class gitrepo(peerrepository):
     capabilities = ['lookup']
