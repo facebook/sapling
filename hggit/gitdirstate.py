@@ -3,7 +3,14 @@ import stat
 import re
 import errno
 
-from mercurial import dirstate
+from mercurial import (
+    dirstate,
+    match as matchmod,
+    osutil,
+    scmutil,
+    util,
+)
+
 try:
     from mercurial import ignore
     ignore.readpats
@@ -11,16 +18,12 @@ try:
 except ImportError:
     # ignore module was removed in Mercurial 3.5
     ignoremod = False
-from mercurial import match as matchmod
-from mercurial import osutil
-from mercurial import scmutil
 # pathauditor moved to pathutil in 2.8
 try:
     from mercurial import pathutil
     pathutil.pathauditor
 except ImportError:
     pathutil = scmutil
-from mercurial import util
 from mercurial.i18n import _
 
 def gignorepats(orig, lines, root=None):
