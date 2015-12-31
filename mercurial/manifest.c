@@ -694,6 +694,9 @@ static lazymanifest *lazymanifest_filtercopy(
 		goto nomem;
 	}
 	copy = PyObject_New(lazymanifest, &lazymanifestType);
+	if (!copy) {
+		goto nomem;
+	}
 	copy->dirty = true;
 	copy->lines = malloc(self->maxlines * sizeof(line));
 	if (!copy->lines) {
