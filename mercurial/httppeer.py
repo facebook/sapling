@@ -254,7 +254,7 @@ class httppeer(wireproto.wirepeer):
                 os.unlink(filename)
 
     def _callcompressable(self, cmd, **args):
-        stream =  self._callstream(cmd, **args)
+        stream = self._callstream(cmd, **args)
         return util.chunkbuffer(zgenerator(stream))
 
     def _abort(self, exception):

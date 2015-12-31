@@ -33,7 +33,7 @@ def checkconsistency(ui, orig, dmap, _nonnormalset, label):
 def _checkdirstate(orig, self, arg):
     """Check nonnormal set consistency before and after the call to orig"""
     checkconsistency(self._ui, orig, self._map, self._nonnormalset, "before")
-    r =  orig(self, arg)
+    r = orig(self, arg)
     checkconsistency(self._ui, orig, self._map, self._nonnormalset, "after")
     return r
 

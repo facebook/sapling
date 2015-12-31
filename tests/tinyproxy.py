@@ -29,7 +29,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     rbufsize = 0                        # self.rfile Be unbuffered
 
     def handle(self):
-        (ip, port) =  self.client_address
+        (ip, port) = self.client_address
         allowed = getattr(self, 'allowed_clients', None)
         if allowed is not None and ip not in allowed:
             self.raw_requestline = self.rfile.readline()

@@ -1272,7 +1272,7 @@ class TestResult(unittest._TextTestResult):
         self.warned = []
 
         self.times = []
-        self._firststarttime =  None
+        self._firststarttime = None
         # Data stored for the benefit of generating xunit reports.
         self.successes = []
         self.faildata = {}

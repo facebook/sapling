@@ -832,7 +832,7 @@ def stylelist():
     paths = templatepaths()
     if not paths:
         return _('no templates found, try `hg debuginstall` for more info')
-    dirlist =  os.listdir(paths[0])
+    dirlist = os.listdir(paths[0])
     stylelist = []
     for file in dirlist:
         split = file.split(".")

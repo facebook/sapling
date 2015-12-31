@@ -117,7 +117,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         diffopts.nodates = True
         diffopts.git = True
         diffopts.showfunc = True
-        originaldiff =  patch.diff(repo, changes=status, opts=diffopts)
+        originaldiff = patch.diff(repo, changes=status, opts=diffopts)
         originalchunks = patch.parsepatch(originaldiff)
 
         # 1. filter patch, so we have intending-to apply subset of it
@@ -2646,7 +2646,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                                  extra=extra,
                                  editor=editor)
 
-            newdesc =  changelog.stripdesc(new.description())
+            newdesc = changelog.stripdesc(new.description())
             if ((not node)
                 and newdesc == old.description()
                 and user == old.user()
@@ -3200,9 +3200,9 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         diffopts = patch.difffeatureopts(repo.ui, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
-        reversehunks =  repo.ui.configbool('experimental',
-                                           'revertalternateinteractivemode',
-                                           True)
+        reversehunks = repo.ui.configbool('experimental',
+                                          'revertalternateinteractivemode',
+                                          True)
         if reversehunks:
             diff = patch.diff(repo, ctx.node(), None, m, opts=diffopts)
         else:

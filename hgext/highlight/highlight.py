@@ -25,7 +25,7 @@ def pygmentize(field, fctx, style, tmpl, guessfilenameonly=False):
     # append a <link ...> to the syntax highlighting css
     old_header = tmpl.load('header')
     if SYNTAX_CSS not in old_header:
-        new_header =  old_header + SYNTAX_CSS
+        new_header = old_header + SYNTAX_CSS
         tmpl.cache['header'] = new_header
 
     text = fctx.data()

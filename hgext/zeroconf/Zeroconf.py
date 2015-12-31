@@ -150,7 +150,7 @@ _TYPE_MX = 15
 _TYPE_TXT = 16
 _TYPE_AAAA = 28
 _TYPE_SRV = 33
-_TYPE_ANY =  255
+_TYPE_ANY = 255
 
 # Mapping constants to names
 
@@ -522,7 +522,7 @@ class DNSIncoming(object):
 	def readString(self, len):
 		"""Reads a string of a given length from the packet"""
 		format = '!' + str(len) + 's'
-		length =  struct.calcsize(format)
+		length = struct.calcsize(format)
 		info = struct.unpack(format, self.data[self.offset:self.offset+length])
 		self.offset += length
 		return info[0]

@@ -130,7 +130,7 @@ class revlogoldio(object):
     def parseindex(self, data, inline):
         s = self.size
         index = []
-        nodemap =  {nullid: nullrev}
+        nodemap = {nullid: nullrev}
         n = off = 0
         l = len(data)
         while off + s <= l:

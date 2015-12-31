@@ -3117,7 +3117,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
             manifestonly = manifestfiles - dirstatefiles
             dsonly = dirstatefiles - manifestfiles
             dsnotadded = set(f for f in dsonly if dirstate[f] != 'a')
-            changedfiles =  manifestonly | dsnotadded
+            changedfiles = manifestonly | dsnotadded
 
         dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
     finally:
@@ -5493,7 +5493,7 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
             brev = checkout
             movemarkfrom = None
             if not checkout:
-                updata =  destutil.destupdate(repo)
+                updata = destutil.destupdate(repo)
                 checkout, movemarkfrom, brev = updata
             ret = hg.update(repo, checkout)
         except error.UpdateAbort as inst:
@@ -6930,7 +6930,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         if check:
             cmdutil.bailifchanged(repo, merge=False)
         if rev is None:
-            updata =  destutil.destupdate(repo, clean=clean, check=check)
+            updata = destutil.destupdate(repo, clean=clean, check=check)
             rev, movemarkfrom, brev = updata
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')

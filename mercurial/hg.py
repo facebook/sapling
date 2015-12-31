@@ -52,7 +52,7 @@ def addbranchrevs(lrepo, other, branches, revs):
     if not hashbranch and not branches:
         x = revs or None
         if util.safehasattr(revs, 'first'):
-            y =  revs.first()
+            y = revs.first()
         elif revs:
             y = revs[0]
         else:

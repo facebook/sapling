@@ -45,7 +45,7 @@ def find(name):
     '''return module with given extension name'''
     mod = None
     try:
-        mod =  _extensions[name]
+        mod = _extensions[name]
     except KeyError:
         for k, v in _extensions.iteritems():
             if k.endswith('.' + name) or k.endswith('/' + name):

@@ -22,7 +22,7 @@ def py_parseindex(data, inline) :
     s = 64
     cache = None
     index = []
-    nodemap =  {nullid: nullrev}
+    nodemap = {nullid: nullrev}
     n = off = 0
 
     l = len(data) - s

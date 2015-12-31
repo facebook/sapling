@@ -187,7 +187,7 @@ class basemanifesttests(object):
 
     def testCopy(self):
         m = self.parsemanifest(A_SHORT_MANIFEST)
-        m['a'] =  BIN_HASH_1
+        m['a'] = BIN_HASH_1
         m2 = m.copy()
         del m
         del m2 # make sure we don't double free() anything

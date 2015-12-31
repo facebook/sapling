@@ -210,7 +210,7 @@ elif os.path.exists('.hg_archival.txt'):
     kw = dict([[t.strip() for t in l.split(':', 1)]
                for l in open('.hg_archival.txt')])
     if 'tag' in kw:
-        version =  kw['tag']
+        version = kw['tag']
     elif 'latesttag' in kw:
         if 'changessincelatesttag' in kw:
             version = '%(latesttag)s+%(changessincelatesttag)s-%(node).12s' % kw
@@ -500,7 +500,7 @@ class hginstallscripts(install_scripts):
             rest = self.install_dir[len(common):]
             uplevel = len([n for n in os.path.split(rest) if n])
 
-            libdir =  uplevel * ('..' + os.sep) + self.install_lib[len(common):]
+            libdir = uplevel * ('..' + os.sep) + self.install_lib[len(common):]
 
         for outfile in self.outfiles:
             fp = open(outfile, 'rb')

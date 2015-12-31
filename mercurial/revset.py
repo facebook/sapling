@@ -2290,7 +2290,7 @@ def optimize(x, small):
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1] == ('func', ('symbol', 'public'), None):
-            newsym =  ('func', ('symbol', '_notpublic'), None)
+            newsym = ('func', ('symbol', '_notpublic'), None)
             o = optimize(newsym, not small)
             return o[0], o[1]
         else:

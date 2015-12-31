@@ -389,8 +389,8 @@ def makememctx(repo, parents, text, user, date, branch, files, store,
         extra = {}
     if branch:
         extra['branch'] = encoding.fromlocal(branch)
-    ctx =  memctx(repo, parents, text, files, getfilectx, user,
-                          date, extra, editor)
+    ctx = memctx(repo, parents, text, files, getfilectx, user,
+                 date, extra, editor)
     return ctx
 
 class changectx(basectx):
