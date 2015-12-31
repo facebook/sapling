@@ -32,6 +32,8 @@ This will attempt to use the ssl module and the new
 socket.create_connection method, but fall back to the old
 methods if those are unavailable.
 """
+from __future__ import absolute_import
+
 import logging
 import socket
 
