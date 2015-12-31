@@ -28,6 +28,7 @@ from mercurial import util as hgutil
 from mercurial import extensions
 
 from hgsubversion import compathacks
+from hgsubversion import svnwrap
 
 try:
     from mercurial import obsolete
@@ -435,7 +436,7 @@ class TestMeta(type):
             for origname in dir(cls):
                 _obsolete_wrap(cls, origname)
 
-        if cls.stupid_mode_tests:
+        if cls.stupid_mode_tests and svnwrap.subversion_version < (1, 9, 0):
             for origname in dir(cls):
                 _stupid_wrap(cls, origname)
 
@@ -765,7 +766,11 @@ files:     {files}
 
 """
         _ui.pushbuffer()
-        graphlog.graphlog(_ui, repo, rev=None, template=templ)
+        try:
+            graphlog.graphlog(_ui, repo, rev=None, template=templ)
+        except AttributeError:
+            from mercurial import commands
+            commands.log(_ui, repo, rev=None, template=templ, graph=True)
         return _ui.popbuffer()
 
     def draw(self, repo):
