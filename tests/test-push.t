@@ -109,9 +109,7 @@ this should also fail
   updating reference refs/heads/master
 
 this should fail, no changes to push
-The exit code for this was broken in Mercurial (incorrectly returning 0) until
-issue3228 was fixed in 2.1
-  $ hg push -r master && false
+  $ hg push -r master
   pushing to $TESTTMP/gitrepo
   searching for changes
   no changes found
@@ -168,12 +166,9 @@ hg-git issue103 -- directories can lose information at hg-git export time
   
 
 Push empty Hg repo to empty Git repo (issue #58)
-Since there aren't any changes, exit code 1 is expected in modern Mercurial.
-However, since it varies between supported Mercurial versions, we need to
-force it to consistency for now. (see issue3228, fixed in Mercurial 2.1)
   $ hg init hgrepo2
   $ git init -q --bare gitrepo2
-  $ hg -R hgrepo2 push gitrepo2 && false
+  $ hg -R hgrepo2 push gitrepo2
   pushing to gitrepo2
   searching for changes
   no changes found
