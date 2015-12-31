@@ -854,7 +854,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
   > [extensions]
   > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
   > fakepatchtime = $TESTDIR/fakepatchtime.py
-  > abort =  $TESTTMP/abort.py
+  > abort = $TESTTMP/abort.py
   > EOF
   $ hg transplant "22c515968f13::"
   applying 22c515968f13
