@@ -127,6 +127,7 @@ testpats = [
     (r'seq ', "don't use 'seq', use $TESTDIR/seq.py"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
     (r'\|&', "don't use |&, use 2>&1"),
+    (r'\w =  +\w', "only one space after = allowed"),
   ],
   # warnings
   [
@@ -220,6 +221,7 @@ pypats = [
     (r'(\w|\)),\w', "missing whitespace after ,"),
     (r'(\w|\))[+/*\-<>]\w', "missing whitespace in expression"),
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
+    (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
     (r'.{81}', "line too long"),
     (r' x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
@@ -337,6 +339,7 @@ cpats = [
     (r'\w+ (\+\+|--)', "use foo++, not foo ++"),
     (r'\w,\w', "missing whitespace after ,"),
     (r'^[^#]\w[+/*]\w', "missing whitespace in expression"),
+    (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
     (r'^#\s+\w', "use #foo, not # foo"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'^\s*#import\b', "use only #include in standard C code"),
