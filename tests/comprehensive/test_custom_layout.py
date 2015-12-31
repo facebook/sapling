@@ -14,6 +14,7 @@ except ImportError:
     import test_util
 
 from hgsubversion import wrappers
+from hgsubversion import svnwrap
 
 
 def _do_case(self, name, stupid):
@@ -55,7 +56,8 @@ attrs = {'_do_case': _do_case,
 for case in test_util.custom:
     name = 'test_' + case[:-len('.svndump')].replace('-', '_')
     attrs[name] = buildmethod(case, name, stupid=False)
-    name += '_stupid'
-    attrs[name] = buildmethod(case, name, stupid=True)
+    if svnwrap.subversion_version < (1, 9, 0):
+        name += '_stupid'
+        attrs[name] = buildmethod(case, name, stupid=True)
 
 CustomPullTests = type('CustomPullTests', (test_util.TestBase,), attrs)

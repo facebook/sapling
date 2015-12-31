@@ -630,6 +630,11 @@ def branches_in_paths(meta, tbdelta, paths, revnum, checkpath, listdir,
     return branches
 
 def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
+    if svnwrap.subversion_version >= (1, 9, 0):
+        raise hgutil.Abort(
+            "hgsubversion doesn't support stupid mode with Subversion 1.9."
+            ' Please email hgsubversion@googlegroups.com and let us know you'
+            ' saw this, otherwise we may remove stupid mode entirely.')
     # this server fails at replay
 
     if meta.filemap:

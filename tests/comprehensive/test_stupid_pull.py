@@ -14,6 +14,7 @@ except ImportError:
     import test_util
 
 from hgsubversion import wrappers
+from hgsubversion import svnwrap
 
 
 def _do_case(self, name, layout):
@@ -48,18 +49,20 @@ def buildmethod(case, name, layout):
     m.__doc__ = 'Test stupid produces same as real on %s. (%s)' % (case, layout)
     return m
 
-attrs = {'_do_case': _do_case,
-         }
-for case in (f for f in os.listdir(test_util.FIXTURES) if f.endswith('.svndump')):
-    if case == 'corrupt.svndump':
-        continue
-    name = 'test_' + case[:-len('.svndump')].replace('-', '_')
-    # Automatic layout branchtag collision exposes a minor defect
-    # here, but since it isn't a regression we suppress the test case.
-    if case != 'branchtagcollision.svndump':
-        attrs[name] = buildmethod(case, name, 'auto')
-    attrs[name + '_single'] = buildmethod(case, name + '_single', 'single')
-    if case in test_util.custom:
-        attrs[name + '_custom'] = buildmethod(case, name + '_custom', 'custom')
+if svnwrap.subversion_version < (1, 9, 0):
+    attrs = {'_do_case': _do_case,
+             }
+    for case in (f for f in os.listdir(test_util.FIXTURES)
+                 if f.endswith('.svndump')):
+        if case == 'corrupt.svndump':
+            continue
+        name = 'test_' + case[:-len('.svndump')].replace('-', '_')
+        # Automatic layout branchtag collision exposes a minor defect
+        # here, but since it isn't a regression we suppress the test case.
+        if case != 'branchtagcollision.svndump':
+            attrs[name] = buildmethod(case, name, 'auto')
+        attrs[name + '_single'] = buildmethod(case, name + '_single', 'single')
+        if case in test_util.custom:
+            attrs[name + '_custom'] = buildmethod(case, name + '_custom', 'custom')
 
-StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
+    StupidPullTests = type('StupidPullTests', (test_util.TestBase,), attrs)
