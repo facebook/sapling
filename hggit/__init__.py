@@ -29,23 +29,25 @@ import util
 
 from bisect import insort
 from git_handler import GitHandler
-from mercurial import bundlerepo
-from mercurial import cmdutil
-from mercurial import demandimport
-from mercurial import dirstate
-from mercurial import discovery
-from mercurial import extensions
-from mercurial import help
-from mercurial import hg
-from mercurial import localrepo
-from mercurial import manifest
-from mercurial import revset
-from mercurial import scmutil
-from mercurial import templatekw
-from mercurial import ui as hgui
-from mercurial import util as hgutil
 from mercurial.node import hex
 from mercurial.i18n import _
+from mercurial import (
+    bundlerepo,
+    cmdutil,
+    demandimport,
+    dirstate,
+    discovery,
+    extensions,
+    help,
+    hg,
+    ui as hgui,
+    util as hgutil,
+    localrepo,
+    manifest,
+    revset,
+    scmutil,
+    templatekw,
+)
 
 try:
     from mercurial import exchange
