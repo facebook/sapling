@@ -558,7 +558,7 @@ static PyMappingMethods lazymanifest_mapping_methods = {
 	(objobjargproc)lazymanifest_setitem,    /* mp_ass_subscript */
 };
 
-/* sequence methods (important or __contains__ builds an iterator */
+/* sequence methods (important or __contains__ builds an iterator) */
 
 static int lazymanifest_contains(lazymanifest *self, PyObject *key)
 {
