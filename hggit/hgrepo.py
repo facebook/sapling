@@ -1,6 +1,8 @@
-from mercurial import localrepo
+from mercurial import (
+    util as hgutil,
+    localrepo,
+)
 from mercurial.node import bin
-from mercurial import util as hgutil
 
 from git_handler import GitHandler
 from gitrepo import gitrepo
