@@ -21,7 +21,10 @@
 <a href="{url|urlescape}bookmarks{sessionvars%urlparameter}">bookmarks</a> |
 <a href="{url|urlescape}branches{sessionvars%urlparameter}">branches</a> |
 <a href="{url|urlescape}file{sessionvars%urlparameter}">files</a> |
-help
+{if(subindex,
+  '<a href="{url|urlescape}help{sessionvars%urlparameter}">help</a>',
+  'help'
+)}
 <br/>
 </div>
 
