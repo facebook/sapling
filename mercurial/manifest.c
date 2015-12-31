@@ -707,11 +707,13 @@ static lazymanifest *lazymanifest_filtercopy(
 	copy->pydata = self->pydata;
 	Py_INCREF(self->pydata);
 	for (i = 0; i < self->numlines; i++) {
-		PyObject *arg = PyString_FromString(self->lines[i].start);
-		PyObject *arglist = PyTuple_Pack(1, arg);
-		PyObject *result = PyObject_CallObject(matchfn, arglist);
+		PyObject *arglist = NULL, *result = NULL;
+		arglist = Py_BuildValue("(s)", self->lines[i].start);
+		if (!arglist) {
+			return NULL;
+		}
+		result = PyObject_CallObject(matchfn, arglist);
 		Py_DECREF(arglist);
-		Py_DECREF(arg);
 		/* if the callback raised an exception, just let it
 		 * through and give up */
 		if (!result) {
