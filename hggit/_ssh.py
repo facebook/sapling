@@ -1,6 +1,9 @@
 from dulwich.client import SubprocessWrapper
-from mercurial import util
 import subprocess
+
+from mercurial import (
+    util,
+)
 
 class SSHVendor(object):
     """Parent class for ui-linked Vendor classes."""
