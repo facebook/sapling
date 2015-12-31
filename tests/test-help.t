@@ -1787,6 +1787,7 @@ Dish up an empty repo; serve it cold.
   This is the topic to test omit indicating.
   </td></tr>
   
+  
   <tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
   
   <tr><td>
@@ -1908,6 +1909,8 @@ Dish up an empty repo; serve it cold.
   </td><td>
   update working directory (or switch revisions)
   </td></tr>
+  
+  
   
   <tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
   
@@ -2149,6 +2152,8 @@ Dish up an empty repo; serve it cold.
   </td><td>
   output version and copyright information
   </td></tr>
+  
+  
   </table>
   </div>
   </div>

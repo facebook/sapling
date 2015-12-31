@@ -30,11 +30,16 @@ help
 <tr><td colspan="2"><h2><a name="main" href="#topics">Topics</a></h2></td></tr>
 {topics % helpentry}
 
+{if(earlycommands, '
 <tr><td colspan="2"><h2><a name="main" href="#main">Main Commands</a></h2></td></tr>
 {earlycommands % helpentry}
+')}
 
+{if(othercommands, '
 <tr><td colspan="2"><h2><a name="other" href="#other">Other Commands</a></h2></td></tr>
 {othercommands % helpentry}
+')}
+
 </table>
 
 {footer}
