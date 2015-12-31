@@ -46,6 +46,14 @@ Push should push to 'default-push' when set:
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+But push should push to 'default' if explicitly specified (issue5000):
+
+  $ hg --cwd b push default
+  pushing to $TESTTMP/a (glob)
+  searching for changes
+  no changes found
+  [1]
+
 Push should push to 'default-push' when 'default' is not set
 
   $ hg -q clone a push-default-only
