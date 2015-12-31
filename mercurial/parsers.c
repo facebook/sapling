@@ -1840,7 +1840,7 @@ static PyObject *index_m_get(indexObject *self, PyObject *args)
 	if (node_check(val, &node, &nodelen) == -1)
 		return NULL;
 	rev = index_find_node(self, node, nodelen);
-	if (rev ==  -3)
+	if (rev == -3)
 		return NULL;
 	if (rev == -2)
 		Py_RETURN_NONE;
