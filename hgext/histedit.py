@@ -629,7 +629,6 @@ class fold(histeditaction):
         """ Verifies semantic correctness of the fold rule"""
         super(fold, self).verify(prev)
         repo = self.repo
-        state = self.state
         if not prev:
             c = repo[self.node].parents()[0]
         elif not prev.verb in ('pick', 'base'):
