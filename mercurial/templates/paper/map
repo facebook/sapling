@@ -15,7 +15,7 @@ helptopics = helptopics.tmpl
 helpentry = '
   <tr><td>
     <a href="{url|urlescape}help/{topic|escape}{sessionvars%urlparameter}">
-      {topic|escape}
+      {if(basename, '{basename|escape}', '{topic|escape}')}
     </a>
   </td><td>
     {summary|escape}
