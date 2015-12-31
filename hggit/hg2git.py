@@ -6,7 +6,9 @@ import os
 import stat
 
 import dulwich.objects as dulobjs
-from mercurial import util as hgutil
+from mercurial import (
+    util as hgutil,
+)
 
 import compat
 import util
