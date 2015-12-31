@@ -18,7 +18,7 @@ try:
 except (AttributeError, ImportError):
     # ignore module was removed in Mercurial 3.5
     ignoremod = False
-# pathauditor moved to pathutil in 2.8
+# pathauditor moved to pathutil in 2.9
 try:
     from mercurial import pathutil
     pathutil.pathauditor
