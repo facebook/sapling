@@ -29,18 +29,6 @@ table = {}
 
 command = cmdutil.command(table)
 
-# Space delimited list of commands that don't require local repositories.
-# This should be populated by passing norepo=True into the @command decorator.
-norepo = ''
-# Space delimited list of commands that optionally require local repositories.
-# This should be populated by passing optionalrepo=True into the @command
-# decorator.
-optionalrepo = ''
-# Space delimited list of commands that will examine arguments looking for
-# a repository. This should be populated by passing inferrepo=True into the
-# @command decorator.
-inferrepo = ''
-
 # label constants
 # until 3.5, bookmarks.current was the advertised name, not
 # bookmarks.active, so we must use both to avoid breaking old

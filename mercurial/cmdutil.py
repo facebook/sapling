@@ -3270,24 +3270,13 @@ def command(table):
     def cmd(name, options=(), synopsis=None, norepo=False, optionalrepo=False,
             inferrepo=False):
         def decorator(func):
+            func.norepo = norepo
+            func.optionalrepo = optionalrepo
+            func.inferrepo = inferrepo
             if synopsis:
                 table[name] = func, list(options), synopsis
             else:
                 table[name] = func, list(options)
-
-            if norepo:
-                # Avoid import cycle.
-                import commands
-                commands.norepo += ' %s' % ' '.join(parsealiases(name))
-
-            if optionalrepo:
-                import commands
-                commands.optionalrepo += ' %s' % ' '.join(parsealiases(name))
-
-            if inferrepo:
-                import commands
-                commands.inferrepo += ' %s' % ' '.join(parsealiases(name))
-
             return func
         return decorator
 

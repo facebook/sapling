@@ -3560,12 +3560,11 @@ def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'init', mqinit)
     entry[1].extend(mqopt)
 
-    nowrap = set(commands.norepo.split(" "))
-
     def dotable(cmdtable):
-        for cmd in cmdtable.keys():
+        for cmd, entry in cmdtable.iteritems():
             cmd = cmdutil.parsealiases(cmd)[0]
-            if cmd in nowrap:
+            func = entry[0]
+            if func.norepo:
                 continue
             entry = extensions.wrapcommand(cmdtable, cmd, mqcommand)
             entry[1].extend(mqopt)

@@ -496,11 +496,11 @@ class cmdalias(object):
                 self.fn, self.opts = tableentry
 
             self.args = aliasargs(self.fn, args)
-            if cmd not in commands.norepo.split(' '):
+            if not self.fn.norepo:
                 self.norepo = False
-            if cmd in commands.optionalrepo.split(' '):
+            if self.fn.optionalrepo:
                 self.optionalrepo = True
-            if cmd in commands.inferrepo.split(' '):
+            if self.fn.inferrepo:
                 self.inferrepo = True
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
@@ -556,12 +556,6 @@ def addaliases(ui, cmdtable):
             pass
 
         cmdtable[aliasdef.name] = (aliasdef, aliasdef.opts, aliasdef.help)
-        if aliasdef.norepo:
-            commands.norepo += ' %s' % alias
-        if aliasdef.optionalrepo:
-            commands.optionalrepo += ' %s' % alias
-        if aliasdef.inferrepo:
-            commands.inferrepo += ' %s' % alias
 
 def _parse(ui, args):
     options = {}
@@ -728,26 +722,16 @@ def _checkshellalias(lui, ui, args, precheck=True):
 
     if precheck:
         strict = True
-        norepo = commands.norepo
-        optionalrepo = commands.optionalrepo
-        inferrepo = commands.inferrepo
-        def restorecommands():
-            commands.norepo = norepo
-            commands.optionalrepo = optionalrepo
-            commands.inferrepo = inferrepo
         cmdtable = commands.table.copy()
         addaliases(lui, cmdtable)
     else:
         strict = False
-        def restorecommands():
-            pass
         cmdtable = commands.table
 
     cmd = args[0]
     try:
         aliases, entry = cmdutil.findcmd(cmd, cmdtable, strict)
     except (error.AmbiguousCommand, error.UnknownCommand):
-        restorecommands()
         return
 
     cmd = aliases[0]
@@ -757,8 +741,6 @@ def _checkshellalias(lui, ui, args, precheck=True):
         d = lambda: fn(ui, *args[1:])
         return lambda: runcommand(lui, None, cmd, args[:1], ui, options, d,
                                   [], {})
-
-    restorecommands()
 
 _loaded = set()
 def _dispatch(req):
@@ -876,7 +858,7 @@ def _dispatch(req):
 
     repo = None
     cmdpats = args[:]
-    if cmd not in commands.norepo.split():
+    if not func.norepo:
         # use the repo from the request only if we don't have -R
         if not rpath and not cwd:
             repo = req.repo
@@ -897,9 +879,9 @@ def _dispatch(req):
             except error.RepoError:
                 if rpath and rpath[-1]: # invalid -R path
                     raise
-                if cmd not in commands.optionalrepo.split():
-                    if (cmd in commands.inferrepo.split() and
-                        args and not path): # try to infer -R from command args
+                if not func.optionalrepo:
+                    if func.inferrepo and args and not path:
+                        # try to infer -R from command args
                         repos = map(cmdutil.findrepo, args)
                         guess = repos[0]
                         if guess and repos.count(guess) == len(repos):
