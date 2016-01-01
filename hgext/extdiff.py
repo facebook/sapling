@@ -369,6 +369,5 @@ use %(path)s to diff repository (or selected files)
             # right encoding) prevents that.
             mydiff.__doc__ = doc.decode(encoding.encoding)
             return mydiff
-        cmdtable[cmd] = (save(cmdline),
-                         extdiffopts[:],
-                         _('hg %s [OPTION]... [FILE]...') % cmd)
+        command(cmd, extdiffopts[:], _('hg %s [OPTION]... [FILE]...') % cmd,
+                inferrepo=True)(save(cmdline))
