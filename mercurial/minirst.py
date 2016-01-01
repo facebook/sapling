@@ -661,12 +661,32 @@ def format(text, width=80, indent=0, keep=None, style='plain', section=None):
         sections = getsections(blocks)
         blocks = []
         i = 0
+        lastparents = []
+        synthetic = []
+        collapse = True
         while i < len(sections):
             name, nest, b = sections[i]
             del parents[nest:]
-            parents.append(name)
+            parents.append(i)
             if name == section:
-                b[0]['path'] = parents[3:]
+                if lastparents != parents:
+                    llen = len(lastparents)
+                    plen = len(parents)
+                    if llen and llen != plen:
+                        collapse = False
+                    s = []
+                    for j in xrange(3, plen - 1):
+                        parent = parents[j]
+                        if (j >= llen or
+                            lastparents[j] != parent):
+                            s.append(len(blocks))
+                            sec = sections[parent][2]
+                            blocks.append(sec[0])
+                            blocks.append(sec[-1])
+                    if s:
+                        synthetic.append(s)
+
+                lastparents = parents[:]
                 blocks.extend(b)
 
                 ## Also show all subnested sections
@@ -674,18 +694,19 @@ def format(text, width=80, indent=0, keep=None, style='plain', section=None):
                     i += 1
                     blocks.extend(sections[i][2])
             i += 1
+        if collapse:
+            synthetic.reverse()
+            for s in synthetic:
+                path = [blocks[i]['lines'][0] for i in s]
+                real = s[-1] + 2
+                realline = blocks[real]['lines']
+                realline[0] = ('"%s"' %
+                               '.'.join(path + [realline[0]]).replace('"', ''))
+                del blocks[s[0]:real]
 
     if style == 'html':
         text = formathtml(blocks)
     else:
-        if len([b for b in blocks if b['type'] == 'definition']) > 1:
-            i = 0
-            while i < len(blocks):
-                if blocks[i]['type'] == 'definition':
-                    if 'path' in blocks[i]:
-                        blocks[i]['lines'][0] = '"%s"' % '.'.join(
-                            blocks[i]['path'])
-                i += 1
         text = ''.join(formatblock(b, width) for b in blocks)
     if keep is None:
         return text

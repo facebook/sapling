@@ -1162,6 +1162,31 @@ Show nested definitions
   $ hg help config.type | egrep '^$'|wc -l
   \s*3 (re)
 
+Separate sections from subsections
+
+  $ hg help config.format | egrep '^    ("|-)|^\s*$' | uniq
+      "format"
+      --------
+  
+      "usegeneraldelta"
+  
+      "dotencode"
+  
+      "usefncache"
+  
+      "usestore"
+  
+      "profiling"
+      -----------
+  
+      "format"
+  
+      "progress"
+      ----------
+  
+      "format"
+  
+
 Last item in help config.*:
 
   $ hg help config.`hg help config|grep '^    "'| \
