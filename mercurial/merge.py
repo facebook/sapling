@@ -570,15 +570,15 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     files. For some actions, the result is to abort; for others, it is to
     choose a different action.
     """
-    conflicts = []
+    conflicts = set()
     if not force:
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
-                    conflicts.append(f)
+                    conflicts.add(f)
             elif m == 'dg':
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
-                    conflicts.append(f)
+                    conflicts.add(f)
 
         for f in sorted(conflicts):
             repo.ui.warn(_("%s: untracked file differs\n") % f)
