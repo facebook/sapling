@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import email
 import os
@@ -81,7 +81,7 @@ class SMTPS(smtplib.SMTP):
 
     def _get_socket(self, host, port, timeout):
         if self.debuglevel > 0:
-            print >> sys.stderr, 'connect:', (host, port)
+            print('connect:', (host, port), file=sys.stderr)
         new_socket = socket.create_connection((host, port), timeout)
         new_socket = sslutil.wrapsocket(new_socket,
                                         self.keyfile, self.certfile,

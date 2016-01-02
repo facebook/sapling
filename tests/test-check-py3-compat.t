@@ -100,7 +100,6 @@
   i18n/polib.py not using absolute_import
   mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
-  mercurial/mail.py requires print_function
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
