@@ -26,6 +26,7 @@ from . import (
     error,
     filemerge,
     obsolete,
+    scmutil,
     subrepo,
     util,
     worker,
@@ -971,12 +972,27 @@ def batchget(repo, mctx, actions):
     verbose = repo.ui.verbose
     fctx = mctx.filectx
     wwrite = repo.wwrite
+    ui = repo.ui
     i = 0
-    for f, args, msg in actions:
+    for f, (flags, backup), msg in actions:
         repo.ui.debug(" %s: %s -> g\n" % (f, msg))
         if verbose:
             repo.ui.note(_("getting %s\n") % f)
-        wwrite(f, fctx(f).data(), args[0])
+
+        if backup:
+            absf = repo.wjoin(f)
+            orig = scmutil.origpath(ui, repo, absf)
+            try:
+                # TODO Mercurial has always aborted if an untracked directory
+                # is replaced by a tracked file, or generally with
+                # file/directory merges. This needs to be sorted out.
+                if repo.wvfs.isfileorlink(f):
+                    util.rename(absf, orig)
+            except OSError as e:
+                if e.errno != errno.ENOENT:
+                    raise
+
+        wwrite(f, fctx(f).data(), flags)
         if i == 100:
             yield i, f
             i = 0
