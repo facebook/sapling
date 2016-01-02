@@ -100,7 +100,6 @@
   i18n/polib.py not using absolute_import
   mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
-  mercurial/lsprofcalltree.py requires print_function
   mercurial/mail.py requires print_function
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function
