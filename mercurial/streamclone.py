@@ -212,12 +212,7 @@ def generatev1(repo):
                 # partially encode name over the wire for backwards compat
                 yield '%s\0%d\n' % (store.encodedir(name), size)
                 if size <= 65536:
-                    fp = svfs(name)
-                    try:
-                        data = fp.read(size)
-                    finally:
-                        fp.close()
-                    yield data
+                    yield svfs.read(name)
                 else:
                     for chunk in util.filechunkiter(svfs(name), limit=size):
                         yield chunk
