@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import _lsprof
 import sys
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     import os
     sys.argv = sys.argv[1:]
     if not sys.argv:
-        print >> sys.stderr, "usage: lsprof.py <script> <arguments...>"
+        print("usage: lsprof.py <script> <arguments...>", file=sys.stderr)
         sys.exit(2)
     sys.path.insert(0, os.path.abspath(os.path.dirname(sys.argv[0])))
     stats = profile(execfile, sys.argv[0], globals(), locals())
