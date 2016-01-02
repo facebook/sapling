@@ -265,39 +265,24 @@ class abstractvfs(object):
         return self.__call__(path, mode, text, atomictemp, notindexed)
 
     def read(self, path):
-        fp = self(path, 'rb')
-        try:
+        with self(path, 'rb') as fp:
             return fp.read()
-        finally:
-            fp.close()
 
     def readlines(self, path, mode='rb'):
-        fp = self(path, mode=mode)
-        try:
+        with self(path, mode=mode) as fp:
             return fp.readlines()
-        finally:
-            fp.close()
 
     def write(self, path, data):
-        fp = self(path, 'wb')
-        try:
+        with self(path, 'wb') as fp:
             return fp.write(data)
-        finally:
-            fp.close()
 
     def writelines(self, path, data, mode='wb', notindexed=False):
-        fp = self(path, mode=mode, notindexed=notindexed)
-        try:
+        with self(path, mode=mode, notindexed=notindexed) as fp:
             return fp.writelines(data)
-        finally:
-            fp.close()
 
     def append(self, path, data):
-        fp = self(path, 'ab')
-        try:
+        with self(path, 'ab') as fp:
             return fp.write(data)
-        finally:
-            fp.close()
 
     def basename(self, path):
         """return base element of a path (as os.path.basename would do)
@@ -526,11 +511,10 @@ class vfs(abstractvfs):
                     else:
                         # nlinks() may behave differently for files on Windows
                         # shares if the file is open.
-                        fd = util.posixfile(f)
-                        nlink = util.nlinks(f)
-                        if nlink < 1:
-                            nlink = 2 # force mktempcopy (issue1922)
-                        fd.close()
+                        with util.posixfile(f):
+                            nlink = util.nlinks(f)
+                            if nlink < 1:
+                                nlink = 2 # force mktempcopy (issue1922)
                 except (OSError, IOError) as e:
                     if e.errno != errno.ENOENT:
                         raise
@@ -1047,10 +1031,9 @@ def readrequires(opener, supported):
     return requirements
 
 def writerequires(opener, requirements):
-    reqfile = opener("requires", "w")
-    for r in sorted(requirements):
-        reqfile.write("%s\n" % r)
-    reqfile.close()
+    with opener('requires', 'w') as fp:
+        for r in sorted(requirements):
+            fp.write("%s\n" % r)
 
 class filecachesubentry(object):
     def __init__(self, path, stat):
