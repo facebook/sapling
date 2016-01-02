@@ -319,12 +319,12 @@ def consumev1(repo, fp, filecount, bytecount):
                     repo.ui.debug('adding %s (%s)\n' %
                                   (name, util.bytecount(size)))
                 # for backwards compat, name was partially encoded
-                ofp = repo.svfs(store.decodedir(name), 'w')
-                for chunk in util.filechunkiter(fp, limit=size):
-                    handled_bytes += len(chunk)
-                    repo.ui.progress(_('clone'), handled_bytes, total=bytecount)
-                    ofp.write(chunk)
-                ofp.close()
+                with repo.svfs(store.decodedir(name), 'w') as ofp:
+                    for chunk in util.filechunkiter(fp, limit=size):
+                        handled_bytes += len(chunk)
+                        repo.ui.progress(_('clone'), handled_bytes,
+                                         total=bytecount)
+                        ofp.write(chunk)
             tr.close()
         finally:
             tr.release()
