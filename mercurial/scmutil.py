@@ -312,6 +312,17 @@ class abstractvfs(object):
     def islink(self, path=None):
         return os.path.islink(self.join(path))
 
+    def isfileorlink(self, path=None):
+        '''return whether path is a regular file or a symlink
+
+        Unlike isfile, this doesn't follow symlinks.'''
+        try:
+            st = self.lstat(path)
+        except OSError:
+            return False
+        mode = st.st_mode
+        return stat.S_ISREG(mode) or stat.S_ISLNK(mode)
+
     def reljoin(self, *paths):
         """join various elements of a path together (as os.path.join would do)
 

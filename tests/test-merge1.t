@@ -102,6 +102,28 @@ merge should fail
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
+
+#if symlink
+symlinks to directories should be treated as regular files (issue5027)
+  $ rm b
+  $ ln -s 'This is file b2' b
+  $ hg merge 1
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+symlinks shouldn't be followed
+  $ rm b
+  $ echo This is file b1 > .hg/b
+  $ ln -s .hg/b b
+  $ hg merge 1
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+
+  $ rm b
+  $ echo This is file b2 > b
+#endif
+
 merge of b expected
   $ hg merge -f 1
   merging b
