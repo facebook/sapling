@@ -124,7 +124,43 @@ symlinks shouldn't be followed
   $ echo This is file b2 > b
 #endif
 
-merge of b expected
+bad config
+  $ hg merge 1 --config merge.checkunknown=x
+  abort: merge.checkunknown not valid ('x' is none of 'abort', 'ignore', 'warn')
+  [255]
+this merge should fail
+  $ hg merge 1 --config merge.checkunknown=abort
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+
+this merge should warn
+  $ hg merge 1 --config merge.checkunknown=warn
+  b: replacing untracked file
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat b.orig
+  This is file b2
+  $ hg up --clean 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mv b.orig b
+
+this merge should silently ignore
+  $ cat b
+  This is file b2
+  $ hg merge 1 --config merge.checkunknown=ignore
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ cat b.orig
+  This is file b2
+  $ hg up --clean 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ mv b.orig b
+
+this merge of b should work
+  $ cat b
+  This is file b2
   $ hg merge -f 1
   merging b
   merging for b

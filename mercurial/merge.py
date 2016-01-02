@@ -573,6 +573,14 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     """
     conflicts = set()
     if not force:
+        config = repo.ui.config('merge', 'checkunknown', default='abort')
+        valid = ['abort', 'ignore', 'warn']
+        if config not in valid:
+            validstr = ', '.join(["'" + v + "'" for v in valid])
+            raise error.ConfigError(_("merge.checkunknown not valid "
+                                      "('%s' is none of %s)")
+                                    % (config, validstr))
+
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
@@ -581,16 +589,21 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     conflicts.add(f)
 
-        for f in sorted(conflicts):
-            repo.ui.warn(_("%s: untracked file differs\n") % f)
-        if conflicts:
-            raise error.Abort(_("untracked files in working directory differ "
-                                "from files in requested revision"))
+        if config == 'abort':
+            for f in sorted(conflicts):
+                repo.ui.warn(_("%s: untracked file differs\n") % f)
+            if conflicts:
+                raise error.Abort(_("untracked files in working directory "
+                                    "differ from files in requested revision"))
+        elif config == 'warn':
+            for f in sorted(conflicts):
+                repo.ui.warn(_("%s: replacing untracked file\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
+        backup = f in conflicts
         if m == 'c':
             flags, = args
-            actions[f] = ('g', (flags, False), msg)
+            actions[f] = ('g', (flags, backup), msg)
         elif m == 'cm':
             fl2, anc = args
             different = _checkunknownfile(repo, wctx, mctx, f)
@@ -598,7 +611,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 actions[f] = ('m', (f, f, None, False, anc),
                               "remote differs from untracked local")
             else:
-                actions[f] = ('g', (fl2, False), "remote created")
+                actions[f] = ('g', (fl2, backup), "remote created")
 
 def _forgetremoved(wctx, mctx, branchmerge):
     """
