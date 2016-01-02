@@ -35,6 +35,13 @@ class httprangereader(object):
         self.pos = 0
         self.opener = opener
         self.name = url
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
     def seek(self, pos):
         self.pos = pos
     def read(self, bytes=None):
