@@ -16,9 +16,9 @@ from .i18n import _
 from .node import nullid, short
 
 from . import (
-    cmdutil,
     error,
     match,
+    scmutil,
     simplemerge,
     tagmerge,
     templatekw,
@@ -608,7 +608,7 @@ def _filemerge(premerge, repo, mynode, orig, fcd, fco, fca, labels=None):
     b = temp("base", fca)
     c = temp("other", fco)
     if not fcd.isabsent():
-        back = cmdutil.origpath(ui, repo, a)
+        back = scmutil.origpath(ui, repo, a)
         if premerge:
             util.copyfile(a, back)
     else:

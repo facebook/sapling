@@ -838,6 +838,26 @@ def matchfiles(repo, files, badfn=None):
     '''Return a matcher that will efficiently match exactly these files.'''
     return matchmod.exact(repo.root, repo.getcwd(), files, badfn=badfn)
 
+def origpath(ui, repo, filepath):
+    '''customize where .orig files are created
+
+    Fetch user defined path from config file: [ui] origbackuppath = <path>
+    Fall back to default (filepath) if not specified
+    '''
+    origbackuppath = ui.config('ui', 'origbackuppath', None)
+    if origbackuppath is None:
+        return filepath + ".orig"
+
+    filepathfromroot = os.path.relpath(filepath, start=repo.root)
+    fullorigpath = repo.wjoin(origbackuppath, filepathfromroot)
+
+    origbackupdir = repo.vfs.dirname(fullorigpath)
+    if not repo.vfs.exists(origbackupdir):
+        ui.note(_('creating directory: %s\n') % origbackupdir)
+        util.makedirs(origbackupdir)
+
+    return fullorigpath + ".orig"
+
 def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
     if opts is None:
         opts = {}

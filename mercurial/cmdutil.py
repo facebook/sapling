@@ -3098,7 +3098,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     xlist.append(abs)
                     if dobackup and (backup <= dobackup
                                      or wctx[abs].cmp(ctx[abs])):
-                            bakname = origpath(ui, repo, rel)
+                            bakname = scmutil.origpath(ui, repo, rel)
                             ui.note(_('saving current version of %s as %s\n') %
                                     (rel, bakname))
                             if not opts.get('dry_run'):
@@ -3129,26 +3129,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                                       % (sub, short(ctx.node())))
     finally:
         wlock.release()
-
-def origpath(ui, repo, filepath):
-    '''customize where .orig files are created
-
-    Fetch user defined path from config file: [ui] origbackuppath = <path>
-    Fall back to default (filepath) if not specified
-    '''
-    origbackuppath = ui.config('ui', 'origbackuppath', None)
-    if origbackuppath is None:
-        return filepath + ".orig"
-
-    filepathfromroot = os.path.relpath(filepath, start=repo.root)
-    fullorigpath = repo.wjoin(origbackuppath, filepathfromroot)
-
-    origbackupdir = repo.vfs.dirname(fullorigpath)
-    if not repo.vfs.exists(origbackupdir):
-        ui.note(_('creating directory: %s\n') % origbackupdir)
-        util.makedirs(origbackupdir)
-
-    return fullorigpath + ".orig"
 
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""

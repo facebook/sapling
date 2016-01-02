@@ -700,9 +700,9 @@ class queue(object):
             absf = repo.wjoin(f)
             if os.path.lexists(absf):
                 self.ui.note(_('saving current version of %s as %s\n') %
-                             (f, cmdutil.origpath(self.ui, repo, f)))
+                             (f, scmutil.origpath(self.ui, repo, f)))
 
-                absorig = cmdutil.origpath(self.ui, repo, absf)
+                absorig = scmutil.origpath(self.ui, repo, absf)
                 if copy:
                     util.copyfile(absf, absorig)
                 else:
