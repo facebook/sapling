@@ -1,7 +1,7 @@
 # Japanese translation for Mercurial
 # Mercurial 日本語翻訳
 #
-# Copyright (C) 2009-2015 the Mercurial team
+# Copyright (C) 2009-2016 the Mercurial team
 #
 # ========================================
 # 【翻訳用語集】
@@ -161,8 +161,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Mercurial\n"
 "Report-Msgid-Bugs-To: <mercurial-devel@selenic.com>\n"
-"POT-Creation-Date: 2015-10-30 21:04+0900\n"
-"PO-Revision-Date: 2015-11-01 05:05+0900\n"
+"POT-Creation-Date: 2016-01-01 11:10+0900\n"
+"PO-Revision-Date: 2016-01-01 12:11+0900\n"
 "Last-Translator: Japanese translation team <mercurial-ja@googlegroups.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -1709,7 +1709,7 @@ msgid ""
 msgstr ""
 
 msgid ""
-"Bundle files can be generated with the :hg:`bundle` comand. Typically\n"
+"Bundle files can be generated with the :hg:`bundle` command. Typically\n"
 ":hg:`bundle --all` is used to produce a bundle of the entire repository."
 msgstr ""
 
@@ -11887,6 +11887,9 @@ msgstr "強制実施"
 msgid "delete a given bookmark"
 msgstr "指定ブックマークの削除"
 
+# this is left untranslated intentionally, because this VERY GENERIC
+# word may be used also for OLD something other than bookmark name
+# (by foozy@lares.dti.ne.jp)
 msgid "OLD"
 msgstr ""
 
@@ -15511,11 +15514,11 @@ msgstr "マージが実施されていない場合は resolve コマンドを使
 
 #, python-format
 msgid "not marking %s as it is driver-resolved\n"
-msgstr ""
+msgstr "マージドライバの処理対象 %s は衝突解消済み扱いになりません\n"
 
 #, python-format
 msgid "not unmarking %s as it is driver-resolved\n"
-msgstr ""
+msgstr "マージドライバの処理対象 %s は衝突未解消扱いになりません\n"
 
 msgid "arguments do not match paths that need resolving\n"
 msgstr "指定パターンは衝突解消対象ファイルに合致しません\n"
@@ -16551,9 +16554,6 @@ msgstr "%s は削除されませんでした!\n"
 #, python-format
 msgid "copy failed: %s is not a file or a symbolic link\n"
 msgstr "コピー失敗: %s はファイルでもシンボリックリンクでもありません\n"
-
-msgid "the python curses/wcurses module is not available/installed"
-msgstr "Python の curses/wcurses モジュールが利用できません"
 
 # this is left untranslated intentionally, because there is no
 # concrete user of this VERY GENERIC word (by foozy@lares.dti.ne.jp)
@@ -28871,7 +28871,10 @@ msgid "could not symlink to %r: %s"
 msgstr "%r に対してシンボリックリンクできません: %s"
 
 msgid "empty revision range"
-msgstr "リビジョンの範囲指定が空です"
+msgstr "該当するリビジョンがありません"
+
+msgid "empty revision on one side of range"
+msgstr "リビジョン対指定の一方が無効です"
 
 #, python-format
 msgid "recording removal of %s as rename to %s (%d%% similar)\n"
