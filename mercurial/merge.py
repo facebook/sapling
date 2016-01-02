@@ -588,7 +588,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
 
     for f, (m, args, msg) in actions.iteritems():
         if m == 'c':
-            actions[f] = ('g', args, msg)
+            flags, = args
+            actions[f] = ('g', (flags, False), msg)
         elif m == 'cm':
             fl2, anc = args
             different = _checkunknownfile(repo, wctx, mctx, f)
@@ -596,7 +597,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 actions[f] = ('m', (f, f, None, False, anc),
                               "remote differs from untracked local")
             else:
-                actions[f] = ('g', (fl2,), "remote created")
+                actions[f] = ('g', (fl2, False), "remote created")
 
 def _forgetremoved(wctx, mctx, branchmerge):
     """
@@ -748,11 +749,11 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
                     if n1 == n2: # optimization: keep local content
                         actions[f] = ('e', (fl2,), "update permissions")
                     else:
-                        actions[f] = ('g', (fl2,), "remote is newer")
+                        actions[f] = ('g', (fl2, False), "remote is newer")
                 elif nol and n2 == a: # remote only changed 'x'
                     actions[f] = ('e', (fl2,), "update permissions")
                 elif nol and n1 == a: # local only changed 'x'
-                    actions[f] = ('g', (fl1,), "remote is newer")
+                    actions[f] = ('g', (fl1, False), "remote is newer")
                 else: # both changed something
                     actions[f] = ('m', (f, f, f, False, pa.node()),
                                    "versions differ")
@@ -1459,7 +1460,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 _("remote changed %s which local deleted\n"
                   "use (c)hanged version or leave (d)eleted?"
                   "$$ &Changed $$ &Deleted") % f, 0) == 0:
-                actions['g'].append((f, (flags,), "prompt recreating"))
+                actions['g'].append((f, (flags, False), "prompt recreating"))
 
         # divergent renames
         for f, fl in sorted(diverge.iteritems()):

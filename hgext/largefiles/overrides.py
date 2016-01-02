@@ -483,7 +483,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         if sm in ('g', 'dc') and lm != 'r':
             if sm == 'dc':
                 f1, f2, fa, move, anc = sargs
-                sargs = (p2[f2].flags(),)
+                sargs = (p2[f2].flags(), False)
             # Case 1: normal file in the working copy, largefile in
             # the second parent
             usermsg = _('remote turned local normal file %s into a largefile\n'
@@ -501,7 +501,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         elif lm in ('g', 'dc') and sm != 'r':
             if lm == 'dc':
                 f1, f2, fa, move, anc = largs
-                largs = (p2[f2].flags(),)
+                largs = (p2[f2].flags(), False)
             # Case 2: largefile in the working copy, normal file in
             # the second parent
             usermsg = _('remote turned local largefile %s into a normal file\n'
