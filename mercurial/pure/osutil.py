@@ -254,3 +254,9 @@ else:
               f = posixfile('foo.txt')
               f.name = 'bla'  '''
             return self._file.__setattr__(name, value)
+
+        def __enter__(self):
+            return self._file.__enter__()
+
+        def __exit__(self, exc_type, exc_value, exc_tb):
+            return self._file.__exit__(exc_type, exc_value, exc_tb)
