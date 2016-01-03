@@ -1,0 +1,24 @@
+/*
+ * Utility functions
+ *
+ * Copyright (c) 2011 Yuya Nishihara <yuya@tcha.org>
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2 or any later version.
+ */
+
+#ifndef UTIL_H_
+#define UTIL_H_
+
+#ifdef __GNUC__
+#define PRINTF_FORMAT_ __attribute__((format(printf, 1, 2)))
+#endif
+
+void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
+
+void enabledebugmsg(void);
+void debugmsg(const char *fmt, ...) PRINTF_FORMAT_;
+
+int runshellcmd(const char *cmd, const char *envp[], const char *cwd);
+
+#endif  /* UTIL_H_ */
