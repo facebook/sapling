@@ -298,25 +298,26 @@ def consumev1(repo, fp, filecount, bytecount):
         start = time.time()
 
         with repo.transaction('clone'):
-            for i in xrange(filecount):
-                # XXX doesn't support '\n' or '\r' in filenames
-                l = fp.readline()
-                try:
-                    name, size = l.split('\0', 1)
-                    size = int(size)
-                except (ValueError, TypeError):
-                    raise error.ResponseError(
-                        _('unexpected response from remote server:'), l)
-                if repo.ui.debugflag:
-                    repo.ui.debug('adding %s (%s)\n' %
-                                  (name, util.bytecount(size)))
-                # for backwards compat, name was partially encoded
-                with repo.svfs(store.decodedir(name), 'w') as ofp:
-                    for chunk in util.filechunkiter(fp, limit=size):
-                        handled_bytes += len(chunk)
-                        repo.ui.progress(_('clone'), handled_bytes,
-                                         total=bytecount)
-                        ofp.write(chunk)
+            if True:
+                for i in xrange(filecount):
+                    # XXX doesn't support '\n' or '\r' in filenames
+                    l = fp.readline()
+                    try:
+                        name, size = l.split('\0', 1)
+                        size = int(size)
+                    except (ValueError, TypeError):
+                        raise error.ResponseError(
+                            _('unexpected response from remote server:'), l)
+                    if repo.ui.debugflag:
+                        repo.ui.debug('adding %s (%s)\n' %
+                                      (name, util.bytecount(size)))
+                    # for backwards compat, name was partially encoded
+                    with repo.svfs(store.decodedir(name), 'w') as ofp:
+                        for chunk in util.filechunkiter(fp, limit=size):
+                            handled_bytes += len(chunk)
+                            repo.ui.progress(_('clone'), handled_bytes,
+                                             total=bytecount)
+                            ofp.write(chunk)
 
         # Writing straight to files circumvented the inmemory caches
         repo.invalidate()
