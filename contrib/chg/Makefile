@@ -1,4 +1,4 @@
-HG = hg
+HG = $(CURDIR)/../../hg
 
 TARGET = chg
 SRCS = chg.c hgclient.c util.c
