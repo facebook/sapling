@@ -23,9 +23,9 @@ without changegroup2 support
   > def reposetup(ui, repo):
   >     packermap = changegroup.packermap
   >     # protect against future changes
-  >     if len(packermap) != 2:
+  >     if len(packermap) != 3:
   >         raise util.Abort('packermap has %d versions, expected 2!' % len(packermap))
-  >     for k in ['01', '02']:
+  >     for k in ['01', '02', '03']:
   >         if not packermap.get(k):
   >             raise util.Abort("packermap doesn't have key '%s'!" % k)
   > 
