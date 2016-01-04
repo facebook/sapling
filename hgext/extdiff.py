@@ -270,15 +270,17 @@ def dodiff(ui, repo, cmdline, pats, opts):
         ui.note(_('cleaning up temp directory\n'))
         shutil.rmtree(tmproot)
 
-@command('extdiff',
-    [('p', 'program', '',
-     _('comparison program to run'), _('CMD')),
+extdiffopts = [
     ('o', 'option', [],
      _('pass option to comparison program'), _('OPT')),
     ('r', 'rev', [], _('revision'), _('REV')),
     ('c', 'change', '', _('change made by revision'), _('REV')),
     ('', 'patch', None, _('compare patches for two revisions'))
-    ] + commands.walkopts + commands.subrepoopts,
+    ] + commands.walkopts + commands.subrepoopts
+
+@command('extdiff',
+    [('p', 'program', '', _('comparison program to run'), _('CMD')),
+     ] + extdiffopts,
     _('hg extdiff [OPT]... [FILE]...'),
     inferrepo=True)
 def extdiff(ui, repo, *pats, **opts):
@@ -368,5 +370,5 @@ use %(path)s to diff repository (or selected files)
             mydiff.__doc__ = doc.decode(encoding.encoding)
             return mydiff
         cmdtable[cmd] = (save(cmdline),
-                         cmdtable['extdiff'][1][1:],
+                         extdiffopts[:],
                          _('hg %s [OPTION]... [FILE]...') % cmd)
