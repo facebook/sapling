@@ -144,6 +144,8 @@ class basectx(object):
                 # The file was not a new file in mf2, so an entry
                 # from diff is really a difference.
                 modified.append(fn)
+            elif flag1 != flag2:
+                modified.append(fn)
             elif self[fn].cmp(other[fn]):
                 # node2 was newnode, but the working file doesn't
                 # match the one in mf1.
