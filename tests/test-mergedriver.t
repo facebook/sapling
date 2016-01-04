@@ -462,6 +462,8 @@ test some other failure modes
   $ hg merge 1 --config experimental.mergedriver=fail
   abort: merge driver must be a python hook
   [255]
+  $ hg update --clean 2
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 this should proceed as if there's no merge driver
   $ hg merge 1 --config experimental.mergedriver=python:fail
   loading preprocess hook failed:
