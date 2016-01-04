@@ -173,6 +173,16 @@ no usage
   $ hg commit -Amfoo
   adding foo
 
+infer repository
+
+  $ cd ..
+
+#if no-outer-repo
+  $ hg shortlog alias/foo
+  0 e63c23eaa88a | 1970-01-01 00:00 +0000
+#endif
+
+  $ cd alias
 
 with opts
 

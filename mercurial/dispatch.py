@@ -434,6 +434,7 @@ class cmdalias(object):
         self.help = ''
         self.norepo = True
         self.optionalrepo = False
+        self.inferrepo = False
         self.badalias = None
         self.unknowncmd = False
 
@@ -499,6 +500,8 @@ class cmdalias(object):
                 self.norepo = False
             if cmd in commands.optionalrepo.split(' '):
                 self.optionalrepo = True
+            if cmd in commands.inferrepo.split(' '):
+                self.inferrepo = True
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd):]
@@ -557,6 +560,8 @@ def addaliases(ui, cmdtable):
             commands.norepo += ' %s' % alias
         if aliasdef.optionalrepo:
             commands.optionalrepo += ' %s' % alias
+        if aliasdef.inferrepo:
+            commands.inferrepo += ' %s' % alias
 
 def _parse(ui, args):
     options = {}
@@ -723,9 +728,11 @@ def _checkshellalias(lui, ui, args, precheck=True):
         strict = True
         norepo = commands.norepo
         optionalrepo = commands.optionalrepo
+        inferrepo = commands.inferrepo
         def restorecommands():
             commands.norepo = norepo
             commands.optionalrepo = optionalrepo
+            commands.inferrepo = inferrepo
         cmdtable = commands.table.copy()
         addaliases(lui, cmdtable)
     else:
