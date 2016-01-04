@@ -13,7 +13,6 @@ import os
 from pipes import quote
 
 from mercurial import cmdutil
-from mercurial import commands
 from mercurial import error
 from mercurial import extensions
 from mercurial import hg
@@ -30,6 +29,7 @@ testedwith = 'internal'
 
 def defineactions():
     histedit = extensions.find('histedit')
+    @histedit.addhisteditaction(['stop', 's'])
     class stop(histedit.histeditaction):
         def run(self):
             parentctx, replacements = super(stop, self).run()
@@ -47,6 +47,7 @@ def defineactions():
                                        if n!=self.node]
             return super(stop, self).continueclean()
 
+    @histedit.addhisteditaction(['exec', 'x'])
     class execute(histedit.histeditaction):
         def __init__(self, state, command):
             self.state = state
@@ -60,6 +61,18 @@ def defineactions():
             """
             command = rule
             return cls(state, command)
+
+        def torule(self):
+            return "%s %s" % (self.verb, self.command)
+
+        def tostate(self):
+            """Print an action in format used by histedit state files
+            (the first line is a verb, the remainder is the second)
+            """
+            return "%s\n%s" % (self.verb, self.command)
+
+        def verify(self, prev):
+            pass
 
         def constraints(self):
             return set()
@@ -115,6 +128,7 @@ def defineactions():
                 return newctx, [(parentctxnode, (newctx.node(),))]
             return newctx, []
 
+    @histedit.addhisteditaction(['execr', 'xr'])
     class executerelative(execute):
         def __init__(self, state, command):
             super(executerelative, self).__init__(state, command)
@@ -141,12 +155,6 @@ def extsetup(ui):
 #
     """)
     stop, execute, executerel = defineactions()
-    histedit.actiontable['s'] = stop
-    histedit.actiontable['stop'] = stop
-    histedit.actiontable['x'] = execute
-    histedit.actiontable['exec'] = execute
-    histedit.actiontable['xr'] = executerel
-    histedit.actiontable['execr'] = executerel
 
     if ui.config('experimental', 'histeditng'):
         rebase = extensions.find('rebase')
@@ -225,7 +233,9 @@ def _rebase(orig, ui, repo, **opts):
     topmost, empty = repo.dirstate.parents()
     revs = histedit.between(repo, src, topmost, keepf)
     ctxs = [repo[r] for r in revs]
-    rules = [['base', repo[dest]]] + [['pick', ctx] for ctx in ctxs]
+    state = histedit.histeditstate(repo)
+    rules = [histedit.base(state, repo[dest])] + \
+        [histedit.pick(state, ctx) for ctx in ctxs]
     editcomment = """#
 # Interactive rebase is just a wrapper over histedit (adding the 'base' line as
 # the first rule). To continue or abort it you should use:
