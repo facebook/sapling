@@ -1135,7 +1135,7 @@ def graph(web, req, tmpl):
                              max([edge[1] for edge in edges] or [0]))
         return cols
 
-    def graphdata(usetuples):
+    def graphdata(usetuples, encodestr):
         data = []
 
         row = 0
@@ -1143,11 +1143,11 @@ def graph(web, req, tmpl):
             if type != graphmod.CHANGESET:
                 continue
             node = str(ctx)
-            age = templatefilters.age(ctx.date())
-            desc = templatefilters.firstline(ctx.description())
+            age = encodestr(templatefilters.age(ctx.date()))
+            desc = templatefilters.firstline(encodestr(ctx.description()))
             desc = cgi.escape(templatefilters.nonempty(desc))
-            user = cgi.escape(templatefilters.person(ctx.user()))
-            branch = cgi.escape(ctx.branch())
+            user = cgi.escape(templatefilters.person(encodestr(ctx.user())))
+            branch = cgi.escape(encodestr(ctx.branch()))
             try:
                 branchnode = web.repo.branchtip(branch)
             except error.RepoLookupError:
@@ -1156,8 +1156,9 @@ def graph(web, req, tmpl):
 
             if usetuples:
                 data.append((node, vtx, edges, desc, user, age, branch,
-                             [cgi.escape(x) for x in ctx.tags()],
-                             [cgi.escape(x) for x in ctx.bookmarks()]))
+                             [cgi.escape(encodestr(x)) for x in ctx.tags()],
+                             [cgi.escape(encodestr(x))
+                              for x in ctx.bookmarks()]))
             else:
                 edgedata = [{'col': edge[0], 'nextcol': edge[1],
                              'color': (edge[2] - 1) % 6 + 1,
@@ -1195,8 +1196,8 @@ def graph(web, req, tmpl):
                 canvaswidth=(cols + 1) * bg_height,
                 truecanvasheight=rows * bg_height,
                 canvasheight=canvasheight, bg_height=bg_height,
-                jsdata=lambda **x: graphdata(True),
-                nodes=lambda **x: graphdata(False),
+                jsdata=lambda **x: graphdata(True, str),
+                nodes=lambda **x: graphdata(False, str),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
