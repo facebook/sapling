@@ -140,15 +140,9 @@ class basectx(object):
                 added.append(fn)
             elif node2 is None:
                 removed.append(fn)
-            elif node2 != _newnode:
-                # The file was not a new file in mf2, so an entry
-                # from diff is really a difference.
-                modified.append(fn)
             elif flag1 != flag2:
                 modified.append(fn)
             elif self[fn].cmp(other[fn]):
-                # node2 was newnode, but the working file doesn't
-                # match the one in mf1.
                 modified.append(fn)
             else:
                 clean.append(fn)
