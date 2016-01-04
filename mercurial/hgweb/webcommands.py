@@ -1135,7 +1135,7 @@ def graph(web, req, tmpl):
                              max([edge[1] for edge in edges] or [0]))
         return cols
 
-    def graphdata(usetuples, **map):
+    def graphdata(usetuples):
         data = []
 
         row = 0
@@ -1195,8 +1195,8 @@ def graph(web, req, tmpl):
                 canvaswidth=(cols + 1) * bg_height,
                 truecanvasheight=rows * bg_height,
                 canvasheight=canvasheight, bg_height=bg_height,
-                jsdata=lambda **x: graphdata(True, **x),
-                nodes=lambda **x: graphdata(False, **x),
+                jsdata=lambda **x: graphdata(True),
+                nodes=lambda **x: graphdata(False),
                 node=ctx.hex(), changenav=changenav)
 
 def _getdoc(e):
