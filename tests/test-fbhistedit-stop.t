@@ -68,8 +68,6 @@ stop & continue cannot preserve hashes without obsolence
   When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/e860deea161a-fa46228d-backup.hg (glob)
 
   $ hg log --graph
@@ -127,8 +125,6 @@ stop on a commit
   $ hg log -v -r '.' --template '{files}\n'
   added e
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/04d2fab98077-3b7c8dde-backup.hg (glob)
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
@@ -174,13 +170,10 @@ fold a commit to check if other non-pick actions are handled correctly
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Changes commited as 08cf87522012. You may amend the commit now.
   When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/9377597fe60b-fe8de266-backup.hg (glob)
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/177f92b77385-97654820-backup.hg (glob)
 

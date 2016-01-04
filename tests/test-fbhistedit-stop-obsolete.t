@@ -77,8 +77,6 @@ stop & continue cannot preserve hashes without obsolence
   When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   7:794fe033d0a0
@@ -135,8 +133,6 @@ stop on a commit
   $ hg log -v -r '.' --template '{files}\n'
   added e
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  099559071076 f f
@@ -181,13 +177,10 @@ fold a commit to check if other non-pick actions are handled correctly
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Changes commited as 08cf87522012. You may amend the commit now.
   When you are finished, run hg histedit --continue to resume
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f

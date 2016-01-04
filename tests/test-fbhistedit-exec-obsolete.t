@@ -224,8 +224,6 @@ amend should just work fine
   > pick 652413bf663e f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {files} {desc}' --graph
   @  3cc63bf64c8d f f

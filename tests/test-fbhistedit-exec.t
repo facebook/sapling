@@ -145,7 +145,6 @@ continue after consecutive failed execs
 continue after the last entry
 
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
@@ -292,7 +291,6 @@ Test continue a stopped evolve histedit
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Command 'false' failed with exit status 1
   [1]
   $ echo d >> d
@@ -336,8 +334,6 @@ Test continue a stopped evolve histedit
   o  cb9a9f314b8b a
   
   $ hg histedit --continue --traceback
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  0d9a4961b100 f
   |
@@ -371,7 +367,6 @@ Test abort a stopped evolve histedit
   > pick 0d9a4961b100 f
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Command 'false' failed with exit status 1
   [1]

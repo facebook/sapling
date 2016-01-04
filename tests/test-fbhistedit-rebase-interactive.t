@@ -67,8 +67,6 @@ Simple rebase with -s and -d
   $ hg update 8
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -s 8 -d 5
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/cf7e1bc6a982-9ce57ee5-backup.hg (glob)
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
@@ -98,7 +96,6 @@ Try to rebase with conflict (also check -d without -s)
   1 files updated, 0 files merged, 4 files removed, 0 files unresolved
 
   $ HGEDITOR=true hg rebase -i -d 9
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging f
   warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
   Fix up the change and run hg histedit --continue
@@ -108,7 +105,6 @@ Try to rebase with conflict (also check -d without -s)
   $ hg resolve --mark f
   (no more unresolved files)
   $ hg histedit --continue
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/8d0611d6e5f2-0e0da94b-backup.hg (glob)
 
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
@@ -137,9 +133,6 @@ Rebase with base
   $ hg update 7
   2 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -b . -d 9
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/0ba40a7dd69a-033489e1-backup.hg (glob)
   $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
   @  9:50cf975d06ef h
