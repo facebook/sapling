@@ -59,6 +59,13 @@ def _getsimilar(symbols, value):
     # probably be investigated and tweaked.
     return [s for s in symbols if sim(s) > 0.6]
 
+def _reportsimilar(write, similar):
+    if len(similar) == 1:
+        write(_("(did you mean %s?)\n") % similar[0])
+    elif similar:
+        ss = ", ".join(sorted(similar))
+        write(_("(did you mean one of %s?)\n") % ss)
+
 def _formatparse(write, inst):
     similar = []
     if isinstance(inst, error.UnknownIdentifier):
@@ -71,12 +78,7 @@ def _formatparse(write, inst):
             write(_("unexpected leading whitespace\n"))
     else:
         write(_("hg: parse error: %s\n") % inst.args[0])
-        if similar:
-            if len(similar) == 1:
-                write(_("(did you mean %r?)\n") % similar[0])
-            else:
-                ss = ", ".join(sorted(similar))
-                write(_("(did you mean one of %s?)\n") % ss)
+        _reportsimilar(write, similar)
 
 def dispatch(req):
     "run the command specified in req.args"
@@ -262,8 +264,7 @@ def _runcatch(req):
             if len(inst.args) == 2:
                 sim = _getsimilar(inst.args[1], inst.args[0])
                 if sim:
-                    ui.warn(_('(did you mean one of %s?)\n') %
-                            ', '.join(sorted(sim)))
+                    _reportsimilar(ui.warn, sim)
                     suggested = True
             if not suggested:
                 commands.help_(ui, 'shortlist')

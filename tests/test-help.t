@@ -645,12 +645,12 @@ this is a section and erroring out weirdly.
 
   $ hg .log
   hg: unknown command '.log'
-  (did you mean one of log?)
+  (did you mean log?)
   [255]
 
   $ hg log.
   hg: unknown command 'log.'
-  (did you mean one of log?)
+  (did you mean log?)
   [255]
   $ hg pu.lh
   hg: unknown command 'pu.lh'

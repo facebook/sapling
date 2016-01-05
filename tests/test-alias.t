@@ -360,11 +360,11 @@ shell alias defined in current repo
   sub
   $ hg --cwd .. subalias > /dev/null
   hg: unknown command 'subalias'
-  (did you mean one of idalias?)
+  (did you mean idalias?)
   [255]
   $ hg -R .. subalias > /dev/null
   hg: unknown command 'subalias'
-  (did you mean one of idalias?)
+  (did you mean idalias?)
   [255]
 
 
@@ -372,7 +372,7 @@ shell alias defined in other repo
 
   $ hg mainalias > /dev/null
   hg: unknown command 'mainalias'
-  (did you mean one of idalias?)
+  (did you mean idalias?)
   [255]
   $ hg -R .. mainalias
   main

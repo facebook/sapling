@@ -1482,11 +1482,11 @@ parentrevspec
 Bogus function gets suggestions
   $ log 'add()'
   hg: parse error: unknown identifier: add
-  (did you mean 'adds'?)
+  (did you mean adds?)
   [255]
   $ log 'added()'
   hg: parse error: unknown identifier: added
-  (did you mean 'adds'?)
+  (did you mean adds?)
   [255]
   $ log 'remo()'
   hg: parse error: unknown identifier: remo
@@ -1499,7 +1499,7 @@ Bogus function gets suggestions
 Bogus function with a similar internal name doesn't suggest the internal name
   $ log 'matches()'
   hg: parse error: unknown identifier: matches
-  (did you mean 'matching'?)
+  (did you mean matching?)
   [255]
 
 Undocumented functions aren't suggested as similar either
