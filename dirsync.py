@@ -126,13 +126,16 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             wctx = repo[None]
             if (sourcepath not in wctx and mirrorpath not in wctx and
                 sourcepath in status.removed and mirrorpath in status.removed):
-                repo.ui.status("not mirroring remove of '%s' to '%s'; it is "
-                               "already removed\n" % (sourcepath, mirrorpath))
+                if repo.ui.verbose:
+                    repo.ui.status("not mirroring remove of '%s' to '%s'; "
+                                   "it is already removed\n" %
+                                   (sourcepath, mirrorpath))
                 continue
 
             if wctx[sourcepath].data() == wctx[mirrorpath].data():
-                repo.ui.status("not mirroring '%s' to '%s'; it already "
-                               "matches\n" % (sourcepath, mirrorpath))
+                if repo.ui.verbose:
+                    repo.ui.status("not mirroring '%s' to '%s'; it already "
+                                   "matches\n" % (sourcepath, mirrorpath))
                 continue
             raise util.Abort("path '%s' needs to be mirrored to '%s', but the "
                              "target already has pending changes" %

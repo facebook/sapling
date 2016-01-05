@@ -8,6 +8,8 @@
   $ hg init repo
   $ cd repo
   $ cat >> .hg/hgrc <<EOF
+  > [ui]
+  > verbose=true
   > [dirsync]
   > sync1.1=dir1/
   > sync1.2=dir2/subdir/
@@ -18,8 +20,15 @@ Test mirroring a simple add
   $ mkdir dir1/
   $ echo a > dir1/a
   $ hg add dir1/a
+  adding dir1/a
   $ hg commit --traceback -m "add in dir1"
   mirrored adding 'dir1/a' to 'dir2/subdir/a'
+  committing files:
+  dir1/a
+  dir2/subdir/a
+  committing manifest
+  committing changelog
+  committed changeset 0:c1796664bada
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -38,6 +47,12 @@ Test mirroring a simple modification
   $ echo a >> dir2/subdir/a
   $ hg commit -m "modify in dir2"
   mirrored changes in 'dir2/subdir/a' to 'dir1/a'
+  committing files:
+  dir1/a
+  dir2/subdir/a
+  committing manifest
+  committing changelog
+  committed changeset 1:c84f345b5796
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
@@ -54,8 +69,13 @@ Test mirroring a simple modification
 
 Test mirroring a simple delete
   $ hg rm dir1/a
+  removing dir1/a
   $ hg commit -m "remove in dir1"
   mirrored remove of 'dir1/a' to 'dir2/subdir/a'
+  committing files:
+  committing manifest
+  committing changelog
+  committed changeset 2:3cc3197052c1
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -88,6 +108,12 @@ Test non-conflicting edits
   $ hg commit -Am "add non-conflicting changes"
   not mirroring 'dir1/a' to 'dir2/subdir/a'; it already matches
   not mirroring 'dir2/subdir/a' to 'dir1/a'; it already matches
+  committing files:
+  dir1/a
+  dir2/subdir/a
+  committing manifest
+  committing changelog
+  committed changeset 3:787a1ee839ea
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -104,9 +130,15 @@ Test non-conflicting edits
 
 Test non-conflicting deletes
   $ hg rm dir1/a dir2/subdir/a
+  removing dir1/a
+  removing dir2/subdir/a
   $ hg commit -Am "non-conflicting removes"
   not mirroring remove of 'dir1/a' to 'dir2/subdir/a'; it is already removed
   not mirroring remove of 'dir2/subdir/a' to 'dir1/a'; it is already removed
+  committing files:
+  committing manifest
+  committing changelog
+  committed changeset 4:20868a046ae1
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -127,13 +159,26 @@ Test non-conflicting deletes
   $ hg commit -Am "add a back"
   adding dir1/a
   mirrored adding 'dir1/a' to 'dir2/subdir/a'
+  committing files:
+  dir1/a
+  dir2/subdir/a
+  committing manifest
+  committing changelog
+  committed changeset 5:4cc69952853e
 
 Test syncing a edit + rename
   $ echo b > dir1/a
   $ hg mv dir1/a dir1/b
+  moving dir1/a to dir1/b
   $ hg commit -m "edit and move a to b in dir1"
   mirrored copy 'dir1/a -> dir1/b' to 'dir2/subdir/a -> dir2/subdir/b'
   mirrored remove of 'dir1/a' to 'dir2/subdir/a'
+  committing files:
+  dir1/b
+  dir2/subdir/b
+  committing manifest
+  committing changelog
+  committed changeset 6:a6e4f018e982
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -155,8 +200,40 @@ Test syncing a edit + rename
 Test amending a change where there has already been a sync before
   $ echo c > dir1/b
   $ hg commit --amend -m "amend b in dir1"
+  amending changeset a6e4f018e982
   mirrored changes in 'dir1/b' to 'dir2/subdir/b'
+  committing files:
+  dir1/b
+  dir2/subdir/b
+  committing manifest
+  committing changelog
+  copying changeset 32cbac0ffaa1 to 4cc69952853e
+  committing files:
+  dir1/b
+  dir2/subdir/b
+  committing manifest
+  committing changelog
+  stripping intermediate changeset 32cbac0ffaa1
+  stripping amended changeset a6e4f018e982
+  2 changesets found
+  uncompressed size of bundle content:
+       478 (changelog)
+       442 (manifests)
+       317  dir1/b
+       331  dir2/subdir/b
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/a6e4f018e982-f4dc39cf-amend-backup.hg (glob)
+  1 changesets found
+  uncompressed size of bundle content:
+       303 (changelog)
+       223 (manifests)
+       199  dir1/b
+       213  dir2/subdir/b
+  adding branch
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  committed changeset 6:a9fa97a5457f
   $ hg diff --git -r .^ -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -305,6 +382,7 @@ Test committing part of the working copy
    2 files changed, 2 insertions(+), 0 deletions(-)
   
 
+
   $ echo a >> dir2/a
   $ hg commit --amend -m "add dir1/a" dir2/a
   mirrored changes in 'dir2/a' to 'dir1/a'
@@ -322,6 +400,7 @@ Test committing part of the working copy
    dir2/a |  2 ++
    2 files changed, 4 insertions(+), 0 deletions(-)
   
+
 
   $ echo a >> dir1/a
   $ hg commit --amend -m "add dir1/a" dir2/a
@@ -346,3 +425,38 @@ Test committing part of the working copy
    dir2/b |  1 +
    4 files changed, 8 insertions(+), 0 deletions(-)
   
+
+- Add it back for the next test
+  $ echo a > dir1/a
+  $ hg commit -m "add a back" --config ui.verbose=False
+  mirrored changes in 'dir1/a' to 'dir2/a'
+
+Test quiet non-conflicting edits
+  $ echo aa > dir1/a
+  $ echo aa > dir2/a
+  $ hg commit -m "add non-conflicting changes" --config ui.verbose=True
+  not mirroring 'dir1/a' to 'dir2/a'; it already matches
+  not mirroring 'dir2/a' to 'dir1/a'; it already matches
+  committing files:
+  dir1/a
+  dir2/a
+  committing manifest
+  committing changelog
+  committed changeset 2:10f8197f7e02
+  $ echo aaa > dir1/a
+  $ echo aaa > dir2/a
+  $ hg commit -m "add non-conflicting changes" --config ui.verbose=False
+  $ hg diff --git -r .^ -r .
+  diff --git a/dir1/a b/dir1/a
+  --- a/dir1/a
+  +++ b/dir1/a
+  @@ -1,1 +1,1 @@
+  -aa
+  +aaa
+  diff --git a/dir2/a b/dir2/a
+  --- a/dir2/a
+  +++ b/dir2/a
+  @@ -1,1 +1,1 @@
+  -aa
+  +aaa
+
