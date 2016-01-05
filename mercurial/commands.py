@@ -2441,7 +2441,8 @@ def debugignore(ui, repo, *files, **opts):
 
     With no argument display the combined ignore pattern.
 
-    Given space separated file names, shows if the given file is ignored.
+    Given space separated file names, shows if the given file is ignored and
+    if so, show the ignore rule (file and line number) that matched it.
     """
     ignore = repo.dirstate._ignore
     if not files:
@@ -2454,13 +2455,16 @@ def debugignore(ui, repo, *files, **opts):
     else:
         for f in files:
             ignored = None
+            ignoredata = None
             if f != '.':
                 if ignore(f):
                     ignored = f
+                    ignoredata = repo.dirstate._ignorefileandline(f)
                 else:
                     for p in util.finddirs(f):
                         if ignore(p):
                             ignored = p
+                            ignoredata = repo.dirstate._ignorefileandline(p)
                             break
             if ignored:
                 if ignored == f:
@@ -2468,6 +2472,9 @@ def debugignore(ui, repo, *files, **opts):
                 else:
                     ui.write("%s is ignored because of containing folder %s\n"
                              % (f, ignored))
+                ignorefile, lineno, line = ignoredata
+                ui.write("(ignore rule in %s, line %d: '%s')\n"
+                         % (ignorefile, lineno, line))
             else:
                 ui.write("%s is not ignored\n" % f)
 
