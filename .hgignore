@@ -20,6 +20,7 @@ syntax: glob
 \#*\#
 .\#*
 tests/.coverage*
+tests/.testtimes*
 tests/annotated
 tests/*.err
 tests/htmlcov

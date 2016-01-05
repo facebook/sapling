@@ -1601,6 +1601,49 @@ class TestSuite(unittest.TestSuite):
 
         return result
 
+# Save the most recent 5 wall-clock runtimes of each test to a
+# human-readable text file named .testtimes. Tests are sorted
+# alphabetically, while times for each test are listed from oldest to
+# newest.
+
+def loadtimes(testdir):
+    times = []
+    try:
+        with open(os.path.join(testdir, '.testtimes-')) as fp:
+            for line in fp:
+                ts = line.split()
+                times.append((ts[0], [float(t) for t in ts[1:]]))
+    except IOError as err:
+        if err.errno != errno.ENOENT:
+            raise
+    return times
+
+def savetimes(testdir, result):
+    saved = dict(loadtimes(testdir))
+    maxruns = 5
+    skipped = set([str(t[0]) for t in result.skipped])
+    for tdata in result.times:
+        test, real = tdata[0], tdata[3]
+        if test not in skipped:
+            ts = saved.setdefault(test, [])
+            ts.append(real)
+            ts[:] = ts[-maxruns:]
+
+    fd, tmpname = tempfile.mkstemp(prefix='.testtimes',
+                                   dir=testdir, text=True)
+    with os.fdopen(fd, 'w') as fp:
+        for name, ts in sorted(saved.iteritems()):
+            fp.write('%s %s\n' % (name, ' '.join(['%.3f' % (t,) for t in ts])))
+    timepath = os.path.join(testdir, '.testtimes')
+    try:
+        os.unlink(timepath)
+    except OSError:
+        pass
+    try:
+        os.rename(tmpname, timepath)
+    except OSError:
+        pass
+
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
 
@@ -1697,6 +1740,7 @@ class TextTestRunner(unittest.TextTestRunner):
 
             self._runner._checkhglib('Tested')
 
+            savetimes(self._runner._testdir, result)
             self.stream.writeln(
                 '# Ran %d tests, %d skipped, %d warned, %d failed.'
                 % (result.testsRun,
