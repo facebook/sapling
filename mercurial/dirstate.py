@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import collections
 import errno
 import os
 import stat
@@ -776,6 +777,26 @@ class dirstate(object):
                 # because path is arbitrary and user-specified
                 files.append(os.path.join(self._rootdir, util.expandpath(path)))
         return files
+
+    def _ignorefileandline(self, f):
+        files = collections.deque(self._ignorefiles())
+        visited = set()
+        while files:
+            i = files.popleft()
+            patterns = matchmod.readpatternfile(i, self._ui.warn,
+                                                sourceinfo=True)
+            for pattern, lineno, line in patterns:
+                kind, p = matchmod._patsplit(pattern, 'glob')
+                if kind == "subinclude":
+                    if p not in visited:
+                        files.append(p)
+                    continue
+                m = matchmod.match(self._root, '', [], [pattern],
+                                   warn=self._ui.warn)
+                if m(f):
+                    return (i, lineno, line)
+            visited.add(i)
+        return (None, -1, "")
 
     def _walkexplicit(self, match, subrepos):
         '''Get stat data about the files explicitly specified by match.
