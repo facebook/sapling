@@ -1861,7 +1861,9 @@ class TestRunner(object):
                     for kw, mul in slow.items():
                         if kw in f:
                             val *= mul
-                    perf[f] = val
+                    if f.endswith('.py'):
+                        val /= 10.0
+                    perf[f] = val / 1000.0
                     return perf[f]
             tests.sort(key=sortkey)
 
