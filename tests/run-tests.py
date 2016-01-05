@@ -1731,7 +1731,9 @@ class TextTestRunner(unittest.TextTestRunner):
                                     'cuser': ('%0.3f' % timesd[tc.name][0]),
                                     'csys': ('%0.3f' % timesd[tc.name][1]),
                                     'start': ('%0.3f' % timesd[tc.name][3]),
-                                    'end': ('%0.3f' % timesd[tc.name][4])}
+                                    'end': ('%0.3f' % timesd[tc.name][4]),
+                                    'diff': result.faildata.get(tc.name, ''),
+                                    }
                             outcome[tc.name] = tres
                     jsonout = json.dumps(outcome, sort_keys=True, indent=4)
                     fp.writelines(("testreport =", jsonout))
