@@ -2721,6 +2721,18 @@ dest#branch URIs:
   +d
   
 
+Set up a fake sendmail program
+
+  $ cat > pretendmail.sh << 'EOF'
+  > #!/bin/sh
+  > echo "$@"
+  > cat
+  > EOF
+  $ chmod +x pretendmail.sh
+
+  $ echo '[email]' >> $HGRCPATH
+  $ echo "method=`pwd`/pretendmail.sh" >> $HGRCPATH
+
 Test introduction configuration
 =================================
 
@@ -2806,15 +2818,13 @@ bad value setting
 
 single rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  $ hg email --date '1980-1-1 0:1' -v -t foo -s test -r '10'
   From [test]: test
   this patch series consists of 1 patches.
   
   warning: invalid patchbomb.intro value "mpmwearaclownnose"
   (should be one of always, never, auto)
-  Cc: 
-  
-  displaying [PATCH] test ...
+  -f test foo
   Content-Type: text/plain; charset="us-ascii"
   MIME-Version: 1.0
   Content-Transfer-Encoding: 7bit
@@ -2844,7 +2854,11 @@ single rev
   @@ -1,1 +1,2 @@
    d
   +d
+  Cc: 
   
+  sending [PATCH] test ...
+  sending mail: $TESTTMP/t2/pretendmail.sh -f test foo
+
 Test pull url header
 =================================
 
