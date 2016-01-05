@@ -1457,6 +1457,12 @@ def clone(ui, source, dest=None, **opts):
     destinations. For ``ssh://`` destinations, no working directory or
     ``.hg/hgrc`` will be created on the remote side.
 
+    If the source repository has a bookmark called '@' set, that
+    revision will be checked out in the new repository by default.
+
+    To check out a particular version, use -u/--update, or
+    -U/--noupdate to create a clone with no working directory.
+
     To pull only a subset of changesets, specify one or more revisions
     identifiers with -r/--rev or branches with -b/--branch. The
     resulting clone will contain only the specified changesets and
@@ -1467,12 +1473,6 @@ def clone(ui, source, dest=None, **opts):
 
        Specifying a tag will include the tagged changeset but not the
        changeset containing the tag.
-
-    If the source repository has a bookmark called '@' set, that
-    revision will be checked out in the new repository by default.
-
-    To check out a particular version, use -u/--update, or
-    -U/--noupdate to create a clone with no working directory.
 
     .. container:: verbose
 
