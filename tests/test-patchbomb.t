@@ -2745,18 +2745,18 @@ Test introduction configuration
 
 single rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
   [1]
 
 single rev + flag
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 
 Multi rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 "never" setting
@@ -2766,23 +2766,23 @@ Multi rev
 
 single rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
   [1]
 
 single rev + flag
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 
 Multi rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
   [1]
 
 Multi rev + flag
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 "always" setting
@@ -2792,23 +2792,23 @@ Multi rev + flag
 
 single rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 single rev + flag
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' --intro | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 
 Multi rev
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '9::' | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 Multi rev + flag
 
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '9::' --intro | grep "Write the introductory message for the patch series."
   Write the introductory message for the patch series.
 
 bad value setting
@@ -2866,7 +2866,7 @@ basic version
 
   $ echo 'intro=auto' >> $HGRCPATH
   $ echo "publicurl=$TESTTMP/t2" >> $HGRCPATH
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10' | grep '^#'
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10' | grep '^#'
   abort: public url $TESTTMP/t2 is missing 3b6f1ec9dde9
   (use "hg push $TESTTMP/t2 -r 3b6f1ec9dde9")
   [1]
@@ -2874,7 +2874,7 @@ basic version
 remote missing
 
   $ echo 'publicurl=$TESTTMP/missing' >> $HGRCPATH
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10'
   unable to access public repo: $TESTTMP/missing
   abort: repository $TESTTMP/missing not found!
   [255]
@@ -2889,7 +2889,7 @@ node missing at remote
   updating to branch test
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 'publicurl=$TESTTMP/t3' >> $HGRCPATH
-  $ hg email --date '1980-1-1 0:1' -n -t foo -s test -r '10'
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '10'
   abort: public url $TESTTMP/t3 is missing 3b6f1ec9dde9
   (use "hg push $TESTTMP/t3 -r 3b6f1ec9dde9")
   [255]
