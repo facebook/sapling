@@ -1845,18 +1845,24 @@ class TestRunner(object):
                     b'gendoc': 100,
                     b'contrib-perf': 200,
                    }
+            perf = {}
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
                 try:
-                    val = -os.stat(f).st_size
-                except OSError as e:
-                    if e.errno != errno.ENOENT:
-                        raise
-                    return -1e9 # file does not exist, tell early
-                for kw, mul in slow.items():
-                    if kw in f:
-                        val *= mul
-                return val
+                    return perf[f]
+                except KeyError:
+                    try:
+                        val = -os.stat(f).st_size
+                    except OSError as e:
+                        if e.errno != errno.ENOENT:
+                            raise
+                        perf[f] = -1e9 # file does not exist, tell early
+                        return -1e9
+                    for kw, mul in slow.items():
+                        if kw in f:
+                            val *= mul
+                    perf[f] = val
+                    return perf[f]
             tests.sort(key=sortkey)
 
         self._testdir = osenvironb[b'TESTDIR'] = getattr(
