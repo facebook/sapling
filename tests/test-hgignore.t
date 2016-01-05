@@ -166,6 +166,9 @@ Test relative ignore path (issue4473):
   $ hg debugignore
   (?:(?:|.*/)[^/]*(?:/|$))
 
+  $ hg debugignore b.o
+  b.o is ignored
+
   $ cd ..
 
 Check patterns that match only the directory
@@ -191,6 +194,10 @@ Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
   ? a.c
   ? a.o
   ? syntax
+  $ hg debugignore a.c
+  a.c is not ignored
+  $ hg debugignore dir/c.o
+  dir/c.o is ignored
 
 Check using 'include:' in ignore file
 
@@ -274,3 +281,5 @@ Check include subignore at the same level
 
   $ hg status | grep file2
   [1]
+  $ hg debugignore dir1/file2
+  dir1/file2 is ignored

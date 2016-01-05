@@ -2435,15 +2435,41 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
         raise error.Abort(_('unknown bundle type specified with --type'))
     changegroup.writebundle(ui, bundle, bundlepath, bundletype)
 
-@command('debugignore', [], '')
-def debugignore(ui, repo, *values, **opts):
-    """display the combined ignore pattern"""
+@command('debugignore', [], '[FILE]')
+def debugignore(ui, repo, *files, **opts):
+    """display the combined ignore pattern and information about ignored files
+
+    With no argument display the combined ignore pattern.
+
+    Given space separated file names, shows if the given file is ignored.
+    """
     ignore = repo.dirstate._ignore
-    includepat = getattr(ignore, 'includepat', None)
-    if includepat is not None:
-        ui.write("%s\n" % includepat)
+    if not files:
+        # Show all the patterns
+        includepat = getattr(ignore, 'includepat', None)
+        if includepat is not None:
+            ui.write("%s\n" % includepat)
+        else:
+            raise error.Abort(_("no ignore patterns found"))
     else:
-        raise error.Abort(_("no ignore patterns found"))
+        for f in files:
+            ignored = None
+            if f != '.':
+                if ignore(f):
+                    ignored = f
+                else:
+                    for p in util.finddirs(f):
+                        if ignore(p):
+                            ignored = p
+                            break
+            if ignored:
+                if ignored == f:
+                    ui.write("%s is ignored\n" % f)
+                else:
+                    ui.write("%s is ignored because of containing folder %s\n"
+                             % (f, ignored))
+            else:
+                ui.write("%s is not ignored\n" % f)
 
 @command('debugindex', debugrevlogopts +
     [('f', 'format', 0, _('revlog format'), _('FORMAT'))],

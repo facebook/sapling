@@ -829,7 +829,8 @@ Test list of internal help commands
    debugfsinfo   show information detected about current filesystem
    debuggetbundle
                  retrieves a bundle from a repo
-   debugignore   display the combined ignore pattern
+   debugignore   display the combined ignore pattern and information about
+                 ignored files
    debugindex    dump the contents of an index file
    debugindexdot
                  dump an index DAG as a graphviz dot file
