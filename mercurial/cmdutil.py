@@ -1308,7 +1308,7 @@ class changeset_printer(object):
             diff = self.diffopts.get('patch')
             diffopts = patch.diffallopts(self.ui, self.diffopts)
             node = ctx.node()
-            prev = ctx.p1()
+            prev = ctx.p1().node()
             if stat:
                 diffordiffstat(self.ui, self.repo, diffopts, prev, node,
                                match=matchfn, stat=True)
