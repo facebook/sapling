@@ -623,7 +623,7 @@ changed, even if it is aborted by conflict of other.
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file .hglf/large1.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ hg status -A large1
   C large1

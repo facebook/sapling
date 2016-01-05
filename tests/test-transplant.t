@@ -402,7 +402,7 @@ transplant --continue
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
 
 transplant -c shouldn't use an old changeset
@@ -416,7 +416,7 @@ transplant -c shouldn't use an old changeset
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file foo.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ cp .hg/transplant/journal .hg/transplant/journal.orig
   $ cat .hg/transplant/journal
@@ -459,7 +459,7 @@ test multiple revisions and --continue
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file baz.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ echo fixed > baz
   $ hg transplant --continue
@@ -506,7 +506,7 @@ transplant
   Hunk #1 FAILED at 0
   1 out of 1 hunks FAILED -- saving rejects to file a.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant --continue -e
   HGEDITFORM=transplant.merge
@@ -675,7 +675,7 @@ test filter with failed patch
   file b1 already exists
   1 out of 1 hunks FAILED -- saving rejects to file b1.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ cd ..
 
@@ -844,7 +844,7 @@ Test empty result in --continue
   file b already exists
   1 out of 1 hunks FAILED -- saving rejects to file b.rej
   patch failed to apply
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ hg status
   ? b.rej
@@ -927,7 +927,7 @@ timestamp of them isn't changed on the filesystem (see also issue4583)
   22c515968f13 transplanted to * (glob)
   applying e38700ba9dd3
   intentional error while patching
-  abort: fix up the merge and run hg transplant --continue
+  abort: fix up the working directory and run hg transplant --continue
   [255]
   $ cat >> .hg/hgrc <<EOF
   > [hooks]
