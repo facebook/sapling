@@ -134,7 +134,7 @@ def _setupupdates(ui):
             for file in temporaryfiles:
                 if file in wctxmanifest:
                     fctx = repo[None][file]
-                    actions.append((file, (fctx.flags(),), message))
+                    actions.append((file, (fctx.flags(), False), message))
 
             typeactions = collections.defaultdict(list)
             typeactions['g'] = actions
@@ -156,7 +156,7 @@ def _setupupdates(ui):
                 new = sparsematch(file)
                 if not old and new:
                     flags = mf.flags(file)
-                    prunedactions[file] = ('g', (flags,), '')
+                    prunedactions[file] = ('g', (flags, False), '')
                 elif old and not new:
                     prunedactions[file] = ('r', [], '')
 
@@ -754,7 +754,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
                 actions[file] = ('e', (fl,), '')
                 lookup.append(file)
             else:
-                actions[file] = ('g', (fl,), '')
+                actions[file] = ('g', (fl, False), '')
                 added.append(file)
         # Drop files that are newly excluded, or that still exist in
         # the dirstate.
