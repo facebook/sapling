@@ -74,7 +74,9 @@ def buildtemprevlog(repo, file):
 
 def debugindex(orig, ui, repo, file_=None, **opts):
     """dump the contents of an index file"""
-    if (opts.get('changelog') or opts.get('manifest') or
+    if (opts.get('changelog') or
+        opts.get('manifest') or
+        opts.get('dir') or
         not shallowrepo.requirement in repo.requirements or
         not repo.shallowmatch(file_)):
         return orig(ui, repo, file_, **opts)
