@@ -395,6 +395,7 @@ attempt to continue
   $ hg revert -r . a/a
   $ hg resolve -m a/a
   (no more unresolved files)
+  continue: hg unshelve --continue
 
   $ hg commit -m 'commit while unshelve in progress'
   abort: unshelve already in progress
@@ -840,6 +841,7 @@ is a no-op), works (issue4398)
   reverting a/a (glob)
   $ hg resolve -m a/a
   (no more unresolved files)
+  continue: hg unshelve --continue
   $ hg unshelve -c
   rebasing 5:e42a7da90865 "changes to: second" (tip)
   note: rebase of 5:e42a7da90865 created no changes to commit

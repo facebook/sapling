@@ -852,3 +852,5 @@ def extsetup(ui):
         [shelvedstate._filename, False, False,
          _('unshelve already in progress'),
          _("use 'hg unshelve --continue' or 'hg unshelve --abort'")])
+    cmdutil.afterresolvedstates.append(
+        [shelvedstate._filename, _('hg unshelve --continue')])
