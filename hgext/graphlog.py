@@ -8,7 +8,7 @@
 '''command to view revision graphs from a shell (DEPRECATED)
 
 The functionality of this extension has been include in core Mercurial
-since version 2.3.
+since version 2.3. Please use :hg:`log -G ...` instead.
 
 This extension adds a --graph option to the incoming, outgoing and log
 commands. When this options is given, an ASCII representation of the
@@ -57,6 +57,8 @@ def glog(ui, repo, *pats, **opts):
 
     Nodes printed as an @ character are parents of the working
     directory.
+
+    This is an alias to :hg:`log -G`.
     """
     opts['graph'] = True
     return commands.log(ui, repo, *pats, **opts)
