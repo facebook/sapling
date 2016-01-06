@@ -154,9 +154,6 @@ class verifier(object):
             ui.status(_("repository uses revlog format %d\n") %
                            (revlogv1 and 1 or 0))
 
-        havecl = self.havecl
-        havemf = self.havemf
-
         ui.status(_("checking changesets\n"))
         seen = {}
         self.checklog(cl, "changelog", 0)
@@ -208,41 +205,7 @@ class verifier(object):
                 self.exc(lr, _("reading manifest delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
-        ui.status(_("crosschecking files in changesets and manifests\n"))
-
-        total = len(mflinkrevs) + len(filelinkrevs) + len(filenodes)
-        count = 0
-        if havemf:
-            for c, m in sorted([(c, m) for m in mflinkrevs
-                                for c in mflinkrevs[m]]):
-                count += 1
-                if m == nullid:
-                    continue
-                ui.progress(_('crosschecking'), count, total=total)
-                self.err(c, _("changeset refers to unknown manifest %s") %
-                         short(m))
-            mflinkrevs = None # del is bad here due to scope issues
-
-            for f in sorted(filelinkrevs):
-                count += 1
-                ui.progress(_('crosschecking'), count, total=total)
-                if f not in filenodes:
-                    lr = filelinkrevs[f][0]
-                    self.err(lr, _("in changeset but not in manifest"), f)
-
-        if havecl:
-            for f in sorted(filenodes):
-                count += 1
-                ui.progress(_('crosschecking'), count, total=total)
-                if f not in filelinkrevs:
-                    try:
-                        fl = repo.file(f)
-                        lr = min([fl.linkrev(fl.rev(n)) for n in filenodes[f]])
-                    except Exception:
-                        lr = None
-                    self.err(lr, _("in manifest but not in changeset"), f)
-
-        ui.progress(_('crosschecking'), None)
+        self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
 
         totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
         revisions += filerevisions
@@ -260,6 +223,45 @@ class verifier(object):
                 ui.warn(_("(first damaged changeset appears to be %d)\n")
                         % min(badrevs))
             return 1
+
+    def _crosscheckfiles(self, mflinkrevs, filelinkrevs, filenodes):
+        repo = self.repo
+        ui = self.ui
+        ui.status(_("crosschecking files in changesets and manifests\n"))
+
+        total = len(mflinkrevs) + len(filelinkrevs) + len(filenodes)
+        count = 0
+        if self.havemf:
+            for c, m in sorted([(c, m) for m in mflinkrevs
+                                for c in mflinkrevs[m]]):
+                count += 1
+                if m == nullid:
+                    continue
+                ui.progress(_('crosschecking'), count, total=total)
+                self.err(c, _("changeset refers to unknown manifest %s") %
+                         short(m))
+            mflinkrevs = None # del is bad here due to scope issues
+
+            for f in sorted(filelinkrevs):
+                count += 1
+                ui.progress(_('crosschecking'), count, total=total)
+                if f not in filenodes:
+                    lr = filelinkrevs[f][0]
+                    self.err(lr, _("in changeset but not in manifest"), f)
+
+        if self.havecl:
+            for f in sorted(filenodes):
+                count += 1
+                ui.progress(_('crosschecking'), count, total=total)
+                if f not in filelinkrevs:
+                    try:
+                        fl = repo.file(f)
+                        lr = min([fl.linkrev(fl.rev(n)) for n in filenodes[f]])
+                    except Exception:
+                        lr = None
+                    self.err(lr, _("in manifest but not in changeset"), f)
+
+        ui.progress(_('crosschecking'), None)
 
     def _verifyfiles(self, filenodes, filelinkrevs):
         repo = self.repo
