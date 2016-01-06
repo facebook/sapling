@@ -18,6 +18,7 @@ Test document extraction
   >     fi
   > 
   >     echo "checking for parse errors"
+  >     python "$TESTDIR/../doc/docchecker" gendoc-$LOCALE.txt
   >     # We call runrst without adding "--halt warning" to make it report
   >     # all errors instead of stopping on the first one.
   >     python "$TESTDIR/../doc/runrst" html gendoc-$LOCALE.txt /dev/null
