@@ -80,6 +80,23 @@ class verifier(object):
             inst = repr(inst)
         self.err(linkrev, "%s: %s" % (msg, inst), filename)
 
+    def checklog(self, obj, name, linkrev):
+        if not len(obj) and (self.havecl or self.havemf):
+            self.err(linkrev, _("empty or missing %s") % name)
+            return
+
+        d = obj.checksize()
+        if d[0]:
+            self.err(None, _("data length off by %d bytes") % d[0], name)
+        if d[1]:
+            self.err(None, _("index contains %d extra bytes") % d[1], name)
+
+        if obj.version != revlog.REVLOGV0:
+            if not self.revlogv1:
+                self.warn(_("warning: `%s' uses revlog format 1") % name)
+        elif self.revlogv1:
+            self.warn(_("warning: `%s' uses revlog format 0") % name)
+
     def verify(self):
         repo = self.repo
         mflinkrevs = {}
@@ -94,23 +111,6 @@ class verifier(object):
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
-
-        def checklog(obj, name, linkrev):
-            if not len(obj) and (havecl or havemf):
-                self.err(linkrev, _("empty or missing %s") % name)
-                return
-
-            d = obj.checksize()
-            if d[0]:
-                self.err(None, _("data length off by %d bytes") % d[0], name)
-            if d[1]:
-                self.err(None, _("index contains %d extra bytes") % d[1], name)
-
-            if obj.version != revlog.REVLOGV0:
-                if not revlogv1:
-                    self.warn(_("warning: `%s' uses revlog format 1") % name)
-            elif revlogv1:
-                self.warn(_("warning: `%s' uses revlog format 0") % name)
 
         def checkentry(obj, i, node, seen, linkrevs, f):
             lr = obj.linkrev(obj.rev(node))
@@ -162,7 +162,7 @@ class verifier(object):
 
         ui.status(_("checking changesets\n"))
         seen = {}
-        checklog(cl, "changelog", 0)
+        self.checklog(cl, "changelog", 0)
         total = len(repo)
         for i in repo:
             ui.progress(_('checking'), i, total=total, unit=_('changesets'))
@@ -187,7 +187,7 @@ class verifier(object):
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
-            checklog(mf, "manifest", 0)
+            self.checklog(mf, "manifest", 0)
         total = len(mf)
         for i in mf:
             ui.progress(_('checking'), i, total=total, unit=_('manifests'))
@@ -283,7 +283,7 @@ class verifier(object):
                     self.warn(_(" warning: revlog '%s' not in fncache!") % ff)
                     self.fncachewarned = True
 
-            checklog(fl, f, lr)
+            self.checklog(fl, f, lr)
             seen = {}
             rp = None
             for i in fl:
