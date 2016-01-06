@@ -134,9 +134,6 @@ class verifier(object):
 
     def verify(self):
         repo = self.repo
-        mflinkrevs = {}
-        filelinkrevs = {}
-        filenodes = {}
 
         ui = repo.ui
 
@@ -150,9 +147,9 @@ class verifier(object):
             ui.status(_("repository uses revlog format %d\n") %
                            (self.revlogv1 and 1 or 0))
 
-        self._verifychangelog(mflinkrevs, filelinkrevs)
+        mflinkrevs, filelinkrevs = self._verifychangelog()
 
-        self._verifymanifest(mflinkrevs, filenodes)
+        filenodes = self._verifymanifest(mflinkrevs)
 
         self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
 
@@ -172,12 +169,14 @@ class verifier(object):
                         % min(self.badrevs))
             return 1
 
-    def _verifychangelog(self, mflinkrevs, filelinkrevs):
+    def _verifychangelog(self):
         ui = self.ui
         repo = self.repo
         cl = repo.changelog
 
         ui.status(_("checking changesets\n"))
+        mflinkrevs = {}
+        filelinkrevs = {}
         seen = {}
         self.checklog(cl, "changelog", 0)
         total = len(repo)
@@ -198,13 +197,15 @@ class verifier(object):
                 self.refersmf = True
                 self.exc(i, _("unpacking changeset %s") % short(n), inst)
         ui.progress(_('checking'), None)
+        return mflinkrevs, filelinkrevs
 
-    def _verifymanifest(self, mflinkrevs, filenodes):
+    def _verifymanifest(self, mflinkrevs):
         repo = self.repo
         ui = self.ui
         mf = self.repo.manifest
 
         ui.status(_("checking manifests\n"))
+        filenodes = {}
         seen = {}
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
@@ -233,7 +234,7 @@ class verifier(object):
                 self.exc(lr, _("reading manifest delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
-        return mflinkrevs
+        return filenodes
 
     def _crosscheckfiles(self, mflinkrevs, filelinkrevs, filenodes):
         repo = self.repo
