@@ -562,6 +562,7 @@ def wraprepo(repo):
                     raise CorruptionException("tip doesn't match after sync")
 
                 self.disablesync = True
+                transaction = self.transaction("syncdb_bookmarks")
                 try:
                     bm = self._bookmarks
                     bm.clear()
@@ -572,8 +573,10 @@ def wraprepo(repo):
                         node = bin(node)
                         if node in self:
                             bm[name] = node
-                    bm.write()
+                    bm.recordchange(transaction)
+                    transaction.close()
                 finally:
+                    transaction.release()
                     self.disablesync = False
 
                 if bm != sqlbookmarks:
@@ -657,6 +660,9 @@ def wraprepo(repo):
                     " are allowed")
 
             if not self.pendingrevs and not 'bookmark_moved' in tr.hookargs:
+                return
+
+            if self.disablesync:
                 return
 
             reponame = self.sqlreponame
