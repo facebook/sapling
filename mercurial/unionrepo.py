@@ -182,7 +182,8 @@ class unionfilelog(unionrevlog, filelog.filelog):
         """Check if a revision is censored."""
         if rev <= self.repotiprev:
             return filelog.filelog.iscensored(self, rev)
-        return self.revlog2.iscensored(rev)
+        node = self.node(rev)
+        return self.revlog2.iscensored(self.revlog2.rev(node))
 
 class unionpeer(localrepo.localpeer):
     def canpush(self):
