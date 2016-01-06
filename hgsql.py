@@ -35,7 +35,7 @@ UNIQUE KEY bookmarkindex (repo, namespace, name)
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import changelog, error, cmdutil, revlog, localrepo, transaction
+from mercurial import error, cmdutil, revlog, localrepo
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
@@ -594,7 +594,6 @@ def wraprepo(repo):
             and places them on the queue. This function is meant to run on a
             background thread and listens to the abort event to abort early.
             """
-            ui = self.ui
             clrev = fetchstart
             chunksize = 1000
             try:
