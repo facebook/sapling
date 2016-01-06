@@ -141,7 +141,6 @@ class verifier(object):
         badrevs = self.badrevs
         ui = repo.ui
         cl = repo.changelog
-        mf = repo.manifest
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
@@ -176,6 +175,32 @@ class verifier(object):
                 self.exc(i, _("unpacking changeset %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
+        self._verifymanifest(mflinkrevs, filenodes)
+
+        self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
+
+        totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
+        revisions += filerevisions
+
+        ui.status(_("%d files, %d changesets, %d total revisions\n") %
+                       (totalfiles, len(cl), revisions))
+        if self.warnings:
+            ui.warn(_("%d warnings encountered!\n") % self.warnings)
+        if self.fncachewarned:
+            ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
+                      'corrupt fncache\n'))
+        if self.errors:
+            ui.warn(_("%d integrity errors encountered!\n") % self.errors)
+            if badrevs:
+                ui.warn(_("(first damaged changeset appears to be %d)\n")
+                        % min(badrevs))
+            return 1
+
+    def _verifymanifest(self, mflinkrevs, filenodes):
+        repo = self.repo
+        ui = self.ui
+        mf = self.repo.manifest
+
         ui.status(_("checking manifests\n"))
         seen = {}
         if self.refersmf:
@@ -205,24 +230,7 @@ class verifier(object):
                 self.exc(lr, _("reading manifest delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
-        self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
-
-        totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
-        revisions += filerevisions
-
-        ui.status(_("%d files, %d changesets, %d total revisions\n") %
-                       (totalfiles, len(cl), revisions))
-        if self.warnings:
-            ui.warn(_("%d warnings encountered!\n") % self.warnings)
-        if self.fncachewarned:
-            ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
-                      'corrupt fncache\n'))
-        if self.errors:
-            ui.warn(_("%d integrity errors encountered!\n") % self.errors)
-            if badrevs:
-                ui.warn(_("(first damaged changeset appears to be %d)\n")
-                        % min(badrevs))
-            return 1
+        return mflinkrevs
 
     def _crosscheckfiles(self, mflinkrevs, filelinkrevs, filenodes):
         repo = self.repo
