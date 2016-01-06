@@ -97,6 +97,41 @@ class verifier(object):
         elif self.revlogv1:
             self.warn(_("warning: `%s' uses revlog format 0") % name)
 
+    def checkentry(self, obj, i, node, seen, linkrevs, f):
+        lr = obj.linkrev(obj.rev(node))
+        if lr < 0 or (self.havecl and lr not in linkrevs):
+            if lr < 0 or lr >= len(self.repo.changelog):
+                msg = _("rev %d points to nonexistent changeset %d")
+            else:
+                msg = _("rev %d points to unexpected changeset %d")
+            self.err(None, msg % (i, lr), f)
+            if linkrevs:
+                if f and len(linkrevs) > 1:
+                    try:
+                        # attempt to filter down to real linkrevs
+                        linkrevs = [l for l in linkrevs
+                                    if self.lrugetctx(l)[f].filenode() == node]
+                    except Exception:
+                        pass
+                self.warn(_(" (expected %s)") % " ".join(map(str, linkrevs)))
+            lr = None # can't be trusted
+
+        try:
+            p1, p2 = obj.parents(node)
+            if p1 not in seen and p1 != nullid:
+                self.err(lr, _("unknown parent 1 %s of %s") %
+                    (short(p1), short(node)), f)
+            if p2 not in seen and p2 != nullid:
+                self.err(lr, _("unknown parent 2 %s of %s") %
+                    (short(p2), short(node)), f)
+        except Exception as inst:
+            self.exc(lr, _("checking parents of %s") % short(node), inst, f)
+
+        if node in seen:
+            self.err(lr, _("duplicate revision %d (%d)") % (i, seen[node]), f)
+        seen[node] = i
+        return lr
+
     def verify(self):
         repo = self.repo
         mflinkrevs = {}
@@ -111,43 +146,6 @@ class verifier(object):
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
-
-        def checkentry(obj, i, node, seen, linkrevs, f):
-            lr = obj.linkrev(obj.rev(node))
-            if lr < 0 or (havecl and lr not in linkrevs):
-                if lr < 0 or lr >= len(cl):
-                    msg = _("rev %d points to nonexistent changeset %d")
-                else:
-                    msg = _("rev %d points to unexpected changeset %d")
-                self.err(None, msg % (i, lr), f)
-                if linkrevs:
-                    if f and len(linkrevs) > 1:
-                        try:
-                            # attempt to filter down to real linkrevs
-                            linkrevs = [l for l in linkrevs
-                                        if lrugetctx(l)[f].filenode() == node]
-                        except Exception:
-                            pass
-                    self.warn(_(" (expected %s)") %
-                              " ".join(map(str, linkrevs)))
-                lr = None # can't be trusted
-
-            try:
-                p1, p2 = obj.parents(node)
-                if p1 not in seen and p1 != nullid:
-                    self.err(lr, _("unknown parent 1 %s of %s") %
-                             (short(p1), short(node)), f)
-                if p2 not in seen and p2 != nullid:
-                    self.err(lr, _("unknown parent 2 %s of %s") %
-                             (short(p2), short(node)), f)
-            except Exception as inst:
-                self.exc(lr, _("checking parents of %s") % short(node), inst, f)
-
-            if node in seen:
-                self.err(lr, _("duplicate revision %d (%d)") %
-                         (i, seen[node]), f)
-            seen[node] = i
-            return lr
 
         if os.path.exists(repo.sjoin("journal")):
             ui.warn(_("abandoned transaction found - run hg recover\n"))
@@ -167,7 +165,7 @@ class verifier(object):
         for i in repo:
             ui.progress(_('checking'), i, total=total, unit=_('changesets'))
             n = cl.node(i)
-            checkentry(cl, i, n, seen, [i], "changelog")
+            self.checkentry(cl, i, n, seen, [i], "changelog")
 
             try:
                 changes = cl.read(n)
@@ -192,7 +190,8 @@ class verifier(object):
         for i in mf:
             ui.progress(_('checking'), i, total=total, unit=_('manifests'))
             n = mf.node(i)
-            lr = checkentry(mf, i, n, seen, mflinkrevs.get(n, []), "manifest")
+            lr = self.checkentry(mf, i, n, seen, mflinkrevs.get(n, []),
+                                 "manifest")
             if n in mflinkrevs:
                 del mflinkrevs[n]
             else:
@@ -289,7 +288,7 @@ class verifier(object):
             for i in fl:
                 revisions += 1
                 n = fl.node(i)
-                lr = checkentry(fl, i, n, seen, linkrevs, f)
+                lr = self.checkentry(fl, i, n, seen, linkrevs, f)
                 if f in filenodes:
                     if havemf and n not in filenodes[f]:
                         self.err(lr, _("%s not in manifests") % (short(n)), f)
