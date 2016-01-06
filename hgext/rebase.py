@@ -343,8 +343,10 @@ def rebase(ui, repo, **opts):
             obsoletenotrebased = {}
             if ui.configbool('experimental', 'rebaseskipobsolete'):
                 rebasesetrevs = set(rebaseset)
+                rebaseobsrevs = set(r for r in rebasesetrevs
+                                      if repo[r].obsolete())
                 obsoletenotrebased = _computeobsoletenotrebased(repo,
-                                                                rebasesetrevs,
+                                                                rebaseobsrevs,
                                                                 dest)
 
                 # - plain prune (no successor) changesets are rebased
@@ -1174,7 +1176,7 @@ def _rebasedvisible(orig, repo):
     blockers.update(getattr(repo, '_rebaseset', ()))
     return blockers
 
-def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
+def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     """return a mapping obsolete => successor for all obsolete nodes to be
     rebased that have a successors in the destination
 
@@ -1185,15 +1187,13 @@ def _computeobsoletenotrebased(repo, rebasesetrevs, dest):
     # nodes to be rebased
     allsuccessors = {}
     cl = repo.changelog
-    for r in rebasesetrevs:
-        n = repo[r]
-        if n.obsolete():
-            node = cl.node(r)
-            for s in obsolete.allsuccessors(repo.obsstore, [node]):
-                try:
-                    allsuccessors[cl.rev(s)] = cl.rev(node)
-                except LookupError:
-                    pass
+    for r in rebaseobsrevs:
+        node = cl.node(r)
+        for s in obsolete.allsuccessors(repo.obsstore, [node]):
+            try:
+                allsuccessors[cl.rev(s)] = cl.rev(node)
+            except LookupError:
+                pass
 
     if allsuccessors:
         # Look for successors of obsolete nodes to be rebased among
