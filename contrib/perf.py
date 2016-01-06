@@ -568,7 +568,7 @@ def perfrevlogrevision(ui, repo, file_, rev=None, cache=None, **opts):
         r.revision(node)
 
     chain = r._deltachain(rev)[0]
-    data = r._chunkraw(chain[0], chain[-1])
+    data = r._chunkraw(chain[0], chain[-1])[1]
     bins = r._chunks(chain)
     text = str(bins[0])
     bins = bins[1:]

@@ -1071,9 +1071,12 @@ class revlog(object):
 
         Requests for data may be satisfied by a cache.
 
-        Returns a str or a buffer instance of raw byte data. Callers will
-        need to call ``self.start(rev)`` and ``self.length()`` to determine
-        where each revision's data begins and ends.
+        Returns a 2-tuple of (offset, data) for the requested range of
+        revisions. Offset is the integer offset from the beginning of the
+        revlog and data is a str or buffer of the raw byte data.
+
+        Callers will need to call ``self.start(rev)`` and ``self.length(rev)``
+        to determine where each revision's data begins and ends.
         """
         start = self.start(startrev)
         end = self.end(endrev)
@@ -1081,7 +1084,8 @@ class revlog(object):
             start += (startrev + 1) * self._io.size
             end += (endrev + 1) * self._io.size
         length = end - start
-        return self._getchunk(start, length, df=df)
+
+        return start, self._getchunk(start, length, df=df)
 
     def _chunk(self, rev, df=None):
         """Obtain a single decompressed chunk for a revision.
@@ -1092,7 +1096,7 @@ class revlog(object):
 
         Returns a str holding uncompressed data for the requested revision.
         """
-        return decompress(self._chunkraw(rev, rev, df=df))
+        return decompress(self._chunkraw(rev, rev, df=df)[1])
 
     def _chunks(self, revs, df=None):
         """Obtain decompressed chunks for the specified revisions.
@@ -1123,7 +1127,7 @@ class revlog(object):
             while True:
                 # ensure that the cache doesn't change out from under us
                 _cache = self._chunkcache
-                self._chunkraw(revs[0], revs[-1], df=df)
+                self._chunkraw(revs[0], revs[-1], df=df)[1]
                 if _cache == self._chunkcache:
                     break
             offset, data = _cache
@@ -1267,7 +1271,7 @@ class revlog(object):
         df = self.opener(self.datafile, 'w')
         try:
             for r in self:
-                df.write(self._chunkraw(r, r))
+                df.write(self._chunkraw(r, r)[1])
         finally:
             df.close()
 
