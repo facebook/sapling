@@ -1,0 +1,11 @@
+#!/bin/sh
+HGENCODING=UTF-8
+export HGENCODING
+
+echo ".. -*- coding: utf-8 -*-" > gendoc.txt
+echo "" >> gendoc.txt
+LANGUAGE=$1 python "$TESTDIR/../doc/gendoc.py" >> gendoc.txt 2> /dev/null || exit
+
+echo "checking for parse errors"
+python "$TESTDIR/../doc/docchecker" gendoc.txt
+python "$TESTDIR/../doc/runrst" html gendoc.txt /dev/null
