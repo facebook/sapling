@@ -411,10 +411,12 @@ class cg1unpacker(object):
             if changesets > 0:
                 if 'node' not in tr.hookargs:
                     tr.hookargs['node'] = hex(cl.node(clstart))
+                    tr.hookargs['node_last'] = hex(cl.node(clend - 1))
                     hookargs = dict(tr.hookargs)
                 else:
                     hookargs = dict(tr.hookargs)
                     hookargs['node'] = hex(cl.node(clstart))
+                    hookargs['node_last'] = hex(cl.node(clend - 1))
                 repo.hook('pretxnchangegroup', throw=True, **hookargs)
 
             added = [cl.node(r) for r in xrange(clstart, clend)]
@@ -461,6 +463,7 @@ class cg1unpacker(object):
                     for n in added:
                         args = hookargs.copy()
                         args['node'] = hex(n)
+                        del args['node_last']
                         repo.hook("incoming", **args)
 
                     newheads = [h for h in repo.heads() if h not in oldheads]

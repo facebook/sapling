@@ -68,7 +68,7 @@ expect success
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: pushkey hook: HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_OLD=1 HG_RET=1
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
@@ -85,7 +85,7 @@ expect success, server lacks the httpheader capability
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: pushkey hook: HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_OLD=1 HG_RET=1
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
@@ -102,7 +102,7 @@ expect success, server lacks the unbundlehash capability
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: pushkey hook: HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_OLD=1 HG_RET=1
-  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
+  remote: changegroup hook: HG_BUNDLE2=1 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)
@@ -123,7 +123,7 @@ expect push success, phase change failure
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
+  remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
@@ -141,7 +141,7 @@ expect phase change success
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
+  remote: prepushkey hook: HG_BUNDLE2=1 HG_KEY=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NAMESPACE=phases HG_NEW=0 HG_NODE=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_NODE_LAST=ba677d0156c1196c1a699fa53f390dcfc3ce3872 HG_OLD=1 HG_PENDING=$TESTTMP/test HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_URL=remote:http:127.0.0.1: (glob)
   % serve errors
   $ hg rollback
   repository tip rolled back to revision 0 (undo serve)

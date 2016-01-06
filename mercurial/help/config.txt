@@ -762,9 +762,9 @@ additional information. For each hook below, the environment
 variables it is passed are listed with names of the form ``$HG_foo``.
 
 ``changegroup``
-  Run after a changegroup has been added via push, pull or unbundle.
-  ID of the first new changeset is in ``$HG_NODE``. URL from which
-  changes came is in ``$HG_URL``.
+  Run after a changegroup has been added via push, pull or unbundle.  ID of the
+  first new changeset is in ``$HG_NODE`` and last in ``$HG_NODE_LAST``. URL
+  from which changes came is in ``$HG_URL``.
 
 ``commit``
   Run after a changeset has been created in the local repository. ID
@@ -846,17 +846,16 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   transaction from being opened.
 
 ``pretxnclose``
-  Run right before the transaction is actually finalized. Any
-  repository change will be visible to the hook program. This lets you
-  validate the transaction content or change it. Exit status 0 allows
-  the commit to proceed. Non-zero status will cause the transaction to
-  be rolled back. The reason for the transaction opening will be in
-  ``$HG_TXNNAME`` and a unique identifier for the transaction will be in
-  ``HG_TXNID``. The rest of the available data will vary according the
-  transaction type. New changesets will add ``$HG_NODE`` (id of the
-  first added changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables,
-  bookmarks and phases changes will set ``HG_BOOKMARK_MOVED`` and
-  ``HG_PHASES_MOVED`` to ``1``, etc.
+  Run right before the transaction is actually finalized. Any repository change
+  will be visible to the hook program. This lets you validate the transaction
+  content or change it. Exit status 0 allows the commit to proceed. Non-zero
+  status will cause the transaction to be rolled back. The reason for the
+  transaction opening will be in ``$HG_TXNNAME`` and a unique identifier for
+  the transaction will be in ``HG_TXNID``. The rest of the available data will
+  vary according the transaction type. New changesets will add ``$HG_NODE`` (id
+  of the first added changeset), ``$HG_NODE_LAST`` (id of the last added
+  changeset), ``$HG_URL`` and ``$HG_SOURCE`` variables, bookmarks and phases
+  changes will set ``HG_BOOKMARK_MOVED`` and ``HG_PHASES_MOVED`` to ``1``, etc.
 
 ``txnclose``
   Run after any repository transaction has been committed. At this
@@ -869,14 +868,13 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   docs for details about available variables.
 
 ``pretxnchangegroup``
-  Run after a changegroup has been added via push, pull or unbundle,
-  but before the transaction has been committed. Changegroup is
-  visible to hook program. This lets you validate incoming changes
-  before accepting them. Passed the ID of the first new changeset in
-  ``$HG_NODE``. Exit status 0 allows the transaction to commit. Non-zero
-  status will cause the transaction to be rolled back and the push,
-  pull or unbundle will fail. URL that was source of changes is in
-  ``$HG_URL``.
+  Run after a changegroup has been added via push, pull or unbundle, but before
+  the transaction has been committed. Changegroup is visible to hook program.
+  This lets you validate incoming changes before accepting them. Passed the ID
+  of the first new changeset in ``$HG_NODE`` and last in ``$HG_NODE_LAST``.
+  Exit status 0 allows the transaction to commit. Non-zero status will cause
+  the transaction to be rolled back and the push, pull or unbundle will fail.
+  URL that was source of changes is in ``$HG_URL``.
 
 ``pretxncommit``
   Run after a changeset has been created but the transaction not yet

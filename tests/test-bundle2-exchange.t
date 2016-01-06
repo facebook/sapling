@@ -51,7 +51,7 @@ The extension requires a repo (currently unused)
   added 8 changesets with 7 changes to 7 files (+3 heads)
   pre-close-tip:02de42196ebe draft 
   postclose-tip:02de42196ebe draft 
-  txnclose hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_TXNID=TXN:* HG_TXNNAME=unbundle (glob)
+  txnclose hook: HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=unbundle HG_TXNID=TXN:* HG_TXNNAME=unbundle (glob)
   bundle:*/tests/bundles/rebase.hg HG_URL=bundle:*/tests/bundles/rebase.hg (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
 
@@ -85,7 +85,7 @@ clone --pull
   1 new obsolescence markers
   pre-close-tip:9520eea781bc draft 
   postclose-tip:9520eea781bc draft 
-  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=cd010b8cd998f3981a5a8115f94f8da4ab506089 HG_NODE_LAST=9520eea781bcca16c1e15acc0ba14335a0e8e5ba HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
   file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -113,7 +113,7 @@ pull
   1 new obsolescence markers
   pre-close-tip:24b6387c8c8c draft 
   postclose-tip:24b6387c8c8c draft 
-  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
+  txnclose hook: HG_NEW_OBSMARKERS=1 HG_NODE=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_NODE_LAST=24b6387c8c8cae37178880f3fa95ded3cb1cf785 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
   file:/*/$TESTTMP/main HG_URL=file:$TESTTMP/main (glob)
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other log -G
@@ -257,7 +257,7 @@ push
   remote: lock:  free
   remote: wlock: free
   remote: postclose-tip:eea13746799a public book_eea1
-  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_NODE_LAST=eea13746799a9e0bfd88f29d3c2e9dc9389f524f HG_PHASES_MOVED=1 HG_SOURCE=push HG_TXNID=TXN:* HG_TXNNAME=push HG_URL=push (glob)
   updating bookmark book_eea1
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
@@ -290,7 +290,7 @@ pull over ssh
   updating bookmark book_02de
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_NODE_LAST=02de42196ebee42ef284b6780a87cdc96e8eaab6 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
   ssh://user@dummy/main HG_URL=ssh://user@dummy/main
   (run 'hg heads' to see heads, 'hg merge' to merge)
   $ hg -R other debugobsolete
@@ -315,7 +315,7 @@ pull over http
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
   postclose-tip:42ccdea3bb16 draft book_42cc
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:* HG_TXNNAME=pull (glob)
   http://localhost:$HGPORT/ HG_URL=http://localhost:$HGPORT/
   (run 'hg heads .' to see heads, 'hg merge' to merge)
   $ cat main-error.log
@@ -341,7 +341,7 @@ push over ssh
   remote: lock:  free
   remote: wlock: free
   remote: postclose-tip:5fddd98957c8 draft book_5fdd
-  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNID=TXN:* HG_TXNNAME=serve HG_URL=remote:ssh:127.0.0.1 (glob)
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_NODE_LAST=5fddd98957c8a54a4d436dfe1da9d87f21a1b97b HG_SOURCE=serve HG_TXNID=TXN:* HG_TXNNAME=serve HG_URL=remote:ssh:127.0.0.1 (glob)
   updating bookmark book_5fdd
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
@@ -395,7 +395,7 @@ push over http
   remote: lock:  free
   remote: wlock: free
   remote: postclose-tip:32af7686d403 public book_32af
-  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=32af7686d403cf45b5d95f2d70cebea587ac806a HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_TXNNAME=serve HG_URL=remote:http:127.0.0.1: (glob)
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_NEW_OBSMARKERS=1 HG_NODE=32af7686d403cf45b5d95f2d70cebea587ac806a HG_NODE_LAST=32af7686d403cf45b5d95f2d70cebea587ac806a HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:* HG_TXNNAME=serve HG_URL=remote:http:127.0.0.1: (glob)
   updating bookmark book_32af
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
