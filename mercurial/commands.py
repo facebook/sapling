@@ -3848,6 +3848,10 @@ def graft(ui, repo, *revs, **opts):
 
           hg log --debug -r .
 
+      - show revisions sorted by date::
+
+          hg log -r 'sort(all(), date)'
+
     See :hg:`help revisions` and :hg:`help revsets` for more about
     specifying revisions.
 
