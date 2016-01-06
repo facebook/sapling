@@ -1299,12 +1299,12 @@ have a definite end point.
     Format of the progress bar.
 
     Valid entries for the format field are ``topic``, ``bar``, ``number``,
-    ``unit``, ``estimate``, speed, and item. item defaults to the last 20
-    characters of the item, but this can be changed by adding either ``-<num>``
-    which would take the last num characters, or ``+<num>`` for the first num
-    characters.
+    ``unit``, ``estimate``, ``speed``, and ``item``. ``item`` defaults to the
+    last 20 characters of the item, but this can be changed by adding either
+    ``-<num>`` which would take the last num characters, or ``+<num>`` for the
+    first num characters.
 
-    (default: Topic bar number estimate)
+    (default: topic bar number estimate)
 
 ``width``
     If set, the maximum width of the progress information (that is, min(width,
