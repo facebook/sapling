@@ -303,6 +303,9 @@ class transplanter(object):
 
         return n
 
+    def canresume(self):
+        return os.path.exists(os.path.join(self.path, 'journal'))
+
     def resume(self, repo, source, opts):
         '''recover last transaction and apply remaining changesets'''
         if os.path.exists(os.path.join(self.path, 'journal')):
@@ -627,11 +630,14 @@ def _dotransplant(ui, repo, *revs, **opts):
 
     tp = transplanter(ui, repo, opts)
 
-    cmdutil.checkunfinished(repo)
     p1, p2 = repo.dirstate.parents()
     if len(repo) > 0 and p1 == revlog.nullid:
         raise error.Abort(_('no revision checked out'))
-    if not opts.get('continue'):
+    if opts.get('continue'):
+        if not tp.canresume():
+            raise error.Abort(_('no transplant to continue'))
+    else:
+        cmdutil.checkunfinished(repo)
         if p2 != revlog.nullid:
             raise error.Abort(_('outstanding uncommitted merges'))
         m, a, r, d = repo.status()[:4]

@@ -410,6 +410,9 @@ transplant -c shouldn't use an old changeset
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm added
+  $ hg transplant --continue
+  abort: no transplant to continue
+  [255]
   $ hg transplant 1
   applying 46ae92138f3c
   patching file foo
