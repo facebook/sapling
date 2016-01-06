@@ -40,6 +40,14 @@ def children(ui, repo, file_=None, **opts):
     be printed. If a file argument is given, revision in which the
     file was last changed (after the working directory revision or the
     argument to --rev if given) is printed.
+
+    Please use :hg:`log` instead::
+
+        hg children => hg log -r 'children()'
+        hg children -r REV => hg log -r 'children(REV)'
+
+    See :hg:`help log` and :hg:`help revsets.children`.
+
     """
     rev = opts.get('rev')
     if file_:
