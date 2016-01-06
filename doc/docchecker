@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+#
+# docchecker - look for problematic markup
+#
+# Copyright 2016 timeless <timeless@mozdev.org> and others
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+import sys
+import re
+
+leadingline = re.compile(r'(^\s*)(\S.*)$')
+hg_backtick = re.compile(r""":hg:`[^`]*'[^`]*`""")
+
+def check(line):
+  if hg_backtick.search(line):
+    print(line)
+    print("""warning: please avoid nesting ' in :hg:`...`""")
+
+def work(file):
+  (llead, lline) = ('', '')
+
+  for line in file:
+    # this section unwraps lines
+    match = leadingline.match(line)
+    if not match:
+      check(lline)
+      (llead, lline) = ('', '')
+      continue
+
+    lead, line = match.group(1), match.group(2)
+    if (lead == llead):
+      if (lline != ''):
+        lline += ' ' + line
+      else:
+        lline = line
+    else:
+      check(lline)
+      (llead, lline) = (lead, line)
+  check(lline)
+
+def main():
+  for f in sys.argv[1:]:
+    try:
+      with open(f) as file:
+        work(file)
+    except:
+      print("failed to process %s" % f)
+
+main()
