@@ -137,10 +137,8 @@ class verifier(object):
         mflinkrevs = {}
         filelinkrevs = {}
         filenodes = {}
-        revisions = 0
-        badrevs = self.badrevs
+
         ui = repo.ui
-        cl = repo.changelog
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
@@ -148,10 +146,9 @@ class verifier(object):
         if os.path.exists(repo.sjoin("journal")):
             ui.warn(_("abandoned transaction found - run hg recover\n"))
 
-        revlogv1 = self.revlogv1
-        if ui.verbose or not revlogv1:
+        if ui.verbose or not self.revlogv1:
             ui.status(_("repository uses revlog format %d\n") %
-                           (revlogv1 and 1 or 0))
+                           (self.revlogv1 and 1 or 0))
 
         self._verifychangelog(mflinkrevs, filelinkrevs)
 
@@ -160,10 +157,9 @@ class verifier(object):
         self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
 
         totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
-        revisions += filerevisions
 
         ui.status(_("%d files, %d changesets, %d total revisions\n") %
-                       (totalfiles, len(cl), revisions))
+                       (totalfiles, len(repo.changelog), filerevisions))
         if self.warnings:
             ui.warn(_("%d warnings encountered!\n") % self.warnings)
         if self.fncachewarned:
@@ -171,9 +167,9 @@ class verifier(object):
                       'corrupt fncache\n'))
         if self.errors:
             ui.warn(_("%d integrity errors encountered!\n") % self.errors)
-            if badrevs:
+            if self.badrevs:
                 ui.warn(_("(first damaged changeset appears to be %d)\n")
-                        % min(badrevs))
+                        % min(self.badrevs))
             return 1
 
     def _verifychangelog(self, mflinkrevs, filelinkrevs):
