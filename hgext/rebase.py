@@ -348,11 +348,12 @@ def rebase(ui, repo, **opts):
                 obsoletenotrebased = _computeobsoletenotrebased(repo,
                                                                 rebaseobsrevs,
                                                                 dest)
+                rebaseobsskipped = set(obsoletenotrebased)
 
                 # - plain prune (no successor) changesets are rebased
                 # - split changesets are not rebased if at least one of the
                 # changeset resulting from the split is an ancestor of dest
-                rebaseset = rebasesetrevs - set(obsoletenotrebased)
+                rebaseset = rebasesetrevs - rebaseobsskipped
                 if rebasesetrevs and not rebaseset:
                     msg = _('all requested changesets have equivalents '
                             'or were marked as obsolete')
