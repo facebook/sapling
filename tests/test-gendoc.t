@@ -17,9 +17,9 @@ Test document extraction
   >         cmp -s gendoc-C.txt gendoc-$LOCALE.txt && echo '** NOTHING TRANSLATED **'
   >     fi
   > 
+  >     echo "checking for parse errors"
   >     # We call runrst without adding "--halt warning" to make it report
   >     # all errors instead of stopping on the first one.
-  >     echo "checking for parse errors"
   >     python "$TESTDIR/../doc/runrst" html gendoc-$LOCALE.txt /dev/null
   > done
   
