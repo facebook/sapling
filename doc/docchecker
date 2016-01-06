@@ -11,11 +11,15 @@ import re
 
 leadingline = re.compile(r'(^\s*)(\S.*)$')
 hg_backtick = re.compile(r""":hg:`[^`]*'[^`]*`""")
+hg_cramped = re.compile(r'\w:hg:`')
 
 def check(line):
   if hg_backtick.search(line):
     print(line)
     print("""warning: please avoid nesting ' in :hg:`...`""")
+  if hg_cramped.search(line):
+    print(line)
+    print('warning: please have a space before :hg:')
 
 def work(file):
   (llead, lline) = ('', '')
