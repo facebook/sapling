@@ -142,7 +142,6 @@ class verifier(object):
         ui = repo.ui
         cl = repo.changelog
         mf = repo.manifest
-        lrugetctx = self.lrugetctx
 
         if not repo.url().startswith('file:'):
             raise error.Abort(_("cannot verify bundle or remote repos"))
@@ -245,6 +244,29 @@ class verifier(object):
 
         ui.progress(_('crosschecking'), None)
 
+        totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
+        revisions += filerevisions
+
+        ui.status(_("%d files, %d changesets, %d total revisions\n") %
+                       (totalfiles, len(cl), revisions))
+        if self.warnings:
+            ui.warn(_("%d warnings encountered!\n") % self.warnings)
+        if self.fncachewarned:
+            ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
+                      'corrupt fncache\n'))
+        if self.errors:
+            ui.warn(_("%d integrity errors encountered!\n") % self.errors)
+            if badrevs:
+                ui.warn(_("(first damaged changeset appears to be %d)\n")
+                        % min(badrevs))
+            return 1
+
+    def _verifyfiles(self, filenodes, filelinkrevs):
+        repo = self.repo
+        ui = self.ui
+        lrugetctx = self.lrugetctx
+        revlogv1 = self.revlogv1
+        havemf = self.havemf
         ui.status(_("checking files\n"))
 
         storefiles = set()
@@ -256,6 +278,7 @@ class verifier(object):
 
         files = sorted(set(filenodes) | set(filelinkrevs))
         total = len(files)
+        revisions = 0
         for i, f in enumerate(files):
             ui.progress(_('checking'), i, item=f, total=total)
             try:
@@ -347,16 +370,4 @@ class verifier(object):
         for f in storefiles:
             self.warn(_("warning: orphan revlog '%s'") % f)
 
-        ui.status(_("%d files, %d changesets, %d total revisions\n") %
-                       (len(files), len(cl), revisions))
-        if self.warnings:
-            ui.warn(_("%d warnings encountered!\n") % self.warnings)
-        if self.fncachewarned:
-            ui.warn(_('hint: run "hg debugrebuildfncache" to recover from '
-                      'corrupt fncache\n'))
-        if self.errors:
-            ui.warn(_("%d integrity errors encountered!\n") % self.errors)
-            if badrevs:
-                ui.warn(_("(first damaged changeset appears to be %d)\n")
-                        % min(badrevs))
-            return 1
+        return len(files), revisions
