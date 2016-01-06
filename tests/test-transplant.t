@@ -7,9 +7,26 @@
 
   $ hg init t
   $ cd t
+  $ hg transplant
+  abort: no source URL, branch revision, or revision list provided
+  [255]
+  $ hg transplant --continue --all
+  abort: --continue is incompatible with --branch, --all and --merge
+  [255]
+  $ hg transplant --all tip
+  abort: --all requires a branch revision
+  [255]
+  $ hg transplant --all --branch default tip
+  abort: --all is incompatible with a revision list
+  [255]
   $ echo r1 > r1
   $ hg ci -Amr1 -d'0 0'
   adding r1
+  $ hg co -q null
+  $ hg transplant tip
+  abort: no revision checked out
+  [255]
+  $ hg up -q
   $ echo r2 > r2
   $ hg ci -Amr2 -d'1 0'
   adding r2
@@ -20,6 +37,18 @@
   $ hg ci -Amb1 -d '0 0'
   adding b1
   created new head
+  $ hg merge 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg transplant 1
+  abort: outstanding uncommitted merges
+  [255]
+  $ hg up -qC tip
+  $ echo b0 > b1
+  $ hg transplant 1
+  abort: outstanding local changes
+  [255]
+  $ hg up -qC tip
   $ echo b2 > b2
   $ hg ci -Amb2 -d '1 0'
   adding b2
@@ -37,6 +66,9 @@
   $ hg clone . ../rebase
   updating to branch default
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg init ../emptydest
+  $ cd ../emptydest
+  $ hg transplant --source=../t > /dev/null
   $ cd ../rebase
 
   $ hg up -C 1
@@ -67,6 +99,8 @@ test transplanted revset
   $ hg log -r 'transplanted()' --template '{rev} {parents} {desc}\n'
   5 1:d11e3596cc1a  b1
   6  b2
+  7  b3
+  $ hg log -r 'transplanted(head())' --template '{rev} {parents} {desc}\n'
   7  b3
   $ hg help revsets | grep transplanted
       "transplanted([set])"
@@ -384,6 +418,18 @@ transplant -c shouldn't use an old changeset
   patch failed to apply
   abort: fix up the merge and run hg transplant --continue
   [255]
+  $ cp .hg/transplant/journal .hg/transplant/journal.orig
+  $ cat .hg/transplant/journal
+  # User test
+  # Date 0 0
+  # Node ID 46ae92138f3ce0249f6789650403286ead052b6d
+  # Parent e8643552fde58f57515e19c4b373a57c96e62af3
+  foo2
+  $ grep -v 'Date' .hg/transplant/journal.orig > .hg/transplant/journal
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant --continue -e
+  abort: filter corrupted changeset (no user or date)
+  [255]
+  $ cp .hg/transplant/journal.orig .hg/transplant/journal
   $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg transplant --continue -e
   HGEDITFORM=transplant.normal
   46ae92138f3c transplanted as 9159dada197d
@@ -505,6 +551,23 @@ test interactive transplant
   |/
   o  0:17ab29e464c6
   
+  $ hg transplant -q --config ui.interactive=true -s ../t <<EOF
+  > ?
+  > x
+  > q
+  > EOF
+  0:17ab29e464c6
+  apply changeset? [ynmpcq?]: ?
+  y: yes, transplant this changeset
+  n: no, skip this changeset
+  m: merge at this changeset
+  p: show patch
+  c: commit selected changesets
+  q: quit and cancel transplant
+  ?: ? (show this help)
+  apply changeset? [ynmpcq?]: x
+  unrecognized response
+  apply changeset? [ynmpcq?]: q
   $ hg transplant -q --config ui.interactive=true -s ../t <<EOF
   > p
   > y
@@ -738,6 +801,9 @@ test transplant with merge changeset accepts --parent
 
   $ hg init merge2b
   $ cd merge2b
+  $ hg transplant -s ../merge2a --parent tip tip
+  abort: be9f9b39483f is not a parent of be9f9b39483f
+  [255]
   $ hg transplant -s ../merge2a --parent 0 tip
   applying be9f9b39483f
   be9f9b39483f transplanted to 9959e51f94d1
