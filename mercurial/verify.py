@@ -153,27 +153,7 @@ class verifier(object):
             ui.status(_("repository uses revlog format %d\n") %
                            (revlogv1 and 1 or 0))
 
-        ui.status(_("checking changesets\n"))
-        seen = {}
-        self.checklog(cl, "changelog", 0)
-        total = len(repo)
-        for i in repo:
-            ui.progress(_('checking'), i, total=total, unit=_('changesets'))
-            n = cl.node(i)
-            self.checkentry(cl, i, n, seen, [i], "changelog")
-
-            try:
-                changes = cl.read(n)
-                if changes[0] != nullid:
-                    mflinkrevs.setdefault(changes[0], []).append(i)
-                    self.refersmf = True
-                for f in changes[3]:
-                    if _validpath(repo, f):
-                        filelinkrevs.setdefault(_normpath(f), []).append(i)
-            except Exception as inst:
-                self.refersmf = True
-                self.exc(i, _("unpacking changeset %s") % short(n), inst)
-        ui.progress(_('checking'), None)
+        self._verifychangelog(mflinkrevs, filelinkrevs)
 
         self._verifymanifest(mflinkrevs, filenodes)
 
@@ -195,6 +175,33 @@ class verifier(object):
                 ui.warn(_("(first damaged changeset appears to be %d)\n")
                         % min(badrevs))
             return 1
+
+    def _verifychangelog(self, mflinkrevs, filelinkrevs):
+        ui = self.ui
+        repo = self.repo
+        cl = repo.changelog
+
+        ui.status(_("checking changesets\n"))
+        seen = {}
+        self.checklog(cl, "changelog", 0)
+        total = len(repo)
+        for i in repo:
+            ui.progress(_('checking'), i, total=total, unit=_('changesets'))
+            n = cl.node(i)
+            self.checkentry(cl, i, n, seen, [i], "changelog")
+
+            try:
+                changes = cl.read(n)
+                if changes[0] != nullid:
+                    mflinkrevs.setdefault(changes[0], []).append(i)
+                    self.refersmf = True
+                for f in changes[3]:
+                    if _validpath(repo, f):
+                        filelinkrevs.setdefault(_normpath(f), []).append(i)
+            except Exception as inst:
+                self.refersmf = True
+                self.exc(i, _("unpacking changeset %s") % short(n), inst)
+        ui.progress(_('checking'), None)
 
     def _verifymanifest(self, mflinkrevs, filenodes):
         repo = self.repo
