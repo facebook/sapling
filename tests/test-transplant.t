@@ -464,6 +464,10 @@ test multiple revisions and --continue
   patch failed to apply
   abort: fix up the working directory and run hg transplant --continue
   [255]
+  $ hg transplant 1:3
+  abort: transplant in progress
+  (use 'hg transplant --continue' or 'hg update' to abort)
+  [255]
   $ echo fixed > baz
   $ hg transplant --continue
   9d6d6b5a8275 transplanted as d80c49962290
