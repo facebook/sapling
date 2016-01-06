@@ -540,10 +540,6 @@ class lrucachedict(object):
     we recycle head.prev and make it the new head. Cache accesses result in
     the node being moved to before the existing head and being marked as the
     new head node.
-
-    NOTE: construction of this class doesn't scale well if the cache size
-    is in the thousands. Avoid creating hundreds or thousands of instances
-    with large capacities.
     """
     def __init__(self, max):
         self._cache = {}
