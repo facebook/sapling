@@ -431,22 +431,21 @@ class transaction(object):
             self.opener.unlink(self._backupjournal)
         if self.opener.isfile(self.journal):
             self.opener.unlink(self.journal)
-        if True:
-            for l, _f, b, c in self._backupentries:
-                if l not in self._vfsmap and c:
-                    self.report("couldn't remove %s: unknown cache location"
-                                "%s\n" % (b, l))
-                    continue
-                vfs = self._vfsmap[l]
-                if b and vfs.exists(b):
-                    try:
-                        vfs.unlink(b)
-                    except (IOError, OSError, error.Abort) as inst:
-                        if not c:
-                            raise
-                        # Abort may be raise by read only opener
-                        self.report("couldn't remove %s: %s\n"
-                                    % (vfs.join(b), inst))
+        for l, _f, b, c in self._backupentries:
+            if l not in self._vfsmap and c:
+                self.report("couldn't remove %s: unknown cache location"
+                            "%s\n" % (b, l))
+                continue
+            vfs = self._vfsmap[l]
+            if b and vfs.exists(b):
+                try:
+                    vfs.unlink(b)
+                except (IOError, OSError, error.Abort) as inst:
+                    if not c:
+                        raise
+                    # Abort may be raise by read only opener
+                    self.report("couldn't remove %s: %s\n"
+                                % (vfs.join(b), inst))
         self._backupentries = []
         self.journal = None
 
