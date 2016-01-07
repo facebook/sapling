@@ -25,7 +25,7 @@ def _readfile(path):
     finally:
         f.close()
 
-def _writefile(path, content):
+def _writefile(path, content, readonly=False):
     dirname = os.path.dirname(path)
     if not os.path.exists(dirname):
         try:
@@ -41,6 +41,9 @@ def _writefile(path, content):
         f.write(content)
     finally:
         f.close()
+
+    if readonly:
+        os.chmod(path, 0o444)
 
 def _createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
@@ -153,9 +156,18 @@ class remotefilelog(object):
             # if this node already exists, save the old version for
             # recovery/debugging purposes.
             if os.path.exists(path):
-                shutil.copyfile(path, path + '_old')
+                newfilename = path + '_old'
+                # newfilename can be read-only and shutil.copy will fail.
+                # Delete newfilename to avoid it
+                if os.path.exists(newfilename):
+                    os.unlink(newfilename)
+                shutil.copy(path, newfilename)
+                # _writefile creates atomictempfile, which copies
+                # access permission from file 'path', if it exists.
+                # It's better to delete it
+                os.unlink(path)
 
-            _writefile(path, _createfileblob())
+            _writefile(path, _createfileblob(), readonly=True)
         finally:
             os.umask(oldumask)
 
