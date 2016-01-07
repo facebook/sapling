@@ -516,17 +516,27 @@ def fromutf8b(s):
     True
     >>> roundtrip("\\xef\\xef\\xbf\\xbd")
     True
+    >>> roundtrip("\\xf1\\x80\\x80\\x80\\x80")
+    True
     '''
 
     # fast path - look for uDxxx prefixes in s
     if "\xed" not in s:
         return s
 
-    u = s.decode("utf-8")
+    # We could do this with the unicode type but some Python builds
+    # use UTF-16 internally (issue5031) which causes non-BMP code
+    # points to be escaped. Instead, we use our handy getutf8char
+    # helper again to walk the string without "decoding" it.
+
     r = ""
-    for c in u:
-        if ord(c) & 0xffff00 == 0xdc00:
-            r += chr(ord(c) & 0xff)
-        else:
-            r += c.encode("utf-8")
+    pos = 0
+    l = len(s)
+    while pos < l:
+        c = getutf8char(s, pos)
+        pos += len(c)
+        # unescape U+DCxx characters
+        if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
+            c = chr(ord(c.decode("utf-8")) & 0xff)
+        r += c
     return r
