@@ -23,6 +23,7 @@
 [Setup]
 AppCopyright=Copyright 2005-2015 Matt Mackall and others
 AppName=Mercurial
+AppVersion={#VERSION}
 #if ARCH == "x64"
 AppVerName=Mercurial {#VERSION} (64-bit)
 OutputBaseFilename=Mercurial-{#VERSION}-x64
