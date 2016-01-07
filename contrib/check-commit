@@ -35,25 +35,32 @@ errors = [
     (r"^\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
 ]
 
-node = os.environ.get("HG_NODE")
+def checkcommit(commit):
+    exitcode = 0
+    for exp, msg in errors:
+        m = re.search(exp, commit, re.MULTILINE)
+        if m:
+            pos = 0
+            for n, l in enumerate(commit.splitlines(True)):
+                pos += len(l)
+                if pos >= m.end():
+                    print "%d: %s" % (n, msg)
+                    print " %s" % l[:-1]
+                    if "BYPASS" not in os.environ:
+                        exitcode = 1
+                    break
+    return exitcode
 
-if node:
-    commit = os.popen("hg export %s" % node).read()
-else:
-    commit = sys.stdin.read()
+def readcommit(node):
+    return os.popen("hg export %s" % node).read()
 
-exitcode = 0
-for exp, msg in errors:
-    m = re.search(exp, commit, re.MULTILINE)
-    if m:
-        pos = 0
-        for n, l in enumerate(commit.splitlines(True)):
-            pos += len(l)
-            if pos >= m.end():
-                print "%d: %s" % (n, msg)
-                print " %s" % l[:-1]
-                if "BYPASS" not in os.environ:
-                    exitcode = 1
-                break
+if __name__ == "__main__":
+    node = os.environ.get("HG_NODE")
 
-sys.exit(exitcode)
+    if node:
+        commit = readcommit(node)
+    else:
+        commit = sys.stdin.read()
+
+    exitcode = checkcommit(commit)
+    sys.exit(exitcode)
