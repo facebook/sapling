@@ -5034,7 +5034,7 @@ def log(ui, repo, *pats, **opts):
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
     See :hg:`help revisions` and :hg:`help revsets` for more about
-    specifying revisions.
+    specifying and ordering revisions.
 
     See :hg:`help templates` for more about pre-packaged styles and
     specifying custom templates.
