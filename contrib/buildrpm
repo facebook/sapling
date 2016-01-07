@@ -68,7 +68,7 @@ else
     RPMPYTHONVER=%{nil}
 fi
 
-mkdir -p $RPMBUILDDIR/SOURCES
+mkdir -p $RPMBUILDDIR/{SOURCES,BUILD,SRPMS,RPMS}
 $HG archive -t tgz $RPMBUILDDIR/SOURCES/mercurial-$version-$release.tar.gz
 if [ "$PYTHONVER" ]; then
 (

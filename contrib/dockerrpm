@@ -15,8 +15,6 @@ initcontainer $PLATFORM
 RPMBUILDDIR=$ROOTDIR/packages/$PLATFORM
 contrib/buildrpm --rpmbuilddir $RPMBUILDDIR --prepare $*
 
-mkdir -p $RPMBUILDDIR/{BUILD,SRPMS,RPMS}
-
 DSHARED=/mnt/shared
 $DOCKER run -u $DBUILDUSER --rm -v $RPMBUILDDIR:$DSHARED $CONTAINER \
     rpmbuild --define "_topdir $DSHARED" -ba $DSHARED/SPECS/mercurial.spec --clean
