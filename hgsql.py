@@ -35,7 +35,7 @@ UNIQUE KEY bookmarkindex (repo, namespace, name)
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import error, cmdutil, revlog, localrepo
+from mercurial import error, cmdutil, revlog
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
@@ -366,7 +366,7 @@ def wraprepo(repo):
             lockname = self._lockname(name)
 
             # cast to int to prevent passing bad sql data
-            self.sqlcursor.execute("SELECT GET_LOCK('%s', %s)" % 
+            self.sqlcursor.execute("SELECT GET_LOCK('%s', %s)" %
                                    (lockname, self.locktimeout))
 
             result = int(self.sqlcursor.fetchall()[0][0])
@@ -375,9 +375,12 @@ def wraprepo(repo):
                                  lockname)
             self.heldlocks.add(name)
 
-        def hassqllock(self, name):
+        def hassqllock(self, name, checkserver=True):
             if not name in self.heldlocks:
                 return False
+
+            if not checkserver:
+                return True
 
             lockname = self._lockname(name)
             self.sqlcursor.execute("SELECT IS_USED_LOCK('%s')" % (lockname,))
@@ -397,6 +400,10 @@ def wraprepo(repo):
             self.sqlcursor.execute("SELECT RELEASE_LOCK('%s')" % (lockname,))
             self.sqlcursor.fetchall()
             self.heldlocks.discard(name)
+
+            for callback in self.sqlpostrelease:
+                callback()
+            self.sqlpostrelease = []
 
         def transaction(self, *args, **kwargs):
             tr = super(sqllocalrepo, self).transaction(*args, **kwargs)
@@ -919,6 +926,12 @@ def wraprepo(repo):
                 raise CorruptionException(("unable to verify %d dependent " +
                     "revisions before adding a commit") % (len(missingrevs)))
 
+        def _afterlock(self, callback):
+            if self.hassqllock(writelock, checkserver=False):
+                self.sqlpostrelease.append(callback)
+            else:
+                return super(sqllocalrepo, self)._afterlock(callback)
+
     ui = repo.ui
 
     sqlargs = {}
@@ -943,6 +956,7 @@ def wraprepo(repo):
     repo.disablesync = False
     repo.pendingrevs = []
     repo.heldlocks = set()
+    repo.sqlpostrelease = []
 
     repo.__class__ = sqllocalrepo
 

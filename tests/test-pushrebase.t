@@ -9,7 +9,7 @@
   > bundle2lazylocking=True
   > EOF
 
-Test verify sql lock is not held during prelockrebase hook
+Test verify sql lock is not held during prelockrebase and txnclose hooks
 
   $ cat >> $TESTTMP/locktester.py <<EOF
   > import os
@@ -24,10 +24,17 @@ Test verify sql lock is not held during prelockrebase hook
   $ cat >> master/.hg/hgrc <<EOF
   > [hooks]
   > prepushrebase=python:$TESTTMP/locktester.py:checklock
+  > txnclose=python:$TESTTMP/locktester.py:checklock
   > EOF
   $ cd master
   $ touch a && hg ci -Aqm a
+  error: txnclose hook failed: lock was FREE
+  error: txnclose hook failed: lock was FREE
+  error: txnclose hook failed: lock was FREE
+  error: txnclose hook failed: lock was FREE
+  error: txnclose hook failed: lock was FREE
   $ hg book master
+  error: txnclose hook failed: lock was FREE
   $ cd ..
 
   $ initclient client
