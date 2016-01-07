@@ -1359,7 +1359,7 @@ Controls generic server settings.
     exchange format. (default: True)
 
 ``bundle1gd``
-    Like ``bundle1` but only used if the repository is using the
+    Like ``bundle1`` but only used if the repository is using the
     *generaldelta* storage format. (default: True)
 
 ``bundle1.push``
@@ -1367,7 +1367,7 @@ Controls generic server settings.
     format. (default: True)
 
 ``bundle1gd.push``
-    Like ``bundle1.push` but only used if the repository is using the
+    Like ``bundle1.push`` but only used if the repository is using the
     *generaldelta* storage format. (default: True)
 
 ``bundle1.pull``
@@ -1375,7 +1375,7 @@ Controls generic server settings.
     format. (default: True)
 
 ``bundle1gd.pull``
-    Like ``bundle1.pull` but only used if the repository is using the
+    Like ``bundle1.pull`` but only used if the repository is using the
     *generaldelta* storage format. (default: True)
 
     Large repositories using the *generaldelta* storage format should
