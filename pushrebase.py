@@ -433,7 +433,7 @@ def _addpushbackobsolete(repo, reply, newrevs):
         try:
             markers = repo.obsstore.relevantmarkers(newrevs)
             exchange.buildobsmarkerspart(reply, markers)
-        except ValueError, exc:
+        except ValueError as exc:
             repo.ui.status(_("can't send obsolete markers: %s") % exc.message)
 
 def _addpushbackparts(op, replacements):
@@ -556,7 +556,7 @@ def bundle2rebase(op, part):
         try:
             if bundlefile:
                 os.unlink(bundlefile)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.ENOENT:
                 raise
 

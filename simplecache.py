@@ -220,7 +220,7 @@ def memoize(func, key, serializer, ui):
                 ui.debug('got value for key %s from %s\n' % (key, name))
                 value = serializer.deserialize(cacheval)
                 return value
-        except Exception, inst:
+        except Exception as inst:
             ui.debug('error getting or deserializing key %s: %s\n' % (key, inst))
 
     ui.debug('falling back for value %s\n' % (key))
@@ -231,7 +231,7 @@ def memoize(func, key, serializer, ui):
         try:
             set(key, serializer.serialize(value), ui)
             ui.debug('set value for key %s to %s\n' % (key, name))
-        except Exception, inst:
+        except Exception as inst:
             ui.debug('error setting key %s: %s\n' % (key, inst))
 
     return value

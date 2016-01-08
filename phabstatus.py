@@ -48,7 +48,7 @@ def getdiffstatus(repo, diffid):
             error = jsresp.get('errorMessage', 'unknown error')
             return error
         return resp[0].get('statusName')
-    except Exception, e:
+    except Exception as e:
         return 'Could not not call "arc call-conduit": %s' % e
 
 def showphabstatus(repo, ctx, templ, **args):

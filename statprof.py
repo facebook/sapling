@@ -677,7 +677,7 @@ def main(argv=None):
     # process options
     try:
         opts, args = getopt.getopt(sys.argv[optstart:], "hl:", ["help", "limit="])
-    except getopt.error, msg:
+    except getopt.error as msg:
         print msg
         printusage()
         return 2

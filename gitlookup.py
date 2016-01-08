@@ -88,7 +88,7 @@ def gitgetmeta(ui, repo, source='default'):
     bundle = other.getbundle('pull', **kwargs)
     try:
         op = bundle2.processbundle(repo, bundle)
-    except error.BundleValueError, exc:
+    except error.BundleValueError as exc:
         raise error.Abort('missing support for %s' % exc)
     writebytes = op.records['fb:gitmeta:writebytes']
     ui.status(_('wrote %d files (%d bytes)\n') %
@@ -104,7 +104,7 @@ def _getbundlegitmetapart(bundler, repo, source, bundlecaps=None, **kwargs):
         for fname in sorted(gitmetafiles):
             try:
                 f = repo.opener(fname)
-            except (IOError, OSError), e:
+            except (IOError, OSError) as e:
                 if e.errno != errno.ENOENT:
                     repo.ui.warn(_("warning: unable to read %s: %s\n") %
                                  (fname, e))

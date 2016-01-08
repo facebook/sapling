@@ -65,7 +65,7 @@ def getdiff(repo, diffid):
         proc.stdin.close()
 
         return proc
-    except Exception, e:
+    except Exception as e:
         raise error.Abort('Could not not call "arc call-conduit": %s' % e)
 
 def finddiff(repo, diffid, proc=None):

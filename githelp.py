@@ -70,7 +70,7 @@ def parseoptions(ui, cmdoptions, args):
         try:
             args = fancyopts.fancyopts(list(args), cmdoptions, opts, True)
             break
-        except getopt.GetoptError, ex:
+        except getopt.GetoptError as ex:
             flag = None
             if "requires argument" in ex.msg:
                 raise
