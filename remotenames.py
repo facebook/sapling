@@ -445,6 +445,8 @@ def expaths(orig, ui, repo, *args, **opts):
     if delete:
         # find the first section and remote path that matches, and delete that
         foundpaths = False
+        if not repo.vfs.isfile('hgrc'):
+            raise error.Abort(_("could not find hgrc file"))
         oldhgrc = repo.vfs.read('hgrc').splitlines(True)
         f = repo.vfs('hgrc', 'w')
         for line in oldhgrc:
@@ -461,7 +463,9 @@ def expaths(orig, ui, repo, *args, **opts):
         # find the first section that matches, then look for previous value; if
         # not found add a new entry
         foundpaths = False
-        oldhgrc = repo.vfs.read('hgrc').splitlines(True)
+        oldhgrc = []
+        if repo.vfs.isfile("hgrc"):
+            oldhgrc = repo.vfs.read('hgrc').splitlines(True)
         f = repo.vfs('hgrc', 'w')
         done = False
         for line in oldhgrc:
