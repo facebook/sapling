@@ -475,6 +475,7 @@ def expaths(orig, ui, repo, *args, **opts):
         # did we not find an existing path?
         if not done:
             done = True
+            f.write("[paths]\n")
             f.write("%s = %s\n" % (add, args[0]))
 
         f.close()
