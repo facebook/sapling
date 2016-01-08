@@ -8,7 +8,7 @@
 testedwith = 'internal'
 
 import fileserverclient, remotefilelog, remotefilectx, shallowstore, shallowrepo
-import shallowbundle, debugcommands, remotefilelogserver
+import shallowbundle, debugcommands, remotefilelogserver, shallowverifier
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
@@ -396,22 +396,15 @@ def onetimeclientsetup(ui):
     wrapfunction(patch, 'trydiff', trydiff)
 
     # Prevent verify from processing files
+    # a stub for mercurial.hg.verify()
     def _verify(orig, repo):
-        # terrible, terrible hack:
-        # To prevent verify from checking files, we throw an exception when
-        # it tries to access a filelog. We then catch the exception and
-        # exit gracefully.
-        class FakeException(Exception):
-            pass
-        def emptylen(*args, **kwargs):
-            raise FakeException()
-        remotefilelog.remotefilelog.__len__ = emptylen
+        lock = repo.lock()
         try:
-            return orig(repo)
-        except FakeException:
-            ui.progress(_('checking'), None)
-            pass
-    wrapfunction(verify, 'verify', _verify)
+            return shallowverifier.shallowverifier(repo).verify()
+        finally:
+            lock.release()
+
+    wrapfunction(hg, 'verify', _verify)
 
     if util.safehasattr(cmdutil, '_revertprefetch'):
         wrapfunction(cmdutil, '_revertprefetch', _revertprefetch)
