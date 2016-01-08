@@ -120,7 +120,7 @@ def fillmvdb(ui, repo, *pats, **opts):
                 if p and p.rev() != stop:
                     ctxlist.append(p.hex())
     except Exception:
-        ui.warn(ctxlist)
+        ui.warn(str(ctxlist))
 
 
 def _fillctx(repo, ctxlist):
