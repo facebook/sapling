@@ -19,7 +19,7 @@ Run test
   $ touch b
   $ hg commit -Aqm b
   $ hg bookmark AB
-  $ hg up .^
+  $ hg up ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark AB)
   $ touch c

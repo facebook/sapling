@@ -24,7 +24,7 @@ Resetting past a remote bookmark should not delete the remote bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd client
   $ hg book bar
-  $ hg reset --clean default/foo^
+  $ hg reset --clean "default/foo^"
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   o  a89d614e2364  default/foo
   |

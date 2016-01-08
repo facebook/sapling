@@ -113,7 +113,7 @@ REBASING ON ANOTHER DRAFT BRANCH -- SERVER HAS NO MOVE DATA -- LOCAL DATA ERASED
   $ hg update -q 89c7ee
   $ hg mv c d
   $ hg commit -m "mv c d"
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv c e
   $ hg commit -q -m "mv c e"
   $ sqlite3 .hg/moves.db "SELECT hash, source, destination, mv FROM Moves" | sort

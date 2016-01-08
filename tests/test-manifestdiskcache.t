@@ -145,7 +145,7 @@ Test that we can pin a revision in the cache.
   > runs-between-prunes=1
   > enabled=True
   > EOF
-  $ hg diff -r .^ --nodates
+  $ hg diff -r ".^" --nodates
   diff -r 53f12ffb3d86 defdef
   --- /dev/null
   +++ b/defdef

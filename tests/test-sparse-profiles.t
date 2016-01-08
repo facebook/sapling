@@ -217,7 +217,7 @@ warning message can be suppressed by setting missingwarning = false in
   $ hg sparse --reset
   $ hg rm *.sparse
   $ hg commit -m "delete profiles"
-  $ hg up -q .^
+  $ hg up -q ".^"
   $ hg sparse --enable-profile backend.sparse
   $ ls
   index.html

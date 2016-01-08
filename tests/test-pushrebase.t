@@ -354,9 +354,9 @@ Pushing a merge should rebase only the latest side of the merge
   o  initial [public:2bb9d20e471c]
   
 - Verify the content of the merge files is correct
-  $ hg cat -r master^ c
+  $ hg cat -r "master^" c
   branched2
-  $ hg cat -r master^ other
+  $ hg cat -r "master^" other
   tux
 
   $ hg strip -r add5ec74853d -q
@@ -484,7 +484,7 @@ Test pushing master bookmark, fast forward
 Test pushing bookmark with no new commit
 
   $ hg book stable -r fb983dc509b6
-  $ hg book stable -r fb983dc509b6^ -R ../server
+  $ hg book stable -r "fb983dc509b6^" -R ../server
   $ hg push -r stable --to stable
   pushing to ssh://user@dummy/server
   searching for changes

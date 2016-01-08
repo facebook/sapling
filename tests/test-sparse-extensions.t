@@ -47,7 +47,7 @@ ignored files the second time it runs, regardless of previous state (ask @sid0)
 
 Test that hgwatchmans ignore hash check updates when .hgignore changes
 
-  $ hg up -q .^
+  $ hg up -q ".^"
   $ hg status --config extensions.hgwatchman=
   ? dir1/file
   ? ignoredir2/file

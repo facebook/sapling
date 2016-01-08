@@ -538,7 +538,7 @@ this should invoke the merge driver
   > mergedriver = python:$TESTTMP/mergedriver-raise.py
   > EOF
   $ echo foowd >> foo.txt
-  $ hg update .^
+  $ hg update ".^"
   * preprocess called
   error: preprocess hook failed: foo
   warning: merge driver failed to preprocess files

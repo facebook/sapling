@@ -81,8 +81,8 @@ Test with multiple backing repos specified.
   $ touch file_c
   $ hg add file_c
   $ hg ci -m "commit 3"
-  $ commit_a_id=`hg log -T "{label('custom.fullrev',node)}" -r .^^`
-  $ commit_b_id=`hg log -T "{label('custom.fullrev',node)}" -r .^`
+  $ commit_a_id=`hg log -T "{label('custom.fullrev',node)}" -r ".^^"`
+  $ commit_b_id=`hg log -T "{label('custom.fullrev',node)}" -r ".^"`
   $ commit_c_id=`hg log -T "{label('custom.fullrev',node)}" -r .`
   $ hg phase -p $commit_a_id
   $ hg phase -p $commit_b_id
@@ -91,9 +91,9 @@ Test with multiple backing repos specified.
   $ curl -s -X PUT http://localhost:8543/multiple/hg/src_b/git/$commit_b_id/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ curl -s -X PUT http://localhost:8543/multiple/hg/src_c/git/$commit_c_id/cccccccccccccccccccccccccccccccccccccccc
   $ curl -s -X PUT http://localhost:8543/multiple/hg/src_b/git/$commit_c_id/dddddddddddddddddddddddddddddddddddddddd
-  $ hg log -T '{gitnode}\n' -r .^^
+  $ hg log -T '{gitnode}\n' -r ".^^"
   src_a: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  $ hg log -T '{gitnode}\n' -r .^
+  $ hg log -T '{gitnode}\n' -r ".^"
   src_b: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
   $ hg log -T '{gitnode}\n' -r .
   src_b: dddddddddddddddddddddddddddddddddddddddd; src_c: cccccccccccccccccccccccccccccccccccccccc

@@ -40,7 +40,7 @@ Setup repo
   $ hg mv c cc
   $ echo 'bar' >> b
   $ hg commit -m "mv a c, mod b"
-  $ hg up .^ -q
+  $ hg up ".^" -q
 
   $ echo 'foo' >> a
   $ echo 'bar' >> b
@@ -131,7 +131,7 @@ Setup repo
   $ hg rm a
   $ hg mv b bbb
   $ hg commit -m "del a, mv b"
-  $ hg update -q .^
+  $ hg update -q ".^"
 
   $ hg mv a aa
   $ hg mv b bb
@@ -198,7 +198,7 @@ Setup repo
   $ hg mv a c
   $ echo 'foo' >> b
   $ hg commit -m "mv a c, mod b"
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv b d
   $ hg commit -q -m "mv b d"
   $ hg mv d e
@@ -246,7 +246,7 @@ Rebase
   A e
     d
   R d
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ ls
   c
   d
@@ -284,7 +284,7 @@ Setup repo
   $ hg commit -m "added a b"
   $ hg mv a c
   $ hg commit -m "mv a c"
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv b d
   $ hg commit -q -m "mv b d"
   $ hg mv d e
@@ -327,7 +327,7 @@ Rebase
   A f
     e
   R e
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ ls
   c
   e
@@ -353,7 +353,7 @@ Setup repo
   $ hg commit -m "mv a c"
   $ hg mv c d
   $ hg commit -q -m "mv c d"
-  $ hg update -q .^^
+  $ hg update -q ".^^"
   $ hg mv b e
   $ hg commit -q -m "mv b e"
   $ hg merge -r 37a712

@@ -58,7 +58,7 @@ Pushrebase pushes should be allowed
 
 Bookmark pushes should not be affected by the block
 
-  $ hg book -r .^ master -f
+  $ hg book -r ".^" master -f
   $ hg push -B master
   pushing to $TESTTMP/server
   searching for changes

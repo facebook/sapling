@@ -44,7 +44,7 @@ Old head (rev 1) should no longer be visible
 
 Test configuration of "interesting" bookmarks
 
-  $ hg up -q .^
+  $ hg up -q ".^"
   $ echo x >> x
   $ hg commit -qAm x4
   $ hg push -q --to project/bookmark --create
@@ -56,7 +56,7 @@ Test configuration of "interesting" bookmarks
   o  0 mybook
   
 
-  $ hg up .^
+  $ hg up ".^"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'
   o  2  default/master

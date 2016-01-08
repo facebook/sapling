@@ -67,7 +67,7 @@ Dirty update to different rev fails by default
   $ echo x >> a
   $ hg st
   M a
-  $ hg update .^
+  $ hg update ".^"
   abort: uncommitted changes
   [255]
 
@@ -75,7 +75,7 @@ Dirty update allowed to same rev and with --nocheck and --clean
 
   $ hg update .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg update --nocheck .^
+  $ hg update --nocheck ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg update --clean 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -365,7 +365,7 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ echo test_1 > rebase_dest
   $ hg commit --date "1 1" -Aqm "dest commit for rebase"
   $ hg bookmark rebase_dest_test_1
-  $ hg up -q .^
+  $ hg up -q ".^"
   $ echo test_1 > rebase_source
   $ hg commit --date "1 1" -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_1
@@ -377,7 +377,7 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
   $ hg commit -Aqm "dest commit for rebase"
   $ hg bookmark rebase_dest_test_2
-  $ hg up -q .^
+  $ hg up -q ".^"
   $ echo test_2 > rebase_source
   $ hg commit -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_2

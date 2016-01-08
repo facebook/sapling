@@ -83,7 +83,7 @@ Amend wrapping
 Rebase wrapping
   $ hg mv a c
   $ hg commit -m "mv a c"
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv b d
   $ hg commit -q -m "mv b d"
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'
@@ -120,7 +120,7 @@ Rebase wrapping
   a003d50a0eea20c381b92e9200e323f3c945c473|||0
 
 Manually adding missing move data
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv c e
   $ hg commit -m "mv c e" -q
   $ rm .hg/moves.db
@@ -152,7 +152,7 @@ Setup repo
   $ hg commit -m "mv a b"
   $ hg mv b c
   $ hg commit -m "mv b c"
-  $ hg update -q .^
+  $ hg update -q ".^"
   $ hg mv b d
   $ hg commit -q -m "mv b d"
   $ hg log -G -T 'changeset: {node}\n desc: {desc}\n'

@@ -21,7 +21,7 @@ Soft reset should leave pending changes
   |
   o  b292c1e3311f
   
-  $ hg reset .^
+  $ hg reset ".^"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg log -G -T '{node|short} {bookmarks}\n'
   @  b292c1e3311f foo
@@ -37,7 +37,7 @@ Soft reset should leave pending changes
 Clean reset should overwrite all changes
 
   $ hg commit -qAm y
-  $ hg reset --clean .^
+  $ hg reset --clean ".^"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg diff
 
@@ -63,7 +63,7 @@ Reset should recover from backup bundles (with correct phase)
 Reset should not strip reachable commits
 
   $ hg book bar
-  $ hg reset --clean .^
+  $ hg reset --clean ".^"
   $ hg log -G -T '{node|short} {bookmarks}\n'
   o  66ee28d0328c foo
   |
@@ -94,7 +94,7 @@ Reset to '.' by default
 
 Keep old commits
 
-  $ hg reset --keep .^
+  $ hg reset --keep ".^"
   $ hg log -G -T '{node|short} {bookmarks}\n'
   o  66ee28d0328c
   |
@@ -106,7 +106,7 @@ Reset without a bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark foo)
   $ hg book -d foo
-  $ hg reset .^
+  $ hg reset ".^"
   resetting without an active bookmark
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg book foo
@@ -119,7 +119,7 @@ Reset to bookmark with - in the name
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  $ hg book foo-bar -r .^
+  $ hg book foo-bar -r ".^"
   $ hg reset foo-bar
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/66ee28d0328c-b6ee89e7-backup.hg (glob)
   $ hg book -d foo-bar
@@ -139,7 +139,7 @@ Verify file status after reset
   $ hg add tobeadded
   $ hg rm toberemoved
   $ hg commit -m 'to be reset'
-  $ hg reset .^
+  $ hg reset ".^"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/d36bf00ac47e-375e6009-backup.hg (glob)
   $ hg status
   M x
@@ -167,7 +167,7 @@ Reset + Evolve tests
 
 Reset prunes commits
 
-  $ hg reset -C 66ee28d0328c^
+  $ hg reset -C "66ee28d0328c^"
   2 changesets pruned
   $ hg log -r 66ee28d0328c
   abort: hidden revision '66ee28d0328c'!

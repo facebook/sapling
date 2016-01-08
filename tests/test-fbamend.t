@@ -52,7 +52,7 @@ Test basic functions
   $ echo b >> b
   $ hg add b
   $ hg commit -m 'b'
-  $ hg up .^
+  $ hg up ".^"
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a >> a
   $ hg amend
@@ -193,7 +193,7 @@ Test interaction with histedit
   455e4104f605 b
   83455f1f6049 aa
   cb9a9f314b8b a
-  $ hg histedit .^^ --commands - <<EOF
+  $ hg histedit ".^^" --commands - <<EOF
   > pick 83455f1f6049
   > x echo amending from exec
   > x hg commit --amend -m 'message from exec'
@@ -366,7 +366,7 @@ Test that fbamend works with interactive commits (crecord)
 
 test hg amend -i works in a stack
   $ hg commit -m 'descendant commit'
-  $ hg up .^ -q -C
+  $ hg up ".^" -q -C
   $ echo 'be happy' > anotherfile
   $ hg add anotherfile
 Just commit the file in interactive mode
@@ -463,7 +463,7 @@ Test fbamend with inhibit
   |
   o  1f0dee641bb7 add a
   
-  $ hg up .^ -q
+  $ hg up ".^" -q
   $ echo "hello" > b
   $ hg amend
   user education
@@ -485,7 +485,7 @@ Test fbamend with inhibit
   $ hg up tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit d
-  $ hg up .^ -q
+  $ hg up ".^" -q
   $ echo "hello" > c
   $ hg amend --rebase
   rebasing the children of 6d41fcaa1aa4.preamend

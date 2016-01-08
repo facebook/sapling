@@ -63,8 +63,8 @@ githelp for git checkout -- . (checking out a directory)
   hg revert .
 
 
-githelp for git checkout HEAD^ (should still work to pass a rev)
-  $ hg githelp -- checkout HEAD^
+githelp for git checkout "HEAD^" (should still work to pass a rev)
+  $ hg githelp -- checkout "HEAD^"
   hg update .^
 
 githelp checkout: args after -- should be treated as paths no matter what
@@ -75,14 +75,14 @@ githelp checkout: args after -- should be treated as paths no matter what
 
 
 githelp for git checkout with rev and path
-  $ hg githelp -- checkout HEAD^ -- file.txt
+  $ hg githelp -- checkout "HEAD^" -- file.txt
   note: use --no-backup to avoid creating .orig files
   
   hg revert -r .^ file.txt
 
 
 githelp for git with rev and path, without separator
-  $ hg githelp -- checkout HEAD^ file.txt
+  $ hg githelp -- checkout "HEAD^" file.txt
   note: use --no-backup to avoid creating .orig files
   
   hg revert -r .^ file.txt
@@ -164,7 +164,7 @@ githelp for grep with pattern and path
 githelp for reset, checking ~ in git becomes ~1 in mercurial
   $ hg githelp -- reset HEAD~
   hg reset .~1
-  $ hg githelp -- reset HEAD^
+  $ hg githelp -- reset "HEAD^"
   hg reset .^
   $ hg githelp -- reset HEAD~3
   hg reset .~3
@@ -183,7 +183,7 @@ githelp for show with no arguments
 
 githelp for show with a path
   $ hg githelp -- show test_file
-  hg diff -r .^ test_file
+  hg diff -r ".^" test_file
 
 githelp for show with not a path:
   $ hg githelp -- show rev

@@ -848,7 +848,7 @@ def show(ui, repo, *args, **kwargs):
         showarg = args[0]
         if ispath(repo, showarg):
             cmd = Command('diff')
-            cmd['-r'] = '.^'
+            cmd['-r'] = '".^"'
         cmd.append(showarg)
 
     ui.status(str(cmd), "\n")

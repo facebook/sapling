@@ -53,7 +53,7 @@ Test mirroring a simple modification
   committing manifest
   committing changelog
   committed changeset 1:c84f345b5796
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
   +++ b/dir1/a
@@ -76,7 +76,7 @@ Test mirroring a simple delete
   committing manifest
   committing changelog
   committed changeset 2:3cc3197052c1
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
   --- a/dir1/a
@@ -114,7 +114,7 @@ Test non-conflicting edits
   committing manifest
   committing changelog
   committed changeset 3:787a1ee839ea
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
   --- /dev/null
@@ -139,7 +139,7 @@ Test non-conflicting deletes
   committing manifest
   committing changelog
   committed changeset 4:20868a046ae1
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
   --- a/dir1/a
@@ -179,7 +179,7 @@ Test syncing a edit + rename
   committing manifest
   committing changelog
   committed changeset 6:a6e4f018e982
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
   rename to dir1/b
@@ -234,7 +234,7 @@ Test amending a change where there has already been a sync before
   adding file changes
   added 1 changesets with 2 changes to 2 files
   committed changeset 6:a9fa97a5457f
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
   rename to dir1/b
@@ -335,7 +335,7 @@ Test that rebasing applies the same change to both
   rebasing 2:70b4edc7f658 "edit dir1/a with sync on" (tip)
   mirrored changes in 'dir1/a' to 'dir2/a'
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/70b4edc7f658-c81f5ea9-backup.hg (glob)
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
   +++ b/dir1/a
