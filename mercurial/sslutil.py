@@ -35,7 +35,7 @@ try:
         # maintainers for us, but that breaks too many things to
         # do it in a hurry.
         sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        sslcontext.options &= ssl.OP_NO_SSLv2 & ssl.OP_NO_SSLv3
+        sslcontext.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
         if certfile is not None:
             def password():
                 f = keyfile or certfile
