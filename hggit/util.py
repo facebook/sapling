@@ -9,6 +9,7 @@ except ImportError:
 
 from dulwich import errors
 from mercurial import (
+    lock as lockmod,
     util as hgutil,
 )
 
@@ -92,3 +93,19 @@ def isgitsshuri(uri):
         if re.match(fqdn_re, giturl):
             return True
     return False
+
+def recordbookmarks(repo, bms, name='git_handler'):
+    """abstract writing bookmarks for backwards compatibility"""
+    tr = lock = wlock = None
+    try:
+        wlock = repo.wlock()
+        lock = repo.lock()
+        tr = repo.transaction(name)
+        if hgutil.safehasattr(bms, 'recordchange'):
+            # recordchange was added in mercurial 3.2
+            bms.recordchange(tr)
+        else:
+            bms.write()
+        tr.close()
+    finally:
+        lockmod.release(tr, lock, wlock)
