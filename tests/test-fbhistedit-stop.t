@@ -65,7 +65,7 @@ stop & continue cannot preserve hashes without obsolence
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as 04d2fab98077. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume
+  When you are done, run hg histedit --continue to resume
 
   $ hg histedit --continue
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/e860deea161a-fa46228d-backup.hg (glob)
@@ -113,7 +113,7 @@ stop on a commit
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as d28623a90f2b. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume
+  When you are done, run hg histedit --continue to resume
 
   $ hg id -r . -i
   d28623a90f2b
@@ -171,7 +171,7 @@ fold a commit to check if other non-pick actions are handled correctly
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Changes commited as 08cf87522012. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume
+  When you are done, run hg histedit --continue to resume
 
   $ hg histedit --continue
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/9377597fe60b-fe8de266-backup.hg (glob)
@@ -195,7 +195,7 @@ fold a commit to check if other non-pick actions are handled correctly
   > EOF
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   Changes commited as 7228fc97bd5e. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume
+  When you are done, run hg histedit --continue to resume
 
   $ hg histedit --abort
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -448,8 +448,8 @@ def _addpushbackparts(op, replacements):
 
         if outgoing.missing:
             plural = 's' if len(outgoing.missing) > 1 else ''
-            op.repo.ui.warn("%s new commit%s from the server will be downloaded\n" %
-                            (len(outgoing.missing), plural))
+            op.repo.ui.warn(_("%s new commit%s from the server will be "
+                              "downloaded\n") % (len(outgoing.missing), plural))
             _addpushbackchangegroup(op.repo, op.reply, outgoing)
             _addpushbackobsolete(op.repo, op.reply, replacements.values())
 
@@ -469,7 +469,8 @@ def bundle2rebase(op, part):
         prelockrebaseargs = dict()
         prelockrebaseargs['source'] = 'push'
         prelockrebaseargs['bundle2'] = '1'
-        prelockrebaseargs['node'] = scmutil.revsingle(bundle, 'min(bundle())').hex()
+        prelockrebaseargs['node'] = scmutil.revsingle(bundle,
+                                                      'min(bundle())').hex()
         prelockrebaseargs['hook_bundlepath'] = bundlefile
         op.repo.hook("prepushrebase", throw=True, **prelockrebaseargs)
 
@@ -503,7 +504,7 @@ def bundle2rebase(op, part):
 
         if not params['newhead']:
             if not op.repo.revs('%r and head()', params['onto']):
-                raise error.Abort(_('rebase would produce a new head on server'))
+                raise error.Abort(_('rebase would create a new head on server'))
 
         if onto == None:
             maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))

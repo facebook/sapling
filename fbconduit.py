@@ -128,7 +128,8 @@ def showgitnode(repo, ctx, templ, **args):
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return ''
-    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos', default=[reponame])
+    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos',
+                                      default=[reponame])
 
     if ctx.mutable():
         # Local commits don't have translations
@@ -171,7 +172,8 @@ def gitnode(repo, subset, x):
     if not reponame:
         # We don't know who we are, so we can't ask for a translation
         return subset.filter(lambda r: false)
-    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos', default=[reponame])
+    backingrepos = repo.ui.configlist('fbconduit', 'backingrepos',
+                                      default=[reponame])
 
     peerpath = repo.ui.expandpath('default')
     translationerror = False

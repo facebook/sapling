@@ -27,7 +27,8 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 class GitUnknownError(error.Abort):
-    FailMessage = """\n\nIf this is a valid git command, please log a task for the source_control oncall.\n"""
+    FailMessage = ("\n\nIf this is a valid git command, please log a task for"
+                   " the source_control oncall.\n")
     def __init__(self, msg):
         msg = msg + GitUnknownError.FailMessage
         super(GitUnknownError, self).__init__(msg)
@@ -50,7 +51,8 @@ def githelp(ui, repo, *args, **kwargs):
     '''
 
     if len(args) == 0:
-        raise error.Abort(_('missing git command - usage: hg githelp -- <git command>'))
+        raise error.Abort(_('missing git command - '
+                            'usage: hg githelp -- <git command>'))
 
     if args[0] == 'git':
         args = args[1:]
@@ -91,7 +93,8 @@ def parseoptions(ui, cmdoptions, args):
             ui.warn("ignoring unknown option %s\n" % flag)
 
     args = list([convert(x) for x in args])
-    opts = dict([(k, convert(v)) if isinstance(v, str) else (k, v) for k,v in opts.iteritems()])
+    opts = dict([(k, convert(v)) if isinstance(v, str) else (k, v)
+                                 for k,v in opts.iteritems()])
 
     return args, opts
 
@@ -147,8 +150,9 @@ def add(ui, repo, *args, **kwargs):
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if (opts.get('patch')):
-        ui.status("note: hg crecord provides a more powerful UI for recording changes\n")
-        ui.status("note: record and crecord will commit when complete, as there is no staging area in mercurial\n\n")
+        ui.status(_("note: hg crecord has a better UI to record changes\n"))
+        ui.status(_("note: record and crecord will commit when complete, "
+                    "as there is no staging area in mercurial\n\n"))
         cmd = Command('record')
     else:
         cmd = Command("add")
@@ -156,11 +160,13 @@ def add(ui, repo, *args, **kwargs):
         if not opts.get('all'):
             cmd.extend(args)
         else:
-            ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
+            ui.status(_("note: use hg addremove to remove files that have "
+                        "been deleted.\n\n"))
         if not opts.get('all'):
             cmd.extend(args)
         else:
-            ui.status("note: use hg addremove to remove files that have been deleted.\n\n")
+            ui.status(_("note: use hg addremove to remove files that have "
+                        "been deleted.\n\n"))
 
     ui.status(str(cmd), "\n")
 
@@ -320,7 +326,7 @@ def cherrypick(ui, repo, *args, **kwargs):
     if opts.get('continue'):
         cmd['--continue'] = None
     elif opts.get('abort'):
-        ui.status("note: hg graft does not have --abort. I don't know why.\n\n")
+        ui.status(_("note: hg graft does not have --abort.\n\n"))
         return
     else:
         cmd.extend(args)
@@ -468,9 +474,10 @@ def fetch(ui, repo, *args, **kwargs):
     if len(args) > 0:
         cmd.append(args[0])
         if len(args) > 1:
-            ui.status("note: Mercurial doesn't have refspecs. " +
+            ui.status(_("note: Mercurial doesn't have refspecs. " +
                 "-r can be used to specify which commits you want to pull. " +
-                "-B can be used to specify which bookmark you want to pull.\n\n")
+                "-B can be used to specify which bookmark you want to pull." +
+                "\n\n"))
             for v in args[1:]:
                 if v in repo._bookmarks:
                     cmd['-B'] = v
@@ -544,8 +551,9 @@ def log(ui, repo, *args, **kwargs):
                 "--template. See hg help templates for more info.\n\n")
             cmd['--template'] = '???'
         else:
-            ui.status("note: --pretty/format/oneline equate to Mercurial's " +
-                "--style or --template. See hg help templates for more info.\n\n")
+            ui.status(_("note: --pretty/format/oneline equate to Mercurial's " +
+                "--style or --template. See hg help templates for more info." +
+                "\n\n"))
             cmd['--style'] = '???'
 
     if len(args) > 0:
@@ -658,9 +666,10 @@ def pull(ui, repo, *args, **kwargs):
     if len(args) > 0:
         cmd.append(args[0])
         if len(args) > 1:
-            ui.status("note: Mercurial doesn't have refspecs. " +
+            ui.status(_("note: Mercurial doesn't have refspecs. " +
                 "-r can be used to specify which commits you want to pull. " +
-                "-B can be used to specify which bookmark you want to pull.\n\n")
+                "-B can be used to specify which bookmark you want to pull." +
+                "\n\n"))
             for v in args[1:]:
                 if v in repo._bookmarks:
                     cmd['-B'] = v
@@ -681,9 +690,10 @@ def push(ui, repo, *args, **kwargs):
     if len(args) > 0:
         cmd.append(args[0])
         if len(args) > 1:
-            ui.status("note: Mercurial doesn't have refspecs. " +
+            ui.status(_("note: Mercurial doesn't have refspecs. " +
                 "-r can be used to specify which commits you want to push. " +
-                "-B can be used to specify which bookmark you want to push.\n\n")
+                "-B can be used to specify which bookmark you want to push." +
+                "\n\n"))
             for v in args[1:]:
                 if v in repo._bookmarks:
                     cmd['-B'] = v
@@ -711,9 +721,9 @@ def rebase(ui, repo, *args, **kwargs):
             "It just edits history.\n\n")
         cmd = Command('histedit')
         if len(args) > 0:
-            ui.status("also note: 'hg histedit' will automatically detect your "
-                      "stack, so no second argument is necessary.\n\n")
-        ui.status(str(cmd), "\n")
+            ui.status(_("also note: 'hg histedit' will automatically detect"
+                      " your stack, so no second argument is necessary.\n\n"))
+        ui.status((str(cmd)), "\n")
         return
 
     if opts.get('skip'):
@@ -728,8 +738,9 @@ def rebase(ui, repo, *args, **kwargs):
         cmd['--abort'] = None
 
     if opts.get('onto'):
-        ui.status("note: if you're trying to lift a commit off one branch, " +
-            "try using hg rebase -d <destination commit> -s <commit to be lifted>\n\n")
+        ui.status(_("note: if you're trying to lift a commit off one branch, " +
+            "try hg rebase -d <destination commit> -s <commit to be lifted>" +
+            "\n\n"))
         cmd['-d'] = convert(opts.get('onto'))
         if len(args) < 2:
             raise GitUnknownError("Expected format: git rebase --onto X Y Z")
@@ -756,10 +767,10 @@ def reflog(ui, repo, *args, **kwargs):
         cmd.append(args[0])
 
     ui.status(str(cmd), "\n\n")
-    ui.status("note: in hg commits can be deleted from repo but we always"
+    ui.status(_("note: in hg commits can be deleted from repo but we always"
               " have backups.\n"
-              "Please use 'hg backups --restore' or 'hg reset' to restore from backups."
-              "\n")
+              "Please use 'hg backups --restore' or 'hg reset'" +
+              " to restore from backups.\n"))
 
 def reset(ui, repo, *args, **kwargs):
     cmdoptions = [
@@ -773,7 +784,8 @@ def reset(ui, repo, *args, **kwargs):
     hard = opts.get('hard')
 
     if opts.get('mixed'):
-        ui.status('NOTE: There is no staging area (index) in mercurial, so --mixed has no meaning\n\n')
+        ui.status(_('NOTE: --mixed has no meaning since mercurial has no ' +
+                    'staging area\n\n'))
 
     cmd = Command('reset')
     if hard:
@@ -788,7 +800,8 @@ def revert(ui, repo, *args, **kwargs):
     args, opts = parseoptions(ui, cmdoptions, args)
 
     if len(args) > 1:
-        ui.status("note: hg backout doesn't support multiple commits at once\n\n")
+        ui.status(_("note: hg backout doesn't support multiple commits at " +
+                    "once\n\n"))
 
     cmd = Command('backout')
     if args:

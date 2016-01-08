@@ -56,11 +56,12 @@ def getdiff(repo, diffid):
 
     try:
         proc = subprocess.Popen(['arc', 'call-conduit', 'differential.getdiff'],
-                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setsid)
+                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                     preexec_fn=os.setsid)
 
         input = json.dumps({'revision_id': diffid})
-        repo.ui.debug("[diffrev] echo '%s' | arc call-conduit differential.getdiff\n" %
-                      input)
+        repo.ui.debug("[diffrev] echo '%s' | "
+                      "arc call-conduit differential.getdiff\n" % input)
         proc.stdin.write(input)
         proc.stdin.close()
 

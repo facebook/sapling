@@ -10,9 +10,13 @@
 # thus:
 #
 # - get the git equivalent of hg 47d743e068523a9346a5ea4e429eeab185c886c6
-#     hg identify --id -r _gitlookup_hg_47d743e068523a9346a5ea4e429eeab185c886c6 ssh://server/repo
+#       hg identify --id\
+#                   -r _gitlookup_hg_47d743e068523a9346a5ea4e429eeab185c886c6\
+#                   ssh://server/repo
 # - get the hg equivalent of git 6916a3c30f53878032dea8d01074d8c2a03927bd
-#     hg identify --id -r _gitlookup_git_6916a3c30f53878032dea8d01074d8c2a03927bd ssh://server/repo
+#     hg identify --id\
+#                 -r _gitlookup_git_6916a3c30f53878032dea8d01074d8c2a03927bd\
+#                 ssh://server/repo
 #
 # This also provides client and server commands to download all the Git metadata
 # via bundle2.

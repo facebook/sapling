@@ -225,7 +225,8 @@ class Sample(object):
         stack = []
 
         while frame:
-            stack.append(CodeSite.get(frame.f_code.co_filename, frame.f_lineno, frame.f_code.co_name))
+            stack.append(CodeSite.get(frame.f_code.co_filename, frame.f_lineno,
+                                      frame.f_code.co_name))
             frame = frame.f_back
 
         return Sample(stack, time)
@@ -285,7 +286,8 @@ def save_data(path=None):
         for sample in state.samples:
             time = str(sample.time)
             stack = sample.stack
-            sites = ['\1'.join([s.path, str(s.lineno), s.function]) for s in stack]
+            sites = ['\1'.join([s.path, str(s.lineno), s.function])
+                     for s in stack]
             file.write(time + '\0' + '\0'.join(sites) + '\n')
 
         file.close()
@@ -306,7 +308,8 @@ def load_data(path=None):
         sites = []
         for rawsite in rawsites:
             siteparts = rawsite.split('\1')
-            sites.append(CodeSite.get(siteparts[0], int(siteparts[1]), siteparts[2]))
+            sites.append(CodeSite.get(siteparts[0], int(siteparts[1]),
+                        siteparts[2]))
 
         state.samples.append(Sample(sites, time))
 
@@ -475,14 +478,13 @@ def display_by_method(fp):
                                                  function[0])) # file:function
         function[4].sort(reverse=True, key=lambda i: i.selfseconds())
         for stat in function[4]:
-            # only show line numbers for significant locations ( > 1% time spent)
+            # only show line numbers for significant locations (>1% time spent)
             if stat.selfpercent() > 1:
                 source = stat.site.getsource(25)
+                stattuple = (stat.selfpercent(), stat.selfseconds(),
+                             stat.site.lineno, source)
 
-                print >> fp, ('%33.0f%% %6.2f   line %s: %s' % (stat.selfpercent(),
-                                                                stat.selfseconds(),
-                                                                stat.site.lineno,
-                                                                source))
+                print >> fp, ('%33.0f%% %6.2f   line %s: %s' % (stattuple))
 
 def display_about_method(fp, function=None, **kwargs):
     if function == None:
@@ -498,7 +500,8 @@ def display_about_method(fp, function=None, **kwargs):
 
     for sample in state.samples:
         for i, site in enumerate(sample.stack):
-            if site.function == function and (not filename or site.filename() == filename):
+            if site.function == function and (not filename
+                or site.filename() == filename):
                 relevant_samples += 1
                 if i != len(sample.stack) - 1:
                     parent = sample.stack[i + 1]
@@ -516,10 +519,13 @@ def display_about_method(fp, function=None, **kwargs):
     parents.sort(reverse=True, key=lambda x: x[1])
     for parent, count in parents:
         print >> fp, ('%6.2f%%   %s:%s   line %s: %s' %
-            (count / relevant_samples * 100, parent.filename(), parent.function, parent.lineno, parent.getsource(50)))
+            (count / relevant_samples * 100, parent.filename(),
+            parent.function, parent.lineno, parent.getsource(50)))
 
     stats = SiteStats.buildstats(state.samples)
-    stats = [s for s in stats if s.site.function == function and (not filename or s.site.filename() == filename)]
+    stats = [s for s in stats
+               if s.site.function == function and
+               (not filename or s.site.filename() == filename)]
 
     total_cum_sec = 0
     total_self_sec = 0
@@ -531,13 +537,16 @@ def display_about_method(fp, function=None, **kwargs):
         total_self_percent += stat.selfpercent()
         total_cum_percent += stat.totalpercent()
 
-    print >> fp, ('\n    %s:%s    Total: %0.2fs (%0.2f%%)    Self: %0.2fs (%0.2f%%)\n' % (
+    print >> fp, (
+        '\n    %s:%s    Total: %0.2fs (%0.2f%%)    Self: %0.2fs (%0.2f%%)\n' %
+        (
         filename or '___',
         function,
         total_cum_sec,
         total_cum_percent,
         total_self_sec,
-        total_self_percent))
+        total_self_percent
+        ))
 
     children = [(child, count) for child, count in children.iteritems()]
     children.sort(reverse=True, key=lambda x: x[1])
@@ -569,8 +578,10 @@ def display_hotpath(fp, limit=0.05, **kwargs):
 
     def _write(node, depth, multiple_siblings):
         site = node.site
-        visiblechildren = [c for c in node.children.itervalues() if c.count >= (limit * root.count)]
-        if site and (node.count < root.count * 0.98 or len(visiblechildren) > 1):
+        visiblechildren = [c for c in node.children.itervalues()
+                             if c.count >= (limit * root.count)]
+        if site and (node.count < root.count * 0.98
+                     or len(visiblechildren) > 1):
             indent = depth * 2 - 1
             filename = ''
             function = ''
@@ -580,8 +591,11 @@ def display_hotpath(fp, limit=0.05, **kwargs):
                 function = childsite.function
 
             # lots of string formatting
-            listpattern = ''.ljust(indent) + ('\\' if multiple_siblings else '|') + ' %4.1f%%  %s %s'
-            liststring = listpattern % (node.count / root.count * 100, filename, function)
+            listpattern = ''.ljust(indent) +\
+                          ('\\' if multiple_siblings else '|') +\
+                          ' %4.1f%%  %s %s'
+            liststring = listpattern % (node.count / root.count * 100,
+                                        filename, function)
             codepattern = '%' + str(55 - len(liststring)) + 's %s:  %s'
             codestring = codepattern % ('line', site.lineno, site.getsource(30))
 
@@ -632,7 +646,8 @@ def write_to_flame(fp):
 
 def printusage():
     print """
-The statprof command line allows you to inspect the last profile's results in the following forms:
+The statprof command line allows you to inspect the last profile's results in
+the following forms:
 
 usage:
     hotpath [-l --limit percent]
@@ -676,7 +691,8 @@ def main(argv=None):
 
     # process options
     try:
-        opts, args = getopt.getopt(sys.argv[optstart:], "hl:", ["help", "limit="])
+        opts, args = getopt.getopt(sys.argv[optstart:], "hl:",
+                                   ["help", "limit="])
     except getopt.error as msg:
         print msg
         printusage()

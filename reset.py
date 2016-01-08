@@ -157,8 +157,8 @@ def _findbundle(repo, rev):
         quiet = ui.quiet
         try:
             ui.quiet = True
-            localother, chlist, cleanupfn = bundlerepo.getremotechanges(ui, repo, other,
-                                        None, None, None)
+            ret = bundlerepo.getremotechanges(ui, repo, other, None, None, None)
+            localother, chlist, cleanupfn = ret
             for node in chlist:
                 if hex(node).startswith(rev):
                     return other, node
@@ -236,7 +236,8 @@ def _deleteunreachable(repo, ctx):
                 obsolete.createmarkers(repo, markers)
                 repo.ui.status(_("%d changesets pruned\n") % len(hiderevs))
             else:
-                repair.strip(repo.ui, repo, [repo.changelog.node(r) for r in hiderevs])
+                repair.strip(repo.ui, repo,
+                             [repo.changelog.node(r) for r in hiderevs])
         finally:
             lockmod.release(lock)
 

@@ -32,9 +32,11 @@ def getdiffstatus(repo, diffid):
 
     try:
         proc = subprocess.Popen(['arc', 'call-conduit', 'differential.query'],
-                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setsid)
+                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                     preexec_fn=os.setsid)
         input = json.dumps({'ids': [diffid]})
-        repo.ui.debug("[diffrev] echo '%s' | arc call-conduit differential.query\n" %
+        repo.ui.debug("[diffrev] echo '%s' | "
+                      "arc call-conduit differential.query\n" %
                       input)
         proc.stdin.write(input)
         proc.stdin.close()
@@ -55,7 +57,8 @@ def showphabstatus(repo, ctx, templ, **args):
     """:phabstatus: String. Return the diff approval status for a given hg rev
     """
     descr = ctx.description()
-    match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)', descr)
+    match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)'
+                      , descr)
     revstr = match.group(1) if match else ''
     if revstr.startswith('D') and revstr[1:].isdigit():
         return getdiffstatus(repo, revstr[1:])

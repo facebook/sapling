@@ -281,9 +281,9 @@ def histgrep(ui, repo, pattern, *pats, **opts):
 
     Returns 0 if a match is found, 1 otherwise."""
     if not pats:
-        mess = _('cannot run histgrep on the whole repo, please provide filenames')
-        hint = _('this is disabled to avoid insanely slow greps over the whole repo')
-        raise error.Abort(mess, hint=hint)
+        m = _("can't run histgrep on the whole repo, please provide filenames")
+        h = _('this is disabled to avoid very slow greps over the whole repo')
+        raise error.Abort(m, hint=h)
 
     return commands.grep(ui, repo, pattern, *pats, **opts)
 
@@ -364,7 +364,8 @@ def grep(ui, repo, pattern, *pats, **opts):
     return p.wait()
 
 def _rebase(orig, ui, repo, **opts):
-    if not opts.get('date') and not ui.configbool('tweakdefaults', 'rebasekeepdate'):
+    if not opts.get('date') and not ui.configbool('tweakdefaults',
+                                                  'rebasekeepdate'):
         opts['date'] = currentdate()
 
     if opts.get('continue') or opts.get('abort'):
@@ -394,12 +395,14 @@ def currentdate():
     return "%d %d" % util.makedate(time.time())
 
 def graftcmd(orig, ui, repo, *revs, **opts):
-    if not opts.get("date") and not ui.configbool('tweakdefaults', 'graftkeepdate'):
+    if not opts.get("date") and not ui.configbool('tweakdefaults',
+                                                  'graftkeepdate'):
         opts["date"] = currentdate()
     return orig(ui, repo, *revs, **opts)
 
 def amendcmd(orig, ui, repo, *pats, **opts):
-    if not opts.get("date") and not ui.configbool('tweakdefaults', 'amendkeepdate'):
+    if not opts.get("date") and not ui.configbool('tweakdefaults',
+                                                  'amendkeepdate'):
         opts["date"] = currentdate()
     return orig(ui, repo, *pats, **opts)
 

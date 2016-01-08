@@ -123,8 +123,8 @@ def _setupupdates(ui):
                 prunedactions[file] = ('r', args, msg)
 
         if len(temporaryfiles) > 0:
-            ui.status("temporarily included %d file(s) in the sparse checkout for "
-                "merging\n" % len(temporaryfiles))
+            ui.status(_("temporarily included %d file(s) in the sparse checkout"
+                " for merging\n") % len(temporaryfiles))
             repo.addtemporaryincludes(temporaryfiles)
 
             # Add the new files to the working copy so they can be merged, etc
@@ -138,7 +138,8 @@ def _setupupdates(ui):
 
             typeactions = collections.defaultdict(list)
             typeactions['g'] = actions
-            mergemod.applyupdates(repo, typeactions, repo[None], repo['.'], False)
+            mergemod.applyupdates(repo, typeactions, repo[None], repo['.'],
+                                  False)
 
             dirstate = repo.dirstate
             for file, flags, msg in actions:
@@ -254,7 +255,8 @@ def _setupdirstate(ui):
 
             sparsematch = repo.sparsematch()
             if self.sparsematch != sparsematch or self.origignore != origignore:
-                self.func = unionmatcher([origignore, negatematcher(sparsematch)])
+                self.func = unionmatcher([origignore,
+                                          negatematcher(sparsematch)])
                 self.sparsematch = sparsematch
                 self.origignore = origignore
             return self.func
@@ -296,8 +298,9 @@ def _setupdirstate(ui):
                 sparsematch = repo.sparsematch()
                 for f in args:
                     if not sparsematch(f) and f not in dirstate:
-                        raise error.Abort(_("cannot add '%s' - it is outside the " +
-                                         "sparse checkout") % f, hint=hint)
+                        raise error.Abort(_("cannot add '%s' - it is outside "
+                                            "the sparse checkout") % f,
+                                          hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
 
@@ -538,7 +541,7 @@ def _wraprepo(ui, repo):
         def prunetemporaryincludes(self):
             if repo.opener.exists('tempsparse'):
                 origstatus = self.status()
-                modified, added, removed, deleted, unknown, ignored, clean = origstatus
+                modified, added, removed, deleted, a, b, c = origstatus
                 if modified or added or removed or deleted:
                     # Still have pending changes. Don't bother trying to prune.
                     return
@@ -556,7 +559,8 @@ def _wraprepo(ui, repo):
 
                 typeactions = collections.defaultdict(list)
                 typeactions['r'] = actions
-                mergemod.applyupdates(self, typeactions, self[None], self['.'], False)
+                mergemod.applyupdates(self, typeactions, self[None], self['.'],
+                                      False)
 
                 # Fix dirstate
                 for file in dropped:
@@ -564,9 +568,9 @@ def _wraprepo(ui, repo):
 
                 self.opener.unlink('tempsparse')
                 self.invalidatesignaturecache()
-                ui.status("cleaned up %d temporarily added file(s) from the sparse checkout\n" %
-                    len(tempincludes))
-
+                msg = _("cleaned up %d temporarily added file(s) from the "
+                        "sparse checkout\n")
+                ui.status(msg % len(tempincludes))
 
     if 'dirstate' in repo._filecache:
         repo.dirstate.repo = repo

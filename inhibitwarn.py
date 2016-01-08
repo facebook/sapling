@@ -67,6 +67,6 @@ def reposetup(ui, repo):
                     ui.write_err(configmsg + "\n")
                 else:
                     ui.write_err(defaultmsg)
-            # Only the first marker is checked as they are ordered chronologically
+            # Check the first marker as markers are ordered chronologically
             break
 

@@ -216,7 +216,8 @@ def insertrawdata(repo, dic, mapping={}):
     _close(conn, cursor)
 
 
-def retrievedatapkg(repo, ctxlist, move=False, askserver=False, addmissing=True):
+def retrievedatapkg(repo, ctxlist, move=False, askserver=False,
+                    addmissing=True):
     """
     retrieves {ctxhash: {dst: src}} for ctxhash in ctxlist for moves or copies
     """

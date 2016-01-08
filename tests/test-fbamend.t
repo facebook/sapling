@@ -206,7 +206,7 @@ Test interaction with histedit
   warning: the commit's children were left behind
   (this is okay since a histedit is in progress)
   Changes commited as a2329fab3fab. You may amend the commit now.
-  When you are finished, run hg histedit --continue to resume
+  When you are done, run hg histedit --continue to resume
   [1]
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
   @  a2329fab3fab b

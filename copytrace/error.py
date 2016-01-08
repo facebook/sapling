@@ -17,4 +17,4 @@ def logfailure(repo, e, funcname, warning=True):
         ui.warn(warnmsg)
     else:
         if ui.verbose:
-            ui.warn("An error was encountered. Falling back to old copytracing")
+            ui.warn(_("Error encountered. Falling back to old copytracing"))

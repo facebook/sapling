@@ -38,7 +38,7 @@ def defineactions():
             self.state.write()
             raise error.InterventionRequired(
                 _('Changes commited as %s. You may amend the commit now.\n'
-                  'When you are finished, run hg histedit --continue to resume') %
+                  'When you are done, run hg histedit --continue to resume') %
                 parentctx)
 
         def continueclean(self):
@@ -57,7 +57,7 @@ def defineactions():
 
         @classmethod
         def fromrule(cls, state, rule):
-            """Parses the given rule, returning an instance of the histeditaction.
+            """Parses the given rule, returns an instance of the histeditaction.
             """
             command = rule
             return cls(state, command)
@@ -92,7 +92,8 @@ def defineactions():
                 ctx = repo[ctxnode]
                 shell = os.environ.get('SHELL', None)
                 cmd = self.command
-                if shell and self.repo.ui.config('fbhistedit', 'exec_in_user_shell'):
+                if shell and self.repo.ui.config('fbhistedit',
+                                                 'exec_in_user_shell'):
                     cmd = "%s -c -i %s" % (shell, quote(cmd))
                 rc = util.system(cmd,  environ={'HGNODE': ctx.hex()},
                                     cwd=self.cwd)
@@ -183,7 +184,7 @@ def _rebase(orig, ui, repo, **opts):
             repo.vfs.exists('histedit.state'):
         msg = _("no rebase in progress")
         hint = _('If you want to continue or abort an interactive rebase please'
-                 'use "histedit --continue/--abort" instead.')
+                 ' use "histedit --continue/--abort" instead.')
         raise error.Abort(msg, hint=hint)
 
     if not opts.get('interactive'):

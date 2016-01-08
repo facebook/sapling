@@ -213,8 +213,8 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
                 if not dst in used:
                     diverge.setdefault(src, []).append(dst)
 
-        # puts the copy data into a temporary row of the db to be able to retrieve
-        # it at the commit time of the rebase (concludenode)
+        # puts the copy data into a temporary row of the db to be able to
+        # retrieve it at the commit time of the rebase (concludenode)
         dbutil.removectx(repo, '0')
         dbutil.insertdata(repo, '0', {}, copy)
         return copy, {}, diverge, renamedelete
