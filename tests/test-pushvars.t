@@ -25,7 +25,7 @@ Test pushing vars to repo
   $ echo b > a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG=1" --pushvars "BYPASS_REVIEW=true"
-  pushing to $TESTTMP/repo
+  pushing to $TESTTMP/repo (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -39,7 +39,7 @@ Test pushing var with empty right-hand side
   $ echo b >> a
   $ hg commit -Aqm a
   $ hg push --pushvars "DEBUG="
-  pushing to $TESTTMP/repo
+  pushing to $TESTTMP/repo (glob)
   searching for changes
   adding changesets
   adding manifests
@@ -52,7 +52,7 @@ Test pushing bad vars
   $ echo b >> a
   $ hg commit -Aqm b
   $ hg push --pushvars "DEBUG"
-  pushing to $TESTTMP/repo
+  pushing to $TESTTMP/repo (glob)
   searching for changes
   abort: passed in variable needs to be of form var= or var=val. Instead, this was given "DEBUG"
   [255]

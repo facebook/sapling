@@ -596,7 +596,7 @@ Test that hooks are fired with the correct variables
   (activating bookmark master)
   $ echo >> file && hg ci -Aqm first
   $ hg push --to master -B master
-  pushing to $TESTTMP/hookserver
+  pushing to $TESTTMP/hookserver (glob)
   searching for changes
   prepushrebase hook: HG_BUNDLE2=1 HG_HOOK_BUNDLEPATH=* HG_NODE=4fcee35c508c1019667f72cae9b843efa8908701 HG_SOURCE=push (glob)
   prechangegroup hook: HG_BUNDLE2=1 HG_SOURCE=push HG_TXNID=TXN:* HG_URL=push (glob)
@@ -654,7 +654,7 @@ Test date rewriting
   > daterewrite=$TESTTMP/daterewrite.py
   > EOF
   $ hg push --to master
-  pushing to $TESTTMP/rewritedate
+  pushing to $TESTTMP/rewritedate (glob)
   searching for changes
   pushing 1 commit:
       d5e255ef74f8  c
@@ -684,7 +684,7 @@ Test date rewriting with a merge commit
   $ hg merge -q 4
   $ hg commit -qm merge
   $ hg push --to master
-  pushing to $TESTTMP/rewritedate
+  pushing to $TESTTMP/rewritedate (glob)
   searching for changes
   pushing 3 commits:
       a5f9a9a43049  x
@@ -725,13 +725,13 @@ Test force pushes
   $ echo b >> a && hg commit -Aqm b
   $ hg book master
   $ hg push -f --to master -B master
-  pushing to $TESTTMP/forcepushserver
+  pushing to $TESTTMP/forcepushserver (glob)
   searching for changes
   pushing 1 commit:
       1846eede8b68  b
   exporting bookmark master
   $ hg pull
-  pulling from $TESTTMP/forcepushserver
+  pulling from $TESTTMP/forcepushserver (glob)
   searching for changes
   adding changesets
   adding manifests

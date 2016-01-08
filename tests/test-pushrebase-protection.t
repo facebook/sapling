@@ -27,21 +27,21 @@ Setup pushrebase required repo
 Non-pushrebase pushes should be rejected
 
   $ hg push
-  pushing to $TESTTMP/server
+  pushing to $TESTTMP/server (glob)
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
   abort: this repository requires that you push using 'hg push --to'
   [255]
 
   $ hg push -f
-  pushing to $TESTTMP/server
+  pushing to $TESTTMP/server (glob)
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
   abort: this repository requires that you push using 'hg push --to'
   [255]
 
   $ hg push -B master
-  pushing to $TESTTMP/server
+  pushing to $TESTTMP/server (glob)
   searching for changes
   error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you push using 'hg push --to'
   abort: this repository requires that you push using 'hg push --to'
@@ -50,7 +50,7 @@ Non-pushrebase pushes should be rejected
 Pushrebase pushes should be allowed
 
   $ hg push --config extensions.pushrebase=$TESTDIR/../pushrebase.py --to master -B master
-  pushing to $TESTTMP/server
+  pushing to $TESTTMP/server (glob)
   searching for changes
   pushing 1 commit:
       1846eede8b68  b
@@ -60,7 +60,7 @@ Bookmark pushes should not be affected by the block
 
   $ hg book -r ".^" master -f
   $ hg push -B master
-  pushing to $TESTTMP/server
+  pushing to $TESTTMP/server (glob)
   searching for changes
   no changes found
   updating bookmark master

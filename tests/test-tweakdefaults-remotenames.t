@@ -46,13 +46,13 @@ Test that hg pull --rebase aborts without --dest
   [255]
   $ hg book bm -t default/two
   $ hg pull --rebase
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
   rebasing 3:3de6bbccf693 "foo" (tip bm)
   saved backup bundle to $TESTTMP/clone/.hg/strip-backup/3de6bbccf693-0dce0663-backup.hg (glob)
   $ hg pull --rebase --dest three
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
   rebasing 3:54ac787ff1c5 "foo" (tip bm)
@@ -64,7 +64,7 @@ Test that hg pull --update aborts without --dest
   (use `hg pull --update --dest <destination>`)
   [255]
   $ hg pull --update --dest one
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
@@ -72,7 +72,7 @@ Test that hg pull --update aborts without --dest
 
 Test that setting a defaultdest allows --update and --rebase to work
   $ hg pull --update --config tweakdefaults.defaultdest=two
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -88,7 +88,7 @@ Test that setting a defaultdest allows --update and --rebase to work
   $ echo d > d
   $ hg commit -qAm d
   $ hg pull --rebase --config tweakdefaults.defaultdest=three
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   no changes found
   rebasing 4:50f3f60b4841 "d" (tip)
