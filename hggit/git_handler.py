@@ -23,7 +23,6 @@ from mercurial import (
     context,
     encoding,
     util as hgutil,
-    lock as lockmod,
     url,
 )
 
@@ -1320,19 +1319,7 @@ class GitHandler(object):
                         bms[head + suffix] = hgsha
 
             if heads:
-                tr = lock = wlock = None
-                try:
-                    wlock = self.repo.wlock()
-                    lock = self.repo.lock()
-                    tr = self.repo.transaction('git_handler')
-                    if hgutil.safehasattr(bms, 'recordchange'):
-                        # recordchange was added in mercurial 3.2
-                        bms.recordchange(tr)
-                    else:
-                        bms.write()
-                    tr.close()
-                finally:
-                    lockmod.release(tr, lock, wlock)
+                util.recordbookmarks(self.repo, bms)
 
         except AttributeError:
             self.ui.warn(_('creating bookmarks failed, do you have'
