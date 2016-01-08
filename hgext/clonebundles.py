@@ -164,15 +164,6 @@ Mercurial server when the bundle hosting service fails.
 The following config options influence the behavior of the clone bundles
 feature:
 
-ui.clonebundleadvertise
-   Whether the server advertises the existence of the clone bundles feature
-   to compatible clients that aren't using it.
-
-   When this is enabled (the default), a server will send a message to
-   compatible clients performing a traditional clone informing them of the
-   available clone bundles feature. Compatible clients are those that support
-   bundle2 and are advertising support for the clone bundles feature.
-
 ui.clonebundlefallback
    Whether to automatically fall back to a traditional clone in case of
    clone bundles failure. Defaults to false for reasons described above.
@@ -190,10 +181,7 @@ experimental.clonebundleprefers
    available bundle will be downloaded.
 """
 
-from mercurial.i18n import _
-from mercurial.node import nullid
 from mercurial import (
-    exchange,
     extensions,
     wireproto,
 )
@@ -210,45 +198,6 @@ def capabilities(orig, repo, proto):
         caps.append('clonebundles')
 
     return caps
-
-@exchange.getbundle2partsgenerator('clonebundlesadvertise', 0)
-def advertiseclonebundlespart(bundler, repo, source, bundlecaps=None,
-                              b2caps=None, heads=None, common=None,
-                              cbattempted=None, **kwargs):
-    """Inserts an output part to advertise clone bundles availability."""
-    # Allow server operators to disable this behavior.
-    # # experimental config: ui.clonebundleadvertise
-    if not repo.ui.configbool('ui', 'clonebundleadvertise', True):
-        return
-
-    # Only advertise if a manifest is present.
-    if not repo.opener.exists('clonebundles.manifest'):
-        return
-
-    # And when changegroup data is requested.
-    if not kwargs.get('cg', True):
-        return
-
-    # And when the client supports clone bundles.
-    if cbattempted is None:
-        return
-
-    # And when the client didn't attempt a clone bundle as part of this pull.
-    if cbattempted:
-        return
-
-    # And when a full clone is requested.
-    # Note: client should not send "cbattempted" for regular pulls. This check
-    # is defense in depth.
-    if common and common != [nullid]:
-        return
-
-    msg = _('this server supports the experimental "clone bundles" feature '
-            'that should enable faster and more reliable cloning\n'
-            'help test it by setting the "experimental.clonebundles" config '
-            'flag to "true"')
-
-    bundler.newpart('output', data=msg)
 
 def extsetup(ui):
     extensions.wrapfunction(wireproto, '_capabilities', capabilities)

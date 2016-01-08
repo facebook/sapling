@@ -68,17 +68,6 @@ Empty manifest file results in retrieval
   adding file changes
   added 2 changesets with 2 changes to 2 files
 
-Server advertises presence of feature to client requesting full clone
-
-  $ hg --config experimental.clonebundles=false clone -U http://localhost:$HGPORT advertise-on-clone
-  requesting all changes
-  remote: this server supports the experimental "clone bundles" feature that should enable faster and more reliable cloning
-  remote: help test it by setting the "experimental.clonebundles" config flag to "true"
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-
 Manifest file with invalid URL aborts
 
   $ echo 'http://does.not.exist/bundle.hg' > server/.hg/clonebundles.manifest
