@@ -111,7 +111,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             sourcemirror = mirror
             break
     if not sourcemirror:
-        raise Exception("unable to detect source mirror of '%s'" % sourcepath)
+        raise error.Abort("unable to detect source mirror of '%s'" % sourcepath)
 
     relpath = sourcepath[len(sourcemirror):]
 
