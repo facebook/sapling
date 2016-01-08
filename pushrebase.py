@@ -422,7 +422,7 @@ def _addpushbackchangegroup(repo, reply, outgoing):
                                             outgoing,
                                             version = version)
 
-    cgpart = reply.newpart('CHANGEGROUP', data = cg)
+    cgpart = reply.newpart('CHANGEGROUP', data=cg)
     if version != '01':
         cgpart.addparam('version', version)
 

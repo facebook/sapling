@@ -397,7 +397,7 @@ def buildstate(orig, repo, dest, rebaseset, collapsef, obsoletenotrebased):
                     maxi = int(repo.ui.config('copytrace', 'maxquery', '500'))
                     length = len(ctxlist)
                     for i in range(0, length, maxi):
-                        subctx = ctxlist[i:min(i+maxi, length)]
+                        subctx = ctxlist[i:min(i + maxi, length)]
                         dbutil.checkpresence(repo,
                              [ctx.hex() for ctx in subctx], True, False)
 

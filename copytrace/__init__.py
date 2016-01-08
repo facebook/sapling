@@ -31,7 +31,7 @@ def extsetup(ui):
     # amend or rebase
     # - Enablebundle2 allows to exchange move data with the server during pulls
     # and pushs
-    # - Enablecopytracing allows the use of the local database to do 
+    # - Enablecopytracing allows the use of the local database to do
     # copytracing during rebases, 'hg st -C', ...
 
     # /!\

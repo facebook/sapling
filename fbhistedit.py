@@ -44,7 +44,7 @@ def defineactions():
         def continueclean(self):
             self.state.replacements = [(n, r) for (n, r) \
                                        in self.state.replacements \
-                                       if n!=self.node]
+                                       if n != self.node]
             return super(stop, self).continueclean()
 
     @histedit.addhisteditaction(['exec', 'x'])

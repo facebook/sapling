@@ -52,7 +52,7 @@ The first client works on a diff while the second client lands one of her diff
   remote: pushing 1 commit:
   remote:     2e73b79a63d8  add b
   updating bookmark master
-  $ cd ../client 
+  $ cd ../client
   $ mkcommit c 123 # 123 is the phabricator rev number (see function above)
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   @  2 "add c
@@ -115,7 +115,7 @@ Here pull should mark 2 as obsolete since it landed as 4 on the remote
   |
   o  0 "add initial"
   
-Rebasing a stack containing landed changesets should only rebase the non-landed 
+Rebasing a stack containing landed changesets should only rebase the non-landed
 changesets
 
   $ hg up --hidden 2 # --hidden because directaccess works only with hashes

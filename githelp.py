@@ -94,7 +94,7 @@ def parseoptions(ui, cmdoptions, args):
 
     args = list([convert(x) for x in args])
     opts = dict([(k, convert(v)) if isinstance(v, str) else (k, v)
-                                 for k,v in opts.iteritems()])
+                                 for k, v in opts.iteritems()])
 
     return args, opts
 

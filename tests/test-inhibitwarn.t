@@ -12,7 +12,7 @@ Test of warning for evolve users when inhibit is enabled
   > evolve=
   > EOF
   $ echo "inhibitwarn = $TESTDIR/../inhibitwarn.py" >> $HGRCPATH
-  $ hg init repo 
+  $ hg init repo
   $ cd repo
   $ mkcommit() {
   >    echo "$1" > "$1"

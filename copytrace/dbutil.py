@@ -288,7 +288,7 @@ def retrieverawdata(repo, ctxlist):
     maxi = int(repo.ui.config('copytrace', 'maxquery', '500'))
     # Cutting the query by a thousand so that it doesn't get too big
     for i in range(0, length, maxi):
-        subctx = ctxlist[i:min(i+maxi, length)]
+        subctx = ctxlist[i:min(i + maxi, length)]
         # Returns: hash, src, dst, mv
         cursor.execute(_sqlcmds('retrieveraw', repo.copytraceremote) %
                        (','.join([token] * len(subctx)), token),
