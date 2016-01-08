@@ -64,7 +64,7 @@ def _call_conduit(method, **kwargs):
     for attempt in xrange(MAX_CONNECT_RETRIES):
         try:
             connection.request('POST', path, args, {'Connection': 'Keep-Alive'})
-            break;
+            break
         except httplib.HTTPException as e:
             connection.connect()
     else:
