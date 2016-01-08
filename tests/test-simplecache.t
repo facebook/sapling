@@ -252,9 +252,9 @@ Test local cache eviction
   $ echo 'x' >> y && hg commit -qm "4" && hg export --debug > /dev/null
   $ echo 'x' >> y && hg commit -qm "5" && hg export --debug > /dev/null
   $ echo 'x' >> y && hg commit -qm "6" && hg export --debug > /dev/null
-  $ ls $TESTTMP/hgsimplecache | wc -l
+  $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   8
   $ echo 'x' >> y && hg commit -qm "7"
   $ hg export --debug --config simplecache.maxcachesize=2 --config simplecache.evictionpercent=50 > /dev/null
-  $ ls $TESTTMP/hgsimplecache | wc -l
+  $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   5
