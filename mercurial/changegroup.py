@@ -298,7 +298,6 @@ class cg1unpacker(object):
         # no new manifest will be created and the manifest group will
         # be empty during the pull
         self.manifestheader()
-        repo.manifest.narrowdebug = repo.ui.warn
         repo.manifest.addgroup(self, revmap, trp)
         repo.ui.progress(_('manifests'), None)
 
