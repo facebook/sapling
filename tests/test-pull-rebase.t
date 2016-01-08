@@ -110,3 +110,33 @@ Tests the behavior of a pull followed by a pull --rebase
   abort: can't rebase public changeset 4557926d2166
   (see "hg help phases" for details)
   [255]
+
+Tests that there are no race condition between pulling changesets and remote bookmarks
+  $ cd ..
+  $ cat > hangpull.py << EOF
+  > """A small extension that makes pull hang for 5 sec, for testing"""
+  > from mercurial import extensions, exchange
+  > def _pullremotenames(orig, repo, remote, *args, **opts):
+  >     import time
+  >     time.sleep(5)
+  >     return orig(repo, remote, *args, **opts)
+  > def extsetup(ui):
+  >     remotenames = extensions.find('remotenames')
+  >     extensions.wrapfunction(remotenames, 'pullremotenames', _pullremotenames)
+  > EOF
+  $ cd localrepo
+  $ hg --config="extensions.hangpull=$TESTTMP/hangpull.py" -q pull &
+  $ sleep 1
+  $ cd ../remoterepo
+  $ hg up bookmarkonremote -q
+  $ mkcommit between_pull
+  $ wait
+  $ hg log -l 1 --template="{desc}\n"
+  between_pull
+  $ cd ../localrepo
+  $ hg up tracking -q
+  $ hg log -l 1 --template="{desc} {remotenames}\n"
+  foo default/bookmarkonremote default/default
+  $ hg -q pull
+  $ hg log -l 1 --template="{desc} {remotenames}\n"
+  between_pull default/bookmarkonremote default/default
