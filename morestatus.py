@@ -61,7 +61,7 @@ def unshelvemsg(repo, ui):
     helpmessage(ui, 'hg unshelve --continue', 'hg unshelve --abort')
 
 def graftmsg(repo, ui):
-     # tweakdefaults requires `update` to have a rev hence the `.`
+    # tweakdefaults requires `update` to have a rev hence the `.`
     helpmessage(ui, 'hg graft --continue', 'hg update .')
 
 def updatemsg(repo, ui):
@@ -74,7 +74,7 @@ def updatemsg(repo, ui):
     helpmessage(ui, continuecmd, abortcmd)
 
 def mergemsg(repo, ui):
-     # tweakdefaults requires `update` to have a rev hence the `.`
+    # tweakdefaults requires `update` to have a rev hence the `.`
     helpmessage(ui, 'hg commit', 'hg update --clean .    (warning: this will '
             'erase all uncommitted changed)')
 

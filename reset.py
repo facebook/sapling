@@ -212,7 +212,7 @@ def _moveto(repo, bookmark, ctx, clean=False):
             repo._bookmarks.recordchange(tr)
             tr.close()
         finally:
-           lockmod.release(lock, tr)
+            lockmod.release(lock, tr)
 
 def _deleteunreachable(repo, ctx):
     """Deletes all ancestor and descendant commits of the given revision that

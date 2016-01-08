@@ -83,12 +83,12 @@ def parseoptions(ui, cmdoptions, args):
             else:
                 raise GitUnknownError("unknown option %s" % ex.opt)
             try:
-              args.remove(flag)
+                args.remove(flag)
             except:
-              raise GitUnknownError(
-                "unknown option {0} packed with other options\n"
-                "Please try passing the option as it's own flag: -{0}" \
-                .format(ex.opt))
+                raise GitUnknownError(
+                    "unknown option {0} packed with other options\n"
+                    "Please try passing the option as it's own flag: -{0}" \
+                    .format(ex.opt))
 
             ui.warn("ignoring unknown option %s\n" % flag)
 

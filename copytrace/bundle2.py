@@ -172,7 +172,7 @@ def _encodedict(dic):
     expandedlist = []
     for ctxhash, mvlist in dic.iteritems():
         for src, dst, mv in mvlist:
-             expandedlist.append('%s\t%s\t%s\t%s' % (ctxhash, src, dst, mv))
+            expandedlist.append('%s\t%s\t%s\t%s' % (ctxhash, src, dst, mv))
     return '\n'.join(expandedlist)
 
 

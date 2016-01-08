@@ -87,10 +87,10 @@ def extsetup(ui):
     wrapcommand(commands.table, 'tags', tagscmd)
     wrapcommand(commands.table, 'graft', graftcmd)
     try:
-      fbamendmodule = extensions.find('fbamend')
-      wrapcommand(fbamendmodule.cmdtable, 'amend', amendcmd)
+        fbamendmodule = extensions.find('fbamend')
+        wrapcommand(fbamendmodule.cmdtable, 'amend', amendcmd)
     except KeyError:
-      pass
+        pass
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -234,7 +234,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
                 'mutually exclusive') % (currentinvalidargs[0]))
 
     if rev:
-       opts['message'] = repo[rev].description()
+        opts['message'] = repo[rev].description()
 
     return orig(ui, repo, *pats, **opts)
 

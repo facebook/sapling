@@ -247,13 +247,13 @@ def fixupamend(ui, repo):
         repo._bookmarks.recordchange(tr)
 
         if obsolete.isenabled(repo, obsolete.createmarkersopt):
-           # clean up the original node if inhibit kept it alive
-           if not old.obsolete():
+            # clean up the original node if inhibit kept it alive
+            if not old.obsolete():
                 obsolete.createmarkers(repo, [(old,())])
-           tr.close()
+            tr.close()
         else:
-           tr.close()
-           repair.strip(ui, repo, old.node(), topic='preamend-backup')
+            tr.close()
+            repair.strip(ui, repo, old.node(), topic='preamend-backup')
 
         merge.update(repo, current.node(), False, True, False)
         if active:
