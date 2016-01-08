@@ -903,8 +903,8 @@ class cg3packer(cg2packer):
         dirlog = self._repo.manifest.dirlog
         for name, nodes in tmfnodes.iteritems():
             # For now, directory headers are simply file headers with
-            # a trailing '/' on the path.
-            yield self.fileheader(name + '/')
+            # a trailing '/' on the path (already in the name).
+            yield self.fileheader(name)
             for chunk in self.group(nodes, dirlog(name), nodes.get):
                 yield chunk
 
