@@ -30,7 +30,7 @@
 
 Remotenames should not interfere with pushvars
 
-  $ hg push --to master --debug --pushvars MYPUSHVAR=true 2>&1 | grep -Ei '(USERVAR|pushvar)'
+  $ hg push --to master --debug --pushvars MYPUSHVAR=true 2>&1 | egrep -i '(USERVAR|pushvar)'
   pushing rev c73f3db8c9d2 to destination $TESTTMP/server bookmark master
   bundle2-output-part: "pushvars" (params: 0 advisory) empty payload
   bundle2-input-part: "pushvars" (params: 0 advisory) supported
