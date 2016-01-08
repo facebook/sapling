@@ -38,7 +38,7 @@ mv/rm/add/modif
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\n' >> b.txt
+  $ printf '\n\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -55,7 +55,7 @@ mv/rm/add/modif
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\nfoo' >> b.txt
+  $ printf '\nfoo\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -70,7 +70,7 @@ mv/rm/add/modif/changethreshold
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\nfoo' >> b.txt
+  $ printf '\nfoo\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -158,7 +158,7 @@ mv/rm/add/modif
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\n' >> b.txt
+  $ printf '\n\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -175,7 +175,7 @@ mv/rm/add/modif
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\nfoo' >> b.txt
+  $ printf '\nfoo\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -190,7 +190,7 @@ mv/rm/add/modif/changethreshold
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
-  $ echo $'\nfoo' >> b.txt
+  $ printf '\nfoo\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt

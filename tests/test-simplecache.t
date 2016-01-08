@@ -29,7 +29,7 @@ Initialize the repo
   $ hg book foo
 
 Test that output remains the same with multiple invocations.
-  $ echo -ne "delete cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1\r\n" | nc localhost 11101
+  $ printf "delete cca.hg.buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1\r\n" | nc localhost 11101
   * (glob)
   $ hg --debug export
   exporting patch:
@@ -158,7 +158,7 @@ Test that localcache gets hit if memcache is off
   +x
 
 Test that corrupt caches are gracefully ignored, and updated
-  $ echo -ne "set cca.hg.buildstatus:0632994590a85631ac9ce1a256862a1683a3ce56:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 0 0 5\r\nhello\r\n" | nc localhost 11101
+  $ printf "set cca.hg.buildstatus:0632994590a85631ac9ce1a256862a1683a3ce56:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 0 0 5\r\nhello\r\n" | nc localhost 11101
   STORED\r (esc)
   $ hg --debug log -vpC -r .
   got value for key buildstatus:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:b292c1e3311fd0f13ae83b409caae4a6d1fb348c:v1 from memcache
@@ -194,7 +194,7 @@ Test that corrupt caches are gracefully ignored, and updated
   
 
 Test strange (unicode) filenames
-  $ echo -ne "delete cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1\r\n" | nc localhost 11101
+  $ printf "delete cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v1\r\n" | nc localhost 11101
   * (glob)
   $ echo 'x' > Å
   $ hg add Å
