@@ -377,7 +377,7 @@ important)
 
 Preferring an undefined attribute will take first entry
 
-  $ hg --config experimental.clonebundleprefers=foo=bar clone -U http://localhost:$HGPORT prefer-foo
+  $ hg --config ui.clonebundleprefers=foo=bar clone -U http://localhost:$HGPORT prefer-foo
   applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
   adding changesets
   adding manifests
@@ -389,7 +389,7 @@ Preferring an undefined attribute will take first entry
 
 Preferring bz2 type will download first entry of that type
 
-  $ hg --config experimental.clonebundleprefers=COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-bz
+  $ hg --config ui.clonebundleprefers=COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-bz
   applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
   adding changesets
   adding manifests
@@ -401,7 +401,7 @@ Preferring bz2 type will download first entry of that type
 
 Preferring multiple values of an option works
 
-  $ hg --config experimental.clonebundleprefers=COMPRESSION=unknown,COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-multiple-bz
+  $ hg --config ui.clonebundleprefers=COMPRESSION=unknown,COMPRESSION=bzip2 clone -U http://localhost:$HGPORT prefer-multiple-bz
   applying clone bundle from http://localhost:$HGPORT1/bz2-a.hg
   adding changesets
   adding manifests
@@ -413,7 +413,7 @@ Preferring multiple values of an option works
 
 Sorting multiple values should get us back to original first entry
 
-  $ hg --config experimental.clonebundleprefers=BUNDLESPEC=unknown,BUNDLESPEC=gzip-v2,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-multiple-gz
+  $ hg --config ui.clonebundleprefers=BUNDLESPEC=unknown,BUNDLESPEC=gzip-v2,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-multiple-gz
   applying clone bundle from http://localhost:$HGPORT1/gz-a.hg
   adding changesets
   adding manifests
@@ -425,7 +425,7 @@ Sorting multiple values should get us back to original first entry
 
 Preferring multiple attributes has correct order
 
-  $ hg --config experimental.clonebundleprefers=extra=b,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-separate-attributes
+  $ hg --config ui.clonebundleprefers=extra=b,BUNDLESPEC=bzip2-v2 clone -U http://localhost:$HGPORT prefer-separate-attributes
   applying clone bundle from http://localhost:$HGPORT1/bz2-b.hg
   adding changesets
   adding manifests
@@ -444,7 +444,7 @@ Test where attribute is missing from some entries
   > http://localhost:$HGPORT1/bz2-b.hg BUNDLESPEC=bzip2-v2 extra=b
   > EOF
 
-  $ hg --config experimental.clonebundleprefers=extra=b clone -U http://localhost:$HGPORT prefer-partially-defined-attribute
+  $ hg --config ui.clonebundleprefers=extra=b clone -U http://localhost:$HGPORT prefer-partially-defined-attribute
   applying clone bundle from http://localhost:$HGPORT1/gz-b.hg
   adding changesets
   adding manifests

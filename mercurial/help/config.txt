@@ -1502,6 +1502,30 @@ User interface controls.
 
     (default: False)
 
+``clonebundleprefers``
+    Defines preferences for which "clone bundles" to use.
+
+    Servers advertising "clone bundles" may advertise multiple available
+    bundles. Each bundle may have different attributes, such as the bundle
+    type and compression format. This option is used to prefer a particular
+    bundle over another.
+
+    The following keys are defined by Mercurial:
+
+    BUNDLESPEC
+       A bundle type specifier. These are strings passed to :hg:`bundle -t`.
+       e.g. ``gzip-v2`` or ``bzip2-v1``.
+
+    COMPRESSION
+       The compression format of the bundle. e.g. ``gzip`` and ``bzip2``.
+
+    Server operators may define custom keys.
+
+    Example values: ``COMPRESSION=bzip2``,
+    ``BUNDLESPEC=gzip-v2, COMPRESSION=gzip``.
+
+    By default, the first bundle advertised by the server is used.
+
 ``commitsubrepos``
     Whether to commit modified subrepositories when committing the
     parent repository. If False and one subrepository has uncommitted

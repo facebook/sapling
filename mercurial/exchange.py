@@ -1805,8 +1805,7 @@ def filterclonebundleentries(repo, entries):
     return newentries
 
 def sortclonebundleentries(ui, entries):
-    # experimental config: experimental.clonebundleprefers
-    prefers = ui.configlist('experimental', 'clonebundleprefers', default=[])
+    prefers = ui.configlist('ui', 'clonebundleprefers', default=[])
     if not prefers:
         return list(entries)
 
