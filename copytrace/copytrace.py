@@ -169,9 +169,9 @@ def mergecopieswithdb(orig, repo, c1, c2, ca):
         if c2.node() is None and c1.node() == repo.dirstate.p1():
             return repo.dirstate.copies(), {}, {}, {}
 
-        if c1.rev() == None:
+        if c1.rev() is None:
             c1 = c1.p1()
-        if c2.rev() == None:
+        if c2.rev() is None:
             c2 = c2.p1()
 
         # in case of a rebase, ca isn't always a common ancestor

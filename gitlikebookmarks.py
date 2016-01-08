@@ -30,7 +30,7 @@ def _bookmarkwrite(orig, bkmstoreinst, *args, **kwargs):
         activebook = bkmstoreinst.oldactivebookmark
         bookmarksbefore = bkmstoreinst.oldbookmarks
 
-    if activebook != None:
+    if activebook is not None:
         override = []
         for book in bkmstoreinst:
             if book == activebook:

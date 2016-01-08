@@ -493,7 +493,7 @@ def bundle2rebase(op, part):
         bundle.manifest._cache = op.repo.manifest._cache
 
         try:
-            # onto == None means don't do rebasing
+            # onto is None means don't do rebasing
             onto = None
             ontoarg = params.get('onto', donotrebasemarker)
             if ontoarg != donotrebasemarker:
@@ -506,7 +506,7 @@ def bundle2rebase(op, part):
             if not op.repo.revs('%r and head()', params['onto']):
                 raise error.Abort(_('rebase would create a new head on server'))
 
-        if onto == None:
+        if onto is None:
             maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))
             if not maxcommonanc:
                 onto = op.repo[nullid]

@@ -188,7 +188,7 @@ class CodeSite(object):
             return v
 
     def getsource(self, length):
-        if self.source == None:
+        if self.source is None:
             lineno = self.lineno - 1
             fp = None
             try:
@@ -202,7 +202,7 @@ class CodeSite(object):
             finally:
                 if fp:
                     fp.close()
-            if self.source == None:
+            if self.source is None:
                 self.source = ''
 
         source = self.source
@@ -487,7 +487,7 @@ def display_by_method(fp):
                 print >> fp, ('%33.0f%% %6.2f   line %s: %s' % (stattuple))
 
 def display_about_method(fp, function=None, **kwargs):
-    if function == None:
+    if function is None:
         raise Exception("Invalid function")
 
     filename = None
@@ -664,7 +664,7 @@ usage:
         Requires that ~/flamegraph.pl exist."""
 
 def main(argv=None):
-    if argv == None:
+    if argv is None:
         argv = sys.argv
 
     if len(argv) == 1:
