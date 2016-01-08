@@ -27,10 +27,10 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 class GitUnknownError(error.Abort):
-    FailMessage = ("\n\nIf this is a valid git command, please log a task for"
+    failmessage = ("\n\nIf this is a valid git command, please log a task for"
                    " the source_control oncall.\n")
     def __init__(self, msg):
-        msg = msg + GitUnknownError.FailMessage
+        msg = msg + GitUnknownError.failmessage
         super(GitUnknownError, self).__init__(msg)
 
 def convert(s):

@@ -5,8 +5,14 @@
   > [extensions]
   > strip =
   > EOF
-  $ alias commit='hg commit -d "0 0" -A -m'
-  $ alias log='hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}"'
+
+  $ commit() {
+  >   hg commit -d "0 0" -A -m "$@"
+  > }
+
+  $ log() {
+  >   hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}" "$@"
+  > }
 
 Set up server repository
 

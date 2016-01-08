@@ -134,7 +134,7 @@ Test that output remains the same with multiple invocations.
   
 
 Test that localcache gets hit if memcache is off
-  $ hg --debug export --config simplecache.caches=local
+  $ hg --debug --config simplecache.caches=local export
   exporting patch:
   # HG changeset patch
   # User test
@@ -255,6 +255,6 @@ Test local cache eviction
   $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   8
   $ echo 'x' >> y && hg commit -qm "7"
-  $ hg export --debug --config simplecache.maxcachesize=2 --config simplecache.evictionpercent=50 > /dev/null
+  $ hg --debug --config simplecache.maxcachesize=2 --config simplecache.evictionpercent=50 export > /dev/null
   $ ls $TESTTMP/hgsimplecache | grep -c buildstatus
   5
