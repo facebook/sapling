@@ -160,7 +160,7 @@ def prunemanifestdiskcache(ui, repo):
                 # because opener.unlink will try to case-escape.
                 try:
                     os.unlink(path)
-                except:
+                except Exception:
                     pass
                 continue
 
@@ -192,7 +192,7 @@ def prunemanifestdiskcache(ui, repo):
             # opener.unlink will try to case-escape.
             try:
                 os.unlink(path)
-            except:
+            except Exception:
                 pass
 
 @replaceclass(changegroup, 'cg1unpacker')
@@ -267,7 +267,7 @@ class manifestwithdc(manifest.manifest):
                     result = self._checkhash(result, node, rev)
 
                     return result
-            except:
+            except Exception:
                 # it's a cache.  suppress the exception, disable caching
                 # going forward, and then report if logging is enabled.
                 if logging and not expectedexception:
@@ -316,7 +316,7 @@ class manifestwithdc(manifest.manifest):
                 fh.write(text)
             finally:
                 fh.close()
-        except:
+        except Exception:
             # it's a cache.  suppress the exception, disable caching
             # going forward, and then report if logging is enabled.
             if loggingenabled:

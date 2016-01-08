@@ -178,7 +178,7 @@ def localget(key, ui):
         path = localpath(key, ui)
         with open(path) as f:
             return f.read()
-    except:
+    except Exception:
         return None
 
 def localset(key, value, ui):
@@ -200,7 +200,7 @@ def localset(key, value, ui):
             evictionpercent /= 100.0
             for i in xrange(0, int(len(entries) * evictionpercent)):
                 os.remove(os.path.join(tempdirpath, entries[i]))
-    except:
+    except Exception:
         return
 
 cachefuncs = {

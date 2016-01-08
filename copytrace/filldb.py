@@ -119,7 +119,7 @@ def fillmvdb(ui, repo, *pats, **opts):
             for p in plist:
                 if p and p.rev() != stop:
                     ctxlist.append(p.hex())
-    except:
+    except Exception:
         ui.warn(ctxlist)
 
 
@@ -142,5 +142,5 @@ def _fillctx(repo, ctxlist):
                 parents.append(ctx.p1())
                 parents.append(ctx.p2())
             return parents
-    except:
-        repo.ui.warn("%s failed\n" % ''.join(ctxlist))
+    except Exception:
+        repo.ui.warn(_("%s failed\n") % ''.join(ctxlist))

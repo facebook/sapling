@@ -290,10 +290,10 @@ def _makebundlefile(part):
                 data = part.read(resource.getpagesize())
         finally:
             fp.close()
-    except:
+    except Exception:
         try:
             os.unlink(bundlefile)
-        except:
+        except Exception:
             # we would rather see the original exception
             pass
         raise

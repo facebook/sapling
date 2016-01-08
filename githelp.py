@@ -84,7 +84,7 @@ def parseoptions(ui, cmdoptions, args):
                 raise GitUnknownError("unknown option %s" % ex.opt)
             try:
                 args.remove(flag)
-            except:
+            except Exception:
                 raise GitUnknownError(
                     "unknown option {0} packed with other options\n"
                     "Please try passing the option as it's own flag: -{0}" \
@@ -448,7 +448,7 @@ def diff(ui, repo, *args, **kwargs):
         try:
             repo.revs(a)
             cmd['-r'] = a
-        except:
+        except Exception:
             cmd.append(a)
 
     ui.status(str(cmd), "\n")

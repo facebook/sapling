@@ -16,7 +16,7 @@ import sqlite3
 # user servers don't need to have the mysql module
 try:
     import mysql.connector
-except:
+except Exception:
     pass
 
 localdb = 'moves.db'

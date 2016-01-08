@@ -120,7 +120,7 @@ def saveupdateargs(repo, args, **kwargs):
 def cleanupdateargs(repo, **kwargs):
     try:
         repo.vfs.unlink(UPDATEARGS)
-    except:
+    except Exception:
         pass
 
 def statuscmd(orig, ui, repo, *pats, **opts):
