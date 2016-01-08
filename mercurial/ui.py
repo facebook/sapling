@@ -507,6 +507,9 @@ class ui(object):
                 result = default or []
         return result
 
+    def hasconfig(self, section, name, untrusted=False):
+        return self._data(untrusted).hasitem(section, name)
+
     def has_section(self, section, untrusted=False):
         '''tell whether section exists in config.'''
         return section in self._data(untrusted)

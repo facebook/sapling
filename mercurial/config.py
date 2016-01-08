@@ -30,6 +30,8 @@ class config(object):
         return config(self)
     def __contains__(self, section):
         return section in self._data
+    def hasitem(self, section, item):
+        return item in self._data.get(section, {})
     def __getitem__(self, section):
         return self._data.get(section, {})
     def __iter__(self):
