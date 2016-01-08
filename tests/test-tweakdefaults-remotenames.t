@@ -2,7 +2,7 @@ Check for remotenames and skip if not present
   $ $PYTHON -c 'import remotenames' || exit 80
 
 Set up
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]

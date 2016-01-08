@@ -1,5 +1,5 @@
   $ . "$TESTDIR/copytrace.sh"
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > copytrace=$extpath/copytrace

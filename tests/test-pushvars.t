@@ -1,4 +1,4 @@
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/bash
   > env | grep -E "^HG_USERVAR_DEBUG"

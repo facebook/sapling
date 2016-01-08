@@ -1,4 +1,4 @@
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]

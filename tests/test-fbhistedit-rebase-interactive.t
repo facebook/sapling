@@ -1,14 +1,15 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
+  $ extpath=`dirname $TESTDIR`
+  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH <<EOF
   > [experimental]
   > histeditng=True
   > [extensions]
   > rebase=
   > histedit=
+  > fbhistedit=$TESTTMP/fbhistedit.py
   > EOF
-
-  $ echo "fbhistedit=$(echo $(dirname $TESTDIR))/fbhistedit.py" >> $HGRCPATH
 
   $ initrepo ()
   > {

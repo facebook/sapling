@@ -1,6 +1,6 @@
 Test functionality is present
 
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF

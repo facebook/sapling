@@ -1,5 +1,5 @@
   $ $PYTHON -c 'import remotenames' || exit 80
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/bash
   > env | grep -E "^HG_USERVAR"

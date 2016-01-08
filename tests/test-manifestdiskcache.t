@@ -1,6 +1,6 @@
 Setup
 
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/manifestdiskcache.py $TESTTMP # use $TESTTMP substitution in message
 
 Test functionality is present

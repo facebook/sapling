@@ -1,10 +1,15 @@
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/morestatus.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [morestatus]
   > show=True
   > [extensions]
   > morestatus=$TESTTMP/morestatus.py
+  > histedit=
+  > reset=$TESTTMP/reset.py
+  > fbhistedit=$TESTTMP/fbhistedit.py
   > EOF
   $ cat >> $TESTTMP/breakupdate.py << EOF
   > import sys
@@ -20,8 +25,6 @@ Test An empty repo should return no extra output
   $ hg status
 
 Test status on histedit stop
-  $ echo "histedit=" >> $HGRCPATH
-  $ echo "fbhistedit=$(echo $(dirname $TESTDIR))/fbhistedit.py" >> $HGRCPATH
   $ echo 'a' > a
   $ hg commit -Am 'a' -q
   $ hg histedit -q --commands - . 2> /dev/null << EOF
@@ -88,7 +91,6 @@ Test hg status is normal after graft abort
   $ rm a.orig
 
 Test unshelve state
-  $ echo "reset=" >> $HGRCPATH
   $ echo "shelve=" >> $HGRCPATH
   $ hg reset ".^" -q
   resetting without an active bookmark

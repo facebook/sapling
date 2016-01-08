@@ -1,4 +1,4 @@
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/dirsync.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]

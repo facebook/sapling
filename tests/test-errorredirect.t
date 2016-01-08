@@ -1,4 +1,4 @@
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/errorredirect.py $TESTTMP
   $ cat > $TESTTMP/crash.py << EOF
   > from mercurial import cmdutil
