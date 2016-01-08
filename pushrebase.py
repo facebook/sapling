@@ -85,7 +85,7 @@ def reposetup(ui, repo):
 
 def blocknonpushrebase(ui, repo, **kwargs):
     if not repo.ui.configbool('pushrebase', pushrebasemarker):
-        raise util.Abort("this repository requires that you push using "
+        raise error.Abort("this repository requires that you push using "
                          "'hg push --to'")
 
 def _peerorrepo(orig, ui, path, create=False):
@@ -110,26 +110,26 @@ def unbundle(orig, repo, cg, heads, source, url):
 def validaterevset(repo, revset):
     "Abort if this is a rebasable revset, return None otherwise"
     if not repo.revs(revset):
-        raise util.Abort(_('nothing to rebase'))
+        raise error.Abort(_('nothing to rebase'))
 
     if repo.revs('%r and public()', revset):
-        raise util.Abort(_('cannot rebase public changesets'))
+        raise error.Abort(_('cannot rebase public changesets'))
 
     if repo.revs('%r and obsolete()', revset):
-        raise util.Abort(_('cannot rebase obsolete changesets'))
+        raise error.Abort(_('cannot rebase obsolete changesets'))
 
     heads = repo.revs('heads(%r)', revset)
     if len(heads) > 1:
-        raise util.Abort(_('cannot rebase divergent changesets'))
+        raise error.Abort(_('cannot rebase divergent changesets'))
 
     repo.ui.note(_('validated revset for rebase\n'))
 
 def getrebasepart(repo, peer, outgoing, onto, newhead):
     if not outgoing.missing:
-        raise util.Abort(_('no commits to rebase'))
+        raise error.Abort(_('no commits to rebase'))
 
     if rebaseparttype not in bundle2.bundle2caps(peer):
-        raise util.Abort(_('no server support for %r') % rebaseparttype)
+        raise error.Abort(_('no server support for %r') % rebaseparttype)
 
     validaterevset(repo, revset.formatspec('%ln', outgoing.missing))
 
@@ -153,9 +153,9 @@ def _checkheads(orig, pushop):
         # we need to bypass the regular push checks because it will look like
         # we're pushing a new head, which isn't normally allowed
         if not repo.ui.configbool('experimental', 'bundle2-exp', False):
-            raise util.Abort(_('bundle2 needs to be enabled on client'))
+            raise error.Abort(_('bundle2 needs to be enabled on client'))
         if not remote.capable('bundle2-exp'):
-            raise util.Abort(_('bundle2 needs to be enabled on server'))
+            raise error.Abort(_('bundle2 needs to be enabled on server'))
         return
     else:
         return orig(pushop)
@@ -320,7 +320,7 @@ def _getrevs(bundle, onto):
             sharedparents = list(bundle.set('parents(bundle()) - bundle()'))
             if not sharedparents:
                 return revs, bundle[nullid]
-            raise util.Abort(_('pushed commits do not branch from an ancestor '
+            raise error.Abort(_('pushed commits do not branch from an ancestor '
                                'of the desired destination %s' % onto.hex()))
         oldonto = oldonto[0]
 
@@ -335,7 +335,7 @@ def _getrevs(bundle, onto):
         ontomanifest = onto.manifest().matches(filematcher)
         conflicts = ontomanifest.diff(commonmanifest).keys()
         if conflicts:
-            raise util.Abort(_('conflicting changes in:\n%s') %
+            raise error.Abort(_('conflicting changes in:\n%s') %
                              ''.join('    %s\n' % f for f in sorted(conflicts)))
 
     return revs, oldonto
@@ -503,7 +503,7 @@ def bundle2rebase(op, part):
 
         if not params['newhead']:
             if not op.repo.revs('%r and head()', params['onto']):
-                raise util.Abort(_('rebase would produce a new head on server'))
+                raise error.Abort(_('rebase would produce a new head on server'))
 
         if onto == None:
             maxcommonanc = list(bundle.set('max(parents(bundle()) - bundle())'))

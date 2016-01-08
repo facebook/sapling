@@ -117,7 +117,7 @@ def defineactions():
             return self.continueclean()
 
         def continuedirty(self):
-            raise util.Abort(_('working copy has pending changes'),
+            raise error.Abort(_('working copy has pending changes'),
                 hint=_('amend, commit, or revert them and run histedit '
                     '--continue, or abort with histedit --abort'))
 
@@ -184,7 +184,7 @@ def _rebase(orig, ui, repo, **opts):
         msg = _("no rebase in progress")
         hint = _('If you want to continue or abort an interactive rebase please'
                  'use "histedit --continue/--abort" instead.')
-        raise util.Abort(msg, hint=hint)
+        raise error.Abort(msg, hint=hint)
 
     if not opts.get('interactive'):
         return orig(ui, repo, **opts)
@@ -201,16 +201,16 @@ def _rebase(orig, ui, repo, **opts):
     src = None
 
     if contf or abortf:
-        raise util.Abort('no interactive rebase in progress')
+        raise error.Abort('no interactive rebase in progress')
     if destf:
         dest = scmutil.revsingle(repo, destf)
     else:
-        raise util.Abort("you must specify a destination (-d) for the rebase")
+        raise error.Abort("you must specify a destination (-d) for the rebase")
 
     if srcf and basef:
         raise error.Abort(_('cannot specify both a source and a base'))
     if revf:
-        raise util.Abort('--rev not supported with interactive rebase')
+        raise error.Abort('--rev not supported with interactive rebase')
     elif srcf:
         src = scmutil.revsingle(repo, srcf)
     else:
@@ -227,7 +227,7 @@ def _rebase(orig, ui, repo, **opts):
             src = None
 
     if src is None:
-        raise util.Abort('no revisions to rebase')
+        raise error.Abort('no revisions to rebase')
     src = repo[src].node()
 
     topmost, empty = repo.dirstate.parents()

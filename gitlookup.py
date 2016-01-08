@@ -89,7 +89,7 @@ def gitgetmeta(ui, repo, source='default'):
     try:
         op = bundle2.processbundle(repo, bundle)
     except error.BundleValueError, exc:
-        raise util.Abort('missing support for %s' % exc)
+        raise error.Abort('missing support for %s' % exc)
     writebytes = op.records['fb:gitmeta:writebytes']
     ui.status(_('wrote %d files (%d bytes)\n') %
               (len(writebytes), sum(writebytes)))
@@ -120,7 +120,7 @@ def bundle2getgitmeta(op, part):
     '''unbundle a bundle2 containing git metadata on the client'''
     params = dict(part.mandatoryparams)
     if 'filename' not in params:
-        raise util.Abort(_("gitmeta: 'filename' missing"))
+        raise error.Abort(_("gitmeta: 'filename' missing"))
     fname = params['filename']
     if fname not in gitmetafiles:
         ui.warn(_("warning: gitmeta: unknown file '%s' skipped\n") % fname)

@@ -25,6 +25,7 @@ callsign = E
 from mercurial import hg
 from mercurial import extensions
 from mercurial import revset
+from mercurial import error
 from mercurial import util as hgutil
 
 from hgsubversion import util as svnutil
@@ -65,7 +66,7 @@ def getdiff(repo, diffid):
 
         return proc
     except Exception, e:
-        raise hgutil.Abort('Could not not call "arc call-conduit": %s' % e)
+        raise error.Abort('Could not not call "arc call-conduit": %s' % e)
 
 def finddiff(repo, diffid, proc=None):
     """Scans the changelog for commit lines mentioning the Differential ID
@@ -120,7 +121,7 @@ def forksearch(repo, diffid):
         repo.ui.debug('[diffrev] Conduit call returned %i\n' % proc.returncode)
 
         if proc.returncode != 0:
-            raise hgutil.Abort('arc call returned status %i' % proc.returncode)
+            raise error.Abort('arc call returned status %i' % proc.returncode)
 
         resp = proc.stdout.read()
         return (None, resp)
@@ -130,14 +131,14 @@ def parsedesc(repo, resp):
     match = DESCRIPTION_REGEX.match(desc)
 
     if not match:
-        raise hgutil.Abort("Cannot parse Conduit description '%s'"
+        raise error.Abort("Cannot parse Conduit description '%s'"
                            % desc)
 
     callsign = match.group('callsign')
     repo_callsign = repo.ui.config('phrevset', 'callsign')
 
     if callsign != repo_callsign:
-        raise hgutil.Abort("Diff callsign '%s' is different from repo"
+        raise error.Abort("Diff callsign '%s' is different from repo"
                            " callsign '%s'" % (callsign, repo_callsign))
 
     return match.group('id')
@@ -153,12 +154,12 @@ def revsetdiff(repo, subset, diffid):
 
     jsresp = json.loads(resp)
     if not jsresp:
-        raise hgutil.Abort('Could not decode Conduit response')
+        raise error.Abort('Could not decode Conduit response')
 
     resp = jsresp.get('response')
     if not resp:
         error = jsresp.get('errorMessage', 'unknown error')
-        raise hgutil.Abort('Counduit error: %s' % error)
+        raise error.Abort('Counduit error: %s' % error)
 
     vcs = resp.get('sourceControlSystem')
 
@@ -205,7 +206,7 @@ def revsetdiff(repo, subset, diffid):
                 parsed_rev = finddiff(repo, diffid)
 
                 if not parsed_rev:
-                    raise hgutil.Abort('Could not find diff '
+                    raise error.Abort('Could not find diff '
                                        'D%s in changelog' % diffid)
 
                 revs[idx] = parsed_rev
@@ -220,7 +221,7 @@ def revsetdiff(repo, subset, diffid):
 
             return []
         else:
-            raise hgutil.Abort('Conduit returned unknown '
+            raise error.Abort('Conduit returned unknown '
                                'sourceControlSystem "%s"' % vcs)
 
 def revsetstringset(orig, repo, subset, revstr):

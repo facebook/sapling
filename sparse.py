@@ -296,7 +296,7 @@ def _setupdirstate(ui):
                 sparsematch = repo.sparsematch()
                 for f in args:
                     if not sparsematch(f) and f not in dirstate:
-                        raise util.Abort(_("cannot add '%s' - it is outside the " +
+                        raise error.Abort(_("cannot add '%s' - it is outside the " +
                                          "sparse checkout") % f, hint=hint)
             return orig(self, *args)
         extensions.wrapfunction(dirstate.dirstate, func, _wrapper)
@@ -319,7 +319,7 @@ def _wraprepo(ui, repo):
                         profiles.append(line)
                 elif line == '[include]':
                     if current != includes:
-                        raise util.Abort(_('.hg/sparse cannot have includes ' +
+                        raise error.Abort(_('.hg/sparse cannot have includes ' +
                             'after excludes'))
                     continue
                 elif line == '[exclude]':
@@ -341,7 +341,7 @@ def _wraprepo(ui, repo):
             if not self.opener.exists('sparse'):
                 return set(), set(), []
             if rev is None:
-                raise util.Abort(_("cannot parse sparse patterns from " +
+                raise error.Abort(_("cannot parse sparse patterns from " +
                     "working copy"))
 
             raw = self.opener.read('sparse')
@@ -629,7 +629,7 @@ def sparse(ui, repo, *pats, **opts):
     count = sum([include, exclude, enableprofile, disableprofile, delete,
                 refresh, reset])
     if count > 1:
-        raise util.Abort(_("too many flags specified"))
+        raise error.Abort(_("too many flags specified"))
 
     if count == 0:
         if repo.opener.exists('sparse'):
@@ -728,7 +728,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
             ui.warn(_("pending changes to '%s'\n") % file)
             abort = not force
     if abort:
-        raise util.Abort(_("could not update sparseness due to " +
+        raise error.Abort(_("could not update sparseness due to " +
             "pending changes"))
 
     # Calculate actions
@@ -769,7 +769,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
         ui.warn(_("pending changes to '%s'\n") % file)
         abort = not force
     if abort:
-        raise util.Abort(_("cannot change sparseness due to " +
+        raise error.Abort(_("cannot change sparseness due to " +
             "pending changes (delete the files or use --force " +
             "to bring them back dirty)"))
 

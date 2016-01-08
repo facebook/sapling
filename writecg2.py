@@ -46,7 +46,7 @@ def overridereadbundle(orig, ui, fh, fname, vfs=None):
     magic, version = header[0:2], header[2:4]
 
     if magic != 'HG':
-        raise util.Abort(_('%s: not a Mercurial bundle') % fname)
+        raise error.Abort(_('%s: not a Mercurial bundle') % fname)
     if version == '10' or version == '2C':
         if alg is None:
             alg = changegroup.readexactly(fh, 2)
@@ -57,7 +57,7 @@ def overridereadbundle(orig, ui, fh, fname, vfs=None):
     elif version == '20':
         return bundle2.unbundle20(ui, fh)
     else:
-        raise util.Abort(_('%s: unknown bundle version %s') % (fname, version))
+        raise error.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
 class cg2bundlerepository(bundlerepo.bundlerepository):
     def __init__(self, ui, path, bundlename):

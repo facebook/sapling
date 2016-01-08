@@ -103,9 +103,9 @@ def prunemanifestdiskcache(ui, repo):
 
     # validate the arguments
     if runsbetween < 1:
-        raise util.Abort("runs-between-prunes should be >= 1")
+        raise error.Abort("runs-between-prunes should be >= 1")
     if secondsbetween < 0:
-        raise util.Abort("seconds-between-prunes should be >= 0")
+        raise error.Abort("seconds-between-prunes should be >= 0")
 
     store = repo.store
     opener = store.opener
@@ -141,7 +141,7 @@ def prunemanifestdiskcache(ui, repo):
         try:
             revs = repo.revs(pinnedrevsets)
         except error.ParseError:
-            util.Abort("Cannot parse {0}.pinned-revsets.".format(CONFIG_KEY))
+            error.Abort("Cannot parse {0}.pinned-revsets.".format(CONFIG_KEY))
 
     pinnednodes = set(hex(changelog.read(changelog.node(rev))[0])
                       for rev in revs)

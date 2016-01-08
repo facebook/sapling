@@ -22,6 +22,7 @@ from mercurial import util, cmdutil, commands, extensions, hg, scmutil
 from mercurial import bookmarks
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial import extensions
+from mercurial import error
 from mercurial.i18n import _
 from hgext import rebase
 import errno, os, stat, subprocess, time
@@ -151,11 +152,11 @@ def pull(orig, ui, repo, *args, **opts):
 
     if isrebase and update:
         mess = _('specify either rebase or update, not both')
-        raise util.Abort(mess)
+        raise error.Abort(mess)
 
     if dest and not (isrebase or update):
         mess = _('only specify a destination if rebasing or updating')
-        raise util.Abort(mess)
+        raise error.Abort(mess)
 
     if (isrebase or update) and not dest:
         rebasemsg = _('you must use a bookmark with tracking '
@@ -175,7 +176,7 @@ def pull(orig, ui, repo, *args, **opts):
         else: # update
             mess = _('you must specify a destination for the update')
             hint = _('use `hg pull --update --dest <destination>`')
-        raise util.Abort(mess, hint=hint)
+        raise error.Abort(mess, hint=hint)
 
     if 'rebase' in opts:
         del opts['rebase']
@@ -229,7 +230,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
         invalidargs = ['message', 'logfile']
         currentinvalidargs = [ia for ia in invalidargs if opts.get(ia)]
         if currentinvalidargs:
-            raise util.Abort(_('--reuse-message and --%s are '
+            raise error.Abort(_('--reuse-message and --%s are '
                 'mutually exclusive') % (currentinvalidargs[0]))
 
     if rev:
@@ -240,7 +241,7 @@ def commitcmd(orig, ui, repo, *pats, **opts):
 def update(orig, ui, repo, node=None, rev=None, **kwargs):
     # 'hg update' should do nothing
     if not node and not rev and not kwargs['date']:
-        raise util.Abort(
+        raise error.Abort(
             'You must specify a destination to update to,' +
             ' for example "hg update master".',
             hint='If you\'re trying to move a bookmark forward, try ' +
@@ -282,7 +283,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     if not pats:
         mess = _('cannot run histgrep on the whole repo, please provide filenames')
         hint = _('this is disabled to avoid insanely slow greps over the whole repo')
-        raise util.Abort(mess, hint=hint)
+        raise error.Abort(mess, hint=hint)
 
     return commands.grep(ui, repo, pattern, *pats, **opts)
 
@@ -371,7 +372,7 @@ def _rebase(orig, ui, repo, **opts):
 
     # 'hg rebase' w/o args should do nothing
     if not opts.get('dest'):
-        raise util.Abort("you must specify a destination (-d) for the rebase")
+        raise error.Abort("you must specify a destination (-d) for the rebase")
 
     # 'hg rebase' can fast-forward bookmark
     prev = repo['.']
@@ -419,11 +420,11 @@ def branchcmd(orig, ui, repo, label=None, **opts):
             del opts['new']
         return orig(ui, repo, label, **opts)
     elif enabled:
-        raise util.Abort(
+        raise error.Abort(
             _('do not use branches; use bookmarks instead'),
             hint=_('use --new if you are certain you want a branch'))
     else:
-        raise util.Abort(message)
+        raise error.Abort(message)
 
 def branchescmd(orig, ui, repo, active, closed, **opts):
     message = ui.config('tweakdefaults', 'branchesmessage')
@@ -441,7 +442,7 @@ def mergecmd(orig, ui, repo, node=None, **opts):
         message = ui.config('tweakdefaults', 'mergemessage',
             _('merging is not supported for this repository'))
         hint = ui.config('tweakdefaults', 'mergehint', _('use rebase instead'))
-        raise util.Abort(message, hint=hint)
+        raise error.Abort(message, hint=hint)
 
 def statuscmd(orig, ui, repo, *pats, **opts):
     """
@@ -473,7 +474,7 @@ def rollbackcmd(orig, ui, repo, **opts):
         message = ui.config('tweakdefaults', 'rollbackmessage',
             _('the use of rollback is disabled'))
         hint = ui.config('tweakdefaults', 'rollbackhint', None)
-        raise util.Abort(message, hint=hint)
+        raise error.Abort(message, hint=hint)
 
 def tagcmd(orig, ui, repo, name1, *names, **opts):
     """
@@ -484,7 +485,7 @@ def tagcmd(orig, ui, repo, name1, *names, **opts):
     if ui.configbool('tweakdefaults', 'allowtags', True):
         return orig(ui, repo, name1, *names, **opts)
     else:
-        raise util.Abort(message)
+        raise error.Abort(message)
 
 def tagscmd(orig, ui, repo, **opts):
     message = ui.config('tweakdefaults', 'tagsmessage', '')

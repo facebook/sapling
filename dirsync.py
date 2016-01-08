@@ -33,6 +33,7 @@ projectY.dir3 = foo/goo/hoo
 from collections import defaultdict
 from mercurial import extensions, localrepo, util
 from mercurial import match as matchmod
+from mercurial import error
 
 testedwith = 'internal'
 
@@ -137,7 +138,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                     repo.ui.status("not mirroring '%s' to '%s'; it already "
                                    "matches\n" % (sourcepath, mirrorpath))
                 continue
-            raise util.Abort("path '%s' needs to be mirrored to '%s', but the "
+            raise error.Abort("path '%s' needs to be mirrored to '%s', but the "
                              "target already has pending changes" %
                              (sourcepath, mirrorpath))
 

@@ -82,7 +82,7 @@ def _revive(repo, rev):
     try:
         revs = scmutil.revrange(repo, [rev])
         if len(revs) > 1:
-            raise util.Abort(_('exactly one revision must be specified'))
+            raise error.Abort(_('exactly one revision must be specified'))
         if len(revs) == 1:
             return repo[revs.first()]
     except error.RepoLookupError:
@@ -110,7 +110,7 @@ def _touch(repo, rev):
         # repo, since it will have been the last commit revived.
         return repo['tip']
     else:
-        raise util.Abort("unable to revive '%s' because it is hidden and "
+        raise error.Abort("unable to revive '%s' because it is hidden and "
                          "evolve is disabled" % rev)
 
 def _pullbundle(repo, rev):
@@ -119,7 +119,7 @@ def _pullbundle(repo, rev):
     """
     other, rev = _findbundle(repo, rev)
     if not other:
-        raise util.Abort("could not find '%s' in the repo or the backup"
+        raise error.Abort("could not find '%s' in the repo or the backup"
                          " bundles" % rev)
     lock = repo.lock()
     try:
@@ -134,7 +134,7 @@ def _pullbundle(repo, rev):
         lock.release()
 
     if rev not in repo:
-        raise util.Abort("unable to get rev %s from repo" % rev)
+        raise error.Abort("unable to get rev %s from repo" % rev)
 
     return repo[rev]
 

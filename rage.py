@@ -3,7 +3,7 @@
 """log useful diagnostics and file a task to source control oncall"""
 
 from mercurial.i18n import _
-from mercurial import cmdutil, util, commands, bookmarks, ui, extensions
+from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
 from hgext import blackbox
 import smartlog
 import os, socket, re, time
@@ -57,7 +57,7 @@ def rage(ui, repo, *pats, **opts):
             _, _, _, p = util.popen4(cmd)
             out, err = p.communicate(input)
             if check and p.returncode:
-                raise util.Abort(cmd + ' error: ' + err)
+                raise error.Abort(cmd + ' error: ' + err)
             return out
 
     basic = [

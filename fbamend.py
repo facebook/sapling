@@ -19,7 +19,7 @@ automatically disable itself if changeset evolution is enabled.
 """
 
 from mercurial import util, cmdutil, phases, commands, bookmarks, repair
-from mercurial import merge, extensions
+from mercurial import merge, extensions, error
 from mercurial.node import hex
 from mercurial import obsolete
 from mercurial import lock as lockmod
@@ -67,7 +67,7 @@ def commit(orig, ui, repo, *pats, **opts):
         badflags = [flag for flag in
                 ['rebase', 'fixup'] if opts.get(flag, None)]
         if badflags:
-            raise util.Abort(_('--%s must be called with --amend') %
+            raise error.Abort(_('--%s must be called with --amend') %
                     badflags[0])
 
         return orig(ui, repo, *pats, **opts)
@@ -91,12 +91,12 @@ def amend(ui, repo, *pats, **opts):
     if rebase and _histediting(repo):
         # if a histedit is in flight, it's dangerous to remove old commits
         hint = _('during histedit, use amend without --rebase')
-        raise util.Abort('histedit in progress', hint=hint)
+        raise error.Abort('histedit in progress', hint=hint)
 
     badflags = [flag for flag in
             ['rebase', 'fixup'] if opts.get(flag, None)]
     if opts.get('interactive') and badflags:
-        raise util.Abort(_('--interactive and --%s are mutually exclusive') %
+        raise error.Abort(_('--interactive and --%s are mutually exclusive') %
                 badflags[0])
 
     fixup = opts.get('fixup')
@@ -106,9 +106,9 @@ def amend(ui, repo, *pats, **opts):
 
     old = repo['.']
     if old.phase() == phases.public:
-        raise util.Abort(_('cannot amend public changesets'))
+        raise error.Abort(_('cannot amend public changesets'))
     if len(repo[None].parents()) > 1:
-        raise util.Abort(_('cannot amend while merging'))
+        raise error.Abort(_('cannot amend while merging'))
 
     haschildren = len(old.children()) > 0
 
@@ -223,7 +223,7 @@ def fixupamend(ui, repo):
         preamendname = _preamendname(repo, current.node())
 
         if not preamendname in repo._bookmarks:
-            raise util.Abort(_('no bookmark %s' % preamendname),
+            raise error.Abort(_('no bookmark %s' % preamendname),
                              hint=_('check if your bookmark is active'))
 
         ui.status("rebasing the children of %s\n" % (preamendname))

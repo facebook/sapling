@@ -4,7 +4,7 @@
 #
 # Copyright 2015 Facebook, Inc.
 
-from mercurial import util, templater, extensions, revset, templatekw, node
+from mercurial import error, templater, extensions, revset, templatekw, node
 from mercurial.i18n import _
 
 import re
@@ -236,5 +236,5 @@ def overridestringset(orig, repo, subset, x):
         if len(githash) == 40:
             return gitnode(repo, subset, ('string', githash))
         else:
-            raise util.Abort('git hash must be 40 characters')
+            raise error.Abort('git hash must be 40 characters')
     return orig(repo, subset, x)
