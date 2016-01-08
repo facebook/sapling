@@ -28,14 +28,14 @@ unbundle should barf appropriately on not-a-bundle
 bundle by itself shouldn't be changegroup2
   $ hg bundle --base 0 --rev 2 ../bundle.bundle
   2 changesets found
-  $ head -c 6 ../bundle.bundle
+  $ dd count=6 bs=1 if=../bundle.bundle 2>/dev/null
   HG10BZ (no-eol)
 
 a strip bundle should be changegroup2
   $ hg strip 1
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
-  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
+  $ dd count=6 bs=1 if=.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg 2>/dev/null
   HG20\x00\x00 (no-eol) (esc)
 
 applying bundle1 should continue to work
@@ -70,7 +70,7 @@ applying bundle1 should continue to work
 
   $ hg strip 1
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
-  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
+  $ dd count=6 bs=1 if=.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg 2>/dev/null
   HG20\x00\x00 (no-eol) (esc)
 
 hg incoming on a changegroup2 should work
@@ -99,7 +99,7 @@ applying a changegroup2 should work via unbundle
 ... and via pull
   $ hg strip 1
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg (glob)
-  $ head -c 6 .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
+  $ dd count=6 bs=1 if=.hg/strip-backup/0e067c57feba-3c242e3d-backup.hg 2>/dev/null
   HG20\x00\x00 (no-eol) (esc)
   $ hg pull .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
   pulling from .hg/strip-backup/0e067c57feba-3c242e3d-backup.hg
@@ -115,7 +115,7 @@ amends should also be cg2
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch d && hg add d && hg ci --amend -mcd
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg (glob)
-  $ head -c 6 .hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg
+  $ dd count=6 bs=1 if=.hg/strip-backup/991a3460af53-046ba7e5-amend-backup.hg 2>/dev/null
   HG20\x00\x00 (no-eol) (esc)
 
 turn on bundle2
