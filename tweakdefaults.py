@@ -60,9 +60,9 @@ def extsetup(ui):
         remotenames = extensions.find('remotenames')
         wrapfunction(remotenames, '_getrebasedest', _getrebasedest)
     except KeyError:
-        pass  # no remotenames, no worries
+        pass # no remotenames, no worries
     except AttributeError:
-        pass  # old version of remotenames doh
+        pass # old version of remotenames doh
 
     entry = wrapcommand(commands.table, 'log', log)
     for opt in logopts:

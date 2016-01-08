@@ -109,7 +109,7 @@ class Command(object):
                     if v:
                         cmd += " %s %s" % (k, v)
                     else:
-                        cmd += " %s" % (k, )
+                        cmd += " %s" % (k,)
         if self.args:
             cmd += " "
             cmd += " ".join(self.args)

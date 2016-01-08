@@ -33,12 +33,12 @@ def getdiffstatus(repo, diffid):
     try:
         proc = subprocess.Popen(['arc', 'call-conduit', 'differential.query'],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, preexec_fn=os.setsid)
-        input = json.dumps({'ids': [ diffid ]})
+        input = json.dumps({'ids': [diffid]})
         repo.ui.debug("[diffrev] echo '%s' | arc call-conduit differential.query\n" %
                       input)
         proc.stdin.write(input)
         proc.stdin.close()
-        resp = proc.stdout.read()    
+        resp = proc.stdout.read()
         jsresp = json.loads(resp)
         if not jsresp:
             return 'Could not decode Conduit response'
