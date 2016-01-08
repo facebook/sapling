@@ -2,12 +2,15 @@
 functions."""
 import re
 
-from dulwich import errors
-from mercurial import util as hgutil
 try:
     from collections import OrderedDict
 except ImportError:
     from ordereddict import OrderedDict
+
+from dulwich import errors
+from mercurial import (
+    util as hgutil,
+)
 
 gitschemes = ('git', 'git+ssh', 'git+http', 'git+https')
 
