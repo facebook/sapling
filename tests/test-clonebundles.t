@@ -20,27 +20,6 @@ Set up a server
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
-Feature disabled by default
-(client should not request manifest)
-
-  $ hg clone -U http://localhost:$HGPORT feature-disabled
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-
-  $ cat server/access.log
-  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  * - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
-  * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%252C03%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=aaff8d2ffbbf07a46dd1f05d8ae7877e3f56e2a2&listkeys=phase%2Cbookmarks (glob)
-  * - - [*] "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases (glob)
-
-  $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > clonebundles = true
-  > EOF
-
 Missing manifest should not result in server lookup
 
   $ hg --verbose clone -U http://localhost:$HGPORT no-manifest
@@ -50,7 +29,7 @@ Missing manifest should not result in server lookup
   adding file changes
   added 2 changesets with 2 changes to 2 files
 
-  $ tail -4 server/access.log
+  $ cat server/access.log
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D (glob)
   * - - [*] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:bundlecaps=HG20%2Cbundle2%3DHG20%250Achangegroup%253D01%252C02%252C03%250Adigests%253Dmd5%252Csha1%252Csha512%250Aerror%253Dabort%252Cunsupportedcontent%252Cpushraced%252Cpushkey%250Ahgtagsfnodes%250Alistkeys%250Apushkey%250Aremote-changegroup%253Dhttp%252Chttps&cg=1&common=0000000000000000000000000000000000000000&heads=aaff8d2ffbbf07a46dd1f05d8ae7877e3f56e2a2&listkeys=phase%2Cbookmarks (glob)
@@ -75,7 +54,7 @@ Manifest file with invalid URL aborts
   applying clone bundle from http://does.not.exist/bundle.hg
   error fetching bundle: (.* not known|getaddrinfo failed) (re)
   abort: error applying bundle
-  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
   [255]
 
 Server is not running aborts
@@ -85,7 +64,7 @@ Server is not running aborts
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
   error fetching bundle: * refused* (glob)
   abort: error applying bundle
-  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
   [255]
 
 Server returns 404
@@ -96,7 +75,7 @@ Server returns 404
   applying clone bundle from http://localhost:$HGPORT1/bundle.hg
   HTTP error fetching bundle: HTTP Error 404: File not found
   abort: error applying bundle
-  (if this error persists, consider contacting the server operator or disable clone bundles via "--config experimental.clonebundles=false")
+  (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
   [255]
 
 We can override failure to fall back to regular clone

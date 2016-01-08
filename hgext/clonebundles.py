@@ -1,7 +1,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-"""advertise pre-generated bundles to seed clones (experimental)
+"""advertise pre-generated bundles to seed clones
 
 "clonebundles" is a server-side extension used to advertise the existence
 of pre-generated, externally hosted bundle files to clients that are
@@ -160,16 +160,6 @@ message informing them how to bypass the clone bundles facility when a failure
 occurs. So server operators should prepare for some people to follow these
 instructions when a failure occurs, thus driving more load to the original
 Mercurial server when the bundle hosting service fails.
-
-The following config options influence the behavior of the clone bundles
-feature:
-
-ui.clonebundlefallback
-   Whether to automatically fall back to a traditional clone in case of
-   clone bundles failure. Defaults to false for reasons described above.
-
-experimental.clonebundles
-   Whether the clone bundles feature is enabled on clients. Defaults to true.
 """
 
 from mercurial import (

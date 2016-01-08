@@ -252,7 +252,6 @@ Test extension help:
        censor        erase file content at a given revision
        churn         command to display statistics about repository history
        clonebundles  advertise pre-generated bundles to seed clones
-                     (experimental)
        color         colorize output from some commands
        convert       import revisions from foreign VCS repositories into
                      Mercurial
@@ -1309,7 +1308,7 @@ Test keyword search help
   
   Extensions:
   
-   clonebundles advertise pre-generated bundles to seed clones (experimental)
+   clonebundles advertise pre-generated bundles to seed clones
    prefixedname matched against word "clone"
    relink       recreates hardlinks between repository clones
   

@@ -1677,7 +1677,7 @@ def _maybeapplyclonebundle(pullop):
     repo = pullop.repo
     remote = pullop.remote
 
-    if not repo.ui.configbool('experimental', 'clonebundles', False):
+    if not repo.ui.configbool('ui', 'clonebundles', True):
         return
 
     # Only run if local repo is empty.
@@ -1733,7 +1733,7 @@ def _maybeapplyclonebundle(pullop):
                           hint=_('if this error persists, consider contacting '
                                  'the server operator or disable clone '
                                  'bundles via '
-                                 '"--config experimental.clonebundles=false"'))
+                                 '"--config ui.clonebundles=false"'))
 
 def parseclonebundlesmanifest(repo, s):
     """Parses the raw text of a clone bundles manifest.

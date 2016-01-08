@@ -1487,6 +1487,16 @@ User interface controls.
     default ``USER@HOST`` is used instead.
     (default: False)
 
+``clonebundles``
+    Whether the "clone bundles" feature is enabled.
+
+    When enabled, :hg:`clone` may download and apply a server-advertised
+    bundle file from a URL instead of using the normal exchange mechanism.
+
+    This can likely result in faster and more reliable clones.
+
+    (default: True)
+
 ``clonebundlefallback``
     Whether failure to apply an advertised "clone bundle" from a server
     should result in fallback to a regular clone.
