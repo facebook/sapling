@@ -16,8 +16,7 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgrepo
-  $ hg co master | egrep -v '^\(activating bookmark master\)$'
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg book master
   $ echo beta > beta
   $ hg add beta
   $ fn_hg_commit -u "test" -m 'add beta'

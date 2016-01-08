@@ -15,7 +15,7 @@ across from hg to git
   $ cd hgrepo
   $ hg mv a b
   $ fn_hg_commit -mb
-  $ hg up 0 | egrep -v '^\(leaving bookmark master\)$'
+  $ hg up 0 | egrep -v '^\(leaving bookmark'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch c
   $ hg add c

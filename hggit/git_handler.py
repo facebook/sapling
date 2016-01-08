@@ -261,6 +261,9 @@ class GitHandler(object):
         refs = self.fetch_pack(remote, heads)
         remote_name = self.remote_name(remote)
 
+        # if remote returns a symref for HEAD, then let's store that
+        rhead = None
+        rnode = None
         oldheads = self.repo.changelog.heads()
         imported = 0
         if refs:
@@ -268,6 +271,20 @@ class GitHandler(object):
             imported = self.import_git_objects(remote_name, filteredrefs)
             self.import_tags(refs)
             self.update_hg_bookmarks(refs)
+
+            try:
+                symref = refs['HEAD']
+                if symref.startswith('refs/heads'):
+                    rhead = symref.replace('refs/heads/', '')
+
+                rnode = refs['refs/heads/%s' % rhead]
+                rnode = self._map_git[rnode]
+                rnode = self.repo[rnode].node()
+            except KeyError:
+                # if there is any error make sure to clear the variables
+                rhead = None
+                rnode = None
+
             if remote_name:
                 self.update_remote_branches(remote_name, refs)
             elif not self.paths:
@@ -276,6 +293,15 @@ class GitHandler(object):
 
                 # "Activate" a tipmost bookmark.
                 bms = self.repo['tip'].bookmarks()
+
+                # override the 'tipmost' behavior if we know the remote HEAD
+                if rnode:
+                    # make sure the bookmark exists; at the point the remote
+                    # branches has already been set up
+                    suffix = self.branch_bookmark_suffix or ''
+                    self.repo._bookmarks[rhead + suffix] = rnode
+                    util.recordbookmarks(self.repo, self.repo._bookmarks)
+                    bms = [rhead + suffix]
 
                 if bms:
                     try:

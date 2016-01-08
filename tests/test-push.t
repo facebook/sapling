@@ -16,6 +16,7 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd hgrepo
+  $ hg bookmark -q master
   $ echo beta > beta
   $ hg add beta
   $ fn_hg_commit -m 'add beta'

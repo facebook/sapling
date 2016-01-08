@@ -90,6 +90,7 @@ Remove the submodule and rename the file back:
   $ cd ..
   $ hg clone -q gitrepo hgrepo
   $ cd hgrepo
+  $ hg book master -q
   $ hg log -p --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  8 a26f94023ab2ea40c9e4c4dbb753c9a4e572fefe remove submodule and rename back
   |  branch=default hg-git-rename-source=git
@@ -405,6 +406,7 @@ Now make another clone and compare the hashes
   $ cd ..
   $ hg clone -q gitrepo hgrepo2
   $ cd hgrepo2
+  $ hg book master -qf
   $ hg export master
   # HG changeset patch
   # User test
