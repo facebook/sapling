@@ -44,6 +44,13 @@ that the patchbomb extension can automatically send patchbombs
 directly from the commandline. See the [email] and [smtp] sections in
 hgrc(5) for details.
 
+By default, :hg:`email` will prompt for a ``To`` or ``CC`` header if
+you do not supply one via configuration or the command line.  You can
+override this to never prompt by configuring an empty value::
+
+  [email]
+  cc =
+
 You can control the default inclusion of an introduction message with the
 ``patchbomb.intro`` configuration option. The configuration is always
 overwritten by command line flags like --intro and --desc::
@@ -596,10 +603,12 @@ def email(ui, repo, *revs, **opts):
 
         # not on the command line: fallback to config and then maybe ask
         addr = (ui.config('email', configkey) or
-                ui.config('patchbomb', configkey) or
-                '')
-        if not addr and ask:
-            addr = prompt(ui, header, default=default)
+                ui.config('patchbomb', configkey))
+        if not addr:
+            specified = (ui.hasconfig('email', configkey) or
+                         ui.hasconfig('patchbomb', configkey))
+            if not specified and ask:
+                addr = prompt(ui, header, default=default)
         if addr:
             showaddrs.append('%s: %s' % (header, addr))
             return mail.addrlistencode(ui, [addr], _charsets, opts.get('test'))

@@ -2682,13 +2682,17 @@ test outgoing:
   +d
   
 
+Don't prompt for a CC header.
+
+  $ echo "[email]" >> $HGRCPATH
+  $ echo "cc=" >> $HGRCPATH
+
 dest#branch URIs:
   $ hg email --date '1980-1-1 0:1' -n -t foo -s test -o ../t#test
   comparing with ../t
   From [test]: test
   this patch series consists of 1 patches.
   
-  Cc: 
   
   displaying [PATCH] test ...
   Content-Type: text/plain; charset="us-ascii"
@@ -2854,7 +2858,6 @@ single rev
   @@ -1,1 +1,2 @@
    d
   +d
-  Cc: 
   
   sending [PATCH] test ...
   sending mail: $TESTTMP/t2/pretendmail.sh -f test foo
