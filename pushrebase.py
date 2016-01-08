@@ -329,7 +329,9 @@ def _getrevs(bundle, onto):
         # bookmark location) and the new onto (ex: the server's actual bookmark
         # location). Since oldonto->onto is the distance of the rebase, this
         # should catch any conflicting changes.
-        files = reduce(operator.or_, [set(rev.files()) for rev in revs], set())
+        files = set()
+        for rev in revs:
+            files |= set(rev.files())
         filematcher = scmutil.matchfiles(bundle, files)
         commonmanifest = oldonto.manifest().matches(filematcher)
         ontomanifest = onto.manifest().matches(filematcher)
