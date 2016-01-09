@@ -1350,7 +1350,6 @@ class TestResult(unittest._TextTestResult):
             return
 
         accepted = False
-        failed = False
         lines = []
 
         with iolock:
@@ -1391,7 +1390,7 @@ class TestResult(unittest._TextTestResult):
                     else:
                         rename(test.errpath, '%s.out' % test.path)
                     accepted = True
-            if not accepted and not failed:
+            if not accepted:
                 self.faildata[test.name] = b''.join(lines)
 
         return accepted
