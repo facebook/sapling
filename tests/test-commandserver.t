@@ -579,9 +579,9 @@ changelog and manifest would have invalid node:
 
   $ cat <<EOF > dbgui.py
   > import os, sys
-  > from mercurial import cmdutil, commands
+  > from mercurial import commands, registrar
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command("debuggetpass", norepo=True)
   > def debuggetpass(ui):
   >     ui.write("%s\\n" % ui.getpass())

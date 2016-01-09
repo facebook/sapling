@@ -62,9 +62,9 @@ show traceback
 names of extensions failed to load can be accessed via extensions.notloaded()
 
   $ cat <<EOF > showbadexts.py
-  > from mercurial import cmdutil, commands, extensions
+  > from mercurial import commands, extensions, registrar
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('showbadexts', norepo=True)
   > def showbadexts(ui, *pats, **opts):
   >     ui.write('BADEXTS: %s\n' % ' '.join(sorted(extensions.notloaded())))

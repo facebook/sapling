@@ -3,14 +3,14 @@
 from __future__ import absolute_import
 
 from mercurial import (
-    cmdutil,
     error,
     patch,
+    registrar,
     scmutil,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('autodiff',
     [('', 'git', '', 'git upgrade mode (yes/no/auto/warn/abort)')],

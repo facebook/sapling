@@ -49,6 +49,11 @@ try:
 except ImportError:
     pass
 try:
+    from mercurial import registrar # since 3.7 (or 37d50250b696)
+    dir(registrar) # forcibly load it
+except ImportError:
+    registrar = None
+try:
     from mercurial import repoview # since 2.5 (or 3a6ddacb7198)
 except ImportError:
     pass
@@ -101,7 +106,9 @@ cmdtable = {}
 def parsealiases(cmd):
     return cmd.lstrip("^").split("|")
 
-if safehasattr(cmdutil, 'command'):
+if safehasattr(registrar, 'command'):
+    command = registrar.command(cmdtable)
+elif safehasattr(cmdutil, 'command'):
     import inspect
     command = cmdutil.command(cmdtable)
     if 'norepo' not in inspect.getargspec(command)[0]:

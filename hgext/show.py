@@ -34,7 +34,7 @@ from mercurial import (
 testedwith = 'ships-with-hg-core'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 revsetpredicate = registrar.revsetpredicate()
 
 class showcmdfunc(registrar._funcregistrarbase):

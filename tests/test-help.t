@@ -680,10 +680,10 @@ this is a section and erroring out weirdly.
 
   $ cat > helpext.py <<EOF
   > import os
-  > from mercurial import cmdutil, commands
+  > from mercurial import commands, registrar
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > 
   > @command('nohelp',
   >     [('', 'longdesc', 3, 'x'*90),

@@ -6,12 +6,12 @@ import code
 import mercurial
 import sys
 from mercurial import (
-    cmdutil,
     demandimport,
+    registrar,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 def pdb(ui, repo, msg, **opts):
     objects = {

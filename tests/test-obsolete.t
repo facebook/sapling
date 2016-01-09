@@ -1065,11 +1065,11 @@ Test issue 4506
 Test heads computation on pending index changes with obsolescence markers
   $ cd ..
   $ cat >$TESTTMP/test_extension.py  << EOF
-  > from mercurial import cmdutil
+  > from mercurial import cmdutil, registrar
   > from mercurial.i18n import _
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command("amendtransient",[], _('hg amendtransient [rev]'))
   > def amend(ui, repo, *pats, **opts):
   >   def commitfunc(ui, repo, message, match, opts):

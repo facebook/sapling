@@ -25,6 +25,7 @@ from mercurial import (
     lock,
     match as matchmod,
     node,
+    registrar,
     scmutil,
     util,
 )
@@ -44,7 +45,7 @@ release = lock.release
 # -- Commands ----------------------------------------------------------
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('lfconvert',
     [('s', 'size', '',

@@ -44,13 +44,13 @@ from mercurial.i18n import _
 from mercurial.node import hex
 
 from mercurial import (
-    cmdutil,
+    registrar,
     ui as uimod,
     util,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or

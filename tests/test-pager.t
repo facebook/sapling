@@ -223,9 +223,9 @@ pager is globally set to off using a flag:
 Pager should not override the exit code of other commands
 
   $ cat >> $TESTTMP/fortytwo.py <<'EOF'
-  > from mercurial import cmdutil, commands
+  > from mercurial import commands, registrar
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('fortytwo', [], 'fortytwo', norepo=True)
   > def fortytwo(ui, *opts):
   >     ui.write('42\n')

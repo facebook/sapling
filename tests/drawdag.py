@@ -80,16 +80,16 @@ import itertools
 
 from mercurial.i18n import _
 from mercurial import (
-    cmdutil,
     context,
     error,
     node,
+    registrar,
     scmutil,
     tags as tagsmod,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 _pipechars = '\\/+-|'
 _nonpipechars = ''.join(chr(i) for i in xrange(33, 127)

@@ -14,10 +14,10 @@ Prepare
 Test that raising an exception in the release function doesn't cause the lock to choke
 
   $ cat > testlock.py << EOF
-  > from mercurial import cmdutil, error, error
+  > from mercurial import error, registrar
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > 
   > def acquiretestlock(repo, releaseexc):
   >     def unlock():

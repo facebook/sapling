@@ -85,9 +85,9 @@ don't allow marking or unmarking driver-resolved files
 
   $ cat > $TESTTMP/markdriver.py << EOF
   > '''mark and unmark files as driver-resolved'''
-  > from mercurial import cmdutil, merge, scmutil
+  > from mercurial import merge, registrar, scmutil
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('markdriver',
   >   [('u', 'unmark', None, '')],
   >   'FILE...')

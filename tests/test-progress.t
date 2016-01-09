@@ -1,10 +1,10 @@
 
   $ cat > loop.py <<EOF
-  > from mercurial import cmdutil, commands
+  > from mercurial import commands, registrar
   > import time
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > 
   > class incrementingtime(object):
   >     def __init__(self):

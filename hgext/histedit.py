@@ -201,6 +201,7 @@ from mercurial import (
     mergeutil,
     node,
     obsolete,
+    registrar,
     repair,
     scmutil,
     util,
@@ -209,7 +210,7 @@ from mercurial import (
 pickle = util.pickle
 release = lock.release
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

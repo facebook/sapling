@@ -37,14 +37,14 @@ these predicates use '\0' as a separator:
   $ cat <<EOF > debugrevlistspec.py
   > from __future__ import absolute_import
   > from mercurial import (
-  >     cmdutil,
   >     node as nodemod,
+  >     registrar,
   >     revset,
   >     revsetlang,
   >     smartset,
   > )
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('debugrevlistspec',
   >     [('', 'optimize', None, 'print parsed tree after optimizing'),
   >      ('', 'bin', None, 'unhexlify arguments')])

@@ -53,11 +53,11 @@ from mercurial.node import (
     short,
 )
 from mercurial import (
-    cmdutil,
     context,
     error,
     hg,
     patch,
+    registrar,
     scmutil,
     util,
 )
@@ -69,7 +69,7 @@ from mercurial import (
 testedwith = 'ships-with-hg-core'
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 newfile = {'new fi', 'rename', 'copy f', 'copy t'}
 

@@ -1,8 +1,8 @@
 
   $ cat > adddrop.py <<EOF
-  > from mercurial import cmdutil
+  > from mercurial import registrar
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('debugadddrop',
   >   [('', 'drop', False, 'drop file from dirstate', 'FILE'),
   >    ('', 'normal-lookup', False, 'add file to dirstate', 'FILE')],

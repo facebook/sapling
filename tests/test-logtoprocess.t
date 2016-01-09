@@ -6,10 +6,10 @@ Test if logtoprocess correctly captures command-related log calls.
 
   $ hg init
   $ cat > $TESTTMP/foocommand.py << EOF
-  > from mercurial import cmdutil
+  > from mercurial import registrar
   > from time import sleep
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('foo', [])
   > def foo(ui, repo):
   >     ui.log('foo', 'a message: %(bar)s\n', bar='spam')

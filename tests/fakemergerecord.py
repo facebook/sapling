@@ -5,12 +5,12 @@
 from __future__ import absolute_import
 
 from mercurial import (
-    cmdutil,
     merge,
+    registrar,
 )
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+command = registrar.command(cmdtable)
 
 @command('fakemergerecord',
          [('X', 'mandatory', None, 'add a fake mandatory record'),

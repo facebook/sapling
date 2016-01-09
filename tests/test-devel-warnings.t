@@ -3,10 +3,10 @@
   > """A small extension that tests our developer warnings
   > """
   > 
-  > from mercurial import cmdutil, repair, util
+  > from mercurial import registrar, repair, util
   > 
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > 
   > @command('buggylocking', [], '')
   > def buggylocking(ui, repo):

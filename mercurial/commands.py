@@ -44,6 +44,7 @@ from . import (
     phases,
     pycompat,
     rcutil,
+    registrar,
     revsetlang,
     scmutil,
     server,
@@ -59,7 +60,7 @@ release = lockmod.release
 
 table = {}
 
-command = cmdutil.command(table)
+command = registrar.command(table)
 
 # label constants
 # until 3.5, bookmarks.current was the advertised name, not

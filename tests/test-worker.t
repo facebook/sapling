@@ -4,8 +4,8 @@ Test UI worker interaction
   > from __future__ import absolute_import, print_function
   > import time
   > from mercurial import (
-  >     cmdutil,
   >     error,
+  >     registrar,
   >     ui as uimod,
   >     worker,
   > )
@@ -30,7 +30,7 @@ Test UI worker interaction
   >     'runme': runme,
   > }
   > cmdtable = {}
-  > command = cmdutil.command(cmdtable)
+  > command = registrar.command(cmdtable)
   > @command('test', [], 'hg test [COST] [FUNC]')
   > def t(ui, repo, cost=1.0, func='runme'):
   >     cost = float(cost)
