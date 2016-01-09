@@ -3335,7 +3335,10 @@ def _performrevert(repo, parents, ctx, actions, interactive=False,
         if f in copied:
             repo.dirstate.copy(copied[f], f)
 
-command = registrar.command
+class command(registrar.command):
+    def _doregister(self, func, name, *args, **kwargs):
+        func._deprecatedregistrar = True  # flag for deprecwarn in extensions.py
+        return super(command, self)._doregister(func, name, *args, **kwargs)
 
 # a list of (ui, repo, otherpeer, opts, missing) functions called by
 # commands.outgoing.  "missing" is "missing" of the result of

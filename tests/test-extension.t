@@ -1590,4 +1590,19 @@ Test synopsis and docstring extending
   $ hg help bookmarks | grep GREPME
   hg bookmarks [OPTIONS]... [NAME]... GREPME [--foo] [-x]
       GREPME make sure that this is in the help!
+  $ cd ..
 
+Show deprecation warning for the use of cmdutil.command
+
+  $ cat > nonregistrar.py <<EOF
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('foo', [], norepo=True)
+  > def foo(ui):
+  >     pass
+  > EOF
+
+  $ hg --config extensions.nonregistrar=`pwd`/nonregistrar.py version > /dev/null
+  devel-warn: cmdutil.command is deprecated, use registrar.command to register 'foo'
+  (compatibility will be dropped after Mercurial-4.6, update your code.) * (glob)
