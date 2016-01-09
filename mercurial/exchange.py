@@ -1519,6 +1519,8 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         if version is not None:
             part.addparam('version', version)
         part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
+        if 'treemanifest' in repo.requirements:
+            part.addparam('treemanifest', '1')
 
 @getbundle2partsgenerator('listkeys')
 def _getbundlelistkeysparts(bundler, repo, source, bundlecaps=None,

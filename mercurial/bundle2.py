@@ -1262,7 +1262,7 @@ def obsmarkersversion(caps):
     obscaps = caps.get('obsmarkers', ())
     return [int(c[1:]) for c in obscaps if c.startswith('V')]
 
-@parthandler('changegroup', ('version', 'nbchanges'))
+@parthandler('changegroup', ('version', 'nbchanges', 'treemanifest'))
 def handlechangegroup(op, inpart):
     """apply a changegroup part on the repo
 
@@ -1284,6 +1284,15 @@ def handlechangegroup(op, inpart):
     nbchangesets = None
     if 'nbchanges' in inpart.params:
         nbchangesets = int(inpart.params.get('nbchanges'))
+    if ('treemanifest' in inpart.params and
+        'treemanifest' not in op.repo.requirements):
+        if len(op.repo.changelog) != 0:
+            raise error.Abort(_(
+                "bundle contains tree manifests, but local repo is "
+                "non-empty and does not use tree manifests"))
+        op.repo.requirements.add('treemanifest')
+        op.repo._applyopenerreqs()
+        op.repo._writerequirements()
     ret = cg.apply(op.repo, 'bundle2', 'bundle2', expectedtotal=nbchangesets)
     op.records.add('changegroup', {'return': ret})
     if op.reply is not None:

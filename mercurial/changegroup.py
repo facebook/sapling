@@ -1046,17 +1046,6 @@ def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles, wasempty):
         directory = (f[-1] == '/')
         if directory:
             # a directory using treemanifests
-            # TODO fixup repo requirements safely
-            if 'treemanifest' not in repo.requirements:
-                if not wasempty:
-                    raise error.Abort(_(
-                        "bundle contains tree manifests, but local repo is "
-                        "non-empty and does not use tree manifests"))
-                repo.requirements.add('treemanifest')
-                repo._applyopenerreqs()
-                repo._writerequirements()
-                repo.manifest._treeondisk = True
-                repo.manifest._treeinmem = True
             fl = repo.manifest.dirlog(f)
         else:
             fl = repo.file(f)
