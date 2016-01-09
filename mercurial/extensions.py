@@ -195,6 +195,11 @@ def bind(func, *args):
         return func(*(args + a), **kw)
     return closure
 
+def _updatewrapper(wrap, origfn):
+    '''Copy attributes to wrapper function'''
+    wrap.__module__ = getattr(origfn, '__module__')
+    wrap.__doc__ = getattr(origfn, '__doc__')
+
 def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     '''Wrap the command named `command' in table
 
@@ -233,13 +238,9 @@ def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
 
     origfn = entry[0]
     wrap = bind(util.checksignature(wrapper), util.checksignature(origfn))
-
-    wrap.__module__ = getattr(origfn, '__module__')
-
-    doc = getattr(origfn, '__doc__')
+    _updatewrapper(wrap, origfn)
     if docstring is not None:
-        doc += docstring
-    wrap.__doc__ = doc
+        wrap.__doc__ += docstring
 
     newentry = list(entry)
     newentry[0] = wrap
