@@ -747,7 +747,12 @@ def _checkshellalias(lui, ui, args, precheck=True):
                                   [], {})
 
 def _cmdattr(ui, cmd, func, attr):
-    return getattr(func, attr)
+    try:
+        return getattr(func, attr)
+    except AttributeError:
+        ui.deprecwarn("missing attribute '%s', use @command decorator "
+                      "to register '%s'" % (attr, cmd), '3.8')
+        return False
 
 _loaded = set()
 

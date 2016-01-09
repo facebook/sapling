@@ -1203,6 +1203,48 @@ disabling in command line overlays with all configuration
 
   $ cd ..
 
+Test compatibility with extension commands that don't use @command (issue5137)
+
+  $ hg init deprecated
+  $ cd deprecated
+
+  $ cat <<EOF > deprecatedcmd.py
+  > def deprecatedcmd(repo, ui):
+  >     pass
+  > cmdtable = {
+  >     'deprecatedcmd': (deprecatedcmd, [], ''),
+  > }
+  > EOF
+  $ cat <<EOF > .hg/hgrc
+  > [extensions]
+  > deprecatedcmd = `pwd`/deprecatedcmd.py
+  > mq = !
+  > hgext.mq = !
+  > hgext/mq = !
+  > [alias]
+  > deprecatedalias = deprecatedcmd
+  > EOF
+
+  $ hg deprecatedcmd
+  devel-warn: missing attribute 'norepo', use @command decorator to register 'deprecatedcmd'
+  (compatibility will be dropped after Mercurial-3.8, update your code.) at: * (glob)
+
+  $ hg deprecatedalias
+  devel-warn: missing attribute 'norepo', use @command decorator to register 'deprecatedalias'
+  (compatibility will be dropped after Mercurial-3.8, update your code.) at: * (glob)
+
+ no warning unless command is executed:
+
+  $ hg paths
+
+ but mq iterates over command table:
+
+  $ hg --config extensions.mq= paths
+  devel-warn: missing attribute 'norepo', use @command decorator to register 'deprecatedcmd'
+  (compatibility will be dropped after Mercurial-3.8, update your code.) at: * (glob)
+
+  $ cd ..
+
 Test synopsis and docstring extending
 
   $ hg init exthelp
