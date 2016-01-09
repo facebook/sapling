@@ -286,7 +286,9 @@ def wrapfunction(container, funcname, wrapper):
 
     origfn = getattr(container, funcname)
     assert callable(origfn)
-    setattr(container, funcname, bind(wrapper, origfn))
+    wrap = bind(wrapper, origfn)
+    _updatewrapper(wrap, origfn)
+    setattr(container, funcname, wrap)
     return origfn
 
 def _disabledpaths(strip_init=False):
