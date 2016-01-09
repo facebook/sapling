@@ -335,21 +335,6 @@ def has_pygments():
     except ImportError:
         return False
 
-@check("json", "some json module available")
-def has_json():
-    try:
-        import json
-        json.dumps
-        return True
-    except ImportError:
-        try:
-            import simplejson as json
-            json.dumps
-            return True
-        except ImportError:
-            pass
-    return False
-
 @check("outer-repo", "outer repo")
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo

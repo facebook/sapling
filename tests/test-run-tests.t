@@ -530,8 +530,6 @@ Missing skips or blacklisted skips don't count as executed:
           "result": "skip"
       }
   } (no-eol)
-#if json
-
 test for --json
 ==================
 
@@ -633,8 +631,6 @@ Test that failed test accepted through interactive are properly reported:
       }
   } (no-eol)
   $ mv backup test-failure.t
-
-#endif
 
 backslash on end of line with glob matching is handled properly
 

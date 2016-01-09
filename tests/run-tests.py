@@ -48,6 +48,7 @@ from __future__ import print_function
 from distutils import version
 import difflib
 import errno
+import json
 import optparse
 import os
 import shutil
@@ -69,15 +70,6 @@ from xml.dom import minidom
 import unittest
 
 osenvironb = getattr(os, 'environb', os.environ)
-
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        json = None
-
 processlock = threading.Lock()
 
 if sys.version_info > (3, 5, 0):
@@ -1725,8 +1717,6 @@ class TextTestRunner(unittest.TextTestRunner):
                     xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 
             if self._runner.options.json:
-                if json is None:
-                    raise ImportError("json module not installed")
                 jsonpath = os.path.join(self._runner._testdir, 'report.json')
                 with open(jsonpath, 'w') as fp:
                     timesd = {}
