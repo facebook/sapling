@@ -517,6 +517,20 @@ class cg3unpacker(cg2unpacker):
         node, p1, p2, deltabase, cs, flags = headertuple
         return node, p1, p2, deltabase, cs, flags
 
+    def _unpackmanifests(self, repo, revmap, trp, prog, numchanges):
+        super(cg3unpacker, self)._unpackmanifests(repo, revmap, trp, prog,
+                                                  numchanges)
+        while True:
+            chunkdata = self.filelogheader()
+            if not chunkdata:
+                break
+            # If we get here, there are directory manifests in the changegroup
+            d = chunkdata["filename"]
+            repo.ui.debug("adding %s revisions\n" % d)
+            dirlog = repo.manifest.dirlog(d)
+            if not dirlog.addgroup(self, revmap, trp):
+                raise error.Abort(_("received dir revlog group is empty"))
+
 class headerlessfixup(object):
     def __init__(self, fh, h):
         self._h = h
@@ -1055,32 +1069,22 @@ def changegroup(repo, basenodes, source):
 def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
     revisions = 0
     files = 0
-    submfsdone = False
     while True:
         chunkdata = source.filelogheader()
         if not chunkdata:
-            if source.version == "03" and not submfsdone:
-                submfsdone = True
-                continue
             break
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)
         pr()
-        directory = (f[-1] == '/')
-        if directory:
-            # a directory using treemanifests
-            fl = repo.manifest.dirlog(f)
-        else:
-            fl = repo.file(f)
+        fl = repo.file(f)
         o = len(fl)
         try:
             if not fl.addgroup(source, revmap, trp):
                 raise error.Abort(_("received file revlog group is empty"))
         except error.CensoredBaseError as e:
             raise error.Abort(_("received delta base is censored: %s") % e)
-        if not directory:
-            revisions += len(fl) - o
-            files += 1
+        revisions += len(fl) - o
+        files += 1
         if f in needfiles:
             needs = needfiles[f]
             for new in xrange(o, len(fl)):
