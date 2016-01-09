@@ -51,7 +51,7 @@ Create a tracking bookmark
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ echo aa > a
-  $ hg resolve --mark a
+  $ hg resolve --mark a 2>&1 | grep -v "^continue:"
   (no more unresolved files)
   $ hg rebase --continue
   rebasing 2:dea4e1d2ca0e "b" (tip b)
