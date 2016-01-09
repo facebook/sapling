@@ -199,6 +199,7 @@ def _updatewrapper(wrap, origfn):
     '''Copy attributes to wrapper function'''
     wrap.__module__ = getattr(origfn, '__module__')
     wrap.__doc__ = getattr(origfn, '__doc__')
+    wrap.__dict__.update(getattr(origfn, '__dict__', {}))
 
 def wrapcommand(table, command, wrapper, synopsis=None, docstring=None):
     '''Wrap the command named `command' in table
