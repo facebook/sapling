@@ -2044,7 +2044,11 @@ def hgcmd():
     get either the python call or current executable.
     """
     if mainfrozen():
-        return [sys.executable]
+        if getattr(sys, 'frozen', None) == 'macosx_app':
+            # Env variable set by py2app
+            return [os.environ['EXECUTABLEPATH']]
+        else:
+            return [sys.executable]
     return gethgcmd()
 
 def rundetached(args, condfn):
