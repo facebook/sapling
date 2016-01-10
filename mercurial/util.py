@@ -886,7 +886,7 @@ def mainfrozen():
             imp.is_frozen("__main__")) # tools/freeze
 
 # the location of data files matching the source code
-if mainfrozen():
+if mainfrozen() and getattr(sys, 'frozen', None) != 'macosx_app':
     # executable version (py2exe) doesn't support __file__
     datapath = os.path.dirname(sys.executable)
 else:
