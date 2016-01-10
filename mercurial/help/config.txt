@@ -1654,14 +1654,17 @@ User interface controls.
       On Windows, this configuration option is ignored and the command aborted.
 
 ``quiet``
-    Reduce the amount of output printed. (default: False)
+    Reduce the amount of output printed.
+    (default: False)
 
 ``remotecmd``
-    Remote command to use for clone/push/pull operations. (default: ``hg``)
+    Remote command to use for clone/push/pull operations.
+    (default: ``hg``)
 
 ``report_untrusted``
     Warn if a ``.hg/hgrc`` file is ignored due to not being owned by a
-    trusted user or group. (default: True)
+    trusted user or group.
+    (default: True)
 
 ``slash``
     Display paths using a slash (``/``) as the path separator. This
