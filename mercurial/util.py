@@ -907,7 +907,11 @@ def hgexecutable():
         if hg:
             _sethgexecutable(hg)
         elif mainfrozen():
-            _sethgexecutable(sys.executable)
+            if getattr(sys, 'frozen', None) == 'macosx_app':
+                # Env variable set by py2app
+                _sethgexecutable(os.environ['EXECUTABLEPATH'])
+            else:
+                _sethgexecutable(sys.executable)
         elif os.path.basename(getattr(mainmod, '__file__', '')) == 'hg':
             _sethgexecutable(mainmod.__file__)
         else:
