@@ -30,10 +30,19 @@ Files
 
 Mercurial reads configuration data from several files, if they exist.
 These files do not exist by default and you will have to create the
-appropriate configuration files yourself: global configuration like
-the username setting is typically put into
-``%USERPROFILE%\mercurial.ini`` or ``$HOME/.hgrc`` and local
-configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
+appropriate configuration files yourself:
+
+Local configuration is put into the per-repository ``<repo>/.hg/hgrc`` file.
+
+Global configuration like the username setting is typically put into:
+
+.. container:: windows
+
+  ``%USERPROFILE%\mercurial.ini``
+
+.. container:: unix.plan9
+
+  ``$HOME/.hgrc``
 
 The names of these files depend on the system on which Mercurial is
 installed. ``*.rc`` files from a single directory are read in
