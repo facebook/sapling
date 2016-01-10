@@ -508,8 +508,16 @@ class mercurial_source(converter_source):
             return None, None
 
     def _changedfiles(self, ctx1, ctx2):
-        m, a, r = ctx1.status(ctx2)[:3]
-        return (m + a, r)
+        ma, r = [], []
+        maappend = ma.append
+        rappend = r.append
+        d = ctx1.manifest().diff(ctx2.manifest())
+        for f, ((node1, flag1), (node2, flag2)) in d.iteritems():
+            if node2 is None:
+                rappend(f)
+            else:
+                maappend(f)
+        return ma, r
 
     def getchanges(self, rev, full):
         ctx = self._changectx(rev)
@@ -529,8 +537,10 @@ class mercurial_source(converter_source):
         copies = self._getcopies(ctx, parents, copyfiles)
         cleanp2 = set()
         if len(parents) == 2:
-            cleanp2.update(self.repo.status(parents[1].node(), ctx.node(),
-                                            clean=True).clean)
+            d = parents[1].manifest().diff(ctx.manifest(), clean=True)
+            for f, value in d.iteritems():
+                if value is None:
+                    cleanp2.add(f)
         changes = [(f, rev) for f in files if f not in self.ignored]
         changes.sort()
         return changes, copies, cleanp2
