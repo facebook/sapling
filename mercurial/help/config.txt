@@ -87,10 +87,13 @@ ones.
 Per-repository configuration options only apply in a
 particular repository. This file is not version-controlled, and
 will not get transferred during a "clone" operation. Options in
-this file override options in all other configuration files. On
-Plan 9 and Unix, most of this file will be ignored if it doesn't
-belong to a trusted user or to a trusted group. See
-:hg:`help config.trusted` for more details.
+this file override options in all other configuration files.
+
+.. container:: unix.plan9
+
+  On Plan 9 and Unix, most of this file will be ignored if it doesn't
+  belong to a trusted user or to a trusted group. See
+  :hg:`help config.trusted` for more details.
 
 Per-user configuration file(s) are for the user running Mercurial. On
 Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``. Options in these
@@ -100,10 +103,14 @@ options.
 
 Per-installation configuration files are searched for in the
 directory where Mercurial is installed. ``<install-root>`` is the
-parent directory of the **hg** executable (or symlink) being run. For
-example, if installed in ``/shared/tools/bin/hg``, Mercurial will look
-in ``/shared/tools/etc/mercurial/hgrc``. Options in these files apply
-to all Mercurial commands executed by any user in any directory.
+parent directory of the **hg** executable (or symlink) being run.
+
+.. container:: unix.plan9
+
+  For example, if installed in ``/shared/tools/bin/hg``, Mercurial
+  will look in ``/shared/tools/etc/mercurial/hgrc``. Options in these
+  files apply to all Mercurial commands executed by any user in any
+  directory.
 
 Per-installation configuration files are for the system on
 which Mercurial is running. Options in these files apply to all
