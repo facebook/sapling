@@ -488,13 +488,13 @@ class mercurial_source(converter_source):
             self.keep = nodes.__contains__
             self._heads = nodes - parents
 
-    def changectx(self, rev):
+    def _changectx(self, rev):
         if self.lastrev != rev:
             self.lastctx = self.repo[rev]
             self.lastrev = rev
         return self.lastctx
 
-    def parents(self, ctx):
+    def _parents(self, ctx):
         return [p for p in ctx.parents() if p and self.keep(p.node())]
 
     def getheads(self):
@@ -502,14 +502,14 @@ class mercurial_source(converter_source):
 
     def getfile(self, name, rev):
         try:
-            fctx = self.changectx(rev)[name]
+            fctx = self._changectx(rev)[name]
             return fctx.data(), fctx.flags()
         except error.LookupError:
             return None, None
 
     def getchanges(self, rev, full):
-        ctx = self.changectx(rev)
-        parents = self.parents(ctx)
+        ctx = self._changectx(rev)
+        parents = self._parents(ctx)
         if full or not parents:
             files = copyfiles = ctx.manifest()
         if parents:
@@ -520,9 +520,9 @@ class mercurial_source(converter_source):
             if not full:
                 files = m + a + r
             copyfiles = m + a
-        # getcopies() is also run for roots and before filtering so missing
+        # _getcopies() is also run for roots and before filtering so missing
         # revlogs are detected early
-        copies = self.getcopies(ctx, parents, copyfiles)
+        copies = self._getcopies(ctx, parents, copyfiles)
         cleanp2 = set()
         if len(parents) == 2:
             cleanp2.update(self.repo.status(parents[1].node(), ctx.node(),
@@ -531,7 +531,7 @@ class mercurial_source(converter_source):
         changes.sort()
         return changes, copies, cleanp2
 
-    def getcopies(self, ctx, parents, files):
+    def _getcopies(self, ctx, parents, files):
         copies = {}
         for name in files:
             if name in self.ignored:
@@ -559,8 +559,8 @@ class mercurial_source(converter_source):
         return copies
 
     def getcommit(self, rev):
-        ctx = self.changectx(rev)
-        parents = [p.hex() for p in self.parents(ctx)]
+        ctx = self._changectx(rev)
+        parents = [p.hex() for p in self._parents(ctx)]
         crev = rev
 
         return commit(author=ctx.user(),
@@ -578,8 +578,8 @@ class mercurial_source(converter_source):
                      if self.keep(node)])
 
     def getchangedfiles(self, rev, i):
-        ctx = self.changectx(rev)
-        parents = self.parents(ctx)
+        ctx = self._changectx(rev)
+        parents = self._parents(ctx)
         if not parents and i is None:
             i = 0
             changes = [], ctx.manifest().keys(), []
