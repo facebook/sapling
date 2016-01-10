@@ -278,7 +278,7 @@ Show all commands + options
   graft: rev, continue, edit, log, force, currentdate, currentuser, date, user, tool, dry-run
   grep: print0, all, text, follow, ignore-case, files-with-matches, line-number, rev, user, date, include, exclude
   heads: rev, topo, active, closed, style, template
-  help: extension, command, keyword
+  help: extension, command, keyword, system
   identify: rev, num, id, branch, tags, bookmarks, ssh, remotecmd, insecure
   import: strip, base, edit, force, no-commit, bypass, partial, exact, prefix, import-branch, message, logfile, date, user, similarity
   incoming: force, newest-first, bundle, rev, bookmarks, branch, patch, git, limit, no-merges, stat, graph, style, template, ssh, remotecmd, insecure, subrepos

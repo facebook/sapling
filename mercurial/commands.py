@@ -4367,8 +4367,9 @@ def heads(ui, repo, *branchrevs, **opts):
     [('e', 'extension', None, _('show only help for extensions')),
      ('c', 'command', None, _('show only help for commands')),
      ('k', 'keyword', None, _('show topics matching keyword')),
+     ('s', 'system', [], _('show help for specific platform(s)')),
      ],
-    _('[-eck] [TOPIC]'),
+    _('[-ecks] [TOPIC]'),
     norepo=True)
 def help_(ui, name=None, **opts):
     """show help for a given topic or a help overview
@@ -4383,18 +4384,19 @@ def help_(ui, name=None, **opts):
 
     textwidth = min(ui.termwidth(), 80) - 2
 
-    keep = []
+    keep = opts.get('system') or []
+    if len(keep) == 0:
+        if sys.platform.startswith('win'):
+            keep.append('windows')
+        elif sys.platform == 'OpenVMS':
+            keep.append('vms')
+        elif sys.platform == 'plan9':
+            keep.append('plan9')
+        else:
+            keep.append('unix')
+            keep.append(sys.platform.lower())
     if ui.verbose:
         keep.append('verbose')
-    if sys.platform.startswith('win'):
-        keep.append('windows')
-    elif sys.platform == 'OpenVMS':
-        keep.append('vms')
-    elif sys.platform == 'plan9':
-        keep.append('plan9')
-    else:
-        keep.append('unix')
-        keep.append(sys.platform.lower())
 
     section = None
     subtopic = None

@@ -1250,6 +1250,15 @@ help -c should only show deprecated for -v
   $ hg help -c -v|egrep DEPRECATED|wc -l|egrep '^\s*0\s*$'
   [1]
 
+Test -s / --system
+
+  $ hg help config.files -s windows |grep 'etc/mercurial' | \
+  > wc -l | sed -e 's/ //g'
+  0
+  $ hg help config.files --system unix | grep 'USER' | \
+  > wc -l | sed -e 's/ //g'
+  0
+
 Test -e / -c / -k combinations
 
   $ hg help -c|egrep '^[A-Z].*:|^ debug'
