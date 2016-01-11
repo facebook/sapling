@@ -25,7 +25,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   >    hg add "$1"
   >    echo "add $1" > msg
   >    echo "" >> msg
-  >    [ -z $2 ] || echo "Differential Revision: https://phabricator.fb.com/D$2" >> msg
+  >    [ -z "$2" ] || echo "Differential Revision: https://phabricator.fb.com/D$2" >> msg
   >    hg ci -l msg
   > }
 
