@@ -329,6 +329,10 @@ class bundlerepository(localrepo.localrepository):
         # consume the header if it exists
         self.bundle.manifestheader()
         m = bundlemanifest(self.svfs, self.bundle, self.changelog.rev)
+        # XXX: hack to work with changegroup3, but we still don't handle
+        # tree manifests correctly
+        if self.bundle.version == "03":
+            self.bundle.filelogheader()
         self.filestart = self.bundle.tell()
         return m
 

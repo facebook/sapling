@@ -506,8 +506,8 @@ class cg3unpacker(cg2unpacker):
     """Unpacker for cg3 streams.
 
     cg3 streams add support for exchanging treemanifests and revlog
-    flags, so the only changes from cg2 are the delta header and
-    version number.
+    flags. It adds the revlog flags to the delta header and an empty chunk
+    separating manifests and files.
     """
     deltaheader = _CHANGEGROUPV3_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
@@ -909,6 +909,7 @@ class cg3packer(cg2packer):
             yield self.fileheader(name)
             for chunk in self.group(nodes, dirlog(name), nodes.get):
                 yield chunk
+        yield self.close()
 
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         return struct.pack(
@@ -917,7 +918,7 @@ class cg3packer(cg2packer):
 _packermap = {'01': (cg1packer, cg1unpacker),
              # cg2 adds support for exchanging generaldelta
              '02': (cg2packer, cg2unpacker),
-             # cg3 adds support for exchanging treemanifests
+             # cg3 adds support for exchanging revlog flags and treemanifests
              '03': (cg3packer, cg3unpacker),
 }
 
@@ -1054,9 +1055,13 @@ def changegroup(repo, basenodes, source):
 def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
     revisions = 0
     files = 0
+    submfsdone = False
     while True:
         chunkdata = source.filelogheader()
         if not chunkdata:
+            if source.version == "03" and not submfsdone:
+                submfsdone = True
+                continue
             break
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)
