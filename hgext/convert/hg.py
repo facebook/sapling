@@ -507,6 +507,10 @@ class mercurial_source(converter_source):
         except error.LookupError:
             return None, None
 
+    def _changedfiles(self, ctx1, ctx2):
+        m, a, r = ctx1.status(ctx2)[:3]
+        return (m + a, r)
+
     def getchanges(self, rev, full):
         ctx = self._changectx(rev)
         parents = self._parents(ctx)
@@ -514,12 +518,12 @@ class mercurial_source(converter_source):
             files = copyfiles = ctx.manifest()
         if parents:
             if self._changescache[0] == rev:
-                m, a, r = self._changescache[1]
+                ma, r = self._changescache[1]
             else:
-                m, a, r = self.repo.status(parents[0].node(), ctx.node())[:3]
+                ma, r = self._changedfiles(parents[0], ctx)
             if not full:
-                files = m + a + r
-            copyfiles = m + a
+                files = ma + r
+            copyfiles = ma
         # _getcopies() is also run for roots and before filtering so missing
         # revlogs are detected early
         copies = self._getcopies(ctx, parents, copyfiles)
@@ -582,16 +586,16 @@ class mercurial_source(converter_source):
         parents = self._parents(ctx)
         if not parents and i is None:
             i = 0
-            changes = [], ctx.manifest().keys(), []
+            ma, r = ctx.manifest().keys(), []
         else:
             i = i or 0
-            changes = self.repo.status(parents[i].node(), ctx.node())[:3]
-        changes = [[f for f in l if f not in self.ignored] for l in changes]
+            ma, r = self._changedfiles(parents[i], ctx)
+        ma, r = [[f for f in l if f not in self.ignored] for l in (ma, r)]
 
         if i == 0:
-            self._changescache = (rev, changes)
+            self._changescache = (rev, (ma, r))
 
-        return changes[0] + changes[1] + changes[2]
+        return ma + r
 
     def converted(self, rev, destrev):
         if self.convertfp is None:
