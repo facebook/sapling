@@ -632,70 +632,65 @@ def _dobackout(ui, repo, node=None, rev=None, commit=False, **opts):
         parent = p1
 
     # the backout should appear on the same branch
-    try:
-        branch = repo.dirstate.branch()
-        bheads = repo.branchheads(branch)
-        rctx = scmutil.revsingle(repo, hex(parent))
-        if not opts.get('merge') and op1 != node:
-            dsguard = cmdutil.dirstateguard(repo, 'backout')
-            try:
-                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                             'backout')
-                stats = mergemod.update(repo, parent, True, True, node, False)
-                repo.setparents(op1, op2)
-                dsguard.close()
-                hg._showstats(repo, stats)
-                if stats[3]:
-                    repo.ui.status(_("use 'hg resolve' to retry unresolved "
-                                     "file merges\n"))
-                    return 1
-                elif not commit:
-                    msg = _("changeset %s backed out, "
-                            "don't forget to commit.\n")
-                    ui.status(msg % short(node))
-                    return 0
-            finally:
-                ui.setconfig('ui', 'forcemerge', '', '')
-                lockmod.release(dsguard)
-        else:
-            hg.clean(repo, node, show_stats=False)
-            repo.dirstate.setbranch(branch)
-            cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
+    branch = repo.dirstate.branch()
+    bheads = repo.branchheads(branch)
+    rctx = scmutil.revsingle(repo, hex(parent))
+    if not opts.get('merge') and op1 != node:
+        dsguard = cmdutil.dirstateguard(repo, 'backout')
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                         'backout')
+            stats = mergemod.update(repo, parent, True, True, node, False)
+            repo.setparents(op1, op2)
+            dsguard.close()
+            hg._showstats(repo, stats)
+            if stats[3]:
+                repo.ui.status(_("use 'hg resolve' to retry unresolved "
+                                 "file merges\n"))
+                return 1
+            elif not commit:
+                msg = _("changeset %s backed out, "
+                        "don't forget to commit.\n")
+                ui.status(msg % short(node))
+                return 0
+        finally:
+            ui.setconfig('ui', 'forcemerge', '', '')
+            lockmod.release(dsguard)
+    else:
+        hg.clean(repo, node, show_stats=False)
+        repo.dirstate.setbranch(branch)
+        cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
 
 
-        def commitfunc(ui, repo, message, match, opts):
-            editform = 'backout'
-            e = cmdutil.getcommiteditor(editform=editform, **opts)
-            if not message:
-                # we don't translate commit messages
-                message = "Backed out changeset %s" % short(node)
-                e = cmdutil.getcommiteditor(edit=True, editform=editform)
-            return repo.commit(message, opts.get('user'), opts.get('date'),
-                               match, editor=e)
-        newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
-        if not newnode:
-            ui.status(_("nothing changed\n"))
-            return 1
-        cmdutil.commitstatus(repo, newnode, branch, bheads)
+    def commitfunc(ui, repo, message, match, opts):
+        editform = 'backout'
+        e = cmdutil.getcommiteditor(editform=editform, **opts)
+        if not message:
+            # we don't translate commit messages
+            message = "Backed out changeset %s" % short(node)
+            e = cmdutil.getcommiteditor(edit=True, editform=editform)
+        return repo.commit(message, opts.get('user'), opts.get('date'),
+                           match, editor=e)
+    newnode = cmdutil.commit(ui, repo, commitfunc, [], opts)
+    if not newnode:
+        ui.status(_("nothing changed\n"))
+        return 1
+    cmdutil.commitstatus(repo, newnode, branch, bheads)
 
-        def nice(node):
-            return '%d:%s' % (repo.changelog.rev(node), short(node))
-        ui.status(_('changeset %s backs out changeset %s\n') %
-                  (nice(repo.changelog.tip()), nice(node)))
-        if opts.get('merge') and op1 != node:
-            hg.clean(repo, op1, show_stats=False)
-            ui.status(_('merging with changeset %s\n')
-                      % nice(repo.changelog.tip()))
-            try:
-                ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                             'backout')
-                return hg.merge(repo, hex(repo.changelog.tip()))
-            finally:
-                ui.setconfig('ui', 'forcemerge', '', '')
-    finally:
-        # TODO: get rid of this meaningless try/finally enclosing.
-        # this is kept only to reduce changes in a patch.
-        pass
+    def nice(node):
+        return '%d:%s' % (repo.changelog.rev(node), short(node))
+    ui.status(_('changeset %s backs out changeset %s\n') %
+              (nice(repo.changelog.tip()), nice(node)))
+    if opts.get('merge') and op1 != node:
+        hg.clean(repo, op1, show_stats=False)
+        ui.status(_('merging with changeset %s\n')
+                  % nice(repo.changelog.tip()))
+        try:
+            ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                         'backout')
+            return hg.merge(repo, hex(repo.changelog.tip()))
+        finally:
+            ui.setconfig('ui', 'forcemerge', '', '')
     return 0
 
 @command('bisect',
