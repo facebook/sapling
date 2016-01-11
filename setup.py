@@ -49,6 +49,5 @@ setup(
     ],
     packages=[
         'copytrace',
-        'crecord'
     ]
 )
