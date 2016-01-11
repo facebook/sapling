@@ -26,6 +26,16 @@ Test backups list and recover
   
   * (glob)
   d2ae7f538514 b
+
+  $ hg backups --config experimental.evolution=createmarkers
+  Marker creation is enabled so no commit should be
+  * (glob)
+  stripped commits.  If you are trying to recover a commit hidden from a previous
+  command, use hg reflog to get its sha1 and you will be able to access it
+  directly without recovering a backup.Recover commits using: hg backups --recover <commit hash>
+  
+  * (glob)
+  d2ae7f538514 b
   $ hg backups --recover d2ae7f538514
   Unbundling d2ae7f538514
   adding changesets
