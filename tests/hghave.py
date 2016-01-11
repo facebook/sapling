@@ -460,7 +460,10 @@ def has_py3k():
 
 @check("pure", "running with pure Python code")
 def has_pure():
-    return os.environ.get("HGTEST_RUN_TESTS_PURE") == "--pure"
+    return any([
+        os.environ.get("HGMODULEPOLICY") == "py",
+        os.environ.get("HGTEST_RUN_TESTS_PURE") == "--pure",
+    ])
 
 @check("slow", "allow slow tests")
 def has_slow():
