@@ -169,7 +169,7 @@ Test non-conflicting deletes
 Test syncing a edit + rename
   $ echo b > dir1/a
   $ hg mv dir1/a dir1/b
-  moving dir1/a to dir1/b
+  moving dir1/a to dir1/b (glob)
   $ hg commit -m "edit and move a to b in dir1"
   mirrored copy 'dir1/a -> dir1/b' to 'dir2/subdir/a -> dir2/subdir/b'
   mirrored remove of 'dir1/a' to 'dir2/subdir/a'
@@ -446,7 +446,7 @@ Test quiet non-conflicting edits
   $ echo aaa > dir1/a
   $ echo aaa > dir2/a
   $ hg commit -m "add non-conflicting changes" --config ui.verbose=False
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
   +++ b/dir1/a
