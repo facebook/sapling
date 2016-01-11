@@ -45,7 +45,6 @@ setup(
         'statprof',
         'tweakdefaults',
         'upgradegeneraldelta',
-        'writecg2',
     ],
     packages=[
         'copytrace',
