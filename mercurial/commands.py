@@ -4735,63 +4735,58 @@ def import_(ui, repo, patch1=None, *patches, **opts):
 
 
     try:
-        try:
-            wlock = repo.wlock()
+        wlock = repo.wlock()
 
-            if update:
-                cmdutil.checkunfinished(repo)
-                if (exact or not opts.get('force')):
-                    cmdutil.bailifchanged(repo)
+        if update:
+            cmdutil.checkunfinished(repo)
+            if (exact or not opts.get('force')):
+                cmdutil.bailifchanged(repo)
 
-            if not opts.get('no_commit'):
-                lock = repo.lock()
-                tr = repo.transaction('import')
+        if not opts.get('no_commit'):
+            lock = repo.lock()
+            tr = repo.transaction('import')
+        else:
+            dsguard = cmdutil.dirstateguard(repo, 'import')
+        parents = repo[None].parents()
+        for patchurl in patches:
+            if patchurl == '-':
+                ui.status(_('applying patch from stdin\n'))
+                patchfile = ui.fin
+                patchurl = 'stdin'      # for error message
             else:
-                dsguard = cmdutil.dirstateguard(repo, 'import')
-            parents = repo[None].parents()
-            for patchurl in patches:
-                if patchurl == '-':
-                    ui.status(_('applying patch from stdin\n'))
-                    patchfile = ui.fin
-                    patchurl = 'stdin'      # for error message
+                patchurl = os.path.join(base, patchurl)
+                ui.status(_('applying %s\n') % patchurl)
+                patchfile = hg.openpath(ui, patchurl)
+
+            haspatch = False
+            for hunk in patch.split(patchfile):
+                (msg, node, rej) = cmdutil.tryimportone(ui, repo, hunk,
+                                                        parents, opts,
+                                                        msgs, hg.clean)
+                if msg:
+                    haspatch = True
+                    ui.note(msg + '\n')
+                if update or exact:
+                    parents = repo[None].parents()
                 else:
-                    patchurl = os.path.join(base, patchurl)
-                    ui.status(_('applying %s\n') % patchurl)
-                    patchfile = hg.openpath(ui, patchurl)
+                    parents = [repo[node]]
+                if rej:
+                    ui.write_err(_("patch applied partially\n"))
+                    ui.write_err(_("(fix the .rej files and run "
+                                   "`hg commit --amend`)\n"))
+                    ret = 1
+                    break
 
-                haspatch = False
-                for hunk in patch.split(patchfile):
-                    (msg, node, rej) = cmdutil.tryimportone(ui, repo, hunk,
-                                                            parents, opts,
-                                                            msgs, hg.clean)
-                    if msg:
-                        haspatch = True
-                        ui.note(msg + '\n')
-                    if update or exact:
-                        parents = repo[None].parents()
-                    else:
-                        parents = [repo[node]]
-                    if rej:
-                        ui.write_err(_("patch applied partially\n"))
-                        ui.write_err(_("(fix the .rej files and run "
-                                       "`hg commit --amend`)\n"))
-                        ret = 1
-                        break
+            if not haspatch:
+                raise error.Abort(_('%s: no diffs found') % patchurl)
 
-                if not haspatch:
-                    raise error.Abort(_('%s: no diffs found') % patchurl)
-
-            if tr:
-                tr.close()
-            if msgs:
-                repo.savecommitmessage('\n* * *\n'.join(msgs))
-            if dsguard:
-                dsguard.close()
-            return ret
-        finally:
-            # TODO: get rid of this meaningless try/finally enclosing.
-            # this is kept only to reduce changes in a patch.
-            pass
+        if tr:
+            tr.close()
+        if msgs:
+            repo.savecommitmessage('\n* * *\n'.join(msgs))
+        if dsguard:
+            dsguard.close()
+        return ret
     finally:
         if tr:
             tr.release()
