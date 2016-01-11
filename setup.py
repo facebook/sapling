@@ -33,6 +33,7 @@ setup(
         'phabdiff',
         'phrevset',
         'phabstatus',
+        'pullcreatemarkers',
         'pushrebase',
         'pushvars',
         'rage',
