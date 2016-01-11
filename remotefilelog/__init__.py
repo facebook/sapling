@@ -309,7 +309,8 @@ def onetimeclientsetup(ui):
         try:
             return orig(lui, repo, *args, **kwargs)
         finally:
-            repo.fileservice.close()
+            if shallowrepo.requirement in repo.requirements:
+                repo.fileservice.close()
     wrapfunction(dispatch, 'runcommand', runcommand)
 
     # disappointing hacks below
