@@ -2641,6 +2641,66 @@ def _makedecompressor(decompcls):
         return chunkbuffer(generator(fh))
     return func
 
+class ctxmanager(object):
+    '''A context manager for use in 'with' blocks to allow multiple
+    contexts to be entered at once.  This is both safer and more
+    flexible than contextlib.nested.
+
+    Once Mercurial supports Python 2.7+, this will become mostly
+    unnecessary.
+    '''
+
+    def __init__(self, *args):
+        '''Accepts a list of no-argument functions that return context
+        managers.  These will be invoked at __call__ time.'''
+        self._pending = args
+        self._atexit = []
+
+    def __enter__(self):
+        return self
+
+    def __call__(self):
+        '''Create and enter context managers in the order in which they were
+        passed to the constructor.'''
+        values = []
+        for func in self._pending:
+            obj = func()
+            values.append(obj.__enter__())
+            self._atexit.append(obj.__exit__)
+        del self._pending
+        return values
+
+    def atexit(self, func, *args, **kwargs):
+        '''Add a function to call when this context manager exits.  The
+        ordering of multiple atexit calls is unspecified, save that
+        they will happen before any __exit__ functions.'''
+        def wrapper(exc_type, exc_val, exc_tb):
+            func(*args, **kwargs)
+        self._atexit.append(wrapper)
+        return func
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        '''Context managers are exited in the reverse order from which
+        they were created.'''
+        received = exc_type is not None
+        suppressed = False
+        pending = None
+        self._atexit.reverse()
+        for exitfunc in self._atexit:
+            try:
+                if exitfunc(exc_type, exc_val, exc_tb):
+                    suppressed = True
+                    exc_type = None
+                    exc_val = None
+                    exc_tb = None
+            except BaseException as e:
+                pending = sys.exc_info()
+                exc_type, exc_val, exc_tb = pending = sys.exc_info()
+        del self._atexit
+        if pending:
+            raise exc_val
+        return received and suppressed
+
 def _bz2():
     d = bz2.BZ2Decompressor()
     # Bzip2 stream start with BZ, but we stripped it.
