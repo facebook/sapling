@@ -5,7 +5,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   > username = nobody <no.reply@fb.com>
   > ssh = python "$RUNTESTDIR/dummyssh"
   > [experimental]
-  > evolution= all
+  > evolution= createmarkers
   > rebaseskipobsolete=True
   > [extensions]
   > inhibit=
@@ -72,7 +72,6 @@ The first client works on a diff while the second client lands one of her diff
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files (+1 heads)
-  1 new obsolescence markers
   updating bookmark master
 
 Here we strip commit 4 to simulate what happens with landcastle, the push
