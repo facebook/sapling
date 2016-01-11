@@ -3998,75 +3998,70 @@ def _dograft(ui, repo, *revs, **opts):
         if not revs:
             return -1
 
-    try:
-        for pos, ctx in enumerate(repo.set("%ld", revs)):
-            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
-                                   ctx.description().split('\n', 1)[0])
-            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
-            if names:
-                desc += ' (%s)' % ' '.join(names)
-            ui.status(_('grafting %s\n') % desc)
-            if opts.get('dry_run'):
-                continue
+    for pos, ctx in enumerate(repo.set("%ld", revs)):
+        desc = '%d:%s "%s"' % (ctx.rev(), ctx,
+                               ctx.description().split('\n', 1)[0])
+        names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+        if names:
+            desc += ' (%s)' % ' '.join(names)
+        ui.status(_('grafting %s\n') % desc)
+        if opts.get('dry_run'):
+            continue
 
-            extra = ctx.extra().copy()
-            del extra['branch']
-            source = extra.get('source')
-            if source:
-                extra['intermediate-source'] = ctx.hex()
-            else:
-                extra['source'] = ctx.hex()
-            user = ctx.user()
-            if opts.get('user'):
-                user = opts['user']
-            date = ctx.date()
-            if opts.get('date'):
-                date = opts['date']
-            message = ctx.description()
-            if opts.get('log'):
-                message += '\n(grafted from %s)' % ctx.hex()
+        extra = ctx.extra().copy()
+        del extra['branch']
+        source = extra.get('source')
+        if source:
+            extra['intermediate-source'] = ctx.hex()
+        else:
+            extra['source'] = ctx.hex()
+        user = ctx.user()
+        if opts.get('user'):
+            user = opts['user']
+        date = ctx.date()
+        if opts.get('date'):
+            date = opts['date']
+        message = ctx.description()
+        if opts.get('log'):
+            message += '\n(grafted from %s)' % ctx.hex()
 
-            # we don't merge the first commit when continuing
-            if not cont:
-                # perform the graft merge with p1(rev) as 'ancestor'
-                try:
-                    # ui.forcemerge is an internal variable, do not document
-                    repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                                      'graft')
-                    stats = mergemod.graft(repo, ctx, ctx.p1(),
-                                           ['local', 'graft'])
-                finally:
-                    repo.ui.setconfig('ui', 'forcemerge', '', 'graft')
-                # report any conflicts
-                if stats and stats[3] > 0:
-                    # write out state for --continue
-                    nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                    repo.vfs.write('graftstate', ''.join(nodelines))
-                    extra = ''
-                    if opts.get('user'):
-                        extra += ' --user %s' % opts['user']
-                    if opts.get('date'):
-                        extra += ' --date %s' % opts['date']
-                    if opts.get('log'):
-                        extra += ' --log'
-                    hint=_('use hg resolve and hg graft --continue%s') % extra
-                    raise error.Abort(
-                        _("unresolved conflicts, can't continue"),
-                        hint=hint)
-            else:
-                cont = False
+        # we don't merge the first commit when continuing
+        if not cont:
+            # perform the graft merge with p1(rev) as 'ancestor'
+            try:
+                # ui.forcemerge is an internal variable, do not document
+                repo.ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                  'graft')
+                stats = mergemod.graft(repo, ctx, ctx.p1(),
+                                       ['local', 'graft'])
+            finally:
+                repo.ui.setconfig('ui', 'forcemerge', '', 'graft')
+            # report any conflicts
+            if stats and stats[3] > 0:
+                # write out state for --continue
+                nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
+                repo.vfs.write('graftstate', ''.join(nodelines))
+                extra = ''
+                if opts.get('user'):
+                    extra += ' --user %s' % opts['user']
+                if opts.get('date'):
+                    extra += ' --date %s' % opts['date']
+                if opts.get('log'):
+                    extra += ' --log'
+                hint=_('use hg resolve and hg graft --continue%s') % extra
+                raise error.Abort(
+                    _("unresolved conflicts, can't continue"),
+                    hint=hint)
+        else:
+            cont = False
 
-            # commit
-            node = repo.commit(text=message, user=user,
-                        date=date, extra=extra, editor=editor)
-            if node is None:
-                ui.warn(
-                    _('note: graft of %d:%s created no changes to commit\n') %
-                    (ctx.rev(), ctx))
-    finally:
-        # TODO: get rid of this meaningless try/finally enclosing.
-        # this is kept only to reduce changes in a patch.
-        pass
+        # commit
+        node = repo.commit(text=message, user=user,
+                    date=date, extra=extra, editor=editor)
+        if node is None:
+            ui.warn(
+                _('note: graft of %d:%s created no changes to commit\n') %
+                (ctx.rev(), ctx))
 
     # remove state when we complete successfully
     if not opts.get('dry_run'):
