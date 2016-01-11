@@ -35,7 +35,7 @@ def extsetup(ui):
     conduit_protocol = ui.config('fbconduit', 'protocol')
 
     if not conduit_host:
-        ui.warn('No conduit host specified in config; disabling fbconduit\n')
+        ui.warn(('No conduit host specified in config; disabling fbconduit\n'))
         return
     if not conduit_protocol:
         conduit_protocol = 'https'
@@ -118,7 +118,7 @@ def mirrornode(ctx, mapping, args):
         )
     except ConduitError as e:
         if 'unknown revision' not in str(e.args):
-            mapping['repo'].ui.warn(str(e.args) + '\n')
+            mapping['repo'].ui.warn((str(e.args) + '\n'))
         return ''
     return result.get(node, '')
 
@@ -195,7 +195,7 @@ def gitnode(repo, subset, x):
         translationerror = True
 
     if translationerror or result[n] == "":
-        repo.ui.warn("Could not translate revision {0}.\n".format(n))
+        repo.ui.warn(("Could not translate revision {0}.\n".format(n)))
         return subset.filter(lambda r: False)
 
     rn = repo[node.bin(result[n])].rev()

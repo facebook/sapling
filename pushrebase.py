@@ -321,7 +321,7 @@ def _getrevs(bundle, onto):
             if not sharedparents:
                 return revs, bundle[nullid]
             raise error.Abort(_('pushed commits do not branch from an ancestor '
-                               'of the desired destination %s' % onto.hex()))
+                               'of the desired destination %s') % onto.hex())
         oldonto = oldonto[0]
 
         # Computes a list of all files that are in the changegroup, and diffs it
@@ -529,16 +529,16 @@ def bundle2rebase(op, part):
 
         # Notify the user of what is being pushed
         plural = 's' if len(revs) > 1 else ''
-        op.repo.ui.warn("pushing %s commit%s:\n" % (len(revs), plural))
+        op.repo.ui.warn(_("pushing %s commit%s:\n") % (len(revs), plural))
         maxoutput = 10
         for i in range(0, min(len(revs), maxoutput)):
             firstline = bundle[revs[i]].description().split('\n')[0][:50]
-            op.repo.ui.warn("    %s  %s\n" % (revs[i], firstline))
+            op.repo.ui.warn(("    %s  %s\n") % (revs[i], firstline))
 
         if len(revs) > maxoutput + 1:
-            op.repo.ui.warn("    ...\n")
+            op.repo.ui.warn(("    ...\n"))
             firstline = bundle[revs[-1]].description().split('\n')[0][:50]
-            op.repo.ui.warn("    %s  %s\n" % (revs[-1], firstline))
+            op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
 
         for rev in revs:
             newrev = _graft(op.repo, rev, mapping)

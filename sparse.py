@@ -330,8 +330,8 @@ def _wraprepo(ui, repo):
                 elif line:
                     if line.strip().startswith('/'):
                         self.ui.warn(_('warning: sparse profile cannot use' +
-                                       ' paths starting with /, ignoring %s\n' %
-                                       line))
+                                       ' paths starting with /, ignoring %s\n')
+                                       % line)
                         continue
                     current.add(line)
 
@@ -640,8 +640,8 @@ def sparse(ui, repo, *pats, **opts):
             ui.status(repo.opener.read("sparse") + "\n")
             temporaryincludes = repo.gettemporaryincludes()
             if temporaryincludes:
-                ui.status("Temporarily Included Files (for merge/rebase):\n")
-                ui.status("\n".join(temporaryincludes) + "\n")
+                ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
+                ui.status(("\n".join(temporaryincludes) + "\n"))
         else:
             ui.status(_('repo is not sparse\n'))
         return
@@ -689,8 +689,8 @@ def _config(ui, repo, pats, include=False, exclude=False, reset=False,
             oldstatus = repo.status()
 
             if any(pat.startswith('/') for pat in pats):
-                ui.warn(_('warning: paths cannot start with /, ignoring: %s\n'
-                          % ([pat for pat in pats if pat.startswith('/')])))
+                ui.warn(_('warning: paths cannot start with /, ignoring: %s\n')
+                          % ([pat for pat in pats if pat.startswith('/')]))
             elif include:
                 newinclude.update(pats)
             elif exclude:

@@ -128,7 +128,7 @@ def prunemanifestdiskcache(ui, repo):
 
         if odds < random.random():
             # no pruning.
-            ui.note("no pruning needed at this time.")
+            ui.note(_("no pruning needed at this time."))
             return
 
         # update the file timestamp.

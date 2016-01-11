@@ -10,6 +10,7 @@
 
 
 from mercurial import scmutil
+from mercurial.i18n import _
 from mercurial import copies as copiesmod
 import sqlite3
 
@@ -134,11 +135,11 @@ def _fillctx(repo, ctxlist):
         if not added:
             return []
         else:
-            repo.ui.warn("Loop:\n")
+            repo.ui.warn(_("Loop:\n"))
             parents = []
             for ctxhash in added:
                 ctx = repo[ctxhash]
-                repo.ui.warn("%s added\n" % ctxhash)
+                repo.ui.warn(_("%s added\n") % ctxhash)
                 parents.append(ctx.p1())
                 parents.append(ctx.p2())
             return parents

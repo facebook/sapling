@@ -88,7 +88,7 @@ def _pushb2movedata(pushop, bundler):
         return
 
     data = _encodedict(dic)
-    repo.ui.status('moves for %d changesets pushed\n' % len(dic.keys()))
+    repo.ui.status(_('moves for %d changesets pushed\n') % len(dic.keys()))
 
     part = bundler.newpart('push:movedata', data=data, mandatory=False)
 
@@ -143,7 +143,7 @@ def _handlemovedatarequest(op, inpart):
     """
     dic = _decodedict(inpart)
     op.records.add('movedata', {'mvdict': dic})
-    op.repo.ui.warn('moves for %d changesets retrieved\n' % len(dic.keys()))
+    op.repo.ui.warn(_('moves for %d changesets retrieved\n') % len(dic.keys()))
     try:
         dbutil.insertrawdata(op.repo, dic)
     except Exception as e:

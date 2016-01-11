@@ -128,15 +128,15 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             if (sourcepath not in wctx and mirrorpath not in wctx and
                 sourcepath in status.removed and mirrorpath in status.removed):
                 if repo.ui.verbose:
-                    repo.ui.status("not mirroring remove of '%s' to '%s'; "
-                                   "it is already removed\n" %
-                                   (sourcepath, mirrorpath))
+                    repo.ui.status(("not mirroring remove of '%s' to '%s';"
+                                    " it is already removed\n")
+                                    % (sourcepath, mirrorpath))
                 continue
 
             if wctx[sourcepath].data() == wctx[mirrorpath].data():
                 if repo.ui.verbose:
-                    repo.ui.status("not mirroring '%s' to '%s'; it already "
-                                   "matches\n" % (sourcepath, mirrorpath))
+                    repo.ui.status(("not mirroring '%s' to '%s'; it already "
+                                    "matches\n") % (sourcepath, mirrorpath))
                 continue
             raise error.Abort("path '%s' needs to be mirrored to '%s', but the "
                              "target already has pending changes" %
@@ -152,6 +152,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
 
             util.copyfile(fullsource, fulltarget)
 
+
             if action == 'a':
                 dirstate.add(mirrorpath)
 
@@ -160,18 +161,19 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                 if copysource and copysource.startswith(sourcemirror):
                     mirrorcopysource = mirror + copysource[len(sourcemirror):]
                     dirstate.copy(mirrorcopysource, mirrorpath)
-                    repo.ui.status("mirrored copy '%s -> %s' to '%s -> %s'\n" %
-                                   (copysource, sourcepath,
+                    repo.ui.status(("mirrored copy '%s -> %s' to '%s -> %s'\n")
+                                    % (copysource, sourcepath,
                                     mirrorcopysource, mirrorpath))
                 else:
-                    repo.ui.status("mirrored adding '%s' to '%s'\n" %
+                    repo.ui.status(("mirrored adding '%s' to '%s'\n") %
                                    (sourcepath, mirrorpath))
             else:
-                repo.ui.status("mirrored changes in '%s' to '%s'\n" %
+                repo.ui.status(("mirrored changes in '%s' to '%s'\n") %
                                (sourcepath, mirrorpath))
         elif action == 'r':
             util.unlink(fulltarget)
             dirstate.remove(mirrorpath)
-            repo.ui.status("mirrored remove of '%s' to '%s'\n" % (sourcepath, mirrorpath))
+            repo.ui.status(("mirrored remove of '%s' to '%s'\n")
+                            % (sourcepath, mirrorpath))
 
     return mirroredfiles

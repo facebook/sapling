@@ -42,7 +42,7 @@ def uisetup(ui):
     try:
         rebasemod = extensions.find('rebase')
     except KeyError:
-        ui.warn("no rebase extension detected - disabling fbamend")
+        ui.warn(_("no rebase extension detected - disabling fbamend"))
         return
 
     entry = extensions.wrapcommand(commands.table, 'commit', commit)
@@ -223,10 +223,10 @@ def fixupamend(ui, repo):
         preamendname = _preamendname(repo, current.node())
 
         if not preamendname in repo._bookmarks:
-            raise error.Abort(_('no bookmark %s' % preamendname),
+            raise error.Abort(_('no bookmark %s') % preamendname,
                              hint=_('check if your bookmark is active'))
 
-        ui.status("rebasing the children of %s\n" % (preamendname))
+        ui.status(_("rebasing the children of %s\n") % (preamendname))
 
         old = repo[preamendname]
         oldbookmarks = old.bookmarks()

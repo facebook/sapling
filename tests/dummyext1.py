@@ -1,5 +1,5 @@
 def uisetup(ui):
-    ui.write("ext1: uisetup\n")
+    ui.write(("ext1: uisetup\n"))
 
 def extsetup(ui):
-    ui.write("ext1: extsetup\n")
+    ui.write(("ext1: extsetup\n"))
