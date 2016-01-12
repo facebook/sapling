@@ -413,6 +413,14 @@ def showmanifest(**args):
     args.update({'rev': repo.manifest.rev(mnode), 'node': hex(mnode)})
     return templ('manifest', **args)
 
+def shownames(namespace, **args):
+    """helper method to generate a template keyword for a namespace"""
+    ctx = args['ctx']
+    repo = ctx.repo()
+    ns = repo.names[namespace]
+    names = ns.names(repo, ctx.node())
+    return showlist(ns.templatename, names, plural=namespace, **args)
+
 def shownode(repo, ctx, templ, **args):
     """:node: String. The changeset identification hash, as a 40 hexadecimal
     digit string.
@@ -488,14 +496,6 @@ def showsubrepos(**args):
         if sub not in substate:
             subrepos.append(sub) # removed in ctx
     return showlist('subrepo', sorted(subrepos), **args)
-
-def shownames(namespace, **args):
-    """helper method to generate a template keyword for a namespace"""
-    ctx = args['ctx']
-    repo = ctx.repo()
-    ns = repo.names[namespace]
-    names = ns.names(repo, ctx.node())
-    return showlist(ns.templatename, names, plural=namespace, **args)
 
 # don't remove "showtags" definition, even though namespaces will put
 # a helper function for "tags" keyword into "keywords" map automatically,
