@@ -107,7 +107,7 @@ testpats = [
      "use egrep for extended grep syntax"),
     (r'/bin/', "don't use explicit paths for tools"),
     (r'[^\n]\Z', "no trailing newline"),
-    (r'export.*=', "don't export and assign at once"),
+    (r'export .*=', "don't export and assign at once"),
     (r'^source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
     (r'ls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
