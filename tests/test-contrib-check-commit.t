@@ -103,7 +103,7 @@ A patch with other errors:
   7: don't add trailing period on summary line
    This has no topic and ends with a period.
   19: adds double empty line
-    
+   +
   15: adds double empty line
    +
   16: adds a function with foo_bar naming

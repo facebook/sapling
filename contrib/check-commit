@@ -17,39 +17,56 @@
 
 import re, sys, os
 
+commitheader = r"^(?:# [^\n]*\n)*"
+afterheader = commitheader + r"(?!#)"
+beforepatch = afterheader + r"(?!\n(?!@@))"
+
 errors = [
-    (r"[(]bc[)]", "(BC) needs to be uppercase"),
-    (r"[(]issue \d\d\d", "no space allowed between issue and number"),
-    (r"[(]bug(\d|\s)", "use (issueDDDD) instead of bug"),
-    (r"^# User [^@\n]+$", "username is not an email address"),
-    (r"^# .*\n(?!merge with )[^#]\S+[^:] ",
+    (beforepatch + r".*[(]bc[)]", "(BC) needs to be uppercase"),
+    (beforepatch + r".*[(]issue \d\d\d", "no space allowed between issue and number"),
+    (beforepatch + r".*[(]bug(\d|\s)", "use (issueDDDD) instead of bug"),
+    (commitheader + r"# User [^@\n]+\n", "username is not an email address"),
+    (commitheader + r"(?!merge with )[^#]\S+[^:] ",
      "summary line doesn't start with 'topic: '"),
-    (r"^# .*\n[A-Z][a-z]\S+", "don't capitalize summary lines"),
-    (r"^# .*\n[^\n]*: *[A-Z][a-z]\S+", "don't capitalize summary lines"),
-    (r"^# [^\n]*\n\S*[^A-Za-z0-9-]\S*: ",
+    (afterheader + r"[A-Z][a-z]\S+", "don't capitalize summary lines"),
+    (afterheader + r"[^\n]*: *[A-Z][a-z]\S+", "don't capitalize summary lines"),
+    (afterheader + r"\S*[^A-Za-z0-9-]\S*: ",
      "summary keyword should be most user-relevant one-word command or topic"),
-    (r"^# .*\n.*\.\s+$", "don't add trailing period on summary line"),
-    (r"^# .*\n[^#].{78,}", "summary line too long (limit is 78)"),
-    (r"^\+\n \n", "adds double empty line"),
-    (r"^ \n\+\n", "adds double empty line"),
-    (r"^\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
+    (afterheader + r".*\.\s*\n", "don't add trailing period on summary line"),
+    (afterheader + r".{79,}", "summary line too long (limit is 78)"),
+    (r"\n\+\n \n", "adds double empty line"),
+    (r"\n \n\+\n", "adds double empty line"),
+    (r"\n\+[ \t]+def [a-z]+_[a-z]", "adds a function with foo_bar naming"),
 ]
+
+word = re.compile('\S')
+def nonempty(first, second):
+    if word.search(first):
+        return first
+    return second
 
 def checkcommit(commit, node = None):
     exitcode = 0
     printed = node is None
     for exp, msg in errors:
-        m = re.search(exp, commit, re.MULTILINE)
+        m = re.search(exp, commit)
         if m:
             pos = 0
+            end = m.end()
+            trailing = re.search(r'(\\n)+$', exp)
+            if trailing:
+                end -= len(trailing.group()) / 2
+            last = ''
             for n, l in enumerate(commit.splitlines(True)):
                 pos += len(l)
-                if pos >= m.end():
+                if pos < end:
+                    last = nonempty(l, last)
+                else:
                     if not printed:
                         printed = True
                         print "node: %s" % node
                     print "%d: %s" % (n, msg)
-                    print " %s" % l[:-1]
+                    print " %s" % nonempty(l, last)[:-1]
                     if "BYPASS" not in os.environ:
                         exitcode = 1
                     break
