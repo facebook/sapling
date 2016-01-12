@@ -141,12 +141,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
                     if path is None:
                         raise error.Abort(_("missing largefile for '%s' in %s")
                                           % (realname, realrev))
-                    fp = open(path, 'rb')
-
-                    try:
-                        return (fp.read(), f[1])
-                    finally:
-                        fp.close()
+                    return util.readfile(path), f[1]
 
             class converter(convcmd.converter):
                 def __init__(self, ui, source, dest, revmapfile, opts):
