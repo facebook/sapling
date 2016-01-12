@@ -53,6 +53,8 @@ RE_GIT_PROGRESS = re.compile('\((\d+)/(\d+)\)')
 
 RE_AUTHOR_FILE = re.compile('\s*=\s*')
 
+CALLBACK_BUFFER = ''
+
 class GitProgress(object):
     """convert git server progress strings into mercurial progress"""
     def __init__(self, ui):
@@ -1003,9 +1005,19 @@ class GitHandler(object):
             return self.git.object_store.generate_pack_contents(have, want)
 
         def callback(remote_info):
+            # dulwich (perhaps git?) wraps remote output at a fixed width but
+            # signifies the end of transmission with a double new line
+            global CALLBACK_BUFFER
+            if remote_info and not remote_info.endswith('\n\n'):
+                CALLBACK_BUFFER += remote_info
+                return
+
+            remote_info = CALLBACK_BUFFER + remote_info
+            CALLBACK_BUFFER = ''
             if not remote_info:
-                remote_info = ''
-            for line in remote_info.split('\n'):
+                remote_info = '\n'
+
+            for line in remote_info[:-1].split('\n'):
                 self.ui.status(_("remote: %s\n") % line)
 
         try:
