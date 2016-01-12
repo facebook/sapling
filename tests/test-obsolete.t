@@ -245,7 +245,7 @@ We need to create a clone of 5 and add a special marker with a flag
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 1 draft
-  bumped: 1 changeset
+  bumped: 1 changesets
   $ hg up '5^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg revert -ar 5
@@ -480,7 +480,7 @@ detect outgoing obsolete and unstable
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 3 draft
-  unstable: 1 changeset
+  unstable: 1 changesets
   $ hg log -G -r '::unstable()'
   @  5:cda648ca50f5 (draft) [tip ] add original_e
   |
