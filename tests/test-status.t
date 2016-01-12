@@ -390,14 +390,6 @@ reverted file with changed flag should appear modified
   reverting file
 #endif
 
-reverted and commit change should appear clean
-
-  $ hg ci -m a
-  $ hg status -A --rev 0 --rev 2
-  C file
-
-  $ cd ..
-
 hg status of binary file starting with '\1\n', a separator for metadata:
 
   $ hg init repo5
