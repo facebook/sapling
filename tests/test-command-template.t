@@ -3304,6 +3304,28 @@ Test active bookmark templating
   1 f
   0 f
 
+Test namespaces dict
+
+  $ hg log -T '{rev}{namespaces % " {namespace}={join(names, ",")}"}\n'
+  2 bookmarks=bar,foo tags=tip branches=text.{rev}
+  1 bookmarks=baz tags= branches=text.{rev}
+  0 bookmarks= tags= branches=default
+  $ hg log -r2 -T '{namespaces % "{namespace}: {names}\n"}'
+  bookmarks: bar foo
+  tags: tip
+  branches: text.{rev}
+  $ hg log -r2 -T '{namespaces % "{namespace}:\n{names % " {name}\n"}"}'
+  bookmarks:
+   bar
+   foo
+  tags:
+   tip
+  branches:
+   text.{rev}
+  $ hg log -r2 -T '{get(namespaces, "bookmarks") % "{name}\n"}'
+  bar
+  foo
+
 Test stringify on sub expressions
 
   $ cd ..

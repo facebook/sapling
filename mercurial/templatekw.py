@@ -421,6 +421,19 @@ def shownames(namespace, **args):
     names = ns.names(repo, ctx.node())
     return showlist(ns.templatename, names, plural=namespace, **args)
 
+def shownamespaces(**args):
+    """:namespaces: Dict of lists. Names attached to this changeset per
+    namespace."""
+    ctx = args['ctx']
+    repo = ctx.repo()
+    namespaces = util.sortdict((k, showlist('name', ns.names(repo, ctx.node()),
+                                            **args))
+                               for k, ns in repo.names.iteritems())
+    f = _showlist('namespace', list(namespaces), **args)
+    return _hybrid(f, namespaces,
+                   lambda k: {'namespace': k, 'names': namespaces[k]},
+                   lambda x: x['namespace'])
+
 def shownode(repo, ctx, templ, **args):
     """:node: String. The changeset identification hash, as a 40 hexadecimal
     digit string.
@@ -537,6 +550,7 @@ keywords = {
     'latesttag': showlatesttag,
     'latesttagdistance': showlatesttagdistance,
     'manifest': showmanifest,
+    'namespaces': shownamespaces,
     'node': shownode,
     'p1rev': showp1rev,
     'p1node': showp1node,
