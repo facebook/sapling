@@ -107,11 +107,8 @@ def checkfile(ui, filename, initlevel):
         filename = 'stdin'
         doc = sys.stdin.read()
     else:
-        fp = open(filename)
-        try:
+        with open(filename) as fp:
             doc = fp.read()
-        finally:
-            fp.close()
 
     ui.note(('checking input from %s with initlevel %d\n') %
             (filename, initlevel))
