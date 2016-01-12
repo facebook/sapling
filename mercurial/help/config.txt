@@ -1323,6 +1323,13 @@ have a definite end point.
 ``assume-tty``
     If true, ALWAYS show a progress bar, unless disable is given.
 
+``rebase``
+----------
+
+``allowdivergence``
+    Default to False, when True allow creating divergence when performing
+    rebase of obsolete changesets.
+
 ``revsetalias``
 ---------------
 

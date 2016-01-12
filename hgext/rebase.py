@@ -350,6 +350,17 @@ def rebase(ui, repo, **opts):
                                                                 dest)
                 rebaseobsskipped = set(obsoletenotrebased)
 
+                # Obsolete node with successors not in dest leads to divergence
+                divergenceok = ui.configbool('rebase',
+                                             'allowdivergence')
+                divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
+
+                if divergencebasecandidates and not divergenceok:
+                    msg = _("this rebase will cause divergence")
+                    h = _("to force the rebase please set "
+                          "rebase.allowdivergence=True")
+                    raise error.Abort(msg, hint=h)
+
                 # - plain prune (no successor) changesets are rebased
                 # - split changesets are not rebased if at least one of the
                 # changeset resulting from the split is an ancestor of dest
