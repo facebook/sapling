@@ -376,7 +376,7 @@ def get_matching_blocks(a, b):
     return [(d[0], d[2], d[1] - d[0]) for d in bdiff.blocks(a, b)]
 
 def trivialdiffheader(length):
-    return struct.pack(">lll", 0, 0, length)
+    return struct.pack(">lll", 0, 0, length) if length else ''
 
 def replacediffheader(oldlen, newlen):
     return struct.pack(">lll", 0, oldlen, newlen)

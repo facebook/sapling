@@ -131,7 +131,7 @@ We verify exact bundle content as an extra check against accidental future
 changes. If this output changes, we could break old clients.
 
   $ f --size --hexdump partial.hg
-  partial.hg: size=208
+  partial.hg: size=207
   0000: 48 47 31 30 47 5a 78 9c 63 60 60 98 17 ac 12 93 |HG10GZx.c``.....|
   0010: f0 ac a9 23 45 70 cb bf 0d 5f 59 4e 4a 7f 79 21 |...#Ep..._YNJ.y!|
   0020: 9b cc 40 24 20 a0 d7 ce 2c d1 38 25 cd 24 25 d5 |..@$ ...,.8%.$%.|
@@ -143,8 +143,8 @@ changes. If this output changes, we could break old clients.
   0080: 41 d6 24 59 18 a4 a4 9a a6 18 1a 5b 98 9b 5a 98 |A.$Y.......[..Z.|
   0090: 9a 18 26 9b a6 19 98 1a 99 99 26 a6 18 9a 98 24 |..&.......&....$|
   00a0: 26 59 a6 25 5a 98 a5 18 a6 24 71 41 35 b1 43 dc |&Y.%Z....$qA5.C.|
-  00b0: 96 b0 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a |.....E..V....R..|
-  00c0: 78 ed fc d5 76 f1 36 95 dc 05 07 00 ad 39 5e d3 |x...v.6......9^.|
+  00b0: 16 b2 83 f7 e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a |.....E..V....R..|
+  00c0: 78 ed fc d5 76 f1 36 35 dc 05 00 36 ed 5e c7    |x...v.65...6.^.|
 
   $ echo "http://localhost:$HGPORT1/partial.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT partial-bundle
@@ -189,11 +189,11 @@ changes, clone bundles produced by new Mercurial versions may not be readable
 by old clients.
 
   $ f --size --hexdump full.hg
-  full.hg: size=408
+  full.hg: size=406
   0000: 48 47 32 30 00 00 00 0e 43 6f 6d 70 72 65 73 73 |HG20....Compress|
   0010: 69 6f 6e 3d 47 5a 78 9c 63 60 60 90 e5 76 f6 70 |ion=GZx.c``..v.p|
   0020: f4 73 77 75 0f f2 0f 0d 60 00 02 46 06 76 a6 b2 |.swu....`..F.v..|
-  0030: d4 a2 e2 cc fc 3c 03 23 06 06 e6 7d 40 b1 4d c1 |.....<.#...}@.M.|
+  0030: d4 a2 e2 cc fc 3c 03 23 06 06 e6 65 40 b1 4d c1 |.....<.#...e@.M.|
   0040: 2a 31 09 cf 9a 3a 52 04 b7 fc db f0 95 e5 a4 f4 |*1...:R.........|
   0050: 97 17 b2 c9 0c 14 00 02 e6 d9 99 25 1a a7 a4 99 |...........%....|
   0060: a4 a4 1a 5b 58 a4 19 27 9b a4 59 a4 1a 59 a4 99 |...[X..'..Y..Y..|
@@ -212,10 +212,10 @@ by old clients.
   0130: 34 31 c5 d0 c4 24 31 c9 32 2d d1 c2 2c c5 30 25 |41...$1.2-..,.0%|
   0140: 09 e4 ee 85 8f 85 ff 88 ab 89 36 c7 2a c4 47 34 |..........6.*.G4|
   0150: fe f8 ec 7b 73 37 3f c3 24 62 1d 8d 4d 1d 9e 40 |...{s7?.$b..M..@|
-  0160: 06 3b 10 14 36 a4 38 10 04 d8 21 01 5a b2 83 f7 |.;..6.8...!.Z...|
+  0160: 06 3b 10 14 36 a4 38 10 04 d8 21 01 9a b1 83 f7 |.;..6.8...!.....|
   0170: e9 45 8b d2 56 c7 a3 1f 82 52 d7 8a 78 ed fc d5 |.E..V....R..x...|
-  0180: 76 f1 36 25 81 49 c0 ad 30 c0 0e 49 8f 54 b7 9e |v.6%.I..0..I.T..|
-  0190: d4 1c 09 00 bb 8d f0 bd                         |........|
+  0180: 76 f1 36 25 81 89 c7 ad ec 90 34 48 75 2b 89 49 |v.6%......4Hu+.I|
+  0190: bf 00 d6 97 f0 8d                               |......|
 
   $ echo "http://localhost:$HGPORT1/full.hg" > server/.hg/clonebundles.manifest
   $ hg clone -U http://localhost:$HGPORT full-bundle
