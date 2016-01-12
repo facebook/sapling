@@ -1445,25 +1445,16 @@ def ensuredirs(name, mode=None, notindexed=False):
         os.chmod(name, mode)
 
 def readfile(path):
-    fp = open(path, 'rb')
-    try:
+    with open(path, 'rb') as fp:
         return fp.read()
-    finally:
-        fp.close()
 
 def writefile(path, text):
-    fp = open(path, 'wb')
-    try:
+    with open(path, 'wb') as fp:
         fp.write(text)
-    finally:
-        fp.close()
 
 def appendfile(path, text):
-    fp = open(path, 'ab')
-    try:
+    with open(path, 'ab') as fp:
         fp.write(text)
-    finally:
-        fp.close()
 
 class chunkbuffer(object):
     """Allow arbitrary sized chunks of data to be efficiently read from an
