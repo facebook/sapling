@@ -212,10 +212,17 @@ if version:
         f.write('version = "%s"\n' % version)
 
 try:
+    oldpolicy = os.environ.get('HGMODULEPOLICY', None)
+    os.environ['HGMODULEPOLICY'] = 'py'
     from mercurial import __version__
     version = __version__.version
 except ImportError:
     version = 'unknown'
+finally:
+    if oldpolicy is None:
+        del os.environ['HGMODULEPOLICY']
+    else:
+        os.environ['HGMODULEPOLICY'] = oldpolicy
 
 class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
