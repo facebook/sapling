@@ -2311,8 +2311,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
     serverlogs = opts.get('serverlog')
     if serverlogs:
         for filename in serverlogs:
-            logfile = open(filename, 'r')
-            try:
+            with open(filename, 'r') as logfile:
                 line = logfile.readline()
                 while line:
                     parts = line.strip().split(';')
@@ -2324,9 +2323,6 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
                     elif op == 'unb':
                         doit(parts[3].split(' '), parts[2].split(' '))
                     line = logfile.readline()
-            finally:
-                logfile.close()
-
     else:
         remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches,
                                                  opts.get('remote_head'))
