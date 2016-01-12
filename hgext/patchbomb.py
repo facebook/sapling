@@ -235,10 +235,7 @@ def _getbundle(repo, dest, **opts):
         opts['type'] = btype
     try:
         commands.bundle(ui, repo, tmpfn, dest, **opts)
-        fp = open(tmpfn, 'rb')
-        data = fp.read()
-        fp.close()
-        return data
+        return util.readfile(tmpfn)
     finally:
         try:
             os.unlink(tmpfn)
