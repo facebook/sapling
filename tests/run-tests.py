@@ -1681,8 +1681,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
             if self._runner.options.xunit:
-                xuf = open(self._runner.options.xunit, 'wb')
-                try:
+                with open(self._runner.options.xunit, 'wb') as xuf:
                     timesd = dict((t[0], t[3]) for t in result.times)
                     doc = minidom.Document()
                     s = doc.createElement('testsuite')
@@ -1709,8 +1708,6 @@ class TextTestRunner(unittest.TextTestRunner):
                         t.appendChild(cd)
                         s.appendChild(t)
                     xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
-                finally:
-                    xuf.close()
 
             if self._runner.options.json:
                 if json is None:
