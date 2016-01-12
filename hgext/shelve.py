@@ -424,8 +424,7 @@ def listcmd(ui, repo, pats, opts):
         ui.write(age, label='shelve.age')
         ui.write(' ' * (12 - len(age)))
         used += 12
-        fp = open(name + '.patch', 'rb')
-        try:
+        with open(name + '.patch', 'rb') as fp:
             while True:
                 line = fp.readline()
                 if not line:
@@ -447,8 +446,6 @@ def listcmd(ui, repo, pats, opts):
                 for chunk, label in patch.diffstatui(difflines, width=width,
                                                      git=True):
                     ui.write(chunk, label=label)
-        finally:
-            fp.close()
 
 def singlepatchcmds(ui, repo, pats, opts, subcommand):
     """subcommand that displays a single shelf"""
