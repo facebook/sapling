@@ -967,16 +967,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
 
             f = lfutil.splitstandin(f)
 
-            def getdatafn():
-                fd = None
-                try:
-                    fd = open(path, 'rb')
-                    return fd.read()
-                finally:
-                    if fd:
-                        fd.close()
-
-            getdata = getdatafn
+            getdata = lambda: util.readfile(path)
         write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, getdata)
 
     if subrepos:
@@ -1024,16 +1015,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
 
             f = lfutil.splitstandin(f)
 
-            def getdatafn():
-                fd = None
-                try:
-                    fd = open(os.path.join(prefix, path), 'rb')
-                    return fd.read()
-                finally:
-                    if fd:
-                        fd.close()
-
-            getdata = getdatafn
+            getdata = lambda: util.readfile(os.path.join(prefix, path))
 
         write(f, 'x' in ff and 0o755 or 0o644, 'l' in ff, getdata)
 
