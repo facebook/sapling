@@ -1,0 +1,80 @@
+# show.py
+#
+# Copyright 2016 Facebook, Inc.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2 or any later version.
+"""Show changesets in detail with full log message, patches etc
+
+For example, 'hg show --stat' prints something like:
+
+  $ hg show --stat
+  changeset:   1:b73358b94785
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       x
+  description:
+  longer
+
+
+   x |  1 +
+   1 files changed, 1 insertions(+), 0 deletions(-)
+
+  diff -r 852a8d467a01 -r b73358b94785 x
+  --- a/x	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
+  @@ -1,1 +1,2 @@
+   show
+  +more
+"""
+
+from mercurial.i18n import _
+from mercurial import cmdutil, commands
+
+cmdtable = {}
+command = cmdutil.command(cmdtable)
+testedwith = 'internal'
+
+def uisetup(ui):
+    permitted_opts = [
+        ('g', 'git', None, _('use git extended diff format')),
+        ('', 'stat', None, _('output diffstat-style summary of changes')),
+    ] + commands.templateopts + commands.walkopts
+
+    aliases, entry = cmdutil.findcmd('log', commands.table)
+    allowed_opts = [opt for opt in entry[1] if opt in permitted_opts]
+
+    # manual call of the decorator
+    command('^show',
+            allowed_opts,
+            _('[OPTION]... [REV]'),
+            inferrepo=True)(show)
+
+def show(ui, repo, *args, **opts):
+    """Shows the given revision in detail, or '.' if no revision is given.
+
+    This behaves similarly to :hg:`log -vp -r [OPTION].. REV`, or if called
+    without a REV, :hg:`log -vp -r [OPTION].. .` Use :hg`log` for more powerful
+    operations than supported by hg show
+
+    See :hg:`help templates` for more about pre-packaged styles and
+    specifying custom templates.
+    """
+    if len(args) == 0:
+        opts['rev'] = ['.']
+    else:
+        opts['rev'] = args
+
+    opts['patch'] = True
+    opts['verbose'] = True
+
+    backup = ui.backupconfig('ui', 'verbose')
+
+    try:
+        ui.setconfig('ui', 'verbose', True)
+        newargs = []
+        commands.log(ui, repo, *newargs, **opts)
+
+    finally:
+        ui.restoreconfig(backup)
