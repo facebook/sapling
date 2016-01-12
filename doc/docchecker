@@ -16,6 +16,8 @@ checks = [
     """warning: please avoid nesting ' in :hg:`...`"""),
   (r'\w:hg:`',
     'warning: please have a space before :hg:'),
+  (r"""(?:[^a-z][^'.])hg ([^,;"`]*'(?!hg)){2}""",
+    '''warning: please use " instead of ' for hg ... "..."'''),
 ]
 
 def check(line):
