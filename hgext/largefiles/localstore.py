@@ -39,11 +39,8 @@ class localstore(basestore.basestore):
         if not path:
             raise basestore.StoreError(filename, hash, self.url,
                 _("can't get file locally"))
-        fd = open(path, 'rb')
-        try:
+        with open(path, 'rb') as fd:
             return lfutil.copyandhash(fd, tmpfile)
-        finally:
-            fd.close()
 
     def _verifyfile(self, cctx, cset, contents, standin, verified):
         filename = lfutil.splitstandin(standin)
