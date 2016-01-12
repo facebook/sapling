@@ -4,7 +4,10 @@
 import sys
 import mercurial
 import code
-from mercurial import cmdutil
+from mercurial import (
+    cmdutil,
+    demandimport,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -45,7 +48,8 @@ def debugshell(ui, repo, **opts):
 
     # if IPython doesn't exist, fallback to code.interact
     try:
-        __import__(pdbmap[debugger])
+        with demandimport.deactivated():
+            __import__(pdbmap[debugger])
     except ImportError:
         ui.warn("%s debugger specified but %s module was not found\n"
                 % (debugger, pdbmap[debugger]))
