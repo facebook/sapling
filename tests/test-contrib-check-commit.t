@@ -55,15 +55,15 @@ A patch with lots of errors:
   >          if opts.get('all'):
   > EOF
   $ cat patch-with-long-header.diff | $TESTDIR/../contrib/check-commit
-  7: (BC) needs to be uppercase
-   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
-  7: no space allowed between issue and number
-   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
-  7: use (issueDDDD) instead of bug
-   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
   1: username is not an email address
    # User timeless
   7: summary keyword should be most user-relevant one-word command or topic
+   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
+  7: (BC) needs to be uppercase
+   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
+  7: use (issueDDDD) instead of bug
+   transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
+  7: no space allowed between issue and number
    transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
   7: summary line too long (limit is 78)
    transplant/foo: this summary is way too long use Oxford comma (bc) (bug123) (issue 244)
@@ -96,16 +96,16 @@ A patch with other errors:
   $ cat patch-with-long-header.diff | $TESTDIR/../contrib/check-commit
   1: username is not an email address
    # User timeless
-  7: summary line doesn't start with 'topic: '
-   This has no topic and ends with a period.
   7: don't capitalize summary lines
+   This has no topic and ends with a period.
+  7: summary line doesn't start with 'topic: '
    This has no topic and ends with a period.
   7: don't add trailing period on summary line
    This has no topic and ends with a period.
-  19: adds double empty line
-   +
   15: adds double empty line
    +
   16: adds a function with foo_bar naming
    + def blah_blah(x):
+  19: adds double empty line
+   +
   [1]

@@ -48,28 +48,35 @@ def nonempty(first, second):
 def checkcommit(commit, node = None):
     exitcode = 0
     printed = node is None
+    hits = []
     for exp, msg in errors:
         m = re.search(exp, commit)
         if m:
-            pos = 0
             end = m.end()
             trailing = re.search(r'(\\n)+$', exp)
             if trailing:
                 end -= len(trailing.group()) / 2
-            last = ''
-            for n, l in enumerate(commit.splitlines(True)):
-                pos += len(l)
+            hits.append((end, exp, msg))
+    if hits:
+        hits.sort()
+        pos = 0
+        last = ''
+        for n, l in enumerate(commit.splitlines(True)):
+            pos += len(l)
+            while len(hits):
+                end, exp, msg = hits[0]
                 if pos < end:
-                    last = nonempty(l, last)
-                else:
-                    if not printed:
-                        printed = True
-                        print "node: %s" % node
-                    print "%d: %s" % (n, msg)
-                    print " %s" % nonempty(l, last)[:-1]
-                    if "BYPASS" not in os.environ:
-                        exitcode = 1
                     break
+                if not printed:
+                    printed = True
+                    print "node: %s" % node
+                print "%d: %s" % (n, msg)
+                print " %s" % nonempty(l, last)[:-1]
+                if "BYPASS" not in os.environ:
+                    exitcode = 1
+                del hits[0]
+            last = nonempty(l, last)
+
     return exitcode
 
 def readcommit(node):
