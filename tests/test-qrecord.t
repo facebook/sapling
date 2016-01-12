@@ -30,10 +30,10 @@ help record (record)
   
   interactively select changes to commit
   
-      If a list of files is omitted, all changes reported by "hg status" will be
+      If a list of files is omitted, all changes reported by 'hg status' will be
       candidates for recording.
   
-      See "hg help dates" for a list of formats valid for -d/--date.
+      See 'hg help dates' for a list of formats valid for -d/--date.
   
       You will be prompted for whether to record changes to each modified file,
       and for files with multiple changes, for each change to use. For each
@@ -82,7 +82,7 @@ help (no mq, so no qrecord)
   
   interactively record a new patch
   
-      See "hg help qnew" & "hg help record" for more information and usage.
+      See 'hg help qnew' & 'hg help record' for more information and usage.
   
   (some details hidden, use --verbose to show complete help)
 
@@ -114,7 +114,7 @@ help (bad mq)
   
   interactively record a new patch
   
-      See "hg help qnew" & "hg help record" for more information and usage.
+      See 'hg help qnew' & 'hg help record' for more information and usage.
   
   (some details hidden, use --verbose to show complete help)
 
@@ -128,7 +128,7 @@ help (mq present)
   
   interactively record a new patch
   
-      See "hg help qnew" & "hg help record" for more information and usage.
+      See 'hg help qnew' & 'hg help record' for more information and usage.
   
   options ([+] can be repeated):
   

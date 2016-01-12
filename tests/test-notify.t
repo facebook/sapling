@@ -22,7 +22,7 @@
   This extension implements hooks to send email notifications when changesets
   are sent from or received by the local repository.
   
-  First, enable the extension as explained in "hg help extensions", and register
+  First, enable the extension as explained in 'hg help extensions', and register
   the hook you want to run. "incoming" and "changegroup" hooks are run when
   changesets are received, while "outgoing" hooks are for changesets sent to
   another repository:

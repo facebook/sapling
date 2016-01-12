@@ -25,7 +25,7 @@ help
   Known patches are represented as patch files in the .hg/patches directory.
   Applied patches are both patch files and changesets.
   
-  Common tasks (use "hg help command" for more details):
+  Common tasks (use 'hg help command' for more details):
   
     create new patch                          qnew
     import existing patch                     qimport
@@ -49,14 +49,14 @@ help
   will override the [diff] section and always generate git or regular patches,
   possibly losing data in the second case.
   
-  It may be desirable for mq changesets to be kept in the secret phase (see "hg
-  help phases"), which can be enabled with the following setting:
+  It may be desirable for mq changesets to be kept in the secret phase (see 'hg
+  help phases'), which can be enabled with the following setting:
   
     [mq]
     secret = True
   
   You will by default be managing a patch queue named "patches". You can create
-  other, independent patch queues with the "hg qqueue" command.
+  other, independent patch queues with the 'hg qqueue' command.
   
   If the working directory contains uncommitted files, qpush, qpop and qgoto
   abort immediately. If -f/--force is used, the changes are discarded. Setting:

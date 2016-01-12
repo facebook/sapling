@@ -431,7 +431,7 @@ Extension module help vs command help:
   to directories containing snapshots of files to compare.
   
   The extdiff extension also allows you to configure new diff commands, so you
-  do not need to type "hg extdiff -p kdiff3" always.
+  do not need to type 'hg extdiff -p kdiff3' always.
   
     [extdiff]
     # add new command that runs GNU diff(1) in 'context diff' mode
@@ -469,7 +469,7 @@ Extension module help vs command help:
     [diff-tools]
     kdiff3.diffargs=--L1 '$plabel1' --L2 '$clabel' $parent $child
   
-  You can use -I/-X and list of file or directory names like normal "hg diff"
+  You can use -I/-X and list of file or directory names like normal 'hg diff'
   command. The extdiff extension makes snapshots of only needed files, so
   running the external diff program will actually be pretty fast (at least
   faster than having to compare the entire tree).

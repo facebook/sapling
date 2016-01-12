@@ -221,7 +221,7 @@ Test extension help:
         [extensions]
         myfeature = ~/.hgext/myfeature.py
   
-      See "hg help config" for more information on configuration files.
+      See 'hg help config' for more information on configuration files.
   
       Extensions are not loaded by default for a variety of reasons: they can
       increase startup overhead; they may be meant for advanced usage only; they
@@ -345,7 +345,7 @@ Test short command list with verbose option
       Schedule files to be version controlled and added to the repository.
   
       The files will be added to the repository at the next commit. To undo an
-      add before that, see "hg forget".
+      add before that, see 'hg forget'.
   
       If no names are given, add all files to the repository (except files
       matching ".hgignore").
@@ -371,14 +371,14 @@ Verbose help for add
       Schedule files to be version controlled and added to the repository.
   
       The files will be added to the repository at the next commit. To undo an
-      add before that, see "hg forget".
+      add before that, see 'hg forget'.
   
       If no names are given, add all files to the repository (except files
       matching ".hgignore").
   
       Examples:
   
-        - New (unknown) files are added automatically by "hg add":
+        - New (unknown) files are added automatically by 'hg add':
   
             $ ls
             foo.c
@@ -498,7 +498,7 @@ Test command without options
       Differences between files are shown using the unified diff format.
   
       Note:
-         "hg diff" may generate unexpected results for merges, as it will
+         'hg diff' may generate unexpected results for merges, as it will
          default to comparing against the working directory's first parent
          changeset if no revisions are specified.
   
@@ -515,7 +515,7 @@ Test command without options
       with undesirable results.
   
       Use the -g/--git option to generate diffs in the git extended diff format.
-      For more information, read "hg help diffs".
+      For more information, read 'hg help diffs'.
   
       Returns 0 on success.
   
@@ -558,7 +558,7 @@ Test command without options
       explicitly requested with -u/--unknown or -i/--ignored.
   
       Note:
-         "hg status" may appear to disagree with diff if permissions have
+         'hg status' may appear to disagree with diff if permissions have
          changed or a merge has occurred. The standard diff format does not
          report permission changes and diff only reports changes relative to one
          merge parent.
@@ -1378,7 +1378,7 @@ Test omit indicating for help
   
   This paragraph is never omitted (for extension)
   
-  This paragraph is omitted, if "hg help" is invoked without "-v" (for
+  This paragraph is omitted, if 'hg help' is invoked without "-v" (for
   extension)
   
   This paragraph is never omitted, too (for extension)
@@ -1399,7 +1399,7 @@ Test omit indicating for help
   
       This paragraph is never omitted (for topic).
   
-      This paragraph is omitted, if "hg help" is invoked without "-v" (for
+      This paragraph is omitted, if 'hg help' is invoked without "-v" (for
       topic)
   
       This paragraph is never omitted, too (for topic)
@@ -1416,7 +1416,7 @@ Test section lookup
           (DVCS) can be described as a directed acyclic graph (DAG), consisting
           of nodes and edges, where nodes correspond to changesets and edges
           imply a parent -> child relation. This graph can be visualized by
-          graphical tools such as "hg log --graph". In Mercurial, the DAG is
+          graphical tools such as 'hg log --graph'. In Mercurial, the DAG is
           limited by the requirement for children to have at most two parents.
   
 
@@ -1434,8 +1434,8 @@ Test section lookup
         local_path = /home/me/repo
   
       These symbolic names can be used from the command line. To pull from
-      "my_server": "hg pull my_server". To push to "local_path": "hg push
-      local_path".
+      "my_server": 'hg pull my_server'. To push to "local_path": 'hg push
+      local_path'.
   
       Options containing colons (":") denote sub-options that can influence
       behavior for that specific path. Example:
@@ -1455,11 +1455,11 @@ Test section lookup
       "default"
          The URL or directory to use when no source or remote is specified.
   
-         "hg clone" will automatically define this path to the location the
+         'hg clone' will automatically define this path to the location the
          repository was cloned from.
   
       "default-push"
-         (deprecated) The URL or directory for the default "hg push" location.
+         (deprecated) The URL or directory for the default 'hg push' location.
          "default:pushurl" should be used instead.
   
   $ hg help glossary.mcguffin
@@ -1486,8 +1486,8 @@ Test dynamic list of merge tools only shows up once
       the two file versions, so they can determine the changes made on both
       branches.
   
-      Merge tools are used both for "hg resolve", "hg merge", "hg update", "hg
-      backout" and in several extensions.
+      Merge tools are used both for 'hg resolve', 'hg merge', 'hg update', 'hg
+      backout' and in several extensions.
   
       Usually, the merge tool tries to automatically reconcile the files by
       combining all non-overlapping changes that occurred separately in the two
@@ -2248,7 +2248,7 @@ Dish up an empty repo; serve it cold.
   </p>
   <p>
   The files will be added to the repository at the next commit. To
-  undo an add before that, see &quot;hg forget&quot;.
+  undo an add before that, see 'hg forget'.
   </p>
   <p>
   If no names are given, add all files to the repository (except
@@ -2258,7 +2258,7 @@ Dish up an empty repo; serve it cold.
   Examples:
   </p>
   <ul>
-   <li> New (unknown) files are added   automatically by &quot;hg add&quot;:
+   <li> New (unknown) files are added   automatically by 'hg add':
   <pre>
   \$ ls (re)
   foo.c
@@ -2425,8 +2425,8 @@ Dish up an empty repo; serve it cold.
   </p>
   <p>
   This command schedules the files to be removed at the next commit.
-  To undo a remove before that, see &quot;hg revert&quot;. To undo added
-  files, see &quot;hg forget&quot;.
+  To undo a remove before that, see 'hg revert'. To undo added
+  files, see 'hg forget'.
   </p>
   <p>
   -A/--after can be used to remove only files that have already
@@ -2438,7 +2438,7 @@ Dish up an empty repo; serve it cold.
   The following table details the behavior of remove for different
   file states (columns) and option combinations (rows). The file
   states are Added [A], Clean [C], Modified [M] and Missing [!]
-  (as reported by &quot;hg status&quot;). The actions are Warn, Remove
+  (as reported by 'hg status'). The actions are Warn, Remove
   (from branch) and Delete (from disk):
   </p>
   <table>
@@ -2472,7 +2472,7 @@ Dish up an empty repo; serve it cold.
   <b>Note:</b> 
   </p>
   <p>
-  &quot;hg remove&quot; never deletes files in Added [A] state from the
+  'hg remove' never deletes files in Added [A] state from the
   working directory, not even if &quot;--force&quot; is specified.
   </p>
   <p>

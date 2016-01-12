@@ -368,7 +368,7 @@ def inlineliterals(blocks):
     return blocks
 
 def hgrole(blocks):
-    substs = [(':hg:`', '"hg '), ('`', '"')]
+    substs = [(':hg:`', "'hg "), ('`', "'")]
     for b in blocks:
         if b['type'] in ('paragraph', 'section'):
             # Turn :hg:`command` into "hg command". This also works
