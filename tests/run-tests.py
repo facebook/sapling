@@ -1716,8 +1716,7 @@ class TextTestRunner(unittest.TextTestRunner):
                 if json is None:
                     raise ImportError("json module not installed")
                 jsonpath = os.path.join(self._runner._testdir, 'report.json')
-                fp = open(jsonpath, 'w')
-                try:
+                with open(jsonpath, 'w') as fp:
                     timesd = {}
                     for tdata in result.times:
                         test = tdata[0]
@@ -1741,8 +1740,6 @@ class TextTestRunner(unittest.TextTestRunner):
                             outcome[tc.name] = tres
                     jsonout = json.dumps(outcome, sort_keys=True, indent=4)
                     fp.writelines(("testreport =", jsonout))
-                finally:
-                    fp.close()
 
             self._runner._checkhglib('Tested')
 
