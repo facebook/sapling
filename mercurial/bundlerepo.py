@@ -245,17 +245,14 @@ class bundlerepository(localrepo.localrepository):
             fdtemp, temp = self.vfs.mkstemp(prefix="hg-bundle-",
                                             suffix=".hg10un")
             self.tempfile = temp
-            fptemp = os.fdopen(fdtemp, 'wb')
 
-            try:
+            with os.fdopen(fdtemp, 'wb') as fptemp:
                 fptemp.write(header)
                 while True:
                     chunk = read(2**18)
                     if not chunk:
                         break
                     fptemp.write(chunk)
-            finally:
-                fptemp.close()
 
             return self.vfs.open(self.tempfile, mode="rb")
         self._tempparent = None
