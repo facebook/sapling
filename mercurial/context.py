@@ -140,13 +140,13 @@ class basectx(object):
                 added.append(fn)
             elif node2 is None:
                 removed.append(fn)
+            elif flag1 != flag2:
+                modified.append(fn)
             elif self.rev() is not None:
                 # When comparing files between two commits, we save time by
                 # not comparing the file contents when the nodeids differ.
                 # Note that this means we incorrectly report a reverted change
                 # to a file as a modification.
-                modified.append(fn)
-            elif flag1 != flag2:
                 modified.append(fn)
             elif self[fn].cmp(other[fn]):
                 modified.append(fn)

@@ -388,6 +388,17 @@ reverted file with changed flag should appear modified
 
   $ hg revert -r 0 .
   reverting file
+
+reverted and committed file with changed flag should appear modified
+
+  $ hg co -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ chmod +x file
+  $ hg ci -m 'change flag'
+  $ hg status -A --rev 1 --rev 2
+  M file
+  $ hg diff -r 1 -r 2
+
 #endif
 
 hg status of binary file starting with '\1\n', a separator for metadata:
