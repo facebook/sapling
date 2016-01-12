@@ -33,7 +33,7 @@ To start a new repository or add new large binary files, just add
 
   $ dd if=/dev/urandom of=randomdata count=2000
   $ hg add --large randomdata
-  $ hg commit -m 'add randomdata as a largefile'
+  $ hg commit -m "add randomdata as a largefile"
 
 When you push a changeset that adds/modifies largefiles to a remote
 repository, its largefile revisions will be uploaded along with it.
