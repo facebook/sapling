@@ -231,3 +231,63 @@ Second scenario with two repos:
   R a/f
 
   $ cd ..
+
+Test renames to separate directories
+
+  $ hg init a
+  $ cd a
+  $ mkdir a
+  $ touch a/s
+  $ touch a/t
+  $ hg ci -Am0
+  adding a/s
+  adding a/t
+
+Add more files
+
+  $ touch a/s2
+  $ touch a/t2
+  $ hg ci -Am1
+  adding a/s2
+  adding a/t2
+
+Do moves on a branch
+
+  $ hg up 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ mkdir s
+  $ mkdir t
+  $ hg mv a/s s
+  $ hg mv a/t t
+  $ hg ci -Am2
+  created new head
+  $ hg st --copies --change .
+  A s/s
+    a/s
+  A t/t
+    a/t
+  R a/s
+  R a/t
+
+Merge shouldn't move s2, t2
+
+  $ hg merge
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg st --copies
+  M a/s2
+  M a/t2
+
+Try the merge in the other direction. It may or may not be appropriate for
+status to list copies here.
+
+  $ hg up -C 1
+  4 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg merge
+  2 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg st --copies
+  M s/s
+  M t/t
+  R a/s
+  R a/t

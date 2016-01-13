@@ -401,13 +401,13 @@ def mergecopies(repo, c1, c2, ca):
             continue
         elif dsrc in d1 and ddst in d1:
             # directory wasn't entirely moved locally
-            invalid.add(dsrc)
+            invalid.add(dsrc + "/")
         elif dsrc in d2 and ddst in d2:
             # directory wasn't entirely moved remotely
-            invalid.add(dsrc)
-        elif dsrc in dirmove and dirmove[dsrc] != ddst:
+            invalid.add(dsrc + "/")
+        elif dsrc + "/" in dirmove and dirmove[dsrc + "/"] != ddst + "/":
             # files from the same directory moved to two different places
-            invalid.add(dsrc)
+            invalid.add(dsrc + "/")
         else:
             # looks good so far
             dirmove[dsrc + "/"] = ddst + "/"
