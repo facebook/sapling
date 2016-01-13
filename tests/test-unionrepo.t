@@ -148,3 +148,22 @@ union repos can be cloned ... and clones works correctly
   2:68c0685446a3  repo1-2
   1:8a58db72e69d  repo1-1
   0:f093fec0529b  repo1-0
+
+union repos should use the correct rev number (issue5024)
+
+  $ hg init a
+  $ cd a
+  $ echo a0 >> f
+  $ hg ci -Aqm a0
+  $ cd ..
+  $ hg init b
+  $ cd b
+  $ echo b0 >> f
+  $ hg ci -Aqm b0
+  $ echo b1 >> f
+  $ hg ci -qm b1
+  $ cd ..
+
+"hg files -v" to call fctx.size() -> fctx.iscensored()
+  $ hg files -R union:b+a -r2 -v
+           3   b/f (glob)
