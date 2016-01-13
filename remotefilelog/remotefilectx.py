@@ -56,7 +56,26 @@ class remotefilectx(context.filectx):
         if rev is not None:
             return rev
 
-        # TODO: look up alternate histories in historical blob files
+        # Search all commits for the appropriate linkrev (slow, but uncommon)
+        path = self._path
+        fileid = self._fileid
+        cl = self._repo.unfiltered().changelog
+        ma = self._repo.manifest
+
+        # If we don't find it within the top 100,000 commits, it probably
+        # doesn't exist, so give up early instead of wasting the user's time.
+        searchlimit = max(0, len(cl) - 100000)
+        for rev in range(len(cl) - 1, searchlimit, -1):
+            node = cl.node(rev)
+            data = cl.read(node) # get changeset data (we avoid object creation)
+            if path in data[3]: # checking the 'files' field.
+                # The file has been touched, check if the hash is what we're
+                # looking for.
+                if fileid == ma.readfast(data[0]).get(path):
+                    return rev
+
+        # Couldn't find the linkrev. This should generally not happen, and will
+        # likely cause a crash.
         return None
 
     def introrev(self):
