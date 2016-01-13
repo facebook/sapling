@@ -557,6 +557,16 @@ class mergestate(object):
         Meant for use by custom merge drivers."""
         self._results[f] = 0, 'g'
 
+def _getcheckunknownconfig(repo, section, name):
+    config = repo.ui.config(section, name, default='abort')
+    valid = ['abort', 'ignore', 'warn']
+    if config not in valid:
+        validstr = ', '.join(["'" + v + "'" for v in valid])
+        raise error.ConfigError(_("%s.%s not valid "
+                                  "('%s' is none of %s)")
+                                % (section, name, config, validstr))
+    return config
+
 def _checkunknownfile(repo, wctx, mctx, f, f2=None):
     if f2 is None:
         f2 = f
@@ -573,14 +583,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     """
     conflicts = set()
     if not force:
-        config = repo.ui.config('merge', 'checkunknown', default='abort')
-        valid = ['abort', 'ignore', 'warn']
-        if config not in valid:
-            validstr = ', '.join(["'" + v + "'" for v in valid])
-            raise error.ConfigError(_("merge.checkunknown not valid "
-                                      "('%s' is none of %s)")
-                                    % (config, validstr))
-
+        config = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
