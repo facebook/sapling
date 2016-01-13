@@ -168,7 +168,7 @@ Test relative ignore path (issue4473):
 
   $ hg debugignore b.o
   b.o is ignored
-  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: '*')
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 1: '*') (glob)
 
   $ cd ..
 
@@ -199,7 +199,7 @@ Check recursive glob pattern matches no directories (dir/**/c.o matches dir/c.o)
   a.c is not ignored
   $ hg debugignore dir/c.o
   dir/c.o is ignored
-  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 2: 'dir/**/c.o')
+  (ignore rule in $TESTTMP/ignorerepo/.hgignore, line 2: 'dir/**/c.o') (glob)
 
 Check using 'include:' in ignore file
 
