@@ -583,6 +583,14 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     """
     conflicts = set()
     if not force:
+        abortconflicts = set()
+        warnconflicts = set()
+        def collectconflicts(conflicts, config):
+            if config == 'abort':
+                abortconflicts.update(conflicts)
+            elif config == 'warn':
+                warnconflicts.update(conflicts)
+
         config = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
@@ -592,15 +600,15 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     conflicts.add(f)
 
-        if config == 'abort':
-            for f in sorted(conflicts):
-                repo.ui.warn(_("%s: untracked file differs\n") % f)
-            if conflicts:
-                raise error.Abort(_("untracked files in working directory "
-                                    "differ from files in requested revision"))
-        elif config == 'warn':
-            for f in sorted(conflicts):
-                repo.ui.warn(_("%s: replacing untracked file\n") % f)
+        collectconflicts(conflicts, config)
+        for f in sorted(abortconflicts):
+            repo.ui.warn(_("%s: untracked file differs\n") % f)
+        if abortconflicts:
+            raise error.Abort(_("untracked files in working directory "
+                                "differ from files in requested revision"))
+
+        for f in sorted(warnconflicts):
+            repo.ui.warn(_("%s: replacing untracked file\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
         backup = f in conflicts
