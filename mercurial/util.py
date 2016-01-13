@@ -2693,7 +2693,7 @@ class ctxmanager(object):
                     exc_type = None
                     exc_val = None
                     exc_tb = None
-            except BaseException as e:
+            except BaseException:
                 pending = sys.exc_info()
                 exc_type, exc_val, exc_tb = pending = sys.exc_info()
         del self._atexit
