@@ -1240,7 +1240,7 @@ def getrepocaps(repo, allowpushback=False):
     Exists to allow extensions (like evolution) to mutate the capabilities.
     """
     caps = capabilities.copy()
-    caps['changegroup'] = tuple(sorted(changegroup.packermap.keys()))
+    caps['changegroup'] = tuple(sorted(changegroup.supportedversions(repo)))
     if obsolete.isenabled(repo, obsolete.exchangeopt):
         supportedformat = tuple('V%i' % v for v in obsolete.formats)
         caps['obsmarkers'] = supportedformat
@@ -1277,8 +1277,7 @@ def handlechangegroup(op, inpart):
     op.gettransaction()
     unpackerversion = inpart.params.get('version', '01')
     # We should raise an appropriate exception here
-    unpacker = changegroup.packermap[unpackerversion][1]
-    cg = unpacker(inpart, None)
+    cg = changegroup.getunbundler(unpackerversion, inpart, None)
     # the source and url passed here are overwritten by the one contained in
     # the transaction.hookargs argument. So 'bundle2' is a placeholder
     nbchangesets = None

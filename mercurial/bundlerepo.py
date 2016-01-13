@@ -285,7 +285,7 @@ class bundlerepository(localrepo.localrepository):
                                                   "multiple changegroups")
                     cgstream = part
                     version = part.params.get('version', '01')
-                    if version not in changegroup.packermap:
+                    if version not in changegroup.supportedversions(self):
                         msg = _('Unsupported changegroup version: %s')
                         raise error.Abort(msg % version)
                     if self.bundle.compressed():
@@ -296,7 +296,7 @@ class bundlerepository(localrepo.localrepository):
                 raise error.Abort('No changegroups found')
             cgstream.seek(0)
 
-            self.bundle = changegroup.packermap[version][1](cgstream, 'UN')
+            self.bundle = changegroup.getunbundler(version, cgstream, 'UN')
 
         elif self.bundle.compressed():
             f = _writetempbundle(self.bundle.read, '.hg10un', header='HG10UN')

@@ -914,12 +914,22 @@ class cg3packer(cg2packer):
         return struct.pack(
             self.deltaheader, node, p1n, p2n, basenode, linknode, flags)
 
-packermap = {'01': (cg1packer, cg1unpacker),
+_packermap = {'01': (cg1packer, cg1unpacker),
              # cg2 adds support for exchanging generaldelta
              '02': (cg2packer, cg2unpacker),
              # cg3 adds support for exchanging treemanifests
              '03': (cg3packer, cg3unpacker),
 }
+
+def supportedversions(repo):
+    return _packermap.keys()
+
+def getbundler(version, repo, bundlecaps=None):
+    assert version in supportedversions(repo)
+    return _packermap[version][0](repo, bundlecaps)
+
+def getunbundler(version, fh, alg):
+    return _packermap[version][1](fh, alg)
 
 def _changegroupinfo(repo, nodes, source):
     if repo.ui.verbose or source == 'bundle':
@@ -947,7 +957,7 @@ def getsubsetraw(repo, outgoing, bundler, source, fastpath=False):
 
 def getsubset(repo, outgoing, bundler, source, fastpath=False):
     gengroup = getsubsetraw(repo, outgoing, bundler, source, fastpath)
-    return packermap[bundler.version][1](util.chunkbuffer(gengroup), None)
+    return getunbundler(bundler.version, util.chunkbuffer(gengroup), None)
 
 def changegroupsubset(repo, roots, heads, source, version='01'):
     """Compute a changegroup consisting of all the nodes that are
@@ -973,7 +983,7 @@ def changegroupsubset(repo, roots, heads, source, version='01'):
     included = set(csets)
     discbases = [n for n in discbases if n not in included]
     outgoing = discovery.outgoing(cl, discbases, heads)
-    bundler = packermap[version][0](repo)
+    bundler = getbundler(version, repo)
     return getsubset(repo, outgoing, bundler, source)
 
 def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
@@ -984,7 +994,7 @@ def getlocalchangegroupraw(repo, source, outgoing, bundlecaps=None,
     precomputed sets in outgoing. Returns a raw changegroup generator."""
     if not outgoing.missing:
         return None
-    bundler = packermap[version][0](repo, bundlecaps)
+    bundler = getbundler(version, repo, bundlecaps)
     return getsubsetraw(repo, outgoing, bundler, source)
 
 def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
@@ -995,7 +1005,7 @@ def getlocalchangegroup(repo, source, outgoing, bundlecaps=None,
     precomputed sets in outgoing."""
     if not outgoing.missing:
         return None
-    bundler = packermap[version][0](repo, bundlecaps)
+    bundler = getbundler(version, repo, bundlecaps)
     return getsubset(repo, outgoing, bundler, source)
 
 def computeoutgoing(repo, heads, common):

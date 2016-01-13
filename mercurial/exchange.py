@@ -653,7 +653,8 @@ def _pushb2ctx(pushop, bundler):
         cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
                                                 pushop.outgoing)
     else:
-        cgversions = [v for v in cgversions if v in changegroup.packermap]
+        cgversions = [v for v in cgversions
+                      if v in changegroup.supportedversions(pushop.repo)]
         if not cgversions:
             raise ValueError(_('no common changegroup version'))
         version = max(cgversions)
@@ -1505,7 +1506,8 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
         cgversions = b2caps.get('changegroup')
         getcgkwargs = {}
         if cgversions:  # 3.1 and 3.2 ship with an empty value
-            cgversions = [v for v in cgversions if v in changegroup.packermap]
+            cgversions = [v for v in cgversions
+                          if v in changegroup.supportedversions(repo)]
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
             version = getcgkwargs['version'] = max(cgversions)

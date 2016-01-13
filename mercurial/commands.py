@@ -2078,7 +2078,7 @@ def _debugbundle2(ui, gen, **opts):
         ui.write('%s -- %r\n' % (part.type, repr(part.params)))
         if part.type == 'changegroup':
             version = part.params.get('version', '01')
-            cg = changegroup.packermap[version][1](part, 'UN')
+            cg = changegroup.getunbundler(version, part, 'UN')
             chunkdata = cg.changelogheader()
             chain = None
             while True:
