@@ -591,7 +591,8 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
             elif config == 'warn':
                 warnconflicts.update(conflicts)
 
-        config = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
+        unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
+        ignoredconfig = _getcheckunknownconfig(repo, 'merge', 'checkignored')
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
@@ -600,7 +601,11 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
                 if _checkunknownfile(repo, wctx, mctx, f, args[0]):
                     conflicts.add(f)
 
-        collectconflicts(conflicts, config)
+        ignoredconflicts = set([c for c in conflicts
+                                if repo.dirstate._ignore(c)])
+        unknownconflicts = conflicts - ignoredconflicts
+        collectconflicts(ignoredconflicts, ignoredconfig)
+        collectconflicts(unknownconflicts, unknownconfig)
         for f in sorted(abortconflicts):
             repo.ui.warn(_("%s: untracked file differs\n") % f)
         if abortconflicts:

@@ -152,10 +152,78 @@ this merge should silently ignore
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
+merge.checkignored
+  $ hg up --clean 1
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ cat >> .hgignore << EOF
+  > remoteignored
+  > EOF
+  $ echo This is file localignored3 > localignored
+  $ echo This is file remoteignored3 > remoteignored
+  $ hg add .hgignore localignored remoteignored
+  $ hg commit -m "commit #3"
+
+  $ hg up 2
+  1 files updated, 0 files merged, 4 files removed, 0 files unresolved
+  $ cat >> .hgignore << EOF
+  > localignored
+  > EOF
+  $ hg add .hgignore
+  $ hg commit -m "commit #4"
+
+remote .hgignore shouldn't be used for determining whether a file is ignored
+  $ echo This is file remoteignored4 > remoteignored
+  $ hg merge 3 --config merge.checkignored=ignore --config merge.checkunknown=abort
+  remoteignored: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ hg merge 3 --config merge.checkignored=abort --config merge.checkunknown=ignore
+  merging .hgignore
+  merging for .hgignore
+  3 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat remoteignored
+  This is file remoteignored3
+  $ cat remoteignored.orig
+  This is file remoteignored4
+  $ rm remoteignored.orig
+
+local .hgignore should be used for that
+  $ hg up --clean 4
+  1 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ echo This is file localignored4 > localignored
+also test other conflicting files to see we output the full set of warnings
+  $ echo This is file b2 > b
+  $ hg merge 3 --config merge.checkignored=abort --config merge.checkunknown=abort
+  b: untracked file differs
+  localignored: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ hg merge 3 --config merge.checkignored=abort --config merge.checkunknown=ignore
+  localignored: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ hg merge 3 --config merge.checkignored=warn --config merge.checkunknown=abort
+  b: untracked file differs
+  abort: untracked files in working directory differ from files in requested revision
+  [255]
+  $ hg merge 3 --config merge.checkignored=warn --config merge.checkunknown=warn
+  b: replacing untracked file
+  localignored: replacing untracked file
+  merging .hgignore
+  merging for .hgignore
+  3 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ cat localignored
+  This is file localignored3
+  $ cat localignored.orig
+  This is file localignored4
+  $ rm localignored.orig
+
   $ cat b.orig
   This is file b2
   $ hg up --clean 2
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ mv b.orig b
 
 this merge of b should work
