@@ -156,9 +156,9 @@ Specifying a revset that evaluates to null will abort
   searching for changes
   2 changesets found
   uncompressed size of bundle content:
-       352 (changelog)
-       330 (manifests)
-       257  foo
+       348 (changelog)
+       326 (manifests)
+       253  foo
   adding changesets
   adding manifests
   adding file changes

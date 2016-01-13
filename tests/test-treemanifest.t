@@ -400,6 +400,7 @@ Test cloning a treemanifest repo over http.
   $ cd ..
 We can clone even with the knob turned off and we'll get a treemanifest repo.
   $ hg clone --config experimental.treemanifest=False \
+  >   --config experimental.changegroup3=True \
   >   http://localhost:$HGPORT deepclone
   requesting all changes
   adding changesets

@@ -922,7 +922,13 @@ _packermap = {'01': (cg1packer, cg1unpacker),
 }
 
 def supportedversions(repo):
-    return _packermap.keys()
+    versions = _packermap.keys()
+    cg3 = ('treemanifest' in repo.requirements or
+           repo.ui.configbool('experimental', 'changegroup3') or
+           repo.ui.configbool('experimental', 'treemanifest'))
+    if not cg3:
+        versions.remove('03')
+    return versions
 
 def getbundler(version, repo, bundlecaps=None):
     assert version in supportedversions(repo)
