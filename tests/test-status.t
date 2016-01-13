@@ -386,12 +386,12 @@ reverted file with changed flag should appear modified
   $ hg status -A --rev 0
   M file
 
+  $ hg revert -r 0 .
+  reverting file
 #endif
 
 reverted and commit change should appear clean
 
-  $ hg revert -r 0 .
-  reverting file
   $ hg ci -m a
   $ hg status -A --rev 0 --rev 2
   C file
