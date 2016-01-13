@@ -756,10 +756,7 @@ def tempfilter(s, cmd):
         if code:
             raise Abort(_("command '%s' failed: %s") %
                         (cmd, explainexit(code)))
-        fp = open(outname, 'rb')
-        r = fp.read()
-        fp.close()
-        return r
+        return readfile(outname)
     finally:
         try:
             if inname:
