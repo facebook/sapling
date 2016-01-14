@@ -1442,6 +1442,8 @@ class TestSuite(unittest.TestSuite):
         executes on its own thread. Tests actually spawn new processes, so
         state mutation should not be an issue.
 
+        If there is only one job, it will use the main thread.
+
         whitelist and blacklist denote tests that have been whitelisted and
         blacklisted, respectively. These arguments don't belong in TestSuite.
         Instead, whitelist and blacklist should be handled by the thing that
@@ -1558,45 +1560,44 @@ class TestSuite(unittest.TestSuite):
             statthread.start()
 
         try:
-            if len(tests) == 1:
-                test = tests.pop(0)
-                test.run(result)
-            else:
-                while tests or running:
-                    if not done.empty() or running == self._jobs or not tests:
-                        try:
-                            done.get(True, 1)
-                            running -= 1
-                            if result and result.shouldStop:
-                                stoppedearly = True
-                                break
-                        except queue.Empty:
-                            continue
-                    if tests and not running == self._jobs:
-                        test = tests.pop(0)
-                        if self._loop:
-                            if getattr(test, 'should_reload', False):
-                                num_tests[0] += 1
-                                tests.append(
-                                    self._loadtest(test.name, num_tests[0]))
-                            else:
-                                tests.append(test)
+            while tests or running:
+                if not done.empty() or running == self._jobs or not tests:
+                    try:
+                        done.get(True, 1)
+                        running -= 1
+                        if result and result.shouldStop:
+                            stoppedearly = True
+                            break
+                    except queue.Empty:
+                        continue
+                if tests and not running == self._jobs:
+                    test = tests.pop(0)
+                    if self._loop:
+                        if getattr(test, 'should_reload', False):
+                            num_tests[0] += 1
+                            tests.append(
+                                self._loadtest(test.name, num_tests[0]))
+                        else:
+                            tests.append(test)
+                    if self._jobs == 1:
+                        job(test, result)
+                    else:
                         t = threading.Thread(target=job, name=test.name,
                                              args=(test, result))
                         t.start()
-                        running += 1
+                    running += 1
 
-                # If we stop early we still need to wait on started tests to
-                # finish. Otherwise, there is a race between the test completing
-                # and the test's cleanup code running. This could result in the
-                # test reporting incorrect.
-                if stoppedearly:
-                    while running:
-                        try:
-                            done.get(True, 1)
-                            running -= 1
-                        except queue.Empty:
-                            continue
+            # If we stop early we still need to wait on started tests to
+            # finish. Otherwise, there is a race between the test completing
+            # and the test's cleanup code running. This could result in the
+            # test reporting incorrect.
+            if stoppedearly:
+                while running:
+                    try:
+                        done.get(True, 1)
+                        running -= 1
+                    except queue.Empty:
+                        continue
         except KeyboardInterrupt:
             for test in runtests:
                 test.abort()
