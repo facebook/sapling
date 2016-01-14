@@ -55,21 +55,23 @@ class test_ctxmanager(unittest.TestCase):
     def test_raise_on_enter(self):
         trace = []
         addtrace = trace.append
-        with self.assertRaises(ctxerror):
+        def go():
             with ctxmanager(ctxmgr('a', addtrace),
                            lambda: raise_on_enter('b', addtrace)) as c:
                 c.enter()
                 addtrace('unreachable')
+        self.assertRaises(ctxerror, go)
         self.assertEqual(trace, [('enter', 'a'), ('raise', 'b'), ('exit', 'a')])
 
     def test_raise_on_exit(self):
         trace = []
         addtrace = trace.append
-        with self.assertRaises(ctxerror):
+        def go():
             with ctxmanager(ctxmgr('a', addtrace),
                            lambda: raise_on_exit('b', addtrace)) as c:
                 c.enter()
                 addtrace('running')
+        self.assertRaises(ctxerror, go)
         self.assertEqual(trace, [('enter', 'a'), ('enter', 'b'), 'running',
                                  ('raise', 'b'), ('exit', 'a')])
 
