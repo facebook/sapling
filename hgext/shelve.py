@@ -264,21 +264,6 @@ def _docreatecmd(ui, repo, pats, opts):
         for i in xrange(1, 100):
             yield '%s-%02d' % (label, i)
 
-    def commitfunc(ui, repo, message, match, opts):
-        hasmq = util.safehasattr(repo, 'mq')
-        if hasmq:
-            saved, repo.mq.checkapplied = repo.mq.checkapplied, False
-        backup = repo.ui.backupconfig('phases', 'new-commit')
-        try:
-            repo.ui. setconfig('phases', 'new-commit', phases.secret)
-            editor = cmdutil.getcommiteditor(editform='shelve.shelve', **opts)
-            return repo.commit(message, user, opts.get('date'), match,
-                               editor=editor)
-        finally:
-            repo.ui.restoreconfig(backup)
-            if hasmq:
-                repo.mq.checkapplied = saved
-
     if parent.node() != nullid:
         desc = "changes to: %s" % parent.description().split('\n', 1)[0]
     else:
@@ -316,6 +301,22 @@ def _docreatecmd(ui, repo, pats, opts):
         if name.startswith('.'):
             raise error.Abort(_("shelved change names may not start with '.'"))
         interactive = opts.get('interactive', False)
+
+        def commitfunc(ui, repo, message, match, opts):
+            hasmq = util.safehasattr(repo, 'mq')
+            if hasmq:
+                saved, repo.mq.checkapplied = repo.mq.checkapplied, False
+            backup = repo.ui.backupconfig('phases', 'new-commit')
+            try:
+                repo.ui. setconfig('phases', 'new-commit', phases.secret)
+                editor = cmdutil.getcommiteditor(editform='shelve.shelve',
+                                                 **opts)
+                return repo.commit(message, user, opts.get('date'), match,
+                                   editor=editor)
+            finally:
+                repo.ui.restoreconfig(backup)
+                if hasmq:
+                    repo.mq.checkapplied = saved
 
         def interactivecommitfunc(ui, repo, *pats, **opts):
             match = scmutil.match(repo['.'], pats, {})
