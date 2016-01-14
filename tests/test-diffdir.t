@@ -68,3 +68,10 @@ parent 1, the diff should be relative to /dev/null
   +++ b/a2
   @@ -0,0 +1,1 @@
   +foo
+  $ hg diff --nodates --git
+  diff --git a/a2 b/a2
+  new file mode 100644
+  --- /dev/null
+  +++ b/a2
+  @@ -0,0 +1,1 @@
+  +foo

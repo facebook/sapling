@@ -2273,6 +2273,11 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     modified = sorted(modifiedset)
     added = sorted(addedset)
     removed = sorted(removedset)
+    for dst, src in copy.items():
+        if src not in ctx1:
+            # Files merged in during a merge and then copied/renamed are
+            # reported as copies. We want to show them in the diff as additions.
+            del copy[dst]
 
     def difffn(opts, losedata):
         return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
