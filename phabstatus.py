@@ -7,13 +7,12 @@
 
 from mercurial import templatekw, extensions
 from mercurial import util as hgutil
+from mercurial.i18n import _
 
 import re
-from pprint import pprint as pp
 import subprocess
 import os
 import json
-import logging
 
 def memoize(f):
     """
@@ -79,7 +78,8 @@ def getdiffstatus(repo, *diffid):
         resp = jsresp.get('response')
         if not resp:
             error = jsresp.get('errorMessage', 'unknown error')
-            return error
+            repo.ui.warn("%s\n" % error)
+            return ["Error"] * len(diffid)
 
         # This makes the code more robust in case conduit does not return
         # what we need
@@ -93,7 +93,12 @@ def getdiffstatus(repo, *diffid):
                 result.append(matchingresponse[0].get('statusName'))
         return result
     except Exception as e:
-        return 'Could not not call "arc call-conduit": %s' % e
+        msg = _('Could not call "arc call-conduit". No diff information can be '
+                'provided.\n')
+        hint = _("(Possibly disconnected operations or phabricator problems)\n")
+        repo.ui.warn(msg)
+        repo.ui.warn(hint)
+        return ["Error"] * len(diffid)
 
 def showphabstatus(repo, ctx, templ, **args):
     """:phabstatus: String. Return the diff approval status for a given hg rev
