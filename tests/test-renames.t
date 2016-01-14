@@ -10,7 +10,7 @@ Test that rename detection works
 
   $ git init -q gitrepo
   $ cd gitrepo
-  $ for i in $(seq 1 10); do echo $i >> alpha; done
+  $ for i in 1 2 3 4 5 6 7 8 9 10; do echo $i >> alpha; done
   $ git add alpha
   $ fn_git_commit -malpha
 
