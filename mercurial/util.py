@@ -2655,7 +2655,7 @@ class ctxmanager(object):
     def __enter__(self):
         return self
 
-    def __call__(self):
+    def enter(self):
         '''Create and enter context managers in the order in which they were
         passed to the constructor.'''
         values = []

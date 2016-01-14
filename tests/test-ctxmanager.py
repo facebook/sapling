@@ -45,7 +45,7 @@ class test_ctxmanager(unittest.TestCase):
         trace = []
         addtrace = trace.append
         with ctxmanager(ctxmgr('a', addtrace), ctxmgr('b', addtrace)) as c:
-            a, b = c()
+            a, b = c.enter()
             c.atexit(addtrace, ('atexit', 'x'))
             c.atexit(addtrace, ('atexit', 'y'))
         self.assertEqual(trace, [('enter', 'a'), ('enter', 'b'),
@@ -58,7 +58,7 @@ class test_ctxmanager(unittest.TestCase):
         with self.assertRaises(ctxerror):
             with ctxmanager(ctxmgr('a', addtrace),
                            lambda: raise_on_enter('b', addtrace)) as c:
-                c()
+                c.enter()
                 addtrace('unreachable')
         self.assertEqual(trace, [('enter', 'a'), ('raise', 'b'), ('exit', 'a')])
 
@@ -68,7 +68,7 @@ class test_ctxmanager(unittest.TestCase):
         with self.assertRaises(ctxerror):
             with ctxmanager(ctxmgr('a', addtrace),
                            lambda: raise_on_exit('b', addtrace)) as c:
-                c()
+                c.enter()
                 addtrace('running')
         self.assertEqual(trace, [('enter', 'a'), ('enter', 'b'), 'running',
                                  ('raise', 'b'), ('exit', 'a')])
