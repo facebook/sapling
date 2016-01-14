@@ -2037,3 +2037,27 @@ helps performance.
     Number of CPUs to use for parallel operations. A zero or
     negative value is treated as ``use the default``.
     (default: 4 or the number of CPUs on the system, whichever is larger)
+
+``backgroundclose``
+    Whether to enable closing file handles on background threads during certain
+    operations. Some platforms aren't very efficient at closing file
+    handles that have been written or appened to. By performing file closing
+    on background threads, file write rate can increase substantially.
+    (default: true on Windows, false elsewhere)
+
+``backgroundcloseminfilecount``
+    Minimum number of files required to trigger background file closing.
+    Operations not writing this many files won't start background close
+    threads.
+    (default: 2048)
+
+``backgroundclosemaxqueue``
+    The maximum number of opened file handles waiting to be closed in the
+    background. This option only has an effect if ``backgroundclose`` is
+    enabled.
+    (default: 384)
+
+``backgroundclosethreadcount``
+    Number of threads to process background file closes. Only relevant if
+    ``backgroundclose`` is enabled.
+    (default: 4)
