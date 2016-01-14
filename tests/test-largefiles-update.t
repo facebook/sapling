@@ -160,7 +160,7 @@ mark the non-existing file as normal in lfdirstate)
   (branch merge, don't forget to commit)
   $ hg commit -m '1-2-3 testing'
   $ hg rollback -q
-  $ mv 58e24f733a964da346e2407a2bee99d9001184f5 .hg/largefiles/
+  $ rm 58e24f733a964da346e2407a2bee99d9001184f5
 
 Test that "hg revert -r REV" updates largefiles from "REV" correctly
 
