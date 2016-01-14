@@ -343,8 +343,7 @@ def rebase(ui, repo, **opts):
             obsoletenotrebased = {}
             if ui.configbool('experimental', 'rebaseskipobsolete'):
                 rebasesetrevs = set(rebaseset)
-                rebaseobsrevs = set(r for r in rebasesetrevs
-                                      if repo[r].obsolete())
+                rebaseobsrevs = _filterobsoleterevs(repo, rebasesetrevs)
                 obsoletenotrebased = _computeobsoletenotrebased(repo,
                                                                 rebaseobsrevs,
                                                                 dest)
@@ -1187,6 +1186,10 @@ def _rebasedvisible(orig, repo):
     blockers = orig(repo)
     blockers.update(getattr(repo, '_rebaseset', ()))
     return blockers
+
+def _filterobsoleterevs(repo, revs):
+    """returns a set of the obsolete revisions in revs"""
+    return set(r for r in revs if repo[r].obsolete())
 
 def _computeobsoletenotrebased(repo, rebaseobsrevs, dest):
     """return a mapping obsolete => successor for all obsolete nodes to be
