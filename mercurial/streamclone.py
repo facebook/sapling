@@ -298,7 +298,7 @@ def consumev1(repo, fp, filecount, bytecount):
         start = time.time()
 
         with repo.transaction('clone'):
-            if True:
+            with repo.svfs.backgroundclosing(repo.ui, expectedcount=filecount):
                 for i in xrange(filecount):
                     # XXX doesn't support '\n' or '\r' in filenames
                     l = fp.readline()
@@ -312,7 +312,8 @@ def consumev1(repo, fp, filecount, bytecount):
                         repo.ui.debug('adding %s (%s)\n' %
                                       (name, util.bytecount(size)))
                     # for backwards compat, name was partially encoded
-                    with repo.svfs(store.decodedir(name), 'w') as ofp:
+                    path = store.decodedir(name)
+                    with repo.svfs(path, 'w', backgroundclose=True) as ofp:
                         for chunk in util.filechunkiter(fp, limit=size):
                             handled_bytes += len(chunk)
                             repo.ui.progress(_('clone'), handled_bytes,
