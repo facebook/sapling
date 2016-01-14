@@ -54,6 +54,7 @@ shelve has a help message
   
    -A --addremove           mark new/missing files as added/removed before
                             shelving
+   -u --unknown             Store unknown files in the shelve
       --cleanup             delete all shelved changes
       --date DATE           shelve with the specified commit date
    -d --delete              delete the named shelved change(s)
@@ -1243,5 +1244,73 @@ Keep active bookmark while (un)shelving even on shared repo (issue4940)
   $ hg bookmarks
    * foo                       5:703117a2acfb
      test                      4:33f7f61e6c5e
+
+  $ cd ..
+
+Shelve and unshelve unknown files. For the purposes of unshelve, a shelved
+unknown file is the same as a shelved added file, except that it will be in
+unknown state after unshelve if and only if it was either absent or unknown
+before the unshelve operation.
+
+  $ hg init unknowns
+  $ cd unknowns
+
+The simplest case is if I simply have an unknown file that I shelve and unshelve
+
+  $ echo unknown > unknown
+  $ hg status
+  ? unknown
+  $ hg shelve --unknown
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg status
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg status
+  ? unknown
+  $ rm unknown
+
+If I shelve, add the file, and unshelve, does it stay added?
+
+  $ echo unknown > unknown
+  $ hg shelve -u
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg status
+  $ touch unknown
+  $ hg add unknown
+  $ hg status
+  A unknown
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 1:098df96e7410 "(changes in empty repository)" (tip)
+  merging unknown
+  $ hg status
+  A unknown
+  $ hg forget unknown
+  $ rm unknown
+
+And if I shelve, commit, then unshelve, does it become modified?
+
+  $ echo unknown > unknown
+  $ hg shelve -u
+  shelved as default
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg status
+  $ touch unknown
+  $ hg add unknown
+  $ hg commit -qm "Add unknown"
+  $ hg status
+  $ hg unshelve
+  unshelving change 'default'
+  rebasing shelved changes
+  rebasing 1:098df96e7410 "(changes in empty repository)" (tip)
+  merging unknown
+  $ hg status
+  M unknown
+  $ hg remove --force unknown
+  $ hg commit -qm "Remove unknown"
 
   $ cd ..

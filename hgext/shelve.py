@@ -301,6 +301,16 @@ def _docreatecmd(ui, repo, pats, opts):
         if name.startswith('.'):
             raise error.Abort(_("shelved change names may not start with '.'"))
         interactive = opts.get('interactive', False)
+        includeunknown = (opts.get('unknown', False) and
+                          not opts.get('addremove', False))
+
+        extra={}
+        if includeunknown:
+            s = repo.status(match=scmutil.match(repo[None], pats, opts),
+                            unknown=True)
+            if s.unknown:
+                extra['shelve_unknown'] = '\0'.join(s.unknown)
+                repo[None].add(s.unknown)
 
         def commitfunc(ui, repo, message, match, opts):
             hasmq = util.safehasattr(repo, 'mq')
@@ -312,7 +322,7 @@ def _docreatecmd(ui, repo, pats, opts):
                 editor = cmdutil.getcommiteditor(editform='shelve.shelve',
                                                  **opts)
                 return repo.commit(message, user, opts.get('date'), match,
-                                   editor=editor)
+                                   editor=editor, extra=extra)
             finally:
                 repo.ui.restoreconfig(backup)
                 if hasmq:
@@ -656,8 +666,10 @@ def _dounshelve(ui, repo, *shelved, **opts):
         # and shelvectx is the unshelved changes. Then we merge it all down
         # to the original pctx.
 
-        # Store pending changes in a commit
+        # Store pending changes in a commit and remember added in case a shelve
+        # contains unknown files that are part of the pending change
         s = repo.status()
+        addedbefore = frozenset(s.added)
         if s.modified or s.added or s.removed or s.deleted:
             ui.status(_("temporarily committing pending changes "
                         "(restore with 'hg unshelve --abort')\n"))
@@ -722,6 +734,16 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 shelvectx = tmpwctx
 
         mergefiles(ui, repo, pctx, shelvectx)
+
+        # Forget any files that were unknown before the shelve, unknown before
+        # unshelve started, but are now added.
+        shelveunknown = shelvectx.extra().get('shelve_unknown')
+        if shelveunknown:
+            shelveunknown = frozenset(shelveunknown.split('\0'))
+            addedafter = frozenset(repo.status().added)
+            toforget = (addedafter & shelveunknown) - addedbefore
+            repo[None].forget(toforget)
+
         shelvedstate.clear(repo)
 
         # The transaction aborting will strip all the commits for us,
@@ -743,6 +765,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
 @command('shelve',
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before shelving')),
+          ('u', 'unknown', None,
+           _('Store unknown files in the shelve')),
           ('', 'cleanup', None,
            _('delete all shelved changes')),
           ('', 'date', '',
@@ -793,6 +817,7 @@ def shelvecmd(ui, repo, *pats, **opts):
     '''
     allowables = [
         ('addremove', set(['create'])), # 'create' is pseudo action
+        ('unknown', set(['create'])),
         ('cleanup', set(['cleanup'])),
 #       ('date', set(['create'])), # ignored for passing '--date "0 0"' in tests
         ('delete', set(['delete'])),
