@@ -1187,7 +1187,7 @@ msgid ""
 "This extension is deprecated. You should use :hg:`log -r\n"
 "\"children(REV)\"` instead.\n"
 msgstr ""
-"Diese Erweiterung ist veraltet. Benutzen Sie stattdessen:hg:`log -r "
+"Diese Erweiterung ist veraltet. Benutzen Sie stattdessen :hg:`log -r "
 "\"children(REV)\"`.\n"
 
 msgid "show the children of the given or working directory revision"
