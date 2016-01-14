@@ -2256,6 +2256,17 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
                      if dst.startswith(relroot)
                      and src.startswith(relroot)))
 
+    modifiedset = set(modified)
+    addedset = set(added)
+    for f in modified:
+        if f not in ctx1:
+            # Fix up added, since merged-in additions appear as
+            # modifications during merges
+            modifiedset.remove(f)
+            addedset.add(f)
+    modified = sorted(modifiedset)
+    added = sorted(addedset)
+
     def difffn(opts, losedata):
         return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                        copy, getfilectx, opts, losedata, prefix, relroot)
@@ -2327,7 +2338,7 @@ def diffui(*args, **kw):
     '''like diff(), but yields 2-tuples of (output, label) for ui.write()'''
     return difflabel(diff, *args, **kw)
 
-def _filepairs(ctx1, modified, added, removed, copy, opts):
+def _filepairs(modified, added, removed, copy, opts):
     '''generates tuples (f1, f2, copyop), where f1 is the name of the file
     before and f2 is the the name after. For added files, f1 will be None,
     and for removed files, f2 will be None. copyop may be set to None, 'copy'
@@ -2337,11 +2348,6 @@ def _filepairs(ctx1, modified, added, removed, copy, opts):
     copyto = dict([(v, k) for k, v in copy.items()])
 
     addedset, removedset = set(added), set(removed)
-    # Fix up  added, since merged-in additions appear as
-    # modifications during merges
-    for f in modified:
-        if f not in ctx1:
-            addedset.add(f)
 
     for f in sorted(modified + added + removed):
         copyop = None
@@ -2407,8 +2413,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
                 raise AssertionError(
                     "file %s doesn't start with relroot %s" % (f, relroot))
 
-    for f1, f2, copyop in _filepairs(
-            ctx1, modified, added, removed, copy, opts):
+    for f1, f2, copyop in _filepairs(modified, added, removed, copy, opts):
         content1 = None
         content2 = None
         flag1 = None
