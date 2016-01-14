@@ -2258,14 +2258,21 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
 
     modifiedset = set(modified)
     addedset = set(added)
+    removedset = set(removed)
     for f in modified:
         if f not in ctx1:
             # Fix up added, since merged-in additions appear as
             # modifications during merges
             modifiedset.remove(f)
             addedset.add(f)
+    for f in removed:
+        if f not in ctx1:
+            # Merged-in additions that are then removed are reported as removed.
+            # They are not in ctx1, so We don't want to show them in the diff.
+            removedset.remove(f)
     modified = sorted(modifiedset)
     added = sorted(addedset)
+    removed = sorted(removedset)
 
     def difffn(opts, losedata):
         return trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
