@@ -458,7 +458,7 @@ static PyObject *_listdir_batch(char *path, int pathlen, int keepstat,
 	requested_attr.bitmapcount = ATTR_BIT_MAP_COUNT;
 	requested_attr.commonattr = (ATTR_CMN_NAME | ATTR_CMN_OBJTYPE |
 				     ATTR_CMN_MODTIME | ATTR_CMN_ACCESSMASK);
-	requested_attr.fileattr = ATTR_FILE_TOTALSIZE;
+	requested_attr.fileattr = ATTR_FILE_DATALENGTH;
 
 	*fallback = false;
 
