@@ -58,6 +58,12 @@ class lock(object):
         if self.acquirefn:
             self.acquirefn()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.release()
+
     def __del__(self):
         if self.held:
             warnings.warn("use lock.release instead of del lock",
