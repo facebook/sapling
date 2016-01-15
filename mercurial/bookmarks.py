@@ -149,9 +149,7 @@ class bmstore(dict):
             rbm.active = None
             rbm._writeactive()
 
-        wlock = repo.wlock()
-        try:
-
+        with repo.wlock():
             file_ = repo.vfs('bookmarks', 'w', atomictemp=True)
             try:
                 self._write(file_)
@@ -160,9 +158,6 @@ class bmstore(dict):
                 raise
             finally:
                 file_.close()
-
-        finally:
-            wlock.release()
 
     def _writeactive(self):
         if self._aclean:
