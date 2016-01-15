@@ -602,11 +602,8 @@ def unshelve(ui, repo, *shelved, **opts):
        than ``maxbackups`` backups are kept, if same timestamp
        prevents from deciding exact order of them, for safety.
     """
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         return _dounshelve(ui, repo, *shelved, **opts)
-    finally:
-        lockmod.release(wlock)
 
 def _dounshelve(ui, repo, *shelved, **opts):
     abortf = opts['abort']
