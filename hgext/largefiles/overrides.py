@@ -1053,8 +1053,7 @@ def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
 
     # Need to lock because standin files are deleted then removed from the
     # repository and we could race in-between.
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         for f in forget:
             if lfdirstate[f] == 'a':
@@ -1066,8 +1065,6 @@ def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
         for f in standins:
             util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         rejected = repo[None].forget(standins)
-    finally:
-        wlock.release()
 
     bad.extend(f for f in rejected if f in m.files())
     forgot.extend(f for f in forget if f not in rejected)
