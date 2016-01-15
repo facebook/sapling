@@ -2715,14 +2715,11 @@ def fold(ui, repo, *files, **opts):
         message = '\n'.join(message)
 
     diffopts = q.patchopts(q.diffopts(), *patches)
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         q.refresh(repo, msg=message, git=diffopts.git, edit=opts.get('edit'),
                   editform='mq.qfold')
         q.delete(repo, patches, opts)
         q.savedirty()
-    finally:
-        wlock.release()
 
 @command("qgoto",
          [('', 'keep-changes', None,
