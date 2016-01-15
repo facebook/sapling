@@ -1548,17 +1548,15 @@ class workingctx(committablectx):
                 # so we don't wait on the lock
                 # wlock can invalidate the dirstate, so cache normal _after_
                 # taking the lock
-                wlock = self._repo.wlock(False)
-                normal = self._repo.dirstate.normal
-                try:
+                with self._repo.wlock(False):
+                    normal = self._repo.dirstate.normal
                     for f in fixup:
                         normal(f)
                     # write changes out explicitly, because nesting
                     # wlock at runtime may prevent 'wlock.release()'
-                    # below from doing so for subsequent changing files
+                    # after this block from doing so for subsequent
+                    # changing files
                     self._repo.dirstate.write(self._repo.currenttransaction())
-                finally:
-                    wlock.release()
             except error.LockError:
                 pass
         return modified, fixup
