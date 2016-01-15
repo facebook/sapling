@@ -2868,8 +2868,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     #   <asb path in repo> -> (<path from CWD>, <exactly specified by matcher?>)
     names = {}
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         ## filling of the `names` mapping
         # walk dirstate to fill `names`
 
@@ -3122,8 +3121,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                 except KeyError:
                     raise error.Abort("subrepository '%s' does not exist in %s!"
                                       % (sub, short(ctx.node())))
-    finally:
-        wlock.release()
 
 def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
