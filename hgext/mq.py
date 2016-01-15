@@ -1168,8 +1168,7 @@ class queue(object):
             raise error.Abort(_('cannot manage merge changesets'))
         self.checktoppatch(repo)
         insert = self.fullseriesend()
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             try:
                 # if patch file write fails, abort early
                 p = self.opener(patchfn, "w")
@@ -1239,8 +1238,6 @@ class queue(object):
                     self.ui.warn(_('error unlinking %s\n') % patchpath)
                 raise
             self.removeundo(repo)
-        finally:
-            release(wlock)
 
     def isapplied(self, patch):
         """returns (index, rev, patch)"""
