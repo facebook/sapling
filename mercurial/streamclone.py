@@ -304,7 +304,7 @@ def consumev1(repo, fp, filecount, bytecount):
         repo.ui.progress(_('clone'), 0, total=bytecount)
         start = time.time()
 
-        tr = repo.transaction(_('clone'))
+        tr = repo.transaction('clone')
         try:
             for i in xrange(filecount):
                 # XXX doesn't support '\n' or '\r' in filenames
