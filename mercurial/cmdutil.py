@@ -2421,16 +2421,13 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
         if ui.verbose or not m.exact(f):
             ui.status(_('removing %s\n') % m.rel(f))
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         if not after:
             for f in list:
                 if f in added:
                     continue # we never unlink added files on remove
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         repo[None].forget(list)
-    finally:
-        wlock.release()
 
     return ret
 
