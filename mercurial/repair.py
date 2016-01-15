@@ -160,26 +160,22 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
         msg = _('programming error: cannot strip from inside a transaction')
         raise error.Abort(msg, hint=_('contact your extension maintainer'))
 
-    tr = repo.transaction("strip")
-    offset = len(tr.entries)
-
     try:
-        tr.startgroup()
-        cl.strip(striprev, tr)
-        mfst.strip(striprev, tr)
-        for fn in files:
-            repo.file(fn).strip(striprev, tr)
-        tr.endgroup()
+        with repo.transaction("strip") as tr:
+            offset = len(tr.entries)
 
-        try:
+            tr.startgroup()
+            cl.strip(striprev, tr)
+            mfst.strip(striprev, tr)
+            for fn in files:
+                repo.file(fn).strip(striprev, tr)
+            tr.endgroup()
+
             for i in xrange(offset, len(tr.entries)):
                 file, troffset, ignore = tr.entries[i]
                 repo.svfs(file, 'a').truncate(troffset)
                 if troffset == 0:
                     repo.store.markremoved(file)
-            tr.close()
-        finally:
-            tr.release()
 
         if saveheads or savebases:
             ui.note(_("adding branch\n"))
