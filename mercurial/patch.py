@@ -2099,8 +2099,7 @@ def patch(ui, repo, patchname, strip=1, prefix='', files=None, eolmode='strict',
 
 def changedfiles(ui, repo, patchpath, strip=1):
     backend = fsbackend(ui, repo.root)
-    fp = open(patchpath, 'rb')
-    try:
+    with open(patchpath, 'rb') as fp:
         changed = set()
         for state, values in iterhunks(fp):
             if state == 'file':
@@ -2118,8 +2117,6 @@ def changedfiles(ui, repo, patchpath, strip=1):
             elif state not in ('hunk', 'git'):
                 raise error.Abort(_('unsupported parser state: %s') % state)
         return changed
-    finally:
-        fp.close()
 
 class GitDiffRequired(Exception):
     pass
