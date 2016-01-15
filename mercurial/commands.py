@@ -1197,8 +1197,7 @@ def branch(ui, repo, label=None, **opts):
         ui.write("%s\n" % repo.dirstate.branch())
         return
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         if opts.get('clean'):
             label = repo[None].p1().branch()
             repo.dirstate.setbranch(label)
@@ -1220,8 +1219,6 @@ def branch(ui, repo, label=None, **opts):
             if not others:
                 ui.status(_('(branches are permanent and global, '
                             'did you want a bookmark?)\n'))
-    finally:
-        wlock.release()
 
 @command('branches',
     [('a', 'active', False,
