@@ -696,8 +696,7 @@ def reposetup(ui, repo):
 
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
         '''Wraps record.dorecord expanding keywords after recording.'''
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             # record returns 0 even when nothing has changed
             # therefore compare nodes before and after
             kwt.postcommit = True
@@ -712,8 +711,6 @@ def reposetup(ui, repo):
                 kwt.overwrite(recctx, added, False, True, True)
                 kwt.restrict = True
             return ret
-        finally:
-            wlock.release()
 
     def kwfilectx_cmp(orig, self, fctx):
         # keyword affects data size, comparing wdir and filelog size does
