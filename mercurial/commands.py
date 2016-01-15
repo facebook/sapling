@@ -1833,11 +1833,8 @@ def copy(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if errors are encountered.
     """
-    wlock = repo.wlock(False)
-    try:
+    with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts)
-    finally:
-        wlock.release()
 
 @command('debugancestor', [], _('[INDEX] REV1 REV2'), optionalrepo=True)
 def debugancestor(ui, repo, *args):
