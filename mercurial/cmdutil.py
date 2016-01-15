@@ -2512,8 +2512,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        tr = repo.transaction('amend')
-        try:
+        with repo.transaction('amend') as tr:
             # See if we got a message from -m or -l, if not, open the editor
             # with the message of the changeset to amend
             message = logmessage(ui, opts)
@@ -2685,9 +2684,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                         obs.append((ctx, ()))
 
                     obsolete.createmarkers(repo, obs)
-            tr.close()
-        finally:
-            tr.release()
         if not createmarkers and newid != old.node():
             # Strip the intermediate commit (if there was one) and the amended
             # commit
