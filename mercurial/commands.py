@@ -3869,12 +3869,8 @@ def graft(ui, repo, *revs, **opts):
 
     Returns 0 on successful completion.
     '''
-    wlock = None
-    try:
-        wlock = repo.wlock()
+    with repo.wlock():
         return _dograft(ui, repo, *revs, **opts)
-    finally:
-        release(wlock)
 
 def _dograft(ui, repo, *revs, **opts):
     revs = list(revs)
