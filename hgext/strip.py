@@ -64,19 +64,14 @@ def strip(ui, repo, revs, update=True, backup=True, force=None, bookmarks=None):
 
         repomarks = repo._bookmarks
         if bookmarks:
-            tr = None
-            try:
-                tr = repo.transaction('strip')
+            with repo.transaction('strip') as tr:
                 if repo._activebookmark in bookmarks:
                     bookmarksmod.deactivate(repo)
                 for bookmark in bookmarks:
                     del repomarks[bookmark]
                 repomarks.recordchange(tr)
-                tr.close()
-                for bookmark in sorted(bookmarks):
-                    ui.write(_("bookmark '%s' deleted\n") % bookmark)
-            finally:
-                release(tr)
+            for bookmark in sorted(bookmarks):
+                ui.write(_("bookmark '%s' deleted\n") % bookmark)
     finally:
         release(lock, wlock)
 
