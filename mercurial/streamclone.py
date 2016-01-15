@@ -186,15 +186,12 @@ def generatev1(repo):
     entries = []
     total_bytes = 0
     # Get consistent snapshot of repo, lock during scan.
-    lock = repo.lock()
-    try:
+    with repo.lock():
         repo.ui.debug('scanning\n')
         for name, ename, size in _walkstreamfiles(repo):
             if size:
                 entries.append((name, size))
                 total_bytes += size
-    finally:
-            lock.release()
 
     repo.ui.debug('%d files, %d bytes to transfer\n' %
                   (len(entries), total_bytes))
