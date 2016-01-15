@@ -329,16 +329,7 @@ def consumev1(repo, fp, filecount, bytecount):
                        (util.bytecount(bytecount), elapsed,
                         util.bytecount(bytecount / elapsed)))
 
-def applybundlev1(repo, fp):
-    """Apply the content from a stream clone bundle version 1.
-
-    We assume the 4 byte header has been read and validated and the file handle
-    is at the 2 byte compression identifier.
-    """
-    if len(repo):
-        raise error.Abort(_('cannot apply stream clone bundle on non-empty '
-                            'repo'))
-
+def readbundle1header(fp):
     compression = fp.read(2)
     if compression != 'UN':
         raise error.Abort(_('only uncompressed stream clone bundles are '
@@ -353,6 +344,20 @@ def applybundlev1(repo, fp):
                             'requirements not properly encoded'))
 
     requirements = set(requires.rstrip('\0').split(','))
+
+    return filecount, bytecount, requirements
+
+def applybundlev1(repo, fp):
+    """Apply the content from a stream clone bundle version 1.
+
+    We assume the 4 byte header has been read and validated and the file handle
+    is at the 2 byte compression identifier.
+    """
+    if len(repo):
+        raise error.Abort(_('cannot apply stream clone bundle on non-empty '
+                            'repo'))
+
+    filecount, bytecount, requirements = readbundle1header(fp)
     missingreqs = requirements - repo.supportedformats
     if missingreqs:
         raise error.Abort(_('unable to apply stream clone: '
