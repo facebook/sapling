@@ -1360,7 +1360,6 @@ def update(repo, node, branchmerge, force, ancestor=None,
     """
 
     onode = node
-    wlock = repo.wlock()
     # If we're doing a partial update, we need to skip updating
     # the dirstate, so make a note of any partial-ness to the
     # update here.
@@ -1368,7 +1367,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
         partial = False
     else:
         partial = True
-    try:
+    with repo.wlock():
         wc = repo[None]
         pl = wc.parents()
         p1 = pl[0]
@@ -1541,8 +1540,6 @@ def update(repo, node, branchmerge, force, ancestor=None,
             if not branchmerge:
                 repo.dirstate.setbranch(p2.branch())
             repo.dirstate.endparentchange()
-    finally:
-        wlock.release()
 
     if not partial:
         repo.hook('update', parent1=xp1, parent2=xp2, error=stats[3])
