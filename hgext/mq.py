@@ -1463,8 +1463,7 @@ class queue(object):
     def pop(self, repo, patch=None, force=False, update=True, all=False,
             nobackup=False, keepchanges=False):
         self.checkkeepchanges(keepchanges, force)
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             if patch:
                 # index, rev, patch
                 info = self.isapplied(patch)
@@ -1568,8 +1567,6 @@ class queue(object):
                 self.ui.write(_("now at: %s\n") % self.applied[-1].name)
             else:
                 self.ui.write(_("patch queue now empty\n"))
-        finally:
-            wlock.release()
 
     def diff(self, repo, pats, opts):
         top, patch = self.checktoppatch(repo)
