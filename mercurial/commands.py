@@ -6932,8 +6932,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if rev is None or rev == '':
         rev = node
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         cmdutil.clearunfinished(repo)
 
         if date:
@@ -6980,8 +6979,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
                 ui.status(_("(leaving bookmark %s)\n") %
                           repo._activebookmark)
             bookmarks.deactivate(repo)
-    finally:
-        wlock.release()
 
     return ret
 
