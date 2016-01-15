@@ -296,12 +296,8 @@ def rebuildfncache(ui, repo):
             fnc.entries = newentries
             fnc._dirty = True
 
-            tr = repo.transaction('fncache')
-            try:
+            with repo.transaction('fncache') as tr:
                 fnc.write(tr)
-                tr.close()
-            finally:
-                tr.release()
         else:
             ui.write(_('fncache already up to date\n'))
 
