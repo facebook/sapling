@@ -1502,6 +1502,14 @@ def clone(ui, source, dest=None, **opts):
       h) the tipmost head of the default branch
       i) tip
 
+      When cloning from servers that support it, Mercurial may fetch
+      pre-generated data from a server-advertised URL. When this is done,
+      hooks operating on incoming changesets and changegroups may fire twice,
+      once for the bundle fetched from the URL and another for any additional
+      data not fetched from this URL. In addition, if an error occurs, the
+      repository may be rolled back to a partial clone. This behavior may
+      change in future releases. See :hg:`help -e clonebundles` for more.
+
       Examples:
 
       - clone a remote repository to a new directory named hg/::
