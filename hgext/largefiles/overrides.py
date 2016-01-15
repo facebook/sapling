@@ -717,8 +717,7 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
     # Because we put the standins in a bad state (by updating them)
     # and then return them to a correct state we need to lock to
     # prevent others from changing them in their incorrect state.
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         s = lfutil.lfdirstatestatus(lfdirstate, repo)
         lfdirstate.write()
@@ -777,9 +776,6 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
         # of target (standin) file.
         lfcommands.updatelfiles(ui, repo, filelist, printmessage=False,
                                 normallookup=True)
-
-    finally:
-        wlock.release()
 
 # after pulling changesets, we need to take some extra care to get
 # largefiles updated remotely
