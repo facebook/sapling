@@ -297,7 +297,8 @@ def _setupdirstate(ui):
                 dirstate = repo.dirstate
                 sparsematch = repo.sparsematch()
                 for f in args:
-                    if not sparsematch(f) and f not in dirstate:
+                    if (f is not None and not sparsematch(f) and
+                        f not in dirstate):
                         raise error.Abort(_("cannot add '%s' - it is outside "
                                             "the sparse checkout") % f,
                                           hint=hint)
