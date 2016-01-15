@@ -1066,17 +1066,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 backupfile = repo.join(state.backupfile)
                 f = hg.openpath(ui, backupfile)
                 gen = exchange.readbundle(ui, f, backupfile)
-                tr = repo.transaction('histedit.abort')
-                try:
+                with repo.transaction('histedit.abort') as tr:
                     if not isinstance(gen, bundle2.unbundle20):
                         gen.apply(repo, 'histedit', 'bundle:' + backupfile)
                     if isinstance(gen, bundle2.unbundle20):
                         bundle2.applybundle(repo, gen, tr,
                                             source='histedit',
                                             url='bundle:' + backupfile)
-                    tr.close()
-                finally:
-                    tr.release()
 
                 os.remove(backupfile)
 
