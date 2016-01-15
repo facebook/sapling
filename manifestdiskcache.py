@@ -233,7 +233,7 @@ class manifestwithdc(manifest.manifest):
     def markbatchoperationend(self):
         self.inbatchoperation = False
 
-    def revision(self, nodeorrev):
+    def revision(self, nodeorrev, *args, **kwargs):
         global logging
 
         if self.manifestdiskcacheenabled:
@@ -275,7 +275,8 @@ class manifestwithdc(manifest.manifest):
                                      "manifestdiskcache: {0}\n".format(
                                          traceback.format_exc()))
 
-        result = super(manifestwithdc, self).revision(nodeorrev)
+        result = super(manifestwithdc, self).revision(nodeorrev,
+                                                      *args, **kwargs)
 
         if self.manifestdiskcacheenabled:
             self._writetomanifestcache(hexnode, result, logging)
