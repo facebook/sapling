@@ -673,8 +673,7 @@ def reposetup(ui, repo):
         For the latter we have to follow the symlink to find out whether its
         target is configured for expansion and we therefore must unexpand the
         keywords in the destination.'''
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             orig(ui, repo, pats, opts, rename)
             if opts.get('dry_run'):
                 return
@@ -694,8 +693,6 @@ def reposetup(ui, repo):
             candidates = [f for f in repo.dirstate.copies() if
                           'l' not in wctx.flags(f) and haskwsource(f)]
             kwt.overwrite(wctx, candidates, False, False)
-        finally:
-            wlock.release()
 
     def kw_dorecord(orig, ui, repo, commitfunc, *pats, **opts):
         '''Wraps record.dorecord expanding keywords after recording.'''
