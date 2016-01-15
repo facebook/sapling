@@ -671,7 +671,7 @@ update
 backout calls revert internally with minimal opts, which should not raise
 KeyError
 
-  $ hg backout ".^"
+  $ hg backout ".^" --no-commit
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   changeset c373c8102e68 backed out, don't forget to commit.
 

@@ -526,22 +526,24 @@ def archive(ui, repo, dest, **opts):
 
 @command('backout',
     [('', 'merge', None, _('merge with old dirstate parent after backout')),
-    ('', 'commit', None, _('commit if no conflicts were encountered')),
+    ('', 'commit', None,
+     _('commit if no conflicts were encountered (DEPRECATED)')),
+    ('', 'no-commit', None, _('do not commit')),
     ('', 'parent', '',
      _('parent to choose when backing out merge (DEPRECATED)'), _('REV')),
     ('r', 'rev', '', _('revision to backout'), _('REV')),
     ('e', 'edit', False, _('invoke editor on commit messages')),
     ] + mergetoolopts + walkopts + commitopts + commitopts2,
     _('[OPTION]... [-r] REV'))
-def backout(ui, repo, node=None, rev=None, commit=False, **opts):
+def backout(ui, repo, node=None, rev=None, **opts):
     '''reverse effect of earlier changeset
 
     Prepare a new changeset with the effect of REV undone in the
-    current working directory.
+    current working directory. If no conflicts were encountered,
+    it will be committed immediately.
 
     If REV is the parent of the working directory, then this new changeset
-    is committed automatically. Otherwise, hg needs to merge the
-    changes and the merged result is left uncommitted.
+    is committed automatically (unless --no-commit is specified).
 
     .. note::
 
@@ -560,12 +562,12 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
       - Reverse the effect of previous bad revision 23::
 
           hg backout -r 23
-          hg commit -m "Backout revision 23"
 
       - Reverse the effect of previous bad revision 23 and
-        commit the backout immediately::
+        leave changes uncommitted::
 
-          hg backout -r 23 --commit
+          hg backout -r 23 --no-commit
+          hg commit -m "Backout revision 23"
 
       By default, the pending changeset will have one parent,
       maintaining a linear history. With --merge, the pending
@@ -589,11 +591,14 @@ def backout(ui, repo, node=None, rev=None, commit=False, **opts):
     try:
         wlock = repo.wlock()
         lock = repo.lock()
-        return _dobackout(ui, repo, node, rev, commit, **opts)
+        return _dobackout(ui, repo, node, rev, **opts)
     finally:
         release(lock, wlock)
 
-def _dobackout(ui, repo, node=None, rev=None, commit=False, **opts):
+def _dobackout(ui, repo, node=None, rev=None, **opts):
+    if opts.get('commit') and opts.get('no_commit'):
+        raise error.Abort(_("cannot use --commit with --no-commit"))
+
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
@@ -648,7 +653,7 @@ def _dobackout(ui, repo, node=None, rev=None, commit=False, **opts):
                 repo.ui.status(_("use 'hg resolve' to retry unresolved "
                                  "file merges\n"))
                 return 1
-            elif not commit:
+            elif opts.get('no_commit'):
                 msg = _("changeset %s backed out, "
                         "don't forget to commit.\n")
                 ui.status(msg % short(node))

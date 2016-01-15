@@ -61,7 +61,7 @@ commit option
   $ echo grapes >> a
   $ hg commit -d '2 0' -m grapes
 
-  $ hg backout --commit -d '4 0' 1 --tool=:fail
+  $ hg backout -d '4 0' 1 --tool=:fail
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   changeset 3:1c2161e97c0a backs out changeset 1:22cb4f70d813
   $ hg summary
@@ -75,7 +75,7 @@ commit option
   $ echo ypples > a
   $ hg commit -d '5 0' -m ypples
 
-  $ hg backout --commit -d '6 0' 2 --tool=:fail
+  $ hg backout -d '6 0' 2 --tool=:fail
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -371,7 +371,7 @@ backout should not back out subsequent changesets
   phases: 3 draft
 
 without --merge
-  $ hg backout -d '3 0' 1 --tool=true
+  $ hg backout --no-commit -d '3 0' 1 --tool=true
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   changeset 22bca4c721e5 backed out, don't forget to commit.
   $ hg locate b
@@ -511,7 +511,7 @@ named branches
   adding file2
 
 without --merge
-  $ hg backout -r 1 --tool=true
+  $ hg backout --no-commit -r 1 --tool=true
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   changeset bf1602f437f3 backed out, don't forget to commit.
   $ hg branch
