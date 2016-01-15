@@ -236,7 +236,7 @@ Show all commands + options
   debugancestor: 
   debugapplystreamclonebundle: 
   debugbuilddag: mergeable-file, overwritten-file, new-file
-  debugbundle: all
+  debugbundle: all, spec
   debugcheckstate: 
   debugcommands: 
   debugcomplete: options

@@ -276,6 +276,9 @@ packed1 is produced properly
   0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
   0030: 74 61 2f 61 64 69 66 66 65 72 65 6e 74 66 69 6c |ta/adifferentfil|
 
+  $ hg debugbundle --spec packed.hg
+  none-packed1;requirements%3Dgeneraldelta%2Crevlogv1
+
 generaldelta requirement is listed in stream clone bundles
 
   $ hg --config format.generaldelta=true init testgd
@@ -293,6 +296,9 @@ generaldelta requirement is listed in stream clone bundles
   0010: 00 00 00 00 01 2d 00 16 67 65 6e 65 72 61 6c 64 |.....-..generald|
   0020: 65 6c 74 61 2c 72 65 76 6c 6f 67 76 31 00 64 61 |elta,revlogv1.da|
   0030: 74 61 2f 66 6f 6f 2e 69 00 36 34 0a 00 03 00 01 |ta/foo.i.64.....|
+
+  $ hg debugbundle --spec packedgd.hg
+  none-packed1;requirements%3Dgeneraldelta%2Crevlogv1
 
 Unpacking packed1 bundles with "hg unbundle" isn't allowed
 

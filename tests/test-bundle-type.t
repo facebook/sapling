@@ -43,6 +43,7 @@ test bundle types
   >   f -q -B6 -D ../b$t; echo
   >   cd ../t$t
   >   hg debugbundle ../b$t
+  >   hg debugbundle --spec ../b$t
   >   echo
   >   cd ..
   > done
@@ -53,6 +54,7 @@ test bundle types
   Stream params: {}
   changegroup -- "{'version': '02'}"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  none-v2
   
   % test bundle type bzip2
   searching for changes
@@ -61,6 +63,7 @@ test bundle types
   Stream params: {'Compression': 'BZ'}
   changegroup -- "{'version': '02'}"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  bzip2-v2
   
   % test bundle type gzip
   searching for changes
@@ -69,6 +72,7 @@ test bundle types
   Stream params: {'Compression': 'GZ'}
   changegroup -- "{'version': '02'}"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  gzip-v2
   
   % test bundle type none-v2
   searching for changes
@@ -77,6 +81,7 @@ test bundle types
   Stream params: {}
   changegroup -- "{'version': '02'}"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  none-v2
   
   % test bundle type v2
   searching for changes
@@ -85,18 +90,21 @@ test bundle types
   Stream params: {'Compression': 'BZ'}
   changegroup -- "{'version': '02'}"
       c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  bzip2-v2
   
   % test bundle type v1
   searching for changes
   1 changesets found
   HG10BZ
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  bzip2-v1
   
   % test bundle type gzip-v1
   searching for changes
   1 changesets found
   HG10GZ
   c35a0f9217e65d1fdb90c936ffa7dbe679f83ddf
+  gzip-v1
   
 
 test garbage file

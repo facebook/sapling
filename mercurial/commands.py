@@ -2007,12 +2007,18 @@ def debugbuilddag(ui, repo, text=None,
         release(tr, lock)
 
 @command('debugbundle',
-        [('a', 'all', None, _('show all details'))],
+        [('a', 'all', None, _('show all details')),
+         ('', 'spec', None, _('print the bundlespec of the bundle'))],
         _('FILE'),
         norepo=True)
-def debugbundle(ui, bundlepath, all=None, **opts):
+def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
     """lists the contents of a bundle"""
     with hg.openpath(ui, bundlepath) as f:
+        if spec:
+            spec = exchange.getbundlespec(ui, f)
+            ui.write('%s\n' % spec)
+            return
+
         gen = exchange.readbundle(ui, f, bundlepath)
         if isinstance(gen, bundle2.unbundle20):
             return _debugbundle2(ui, gen, all=all, **opts)
