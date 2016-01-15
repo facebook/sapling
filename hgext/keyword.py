@@ -653,8 +653,7 @@ def reposetup(ui, repo):
 
     def kw_amend(orig, ui, repo, commitfunc, old, extra, pats, opts):
         '''Wraps cmdutil.amend expanding keywords after amend.'''
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             kwt.postcommit = True
             newid = orig(ui, repo, commitfunc, old, extra, pats, opts)
             if newid != old.node():
@@ -663,8 +662,6 @@ def reposetup(ui, repo):
                 kwt.overwrite(ctx, ctx.files(), False, True)
                 kwt.restrict = False
             return newid
-        finally:
-            wlock.release()
 
     def kw_copy(orig, ui, repo, pats, opts, rename=False):
         '''Wraps cmdutil.copy so that copy/rename destinations do not
