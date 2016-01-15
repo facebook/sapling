@@ -5899,8 +5899,7 @@ def resolve(ui, repo, *pats, **opts):
         fm.end()
         return 0
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         ms = mergemod.mergestate.read(repo)
 
         if not (ms.active() or repo.dirstate.p2() != nullid):
@@ -6016,9 +6015,6 @@ def resolve(ui, repo, *pats, **opts):
                 ms.commit()
                 if not proceed:
                     return 1
-
-    finally:
-        wlock.release()
 
     # Nudge users into finishing an unfinished operation
     unresolvedf = list(ms.unresolved())
