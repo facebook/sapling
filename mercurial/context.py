@@ -1461,8 +1461,7 @@ class workingctx(committablectx):
 
     def undelete(self, list):
         pctxs = self.parents()
-        wlock = self._repo.wlock()
-        try:
+        with self._repo.wlock():
             for f in list:
                 if self._repo.dirstate[f] != 'r':
                     self._repo.ui.warn(_("%s not removed!\n") % f)
@@ -1471,8 +1470,6 @@ class workingctx(committablectx):
                     t = fctx.data()
                     self._repo.wwrite(f, t, fctx.flags())
                     self._repo.dirstate.normal(f)
-        finally:
-            wlock.release()
 
     def copy(self, source, dest):
         try:
