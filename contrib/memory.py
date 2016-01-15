@@ -15,20 +15,15 @@ import atexit
 
 def memusage(ui):
     """Report memory usage of the current process."""
-    status = None
     result = {'peak': 0, 'rss': 0}
-    try:
+    with open('/proc/self/status', 'r') as status:
         # This will only work on systems with a /proc file system
         # (like Linux).
-        status = open('/proc/self/status', 'r')
         for line in status:
             parts = line.split()
             key = parts[0][2:-1].lower()
             if key in result:
                 result[key] = int(parts[1])
-    finally:
-        if status is not None:
-            status.close()
     ui.write_err(", ".join(["%s: %.1f MiB" % (key, value / 1024.0)
                             for key, value in result.iteritems()]) + "\n")
 
