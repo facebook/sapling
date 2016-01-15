@@ -137,8 +137,7 @@ def maybeperformlegacystreamclone(pullop):
         raise error.ResponseError(
             _('unexpected response from remote server:'), l)
 
-    lock = repo.lock()
-    try:
+    with repo.lock():
         consumev1(repo, fp, filecount, bytecount)
 
         # new requirements = old non-format requirements +
@@ -153,8 +152,6 @@ def maybeperformlegacystreamclone(pullop):
             branchmap.replacecache(repo, rbranchmap)
 
         repo.invalidate()
-    finally:
-        lock.release()
 
 def allowservergeneration(ui):
     """Whether streaming clones are allowed from the server."""
