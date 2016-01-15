@@ -224,12 +224,9 @@ def _aborttransaction(repo):
 
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         cmdutil.checkunfinished(repo)
         return _docreatecmd(ui, repo, pats, opts)
-    finally:
-        lockmod.release(wlock)
 
 def _docreatecmd(ui, repo, pats, opts):
     def mutableancestors(ctx):
