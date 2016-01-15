@@ -2012,8 +2012,7 @@ def debugbuilddag(ui, repo, text=None,
         norepo=True)
 def debugbundle(ui, bundlepath, all=None, **opts):
     """lists the contents of a bundle"""
-    f = hg.openpath(ui, bundlepath)
-    try:
+    with hg.openpath(ui, bundlepath) as f:
         gen = exchange.readbundle(ui, f, bundlepath)
         if isinstance(gen, bundle2.unbundle20):
             return _debugbundle2(ui, gen, all=all, **opts)
@@ -2060,8 +2059,6 @@ def debugbundle(ui, bundlepath, all=None, **opts):
                 node = chunkdata['node']
                 ui.write("%s\n" % hex(node))
                 chain = node
-    finally:
-        f.close()
 
 def _debugbundle2(ui, gen, **opts):
     """lists the contents of a bundle2"""
