@@ -252,8 +252,7 @@ def rebuildfncache(ui, repo):
                   'support fncache)\n'))
         return
 
-    lock = repo.lock()
-    try:
+    with repo.lock():
         fnc = repo.store.fncache
         # Trigger load of fncache.
         if 'irrelevant' in fnc:
@@ -305,8 +304,6 @@ def rebuildfncache(ui, repo):
                 tr.release()
         else:
             ui.write(_('fncache already up to date\n'))
-    finally:
-        lock.release()
 
 def stripbmrevset(repo, mark):
     """
