@@ -2627,13 +2627,10 @@ def refresh(ui, repo, *pats, **opts):
     q = repo.mq
     message = cmdutil.logmessage(ui, opts)
     setupheaderopts(ui, opts)
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         ret = q.refresh(repo, pats, msg=message, **opts)
         q.savedirty()
         return ret
-    finally:
-        wlock.release()
 
 @command("^qdiff",
          commands.diffopts + commands.diffopts2 + commands.walkopts,
