@@ -1337,8 +1337,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
     matcher = kwargs.get('matcher', None)
     # note if this is a partial update
     partial = matcher and not matcher.always()
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         # branch |       |         |
         #  merge | force | partial | action
         # -------+-------+---------+--------------
@@ -1387,8 +1386,6 @@ def mergeupdate(orig, repo, node, branchmerge, force,
                                 normallookup=partial)
 
         return result
-    finally:
-        wlock.release()
 
 def scmutilmarktouched(orig, repo, files, *args, **kwargs):
     result = orig(repo, files, *args, **kwargs)
