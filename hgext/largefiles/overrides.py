@@ -196,8 +196,7 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
 
     # Need to lock because standin files are deleted then removed from the
     # repository and we could race in-between.
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         for f in sorted(remove):
             if ui.verbose or not m.exact(f):
@@ -228,8 +227,6 @@ def removelargefiles(ui, repo, isaddremove, matcher, **opts):
                                   False)
 
         lfdirstate.write()
-    finally:
-        wlock.release()
 
     return result
 
