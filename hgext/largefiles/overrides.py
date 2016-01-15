@@ -141,8 +141,7 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
 
     # Need to lock, otherwise there could be a race condition between
     # when standins are created and added to the repo.
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         if not opts.get('dry_run'):
             standins = []
             lfdirstate = lfutil.openlfdirstate(ui, repo)
@@ -161,8 +160,6 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
                     if f in m.files()]
 
         added = [f for f in lfnames if f not in bad]
-    finally:
-        wlock.release()
     return added, bad
 
 def removelargefiles(ui, repo, isaddremove, matcher, **opts):
