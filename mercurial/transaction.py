@@ -333,6 +333,14 @@ class transaction(object):
         if self.count > 0 and self.usages == 0:
             self._abort()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.close()
+        self.release()
+
     def running(self):
         return self.count > 0
 
