@@ -3199,12 +3199,9 @@ def finish(ui, repo, *revrange, **opts):
     # queue.finish may changes phases but leave the responsibility to lock the
     # repo to the caller to avoid deadlock with wlock. This command code is
     # responsibility for this locking.
-    lock = repo.lock()
-    try:
+    with repo.lock():
         q.finish(repo, revs)
         q.savedirty()
-    finally:
-        lock.release()
     return 0
 
 @command("qqueue",
