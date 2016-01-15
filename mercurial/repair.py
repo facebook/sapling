@@ -185,15 +185,11 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
                 # silence internal shuffling chatter
                 repo.ui.pushbuffer()
             if isinstance(gen, bundle2.unbundle20):
-                tr = repo.transaction('strip')
-                tr.hookargs = {'source': 'strip',
-                               'url': 'bundle:' + vfs.join(chgrpfile)}
-                try:
+                with repo.transaction('strip') as tr:
+                    tr.hookargs = {'source': 'strip',
+                                   'url': 'bundle:' + vfs.join(chgrpfile)}
                     bundle2.applybundle(repo, gen, tr, source='strip',
                                         url='bundle:' + vfs.join(chgrpfile))
-                    tr.close()
-                finally:
-                    tr.release()
             else:
                 gen.apply(repo, 'strip', 'bundle:' + vfs.join(chgrpfile), True)
             if not repo.ui.verbose:
