@@ -263,15 +263,12 @@ def reposetup(ui, repo):
                 force=False, editor=False, extra={}):
             orig = super(lfilesrepo, self).commit
 
-            wlock = self.wlock()
-            try:
+            with self.wlock():
                 lfcommithook = self._lfcommithooks[-1]
                 match = lfcommithook(self, match)
                 result = orig(text=text, user=user, date=date, match=match,
                                 force=force, editor=editor, extra=extra)
                 return result
-            finally:
-                wlock.release()
 
         def push(self, remote, force=False, revs=None, newbranch=False):
             if remote.local():
