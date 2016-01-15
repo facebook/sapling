@@ -81,6 +81,10 @@ ones.
    The registry key ``HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Mercurial``
    is used when running 32-bit Python on 64-bit Windows.
 
+.. container:: windows
+
+  On Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``.
+
 .. container:: verbose.plan9
 
   On Plan9, the following files are consulted:
@@ -104,14 +108,10 @@ this file override options in all other configuration files.
   belong to a trusted user or to a trusted group. See
   :hg:`help config.trusted` for more details.
 
-Per-user configuration file(s) are for the user running Mercurial.
-
-.. container:: windows
-
-  On Windows 9x, ``%HOME%`` is replaced by ``%APPDATA%``. Options in
-  these files apply to all Mercurial commands executed by this user in
-  any directory. Options in these files override per-system and
-  per-installation options.
+Per-user configuration file(s) are for the user running Mercurial.  Options
+in these files apply to all Mercurial commands executed by this user in any
+directory. Options in these files override per-system and per-installation
+options.
 
 Per-installation configuration files are searched for in the
 directory where Mercurial is installed. ``<install-root>`` is the
