@@ -1471,9 +1471,7 @@ def cleanupnode(ui, repo, name, nodes):
     The set of node to strip may contains unknown nodes."""
     ui.debug('should strip %s nodes %s\n' %
              (name, ', '.join([node.short(n) for n in nodes])))
-    lock = None
-    try:
-        lock = repo.lock()
+    with repo.lock():
         # do not let filtering get in the way of the cleanse
         # we should probably get rid of obsolescence marker created during the
         # histedit, but we currently do not have such information.
@@ -1488,8 +1486,6 @@ def cleanupnode(ui, repo, name, nodes):
             # but this trigger a bug in changegroup hook.
             # This would reduce bundle overhead
             repair.strip(ui, repo, c)
-    finally:
-        release(lock)
 
 def stripwrapper(orig, ui, repo, nodelist, *args, **kwargs):
     if isinstance(nodelist, str):
