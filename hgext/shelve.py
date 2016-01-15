@@ -354,16 +354,12 @@ def _docreatecmd(ui, repo, pats, opts):
 def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
 
-    wlock = None
-    try:
-        wlock = repo.wlock()
+    with repo.wlock():
         for (name, _type) in repo.vfs.readdir('shelved'):
             suffix = name.rsplit('.', 1)[-1]
             if suffix in ('hg', 'patch'):
                 shelvedfile(repo, name).movetobackup()
             cleanupoldbackups(repo)
-    finally:
-        lockmod.release(wlock)
 
 def deletecmd(ui, repo, pats):
     """subcommand that deletes a specific shelve"""
