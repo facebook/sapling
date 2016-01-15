@@ -1041,12 +1041,8 @@ class queue(object):
             oldqbase = repo[qfinished[0]]
             tphase = repo.ui.config('phases', 'new-commit', phases.draft)
             if oldqbase.phase() > tphase and oldqbase.p1().phase() <= tphase:
-                tr = repo.transaction('qfinish')
-                try:
+                with repo.transaction('qfinish') as tr:
                     phases.advanceboundary(repo, tr, tphase, qfinished)
-                    tr.close()
-                finally:
-                    tr.release()
 
     def delete(self, repo, patches, opts):
         if not patches and not opts.get('rev'):
