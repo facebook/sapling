@@ -5818,11 +5818,8 @@ def rename(ui, repo, *pats, **opts):
 
     Returns 0 on success, 1 if errors are encountered.
     """
-    wlock = repo.wlock(False)
-    try:
+    with repo.wlock(False):
         return cmdutil.copy(ui, repo, pats, opts, rename=True)
-    finally:
-        wlock.release()
 
 @command('resolve',
     [('a', 'all', None, _('select all unresolved files')),
