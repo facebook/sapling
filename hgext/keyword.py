@@ -357,14 +357,11 @@ def _kwfwrite(ui, repo, expand, *pats, **opts):
     if len(wctx.parents()) > 1:
         raise error.Abort(_('outstanding uncommitted merge'))
     kwt = kwtools['templater']
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         status = _status(ui, repo, wctx, kwt, *pats, **opts)
         if status.modified or status.added or status.removed or status.deleted:
             raise error.Abort(_('outstanding uncommitted changes'))
         kwt.overwrite(wctx, status.clean, True, expand)
-    finally:
-        wlock.release()
 
 @command('kwdemo',
          [('d', 'default', None, _('show default keyword template maps')),
