@@ -22,6 +22,11 @@ class remotelock(object):
     def release(self):
         self.repo.unlock()
         self.repo = None
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.repo:
+            self.release()
     def __del__(self):
         if self.repo:
             self.release()
