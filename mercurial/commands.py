@@ -6831,8 +6831,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
     """
     fnames = (fname1,) + fnames
 
-    lock = repo.lock()
-    try:
+    with repo.lock():
         for fname in fnames:
             f = hg.openpath(ui, fname)
             gen = exchange.readbundle(ui, f, fname)
@@ -6861,8 +6860,6 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
                         hint=_('use "hg debugapplystreamclonebundle"'))
             else:
                 modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
-    finally:
-        lock.release()
 
     return postincoming(ui, repo, modheads, opts.get('update'), None)
 
