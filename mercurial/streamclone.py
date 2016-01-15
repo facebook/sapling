@@ -297,8 +297,7 @@ def consumev1(repo, fp, filecount, bytecount):
         repo.ui.progress(_('clone'), 0, total=bytecount)
         start = time.time()
 
-        tr = repo.transaction('clone')
-        try:
+        with repo.transaction('clone'):
             for i in xrange(filecount):
                 # XXX doesn't support '\n' or '\r' in filenames
                 l = fp.readline()
@@ -318,9 +317,6 @@ def consumev1(repo, fp, filecount, bytecount):
                         repo.ui.progress(_('clone'), handled_bytes,
                                          total=bytecount)
                         ofp.write(chunk)
-            tr.close()
-        finally:
-            tr.release()
 
         # Writing straight to files circumvented the inmemory caches
         repo.invalidate()
