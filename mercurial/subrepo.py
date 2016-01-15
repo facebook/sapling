@@ -631,11 +631,8 @@ class hgsubrepo(abstractsubrepo):
         self._initrepo(r, state[0], create)
 
     def storeclean(self, path):
-        lock = self._repo.lock()
-        try:
+        with self._repo.lock():
             return self._storeclean(path)
-        finally:
-            lock.release()
 
     def _storeclean(self, path):
         clean = True
