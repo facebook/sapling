@@ -3124,8 +3124,7 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
     check the actual file content.
     """
     ctx = scmutil.revsingle(repo, rev)
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         dirstate = repo.dirstate
         changedfiles = None
         # See command doc for what minimal does.
@@ -3138,8 +3137,6 @@ def debugrebuilddirstate(ui, repo, rev, **opts):
             changedfiles = manifestonly | dsnotadded
 
         dirstate.rebuild(ctx.node(), ctx.manifest(), changedfiles)
-    finally:
-        wlock.release()
 
 @command('debugrebuildfncache', [], '')
 def debugrebuildfncache(ui, repo):
