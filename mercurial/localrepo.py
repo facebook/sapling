@@ -1126,8 +1126,7 @@ class localrepository(object):
                            self.svfs.tryread("phaseroots"))
 
     def recover(self):
-        lock = self.lock()
-        try:
+        with self.lock():
             if self.svfs.exists("journal"):
                 self.ui.status(_("rolling back interrupted transaction\n"))
                 vfsmap = {'': self.svfs,
@@ -1139,8 +1138,6 @@ class localrepository(object):
             else:
                 self.ui.warn(_("no interrupted transaction available\n"))
                 return False
-        finally:
-            lock.release()
 
     def rollback(self, dryrun=False, force=False):
         wlock = lock = dsguard = None
