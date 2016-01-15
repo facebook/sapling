@@ -133,8 +133,7 @@ def stripcmd(ui, repo, *revs, **opts):
     revs = list(revs) + opts.get('rev')
     revs = set(scmutil.revrange(repo, revs))
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         bookmarks = set(opts.get('bookmark'))
         if bookmarks:
             repomarks = repo._bookmarks
@@ -232,7 +231,5 @@ def stripcmd(ui, repo, *revs, **opts):
 
         strip(ui, repo, revs, backup=backup, update=update,
               force=opts.get('force'), bookmarks=bookmarks)
-    finally:
-        wlock.release()
 
     return 0
