@@ -461,30 +461,27 @@ def pathtofiles(repo, files):
 
 def unshelveabort(ui, repo, state, opts):
     """subcommand that abort an in-progress unshelve"""
-    lock = None
-    try:
-        checkparents(repo, state)
-
-        util.rename(repo.join('unshelverebasestate'),
-                    repo.join('rebasestate'))
+    with repo.lock():
         try:
-            rebase.rebase(ui, repo, **{
-                'abort' : True
-            })
-        except Exception:
-            util.rename(repo.join('rebasestate'),
-                        repo.join('unshelverebasestate'))
-            raise
+            checkparents(repo, state)
 
-        lock = repo.lock()
+            util.rename(repo.join('unshelverebasestate'),
+                        repo.join('rebasestate'))
+            try:
+                rebase.rebase(ui, repo, **{
+                    'abort' : True
+                })
+            except Exception:
+                util.rename(repo.join('rebasestate'),
+                            repo.join('unshelverebasestate'))
+                raise
 
-        mergefiles(ui, repo, state.wctx, state.pendingctx)
-
-        repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
-    finally:
-        shelvedstate.clear(repo)
-        ui.warn(_("unshelve of '%s' aborted\n") % state.name)
-        lockmod.release(lock)
+            mergefiles(ui, repo, state.wctx, state.pendingctx)
+            repair.strip(ui, repo, state.stripnodes, backup=False,
+                         topic='shelve')
+        finally:
+            shelvedstate.clear(repo)
+            ui.warn(_("unshelve of '%s' aborted\n") % state.name)
 
 def mergefiles(ui, repo, wctx, shelvectx):
     """updates to wctx and merges the changes from shelvectx into the
