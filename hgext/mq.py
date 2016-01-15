@@ -2079,8 +2079,7 @@ class queue(object):
                 lastparent = None
 
             diffopts = self.diffopts({'git': git})
-            tr = repo.transaction('qimport')
-            try:
+            with repo.transaction('qimport') as tr:
                 for r in rev:
                     if not repo[r].mutable():
                         raise error.Abort(_('revision %d is not mutable') % r,
@@ -2121,9 +2120,6 @@ class queue(object):
                     self.parseseries()
                     self.applieddirty = True
                     self.seriesdirty = True
-                tr.close()
-            finally:
-                tr.release()
 
         for i, filename in enumerate(files):
             if existing:
