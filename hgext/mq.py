@@ -1318,8 +1318,7 @@ class queue(object):
              keepchanges=False):
         self.checkkeepchanges(keepchanges, force)
         diffopts = self.diffopts()
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             heads = []
             for hs in repo.branchmap().itervalues():
                 heads.extend(hs)
@@ -1460,9 +1459,6 @@ class queue(object):
             else:
                 self.ui.write(_("now at: %s\n") % top)
             return ret[0]
-
-        finally:
-            wlock.release()
 
     def pop(self, repo, patch=None, force=False, update=True, all=False,
             nobackup=False, keepchanges=False):
