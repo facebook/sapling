@@ -1447,8 +1447,7 @@ class workingctx(committablectx):
 
     def forget(self, files, prefix=""):
         join = lambda f: os.path.join(prefix, f)
-        wlock = self._repo.wlock()
-        try:
+        with self._repo.wlock():
             rejected = []
             for f in files:
                 if f not in self._repo.dirstate:
@@ -1459,8 +1458,6 @@ class workingctx(committablectx):
                 else:
                     self._repo.dirstate.drop(f)
             return rejected
-        finally:
-            wlock.release()
 
     def undelete(self, list):
         pctxs = self.parents()
