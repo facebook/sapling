@@ -323,9 +323,7 @@ class mercurial_sink(converter_sink):
             self.repo.ui.setconfig('phases', 'new-commit',
                                    phases.phasenames[commit.phase], 'convert')
 
-            tr = self.repo.transaction("convert")
-
-            try:
+            with self.repo.transaction("convert") as tr:
                 node = hex(self.repo.commitctx(ctx))
 
                 # If the node value has changed, but the phase is lower than
@@ -336,9 +334,6 @@ class mercurial_sink(converter_sink):
                     if ctx.phase() < phases.draft:
                         phases.retractboundary(self.repo, tr, phases.draft,
                                                [ctx.node()])
-                tr.close()
-            finally:
-                tr.release()
 
             text = "(octopus merge fixup)\n"
             p2 = node
