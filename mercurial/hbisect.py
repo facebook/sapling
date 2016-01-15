@@ -153,14 +153,11 @@ def load_state(repo):
 
 def save_state(repo, state):
     f = repo.vfs("bisect.state", "w", atomictemp=True)
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         for kind in sorted(state):
             for node in state[kind]:
                 f.write("%s %s\n" % (kind, hex(node)))
         f.close()
-    finally:
-        wlock.release()
 
 def get(repo, status):
     """
