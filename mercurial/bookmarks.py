@@ -162,8 +162,7 @@ class bmstore(dict):
     def _writeactive(self):
         if self._aclean:
             return
-        wlock = self._repo.wlock()
-        try:
+        with self._repo.wlock():
             if self._active is not None:
                 f = self._repo.vfs('bookmarks.current', 'w', atomictemp=True)
                 try:
@@ -176,8 +175,6 @@ class bmstore(dict):
                 except OSError as inst:
                     if inst.errno != errno.ENOENT:
                         raise
-        finally:
-            wlock.release()
         self._aclean = True
 
     def _write(self, fp):
