@@ -409,12 +409,8 @@ def pushphase(repo, nhex, oldphasestr, newphasestr):
         newphase = abs(int(newphasestr)) # let's avoid negative index surprise
         oldphase = abs(int(oldphasestr)) # let's avoid negative index surprise
         if currentphase == oldphase and newphase < oldphase:
-            try:
-                tr = repo.transaction('pushkey-phase')
+            with repo.transaction('pushkey-phase') as tr:
                 advanceboundary(repo, tr, newphase, [bin(nhex)])
-                tr.close()
-            finally:
-                tr.release()
             return 1
         elif currentphase == newphase:
             # raced, but got correct result
