@@ -20,7 +20,6 @@ from mercurial.node import short
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
 from mercurial import revset, templatekw, exchange
-from mercurial import lock as lockmod
 
 class TransplantError(error.Abort):
     pass
@@ -575,12 +574,8 @@ def transplant(ui, repo, *revs, **opts):
     and then resume where you left off by calling :hg:`transplant
     --continue/-c`.
     '''
-    wlock = None
-    try:
-        wlock = repo.wlock()
+    with repo.wlock():
         return _dotransplant(ui, repo, *revs, **opts)
-    finally:
-        lockmod.release(wlock)
 
 def _dotransplant(ui, repo, *revs, **opts):
     def incwalk(repo, csets, match=util.always):
