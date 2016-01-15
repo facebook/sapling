@@ -70,11 +70,6 @@ However, *streaming clone bundles* don't have this guarantee. **Server
 operators need to be aware that newer versions of Mercurial may produce
 streaming clone bundles incompatible with older Mercurial versions.**
 
-The list of requirements printed by :hg:`debugcreatestreamclonebundle` should
-be specified in the ``requirements`` parameter of the *bundle specification
-string* for the ``BUNDLESPEC`` manifest property described below. e.g.
-``BUNDLESPEC=none-packed1;requirements%3Drevlogv1``.
-
 A server operator is responsible for creating a ``.hg/clonebundles.manifest``
 file containing the list of available bundle files suitable for seeding
 clones. If this file does not exist, the repository will not advertise the
@@ -108,6 +103,10 @@ BUNDLESPEC
    "<compression>-<type>" form. See
    mercurial.exchange.parsebundlespec() for more details.
 
+   :hg:`debugbundle --spec` can be used to print the bundle specification
+   string for a bundle file. The output of this command can be used verbatim
+   for the value of ``BUNDLESPEC`` (it is already escaped).
+
    Clients will automatically filter out specifications that are unknown or
    unsupported so they won't attempt to download something that likely won't
    apply.
@@ -117,7 +116,8 @@ BUNDLESPEC
    files.
 
    **Use of this key is highly recommended**, as it allows clients to
-   easily skip unsupported bundles.
+   easily skip unsupported bundles. If this key is not defined, an old
+   client may attempt to apply a bundle that it is incapable of reading.
 
 REQUIRESNI
    Whether Server Name Indication (SNI) is required to connect to the URL.
