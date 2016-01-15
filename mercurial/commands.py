@@ -3386,13 +3386,10 @@ def debugsetparents(ui, repo, rev1, rev2=None):
     r1 = scmutil.revsingle(repo, rev1).node()
     r2 = scmutil.revsingle(repo, rev2, 'null').node()
 
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         repo.dirstate.beginparentchange()
         repo.setparents(r1, r2)
         repo.dirstate.endparentchange()
-    finally:
-        wlock.release()
 
 @command('debugdirstate|debugstate',
     [('', 'nodates', None, _('do not display the saved mtime')),
