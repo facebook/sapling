@@ -426,8 +426,7 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
     ignore, for false) message forcibly".
     '''
     statuswriter = lfutil.getstatuswriter(ui, repo, printmessage)
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         lfdirstate = lfutil.openlfdirstate(ui, repo)
         lfiles = set(lfutil.listlfiles(repo)) | set(lfdirstate)
 
@@ -504,8 +503,6 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
         if lfiles:
             statuswriter(_('%d largefiles updated, %d removed\n') % (updated,
                 removed))
-    finally:
-        wlock.release()
 
 @command('lfpull',
     [('r', 'rev', [], _('pull largefiles for these revisions'))
