@@ -22,11 +22,8 @@ from . import (
 )
 
 def verify(repo):
-    lock = repo.lock()
-    try:
+    with repo.lock():
         return verifier(repo).verify()
-    finally:
-        lock.release()
 
 def _normpath(f):
     # under hg < 2.4, convert didn't sanitize paths properly, so a
