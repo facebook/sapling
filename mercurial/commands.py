@@ -5118,13 +5118,10 @@ def manifest(ui, repo, node=None, rev=None, **opts):
         suffix = ".i"
         plen = len(prefix)
         slen = len(suffix)
-        lock = repo.lock()
-        try:
+        with repo.lock():
             for fn, b, size in repo.store.datafiles():
                 if size != 0 and fn[-slen:] == suffix and fn[:plen] == prefix:
                     res.append(fn[plen:-slen])
-        finally:
-            lock.release()
         for f in res:
             fm.startitem()
             fm.write("path", '%s\n', f)
