@@ -187,6 +187,59 @@ def readbundle(ui, fh, fname, vfs=None):
     else:
         raise error.Abort(_('%s: unknown bundle version %s') % (fname, version))
 
+def getbundlespec(ui, fh):
+    """Infer the bundlespec from a bundle file handle.
+
+    The input file handle is seeked and the original seek position is not
+    restored.
+    """
+    def speccompression(alg):
+        for k, v in _bundlespeccompressions.items():
+            if v == alg:
+                return k
+        return None
+
+    b = readbundle(ui, fh, None)
+    if isinstance(b, changegroup.cg1unpacker):
+        alg = b._type
+        if alg == '_truncatedBZ':
+            alg = 'BZ'
+        comp = speccompression(alg)
+        if not comp:
+            raise error.Abort(_('unknown compression algorithm: %s') % alg)
+        return '%s-v1' % comp
+    elif isinstance(b, bundle2.unbundle20):
+        if 'Compression' in b.params:
+            comp = speccompression(b.params['Compression'])
+            if not comp:
+                raise error.Abort(_('unknown compression algorithm: %s') % comp)
+        else:
+            comp = 'none'
+
+        version = None
+        for part in b.iterparts():
+            if part.type == 'changegroup':
+                version = part.params['version']
+                if version in ('01', '02'):
+                    version = 'v2'
+                else:
+                    raise error.Abort(_('changegroup version %s does not have '
+                                        'a known bundlespec') % version,
+                                      hint=_('try upgrading your Mercurial '
+                                              'client'))
+
+        if not version:
+            raise error.Abort(_('could not identify changegroup version in '
+                                'bundle'))
+
+        return '%s-%s' % (comp, version)
+    elif isinstance(b, streamclone.streamcloneapplier):
+        requirements = streamclone.readbundle1header(fh)[2]
+        params = 'requirements=%s' % ','.join(sorted(requirements))
+        return 'none-packed1;%s' % urllib.quote(params)
+    else:
+        raise error.Abort(_('unknown bundle type: %s') % b)
+
 def buildobsmarkerspart(bundler, markers):
     """add an obsmarker part to the bundler with <markers>
 
