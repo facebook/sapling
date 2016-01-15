@@ -520,16 +520,13 @@ def unshelvecontinue(ui, repo, state, opts):
     """subcommand to continue an in-progress unshelve"""
     # We're finishing off a merge. First parent is our original
     # parent, second is the temporary "fake" commit we're unshelving.
-    lock = None
-    try:
+    with repo.lock():
         checkparents(repo, state)
         ms = merge.mergestate.read(repo)
         if [f for f in ms if ms[f] == 'u']:
             raise error.Abort(
                 _("unresolved conflicts, can't continue"),
                 hint=_("see 'hg resolve', then 'hg unshelve --continue'"))
-
-        lock = repo.lock()
 
         util.rename(repo.join('unshelverebasestate'),
                     repo.join('rebasestate'))
@@ -556,8 +553,6 @@ def unshelvecontinue(ui, repo, state, opts):
         shelvedstate.clear(repo)
         unshelvecleanup(ui, repo, state.name, opts)
         ui.status(_("unshelve of '%s' complete\n") % state.name)
-    finally:
-        lockmod.release(lock)
 
 @command('unshelve',
          [('a', 'abort', None,
