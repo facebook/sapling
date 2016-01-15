@@ -290,8 +290,7 @@ def consumev1(repo, fp, filecount, bytecount):
     Like "streamout," the status line added by the wire protocol is not handled
     by this function.
     """
-    lock = repo.lock()
-    try:
+    with repo.lock():
         repo.ui.status(_('%d files to transfer, %s of data\n') %
                        (filecount, util.bytecount(bytecount)))
         handled_bytes = 0
@@ -333,8 +332,6 @@ def consumev1(repo, fp, filecount, bytecount):
         repo.ui.status(_('transferred %s in %.1f seconds (%s/sec)\n') %
                        (util.bytecount(bytecount), elapsed,
                         util.bytecount(bytecount / elapsed)))
-    finally:
-        lock.release()
 
 def applybundlev1(repo, fp):
     """Apply the content from a stream clone bundle version 1.
