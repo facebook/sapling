@@ -679,13 +679,10 @@ class hgsubrepo(abstractsubrepo):
         store may be "clean" versus a given remote repo, but not versus another
         '''
         cachefile = _getstorehashcachename(remotepath)
-        lock = self._repo.lock()
-        try:
+        with self._repo.lock():
             storehash = list(self._calcstorehash(remotepath))
             vfs = self._cachestorehashvfs
             vfs.writelines(cachefile, storehash, mode='w', notindexed=True)
-        finally:
-            lock.release()
 
     def _getctx(self):
         '''fetch the context for this subrepo revision, possibly a workingctx
