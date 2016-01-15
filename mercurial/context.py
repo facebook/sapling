@@ -1483,15 +1483,12 @@ class workingctx(committablectx):
             self._repo.ui.warn(_("copy failed: %s is not a file or a "
                                  "symbolic link\n") % dest)
         else:
-            wlock = self._repo.wlock()
-            try:
+            with self._repo.wlock():
                 if self._repo.dirstate[dest] in '?':
                     self._repo.dirstate.add(dest)
                 elif self._repo.dirstate[dest] in 'r':
                     self._repo.dirstate.normallookup(dest)
                 self._repo.dirstate.copy(source, dest)
-            finally:
-                wlock.release()
 
     def match(self, pats=[], include=None, exclude=None, default='glob',
               listsubrepos=False, badfn=None):
