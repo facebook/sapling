@@ -1223,8 +1223,7 @@ def overridepurge(orig, ui, repo, *dirs, **opts):
     orig(ui, repo, *dirs, **opts)
     repo.status = oldstatus
 def overriderollback(orig, ui, repo, **opts):
-    wlock = repo.wlock()
-    try:
+    with repo.wlock():
         before = repo.dirstate.parents()
         orphans = set(f for f in repo.dirstate
                       if lfutil.isstandin(f) and repo.dirstate[f] != 'r')
@@ -1258,8 +1257,6 @@ def overriderollback(orig, ui, repo, **opts):
         for lfile in orphans:
             lfdirstate.drop(lfile)
         lfdirstate.write()
-    finally:
-        wlock.release()
     return result
 
 def overridetransplant(orig, ui, repo, *revs, **opts):
