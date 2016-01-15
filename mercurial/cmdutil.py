@@ -230,11 +230,8 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                 pass
 
     def recordinwlock(ui, repo, message, match, opts):
-        wlock = repo.wlock()
-        try:
+        with repo.wlock():
             return recordfunc(ui, repo, message, match, opts)
-        finally:
-            wlock.release()
 
     return commit(ui, repo, recordinwlock, pats, opts)
 
