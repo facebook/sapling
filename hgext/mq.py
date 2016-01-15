@@ -2986,16 +2986,13 @@ def rename(ui, repo, patch, name=None, **opts):
     r = q.qrepo()
     if r and patch in r.dirstate:
         wctx = r[None]
-        wlock = r.wlock()
-        try:
+        with r.wlock():
             if r.dirstate[patch] == 'a':
                 r.dirstate.drop(patch)
                 r.dirstate.add(name)
             else:
                 wctx.copy(patch, name)
                 wctx.forget([patch])
-        finally:
-            wlock.release()
 
     q.savedirty()
 
