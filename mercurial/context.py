@@ -1415,9 +1415,8 @@ class workingctx(committablectx):
 
     def add(self, list, prefix=""):
         join = lambda f: os.path.join(prefix, f)
-        wlock = self._repo.wlock()
-        ui, ds = self._repo.ui, self._repo.dirstate
-        try:
+        with self._repo.wlock():
+            ui, ds = self._repo.ui, self._repo.dirstate
             rejected = []
             lstat = self._repo.wvfs.lstat
             for f in list:
@@ -1445,8 +1444,6 @@ class workingctx(committablectx):
                 else:
                     ds.add(f)
             return rejected
-        finally:
-            wlock.release()
 
     def forget(self, files, prefix=""):
         join = lambda f: os.path.join(prefix, f)
