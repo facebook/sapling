@@ -20,6 +20,7 @@ setup(
         'chistedit',
         'commitextras',
         'dirsync',
+        'errorredirect',
         'fbamend',
         'fbconduit',
         'fbhistedit',
