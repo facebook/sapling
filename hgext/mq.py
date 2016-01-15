@@ -2316,8 +2316,7 @@ def qimport(ui, repo, *filename, **opts):
 
     Returns 0 if import succeeded.
     """
-    lock = repo.lock() # cause this may move phase
-    try:
+    with repo.lock(): # cause this may move phase
         q = repo.mq
         try:
             imported = q.qimport(
@@ -2326,8 +2325,6 @@ def qimport(ui, repo, *filename, **opts):
                 rev=opts.get('rev'), git=opts.get('git'))
         finally:
             q.savedirty()
-    finally:
-        lock.release()
 
     if imported and opts.get('push') and not opts.get('rev'):
         return q.push(repo, imported[-1])
