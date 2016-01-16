@@ -395,8 +395,10 @@ def jsonescape(s):
 
     >>> jsonescape('this is a test')
     'this is a test'
-    >>> jsonescape('escape characters: \\0 \\x0b \\t \\n \\r \\" \\\\')
-    'escape characters: \\\\u0000 \\\\u000b \\\\t \\\\n \\\\r \\\\" \\\\\\\\'
+    >>> jsonescape('escape characters: \\0 \\x0b \\x7f')
+    'escape characters: \\\\u0000 \\\\u000b \\\\u007f'
+    >>> jsonescape('escape characters: \\t \\n \\r \\" \\\\')
+    'escape characters: \\\\t \\\\n \\\\r \\\\" \\\\\\\\'
     >>> jsonescape('a weird byte: \\xdd')
     'a weird byte: \\xed\\xb3\\x9d'
     >>> jsonescape('utf-8: caf\\xc3\\xa9')
@@ -411,6 +413,7 @@ def jsonescape(s):
         for x in xrange(32, 256):
             c = chr(x)
             _jsonmap[c] = c
+        _jsonmap['\x7f'] = '\\u007f'
         _jsonmap['\t'] = '\\t'
         _jsonmap['\n'] = '\\n'
         _jsonmap['\"'] = '\\"'
