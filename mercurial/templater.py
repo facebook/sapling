@@ -432,7 +432,7 @@ def get(context, mapping, args):
         raise error.ParseError(_("get() expects a dict as first argument"))
 
     key = args[1][0](context, mapping, args[1][1])
-    yield dictarg.get(key)
+    return dictarg.get(key)
 
 def if_(context, mapping, args):
     """:if(expr, then[, else]): Conditionally execute based on the result of
