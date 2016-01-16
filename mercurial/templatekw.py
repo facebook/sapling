@@ -34,7 +34,7 @@ class _hybrid(object):
             self.joinfmt = lambda x: x.values()[0]
     def __iter__(self):
         return self.gen
-    def __call__(self):
+    def itermaps(self):
         makemap = self._makemap
         for x in self.values:
             yield makemap(x)

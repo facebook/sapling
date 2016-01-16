@@ -281,8 +281,8 @@ def buildmap(exp, context):
 def runmap(context, mapping, data):
     func, data, ctmpl = data
     d = func(context, mapping, data)
-    if callable(d):
-        d = d()
+    if util.safehasattr(d, 'itermaps'):
+        d = d.itermaps()
 
     lm = mapping.copy()
 
@@ -483,9 +483,9 @@ def join(context, mapping, args):
         raise error.ParseError(_("join expects one or two arguments"))
 
     joinset = args[0][0](context, mapping, args[0][1])
-    if callable(joinset):
+    if util.safehasattr(joinset, 'itermaps'):
         jf = joinset.joinfmt
-        joinset = [jf(x) for x in joinset()]
+        joinset = [jf(x) for x in joinset.itermaps()]
 
     joiner = " "
     if len(args) > 1:
