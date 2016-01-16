@@ -851,13 +851,15 @@ class bundlepart(object):
                               self._advisoryparams, self._data, self.mandatory)
 
     # methods used to defines the part content
-    def __setdata(self, data):
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data):
         if self._generated is not None:
             raise error.ReadOnlyPartError('part is being generated')
         self._data = data
-    def __getdata(self):
-        return self._data
-    data = property(__getdata, __setdata)
 
     @property
     def mandatoryparams(self):

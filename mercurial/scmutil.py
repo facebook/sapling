@@ -448,21 +448,21 @@ class vfs(abstractvfs):
         if realpath:
             base = os.path.realpath(base)
         self.base = base
-        self._setmustaudit(audit)
+        self.mustaudit = audit
         self.createmode = None
         self._trustnlink = None
 
-    def _getmustaudit(self):
+    @property
+    def mustaudit(self):
         return self._audit
 
-    def _setmustaudit(self, onoff):
+    @mustaudit.setter
+    def mustaudit(self, onoff):
         self._audit = onoff
         if onoff:
             self.audit = pathutil.pathauditor(self.base)
         else:
             self.audit = util.always
-
-    mustaudit = property(_getmustaudit, _setmustaudit)
 
     @util.propertycache
     def _cansymlink(self):
@@ -561,13 +561,13 @@ class auditvfs(object):
     def __init__(self, vfs):
         self.vfs = vfs
 
-    def _getmustaudit(self):
+    @property
+    def mustaudit(self):
         return self.vfs.mustaudit
 
-    def _setmustaudit(self, onoff):
+    @mustaudit.setter
+    def mustaudit(self, onoff):
         self.vfs.mustaudit = onoff
-
-    mustaudit = property(_getmustaudit, _setmustaudit)
 
 class filtervfs(abstractvfs, auditvfs):
     '''Wrapper vfs for filtering filenames with a function.'''
