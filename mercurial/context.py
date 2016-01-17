@@ -1779,6 +1779,22 @@ class workingcommitctx(workingctx):
         changed.update(self._status.removed)
         return changed
 
+def makecachingfilectxfn(func):
+    """Create a filectxfn that caches based on the path.
+
+    We can't use util.cachefunc because it uses all arguments as the cache
+    key and this creates a cycle since the arguments include the repo and
+    memctx.
+    """
+    cache = {}
+
+    def getfilectx(repo, memctx, path):
+        if path not in cache:
+            cache[path] = func(repo, memctx, path)
+        return cache[path]
+
+    return getfilectx
+
 class memctx(committablectx):
     """Use memctx to perform in-memory commits via localrepo.commitctx().
 
@@ -1838,9 +1854,8 @@ class memctx(committablectx):
                                   copied=copied, memctx=memctx)
             self._filectxfn = getfilectx
         else:
-            # "util.cachefunc" reduces invocation of possibly expensive
-            # "filectxfn" for performance (e.g. converting from another VCS)
-            self._filectxfn = util.cachefunc(filectxfn)
+            # memoizing increases performance for e.g. vcs convert scenarios.
+            self._filectxfn = makecachingfilectxfn(filectxfn)
 
         if extra:
             self._extra = extra.copy()
