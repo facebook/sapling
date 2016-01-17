@@ -1085,9 +1085,15 @@ class localrepository(object):
         def txnclosehook(tr2):
             """To be run if transaction is successful, will schedule a hook run
             """
+            # Don't reference tr2 in hook() so we don't hold a reference.
+            # This reduces memory consumption when there are multiple
+            # transactions per lock. This can likely go away if issue5045
+            # fixes the function accumulation.
+            hookargs = tr2.hookargs
+
             def hook():
                 reporef().hook('txnclose', throw=False, txnname=desc,
-                               **tr2.hookargs)
+                               **hookargs)
             reporef()._afterlock(hook)
         tr.addfinalize('txnclose-hook', txnclosehook)
         def txnaborthook(tr2):
