@@ -470,7 +470,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
         elif lfutil.standin(f) in p1:
             lfiles.add(f)
 
-    for lfile in lfiles:
+    for lfile in sorted(lfiles):
         standin = lfutil.standin(lfile)
         (lm, largs, lmsg) = actions.get(lfile, (None, None, None))
         (sm, sargs, smsg) = actions.get(standin, (None, None, None))
