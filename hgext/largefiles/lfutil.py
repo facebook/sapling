@@ -221,7 +221,12 @@ def copytostore(repo, rev, file, uploaded=False):
     hash = readstandin(repo, file, rev)
     if instore(repo, hash):
         return
-    copytostoreabsolute(repo, repo.wjoin(file), hash)
+    absfile = repo.wjoin(file)
+    if os.path.exists(absfile):
+        copytostoreabsolute(repo, absfile, hash)
+    else:
+        repo.ui.warn(_("%s: largefile %s not available from local store\n") %
+                     (file, hash))
 
 def copyalltostore(repo, node):
     '''Copy all largefiles in a given revision to the store'''

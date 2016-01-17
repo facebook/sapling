@@ -158,9 +158,17 @@ mark the non-existing file as normal in lfdirstate)
   0 largefiles updated, 0 removed
   0 files updated, 2 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg commit -m '1-2-3 testing'
+  $ hg commit -m '1-2-3 testing' --config largefiles.usercache=not
+  large1: largefile 58e24f733a964da346e2407a2bee99d9001184f5 not available from local store
+  $ hg up -C . --config largefiles.usercache=not
+  getting changed largefiles
+  large1: largefile 58e24f733a964da346e2407a2bee99d9001184f5 not available from file:/*/$TESTTMP/repo (glob)
+  0 largefiles updated, 0 removed
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg st large1
+  ! large1
   $ hg rollback -q
-  $ rm 58e24f733a964da346e2407a2bee99d9001184f5
+  $ mv 58e24f733a964da346e2407a2bee99d9001184f5 .hg/largefiles/
 
 Test that "hg revert -r REV" updates largefiles from "REV" correctly
 
