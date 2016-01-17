@@ -3889,6 +3889,10 @@ def graft(ui, repo, *revs, **opts):
         return _dograft(ui, repo, *revs, **opts)
 
 def _dograft(ui, repo, *revs, **opts):
+    if revs and opts['rev']:
+        ui.warn(_('warning: inconsistent use of --rev might give unexpected '
+                  'revision ordering!\n'))
+
     revs = list(revs)
     revs.extend(opts['rev'])
 

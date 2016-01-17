@@ -62,6 +62,7 @@ Specify revisions with -r:
   [255]
 
   $ hg graft -r 1 2
+  warning: inconsistent use of --rev might give unexpected revision ordering!
   skipping ancestor revision 2:5c095ad7e90f
   skipping ancestor revision 1:5d205f8b35b6
   [255]
