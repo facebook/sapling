@@ -464,7 +464,7 @@ def overridecalculateupdates(origfn, repo, p1, p2, pas, branchmerge, force,
     # Convert to dictionary with filename as key and action as value.
     lfiles = set()
     for f in actions:
-        splitstandin = f and lfutil.splitstandin(f)
+        splitstandin = lfutil.splitstandin(f)
         if splitstandin in p1:
             lfiles.add(splitstandin)
         elif lfutil.standin(f) in p1:
