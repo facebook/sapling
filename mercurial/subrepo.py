@@ -1294,10 +1294,25 @@ class gitsubrepo(abstractsubrepo):
             self._gitexecutable = 'git'
             out, err = self._gitnodir(['--version'])
         except OSError as e:
-            if e.errno != 2 or os.name != 'nt':
-                raise
-            self._gitexecutable = 'git.cmd'
-            out, err = self._gitnodir(['--version'])
+            genericerror = _("error executing git for subrepo '%s': %s")
+            notfoundhint = _("check git is installed and in your PATH")
+            if e.errno != errno.ENOENT:
+                raise error.Abort(genericerror % (self._path, e.strerror))
+            elif os.name == 'nt':
+                try:
+                    self._gitexecutable = 'git.cmd'
+                    out, err = self._gitnodir(['--version'])
+                except OSError as e2:
+                    if e2.errno == errno.ENOENT:
+                        raise error.Abort(_("couldn't find 'git' or 'git.cmd'"
+                            " for subrepo '%s'") % self._path,
+                            hint=notfoundhint)
+                    else:
+                        raise error.Abort(genericerror % (self._path,
+                            e2.strerror))
+            else:
+                raise error.Abort(_("couldn't find git for subrepo '%s'")
+                    % self._path, hint=notfoundhint)
         versionstatus = self._checkversion(out)
         if versionstatus == 'unknown':
             self.ui.warn(_('cannot retrieve git version\n'))
