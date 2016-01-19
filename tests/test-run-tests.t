@@ -494,13 +494,21 @@ Skips with xml
 
 Missing skips or blacklisted skips don't count as executed:
   $ echo test-failure.t > blacklist
-  $ rt --blacklist=blacklist \
+  $ rt --blacklist=blacklist --json\
   >   test-failure.t test-bogus.t
   ss
   Skipped test-bogus.t: Doesn't exist
   Skipped test-failure.t: blacklisted
   # Ran 0 tests, 2 skipped, 0 warned, 0 failed.
-
+  $ cat report.json
+  testreport ={
+      "test-bogus.t": {
+          "result": "skip"
+      }, 
+      "test-failure.t": {
+          "result": "skip"
+      }
+  } (no-eol)
 #if json
 
 test for --json
