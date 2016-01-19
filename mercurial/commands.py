@@ -1328,7 +1328,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
     """
     revs = None
     if 'rev' in opts:
-        revs = scmutil.revrange(repo, opts['rev'])
+        revstrings = opts['rev']
+        revs = scmutil.revrange(repo, revstrings)
+        if revstrings and not revs:
+            raise error.Abort(_('no commits to bundle'))
 
     bundletype = opts.get('type', 'bzip2').lower()
     try:

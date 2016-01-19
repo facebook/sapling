@@ -728,4 +728,8 @@ bundle single branch
   checking files
   4 files, 3 changesets, 5 total revisions
 
-  $ cd ..
+== Test bundling no commits
+
+  $ hg bundle -r 'public()' no-output.hg
+  abort: no commits to bundle
+  [255]
