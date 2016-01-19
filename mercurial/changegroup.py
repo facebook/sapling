@@ -947,12 +947,18 @@ _packermap = {'01': (cg1packer, cg1unpacker),
 }
 
 def supportedversions(repo):
-    versions = _packermap.keys()
-    cg3 = ('treemanifest' in repo.requirements or
-           repo.ui.configbool('experimental', 'changegroup3') or
-           repo.ui.configbool('experimental', 'treemanifest'))
-    if not cg3:
-        versions.remove('03')
+    versions = set(_packermap.keys())
+    if ('treemanifest' in repo.requirements or
+        repo.ui.configbool('experimental', 'treemanifest')):
+        # Versions 01 and 02 support only flat manifests and it's just too
+        # expensive to convert between the flat manifest and tree manifest on
+        # the fly. Since tree manifests are hashed differently, all of history
+        # would have to be converted. Instead, we simply don't even pretend to
+        # support versions 01 and 02.
+        versions.discard('01')
+        versions.discard('02')
+    elif not repo.ui.configbool('experimental', 'changegroup3'):
+        versions.discard('03')
     return versions
 
 def getbundler(version, repo, bundlecaps=None):
