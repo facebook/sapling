@@ -22,9 +22,7 @@ from . import (
 
 def _bundle(repo, bases, heads, node, suffix, compress=True):
     """create a bundle with the specified revisions as a backup"""
-    cgversion = '01'
-    if 'generaldelta' in repo.requirements:
-        cgversion = '02'
+    cgversion = changegroup.safeversion(repo)
 
     cg = changegroup.changegroupsubset(repo, bases, heads, 'strip',
                                        version=cgversion)

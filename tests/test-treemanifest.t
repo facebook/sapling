@@ -285,6 +285,17 @@ Turning off treemanifest config has no effect
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
        2       238      55      1       6 5b16163a30c6 25ecb8cb8618 000000000000
 
+Stripping and recovering changes should work
+
+  $ hg st --change tip
+  M dir1/a
+  $ hg --config extensions.strip= strip tip
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg (glob)
+  $ hg unbundle -q .hg/strip-backup/*
+  $ hg st --change tip
+  M dir1/a
+
 Create deeper repo with tree manifests.
 
   $ cd ..
