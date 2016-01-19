@@ -961,6 +961,15 @@ def supportedversions(repo):
         versions.discard('03')
     return versions
 
+def safeversion(repo):
+    # Finds the smallest version that it's safe to assume clients of the repo
+    # will support.
+    versions = supportedversions(repo)
+    if 'generaldelta' in repo.requirements:
+        versions.discard('01')
+    assert versions
+    return min(versions)
+
 def getbundler(version, repo, bundlecaps=None):
     assert version in supportedversions(repo)
     return _packermap[version][0](repo, bundlecaps)
