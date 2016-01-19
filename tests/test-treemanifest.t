@@ -296,6 +296,22 @@ Stripping and recovering changes should work
   $ hg st --change tip
   M dir1/a
 
+Shelving and unshelving should work
+
+  $ echo foo >> dir1/a
+  $ hg --config extensions.shelve= shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg --config extensions.shelve= unshelve
+  unshelving change 'default'
+  $ hg diff --nodates
+  diff -r 708a273da119 dir1/a
+  --- a/dir1/a
+  +++ b/dir1/a
+  @@ -1,1 +1,2 @@
+   1
+  +foo
+
 Create deeper repo with tree manifests.
 
   $ cd ..

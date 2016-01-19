@@ -963,7 +963,8 @@ def supportedversions(repo):
 
 def safeversion(repo):
     # Finds the smallest version that it's safe to assume clients of the repo
-    # will support.
+    # will support. For example, all hg versions that support generaldelta also
+    # support changegroup 02.
     versions = supportedversions(repo)
     if 'generaldelta' in repo.requirements:
         versions.discard('01')

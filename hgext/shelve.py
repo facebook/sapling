@@ -112,12 +112,12 @@ class shelvedfile(object):
         return bundlerepo.bundlerepository(self.repo.baseui, self.repo.root,
                                            self.vfs.join(self.fname))
     def writebundle(self, bases, node):
-        btype = 'HG10BZ'
-        cgversion = '01'
-        compression = None
-        if 'generaldelta' in self.repo.requirements:
+        cgversion = changegroup.safeversion(self.repo)
+        if cgversion == '01':
+            btype = 'HG10BZ'
+            compression = None
+        else:
             btype = 'HG20'
-            cgversion = '02'
             compression = 'BZ'
 
         cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve',
