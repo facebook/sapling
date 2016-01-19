@@ -231,6 +231,38 @@ static void forwardsignal(int sig)
 	debugmsg("forward signal %d", sig);
 }
 
+static void handlestopsignal(int sig)
+{
+	sigset_t unblockset, oldset;
+	struct sigaction sa, oldsa;
+	if (sigemptyset(&unblockset) < 0)
+		goto error;
+	if (sigaddset(&unblockset, sig) < 0)
+		goto error;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_DFL;
+	sa.sa_flags = SA_RESTART;
+	if (sigemptyset(&sa.sa_mask) < 0)
+		goto error;
+
+	forwardsignal(sig);
+	if (raise(sig) < 0)  /* resend to self */
+		goto error;
+	if (sigaction(sig, &sa, &oldsa) < 0)
+		goto error;
+	if (sigprocmask(SIG_UNBLOCK, &unblockset, &oldset) < 0)
+		goto error;
+	/* resent signal will be handled before sigprocmask() returns */
+	if (sigprocmask(SIG_SETMASK, &oldset, NULL) < 0)
+		goto error;
+	if (sigaction(sig, &oldsa, NULL) < 0)
+		goto error;
+	return;
+
+error:
+	abortmsg("failed to handle stop signal (errno = %d)", errno);
+}
+
 static void setupsignalhandler(pid_t pid)
 {
 	if (pid <= 0)
@@ -253,6 +285,17 @@ static void setupsignalhandler(pid_t pid)
 	sa.sa_flags |= SA_RESETHAND;
 	if (sigaction(SIGTERM, &sa, NULL) < 0)
 		goto error;
+
+	/* propagate job control requests to worker */
+	sa.sa_handler = forwardsignal;
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCONT, &sa, NULL) < 0)
+		goto error;
+	sa.sa_handler = handlestopsignal;
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGTSTP, &sa, NULL) < 0)
+		goto error;
+
 	return;
 
 error:
