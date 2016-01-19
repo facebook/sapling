@@ -724,3 +724,25 @@ new commits must be visible in pretxnchangegroup (issue3428)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
+  $ cd ..
+
+pretxnclose hook failure should abort the transaction
+
+  $ hg init txnfailure
+  $ cd txnfailure
+  $ touch a && hg commit -Aqm a
+  $ cat >> .hg/hgrc <<EOF
+  > [hooks]
+  > pretxnclose.error = exit 1
+  > EOF
+  $ hg strip -r 0 --config extensions.strip=
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to * (glob)
+  transaction abort!
+  rollback completed
+  strip failed, full bundle stored in * (glob)
+  abort: pretxnclose.error hook exited with status 1
+  [255]
+  $ hg recover
+  no interrupted transaction available
+  [1]

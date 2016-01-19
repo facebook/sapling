@@ -337,9 +337,11 @@ class transaction(object):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            self.close()
-        self.release()
+        try:
+            if exc_type is None:
+                self.close()
+        finally:
+            self.release()
 
     def running(self):
         return self.count > 0
