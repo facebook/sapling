@@ -354,6 +354,10 @@ class chgcmdserver(commandserver.server):
 # copied from mercurial/commandserver.py
 class _requesthandler(SocketServer.StreamRequestHandler):
     def handle(self):
+        # use a different process group from the master process, making this
+        # process pass kernel "is_current_pgrp_orphaned" check so signals like
+        # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
+        os.setpgid(0, 0)
         ui = self.server.ui
         repo = self.server.repo
         sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection)
