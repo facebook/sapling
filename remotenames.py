@@ -14,6 +14,7 @@ remotebranches extension. Ryan McElroy of Facebook also contributed.
 """
 
 import os
+import re
 import errno
 import shutil
 import UserDict
@@ -854,6 +855,13 @@ def expushcmd(orig, ui, repo, dest=None, **opts):
     # TODO: subrepo stuff
 
     force = opts.get('force')
+    bookmark = opargs['to']
+    pattern = ui.config("remotenames", "disallowedto")
+    if pattern and re.match(pattern, bookmark):
+        msg = _("this remote bookmark name is not allowed")
+        hint = ui.config("remotenames", "disallowedhint") or \
+                       _("use another bookmark name")
+        raise error.Abort(msg, hint=hint)
     # NB: despite the name, 'revs' doesn't work if it's a numeric rev
     pushop = exchange.push(repo, other, force, revs=[node],
                            bookmarks=(opargs['to'],), opargs=opargs)
