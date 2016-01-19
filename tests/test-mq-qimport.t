@@ -200,9 +200,8 @@ try to import --push
   patch b.diff finalized without changeset message
   $ touch .hg/patches/append_foo
   $ hg qimport -r 'p1(.)::'
-  abort: patch "append_foo" already exists
-  [255]
   $ hg qapplied
+  append_foo__1
   append_bar
   $ hg qfin -a
   $ rm .hg/patches/append_foo
@@ -313,3 +312,22 @@ check patch name generation for non-alpha-numeric summary line
   2 U 0
   3 U this-name-is-better
   4 U url.diff
+
+check reserved patch names
+
+  $ hg qpop -qa
+  patch queue now empty
+  $ echo >> b
+  $ hg commit -m 'status'
+  $ echo >> b
+  $ hg commit -m '.'
+  $ echo >> b
+  $ hg commit -m 'taken'
+  $ mkdir .hg/patches/taken
+  $ touch .hg/patches/taken__1
+  $ hg qimport -r -3::
+  $ hg qap
+  1.diff__1
+  2.diff
+  taken__2
+

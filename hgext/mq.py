@@ -1117,11 +1117,22 @@ class queue(object):
         """Return a suitable filename for title, adding a suffix to make
         it unique in the existing list"""
         namebase = re.sub('[\s\W_]+', '_', title.lower()).strip('_')
-        if not namebase:
+        if namebase:
+            try:
+                self.checkreservedname(namebase)
+            except error.Abort:
+                namebase = fallbackname
+        else:
             namebase = fallbackname
         name = namebase
         i = 0
-        while name in self.fullseries:
+        while True:
+            if name not in self.fullseries:
+                try:
+                    self.checkpatchname(name)
+                    break
+                except error.Abort:
+                    pass
             i += 1
             name = '%s__%s' % (namebase, i)
         return name
