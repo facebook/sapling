@@ -650,9 +650,11 @@ graft with failing merge
   $ hg resolve foo.txt bar.txt --tool :other
   * conclude called
   (no more unresolved files)
+  continue: hg graft --continue
 XXX hg resolve --unmark --all doesn't cause the merge driver to be rerun
   $ hg resolve --mark --all
   (no more unresolved files)
+  continue: hg graft --continue
   $ hg graft --continue
   grafting 1:e0cfe070a2bb "b"
   $ hg export
