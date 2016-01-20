@@ -55,7 +55,7 @@ def _wrapfn(orig, ui, repo, *args, **kwargs):
     # Normal behavior unless -x is specified
     if not kwargs.get('stickybookmark'):
         return orig(ui, repo, *args, **kwargs)
-    repo._bookmarks.oldactivebookmark = bookmarks.readactive(repo)
+    repo._bookmarks.oldactivebookmark = repo._bookmarks.active
     repo._bookmarks.oldbookmarks = repo._bookmarks.copy()
     return orig(ui, repo, *args, **kwargs)
 
