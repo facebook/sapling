@@ -417,7 +417,7 @@ def _addpushbackchangegroup(repo, reply, outgoing):
     cgversions = set(reply.capabilities.get('changegroup'))
     if not cgversions:
         cgversions.add('01')
-    version = max(cgversions & set(changegroup.packermap.keys()))
+    version = max(cgversions & set(changegroup._packermap.keys()))
 
     cg = changegroup.getlocalchangegroupraw(repo,
                                             'rebase:reply',
@@ -489,11 +489,7 @@ def bundle2rebase(op, part):
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
         # specific data.
-        newmancache = bundle.manifest._mancache
-        oldmancache = op.repo.manifest._mancache
-        newmancache._cache = oldmancache._cache.copy()
-        newmancache._order = collections.deque(oldmancache._order)
-        bundle.manifest._cache = op.repo.manifest._cache
+        bundle.manifest._mancache = op.repo.manifest._mancache.copy()
 
         try:
             # onto is None means don't do rebasing
