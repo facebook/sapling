@@ -150,6 +150,13 @@ def tryreadcache(repo, hideable):
                 count = len(data) / 4
                 hidden = frozenset(struct.unpack('>%ii' % count, data))
         return hidden
+    except struct.error:
+        repo.ui.debug('corrupted hidden cache\n')
+        # No need to fix the content as it will get rewritten
+        return None
+    except (IOError, OSError):
+        repo.ui.debug('cannot read hidden cache\n')
+        return None
     finally:
         if fh:
             fh.close()

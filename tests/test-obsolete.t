@@ -951,6 +951,23 @@ Test heads computation on pending index changes with obsolescence markers
   $ hg amendtransient
   [1, 3]
 
+Check that corrupted hidden cache does not crash
+
+  $ printf "" > .hg/cache/hidden
+  $ hg log -r . -T '{node}' --debug
+  corrupted hidden cache
+  8fd96dfc63e51ed5a8af1bec18eb4b19dbf83812 (no-eol)
+  $ hg log -r . -T '{node}' --debug
+  8fd96dfc63e51ed5a8af1bec18eb4b19dbf83812 (no-eol)
+
+Check that wrong hidden cache permission does not crash
+
+  $ chmod 000 .hg/cache/hidden
+  $ hg log -r . -T '{node}' --debug
+  cannot read hidden cache
+  error writing hidden changesets cache
+  8fd96dfc63e51ed5a8af1bec18eb4b19dbf83812 (no-eol)
+
 Test cache consistency for the visible filter
 1) We want to make sure that the cached filtered revs are invalidated when
 bookmarks change
