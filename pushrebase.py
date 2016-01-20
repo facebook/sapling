@@ -17,7 +17,7 @@ from mercurial import util, error, discovery, changegroup, context, revset
 from mercurial import obsolete, pushkey, phases, extensions
 from mercurial import bookmarks, lock as lockmod
 from mercurial.extensions import wrapcommand, wrapfunction
-from mercurial.bundlerepo import bundlerepository
+from mercurial.hg import repository
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
 
@@ -465,7 +465,8 @@ def bundle2rebase(op, part):
 
     try: # guards bundlefile
         bundlefile = _makebundlefile(part)
-        bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+        bundlepath = "bundle:%s+%s" % (op.repo.root, bundlefile)
+        bundle = repository(op.repo.ui, bundlepath)
 
         # Allow running hooks on the new commits before we take the lock
         prelockrebaseargs = dict()
@@ -483,7 +484,7 @@ def bundle2rebase(op, part):
         # Recreate the bundle repo, since taking the lock in gettranscation()
         # may have caused it to become out of date.
         # (but grab a copy of the cache first)
-        bundle = bundlerepository(op.repo.ui, op.repo.root, bundlefile)
+        bundle = repository(op.repo.ui, bundlepath)
 
         # Preload the caches with data we already have. We need to make copies
         # here so that original repo caches don't get tainted with bundle
