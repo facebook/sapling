@@ -147,6 +147,7 @@ Test rebase state
 Test status in rebase state with resolved files
   $ hg resolve --mark a
   (no more unresolved files)
+  continue: hg rebase --continue
   $ hg status
   M a
   ? a.orig
