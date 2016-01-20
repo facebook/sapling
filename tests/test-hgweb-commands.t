@@ -1751,7 +1751,7 @@ Overviews
   
   <div id="wrapper">
   <ul id="nodebgs"></ul>
-  <canvas id="graph" width="480" height="168"></canvas>
+  <canvas id="graph" width="39" height="168"></canvas>
   <ul id="graphnodes"></ul>
   </div>
   
