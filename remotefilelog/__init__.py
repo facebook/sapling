@@ -169,13 +169,20 @@ def onetimeclientsetup(ui):
 
     # some users in core still call changegroup.cg1packer directly
     changegroup.cg1packer = shallowbundle.shallowcg1packer
+
+    packermap = None
     if util.safehasattr(changegroup, 'packermap'):
+        packermap = changegroup.packermap
+    elif util.safehasattr(changegroup, '_packermap'):
+        packermap = changegroup._packermap
+
+    if packermap:
         # Mercurial >= 3.3
-        packermap01 = changegroup.packermap['01']
-        packermap02 = changegroup.packermap['02']
-        changegroup.packermap['01'] = (shallowbundle.shallowcg1packer,
+        packermap01 = packermap['01']
+        packermap02 = packermap['02']
+        packermap['01'] = (shallowbundle.shallowcg1packer,
                                        packermap01[1])
-        changegroup.packermap['02'] = (shallowbundle.shallowcg2packer,
+        packermap['02'] = (shallowbundle.shallowcg2packer,
                                        packermap02[1])
     if util.safehasattr(changegroup, '_addchangegroupfiles'):
         fn = '_addchangegroupfiles' # hg >= 3.6

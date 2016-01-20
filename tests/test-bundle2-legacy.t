@@ -21,7 +21,7 @@ without changegroup2 support
   $ cat > disablecg2.py << EOF
   > from mercurial import changegroup, util
   > def reposetup(ui, repo):
-  >     packermap = changegroup.packermap
+  >     packermap = changegroup._packermap
   >     # protect against future changes
   >     if len(packermap) != 3:
   >         raise util.Abort('packermap has %d versions, expected 2!' % len(packermap))
