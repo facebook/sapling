@@ -197,6 +197,7 @@ Verify resolving conflict removes the temporary files
   > EOF
   $ hg resolve -m data.py
   (no more unresolved files)
+  continue: hg rebase --continue
 
   $ hg rebase -q --continue
   $ ls
