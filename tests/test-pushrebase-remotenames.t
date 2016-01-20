@@ -134,9 +134,22 @@ Test a push that comes with out-of-date bookmark discovery
 
   $ cat >> $TESTTMP/move.py <<EOF
   > def movebookmark(ui, repo, **kwargs):
-  >     bm = repo._bookmarks
-  >     bm['bm'] = repo[1].node()
-  >     bm.write()
+  >     import traceback
+  >     if [f for f in traceback.extract_stack(limit=10)[:-1] if f[2] == "movebookmark"]:
+  >         return
+  >     import mercurial.lock as lockmod
+  >     tr = None
+  >     try:
+  >         lock = repo.lock()
+  >         tr = repo.transaction("pretxnopen.movebook")
+  >         bm = repo._bookmarks
+  >         bm['bm'] = repo[1].node()
+  >         bm.recordchange(tr)
+  >         tr.close()
+  >     finally:
+  >         if tr:
+  >             tr.release()
+  >         lockmod.release(lock)
   >     print "moved bookmark to rev 1"
   > EOF
   $ cat >> server/.hg/hgrc <<EOF
