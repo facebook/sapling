@@ -213,11 +213,11 @@ Confirm that --help works (it didn't when we used an alias)
   
   Shows the given revision in detail, or '.' if no revision is given.
   
-      This behaves similarly to "hg log -vp -r [OPTION].. REV", or if called
-      without a REV, "hg log -vp -r [OPTION].. ." Use :hg"log" for more powerful
+      This behaves similarly to 'hg log -vp -r [OPTION].. REV', or if called
+      without a REV, 'hg log -vp -r [OPTION].. .' Use :hg'log' for more powerful
       operations than supported by hg show
   
-      See "hg help templates" for more about pre-packaged styles and specifying
+      See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
   (use "hg help -e show" to show help for the show extension)
@@ -236,11 +236,11 @@ Confirm that --help works (it didn't when we used an alias)
   
   Shows the given revision in detail, or '.' if no revision is given.
   
-      This behaves similarly to "hg log -vp -r [OPTION].. REV", or if called
-      without a REV, "hg log -vp -r [OPTION].. ." Use :hg"log" for more powerful
+      This behaves similarly to 'hg log -vp -r [OPTION].. REV', or if called
+      without a REV, 'hg log -vp -r [OPTION].. .' Use :hg'log' for more powerful
       operations than supported by hg show
   
-      See "hg help templates" for more about pre-packaged styles and specifying
+      See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
   
   (use "hg help -e show" to show help for the show extension)
