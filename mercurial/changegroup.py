@@ -189,6 +189,8 @@ class cg1unpacker(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = '01'
+    _grouplistcount = 1 # One list of files after the manifests
+
     def __init__(self, fh, alg):
         if alg == 'UN':
             alg = None # get more modern without breaking too much
@@ -270,15 +272,19 @@ class cg1unpacker(object):
         """
         # an empty chunkgroup is the end of the changegroup
         # a changegroup has at least 2 chunkgroups (changelog and manifest).
-        # after that, an empty chunkgroup is the end of the changegroup
-        empty = False
+        # after that, changegroup versions 1 and 2 have a series of groups
+        # with one group per file. changegroup 3 has a series of directory
+        # manifests before the files.
         count = 0
-        while not empty or count <= 2:
+        emptycount = 0
+        while emptycount < self._grouplistcount:
             empty = True
             count += 1
             while True:
                 chunk = getchunk(self)
                 if not chunk:
+                    if empty and count > 2:
+                        emptycount += 1
                     break
                 empty = False
                 yield chunkheader(len(chunk))
@@ -515,6 +521,7 @@ class cg3unpacker(cg2unpacker):
     deltaheader = _CHANGEGROUPV3_DELTA_HEADER
     deltaheadersize = struct.calcsize(deltaheader)
     version = '03'
+    _grouplistcount = 2 # One list of manifests and one list of files
 
     def _deltaheader(self, headertuple, prevnode):
         node, p1, p2, deltabase, cs, flags = headertuple
