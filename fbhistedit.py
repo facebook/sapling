@@ -29,7 +29,8 @@ testedwith = 'internal'
 
 def defineactions():
     histedit = extensions.find('histedit')
-    @histedit.addhisteditaction(['stop', 's'])
+    @histedit.action(['stop', 's'],
+                     _('pick commit, and stop after committing changes'))
     class stop(histedit.histeditaction):
         def run(self):
             parentctx, replacements = super(stop, self).run()
@@ -47,7 +48,8 @@ def defineactions():
                                        if n != self.node]
             return super(stop, self).continueclean()
 
-    @histedit.addhisteditaction(['exec', 'x'])
+    @histedit.action(['exec', 'x'],
+                     _('execute given command'))
     class execute(histedit.histeditaction):
         def __init__(self, state, command):
             self.state = state
@@ -129,7 +131,8 @@ def defineactions():
                 return newctx, [(parentctxnode, (newctx.node(),))]
             return newctx, []
 
-    @histedit.addhisteditaction(['execr', 'xr'])
+    @histedit.action(['execr', 'xr'],
+                     _('execute given command relative to current directory'))
     class executerelative(execute):
         def __init__(self, state, command):
             super(executerelative, self).__init__(state, command)
@@ -139,22 +142,6 @@ def defineactions():
 
 def extsetup(ui):
     histedit = extensions.find('histedit')
-    histedit.editcomment = _("""# Edit history between %s and %s
-#
-# Commits are listed from least to most recent
-#
-# Commands:
-#  p, pick = use commit
-#  e, edit = use commit, but stop for amending
-#  s, stop = use commit, and stop after committing changes
-#  f, fold = use commit, but combine it with the one above
-#  r, roll = like fold, but discard this commit's description
-#  d, drop = remove commit from history
-#  m, mess = edit message without changing commit content
-#  x, exec = execute given command
-#  xr, execr = execute given command relative to current directory
-#
-    """)
     stop, execute, executerel = defineactions()
 
     if ui.config('experimental', 'histeditng'):
@@ -243,7 +230,8 @@ def _rebase(orig, ui, repo, **opts):
 # "hg histedit --continue" and "--abort"
 #
 """
-    editcomment += histedit.editcomment % (node.short(src), node.short(topmost))
+    editcomment += histedit.geteditcomment(node.short(src),
+                                           node.short(topmost))
     histedit.ruleeditor(repo, ui, rules, editcomment=editcomment)
 
     return histedit.histedit(ui, repo, node.hex(src), keep=keepf,

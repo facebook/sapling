@@ -99,12 +99,14 @@ Try to rebase with conflict (also check -d without -s)
   $ HGEDITOR=true hg rebase -i -d 9
   merging f
   warning: conflicts while merging f! (edit, then use 'hg resolve --mark')
-  Fix up the change and run hg histedit --continue
+  Fix up the change (pick 8d0611d6e5f2)
+  (hg histedit --continue to resume)
   [1]
 
   $ echo resolved > f
   $ hg resolve --mark f
   (no more unresolved files)
+  continue: hg histedit --continue
   $ hg histedit --continue
   saved backup bundle to $TESTTMP/r/.hg/strip-backup/8d0611d6e5f2-0e0da94b-backup.hg (glob)
 
