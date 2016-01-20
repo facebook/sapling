@@ -653,11 +653,6 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
                 repo.ui.status(_("use 'hg resolve' to retry unresolved "
                                  "file merges\n"))
                 return 1
-            elif opts.get('no_commit'):
-                msg = _("changeset %s backed out, "
-                        "don't forget to commit.\n")
-                ui.status(msg % short(node))
-                return 0
         finally:
             ui.setconfig('ui', 'forcemerge', '', '')
             lockmod.release(dsguard)
@@ -666,6 +661,11 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         repo.dirstate.setbranch(branch)
         cmdutil.revert(ui, repo, rctx, repo.dirstate.parents())
 
+    if opts.get('no_commit'):
+        msg = _("changeset %s backed out, "
+                "don't forget to commit.\n")
+        ui.status(msg % short(node))
+        return 0
 
     def commitfunc(ui, repo, message, match, opts):
         editform = 'backout'

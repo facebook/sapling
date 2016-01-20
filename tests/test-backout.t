@@ -739,4 +739,17 @@ Test usage of `hg resolve` in case of conflict
   nine
   TEN
 
+--no-commit shouldn't commit
 
+  $ hg init a
+  $ cd a
+  $ for i in 1 2 3; do
+  >   touch $i
+  >   hg ci -Am $i
+  > done
+  adding 1
+  adding 2
+  adding 3
+  $ hg backout --no-commit .
+  removing 3
+  changeset cccc23d9d68f backed out, don't forget to commit.
