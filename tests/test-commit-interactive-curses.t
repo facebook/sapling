@@ -193,3 +193,33 @@ Amend option works
   +++ b/x	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +hello world
+
+Editing a hunk puts you back on that hunk when done editing (issue5041)
+To do that, we change two lines in a file, pretend to edit the second line,
+exit, toggle the line selected at the end of the edit and commit.
+The first line should be recorded if we were put on the second line at the end
+of the edit.
+
+  $ hg update -C .
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "foo" > x
+  $ echo "hello world" >> x
+  $ echo "bar" >> x
+  $ cat <<EOF >testModeCommands
+  > f
+  > KEY_DOWN
+  > KEY_DOWN
+  > KEY_DOWN
+  > KEY_DOWN
+  > e
+  > TOGGLE
+  > X
+  > EOF
+  $ printf "printf 'editor ran\n'; exit 0" > editor.sh
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit  -i -m "edit hunk" -d "0 0"
+  editor ran
+  $ hg cat -r . x
+  foo
+  hello world
+
+

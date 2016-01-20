@@ -1551,6 +1551,9 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         if not isinstance(item, uihunk):
             return
 
+        # To go back to that hunk or its replacement at the end of the edit
+        itemindex = item.parentitem().hunks.index(item)
+
         beforeadded, beforeremoved = item.added, item.removed
         newpatches = editpatchwitheditor(self, item)
         if newpatches is None:
@@ -1575,6 +1578,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         if self.emptypatch():
             header.hunks = hunksbefore + [item] + hunksafter
         self.currentselecteditem = header
+        if len(header.hunks) > itemindex:
+            self.currentselecteditem = header.hunks[itemindex]
 
         if not test:
             updateui(self)
