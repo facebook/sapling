@@ -27,6 +27,7 @@ from mercurial import extensions
 from mercurial import revset
 from mercurial import error
 from mercurial import util as hgutil
+from mercurial.i18n import _
 
 from hgsubversion import util as svnutil
 
@@ -95,7 +96,7 @@ def finddiff(repo, diffid, proc=None):
 def forksearch(repo, diffid):
     """Perform a log traversal and Conduit call in parallel
 
-    Returns a (revision, arc_response) tuple, where one of the items will be
+    Returns a (revisions, arc_response) tuple, where one of the items will be
     None, depending on which process terminated first"""
 
     repo.ui.debug('[diffrev] Starting Conduit call\n')
@@ -127,13 +128,16 @@ def forksearch(repo, diffid):
         resp = proc.stdout.read()
         return (None, resp)
 
-def parsedesc(repo, resp):
+def parsedesc(repo, resp, ignoreparsefailure):
     desc = resp['description']
     match = DESCRIPTION_REGEX.match(desc)
 
     if not match:
-        raise error.Abort("Cannot parse Conduit description '%s'"
-                           % desc)
+        if ignoreparsefailure:
+            return None
+        else:
+            raise error.Abort("Cannot parse Conduit description '%s'"
+                              % desc)
 
     callsign = match.group('callsign')
     repo_callsign = repo.ui.config('phrevset', 'callsign')
@@ -147,11 +151,23 @@ def parsedesc(repo, resp):
 def revsetdiff(repo, subset, diffid):
     """Return a set of revisions corresponding to a given Differential ID """
 
-    rev, resp = forksearch(repo, diffid)
+    repo_callsign = repo.ui.config('phrevset', 'callsign')
+    if repo_callsign is None:
+        msg = _('phrevset.callsign is not set - doing a linear search\n')
+        hint = _('This will be slow if the diff was not committed recently\n')
+        repo.ui.warn(msg)
+        repo.ui.warn(hint)
+        rev = finddiff(repo, diffid)
+        if rev is None:
+            raise error.Abort('Could not find diff D%s in changelog' % diffid)
+        else:
+            return [rev]
 
-    if rev is not None:
+    revs, resp = forksearch(repo, diffid)
+
+    if revs is not None:
         # The log walk found the diff, nothing more to do
-        return rev
+        return revs
 
     jsresp = json.loads(resp)
     if not jsresp:
@@ -159,8 +175,8 @@ def revsetdiff(repo, subset, diffid):
 
     resp = jsresp.get('response')
     if not resp:
-        error = jsresp.get('errorMessage', 'unknown error')
-        raise error.Abort('Counduit error: %s' % error)
+        e = jsresp.get('errorMessage', 'unknown error')
+        raise error.Abort('Counduit error: %s' % e)
 
     vcs = resp.get('sourceControlSystem')
 
@@ -170,14 +186,14 @@ def revsetdiff(repo, subset, diffid):
         # commit has landed in svn, parse the description to get the SVN
         # revision and delegate to hgsubversion for the rest
 
-        svnrev = parsedesc(repo, resp)
+        svnrev = parsedesc(repo, resp, ignoreparsefailure=False)
         repo.ui.debug("[diffrev] SVN rev is r%s\n" % svnrev)
 
         args = ('string', svnrev)
         return svnutil.revset_svnrev(repo, subset, args)
 
     elif vcs == 'git':
-        gitrev = parsedesc(repo, resp)
+        gitrev = parsedesc(repo, resp, ignoreparsefailure=False)
         repo.ui.debug("[diffrev] GIT rev is %s\n" % gitrev)
 
         peerpath = repo.ui.expandpath('default')
@@ -192,7 +208,11 @@ def revsetdiff(repo, subset, diffid):
         return [repo[remoterev].rev()]
 
     elif vcs == 'hg':
-        # commit is still in hg, get its hash
+        rev = parsedesc(repo, resp, ignoreparsefailure=True)
+        if rev:
+            return [rev.encode('utf-8')]
+
+        # commit is still local, get its hash
 
         props = resp['properties']
         commits = props['local:commits']
