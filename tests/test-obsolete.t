@@ -960,6 +960,7 @@ Check that corrupted hidden cache does not crash
   $ hg log -r . -T '{node}' --debug
   8fd96dfc63e51ed5a8af1bec18eb4b19dbf83812 (no-eol)
 
+#if unix-permissions
 Check that wrong hidden cache permission does not crash
 
   $ chmod 000 .hg/cache/hidden
@@ -967,6 +968,7 @@ Check that wrong hidden cache permission does not crash
   cannot read hidden cache
   error writing hidden changesets cache
   8fd96dfc63e51ed5a8af1bec18eb4b19dbf83812 (no-eol)
+#endif
 
 Test cache consistency for the visible filter
 1) We want to make sure that the cached filtered revs are invalidated when
