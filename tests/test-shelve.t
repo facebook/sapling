@@ -54,7 +54,7 @@ shelve has a help message
   
    -A --addremove           mark new/missing files as added/removed before
                             shelving
-   -u --unknown             Store unknown files in the shelve
+   -u --unknown             store unknown files in the shelve
       --cleanup             delete all shelved changes
       --date DATE           shelve with the specified commit date
    -d --delete              delete the named shelved change(s)

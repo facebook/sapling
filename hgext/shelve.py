@@ -766,7 +766,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
          [('A', 'addremove', None,
            _('mark new/missing files as added/removed before shelving')),
           ('u', 'unknown', None,
-           _('Store unknown files in the shelve')),
+           _('store unknown files in the shelve')),
           ('', 'cleanup', None,
            _('delete all shelved changes')),
           ('', 'date', '',
