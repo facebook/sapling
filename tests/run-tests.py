@@ -1526,13 +1526,13 @@ class TestSuite(unittest.TestSuite):
             channels[channel] = "=" + test.name[5:].split(".")[0]
             try:
                 test(result)
+                channels[channel] = ''
                 done.put(None)
             except KeyboardInterrupt:
-                pass
+                channels[channel] = ''
             except: # re-raises
                 done.put(('!', test, 'run-test raised an error, see traceback'))
                 raise
-            channels[channel] = ''
 
         def stat():
             count = 0
