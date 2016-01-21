@@ -59,24 +59,24 @@ with paths:
 formatter output with paths:
 
   $ echo 'dupe:pushurl = https://example.com/dupe' >> .hg/hgrc
-  $ hg paths -Tjson
+  $ hg paths -Tjson | sed 's|\\\\|\\|g'
   [
    {
     "name": "dupe",
     "pushurl": "https://example.com/dupe",
-    "url": "$TESTTMP/b#tip"
+    "url": "$TESTTMP/b#tip" (glob)
    },
    {
     "name": "expand",
-    "url": "$TESTTMP/a/$SOMETHING/bar"
+    "url": "$TESTTMP/a/$SOMETHING/bar" (glob)
    }
   ]
-  $ hg paths -Tjson dupe
+  $ hg paths -Tjson dupe | sed 's|\\\\|\\|g'
   [
    {
     "name": "dupe",
     "pushurl": "https://example.com/dupe",
-    "url": "$TESTTMP/b#tip"
+    "url": "$TESTTMP/b#tip" (glob)
    }
   ]
   $ hg paths -Tjson -q unknown
