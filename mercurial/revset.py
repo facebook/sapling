@@ -1036,88 +1036,39 @@ def filelog(repo, subset, x):
         files = (f for f in repo[None] if m(f))
 
     for f in files:
-        backrevref = {}  # final value for: filerev -> changerev
-        lowestchild = {} # lowest known filerev child of a filerev
-        delayed = []     # filerev with filtered linkrev, for post-processing
-        lowesthead = None # cache for manifest content of all head revisions
         fl = repo.file(f)
+        known = {}
+        scanpos = 0
         for fr in list(fl):
-            rev = fl.linkrev(fr)
-            if rev not in cl:
-                # changerev pointed in linkrev is filtered
-                # record it for post processing.
-                delayed.append((fr, rev))
+            fn = fl.node(fr)
+            if fn in known:
+                s.add(known[fn])
                 continue
-            for p in fl.parentrevs(fr):
-                if 0 <= p and p not in lowestchild:
-                    lowestchild[p] = fr
-            backrevref[fr] = rev
-            s.add(rev)
 
-        # Post-processing of all filerevs we skipped because they were
-        # filtered. If such filerevs have known and unfiltered children, this
-        # means they have an unfiltered appearance out there. We'll use linkrev
-        # adjustment to find one of these appearances. The lowest known child
-        # will be used as a starting point because it is the best upper-bound we
-        # have.
-        #
-        # This approach will fail when an unfiltered but linkrev-shadowed
-        # appearance exists in a head changeset without unfiltered filerev
-        # children anywhere.
-        while delayed:
-            # must be a descending iteration. To slowly fill lowest child
-            # information that is of potential use by the next item.
-            fr, rev = delayed.pop()
-            lkr = rev
-
-            child = lowestchild.get(fr)
-
-            if child is None:
-                # search for existence of this file revision in a head revision.
-                # There are three possibilities:
-                # - the revision exists in a head and we can find an
-                #   introduction from there,
-                # - the revision does not exist in a head because it has been
-                #   changed since its introduction: we would have found a child
-                #   and be in the other 'else' clause,
-                # - all versions of the revision are hidden.
-                if lowesthead is None:
-                    lowesthead = {}
-                    for h in repo.heads():
-                        fnode = repo[h].manifest().get(f)
-                        if fnode is not None:
-                            lowesthead[fl.rev(fnode)] = h
-                headrev = lowesthead.get(fr)
-                if headrev is None:
-                    # content is nowhere unfiltered
-                    continue
-                rev = repo[headrev][f].introrev()
-            else:
-                # the lowest known child is a good upper bound
-                childcrev = backrevref[child]
-                # XXX this does not guarantee returning the lowest
-                # introduction of this revision, but this gives a
-                # result which is a good start and will fit in most
-                # cases. We probably need to fix the multiple
-                # introductions case properly (report each
-                # introduction, even for identical file revisions)
-                # once and for all at some point anyway.
-                for p in repo[childcrev][f].parents():
-                    if p.filerev() == fr:
-                        rev = p.rev()
-                        break
-                if rev == lkr:  # no shadowed entry found
-                    # XXX This should never happen unless some manifest points
-                    # to biggish file revisions (like a revision that uses a
-                    # parent that never appears in the manifest ancestors)
-                    continue
-
-            # Fill the data for the next iteration.
-            for p in fl.parentrevs(fr):
-                if 0 <= p and p not in lowestchild:
-                    lowestchild[p] = fr
-            backrevref[fr] = rev
-            s.add(rev)
+            lr = fl.linkrev(fr)
+            if lr in cl:
+                s.add(lr)
+            elif scanpos is not None:
+                # lowest matching changeset is filtered, scan further
+                # ahead in changelog
+                start = max(lr, scanpos) + 1
+                scanpos = None
+                for r in cl.revs(start):
+                    # minimize parsing of non-matching entries
+                    if f in cl.revision(r) and f in cl.readfiles(r):
+                        try:
+                            # try to use manifest delta fastpath
+                            n = repo[r].filenode(f)
+                            if n not in known:
+                                if n == fn:
+                                    s.add(r)
+                                    scanpos = r
+                                    break
+                                else:
+                                    known[n] = r
+                        except error.ManifestLookupError:
+                            # deletion in changelog
+                            continue
 
     return subset & s
 
