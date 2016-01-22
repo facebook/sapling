@@ -121,7 +121,7 @@ def rebase(ui, repo, **opts):
     destination changeset is not modified by rebasing, but new
     changesets are added as its descendants.)
 
-    There are three ways to select changesets::
+    Here are the ways to select changesets::
 
       1. Explicitly select them using ``--rev``.
 
@@ -130,6 +130,9 @@ def rebase(ui, repo, **opts):
 
       3. Use ``--base`` to select a changeset; rebase will find ancestors
       and their descendants which are not also ancestors of the destination.
+
+      4. If you do not specify any of ``--rev``, ``source``, or ``--base``,
+      rebase will use ``--base .`` as above.
 
     Rebase will destroy original changesets unless you use ``--keep``.
     It will also move your bookmarks (even if you do).
