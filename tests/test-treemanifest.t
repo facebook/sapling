@@ -312,9 +312,28 @@ Shelving and unshelving should work
    1
   +foo
 
-Create deeper repo with tree manifests.
+Pushing from treemanifest repo to an empty repo makes that a treemanifest repo
 
   $ cd ..
+  $ hg init empty-repo
+  $ cat << EOF >> empty-repo/.hg/hgrc
+  > [experimental]
+  > changegroup3=yes
+  > EOF
+  $ grep treemanifest empty-repo/.hg/requires
+  [1]
+  $ hg push -R repo -r 0 empty-repo
+  pushing to empty-repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 2 changes to 2 files
+  $ grep treemanifest empty-repo/.hg/requires
+  treemanifest
+
+Create deeper repo with tree manifests.
+
   $ hg --config experimental.treemanifest=True init deeprepo
   $ cd deeprepo
 

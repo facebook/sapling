@@ -717,6 +717,8 @@ def _pushb2ctx(pushop, bundler):
     cgpart = bundler.newpart('changegroup', data=cg)
     if version is not None:
         cgpart.addparam('version', version)
+    if 'treemanifest' in pushop.repo.requirements:
+        cgpart.addparam('treemanifest', '1')
     def handlereply(op):
         """extract addchangegroup returns from server reply"""
         cgreplies = op.records.getreplies(cgpart.id)
