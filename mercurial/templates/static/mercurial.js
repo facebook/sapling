@@ -383,8 +383,12 @@ function ajaxScrollInit(urlFormat,
                 },
                 function onsuccess(htmlText) {
                     if (mode == 'graph') {
-                        var addHeight = htmlText.match(/^\s*<canvas id="graph".*height="(\d+)"><\/canvas>$/m)[1];
+                        var sizes = htmlText.match(/^\s*<canvas id="graph" width="(\d+)" height="(\d+)"><\/canvas>$/m);
+                        var addWidth = sizes[1];
+                        var addHeight = sizes[2];
+                        addWidth = parseInt(addWidth);
                         addHeight = parseInt(addHeight);
+                        graph.canvas.width = addWidth;
                         graph.canvas.height = addHeight;
 
                         var dataStr = htmlText.match(/^\s*var data = (.*);$/m)[1];
