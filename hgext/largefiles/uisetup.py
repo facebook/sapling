@@ -123,6 +123,8 @@ def uisetup(ui):
     extensions.wrapfunction(cmdutil, 'bailifchanged',
                             overrides.overridebailifchanged)
 
+    extensions.wrapfunction(cmdutil, 'postcommitstatus',
+                            overrides.postcommitstatus)
     extensions.wrapfunction(scmutil, 'marktouched',
                             overrides.scmutilmarktouched)
 

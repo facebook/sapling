@@ -531,7 +531,7 @@ Test 3364
   ! foo
 hmm.. no precommit invoked, but there is a postcommit??
   $ hg ci -m "will not checkin"
-  nothing changed
+  nothing changed (1 missing files, see 'hg status')
   Invoking status postcommit hook
   ! foo
   C normal3

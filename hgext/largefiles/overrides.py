@@ -1027,6 +1027,13 @@ def overridebailifchanged(orig, repo, *args, **kwargs):
     if s.modified or s.added or s.removed or s.deleted:
         raise error.Abort(_('uncommitted changes'))
 
+def postcommitstatus(orig, repo, *args, **kwargs):
+    repo.lfstatus = True
+    try:
+        return orig(repo, *args, **kwargs)
+    finally:
+        repo.lfstatus = False
+
 def cmdutilforget(orig, ui, repo, match, prefix, explicitonly):
     normalmatcher = composenormalfilematcher(match, repo[None].manifest())
     bad, forgot = orig(ui, repo, normalmatcher, prefix, explicitonly)
