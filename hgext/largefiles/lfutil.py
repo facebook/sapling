@@ -319,6 +319,8 @@ def updatestandin(repo, standin):
         hash = hashfile(file)
         executable = getexecutable(file)
         writestandin(repo, standin, hash, executable)
+    else:
+        raise error.Abort(_('%s: file not found!') % splitstandin(standin))
 
 def readstandin(repo, filename, node=None):
     '''read hex hash from standin for filename at given node, or working

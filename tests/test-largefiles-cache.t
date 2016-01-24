@@ -19,6 +19,12 @@ Create source repo, and commit adding largefile.
   $ hg rm large
   $ hg commit -m 'branchhead without largefile' large
   $ hg up -qr 0
+  $ rm large
+  $ echo "0000000000000000000000000000000000000000" > .hglf/large
+  $ hg commit -m 'commit missing file with corrupt standin' large
+  abort: large: file not found!
+  [255]
+  $ hg up -Cqr 0
   $ cd ..
 
 Discard all cached largefiles in USERCACHE
