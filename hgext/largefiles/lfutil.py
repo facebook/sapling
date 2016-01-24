@@ -575,11 +575,15 @@ def updatestandinsbymatch(repo, match):
         fstandin = standin(f)
 
         # For largefiles, only one of the normal and standin should be
-        # committed (except if one of them is a remove).
+        # committed (except if one of them is a remove).  In the case of a
+        # standin removal, drop the normal file if it is unknown to dirstate.
         # Thus, skip plain largefile names but keep the standin.
-        if (f in lfiles or fstandin in standins) and \
-            repo.dirstate[f] != 'r' and repo.dirstate[fstandin] != 'r':
-            continue
+        if f in lfiles or fstandin in standins:
+            if repo.dirstate[fstandin] != 'r':
+                if repo.dirstate[f] != 'r':
+                    continue
+            elif repo.dirstate[f] == '?':
+                continue
 
         actualfiles.append(f)
     match._files = actualfiles

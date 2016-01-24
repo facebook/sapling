@@ -17,7 +17,7 @@ Create source repo, and commit adding largefile.
   $ hg add --large large
   $ hg commit -m 'add largefile'
   $ hg rm large
-  $ hg commit -m 'branchhead without largefile'
+  $ hg commit -m 'branchhead without largefile' large
   $ hg up -qr 0
   $ cd ..
 
