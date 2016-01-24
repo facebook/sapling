@@ -1720,7 +1720,7 @@ def _docommit(ui, repo, *pats, **opts):
         node = cmdutil.commit(ui, repo, commitfunc, pats, opts)
 
         if not node:
-            stat = repo.status(match=scmutil.match(repo[None], pats, opts))
+            stat = cmdutil.postcommitstatus(repo, pats, opts)
             if stat[3]:
                 ui.status(_("nothing changed (%d missing files, see "
                             "'hg status')\n") % len(stat[3]))

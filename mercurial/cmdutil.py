@@ -2841,6 +2841,9 @@ def commitstatus(repo, node, branch, bheads=None, opts=None):
     elif repo.ui.verbose:
         repo.ui.write(_('committed changeset %d:%s\n') % (int(ctx), ctx))
 
+def postcommitstatus(repo, pats, opts):
+    return repo.status(match=scmutil.match(repo[None], pats, opts))
+
 def revert(ui, repo, ctx, parents, *pats, **opts):
     parent, p2 = parents
     node = ctx.node()
