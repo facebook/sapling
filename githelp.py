@@ -170,6 +170,19 @@ def add(ui, repo, *args, **kwargs):
 
     ui.status((str(cmd)), "\n")
 
+def apply(ui, repo, *args, **kwargs):
+    cmdoptions = [
+        ('p', 'p', int, ''),
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+
+    cmd = Command('import')
+    if (opts.get('p')):
+        cmd['-p'] = opts.get('p')
+    cmd.extend(args)
+
+    ui.status((str(cmd)), "\n")
+
 def bisect(ui, repo, *args, **kwargs):
     ui.status(_("See 'hg help bisect' for how to use bisect.\n\n"))
 
@@ -994,6 +1007,7 @@ def tag(ui, repo, *args, **kwargs):
 
 gitcommands = {
     'add': add,
+    'apply': apply,
     'bisect': bisect,
     'blame': blame,
     'branch': branch,

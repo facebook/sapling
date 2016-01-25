@@ -213,3 +213,11 @@ githelp for git branch -m renaming
 When the old name is omitted, git branch -m new renames the current branch.
   $ hg githelp -- git branch -m new
   hg bookmark -m `hg log -T"{activebookmark}" -r .` new
+
+githelp for apply with no options
+  $ hg githelp -- apply
+  hg import
+
+githelp for apply with directory strip custom
+  $ hg githelp -- apply -p 5
+  hg import -p 5
