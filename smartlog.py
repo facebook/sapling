@@ -309,7 +309,7 @@ def smartlogrevset(repo, subset, x):
         # heads should have a remote bookmark indicating them. This allows us to
         # force push server bookmarks to new locations, and not have the commits
         # clutter the user's smartlog.
-        headquery += ' & draft()'
+        headquery = 'draft() &' + headquery
 
     allheads = set(repo.revs(headquery))
     if scope == 'all':
