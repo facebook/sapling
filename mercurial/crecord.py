@@ -1363,7 +1363,7 @@ can use crecord multiple times to split large changes into smaller changesets.
 the following are valid keystrokes:
 
                 [space] : (un-)select item ([~]/[x] = partly/fully applied)
-                      a : (un-)select all items
+                      A : (un-)select all items
     up/down-arrow [k/j] : go to previous/next unfolded item
         pgup/pgdn [K/J] : go to previous/next item of same type
  right/left-arrow [l/h] : go to child item / parent item
