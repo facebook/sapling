@@ -1010,13 +1010,16 @@ class curseschunkselector(object):
                             pairname='legend')
                 self.statuswin.refresh()
                 return
+            line1 = ("SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
+                   "(space/A) toggle hunk/all; (e)dit hunk;")
+            line2 = (" (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
+                   "| [X]=hunk applied **=folded, toggle [a]mend mode")
+
             printstring(self.statuswin,
-                        "SELECT CHUNKS: (j/k/up/dn/pgup/pgdn) move cursor; "
-                        "(space/A) toggle hunk/all; (e)dit hunk;",
+                        util.ellipsis(line1, self.xscreensize - 1),
                         pairname="legend")
             printstring(self.statuswin,
-                        " (f)old/unfold; (c)onfirm applied; (q)uit; (?) help "
-                        "| [X]=hunk applied **=folded, toggle [a]mend mode",
+                        util.ellipsis(line2, self.xscreensize - 1),
                         pairname="legend")
         except curses.error:
             pass
