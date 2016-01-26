@@ -191,7 +191,7 @@ hgweb filerevision, html
 hgweb fileannotate, html
 
   $ (get-with-headers.py localhost:$HGPORT 'annotate/tip/primes.py') \
-  >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mi\"/class=\"mf\"/g"
+  >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -408,7 +408,7 @@ hgweb fileannotate, html
   <a href="/annotate/06824edf55d0/primes.py#l18"
   title="06824edf55d0: a">test@0</a>
   </td>
-  <td class="source"><a href="#l18">    18</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mf">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
+  <td class="source"><a href="#l18">    18</a>         <span class="n">ns</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span></td>
   </tr>
   <tr id="l19">
   <td class="annotate">
@@ -436,14 +436,14 @@ hgweb fileannotate, html
   <a href="/annotate/06824edf55d0/primes.py#l22"
   title="06824edf55d0: a">test@0</a>
   </td>
-  <td class="source"><a href="#l22">    22</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mf">2</span> <span class="o">==</span> <span class="mf">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
+  <td class="source"><a href="#l22">    22</a>     <span class="n">odds</span> <span class="o">=</span> <span class="n">ifilter</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">count</span><span class="p">())</span></td>
   </tr>
   <tr id="l23">
   <td class="annotate">
   <a href="/annotate/06824edf55d0/primes.py#l23"
   title="06824edf55d0: a">test@0</a>
   </td>
-  <td class="source"><a href="#l23">    23</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mf">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mf">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
+  <td class="source"><a href="#l23">    23</a>     <span class="kn">return</span> <span class="n">chain</span><span class="p">([</span><span class="mi">2</span><span class="p">],</span> <span class="n">sieve</span><span class="p">(</span><span class="n">dropwhile</span><span class="p">(</span><span class="kn">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">,</span> <span class="n">odds</span><span class="p">)))</span></td>
   </tr>
   <tr id="l24">
   <td class="annotate">
@@ -478,7 +478,7 @@ hgweb fileannotate, html
   <a href="/annotate/06824edf55d0/primes.py#l28"
   title="06824edf55d0: a">test@0</a>
   </td>
-  <td class="source"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mf">1</span><span class="p">])</span></td>
+  <td class="source"><a href="#l28">    28</a>         <span class="n">n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></td>
   </tr>
   <tr id="l29">
   <td class="annotate">
@@ -492,7 +492,7 @@ hgweb fileannotate, html
   <a href="/annotate/06824edf55d0/primes.py#l30"
   title="06824edf55d0: a">test@0</a>
   </td>
-  <td class="source"><a href="#l30">    30</a>         <span class="n">n</span> <span class="o">=</span> <span class="mf">10</span></td>
+  <td class="source"><a href="#l30">    30</a>         <span class="n">n</span> <span class="o">=</span> <span class="mi">10</span></td>
   </tr>
   <tr id="l31">
   <td class="annotate">
