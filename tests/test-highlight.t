@@ -10,6 +10,11 @@
   $ hg init test
   $ cd test
 
+  $ filterhtml () {
+  >   sed -e "s/class=\"k\"/class=\"kn\"/g" \
+  >       -e "s/class=\"mf\"/class=\"mi\"/g"
+  > }
+
 create random Python file to exercise Pygments
 
   $ cat <<EOF > primes.py
@@ -57,8 +62,7 @@ hg serve
 
 hgweb filerevision, html
 
-  $ (get-with-headers.py localhost:$HGPORT 'file/tip/primes.py') \
-  >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
+  $ (get-with-headers.py localhost:$HGPORT 'file/tip/primes.py') | filterhtml
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
@@ -190,8 +194,7 @@ hgweb filerevision, html
 
 hgweb fileannotate, html
 
-  $ (get-with-headers.py localhost:$HGPORT 'annotate/tip/primes.py') \
-  >     | sed "s/class=\"k\"/class=\"kn\"/g" | sed "s/class=\"mf\"/class=\"mi\"/g"
+  $ (get-with-headers.py localhost:$HGPORT 'annotate/tip/primes.py') | filterhtml
   200 Script output follows
   
   <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
