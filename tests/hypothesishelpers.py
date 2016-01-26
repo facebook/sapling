@@ -8,9 +8,16 @@ import os
 import sys
 import traceback
 
-from hypothesis.settings import set_hypothesis_home_dir
+try:
+    # hypothesis 2.x
+    from hypothesis.configuration import set_hypothesis_home_dir
+    from hypothesis import settings
+except ImportError:
+    # hypothesis 1.x
+    from hypothesis.settings import set_hypothesis_home_dir
+    from hypothesis import Settings as settings
 import hypothesis.strategies as st
-from hypothesis import given, Settings
+from hypothesis import given
 
 # hypothesis store data regarding generate example and code
 set_hypothesis_home_dir(os.path.join(
@@ -26,7 +33,7 @@ def check(*args, **kwargs):
         # Fixed in version 1.13 (released 2015 october 29th)
         f.__module__ = '__anon__'
         try:
-            given(*args, settings=Settings(max_examples=2000), **kwargs)(f)()
+            given(*args, settings=settings(max_examples=2000), **kwargs)(f)()
         except Exception:
             traceback.print_exc(file=sys.stdout)
             sys.exit(1)
