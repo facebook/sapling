@@ -33,7 +33,8 @@ def check(*args, **kwargs):
         # Fixed in version 1.13 (released 2015 october 29th)
         f.__module__ = '__anon__'
         try:
-            given(*args, settings=settings(max_examples=2000), **kwargs)(f)()
+            with settings(max_examples=2000):
+                given(*args, **kwargs)(f)()
         except Exception:
             traceback.print_exc(file=sys.stdout)
             sys.exit(1)
