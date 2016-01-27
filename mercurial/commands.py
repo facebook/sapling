@@ -968,7 +968,7 @@ def bisect(ui, repo, rev=None, extra=None, command=None,
 
 @command('bookmarks|bookmark',
     [('f', 'force', False, _('force')),
-    ('r', 'rev', '', _('revision'), _('REV')),
+    ('r', 'rev', '', _('revision for bookmark action'), _('REV')),
     ('d', 'delete', False, _('delete a given bookmark')),
     ('m', 'rename', '', _('rename a given bookmark'), _('OLD')),
     ('i', 'inactive', False, _('mark a bookmark inactive')),
