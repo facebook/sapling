@@ -949,10 +949,25 @@ _packermap = {'01': (cg1packer, cg1unpacker),
              '03': (cg3packer, cg3unpacker),
 }
 
-def supportedversions(repo):
+def allsupportedversions(ui):
     versions = set(_packermap.keys())
-    if ('treemanifest' in repo.requirements or
-        repo.ui.configbool('experimental', 'treemanifest')):
+    versions.discard('03')
+    if (ui.configbool('experimental', 'changegroup3') or
+        ui.configbool('experimental', 'treemanifest')):
+        versions.add('03')
+    return versions
+
+# Changegroup versions that can be applied to the repo
+def supportedincomingversions(repo):
+    versions = allsupportedversions(repo.ui)
+    if 'treemanifest' in repo.requirements:
+        versions.add('03')
+    return versions
+
+# Changegroup versions that can be created from the repo
+def supportedoutgoingversions(repo):
+    versions = allsupportedversions(repo.ui)
+    if 'treemanifest' in repo.requirements:
         # Versions 01 and 02 support only flat manifests and it's just too
         # expensive to convert between the flat manifest and tree manifest on
         # the fly. Since tree manifests are hashed differently, all of history
@@ -960,22 +975,21 @@ def supportedversions(repo):
         # support versions 01 and 02.
         versions.discard('01')
         versions.discard('02')
-    elif not repo.ui.configbool('experimental', 'changegroup3'):
-        versions.discard('03')
+        versions.add('03')
     return versions
 
 def safeversion(repo):
     # Finds the smallest version that it's safe to assume clients of the repo
     # will support. For example, all hg versions that support generaldelta also
     # support changegroup 02.
-    versions = supportedversions(repo)
+    versions = supportedoutgoingversions(repo)
     if 'generaldelta' in repo.requirements:
         versions.discard('01')
     assert versions
     return min(versions)
 
 def getbundler(version, repo, bundlecaps=None):
-    assert version in supportedversions(repo)
+    assert version in supportedoutgoingversions(repo)
     return _packermap[version][0](repo, bundlecaps)
 
 def getunbundler(version, fh, alg):

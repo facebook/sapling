@@ -1,6 +1,8 @@
   $ cat << EOF >> $HGRCPATH
   > [format]
   > usegeneraldelta=yes
+  > [ui]
+  > ssh=python "$TESTDIR/dummyssh"
   > EOF
 
 Set up repo
@@ -203,15 +205,18 @@ Create a few commits with flat manifest
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge of flat manifests to new flat manifest'
 
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
+  $ cat hg.pid >> $DAEMON_PIDS
+
 Create clone with tree manifests enabled
 
   $ cd ..
-  $ hg clone --pull --config experimental.treemanifest=1 repo-flat repo-mixed
-  requesting all changes
+  $ hg clone --config experimental.treemanifest=1 \
+  >   http://localhost:$HGPORT repo-mixed -r 1
   adding changesets
   adding manifests
   adding file changes
-  added 4 changesets with 17 changes to 11 files
+  added 2 changesets with 14 changes to 11 files
   updating to branch default
   11 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-mixed
@@ -220,10 +225,20 @@ Create clone with tree manifests enabled
   $ grep treemanifest .hg/requires
   treemanifest
 
+Should be possible to push updates from flat to tree manifest repo
+
+  $ hg -R ../repo-flat push ssh://user@dummy/repo-mixed
+  pushing to ssh://user@dummy/repo-mixed
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 2 changesets with 3 changes to 3 files
+
 Commit should store revlog per directory
 
   $ hg co 1
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 3 > a
   $ echo 3 > dir1/a
   $ echo 3 > dir1/dir1/a
@@ -456,13 +471,13 @@ Add some more changes to the deep repo
   $ hg ci -m troz
 
 Test cloning a treemanifest repo over http.
-  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --errorlog=errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 We can clone even with the knob turned off and we'll get a treemanifest repo.
   $ hg clone --config experimental.treemanifest=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT deepclone
+  >   http://localhost:$HGPORT2 deepclone
   requesting all changes
   adding changesets
   adding manifests
