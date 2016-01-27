@@ -778,12 +778,15 @@ class cg1packer(object):
                 if 'treemanifest' in repo.requirements:
                     submfs = {'/': mdata}
                     for dn, bn in _moddirs(mfchangedfiles[x]):
-                        submf = submfs[dn]
-                        submf = submf._dirs[bn]
+                        try:
+                            submf = submfs[dn]
+                            submf = submf._dirs[bn]
+                        except KeyError:
+                            continue # deleted directory, so nothing to send
                         submfs[submf.dir()] = submf
                         tmfclnodes = tmfnodes.setdefault(submf.dir(), {})
-                        tmfclnodes.setdefault(submf._node, clnode)
-                        if clrevorder[clnode] < clrevorder[fclnode]:
+                        tmfclnode = tmfclnodes.setdefault(submf._node, clnode)
+                        if clrevorder[clnode] < clrevorder[tmfclnode]:
                             tmfclnodes[n] = clnode
                 return clnode
 

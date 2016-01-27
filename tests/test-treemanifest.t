@@ -332,6 +332,21 @@ Pushing from treemanifest repo to an empty repo makes that a treemanifest repo
   $ grep treemanifest empty-repo/.hg/requires
   treemanifest
 
+Pushing to an empty repo works
+
+  $ hg --config experimental.treemanifest=1 init clone
+  $ grep treemanifest clone/.hg/requires
+  treemanifest
+  $ hg push -R repo clone
+  pushing to clone
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 11 changesets with 15 changes to 10 files (+3 heads)
+  $ grep treemanifest clone/.hg/requires
+  treemanifest
+
 Create deeper repo with tree manifests.
 
   $ hg --config experimental.treemanifest=True init deeprepo
