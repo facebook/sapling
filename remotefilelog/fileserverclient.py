@@ -166,6 +166,13 @@ class fileserverclient(object):
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
         if self.cacheprocess:
             self.cacheprocess = util.expandpath(self.cacheprocess)
+
+
+        # This option causes remotefilelog to pass the full file path to the
+        # cacheprocess instead of a hashed key.
+        self.cacheprocesspasspath = ui.configbool(
+            "remotefilelog", "cacheprocess.includepath")
+
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.localcache = localcache(repo)
@@ -204,6 +211,8 @@ class fileserverclient(object):
         reponame = repo.name
         for file, id in fileids:
             fullid = getcachekey(reponame, file, id)
+            if self.cacheprocesspasspath:
+                request += file + '\0'
             request += fullid + "\n"
             idmap[fullid] = file
 
