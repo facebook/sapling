@@ -216,7 +216,7 @@ def push(repo, dest, force, revs):
         if len(repo.parents()) != 1:
             ui.status('Cowardly refusing to push branch merge\n')
             return 0 # results in nonzero exit status, see hg's commands.py
-        workingrev = repo.parents()[0]
+        workingrev = repo[None].parents()[0]
         workingbranch = workingrev.branch()
         ui.status('searching for changes\n')
         hashes = meta.revmap.hashes()
