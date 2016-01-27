@@ -1006,25 +1006,6 @@ proxy.
     Optional. Always use the proxy, even for localhost and any entries
     in ``http_proxy.no``. (default: False)
 
-``merge``
----------
-
-This section specifies behavior during merges and updates.
-
-``checkignored``
-   Controls behavior when an ignored file on disk has the same name as a tracked
-   file in the changeset being merged or updated to, and has different
-   contents. Options are ``abort``, ``warn`` and ``ignore``. With ``abort``,
-   abort on such files. With ``warn``, warn on such files and back them up as
-   .orig. With ``ignore``, don't print a warning and back them up as
-   .orig. (default: ``abort``)
-
-``checkunknown``
-   Controls behavior when an unknown file that isn't ignored has the same name
-   as a tracked file in the changeset being merged or updated to, and has
-   different contents. Similar to ``merge.checkignored``, except for files that
-   are not ignored. (default: ``abort``)
-
 ``merge-patterns``
 ------------------
 
