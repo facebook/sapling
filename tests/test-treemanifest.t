@@ -215,7 +215,7 @@ Create clone with tree manifests enabled
   updating to branch default
   11 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo-mixed
-  $ test -f .hg/store/meta
+  $ test -d .hg/store/meta
   [1]
   $ grep treemanifest .hg/requires
   treemanifest
@@ -273,13 +273,13 @@ Status across flat/tree boundary should work
 
 Turning off treemanifest config has no effect
 
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i
+  $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
   $ echo 2 > dir1/a
   $ hg --config experimental.treemanifest=False ci -qm 'modify dir1/a'
-  $ hg debugindex .hg/store/meta/dir1/00manifest.i
+  $ hg debugindex --dir dir1
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0     127     -1       4 064927a0648a 000000000000 000000000000
        1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
