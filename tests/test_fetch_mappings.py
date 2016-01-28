@@ -114,6 +114,15 @@ class MapTests(test_util.TestBase):
         self.assertEqual(self.repo['tip'].user(),
                         'evil@5b65bade-98f3-4993-a01f-b7a6710da339')
 
+    def test_author_map_mapauthorscmd(self):
+        repo_path = self.load_svndump('replace_trunk_with_branch.svndump')
+        ui = self.ui()
+        ui.setconfig('hgsubversion', 'mapauthorscmd', 'echo "svn: %s"')
+        commands.clone(ui, test_util.fileurl(repo_path),
+                       self.wc_path)
+        self.assertEqual(self.repo[0].user(), 'svn: Augie')
+        self.assertEqual(self.repo['tip'].user(), 'svn: evil')
+
     def _loadwithfilemap(self, svndump, filemapcontent,
             failonmissing=True):
         repo_path = self.load_svndump(svndump)

@@ -5,6 +5,7 @@ import os
 from mercurial import util as hgutil
 from mercurial.node import bin, hex, nullid
 
+import subprocess
 import svncommands
 import util
 
@@ -98,15 +99,20 @@ class AuthorMap(dict):
         if self.meta.caseignoreauthors:
             search_author = author.lower()
 
+        result = None
         if search_author in self:
             result = self.super.__getitem__(search_author)
-        elif self.meta.defaultauthors:
-            self[author] = result = '%s%s' % (author, self.defaulthost)
-            msg = 'substituting author "%s" for default "%s"\n'
-            self.meta.ui.debug(msg % (author, result))
-        else:
-            msg = 'author %s has no entry in the author map!'
-            raise hgutil.Abort(msg % author)
+        elif self.meta.mapauthorscmd:
+            self[author] = result = subprocess.check_output (
+                self.meta.mapauthorscmd % author, shell = True).strip()
+        if not result:
+            if self.meta.defaultauthors:
+                self[author] = result = '%s%s' % (author, self.defaulthost)
+                msg = 'substituting author "%s" for default "%s"\n'
+                self.meta.ui.debug(msg % (author, result))
+            else:
+                msg = 'author %s has no entry in the author map!'
+                raise hgutil.Abort(msg % author)
         self.meta.ui.debug('mapping author "%s" to "%s"\n' % (author, result))
         return result
 
