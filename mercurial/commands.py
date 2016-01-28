@@ -5542,8 +5542,10 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
             msg = _("not updating: %s") % str(inst)
             hint = inst.hint
             raise error.UpdateAbort(msg, hint=hint)
-        if not ret and not checkout:
-            if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+        if not ret and movemarkfrom:
+            if movemarkfrom == repo['.'].node():
+                pass # no-op update
+            elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
                 ui.status(_("updating bookmark %s\n") % repo._activebookmark)
         return ret
     if modheads > 1:

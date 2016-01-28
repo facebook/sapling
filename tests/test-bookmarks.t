@@ -781,3 +781,61 @@ test clearing only a single divergent bookmark across branches
      foo@2                     2:db815d6d32e6
      four                      3:9ba5f110a0b3
      should-end-on-two         2:db815d6d32e6
+
+pull --update works the same as pull && update (case #2)
+
+It is assumed that "hg pull" itself doesn't update current active
+bookmark ('Y' in tests below).
+
+  $ hg pull -q ../cloned-bookmarks-update
+  divergent bookmark Z stored as Z@2
+
+(pulling revision on another named branch with --update updates
+neither the working directory nor current active bookmark: "no-op"
+case)
+
+  $ echo yy >> y
+  $ hg commit -m yy
+
+  $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
+   * Y                         3:125c9a1d6df6
+  $ hg -R ../cloned-bookmarks-update pull . --update
+  pulling from .
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  divergent bookmark Z stored as Z@default
+  adding remote bookmark foo
+  adding remote bookmark four
+  adding remote bookmark should-end-on-two
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
+  3:125c9a1d6df6
+  $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
+   * Y                         3:125c9a1d6df6
+
+(pulling revision on current named/topological branch with --update
+updates the working directory and current active bookmark)
+
+  $ hg update -C -q 125c9a1d6df6
+  $ echo xx >> x
+  $ hg commit -m xx
+
+  $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
+   * Y                         3:125c9a1d6df6
+  $ hg -R ../cloned-bookmarks-update pull . --update
+  pulling from .
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  divergent bookmark Z stored as Z@default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating bookmark Y
+  $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
+  6:81dcce76aa0b
+  $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
+   * Y                         6:81dcce76aa0b
