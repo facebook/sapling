@@ -52,6 +52,21 @@ check that paths are expanded
   no changes found
   [1]
 
+check that debugexpandscheme outputs the canonical form
+
+  $ hg debugexpandscheme bb://user/repo
+  https://bitbucket.org/user/repo
+
+expanding an unknown scheme emits the input
+
+  $ hg debugexpandscheme foobar://this/that
+  foobar://this/that
+
+expanding a canonical URL emits the input
+
+  $ hg debugexpandscheme https://bitbucket.org/user/repo
+  https://bitbucket.org/user/repo
+
 errors
 
   $ cat errors.log
