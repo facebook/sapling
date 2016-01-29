@@ -724,16 +724,19 @@ class Test(unittest.TestCase):
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
             ]
-
-        if os.name == 'nt':
-            r.append(
-                (b''.join(c.isalpha() and b'[%s%s]' % (c.lower(), c.upper()) or
-                    c in b'/\\' and br'[/\\]' or c.isdigit() and c or b'\\' + c
-                    for c in self._testtmp), b'$TESTTMP'))
-        else:
-            r.append((re.escape(self._testtmp), b'$TESTTMP'))
+        r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
         return r
+
+    def _escapepath(self, p):
+        if os.name == 'nt':
+            return (
+                (b''.join(c.isalpha() and b'[%s%s]' % (c.lower(), c.upper()) or
+                    c in b'/\\' and br'[/\\]' or c.isdigit() and c or b'\\' + c
+                    for c in p))
+            )
+        else:
+            return re.escape(p)
 
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
