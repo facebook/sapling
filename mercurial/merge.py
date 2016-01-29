@@ -1464,6 +1464,34 @@ def update(repo, node, branchmerge, force, ancestor=None,
         actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, mergeancestor,
             followcopies, matcher=matcher)
+
+        # Prompt and create actions. Most of this is in the resolve phase
+        # already, but we can't handle .hgsubstate in filemerge or
+        # subrepo.submerge yet so we have to keep prompting for it.
+        if '.hgsubstate' in actionbyfile:
+            f = '.hgsubstate'
+            m, args, msg = actionbyfile[f]
+            if m == 'cd':
+                if repo.ui.promptchoice(
+                    _("local changed %s which remote deleted\n"
+                      "use (c)hanged version or (d)elete?"
+                      "$$ &Changed $$ &Delete") % f, 0):
+                    actionbyfile[f] = ('r', None, "prompt delete")
+                elif f in p1:
+                    actionbyfile[f] = ('am', None, "prompt keep")
+                else:
+                    actionbyfile[f] = ('a', None, "prompt keep")
+            elif m == 'dc':
+                f1, f2, fa, move, anc = args
+                flags = p2[f2].flags()
+                if repo.ui.promptchoice(
+                    _("remote changed %s which local deleted\n"
+                      "use (c)hanged version or leave (d)eleted?"
+                      "$$ &Changed $$ &Deleted") % f, 0) == 0:
+                    actionbyfile[f] = ('g', (flags, False), "prompt recreating")
+                else:
+                    del actionbyfile[f]
+
         # Convert to dictionary-of-lists format
         actions = dict((m, []) for m in 'a am f g cd dc r dm dg m e k'.split())
         for f, (m, args, msg) in actionbyfile.iteritems():
@@ -1478,33 +1506,6 @@ def update(repo, node, branchmerge, force, ancestor=None,
                 _checkcollision(repo, p2.manifest(), None)
             else:
                 _checkcollision(repo, wc.manifest(), actions)
-
-        # Prompt and create actions. Most of this is in the resolve phase
-        # already, but we can't handle .hgsubstate in filemerge or
-        # subrepo.submerge yet so we have to keep prompting for it.
-        for f, args, msg in sorted(actions['cd']):
-            if f != '.hgsubstate':
-                continue
-            if repo.ui.promptchoice(
-                _("local changed %s which remote deleted\n"
-                  "use (c)hanged version or (d)elete?"
-                  "$$ &Changed $$ &Delete") % f, 0):
-                actions['r'].append((f, None, "prompt delete"))
-            elif f in p1:
-                actions['am'].append((f, None, "prompt keep"))
-            else:
-                actions['a'].append((f, None, "prompt keep"))
-
-        for f, args, msg in sorted(actions['dc']):
-            if f != '.hgsubstate':
-                continue
-            f1, f2, fa, move, anc = args
-            flags = p2[f2].flags()
-            if repo.ui.promptchoice(
-                _("remote changed %s which local deleted\n"
-                  "use (c)hanged version or leave (d)eleted?"
-                  "$$ &Changed $$ &Deleted") % f, 0) == 0:
-                actions['g'].append((f, (flags, False), "prompt recreating"))
 
         # divergent renames
         for f, fl in sorted(diverge.iteritems()):
