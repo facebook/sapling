@@ -241,6 +241,7 @@ static void setupsignalhandler(pid_t pid)
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = forwardsignal;
 	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
 
 	sigaction(SIGHUP, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);

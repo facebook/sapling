@@ -11,6 +11,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -63,6 +64,7 @@ int runshellcmd(const char *cmd, const char *envp[], const char *cwd)
 	sigset_t oldmask;
 
 	/* block or mask signals just as system() does */
+	memset(&newsa, 0, sizeof(newsa));
 	newsa.sa_handler = SIG_IGN;
 	newsa.sa_flags = 0;
 	if (sigemptyset(&newsa.sa_mask) < 0)
