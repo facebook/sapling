@@ -241,14 +241,22 @@ static void setupsignalhandler(pid_t pid)
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = forwardsignal;
 	sa.sa_flags = SA_RESTART;
-	sigemptyset(&sa.sa_mask);
+	if (sigemptyset(&sa.sa_mask) < 0)
+		goto error;
 
-	sigaction(SIGHUP, &sa, NULL);
-	sigaction(SIGINT, &sa, NULL);
+	if (sigaction(SIGHUP, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGINT, &sa, NULL) < 0)
+		goto error;
 
 	/* terminate frontend by double SIGTERM in case of server freeze */
 	sa.sa_flags |= SA_RESETHAND;
-	sigaction(SIGTERM, &sa, NULL);
+	if (sigaction(SIGTERM, &sa, NULL) < 0)
+		goto error;
+	return;
+
+error:
+	abortmsg("failed to set up signal handlers (errno = %d)", errno);
 }
 
 /* This implementation is based on hgext/pager.py (pre 369741ef7253) */
