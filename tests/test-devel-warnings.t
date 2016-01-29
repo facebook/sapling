@@ -63,6 +63,8 @@
   $ cat << EOF >> $HGRCPATH
   > [extensions]
   > buggylocking=$TESTTMP/buggylocking.py
+  > mock=$TESTDIR/mockblackbox.py
+  > blackbox=
   > [devel]
   > all-warnings=1
   > EOF
@@ -138,4 +140,27 @@
    */mercurial/dispatch.py:* in <lambda> (glob)
    */mercurial/util.py:* in check (glob)
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
+  $ hg blackbox -l 9
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: revset "oldstyle" use list instead of smartset, (upgrade your code) at: */mercurial/revset.py:* (mfunc) (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> log -r oldstyle() -T {rev}\n exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
+  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> devel-warn: foorbar is deprecated, go shopping
+  (compatibility will be dropped after Mercurial-42.1337, update your code.) at:
+   */hg:* in <module> (glob)
+   */mercurial/dispatch.py:* in run (glob)
+   */mercurial/dispatch.py:* in dispatch (glob)
+   */mercurial/dispatch.py:* in _runcatch (glob)
+   */mercurial/dispatch.py:* in _dispatch (glob)
+   */mercurial/dispatch.py:* in runcommand (glob)
+   */mercurial/dispatch.py:* in _runcommand (glob)
+   */mercurial/dispatch.py:* in checkargs (glob)
+   */mercurial/dispatch.py:* in <lambda> (glob)
+   */mercurial/util.py:* in check (glob)
+   $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 9
   $ cd ..

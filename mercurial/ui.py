@@ -1069,11 +1069,15 @@ class ui(object):
         stacklevel += 1 # get in develwarn
         if self.tracebackflag:
             util.debugstacktrace(msg, stacklevel, self.ferr, self.fout)
+            self.log('develwarn', '%s at:\n%s' %
+                     (msg, ''.join(util.getstackframes(stacklevel))))
         else:
             curframe = inspect.currentframe()
             calframe = inspect.getouterframes(curframe, 2)
             self.write_err('%s at: %s:%s (%s)\n'
                            % ((msg,) + calframe[stacklevel][1:4]))
+            self.log('develwarn', '%s at: %s:%s (%s)\n',
+                     msg, *calframe[stacklevel][1:4])
 
     def deprecwarn(self, msg, version):
         """issue a deprecation warning
