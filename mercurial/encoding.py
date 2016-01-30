@@ -378,7 +378,7 @@ class normcasespecs(object):
     upper = 1
     other = 0
 
-_jsonmap = {}
+_jsonmap = []
 
 def jsonescape(s):
     '''returns a string suitable for JSON
@@ -408,21 +408,18 @@ def jsonescape(s):
     '''
 
     if not _jsonmap:
-        for x in xrange(32):
-            _jsonmap[chr(x)] = "\\u%04x" % x
-        for x in xrange(32, 256):
-            c = chr(x)
-            _jsonmap[c] = c
-        _jsonmap['\x7f'] = '\\u007f'
-        _jsonmap['\t'] = '\\t'
-        _jsonmap['\n'] = '\\n'
-        _jsonmap['\"'] = '\\"'
-        _jsonmap['\\'] = '\\\\'
-        _jsonmap['\b'] = '\\b'
-        _jsonmap['\f'] = '\\f'
-        _jsonmap['\r'] = '\\r'
+        _jsonmap.extend("\\u%04x" % x for x in xrange(32))
+        _jsonmap.extend(chr(x) for x in xrange(32, 256))
+        _jsonmap[0x7f] = '\\u007f'
+        _jsonmap[0x09] = '\\t'
+        _jsonmap[0x0a] = '\\n'
+        _jsonmap[0x22] = '\\"'
+        _jsonmap[0x5c] = '\\\\'
+        _jsonmap[0x08] = '\\b'
+        _jsonmap[0x0c] = '\\f'
+        _jsonmap[0x0d] = '\\r'
 
-    return ''.join(_jsonmap[c] for c in toutf8b(s))
+    return ''.join(_jsonmap[x] for x in bytearray(toutf8b(s)))
 
 _utf8len = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 4]
 
