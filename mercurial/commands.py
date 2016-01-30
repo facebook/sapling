@@ -598,6 +598,8 @@ def backout(ui, repo, node=None, rev=None, **opts):
 def _dobackout(ui, repo, node=None, rev=None, **opts):
     if opts.get('commit') and opts.get('no_commit'):
         raise error.Abort(_("cannot use --commit with --no-commit"))
+    if opts.get('merge') and opts.get('no_commit'):
+        raise error.Abort(_("cannot use --merge with --no-commit"))
 
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
