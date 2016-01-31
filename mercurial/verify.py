@@ -147,9 +147,9 @@ class verifier(object):
         mflinkrevs, filelinkrevs = self._verifychangelog()
 
         filenodes = self._verifymanifest(mflinkrevs)
-
-        self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
         del mflinkrevs
+
+        self._crosscheckfiles(filelinkrevs, filenodes)
 
         totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
 
@@ -232,25 +232,24 @@ class verifier(object):
                 self.exc(lr, _("reading manifest delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
+        if self.havemf:
+            for c, m in sorted([(c, m) for m in mflinkrevs
+                        for c in mflinkrevs[m]]):
+                if m == nullid:
+                    continue
+                self.err(c, _("changeset refers to unknown manifest %s") %
+                         short(m))
+
         return filenodes
 
-    def _crosscheckfiles(self, mflinkrevs, filelinkrevs, filenodes):
+    def _crosscheckfiles(self, filelinkrevs, filenodes):
         repo = self.repo
         ui = self.ui
         ui.status(_("crosschecking files in changesets and manifests\n"))
 
-        total = len(mflinkrevs) + len(filelinkrevs) + len(filenodes)
+        total = len(filelinkrevs) + len(filenodes)
         count = 0
         if self.havemf:
-            for c, m in sorted([(c, m) for m in mflinkrevs
-                                for c in mflinkrevs[m]]):
-                count += 1
-                if m == nullid:
-                    continue
-                ui.progress(_('crosschecking'), count, total=total)
-                self.err(c, _("changeset refers to unknown manifest %s") %
-                         short(m))
-
             for f in sorted(filelinkrevs):
                 count += 1
                 ui.progress(_('crosschecking'), count, total=total)
