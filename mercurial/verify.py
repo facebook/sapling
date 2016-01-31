@@ -149,6 +149,7 @@ class verifier(object):
         filenodes = self._verifymanifest(mflinkrevs)
 
         self._crosscheckfiles(mflinkrevs, filelinkrevs, filenodes)
+        del mflinkrevs
 
         totalfiles, filerevisions = self._verifyfiles(filenodes, filelinkrevs)
 
@@ -249,7 +250,6 @@ class verifier(object):
                 ui.progress(_('crosschecking'), count, total=total)
                 self.err(c, _("changeset refers to unknown manifest %s") %
                          short(m))
-            mflinkrevs = None # del is bad here due to scope issues
 
             for f in sorted(filelinkrevs):
                 count += 1
