@@ -126,13 +126,13 @@ def rebase(ui, repo, **opts):
       1. Explicitly select them using ``--rev``.
 
       2. Use ``--source`` to select a root changeset and include all of its
-      descendants.
+         descendants.
 
       3. Use ``--base`` to select a changeset; rebase will find ancestors
-      and their descendants which are not also ancestors of the destination.
+         and their descendants which are not also ancestors of the destination.
 
       4. If you do not specify any of ``--rev``, ``source``, or ``--base``,
-      rebase will use ``--base .`` as above.
+         rebase will use ``--base .`` as above.
 
     Rebase will destroy original changesets unless you use ``--keep``.
     It will also move your bookmarks (even if you do).
