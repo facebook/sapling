@@ -1315,12 +1315,12 @@ def verifyactions(actions, state, ctxs):
             if _constraints.noother in constraints and ha not in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not a candidate')
-                     % (action.verb, node.short(ha)),
+                     % (action.verb, ha[:12]),
                     hint=_('only use listed changesets'))
             if _constraints.forceother in constraints and ha in expected:
                 raise error.ParseError(
                     _('%s "%s" changeset was not an edited list candidate')
-                     % (action.verb, node.short(ha)),
+                     % (action.verb, ha[:12]),
                     hint=_('only use listed changesets'))
             if _constraints.noduplicates in constraints and ha in seen:
                 raise error.ParseError(_(

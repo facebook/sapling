@@ -282,7 +282,7 @@ try with --rev
   > pick de71b079d9ce e
   > pick 38b92f448761 c
   > EOF
-  hg: parse error: pick "646537316230" changeset was not a candidate
+  hg: parse error: pick "de71b079d9ce" changeset was not a candidate
   (only use listed changesets)
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
