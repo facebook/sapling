@@ -1035,7 +1035,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     _('histedit requires exactly one ancestor revision'))
 
 
-    replacements = []
     state.keep = opts.get('keep', False)
     supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
@@ -1050,56 +1049,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         _abortaction(ui, repo, state)
         return
     else:
-        cmdutil.checkunfinished(repo)
-        cmdutil.bailifchanged(repo)
-
-        topmost, empty = repo.dirstate.parents()
-        if outg:
-            if freeargs:
-                remote = freeargs[0]
-            else:
-                remote = None
-            root = findoutgoing(ui, repo, remote, force, opts)
-        else:
-            rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
-            if len(rr) != 1:
-                raise error.Abort(_('The specified revisions must have '
-                    'exactly one common root'))
-            root = rr[0].node()
-
-        revs = between(repo, root, topmost, state.keep)
-        if not revs:
-            raise error.Abort(_('%s is not an ancestor of working directory') %
-                             node.short(root))
-
-        ctxs = [repo[r] for r in revs]
-        if not rules:
-            comment = geteditcomment(node.short(root), node.short(topmost))
-            actions = [pick(state, r) for r in revs]
-            rules = ruleeditor(repo, ui, actions, comment)
-        else:
-            if rules == '-':
-                f = sys.stdin
-            else:
-                f = open(rules)
-            rules = f.read()
-            f.close()
-        actions = parserules(rules, state)
-        warnverifyactions(ui, repo, actions, state, ctxs)
-
-        parentctxnode = repo[root].parents()[0].node()
-
-        state.parentctxnode = parentctxnode
-        state.actions = actions
-        state.topmost = topmost
-        state.replacements = replacements
-
-        # Create a backup so we can always abort completely.
-        backupfile = None
-        if not obsolete.isenabled(repo, obsolete.createmarkersopt):
-            backupfile = repair._bundle(repo, [parentctxnode], [topmost], root,
-                                        'histedit')
-        state.backupfile = backupfile
+        _newaction(ui, repo, state, revs, freeargs, opts)
 
     # preprocess rules so that we can hide inner folds from the user
     # and only show one editor
@@ -1227,6 +1177,62 @@ def _editplanaction(ui, repo, state, rules):
     warnverifyactions(ui, repo, actions, state, ctxs)
     state.actions = actions
     state.write()
+
+def _newaction(ui, repo, state, revs, freeargs, opts):
+    outg = opts.get('outgoing')
+    rules = opts.get('commands', '')
+    force = opts.get('force')
+
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
+
+    topmost, empty = repo.dirstate.parents()
+    if outg:
+        if freeargs:
+            remote = freeargs[0]
+        else:
+            remote = None
+        root = findoutgoing(ui, repo, remote, force, opts)
+    else:
+        rr = list(repo.set('roots(%ld)', scmutil.revrange(repo, revs)))
+        if len(rr) != 1:
+            raise error.Abort(_('The specified revisions must have '
+                'exactly one common root'))
+        root = rr[0].node()
+
+    revs = between(repo, root, topmost, state.keep)
+    if not revs:
+        raise error.Abort(_('%s is not an ancestor of working directory') %
+                         node.short(root))
+
+    ctxs = [repo[r] for r in revs]
+    if not rules:
+        comment = geteditcomment(node.short(root), node.short(topmost))
+        actions = [pick(state, r) for r in revs]
+        rules = ruleeditor(repo, ui, actions, comment)
+    else:
+        if rules == '-':
+            f = sys.stdin
+        else:
+            f = open(rules)
+        rules = f.read()
+        f.close()
+    actions = parserules(rules, state)
+    warnverifyactions(ui, repo, actions, state, ctxs)
+
+    parentctxnode = repo[root].parents()[0].node()
+
+    state.parentctxnode = parentctxnode
+    state.actions = actions
+    state.topmost = topmost
+    state.replacements = []
+
+    # Create a backup so we can always abort completely.
+    backupfile = None
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        backupfile = repair._bundle(repo, [parentctxnode], [topmost], root,
+                                    'histedit')
+    state.backupfile = backupfile
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
