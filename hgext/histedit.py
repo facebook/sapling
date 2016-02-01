@@ -1044,24 +1044,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.read()
         state = bootstrapcontinue(ui, state, opts)
     elif goal == 'edit-plan':
-        state.read()
-        if not rules:
-            comment = geteditcomment(node.short(state.parentctxnode),
-                                     node.short(state.topmost))
-            rules = ruleeditor(repo, ui, state.actions, comment)
-        else:
-            if rules == '-':
-                f = sys.stdin
-            else:
-                f = open(rules)
-            rules = f.read()
-            f.close()
-        actions = parserules(rules, state)
-        ctxs = [repo[act.nodetoverify()] \
-                for act in state.actions if act.nodetoverify()]
-        warnverifyactions(ui, repo, actions, state, ctxs)
-        state.actions = actions
-        state.write()
+        _editplanaction(ui, repo, state, rules)
         return
     elif goal == 'abort':
         _abortaction(ui, repo, state)
@@ -1224,6 +1207,26 @@ def _abortaction(ui, repo, state):
         raise
     finally:
             state.clear()
+
+def _editplanaction(ui, repo, state, rules):
+    state.read()
+    if not rules:
+        comment = geteditcomment(node.short(state.parentctxnode),
+                                 node.short(state.topmost))
+        rules = ruleeditor(repo, ui, state.actions, comment)
+    else:
+        if rules == '-':
+            f = sys.stdin
+        else:
+            f = open(rules)
+        rules = f.read()
+        f.close()
+    actions = parserules(rules, state)
+    ctxs = [repo[act.nodetoverify()] \
+            for act in state.actions if act.nodetoverify()]
+    warnverifyactions(ui, repo, actions, state, ctxs)
+    state.actions = actions
+    state.write()
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
