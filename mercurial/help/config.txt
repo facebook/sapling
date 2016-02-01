@@ -38,11 +38,11 @@ Global configuration like the username setting is typically put into:
 
 .. container:: windows
 
-  ``%USERPROFILE%\mercurial.ini``
+  - ``%USERPROFILE%\mercurial.ini`` (on Windows)
 
 .. container:: unix.plan9
 
-  ``$HOME/.hgrc``
+  - ``$HOME/.hgrc`` (on Unix, Plan9)
 
 The names of these files depend on the system on which Mercurial is
 installed. ``*.rc`` files from a single directory are read in
