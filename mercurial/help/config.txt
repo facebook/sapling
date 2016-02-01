@@ -334,7 +334,7 @@ Each line has the following format::
 where ``<name>`` is used to group arguments into authentication
 entries. Example::
 
-    foo.prefix = hg.intevation.org/mercurial
+    foo.prefix = hg.intevation.de/mercurial
     foo.username = foo
     foo.password = bar
     foo.schemes = http https
@@ -977,7 +977,8 @@ The CA chain and web.cacerts is not used for servers with a fingerprint.
 For example::
 
     [hostfingerprints]
-    hg.intevation.org = fa:1f:d9:48:f1:e7:74:30:38:8d:d8:58:b6:94:b8:58:28:7d:8b:d0
+    hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
+    hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
 
 This feature is only supported when using Python 2.6 or later.
 
