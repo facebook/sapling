@@ -162,7 +162,7 @@ revset in your configuration file::
 
 By default each edited revision needs to be present in histedit commands.
 To remove revision you need to use ``drop`` operation. You can configure
-the drop to be implicit for missing commits by adding:
+the drop to be implicit for missing commits by adding::
 
   [histedit]
   dropmissing = True
