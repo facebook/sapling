@@ -873,7 +873,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
     This command lets you edit a linear series of changesets (up to
     and including the working directory, which should be clean).
-    You can::
+    You can:
 
     - `pick` to [re]order a changeset
 
@@ -887,7 +887,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `edit` to edit this changeset
 
-    There are a number of ways to select the root changset::
+    There are a number of ways to select the root changset:
 
     - Specify ANCESTOR directly
 

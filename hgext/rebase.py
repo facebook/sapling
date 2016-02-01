@@ -121,7 +121,7 @@ def rebase(ui, repo, **opts):
     destination changeset is not modified by rebasing, but new
     changesets are added as its descendants.)
 
-    Here are the ways to select changesets::
+    Here are the ways to select changesets:
 
       1. Explicitly select them using ``--rev``.
 
