@@ -1064,41 +1064,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.write()
         return
     elif goal == 'abort':
-        try:
-            state.read()
-            tmpnodes, leafs = newnodestoabort(state)
-            ui.debug('restore wc to old parent %s\n'
-                    % node.short(state.topmost))
-
-            # Recover our old commits if necessary
-            if not state.topmost in repo and state.backupfile:
-                backupfile = repo.join(state.backupfile)
-                f = hg.openpath(ui, backupfile)
-                gen = exchange.readbundle(ui, f, backupfile)
-                with repo.transaction('histedit.abort') as tr:
-                    if not isinstance(gen, bundle2.unbundle20):
-                        gen.apply(repo, 'histedit', 'bundle:' + backupfile)
-                    if isinstance(gen, bundle2.unbundle20):
-                        bundle2.applybundle(repo, gen, tr,
-                                            source='histedit',
-                                            url='bundle:' + backupfile)
-
-                os.remove(backupfile)
-
-            # check whether we should update away
-            if repo.unfiltered().revs('parents() and (%n  or %ln::)',
-                                    state.parentctxnode, leafs | tmpnodes):
-                hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
-            cleanupnode(ui, repo, 'created', tmpnodes)
-            cleanupnode(ui, repo, 'temp', leafs)
-        except Exception:
-            if state.inprogress():
-                ui.warn(_('warning: encountered an exception during histedit '
-                    '--abort; the repository may not have been completely '
-                    'cleaned up\n'))
-            raise
-        finally:
-                state.clear()
+        _abortaction(ui, repo, state)
         return
     else:
         cmdutil.checkunfinished(repo)
@@ -1221,6 +1187,43 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         os.unlink(repo.sjoin('undo'))
     if repo.vfs.exists('histedit-last-edit.txt'):
         repo.vfs.unlink('histedit-last-edit.txt')
+
+def _abortaction(ui, repo, state):
+    try:
+        state.read()
+        tmpnodes, leafs = newnodestoabort(state)
+        ui.debug('restore wc to old parent %s\n'
+                % node.short(state.topmost))
+
+        # Recover our old commits if necessary
+        if not state.topmost in repo and state.backupfile:
+            backupfile = repo.join(state.backupfile)
+            f = hg.openpath(ui, backupfile)
+            gen = exchange.readbundle(ui, f, backupfile)
+            with repo.transaction('histedit.abort') as tr:
+                if not isinstance(gen, bundle2.unbundle20):
+                    gen.apply(repo, 'histedit', 'bundle:' + backupfile)
+                if isinstance(gen, bundle2.unbundle20):
+                    bundle2.applybundle(repo, gen, tr,
+                                        source='histedit',
+                                        url='bundle:' + backupfile)
+
+            os.remove(backupfile)
+
+        # check whether we should update away
+        if repo.unfiltered().revs('parents() and (%n  or %ln::)',
+                                state.parentctxnode, leafs | tmpnodes):
+            hg.clean(repo, state.topmost, show_stats=True, quietempty=True)
+        cleanupnode(ui, repo, 'created', tmpnodes)
+        cleanupnode(ui, repo, 'temp', leafs)
+    except Exception:
+        if state.inprogress():
+            ui.warn(_('warning: encountered an exception during histedit '
+                '--abort; the repository may not have been completely '
+                'cleaned up\n'))
+        raise
+    finally:
+            state.clear()
 
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
