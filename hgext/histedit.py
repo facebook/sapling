@@ -892,7 +892,7 @@ def histedit(ui, repo, *freeargs, **opts):
     - Specify ANCESTOR directly
 
     - Use --outgoing -- it will be the first linear changeset not
-      included in destination. (See :hg:"help default-push")
+      included in destination. (See :hg:`help config.default-push`)
 
     - Otherwise, the value from the "histedit.defaultrev" config option
       is used as a revset to select the base revision when ANCESTOR is not
