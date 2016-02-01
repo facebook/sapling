@@ -712,8 +712,8 @@ def defineparents(repo, rev, target, state, targetancestors):
     repo.ui.debug(" future parents are %d and %d\n" %
                             (repo[p1].rev(), repo[p2].rev()))
 
-    if rev == min(state):
-        # Case (1) initial changeset of a non-detaching rebase.
+    if not any(p.rev() in state for p in parents):
+        # Case (1) root changeset of a non-detaching rebase set.
         # Let the merge mechanism find the base itself.
         base = None
     elif not repo[rev].p2():
