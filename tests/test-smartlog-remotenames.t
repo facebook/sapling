@@ -84,3 +84,26 @@ Test configuration of "interesting" bookmarks
   |/
   @  0 mybook
   
+
+Change remote master to a non-existing locally commit and check that warning
+is shown to the user
+  $ cat > .hg/remotenames << EOF
+  > 6dd477f76ca35ae46e82972648735867cf335d3e bookmarks remote/master
+  > EOF
+  $ hg sl
+  warning: there is no master commit locally, try pulling from server
+  o  changeset:   3:8e2253d950ae
+  |  tag:         tip
+  |  parent:      0:b292c1e3311f
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     x4
+  |
+  @  changeset:   0:b292c1e3311f
+     bookmark:    mybook
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     x
+  
+  note: hiding 3 old heads without bookmarks
+  (use --all to see them)
