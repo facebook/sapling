@@ -306,3 +306,21 @@ Test branches marked as closed are not loaded
   $ hg pull -q
   $ hg branches --remote
   default/default                1:7c3bad9141dc
+
+Test json formatted bookmarks with tracking data
+  $ cd ..
+  $ hg init delta
+  $ cd delta
+  $ hg book mimimi -t lalala
+  $ hg book -v -T json
+  [
+   {
+    "active": true,
+    "bookmark": "mimimi",
+    "node": "0000000000000000000000000000000000000000",
+    "rev": -1,
+    "tracking": "lalala"
+   }
+  ]
+  $ hg book -v
+   * mimimi                    -1:000000000000           [lalala]

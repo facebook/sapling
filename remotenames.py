@@ -1059,12 +1059,18 @@ def displaylocalbookmarks(ui, repo, opts):
             else:
                 distance = calculatenamedistance(repo, bmark, tracked)
             if tracked:
-                ab = ''
+                fmt = '%s'
+                args = (tracked,)
+                fields = ['tracking']
                 if distance != (0, 0) and distance != (None, None):
-                    ab = ': %s ahead, %s behind' % distance
+                    ahead, behind = distance
+                    fmt += ': %s ahead, %s behind'
+                    args += ahead, behind
+                    fields += ['ahead', 'behind']
                 pad = " " * (25 - encoding.colwidth(str(rev)) -
                              encoding.colwidth(str(h)))
-                fm.write('bookmark', pad + '[%s%s]', tracked, ab, label=label)
+                fm.write(' '.join(fields), '%s[%s]' % (pad, fmt), *args,
+                    label=label)
                 if distance != (None, None):
                     distances[bmark] = distance
         fm.data(active=(bmark == current))
