@@ -92,7 +92,8 @@ def _destupdatebranch(repo, clean, check):
     wc = repo[None]
     movemark = node = None
     try:
-        node = repo.branchtip(wc.branch())
+        node = repo.revs('max(.::(head() and branch(%s)))'
+                         , wc.branch()).first()
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
     except error.RepoLookupError:

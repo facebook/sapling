@@ -172,9 +172,8 @@ create a second head
   summary:     2
   
   $ hg --debug up
-  abort: uncommitted changes
-  (commit and merge, or update --clean to discard changes)
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
 test conflicting untracked files
 

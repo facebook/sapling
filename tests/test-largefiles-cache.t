@@ -189,7 +189,7 @@ conditional above.
 Inject corruption into the largefiles store and see how update handles that:
 
   $ cd src
-  $ hg up -qC
+  $ hg up -qC tip
   $ cat large
   modified
   $ rm large

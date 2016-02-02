@@ -13,18 +13,13 @@
   created new head
   $ hg update 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg update
-  abort: not a linear update
-  (merge or update --check to force update)
-  [255]
   $ rm b
-  $ hg update -c
+  $ hg update -c 2
   abort: uncommitted changes
   [255]
   $ hg revert b
-  $ hg update -c
+  $ hg update -c 2
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 other heads for branch "default"
   $ mv a c
 
 Should abort:
