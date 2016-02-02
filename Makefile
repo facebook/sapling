@@ -31,6 +31,6 @@ tests-%:
 # fixes that bug.
 
 all-version-tests: tests-2.8.2 tests-3.0.1 tests-3.1 tests-3.2.2 tests-3.3 \
-  tests-3.4.1 tests-3.5.2 tests-3.6.3 tests-@
+  tests-3.4.1 tests-3.5.2 tests-3.6.3 tests-3.7 tests-@
 
 .PHONY: tests all-version-tests
