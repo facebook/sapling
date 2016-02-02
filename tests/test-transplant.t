@@ -409,6 +409,7 @@ transplant -c shouldn't use an old changeset
 
   $ hg up -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ rm added
   $ hg transplant --continue
   abort: no transplant to continue

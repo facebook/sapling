@@ -6955,6 +6955,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if rev is None or rev == '':
         rev = node
 
+    warndest = False
+
     with repo.wlock():
         cmdutil.clearunfinished(repo)
 
@@ -6976,6 +6978,7 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
         if rev is None:
             updata = destutil.destupdate(repo, clean=clean, check=check)
             rev, movemarkfrom, brev = updata
+            warndest = True
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
@@ -7002,7 +7005,8 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
                 ui.status(_("(leaving bookmark %s)\n") %
                           repo._activebookmark)
             bookmarks.deactivate(repo)
-
+        if warndest:
+            destutil.statusotherdests(ui, repo)
     return ret
 
 @command('verify', [])

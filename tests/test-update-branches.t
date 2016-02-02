@@ -167,6 +167,7 @@ Cases are run as shown in that table, row by row.
 
   $ norevtest '-c clean same'   clean 2 -c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   parent=3
 
   $ revtest '-cC dirty linear'  dirty 1 2 -cC

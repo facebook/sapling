@@ -123,6 +123,7 @@ extension and python hooks - use the eol extension for a pythonhook
   $ hg update
   hooked
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob (*)> update (glob)
   1970/01/01 00:00:00 bob (*)> writing .hg/cache/tags2-visible with 0 tags (glob)

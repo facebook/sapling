@@ -287,6 +287,7 @@ after strip of merge parent
 
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ hg log -G
   @  changeset:   4:264128213d29
   |  tag:         tip

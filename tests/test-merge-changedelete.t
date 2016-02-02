@@ -111,6 +111,7 @@ Interactive merge:
 
   $ hg co -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=true <<EOF
   > c
@@ -171,6 +172,7 @@ Interactive merge with bad input:
 
   $ hg co -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=true <<EOF
   > foo
@@ -243,6 +245,7 @@ Interactive merge with not enough input:
 
   $ hg co -C
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=true <<EOF
   > d
@@ -301,6 +304,7 @@ Choose local versions of files
 
   $ hg co -C
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --tool :local
   0 files updated, 3 files merged, 0 files removed, 0 files unresolved
@@ -345,6 +349,7 @@ Choose other versions of files
 
   $ hg co -C
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --tool :other
   0 files updated, 2 files merged, 1 files removed, 0 files unresolved
@@ -389,6 +394,7 @@ Fail
 
   $ hg co -C
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --tool :fail
   0 files updated, 0 files merged, 0 files removed, 3 files unresolved
@@ -436,6 +442,7 @@ Force prompts with no input (should be similar to :fail)
 
   $ hg co -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --config ui.interactive=True --tool :prompt
   local changed file1 which remote deleted
@@ -491,6 +498,7 @@ Force prompts
 
   $ hg co -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --tool :prompt
   local changed file1 which remote deleted
@@ -544,6 +552,7 @@ Choose to merge all files
 
   $ hg co -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg merge --tool :merge3
   local changed file1 which remote deleted

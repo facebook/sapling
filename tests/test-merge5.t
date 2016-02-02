@@ -24,6 +24,7 @@
   $ hg revert b
   $ hg update -c
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ mv a c
 
 Should abort:

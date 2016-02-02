@@ -232,6 +232,7 @@ are merging, unlike :local and :other
 
   $ hg up -C
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ printf "\n\nEnd of file\n" >> a
   $ hg ci -m "Add some stuff at the end"
   $ hg up -r 1
@@ -269,6 +270,7 @@ Now test :merge-other and :merge-local
 
   $ hg up -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ hg merge --tool :merge-local
   merging a
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

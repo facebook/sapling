@@ -68,6 +68,7 @@ we don't have to hash them again next time we update.
 
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ hg debugdirstate --large --nodate
   n 644          7 set                 large1
   n 644         13 set                 large2
@@ -82,6 +83,7 @@ prevents unnecessary hashing of content - also after linear/noop update
   n 644         13 set                 large2
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
   $ hg debugdirstate --large --nodate
   n 644          7 set                 large1
   n 644         13 set                 large2

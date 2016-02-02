@@ -573,6 +573,7 @@ pull --update works the same as pull && update
   $ hg bookmark -r3 Y
   moving bookmark 'Y' forward from db815d6d32e6
   $ cp -r  ../cloned-bookmarks-update ../cloned-bookmarks-manual-update
+  $ cp -r  ../cloned-bookmarks-update ../cloned-bookmarks-manual-update-with-divergence
 
 (manual version)
 
@@ -616,6 +617,34 @@ pull --update works the same as pull && update
   updating bookmark Z
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+We warn about divergent during bare update to the active bookmark
+
+  $ hg -R ../cloned-bookmarks-manual-update-with-divergence update Y
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark Y)
+  $ hg -R ../cloned-bookmarks-manual-update-with-divergence bookmarks -r X2 Y@1
+  $ hg -R ../cloned-bookmarks-manual-update-with-divergence bookmarks
+     X2                        1:925d80f479bb
+   * Y                         2:db815d6d32e6
+     Y@1                       1:925d80f479bb
+     Z                         2:db815d6d32e6
+     x  y                      2:db815d6d32e6
+  $ hg -R ../cloned-bookmarks-manual-update-with-divergence pull
+  pulling from $TESTTMP
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+1 heads)
+  updating bookmark Y
+  updating bookmark Z
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+  $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
+  updating to active bookmark Y
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark Y)
+  1 other divergent bookmarks for "Y"
 
 test wrongly formated bookmark
 
@@ -715,6 +744,7 @@ test non-linear update not clearing active bookmark
   $ hg up -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark drop)
+  1 other heads for branch "default"
   $ hg sum
   parent: 2:db815d6d32e6 
    2

@@ -218,3 +218,34 @@ def desthistedit(ui, repo):
             return revs.first()
 
     return None
+
+def _statusotherbook(ui, repo):
+    bmheads = repo.bookmarkheads(repo._activebookmark)
+    curhead = repo[repo._activebookmark].node()
+    if repo.revs('%n and parents()', curhead):
+        # we are on the active bookmark
+        bmheads = [b for b in bmheads if curhead != b]
+        if bmheads:
+            msg = _('%i other divergent bookmarks for "%s"\n')
+            ui.status(msg % (len(bmheads), repo._activebookmark))
+
+def _statusotherbranchheads(ui, repo):
+    currentbranch = repo.dirstate.branch()
+    heads = repo.branchheads(currentbranch)
+    l = len(heads)
+    if repo.revs('%ln and parents()', heads):
+        # we are on a head
+        heads = repo.revs('%ln - parents()', heads)
+        if heads and l != len(heads):
+            ui.status(_('%i other heads for branch "%s"\n') %
+                      (len(heads), currentbranch))
+
+def statusotherdests(ui, repo):
+    """Print message about other head"""
+    # XXX we should probably include a hint:
+    # - about what to do
+    # - how to see such heads
+    if repo._activebookmark:
+        _statusotherbook(ui, repo)
+    else:
+        _statusotherbranchheads(ui, repo)
