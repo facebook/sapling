@@ -319,7 +319,7 @@ def getlist(x):
     if not x:
         return []
     if x[0] == 'list':
-        return getlist(x[1]) + [x[2]]
+        return list(x[1:])
     return [x]
 
 def getargs(x, min, max, err):
@@ -448,7 +448,7 @@ def orset(repo, subset, *xs):
 def notset(repo, subset, x):
     return subset - getset(repo, subset, x)
 
-def listset(repo, subset, a, b):
+def listset(repo, subset, *xs):
     raise error.ParseError(_("can't use a list in this context"),
                            hint=_('see hg help "revsets.x or y"'))
 
@@ -2252,7 +2252,7 @@ def optimize(x, small):
         return o[0], (op, o[1])
     elif op == 'group':
         return optimize(x[1], small)
-    elif op in 'dagrange range list parent ancestorspec':
+    elif op in 'dagrange range parent ancestorspec':
         if op == 'parent':
             # x^:y means (x^) : y, not x ^ (:y)
             post = ('parentpost', x[1])
@@ -2264,6 +2264,9 @@ def optimize(x, small):
         wa, ta = optimize(x[1], small)
         wb, tb = optimize(x[2], small)
         return wa + wb, (op, ta, tb)
+    elif op == 'list':
+        ws, ts = zip(*(optimize(y, small) for y in x[1:]))
+        return sum(ws), (op,) + ts
     elif op == 'func':
         f = getstring(x[1], _("not a symbol"))
         wa, ta = optimize(x[2], small)
@@ -2365,6 +2368,7 @@ def _parsealiasdecl(decl):
         tree, pos = p.parse(_tokenizealias(decl))
         if (pos != len(decl)):
             raise error.ParseError(_('invalid token'), pos)
+        tree = parser.simplifyinfixops(tree, ('list',))
 
         if isvalidsymbol(tree):
             # "name = ...." style
@@ -2455,7 +2459,7 @@ def _parsealiasdefn(defn, args):
     tree, pos = p.parse(tokenizedefn(defn))
     if pos != len(defn):
         raise error.ParseError(_('invalid token'), pos)
-    return parser.simplifyinfixops(tree, ('or',))
+    return parser.simplifyinfixops(tree, ('list', 'or'))
 
 class revsetalias(object):
     # whether own `error` information is already shown or not.
@@ -2586,7 +2590,7 @@ def parse(spec, lookup=None):
     tree, pos = p.parse(tokenize(spec, lookup=lookup))
     if pos != len(spec):
         raise error.ParseError(_("invalid token"), pos)
-    return parser.simplifyinfixops(tree, ('or',))
+    return parser.simplifyinfixops(tree, ('list', 'or'))
 
 def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
