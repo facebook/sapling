@@ -603,7 +603,7 @@ def _checkunknownfile(repo, wctx, mctx, f, f2=None):
         and repo.dirstate.normalize(f) not in repo.dirstate
         and mctx[f2].cmp(wctx[f]))
 
-def _checkunknownfiles(repo, wctx, mctx, force, actions):
+def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
     """
     Considers any actions that care about the presence of conflicting unknown
     files. For some actions, the result is to abort; for others, it is to
@@ -905,13 +905,14 @@ def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
             del actions[f] # don't get = keep local deleted
 
 def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
-                     acceptremote, followcopies, matcher=None):
+                     acceptremote, followcopies, matcher=None,
+                     mergeforce=False):
     "Calculate the actions needed to merge mctx into wctx using ancestors"
     if len(ancestors) == 1: # default
         actions, diverge, renamedelete = manifestmerge(
             repo, wctx, mctx, ancestors[0], branchmerge, force, matcher,
             acceptremote, followcopies)
-        _checkunknownfiles(repo, wctx, mctx, force, actions)
+        _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce)
 
     else: # only when merge.preferancestor=* - the default
         repo.ui.note(
@@ -926,7 +927,7 @@ def calculateupdates(repo, wctx, mctx, ancestors, branchmerge, force,
             actions, diverge1, renamedelete1 = manifestmerge(
                 repo, wctx, mctx, ancestor, branchmerge, force, matcher,
                 acceptremote, followcopies)
-            _checkunknownfiles(repo, wctx, mctx, force, actions)
+            _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce)
 
             # Track the shortest set of warning on the theory that bid
             # merge will correctly incorporate more information
@@ -1344,7 +1345,7 @@ def recordupdates(repo, actions, branchmerge):
             repo.dirstate.normal(f)
 
 def update(repo, node, branchmerge, force, ancestor=None,
-           mergeancestor=False, labels=None, matcher=None):
+           mergeancestor=False, labels=None, matcher=None, mergeforce=False):
     """
     Perform a merge between the working directory and the given node
 
@@ -1358,6 +1359,8 @@ def update(repo, node, branchmerge, force, ancestor=None,
       between different named branches. This flag is used by rebase extension
       as a temporary fix and should be avoided in general.
     labels = labels to use for base, local and other
+    mergeforce = whether the merge was run with 'merge --force' (deprecated): if
+      this is True, then 'force' should be True as well.
 
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
@@ -1493,7 +1496,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
         ### calculate phase
         actionbyfile, diverge, renamedelete = calculateupdates(
             repo, wc, p2, pas, branchmerge, force, mergeancestor,
-            followcopies, matcher=matcher)
+            followcopies, matcher=matcher, mergeforce=mergeforce)
 
         # Prompt and create actions. Most of this is in the resolve phase
         # already, but we can't handle .hgsubstate in filemerge or

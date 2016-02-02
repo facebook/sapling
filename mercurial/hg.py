@@ -671,10 +671,10 @@ def clean(repo, node, show_stats=True, quietempty=False):
         _showstats(repo, stats, quietempty)
     return stats[3] > 0
 
-def merge(repo, node, force=None, remind=True):
+def merge(repo, node, force=None, remind=True, mergeforce=False):
     """Branch merge with node, resolving changes. Return true if any
     unresolved conflicts."""
-    stats = mergemod.update(repo, node, True, force)
+    stats = mergemod.update(repo, node, True, force, mergeforce=mergeforce)
     _showstats(repo, stats)
     if stats[3]:
         repo.ui.status(_("use 'hg resolve' to retry unresolved file merges "
