@@ -17,6 +17,7 @@ setup(
     py_modules=[
         'automv',
         'backups',
+        'catnotate',
         'chistedit',
         'commitextras',
         'dirsync',
