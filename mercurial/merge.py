@@ -1357,6 +1357,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
       If false, merging with an ancestor (fast-forward) is only allowed
       between different named branches. This flag is used by rebase extension
       as a temporary fix and should be avoided in general.
+    labels = labels to use for base, local and other
 
     The table below shows all the behaviors of the update command
     given the -c and -C or no options, whether the working directory
