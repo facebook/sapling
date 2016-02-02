@@ -610,17 +610,17 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
     choose a different action.
     """
     conflicts = set()
+    warnconflicts = set()
+    abortconflicts = set()
+    unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
+    ignoredconfig = _getcheckunknownconfig(repo, 'merge', 'checkignored')
     if not force:
-        abortconflicts = set()
-        warnconflicts = set()
         def collectconflicts(conflicts, config):
             if config == 'abort':
                 abortconflicts.update(conflicts)
             elif config == 'warn':
                 warnconflicts.update(conflicts)
 
-        unknownconfig = _getcheckunknownconfig(repo, 'merge', 'checkunknown')
-        ignoredconfig = _getcheckunknownconfig(repo, 'merge', 'checkignored')
         for f, (m, args, msg) in actions.iteritems():
             if m in ('c', 'dc'):
                 if _checkunknownfile(repo, wctx, mctx, f):
@@ -634,14 +634,15 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions):
         unknownconflicts = conflicts - ignoredconflicts
         collectconflicts(ignoredconflicts, ignoredconfig)
         collectconflicts(unknownconflicts, unknownconfig)
-        for f in sorted(abortconflicts):
-            repo.ui.warn(_("%s: untracked file differs\n") % f)
-        if abortconflicts:
-            raise error.Abort(_("untracked files in working directory "
-                                "differ from files in requested revision"))
 
-        for f in sorted(warnconflicts):
-            repo.ui.warn(_("%s: replacing untracked file\n") % f)
+    for f in sorted(abortconflicts):
+        repo.ui.warn(_("%s: untracked file differs\n") % f)
+    if abortconflicts:
+        raise error.Abort(_("untracked files in working directory "
+                            "differ from files in requested revision"))
+
+    for f in sorted(warnconflicts):
+        repo.ui.warn(_("%s: replacing untracked file\n") % f)
 
     for f, (m, args, msg) in actions.iteritems():
         backup = f in conflicts
