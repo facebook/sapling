@@ -235,8 +235,6 @@ class verifier(object):
         if self.havemf:
             for c, m in sorted([(c, m) for m in mflinkrevs
                         for c in mflinkrevs[m]]):
-                if m == nullid:
-                    continue
                 self.err(c, _("changeset refers to unknown manifest %s") %
                          short(m))
 
