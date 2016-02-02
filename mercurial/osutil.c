@@ -653,7 +653,11 @@ bail:
 /*
  * recvfds() simply does not release GIL during blocking io operation because
  * command server is known to be single-threaded.
+ *
+ * Old systems such as Solaris don't provide CMSG_LEN, msg_control, etc.
+ * Currently, recvfds() is not supported on these platforms.
  */
+#ifdef CMSG_LEN
 
 static ssize_t recvfdstobuf(int sockfd, int **rfds, void *cbuf, size_t cbufsize)
 {
@@ -713,6 +717,7 @@ bail:
 	return NULL;
 }
 
+#endif /* CMSG_LEN */
 #endif /* ndef _WIN32 */
 
 static PyObject *listdir(PyObject *self, PyObject *args, PyObject *kwargs)
@@ -881,8 +886,10 @@ static PyMethodDef methods[] = {
 	{"statfiles", (PyCFunction)statfiles, METH_VARARGS | METH_KEYWORDS,
 	 "stat a series of files or symlinks\n"
 "Returns None for non-existent entries and entries of other types.\n"},
+#ifdef CMSG_LEN
 	{"recvfds", (PyCFunction)recvfds, METH_VARARGS,
 	 "receive list of file descriptors via socket\n"},
+#endif
 #endif
 #ifdef __APPLE__
 	{
