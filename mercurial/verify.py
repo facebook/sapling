@@ -229,14 +229,14 @@ class verifier(object):
                             filenodes.setdefault(
                                 _normpath(f), {}).setdefault(fn, lr)
             except Exception as inst:
-                self.exc(lr, _("reading manifest delta %s") % short(n), inst)
+                self.exc(lr, _("reading delta %s") % short(n), inst)
         ui.progress(_('checking'), None)
 
         if self.havemf:
             for c, m in sorted([(c, m) for m in mflinkrevs
                         for c in mflinkrevs[m]]):
-                self.err(c, _("changeset refers to unknown manifest %s") %
-                         short(m))
+                self.err(c, _("changeset refers to unknown revision %s") %
+                         short(m), "manifest")
 
         return filenodes
 

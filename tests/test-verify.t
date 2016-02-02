@@ -171,7 +171,7 @@ Manifest log missing entry
 
   $ cp -f .hg/store-partial/00manifest.* .hg/store
   $ hg verify -q
-   1: changeset refers to unknown manifest 941fc4534185
+   manifest@1: changeset refers to unknown revision 941fc4534185
    file@1: c10f2164107d not in manifests
   2 integrity errors encountered!
   (first damaged changeset appears to be 1)
@@ -218,7 +218,7 @@ Manifest and filelog missing entry
   $ cp -f .hg/store-partial/00manifest.* .hg/store
   $ cp -f .hg/store-partial/data/file.* .hg/store/data
   $ hg verify -q
-   1: changeset refers to unknown manifest 941fc4534185
+   manifest@1: changeset refers to unknown revision 941fc4534185
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
@@ -245,7 +245,7 @@ Corrupt manifest log base node to cause failure to read revision
   $ printf abcd | dd conv=notrunc of=.hg/store/00manifest.i bs=1 seek=16 \
   >   2> /dev/null
   $ hg verify -q
-   0: reading manifest delta d0b6632564d4: * (glob)
+   manifest@0: reading delta d0b6632564d4: * (glob)
    file@0: 362fef284ce2 not in manifests
   2 integrity errors encountered!
   (first damaged changeset appears to be 0)
