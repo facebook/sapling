@@ -104,9 +104,15 @@ if os.name != 'nt':
         ]
 
     _libc = ctypes.CDLL(ctypes.util.find_library('c'), use_errno=True)
-    _recvmsg = _libc.recvmsg
-    _recvmsg.restype = getattr(ctypes, 'c_ssize_t', ctypes.c_long)
-    _recvmsg.argtypes = (ctypes.c_int, ctypes.POINTER(_msghdr), ctypes.c_int)
+    _recvmsg = getattr(_libc, 'recvmsg', None)
+    if _recvmsg:
+        _recvmsg.restype = getattr(ctypes, 'c_ssize_t', ctypes.c_long)
+        _recvmsg.argtypes = (ctypes.c_int, ctypes.POINTER(_msghdr),
+                             ctypes.c_int)
+    else:
+        # recvmsg isn't always provided by libc; such systems are unsupported
+        def _recvmsg(sockfd, msg, flags):
+            raise NotImplementedError('unsupported platform')
 
     def _CMSG_FIRSTHDR(msgh):
         if msgh.msg_controllen < ctypes.sizeof(_cmsghdr):
