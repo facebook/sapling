@@ -205,20 +205,20 @@ class verifier(object):
         ui.status(_("checking manifests\n"))
         filenodes = {}
         seen = {}
+        label = "manifest"
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
-            self.checklog(mf, "manifest", 0)
+            self.checklog(mf, label, 0)
         total = len(mf)
         for i in mf:
             ui.progress(_('checking'), i, total=total, unit=_('manifests'))
             n = mf.node(i)
-            lr = self.checkentry(mf, i, n, seen, mflinkrevs.get(n, []),
-                                 "manifest")
+            lr = self.checkentry(mf, i, n, seen, mflinkrevs.get(n, []), label)
             if n in mflinkrevs:
                 del mflinkrevs[n]
             else:
-                self.err(lr, _("%s not in changesets") % short(n), "manifest")
+                self.err(lr, _("%s not in changesets") % short(n), label)
 
             try:
                 for f, fn in mf.readdelta(n).iteritems():
@@ -229,14 +229,14 @@ class verifier(object):
                             filenodes.setdefault(
                                 _normpath(f), {}).setdefault(fn, lr)
             except Exception as inst:
-                self.exc(lr, _("reading delta %s") % short(n), inst)
+                self.exc(lr, _("reading delta %s") % short(n), inst, label)
         ui.progress(_('checking'), None)
 
         if self.havemf:
             for c, m in sorted([(c, m) for m in mflinkrevs
                         for c in mflinkrevs[m]]):
                 self.err(c, _("changeset refers to unknown revision %s") %
-                         short(m), "manifest")
+                         short(m), label)
 
         return filenodes
 
