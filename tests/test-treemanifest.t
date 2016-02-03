@@ -408,61 +408,56 @@ Excludes with a glob should not exclude everything from the glob's root
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
+  $ cp -r .hg/store .hg/store-copy
 
 Test files for a subdirectory.
 
-  $ mv .hg/store/meta/a oldmf
+  $ rm -r .hg/store/meta/a
   $ hg files -r . b
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
   b/foo/apple/bees/flower.py (glob)
-  $ mv oldmf .hg/store/meta/a
+  $ cp -rT .hg/store-copy .hg/store
 
 Test files with just includes and excludes.
 
-  $ mv .hg/store/meta/a oldmf
-  $ mv .hg/store/meta/b/bar/orange/fly oldmf2
-  $ mv .hg/store/meta/b/foo/apple/bees oldmf3
+  $ rm -r .hg/store/meta/a
+  $ rm -r .hg/store/meta/b/bar/orange/fly
+  $ rm -r .hg/store/meta/b/foo/apple/bees
   $ hg files -r . -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
   b/bar/fruits.txt (glob)
-  $ mv oldmf .hg/store/meta/a
-  $ mv oldmf2 .hg/store/meta/b/bar/orange/fly
-  $ mv oldmf3 .hg/store/meta/b/foo/apple/bees
+  $ cp -rT .hg/store-copy .hg/store
 
 Test files for a subdirectory, excluding a directory within it.
 
-  $ mv .hg/store/meta/a oldmf
-  $ mv .hg/store/meta/b/foo oldmf2
+  $ rm -r .hg/store/meta/a
+  $ rm -r .hg/store/meta/b/foo
   $ hg files -r . -X path:b/foo b
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
-  $ mv oldmf .hg/store/meta/a
-  $ mv oldmf2 .hg/store/meta/b/foo
+  $ cp -rT .hg/store-copy .hg/store
 
 Test files for a sub directory, including only a directory within it, and
 including an unrelated directory.
 
-  $ mv .hg/store/meta/a oldmf
-  $ mv .hg/store/meta/b/foo oldmf2
+  $ rm -r .hg/store/meta/a
+  $ rm -r .hg/store/meta/b/foo
   $ hg files -r . -I path:b/bar/orange -I path:a b
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
-  $ mv oldmf .hg/store/meta/a
-  $ mv oldmf2 .hg/store/meta/b/foo
+  $ cp -rT .hg/store-copy .hg/store
 
 Test files for a pattern, including a directory, and excluding a directory
 within that.
 
-  $ mv .hg/store/meta/a oldmf
-  $ mv .hg/store/meta/b/foo oldmf2
-  $ mv .hg/store/meta/b/bar/orange oldmf3
+  $ rm -r .hg/store/meta/a
+  $ rm -r .hg/store/meta/b/foo
+  $ rm -r .hg/store/meta/b/bar/orange
   $ hg files -r . glob:**.txt -I path:b/bar -X path:b/bar/orange
   b/bar/fruits.txt (glob)
-  $ mv oldmf .hg/store/meta/a
-  $ mv oldmf2 .hg/store/meta/b/foo
-  $ mv oldmf3 .hg/store/meta/b/bar/orange
+  $ cp -rT .hg/store-copy .hg/store
 
 Add some more changes to the deep repo
   $ echo narf >> b/bar/fruits.txt
