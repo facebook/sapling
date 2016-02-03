@@ -54,7 +54,7 @@ command = cmdutil.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'internal'
-lastfp = None
+lastui = None
 
 filehandles = {}
 
@@ -115,15 +115,19 @@ def wrapui(ui):
                     fp = _openlog(self._bbvfs)
             return fp
 
+        def _bbwrite(self, fmt, *args):
+            self._bbfp.write(fmt % args)
+            self._bbfp.flush()
+
         def log(self, event, *msg, **opts):
-            global lastfp
+            global lastui
             super(blackboxui, self).log(event, *msg, **opts)
 
             if not '*' in self.track and not event in self.track:
                 return
 
-            if util.safehasattr(self, '_blackbox'):
-                fp = self._blackbox
+            if util.safehasattr(self, '_bbfp'):
+                ui = self
             elif util.safehasattr(self, '_bbvfs'):
                 try:
                     self._bbfp = self._openlogfile()
@@ -132,41 +136,41 @@ def wrapui(ui):
                                err.strerror)
                     del self._bbvfs
                     self._bbfp = None
-                fp = self._bbfp
+                ui = self
             else:
                 # certain ui instances exist outside the context of
                 # a repo, so just default to the last blackbox that
                 # was seen.
-                fp = lastfp
+                ui = lastui
 
-            if fp:
+            if (util.safehasattr(ui, '_bbfp') and
+                ui._bbfp is not None):
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
                 pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 rev = '(unknown)'
                 changed = ''
-                if util.safehasattr(self, '_bbrepo'):
-                    ctx = self._bbrepo[None]
+                if util.safehasattr(ui, '_bbrepo'):
+                    ctx = ui._bbrepo[None]
                     if ctx.rev() is not None:
                         rev = hexfn(ctx.node())
                     else:
                         parents = ctx.parents()
                         rev = ('+'.join([hexfn(p.node()) for p in parents]))
-                        if (self.configbool('blackbox', 'dirty', False) and (
-                            any(self._bbrepo.status()) or
+                        if (ui.configbool('blackbox', 'dirty', False) and (
+                            any(ui._bbrepo.status()) or
                             any(ctx.sub(s).dirty() for s in ctx.substate)
                         )):
                             changed = '+'
                 try:
-                    fp.write('%s %s @%s%s (%s)> %s' %
-                        (date, user, rev, changed, pid, formattedmsg))
-                    fp.flush()
+                    ui._bbwrite('%s %s @%s%s (%s)> %s',
+                        date, user, rev, changed, pid, formattedmsg)
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                if not lastfp or util.safehasattr(self, '_bbrepo'):
-                    lastfp = fp
+                if not lastui or util.safehasattr(ui, '_bbrepo'):
+                    lastui = ui
 
         def setrepo(self, repo):
             self._bbvfs = repo.vfs
