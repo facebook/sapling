@@ -397,13 +397,14 @@ def rebase(ui, repo, **opts):
             if dest.closesbranch() and not keepbranchesf:
                 ui.status(_('reopening closed branch head %s\n') % dest)
 
-        if keepbranchesf and collapsef:
-            branches = set()
-            for rev in state:
-                branches.add(repo[rev].branch())
-                if len(branches) > 1:
-                    raise error.Abort(_('cannot collapse multiple named '
-                                        'branches'))
+        if keepbranchesf:
+            if collapsef:
+                branches = set()
+                for rev in state:
+                    branches.add(repo[rev].branch())
+                    if len(branches) > 1:
+                        raise error.Abort(_('cannot collapse multiple named '
+                            'branches'))
 
         # Rebase
         if not targetancestors:
