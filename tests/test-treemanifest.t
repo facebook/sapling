@@ -513,3 +513,56 @@ Verify passes.
   checking files
   8 files, 3 changesets, 10 total revisions
   $ cd ..
+
+Create clones using old repo formats to use in later tests
+  $ hg clone --config format.usestore=False \
+  >   --config experimental.changegroup3=True \
+  >   http://localhost:$HGPORT2 deeprepo-basicstore
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 10 changes to 8 files
+  updating to branch default
+  8 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ grep store deeprepo-basicstore/.hg/requires
+  [1]
+  $ hg clone --config format.usefncache=False \
+  >   --config experimental.changegroup3=True \
+  >   http://localhost:$HGPORT2 deeprepo-encodedstore
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 10 changes to 8 files
+  updating to branch default
+  8 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ grep fncache deeprepo-encodedstore/.hg/requires
+  [1]
+
+Local clone with basicstore
+  $ hg clone -U deeprepo-basicstore local-clone-basicstore
+  $ hg -R local-clone-basicstore verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
+
+Local clone with encodedstore
+  $ hg clone -U deeprepo-encodedstore local-clone-encodedstore
+  $ hg -R local-clone-encodedstore verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
+
+Local clone with fncachestore
+  $ hg clone -U deeprepo local-clone-fncachestore
+  $ hg -R local-clone-fncachestore verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
