@@ -54,9 +54,6 @@ log before edit
   > fold 177f92b77385 c
   > pick 055a42cdd887 d
   > EOF
-  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 log after edit
   $ hg logt --graph
@@ -111,9 +108,6 @@ rollup will fold without preserving the folded commit's message
   > pick 6de59d13424a f
   > pick 9c277da72c9b d
   > EOF
-  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HGEDITOR=$OLDHGEDITOR
 
@@ -177,10 +171,7 @@ check saving last-message.txt
   > pick 8e03a72b6f83 f
   > fold c4a9eb7989fc d
   > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding d
   allow non-folding commit
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   ==== before editing
   f
   ***
@@ -242,9 +233,6 @@ tip before edit
   > EOF
   editing: pick e860deea161a 4 e 1/2 changes (50.00%)
   editing: fold a00ad806cb55 5 f 2/2 changes (100.00%)
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 tip after edit
   $ hg log --rev .
@@ -372,7 +360,6 @@ dropped revision.
   created new head
   $ echo 6 >> file
   $ HGEDITOR=cat hg histedit --continue
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   +4
   ***
   +5.2
@@ -387,7 +374,6 @@ dropped revision.
   HG: user: test
   HG: branch 'default'
   HG: changed file
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/55c8d8dc79ce-4066cd98-backup.hg (glob)
   saved backup bundle to $TESTTMP/fold-with-dropped/.hg/strip-backup/617f94f13c0f-a35700fc-backup.hg (glob)
   $ hg logt -G
@@ -443,10 +429,6 @@ Folding with initial rename (issue3729)
   > pick 1c4f440a8085 rename
   > fold e0371e0426bc b
   > EOF
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  reverting b.txt
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg logt --follow b.txt
   1:cf858d235c76 rename
@@ -489,9 +471,6 @@ into the hook command.
   > fold a1a953ffb4b0 c
   > pick 6c795aa153cb a
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
   $ hg logt
@@ -530,13 +509,6 @@ editors.
   > fold b7389cc4d66e 3 foo2
   > fold 21679ff7675c 4 foo3
   > EOF
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  reverting foo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  merging foo
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg logt
   2:e8bedbda72c1 merged foos
   1:578c7455730c a

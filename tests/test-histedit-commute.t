@@ -104,7 +104,6 @@ rules should end up in .hg/histedit-last-edit.txt:
   > pick 055a42cdd887 d
   > EOF
   $ HGEDITOR="cat \"$EDITED\" > " hg histedit 177f92b77385 2>&1 | fixbundle
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
 log after edit
   $ hg log --graph
@@ -148,7 +147,6 @@ put things back
   > pick d8249471110a e
   > pick 8ade9693061e f
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   5:7eca9b5b1148
@@ -191,7 +189,6 @@ slightly different this time
   > pick 915da888f2de e
   > pick 177f92b77385 c
   > EOF
-  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   5:38b92f448761
   |  tag:         tip
@@ -232,7 +229,6 @@ keep prevents stripping dead revs
   > pick 38b92f448761 c
   > pick de71b079d9ce e
   > EOF
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log --graph
   @  changeset:   7:803ef1c6fcfd
   |  tag:         tip
@@ -417,11 +413,6 @@ Now, let's try to fold the second commit into the first:
   > EOF
 
   $ HGEDITOR="sh ./editor.sh" hg histedit 0
-  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding another-dir/initial-file (glob)
-  removing initial-dir/initial-file (glob)
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)
   saved backup bundle to $TESTTMP/issue4251/.hg/strip-backup/*-backup.hg (glob)
 

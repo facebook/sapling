@@ -243,9 +243,6 @@ short hash. This tests issue3893.
   > p    c8e68270e35a 3 four
   > f 08d98a8350f3 4 five
   > EOF
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  reverting alpha
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   four
   ***
   five
@@ -258,7 +255,6 @@ short hash. This tests issue3893.
   HG: user: test
   HG: branch 'default'
   HG: changed alpha
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
   saved backup bundle to $TESTTMP/foo/.hg/strip-backup/*-backup.hg (glob)
 

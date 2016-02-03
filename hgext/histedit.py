@@ -447,13 +447,18 @@ class histeditaction(object):
         parentctx, but does not commit them."""
         repo = self.repo
         rulectx = repo[self.node]
+        repo.ui.pushbuffer(error=True, labeled=True)
         hg.update(repo, self.state.parentctxnode, quietempty=True)
         stats = applychanges(repo.ui, repo, rulectx, {})
         if stats and stats[3] > 0:
+            buf = repo.ui.popbuffer()
+            repo.ui.write(*buf)
             raise error.InterventionRequired(
                 _('Fix up the change (%s %s)') %
                 (self.verb, node.short(self.node)),
                 hint=_('hg histedit --continue to resume'))
+        else:
+            repo.ui.popbuffer()
 
     def continuedirty(self):
         """Continues the action when changes have been applied to the working
@@ -733,7 +738,9 @@ class fold(histeditaction):
 
     def finishfold(self, ui, repo, ctx, oldctx, newnode, internalchanges):
         parent = ctx.parents()[0].node()
+        repo.ui.pushbuffer()
         hg.update(repo, parent)
+        repo.ui.popbuffer()
         ### prepare new commit data
         commitopts = {}
         commitopts['user'] = ctx.user()
@@ -764,7 +771,9 @@ class fold(histeditaction):
             repo.ui.restoreconfig(phasebackup)
         if n is None:
             return ctx, []
+        repo.ui.pushbuffer()
         hg.update(repo, n)
+        repo.ui.popbuffer()
         replacements = [(oldctx.node(), (newnode,)),
                         (ctx.node(), (n,)),
                         (newnode, (n,)),
@@ -1167,7 +1176,9 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     state.write()
     ui.progress(_("editing"), None)
 
+    repo.ui.pushbuffer()
     hg.update(repo, state.parentctxnode, quietempty=True)
+    repo.ui.popbuffer()
 
     mapping, tmpnodes, created, ntm = processreplacement(state)
     if mapping:

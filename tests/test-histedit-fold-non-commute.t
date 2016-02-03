@@ -104,7 +104,6 @@ fix up
   > print
   > EOF
   $ HGEDITOR="python cat.py" hg histedit --continue 2>&1 | fixbundle | grep -v '2 files removed'
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   d
   ***
   does not commute with e
@@ -121,7 +120,6 @@ fix up
   
   
   
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 7b4e2f4b7bcd)
@@ -262,8 +260,6 @@ fix up
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle | grep -v '2 files removed'
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick 7b4e2f4b7bcd)

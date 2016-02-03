@@ -69,7 +69,6 @@ edit the history
   > pick e860deea161a e
   > pick 652413bf663e f
   > EOF
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   Fix up the change (pick e860deea161a)

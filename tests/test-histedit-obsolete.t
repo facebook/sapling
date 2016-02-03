@@ -108,7 +108,6 @@ create an hidden revision
   > drop 59d9f330561f 7 d
   > pick cacdfd884a93 8 f
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg log --graph
   @  11:c13eb81022ca f
   |
@@ -167,7 +166,6 @@ dropped changeset to be hidden.
   > pick 40db8afa467b 10 c
   > drop b449568bf7fc 11 f
   > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   @  12:40db8afa467b c
   |
@@ -187,7 +185,6 @@ With rewritten ancestors
   > pick 40db8afa467b 10 c
   > drop 1b3b05f35ff0 13 h
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ hg log -G
   @  17:ee6544123ab8 c
   |
@@ -357,7 +354,6 @@ It seems more important to present the secret phase.
   > pick 7395e1ff83bd 13 h
   > pick ee118ab9fa44 16 k
   > EOF
-  0 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ hg log -G
   @  23:558246857888 (secret) k
   |
@@ -399,13 +395,6 @@ Note that there is a few reordering in this series for more extensive test
   > pick b605fb7503f2 14 i
   > fold ee118ab9fa44 16 k
   > EOF
-  0 files updated, 0 files merged, 6 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  27:f9daec13fb98 (secret) i
   |

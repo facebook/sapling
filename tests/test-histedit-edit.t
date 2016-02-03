@@ -286,7 +286,6 @@ say we'll change the message, but don't.
   > mv tmp "\$1"
   > EOF
   $ HGEDITOR="sh ../edit.sh" hg histedit tip 2>&1 | fixbundle
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
   changeset:   6:1fd3b2fe7754
@@ -327,7 +326,6 @@ check saving last-message.txt, at first
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   abort: emulating unexpected abort
   $ test -f .hg/last-message.txt
   [1]
@@ -354,8 +352,6 @@ check saving last-message.txt, at first
   $ HGEDITOR="sh $TESTTMP/editor.sh" hg histedit tip --commands - 2>&1 << EOF
   > mess 1fd3b2fe7754 f
   > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  adding f
   ==== before editing
   f
   
@@ -408,7 +404,6 @@ then, check "modify the message" itself
   $ hg histedit tip --commands - 2>&1 << EOF | fixbundle
   > mess 1fd3b2fe7754 f
   > EOF
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg status
   $ hg log --limit 1
   changeset:   6:62feedb1200e
