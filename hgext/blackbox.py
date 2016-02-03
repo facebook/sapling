@@ -49,6 +49,21 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 lastblackbox = None
 
+filehandles = {}
+
+def _openlog(vfs):
+    path = vfs.join('blackbox.log')
+    if path in filehandles:
+        return filehandles[path]
+    filehandles[path] = fp = vfs('blackbox.log', 'a')
+    return fp
+
+def _closelog(vfs):
+    path = vfs.join('blackbox.log')
+    fp = filehandles[path]
+    del filehandles[path]
+    fp.close()
+
 def wrapui(ui):
     class blackboxui(ui.__class__):
         @util.propertycache
@@ -71,20 +86,20 @@ def wrapui(ui):
                         self.debug("warning: cannot rename '%s' to '%s': %s\n" %
                                    (newpath, oldpath, err.strerror))
 
-            fp = self._bbvfs('blackbox.log', 'a')
+            fp = _openlog(self._bbvfs)
             maxsize = self.configbytes('blackbox', 'maxsize', 1048576)
             if maxsize > 0:
                 st = self._bbvfs.fstat(fp)
                 if st.st_size >= maxsize:
                     path = fp.name
-                    fp.close()
+                    _closelog(self._bbvfs)
                     maxfiles = self.configint('blackbox', 'maxfiles', 7)
                     for i in xrange(maxfiles - 1, 1, -1):
                         rotate(oldpath='%s.%d' % (path, i - 1),
                                newpath='%s.%d' % (path, i))
                     rotate(oldpath=path,
                            newpath=maxfiles > 0 and path + '.1')
-                    fp = self._bbvfs('blackbox.log', 'a')
+                    fp = _openlog(self._bbvfs)
             return fp
 
         def log(self, event, *msg, **opts):
