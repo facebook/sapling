@@ -253,9 +253,9 @@ More complex case were part of the rebase set were already rebased
   grafting 11:4596109a6a43 "D"
   $ hg up -qr 'desc(E)'
   $ hg rebase -s tip -d .
-  rebasing 14:0f4c66d0b70f "D" (tip)
+  rebasing 14:9e36056a46e3 "D" (tip)
   $ hg log --style default --debug -r tip
-  changeset:   15:884f358981b4d32069bb539e0e95d49a35eb81d0
+  changeset:   15:627d4614809036ba22b9e7cb31638ddc06ab99ab
   tag:         tip
   phase:       draft
   parent:      4:9520eea781bcca16c1e15acc0ba14335a0e8e5ba
@@ -266,7 +266,7 @@ More complex case were part of the rebase set were already rebased
   files+:      D
   extra:       branch=default
   extra:       intermediate-source=4596109a6a4328c398bde3a4a3b6737cfade3003
-  extra:       rebase_source=0f4c66d0b70f8e1ce4aec01f8e95cf24ee923afa
+  extra:       rebase_source=9e36056a46e37c9776168c7375734eebc70e294f
   extra:       source=32af7686d403cf45b5d95f2d70cebea587ac806a
   description:
   D

@@ -4010,10 +4010,10 @@ def _dograft(ui, repo, *revs, **opts):
         if opts.get('dry_run'):
             continue
 
-        extra = ctx.extra().copy()
-        del extra['branch']
-        source = extra.get('source')
+        source = ctx.extra().get('source')
+        extra = {}
         if source:
+            extra['source'] = source
             extra['intermediate-source'] = ctx.hex()
         else:
             extra['source'] = ctx.hex()
