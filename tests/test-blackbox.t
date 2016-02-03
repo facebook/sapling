@@ -45,7 +45,7 @@ clone, commit, pull
   (run 'hg update' to get a working copy)
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob (*)> pull (glob)
-  1970/01/01 00:00:00 bob (*)> updated served branch cache in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob (*)> updated served branch cache in * seconds (glob)
   1970/01/01 00:00:00 bob (*)> wrote served branch cache with 1 labels and 2 nodes (glob)
   1970/01/01 00:00:00 bob (*)> 1 incoming changes - new heads: d02f48003e62 (glob)
   1970/01/01 00:00:00 bob (*)> pull exited 0 after * seconds (glob)
@@ -55,10 +55,10 @@ we must not cause a failure if we cannot write to the log
   $ hg rollback
   repository tip rolled back to revision 1 (undo pull)
 
-#if unix-permissions no-root
-  $ chmod 000 .hg/blackbox.log
+  $ mv .hg/blackbox.log .hg/blackbox.log-
+  $ mkdir .hg/blackbox.log
   $ hg --debug incoming
-  warning: cannot write to blackbox.log: Permission denied
+  warning: cannot write to blackbox.log: * (glob)
   comparing with $TESTTMP/blackboxtest (glob)
   query 1; heads
   searching for changes
@@ -77,7 +77,6 @@ we must not cause a failure if we cannot write to the log
   c
   
   
-#endif
   $ hg pull
   pulling from $TESTTMP/blackboxtest (glob)
   searching for changes
@@ -87,14 +86,14 @@ we must not cause a failure if we cannot write to the log
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
 
-a failure reading from the log is fine
-#if unix-permissions no-root
+a failure reading from the log is fatal
+
   $ hg blackbox -l 3
-  abort: Permission denied: $TESTTMP/blackboxtest2/.hg/blackbox.log
+  abort: *$TESTTMP/blackboxtest2/.hg/blackbox.log* (glob)
   [255]
 
-  $ chmod 600 .hg/blackbox.log
-#endif
+  $ rmdir .hg/blackbox.log
+  $ mv .hg/blackbox.log- .hg/blackbox.log
 
 backup bundles get logged
 
@@ -108,7 +107,7 @@ backup bundles get logged
   $ hg blackbox -l 5
   1970/01/01 00:00:00 bob (*)> strip tip (glob)
   1970/01/01 00:00:00 bob (*)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
-  1970/01/01 00:00:00 bob (*)> updated base branch cache in ?.???? seconds (glob)
+  1970/01/01 00:00:00 bob (*)> updated base branch cache in * seconds (glob)
   1970/01/01 00:00:00 bob (*)> wrote base branch cache with 1 labels and 2 nodes (glob)
   1970/01/01 00:00:00 bob (*)> strip tip exited 0 after * seconds (glob)
 
@@ -142,6 +141,39 @@ log rotation
   .hg/blackbox.log
   .hg/blackbox.log.1
   .hg/blackbox.log.2
+  $ cd ..
+
+  $ hg init blackboxtest3
+  $ cd blackboxtest3
+  $ hg blackbox
+  $ mv .hg/blackbox.log .hg/blackbox.log-
+  $ mkdir .hg/blackbox.log
+  $ sed -e 's/\(.*test1.*\)/#\1/; s#\(.*commit2.*\)#os.rmdir(".hg/blackbox.log")\nos.rename(".hg/blackbox.log-", ".hg/blackbox.log")\n\1#' $TESTDIR/test-dispatch.py > ../test-dispatch.py
+  $ python ../test-dispatch.py
+  running: add foo
+  result: 0
+  running: commit -m commit1 -d 2000-01-01 foo
+  result: None
+  running: commit -m commit2 -d 2000-01-02 foo
+  result: None
+  running: log -r 0
+  changeset:   0:0e4634943879
+  user:        test
+  date:        Sat Jan 01 00:00:00 2000 +0000
+  summary:     commit1
+  
+  result: None
+  running: log -r tip
+  changeset:   1:45589e459b2e
+  tag:         tip
+  user:        test
+  date:        Sun Jan 02 00:00:00 2000 +0000
+  summary:     commit2
+  
+  result: None
+  $ hg blackbox
+  1970/01/01 00:00:00 bob (*)> blackbox (glob)
+  1970/01/01 00:00:00 bob (*)> blackbox exited 0 after * seconds (glob)
 
 cleanup
   $ cd ..
