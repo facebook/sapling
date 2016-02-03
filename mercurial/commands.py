@@ -1682,9 +1682,6 @@ def _docommit(ui, repo, *pats, **opts):
         if not allowunstable and old.children():
             raise error.Abort(_('cannot amend changeset with children'))
 
-        newextra = extra.copy()
-        newextra['branch'] = branch
-        extra = newextra
         # commitfunc is used only for temporary amend commit by cmdutil.amend
         def commitfunc(ui, repo, message, match, opts):
             return repo.commit(message,

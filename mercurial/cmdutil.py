@@ -2623,11 +2623,6 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 message = old.description()
 
             pureextra = extra.copy()
-            if 'amend_source' in pureextra:
-                del pureextra['amend_source']
-            pureoldextra = old.extra()
-            if 'amend_source' in pureoldextra:
-                del pureoldextra['amend_source']
             extra['amend_source'] = old.hex()
 
             new = context.memctx(repo,
@@ -2645,7 +2640,7 @@ def amend(ui, repo, commitfunc, old, extra, pats, opts):
                 and newdesc == old.description()
                 and user == old.user()
                 and date == old.date()
-                and pureextra == pureoldextra):
+                and pureextra == old.extra()):
                 # nothing changed. continuing here would create a new node
                 # anyway because of the amend_source noise.
                 #
