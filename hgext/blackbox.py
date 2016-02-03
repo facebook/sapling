@@ -31,7 +31,7 @@ Examples::
 
 from mercurial import util, cmdutil
 from mercurial.i18n import _
-import errno, os, re
+import errno, re
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -107,7 +107,7 @@ def wrapui(ui):
             if blackbox:
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
-                pid = str(os.getpid())
+                pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 try:
                     blackbox.write('%s %s (%s)> %s' %

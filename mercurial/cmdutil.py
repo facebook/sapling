@@ -796,7 +796,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         initfn()
 
     if not opts['daemon']:
-        writepid(os.getpid())
+        writepid(util.getpid())
 
     if opts['daemon_pipefds']:
         lockpath = opts['daemon_pipefds']

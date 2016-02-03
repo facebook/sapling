@@ -28,7 +28,7 @@ class lockwrapper(lock.lock):
         self._pidoffset = pidoffset
         super(lockwrapper, self).__init__(*args, **kwargs)
     def _getpid(self):
-        return os.getpid() + self._pidoffset
+        return super(lockwrapper, self)._getpid() + self._pidoffset
 
 class teststate(object):
     def __init__(self, testcase, dir, pidoffset=0):

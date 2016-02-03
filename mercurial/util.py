@@ -65,6 +65,7 @@ explainexit = platform.explainexit
 findexe = platform.findexe
 gethgcmd = platform.gethgcmd
 getuser = platform.getuser
+getpid = os.getpid
 groupmembers = platform.groupmembers
 groupname = platform.groupname
 hidewindow = platform.hidewindow

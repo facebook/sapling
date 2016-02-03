@@ -9,7 +9,6 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
-import os
 import socket
 import time
 import warnings
@@ -77,8 +76,8 @@ class lock(object):
         self.release()
 
     def _getpid(self):
-        # wrapper around os.getpid() to make testing easier
-        return os.getpid()
+        # wrapper around util.getpid() to make testing easier
+        return util.getpid()
 
     def lock(self):
         timeout = self.timeout
