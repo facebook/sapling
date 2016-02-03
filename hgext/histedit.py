@@ -887,7 +887,7 @@ def histedit(ui, repo, *freeargs, **opts):
 
     - `edit` to edit this changeset
 
-    There are a number of ways to select the root changset:
+    There are a number of ways to select the root changeset:
 
     - Specify ANCESTOR directly
 
