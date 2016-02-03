@@ -25,7 +25,8 @@
 
 Rebasing
 D onto H - simple rebase:
-(this also tests that editor is invoked if '--edit' is specified)
+(this also tests that editor is invoked if '--edit' is specified, and that we
+can abort or warn for colliding untracked files)
 
   $ hg clone -q -u . a a1
   $ cd a1
@@ -50,8 +51,10 @@ D onto H - simple rebase:
 
   $ hg status --rev "3^1" --rev 3
   A D
-  $ HGEDITOR=cat hg rebase -s 3 -d 7 --edit
+  $ echo collide > D
+  $ HGEDITOR=cat hg rebase -s 3 -d 7 --edit --config merge.checkunknown=warn
   rebasing 3:32af7686d403 "D"
+  D: replacing untracked file
   D
   
   
@@ -62,6 +65,9 @@ D onto H - simple rebase:
   HG: branch 'default'
   HG: added D
   saved backup bundle to $TESTTMP/a1/.hg/strip-backup/32af7686d403-6f7dface-backup.hg (glob)
+  $ cat D.orig
+  collide
+  $ rm D.orig
 
   $ hg tglog
   o  7: 'D'
@@ -84,14 +90,19 @@ D onto H - simple rebase:
 
 
 D onto F - intermediate point:
-(this also tests that editor is not invoked if '--edit' is not specified)
+(this also tests that editor is not invoked if '--edit' is not specified, and
+that we can ignore for colliding untracked files)
 
   $ hg clone -q -u . a a2
   $ cd a2
+  $ echo collide > D
 
-  $ HGEDITOR=cat hg rebase -s 3 -d 5
+  $ HGEDITOR=cat hg rebase -s 3 -d 5 --config merge.checkunknown=ignore
   rebasing 3:32af7686d403 "D"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/32af7686d403-6f7dface-backup.hg (glob)
+  $ cat D.orig
+  collide
+  $ rm D.orig
 
   $ hg tglog
   o  7: 'D'
@@ -114,15 +125,21 @@ D onto F - intermediate point:
 
 
 E onto H - skip of G:
+(this also tests that we can overwrite untracked files and don't create backups
+if they have the same contents)
 
   $ hg clone -q -u . a a3
   $ cd a3
+  $ hg cat -r 4 E | tee E
+  E
 
   $ hg rebase -s 4 -d 7
   rebasing 4:9520eea781bc "E"
   rebasing 6:eea13746799a "G"
   note: rebase of 6:eea13746799a created no changes to commit
   saved backup bundle to $TESTTMP/a3/.hg/strip-backup/9520eea781bc-fcd8edd4-backup.hg (glob)
+  $ f E.orig
+  E.orig: file not found
 
   $ hg tglog
   o  6: 'E'

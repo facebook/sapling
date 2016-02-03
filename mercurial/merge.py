@@ -634,6 +634,39 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         unknownconflicts = conflicts - ignoredconflicts
         collectconflicts(ignoredconflicts, ignoredconfig)
         collectconflicts(unknownconflicts, unknownconfig)
+    else:
+        for f, (m, args, msg) in actions.iteritems():
+            if m == 'cm':
+                fl2, anc = args
+                different = _checkunknownfile(repo, wctx, mctx, f)
+                if repo.dirstate._ignore(f):
+                    config = ignoredconfig
+                else:
+                    config = unknownconfig
+
+                # The behavior when force is True is described by this table:
+                #  config  different  mergeforce  |    action    backup
+                #    *         n          *       |      get        n
+                #    *         y          y       |     merge       -
+                #   abort      y          n       |     merge       -   (1)
+                #   warn       y          n       |  warn + get     y
+                #  ignore      y          n       |      get        y
+                #
+                # (1) this is probably the wrong behavior here -- we should
+                #     probably abort, but some actions like rebases currently
+                #     don't like an abort happening in the middle of
+                #     merge.update.
+                if not different:
+                    actions[f] = ('g', (fl2, False), "remote created")
+                elif mergeforce or config == 'abort':
+                    actions[f] = ('m', (f, f, None, False, anc),
+                                  "remote differs from untracked local")
+                elif config == 'abort':
+                    abortconflicts.add(f)
+                else:
+                    if config == 'warn':
+                        warnconflicts.add(f)
+                    actions[f] = ('g', (fl2, True), "remote created")
 
     for f in sorted(abortconflicts):
         repo.ui.warn(_("%s: untracked file differs\n") % f)
@@ -649,14 +682,6 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
         if m == 'c':
             flags, = args
             actions[f] = ('g', (flags, backup), msg)
-        elif m == 'cm':
-            fl2, anc = args
-            different = _checkunknownfile(repo, wctx, mctx, f)
-            if different:
-                actions[f] = ('m', (f, f, None, False, anc),
-                              "remote differs from untracked local")
-            else:
-                actions[f] = ('g', (fl2, backup), "remote created")
 
 def _forgetremoved(wctx, mctx, branchmerge):
     """
