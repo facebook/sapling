@@ -108,7 +108,7 @@ backup bundles get logged
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   $ hg blackbox -l 6
   1970/01/01 00:00:00 bob (*)> strip tip (glob)
-  1970/01/01 00:00:00 bob (*)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
+  1970/01/01 00:00:00 bob (*)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg (glob)
   1970/01/01 00:00:00 bob (*)> updated base branch cache in * seconds (glob)
   1970/01/01 00:00:00 bob (*)> wrote base branch cache with 1 labels and 2 nodes (glob)
   1970/01/01 00:00:00 bob (*)> strip tip exited 0 after * seconds (glob)
