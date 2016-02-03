@@ -141,7 +141,7 @@ Merge with remote
 # - local and remote changed content1_content2_*_content2-untracked
 #   in the same way, so it could potentially be left alone
 
-  $ hg merge -f --tool internal:merge3 'desc("remote")'
+  $ hg merge -f --tool internal:merge3 'desc("remote")' 2>&1 | tee $TESTTMP/merge-output-1
   local changed content1_missing_content1_content4-tracked which remote deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   local changed content1_missing_content3_content3-tracked which remote deleted
@@ -217,7 +217,6 @@ Merge with remote
   warning: conflicts while merging missing_content2_missing_content4-untracked! (edit, then use 'hg resolve --mark')
   18 files updated, 3 files merged, 8 files removed, 35 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
-  [1]
 
 Check which files need to be resolved (should correspond to the output above).
 This should be the files for which the base (1st filename segment), the remote
@@ -780,3 +779,17 @@ Re-resolve and check status
   [1]
   $ checkstatus > $TESTTMP/status2 2>&1
   $ cmp $TESTTMP/status1 $TESTTMP/status2 || diff -U8 $TESTTMP/status1 $TESTTMP/status2
+
+Set up working directory again
+
+  $ hg -q update --clean 2
+  $ hg --config extensions.purge= purge
+  $ python $TESTDIR/generate-working-copy-states.py state 3 wc
+  $ hg addremove -q --similarity 0
+  $ hg forget *_*_*_*-untracked
+  $ rm *_*_*_missing-*
+
+Merge with checkunknown = warn, see that behavior is the same as before
+  $ hg merge -f --tool internal:merge3 'desc("remote")' --config merge.checkunknown=warn > $TESTTMP/merge-output-2 2>&1
+  [1]
+  $ cmp $TESTTMP/merge-output-1 $TESTTMP/merge-output-2 || diff -U8 $TESTTMP/merge-output-1 $TESTTMP/merge-output-2
