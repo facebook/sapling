@@ -133,6 +133,7 @@ Should succeed because there is only one head on our branch:
   adding file changes
   added 4 changesets with 4 changes to 1 files (+1 heads)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "branchA"
 
 Make changes on new branch on tt
 

@@ -5542,13 +5542,17 @@ def postincoming(ui, repo, modheads, optupdate, checkout):
     if modheads == 0:
         return
     if optupdate:
+        warndest = False
         try:
             brev = checkout
             movemarkfrom = None
             if not checkout:
+                warndest = True
                 updata = destutil.destupdate(repo)
                 checkout, movemarkfrom, brev = updata
             ret = hg.update(repo, checkout)
+            if warndest:
+                destutil.statusotherdests(ui, repo)
         except error.UpdateAbort as inst:
             msg = _("not updating: %s") % str(inst)
             hint = inst.hint

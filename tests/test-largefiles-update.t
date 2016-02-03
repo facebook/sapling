@@ -465,6 +465,7 @@ Test that the internal linear merging works correctly
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
   take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg status -A large1
   M large1
@@ -498,6 +499,7 @@ Test that the internal linear merging works correctly
   keep (l)ocal ba94c2efe5b7c5e0af8d189295ce00553b0612b7 or
   take (o)ther e5bb990443d6a92aaf7223813720f7566c9dd05b? l
   2 files updated, 1 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
 
   $ hg status -A large1
   M large1
