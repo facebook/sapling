@@ -112,6 +112,7 @@ def wrapui(ui):
                 try:
                     blackbox.write('%s %s (%s)> %s' %
                                    (date, user, pid, formattedmsg))
+                    blackbox.flush()
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
