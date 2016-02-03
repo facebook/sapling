@@ -65,11 +65,11 @@ def _commit(orig, self, *args, **kwargs):
     wlock = self.wlock()
     try:
         maps = getconfigs(self.ui)
+        mirroredfiles = set()
         if maps:
             match = args[3] if len(args) >= 4 else kwargs.get('match')
             match = match or matchmod.always(self.root, '')
             status = self.status()
-            mirroredfiles = set()
 
             for added in status.added:
                 mirrors = getmirrors(maps, added)
