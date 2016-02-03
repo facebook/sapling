@@ -70,16 +70,16 @@
   $ hg init lock-checker
   $ cd lock-checker
   $ hg buggylocking
-  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
-  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
+  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
+  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ cat << EOF >> $HGRCPATH
   > [devel]
   > all=0
   > check-locks=1
   > EOF
   $ hg buggylocking
-  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:11 (buggylocking)
-  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:13 (buggylocking)
+  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
+  devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ hg buggylocking --traceback
   devel-warn: transaction with no lock at:
    */hg:* in * (glob)
@@ -112,7 +112,7 @@
   $ hg add a
   $ hg commit -m a
   $ hg stripintr
-  saved backup bundle to $TESTTMP/lock-checker/.hg/strip-backup/cb9a9f314b8b-cc5ccb0b-backup.hg (glob)
+  saved backup bundle to $TESTTMP/lock-checker/.hg/strip-backup/*-backup.hg (glob)
   abort: programming error: cannot strip from inside a transaction
   (contact your extension maintainer)
   [255]
@@ -122,7 +122,7 @@
   0
   $ hg oldanddeprecated
   devel-warn: foorbar is deprecated, go shopping
-  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:53 (oldanddeprecated)
+  (compatibility will be dropped after Mercurial-42.1337, update your code.) at: $TESTTMP/buggylocking.py:* (oldanddeprecated) (glob)
 
   $ hg oldanddeprecated --traceback
   devel-warn: foorbar is deprecated, go shopping
