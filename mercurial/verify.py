@@ -197,7 +197,7 @@ class verifier(object):
         ui.progress(_('checking'), None)
         return mflinkrevs, filelinkrevs
 
-    def _verifymanifest(self, mflinkrevs, dir=""):
+    def _verifymanifest(self, mflinkrevs, dir="", storefiles=None):
         repo = self.repo
         ui = self.ui
         mf = self.repo.manifest.dirlog(dir)
@@ -211,6 +211,8 @@ class verifier(object):
         label = "manifest"
         if dir:
             label = dir
+            revlogfiles = mf.files()
+            storefiles.difference_update(revlogfiles)
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
@@ -260,10 +262,22 @@ class verifier(object):
 
         if not dir and subdirnodes:
             self.ui.status(_("checking directory manifests\n"))
+            storefiles = set()
+            revlogv1 = self.revlogv1
+            for f, f2, size in repo.store.datafiles():
+                if not f:
+                    self.err(None, _("cannot decode filename '%s'") % f2)
+                elif (size > 0 or not revlogv1) and f.startswith('meta/'):
+                    storefiles.add(_normpath(f))
+
         for subdir, linkrevs in subdirnodes.iteritems():
-            subdirfilenodes = self._verifymanifest(linkrevs, subdir)
+            subdirfilenodes = self._verifymanifest(linkrevs, subdir, storefiles)
             for f, onefilenodes in subdirfilenodes.iteritems():
                 filenodes.setdefault(f, {}).update(onefilenodes)
+
+        if not dir and subdirnodes:
+            for f in sorted(storefiles):
+                self.warn(_("warning: orphan revlog '%s'") % f)
 
         return filenodes
 
@@ -402,7 +416,7 @@ class verifier(object):
                              short(node), f)
         ui.progress(_('checking'), None)
 
-        for f in storefiles:
+        for f in sorted(storefiles):
             self.warn(_("warning: orphan revlog '%s'") % f)
 
         return len(files), revisions

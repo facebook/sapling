@@ -517,6 +517,12 @@ Verify reports missing dirlog
    b/@0: parent-directory manifest refers to unknown revision 67688a370455
    b/@1: parent-directory manifest refers to unknown revision f38e85d334c5
    b/@2: parent-directory manifest refers to unknown revision 99c9792fd4b0
+  warning: orphan revlog 'meta/b/bar/00manifest.i'
+  warning: orphan revlog 'meta/b/bar/orange/00manifest.i'
+  warning: orphan revlog 'meta/b/bar/orange/fly/00manifest.i'
+  warning: orphan revlog 'meta/b/foo/00manifest.i'
+  warning: orphan revlog 'meta/b/foo/apple/00manifest.i'
+  warning: orphan revlog 'meta/b/foo/apple/bees/00manifest.i'
   crosschecking files in changesets and manifests
    b/bar/fruits.txt@0: in changeset but not in manifest
    b/bar/orange/fly/gnat.py@0: in changeset but not in manifest
@@ -524,6 +530,7 @@ Verify reports missing dirlog
    b/foo/apple/bees/flower.py@0: in changeset but not in manifest
   checking files
   8 files, 3 changesets, 10 total revisions
+  6 warnings encountered!
   8 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
