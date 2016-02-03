@@ -44,6 +44,7 @@ from mercurial.node import hex
 
 from mercurial import (
     cmdutil,
+    ui as uimod,
     util,
 )
 
@@ -79,6 +80,26 @@ def hexfn(node):
 
 def wrapui(ui):
     class blackboxui(ui.__class__):
+        def __init__(self, src=None):
+            super(blackboxui, self).__init__(src)
+            if src is None:
+                self._partialinit()
+            else:
+                self._bbfp = src._bbfp
+                self._bbrepo = src._bbrepo
+                self._bbvfs = src._bbvfs
+
+        def _partialinit(self):
+            if util.safehasattr(self, '_bbvfs'):
+                return
+            self._bbfp = None
+            self._bbrepo = None
+            self._bbvfs = None
+
+        def copy(self):
+            self._partialinit()
+            return self.__class__(self)
+
         @util.propertycache
         def track(self):
             return self.configlist('blackbox', 'track', ['*'])
@@ -122,13 +143,14 @@ def wrapui(ui):
         def log(self, event, *msg, **opts):
             global lastui
             super(blackboxui, self).log(event, *msg, **opts)
+            self._partialinit()
 
             if not '*' in self.track and not event in self.track:
                 return
 
-            if util.safehasattr(self, '_bbfp'):
+            if self._bbfp:
                 ui = self
-            elif util.safehasattr(self, '_bbvfs'):
+            elif self._bbvfs:
                 try:
                     self._bbfp = self._openlogfile()
                 except (IOError, OSError) as err:
@@ -143,15 +165,14 @@ def wrapui(ui):
                 # was seen.
                 ui = lastui
 
-            if (util.safehasattr(ui, '_bbfp') and
-                ui._bbfp is not None):
+            if ui and ui._bbfp:
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
                 pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 rev = '(unknown)'
                 changed = ''
-                if util.safehasattr(ui, '_bbrepo'):
+                if ui._bbrepo:
                     ctx = ui._bbrepo[None]
                     if ctx.rev() is not None:
                         rev = hexfn(ctx.node())
@@ -169,14 +190,16 @@ def wrapui(ui):
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                if not lastui or util.safehasattr(ui, '_bbrepo'):
+                if not lastui or ui._bbrepo:
                     lastui = ui
 
         def setrepo(self, repo):
-            self._bbvfs = repo.vfs
+            self._bbfp = None
             self._bbrepo = repo
+            self._bbvfs = repo.vfs
 
     ui.__class__ = blackboxui
+    uimod.ui = blackboxui
 
 def uisetup(ui):
     wrapui(ui)
