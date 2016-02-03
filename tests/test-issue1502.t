@@ -12,16 +12,14 @@ Initialize repository
 
   $ echo "bar" > foo1/a && hg -R foo1 commit -m "edit a in foo1"
   $ echo "hi" > foo/a && hg -R foo commit -m "edited a foo"
-  $ hg -R foo1 pull -u
+  $ hg -R foo1 pull
   pulling from $TESTTMP/foo (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  abort: not updating: not a linear update
-  (merge or update --check to force update)
-  [255]
+  (run 'hg heads' to see heads, 'hg merge' to merge)
 
   $ hg -R foo1 book branchy
   $ hg -R foo1 book
