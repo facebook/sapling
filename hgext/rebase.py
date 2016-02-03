@@ -621,10 +621,7 @@ def concludenode(repo, rev, p1, p2, commitmsg=None, editor=None, extrafn=None,
         if commitmsg is None:
             commitmsg = ctx.description()
         keepbranch = keepbranches and repo[p1].branch() != ctx.branch()
-        extra = ctx.extra().copy()
-        if not keepbranches:
-            del extra['branch']
-        extra['rebase_source'] = ctx.hex()
+        extra = {'rebase_source': ctx.hex()}
         if extrafn:
             extrafn(ctx, extra)
 
