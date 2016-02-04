@@ -719,6 +719,8 @@ class Test(unittest.TestCase):
             (br':%d\b' % self._startport, b':$HGPORT'),
             (br':%d\b' % (self._startport + 1), b':$HGPORT1'),
             (br':%d\b' % (self._startport + 2), b':$HGPORT2'),
+            (br':%d\b' % (self._startport + 2), b':$HGPORT3'),
+            (br':%d\b' % (self._startport + 2), b':$HGPORT4'),
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
             ]
@@ -741,6 +743,8 @@ class Test(unittest.TestCase):
         env["HGPORT"] = str(self._startport)
         env["HGPORT1"] = str(self._startport + 1)
         env["HGPORT2"] = str(self._startport + 2)
+        env["HGPORT3"] = str(self._startport + 3)
+        env["HGPORT4"] = str(self._startport + 4)
         env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b'daemon.pids')
         env["HGEDITOR"] = ('"' + sys.executable + '"'

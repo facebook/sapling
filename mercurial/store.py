@@ -330,7 +330,7 @@ class basicstore(object):
         return l
 
     def datafiles(self):
-        return self._walk('data', True)
+        return self._walk('data', True) + self._walk('meta', True)
 
     def topfiles(self):
         # yield manifest before changelog
@@ -378,7 +378,7 @@ class encodedstore(basicstore):
         self.opener = self.vfs
 
     def datafiles(self):
-        for a, b, size in self._walk('data', True):
+        for a, b, size in super(encodedstore, self).datafiles():
             try:
                 a = decodefilename(a)
             except KeyError:
@@ -460,7 +460,8 @@ class _fncachevfs(scmutil.abstractvfs, scmutil.auditvfs):
         self.encode = encode
 
     def __call__(self, path, mode='r', *args, **kw):
-        if mode not in ('r', 'rb') and path.startswith('data/'):
+        if mode not in ('r', 'rb') and (path.startswith('data/') or
+                                        path.startswith('meta/')):
             self.fncache.add(path)
         return self.vfs(self.encode(path), mode, *args, **kw)
 

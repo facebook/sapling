@@ -273,6 +273,16 @@ def rebuildfncache(ui, repo):
 
         ui.progress(_('changeset'), None)
 
+        if 'treemanifest' in repo: # safe but unnecessary otherwise
+            for dir in util.dirs(seenfiles):
+                i = 'meta/%s/00manifest.i' % dir
+                d = 'meta/%s/00manifest.d' % dir
+
+                if repo.store._exists(i):
+                    newentries.add(i)
+                if repo.store._exists(d):
+                    newentries.add(d)
+
         addcount = len(newentries - oldentries)
         removecount = len(oldentries - newentries)
         for p in sorted(oldentries - newentries):

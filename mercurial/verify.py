@@ -284,7 +284,7 @@ class verifier(object):
         for f, f2, size in repo.store.datafiles():
             if not f:
                 self.err(None, _("cannot decode filename '%s'") % f2)
-            elif size > 0 or not revlogv1:
+            elif (size > 0 or not revlogv1) and f.startswith('data/'):
                 storefiles.add(_normpath(f))
 
         files = sorted(set(filenodes) | set(filelinkrevs))
