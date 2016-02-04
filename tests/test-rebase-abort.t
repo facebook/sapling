@@ -356,6 +356,7 @@ during a rebase (issue4661)
   commit: (clean)
   update: 1 new changesets, 2 branch heads (merge)
   phases: 4 draft
+  $ cd ..
 
 test aborting a rebase succeeds after rebasing with skipped commits onto a
 public changeset (issue4896)
@@ -389,4 +390,5 @@ commit will cause merge conflict on rebase
   [1]
   $ hg rebase --abort
   rebase aborted
+  $ cd ..
 
