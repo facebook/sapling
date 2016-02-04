@@ -3933,7 +3933,7 @@ def _dograft(ui, repo, *revs, **opts):
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise
-            raise error.Abort(_("no graft state found, can't continue"))
+            cmdutil.wrongtooltocontinue(repo, _('graft'))
     else:
         cmdutil.checkunfinished(repo)
         cmdutil.bailifchanged(repo)

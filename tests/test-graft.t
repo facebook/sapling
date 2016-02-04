@@ -46,6 +46,13 @@ Create a repo with some stuff in it:
   |
   o  test@0.public: 0
   
+Can't continue without starting:
+
+  $ hg rm -q e
+  $ hg graft --continue
+  abort: no graft in progress
+  [255]
+  $ hg revert -r . -q e
 
 Need to specify a rev:
 
