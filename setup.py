@@ -17,11 +17,13 @@ setup(
     py_modules=[
         'automv',
         'backups',
+        'bundle2hooks',
         'catnotate',
         'chistedit',
         'commitextras',
         'dirsync',
         'errorredirect',
+        'ext2util',
         'fbamend',
         'fbconduit',
         'fbhistedit',
