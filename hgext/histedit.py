@@ -279,7 +279,7 @@ class histeditstate(object):
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            raise error.Abort(_('no histedit in progress'))
+            cmdutil.wrongtooltocontinue(self.repo, _('histedit'))
 
         if state.startswith('v1\n'):
             data = self._load()

@@ -133,6 +133,11 @@ temporarily.
   (hg histedit --continue to resume)
   [1]
 
+  $ hg graft --continue
+  abort: no graft in progress
+  (continue: hg histedit --continue)
+  [255]
+
   $ mv .hg/histedit-state .hg/histedit-state.back
   $ hg update --quiet --clean 2
   $ echo alpha >> alpha
