@@ -1225,6 +1225,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
         metadata['user'] = repo.ui.username()
     tr = repo.transaction('add-obsolescence-marker')
     try:
+        markerargs = []
         for rel in relations:
             prec = rel[0]
             sucs = rel[1]
@@ -1243,6 +1244,15 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
                 npare = tuple(p.node() for p in prec.parents())
             if nprec in nsucs:
                 raise error.Abort("changeset %s cannot obsolete itself" % prec)
+
+            # Creating the marker causes the hidden cache to become invalid,
+            # which causes recomputation when we ask for prec.parents() above.
+            # Resulting in n^2 behavior.  So let's prepare all of the args
+            # first, then create the markers.
+            markerargs.append((nprec, nsucs, npare, localmetadata))
+
+        for args in markerargs:
+            nprec, nsucs, npare, localmetadata = args
             repo.obsstore.create(tr, nprec, nsucs, flag, parents=npare,
                                  date=date, metadata=localmetadata)
             repo.filteredrevcache.clear()
