@@ -90,3 +90,28 @@ And the NTFS case:
   (If you need to continue, read about CVE-2014-9390 and then set '[git] blockdotgit = false' in your hgrc.)
   [255]
   $ cd ..
+
+Now check a Git repository containing a Mercurial repository, which
+you can't check out.
+
+  $ rm -rf hg git nested
+  $ git init -q git
+  $ hg init nested
+  $ mv nested git
+  $ cd git
+  $ git add nested
+  $ fn_git_commit -m 'add a Mercurial repository'
+  $ cd ..
+  $ hg clone git hg
+  importing git objects into hg
+  abort: Refusing to import problematic path 'nested/.hg/00changelog.i'
+  (Mercurial cannot check out paths inside nested repositories; if you need to continue, then set '[git] blockdothg = false' in your hgrc.)
+  [255]
+  $ hg clone --config git.blockdothg=false git hg
+  importing git objects into hg
+  warning: path 'nested/.hg/00changelog.i' is within a nested repository, which Mercurial cannot check out.
+  warning: path 'nested/.hg/requires' is within a nested repository, which Mercurial cannot check out.
+  updating to branch default
+  abort: path 'nested/.hg/00changelog.i' is inside nested repo 'nested'
+  [255]
+  $ cd ..

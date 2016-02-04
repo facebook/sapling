@@ -1456,6 +1456,7 @@ class GitHandler(object):
                 gitlinks[oldfile] = None
                 continue
             if newfile is not None:
+                self.audit_hg_path(newfile)
                 # new = file
                 files[newfile] = False, newmode, newsha
                 if renames is not None and newfile != oldfile:
@@ -1537,6 +1538,18 @@ class GitHandler(object):
         names = [name for name, path in self.paths if path == remote]
         if names:
             return names[0]
+
+    def audit_hg_path(self, path):
+        if '.hg' in path.split(os.path.sep):
+            if self.ui.configbool('git', 'blockdothg', True):
+                raise hgutil.Abort(
+                    ('Refusing to import problematic path %r' % path),
+                    hint=("Mercurial cannot check out paths inside nested " +
+                          "repositories; if you need to continue, then set " +
+                          "'[git] blockdothg = false' in your hgrc."))
+            self.ui.warn(('warning: path %r is within a nested repository, ' +
+                          'which Mercurial cannot check out.\n')
+                         % path)
 
     # Stolen from hgsubversion
     def swap_out_encoding(self, new_encoding='UTF-8'):
