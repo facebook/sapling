@@ -157,6 +157,8 @@ def rebase(ui, repo, **opts):
 
     If you need to use a tool to automate merge/conflict decisions, you
     can specify one with ``--tool``, see :hg:`help merge-tools`.
+    As a caveat: the tool will not be used to mediate when a file was
+    deleted, there is no hook presently available for this.
 
     If a rebase is interrupted to manually resolve a conflict, it can be
     continued with --continue/-c or aborted with --abort/-a.
