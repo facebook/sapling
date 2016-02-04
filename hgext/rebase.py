@@ -915,7 +915,7 @@ def restorestatus(repo):
     except IOError as err:
         if err.errno != errno.ENOENT:
             raise
-        raise error.Abort(_('no rebase in progress'))
+        cmdutil.wrongtooltocontinue(repo, _('rebase'))
 
     if keepbranches is None:
         raise error.Abort(_('.hg/rebasestate is incomplete'))

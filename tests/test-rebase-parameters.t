@@ -481,6 +481,10 @@ Test --tool parameter:
   $ hg resolve -m c2
   (no more unresolved files)
   continue: hg rebase --continue
+  $ hg graft --continue
+  abort: no graft in progress
+  (continue: hg rebase --continue)
+  [255]
   $ hg rebase -c --tool internal:fail
   rebasing 2:e4e3f3546619 "c2b" (tip)
   note: rebase of 2:e4e3f3546619 created no changes to commit
