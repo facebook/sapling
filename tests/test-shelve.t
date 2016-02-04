@@ -373,7 +373,7 @@ abort the unshelve and be happy
 try to continue with no unshelve underway
 
   $ hg unshelve -c
-  abort: no unshelve operation underway
+  abort: no unshelve in progress
   [255]
   $ hg status
   A foo/foo
@@ -403,6 +403,10 @@ attempt to continue
   (use 'hg unshelve --continue' or 'hg unshelve --abort')
   [255]
 
+  $ hg graft --continue
+  abort: no graft in progress
+  (continue: hg unshelve --continue)
+  [255]
   $ hg unshelve -c
   rebasing 5:32c69314e062 "changes to: [mq]: second.patch" (tip)
   unshelve of 'default' complete

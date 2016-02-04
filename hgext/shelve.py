@@ -628,7 +628,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
         except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
-            raise error.Abort(_('no unshelve operation underway'))
+            cmdutil.wrongtooltocontinue(repo, _('unshelve'))
 
         if abortf:
             return unshelveabort(ui, repo, state, opts)
