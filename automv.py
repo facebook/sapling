@@ -19,13 +19,6 @@ def extsetup(ui):
     entry = wrapcommand(commands.table, 'commit', mvcheck)
     entry[1].append(('', 'no-move-detection', None,
          _('disable automatic' + 'file move detection')))
-    try:
-        module = extensions.find('fbamend')
-        entry = wrapcommand(module.cmdtable, 'amend', mvcheck)
-        entry[1].append(('', 'no-move-detection', None,
-             _('disable automatic' + 'file move detection')))
-    except KeyError:
-        pass
 
 def mvcheck(orig, ui, repo, *pats, **opts):
     if not opts.get('no_move_detection'):

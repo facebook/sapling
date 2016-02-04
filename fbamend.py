@@ -58,6 +58,17 @@ def uisetup(ui):
        ] + amendopts + commands.walkopts + commands.commitopts,
        _('hg amend [OPTION]...'))(amend)
 
+    def has_automv(loaded):
+        if not loaded:
+            return
+        automv = extensions.find('automv')
+        entry = extensions.wrapcommand(cmdtable, 'amend', automv.mvcheck)
+        entry[1].append(
+            ('', 'no-move-detection', None,
+             _('disable automatic file move detection')))
+    extensions.afterloaded('automv', has_automv)
+
+
 def commit(orig, ui, repo, *pats, **opts):
     if opts.get("amend"):
         # commit --amend default behavior is to prompt for edit
