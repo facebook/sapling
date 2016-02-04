@@ -155,6 +155,9 @@ def rebase(ui, repo, **opts):
     a named branch with two heads. You will need to explicitly specify source
     and/or destination.
 
+    If you need to use a tool to automate merge/conflict decisions, you
+    can specify one with ``--tool``, see :hg:`help merge-tools`.
+
     If a rebase is interrupted to manually resolve a conflict, it can be
     continued with --continue/-c or aborted with --abort/-a.
 
