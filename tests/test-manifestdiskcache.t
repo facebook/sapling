@@ -1,7 +1,6 @@
 Setup
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/manifestdiskcache.py $TESTTMP # use $TESTTMP substitution in message
+  $ export PYTHONPATH=$TESTDIR/..:$PYTHONPATH
 
 Test functionality is present
 
@@ -10,7 +9,7 @@ Test functionality is present
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > manifestdiskcache=$TESTTMP/manifestdiskcache.py
+  > manifestdiskcache=
   > [manifestdiskcache]
   > logging=True
   > enabled=True
@@ -46,7 +45,7 @@ Test that we prune the cache.
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > manifestdiskcache=$TESTTMP/manifestdiskcache.py
+  > manifestdiskcache=
   > [manifestdiskcache]
   > logging=True
   > enabled=True
@@ -98,7 +97,7 @@ Test that a corrupt cache does not interfere with correctness.
   $ hg init
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > manifestdiskcache=$TESTTMP/manifestdiskcache.py
+  > manifestdiskcache=
   > [manifestdiskcache]
   > enabled=True
   > EOF
@@ -139,7 +138,7 @@ Test that we can pin a revision in the cache.
   OK
   $ cat >> .hg/hgrc << EOF
   > [extensions]
-  > manifestdiskcache=$TESTTMP/manifestdiskcache.py
+  > manifestdiskcache=
   > [manifestdiskcache]
   > cache-size=0
   > runs-between-prunes=1

@@ -44,41 +44,13 @@ import sys
 import time
 import traceback
 
+from extutil import replaceclass
+
 CACHE_SUBDIR = 'manifestdiskcache'
 CONFIG_KEY = 'manifestdiskcache'
 HEX_SHA_SIZE_BYTES = 40
 
 testedwith = 'internal'
-
-def replaceclass(container, classname):
-    '''Replace a class with another in a module, and interpose it into
-    the hierarchies of all loaded subclasses. This function is
-    intended for use as a decorator.
-
-      import mymodule
-      @replaceclass(mymodule, 'myclass')
-      class mysubclass(mymodule.myclass):
-          def foo(self):
-              f = super(mysubclass, self).foo()
-              return f + ' bar'
-
-    Existing instances of the class being replaced will not have their
-    __class__ modified, so call this function before creating any
-    objects of the target type.
-    '''
-    def wrap(cls):
-        oldcls = getattr(container, classname)
-        for subcls in oldcls.__subclasses__():
-            if subcls is not cls:
-                assert oldcls in subcls.__bases__
-                newbases = [oldbase
-                            for oldbase in subcls.__bases__
-                            if oldbase != oldcls]
-                newbases.append(cls)
-                subcls.__bases__ = tuple(newbases)
-        setattr(container, classname, cls)
-        return cls
-    return wrap
 
 def extsetup(ui):
     global logging
