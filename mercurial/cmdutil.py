@@ -3130,13 +3130,26 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
     """
     parent, p2 = parents
     node = ctx.node()
+    excluded_files = []
+    matcher_opts = {"exclude": excluded_files}
+
     def checkout(f):
         fc = ctx[f]
         repo.wwrite(f, fc.data(), fc.flags())
 
     audit_path = pathutil.pathauditor(repo.root)
     for f in actions['forget'][0]:
-        repo.dirstate.drop(f)
+        if interactive:
+            choice = \
+                repo.ui.promptchoice(
+                    _("forget added file %s (yn)?$$ &Yes $$ &No")
+                    % f)
+            if choice == 0:
+                repo.dirstate.drop(f)
+            else:
+                excluded_files.append(repo.wjoin(f))
+        else:
+            repo.dirstate.drop(f)
     for f in actions['remove'][0]:
         audit_path(f)
         try:
@@ -3162,7 +3175,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
     if interactive:
         # Prompt the user for changes to revert
         torevert = [repo.wjoin(f) for f in actions['revert'][0]]
-        m = scmutil.match(ctx, torevert, {})
+        m = scmutil.match(ctx, torevert, matcher_opts)
         diffopts = patch.difffeatureopts(repo.ui, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True

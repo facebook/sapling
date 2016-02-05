@@ -15,6 +15,7 @@ Revert interactive tests
   > interactive = true
   > [extensions]
   > record =
+  > purge = 
   > EOF
 
 
@@ -377,3 +378,26 @@ Check the experimental config to invert the selection:
    5
    d
   +lastline
+
+  $ hg update -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg purge
+  $ touch newfile
+  $ hg add newfile
+  $ hg status
+  A newfile
+  $ hg revert -i <<EOF
+  > n
+  > EOF
+  forgetting newfile
+  forget added file newfile (yn)? n
+  $ hg status
+  A newfile
+  $ hg revert -i <<EOF
+  > y
+  > EOF
+  forgetting newfile
+  forget added file newfile (yn)? y
+  $ hg status
+  ? newfile
+
