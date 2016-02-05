@@ -373,7 +373,7 @@ K: move current up, J: move current down, c: commit changes, q: abort
                 commitwin = curses.newwin(8, maxx, maxy - 8, 0)
                 helplen = len(helplines())
                 helpwin = curses.newwin(helplen, maxx, 0, 0)
-                editwin = curses.newwin(maxy-helplen-8, maxx, helplen, 0)
+                editwin = curses.newwin(maxy - helplen - 8, maxx, helplen, 0)
                 # start rendering
                 commitwin.erase()
                 helpwin.erase()
