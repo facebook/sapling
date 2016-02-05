@@ -1,3 +1,8 @@
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
@@ -30,7 +35,7 @@ Set up client repository
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "pushrebase = $TESTDIR/../pushrebase.py" >> .hg/hgrc
+  $ echo "pushrebase =" >> .hg/hgrc
 
 Without server extension
 
@@ -78,7 +83,7 @@ Stack of non-conflicting commits should be accepted
 
   $ cd ../server
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "pushrebase = $TESTDIR/../pushrebase.py" >> .hg/hgrc
+  $ echo "pushrebase =" >> .hg/hgrc
   $ log
   @  a => bar [draft:add0c792bfce]
   |
@@ -521,7 +526,7 @@ Test that the prepushrebase hook can run against the bundle repo
   > [hooks]
   > prepushrebase = $TESTTMP/prerebase.sh
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > [experimental]
   > bundle2lazylocking = True
   > EOF
@@ -540,7 +545,7 @@ Test that the prepushrebase hook can run against the bundle repo
   $ cd prepushrebaseclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ touch b && hg add b && hg commit -qm b
   $ hg push --to master
@@ -577,7 +582,7 @@ Test that hooks are fired with the correct variables
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ touch file && hg ci -Aqm initial
   pretxnclose hook: HG_PENDING=$TESTTMP/hookserver HG_PHASES_MOVED=1 HG_TXNID=TXN:* HG_TXNNAME=commit (glob)
@@ -595,7 +600,7 @@ Test that hooks are fired with the correct variables
   $ cd hookclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ hg update master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -626,7 +631,7 @@ Test date rewriting
   $ cd rewritedate
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > [pushrebase]
   > rewritedates = True
   > EOF
@@ -641,7 +646,7 @@ Test date rewriting
   $ cd rewritedateclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -710,7 +715,7 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ cd ..
@@ -724,7 +729,7 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ hg up 0
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

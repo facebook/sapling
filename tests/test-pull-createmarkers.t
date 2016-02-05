@@ -1,3 +1,8 @@
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
 Test that hg pull creates obsolescence markers for landed diffs
   $ $PYTHON -c 'import remotenames' || exit 80
   $ cat >> $HGRCPATH <<EOF
@@ -14,7 +19,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   > strip=
   > rebase=
   > remotenames=
-  > pushrebase= $TESTDIR/../pushrebase.py
+  > pushrebase =
   > pullcreatemarkers= $TESTDIR/../pullcreatemarkers.py
   > [remotenames]
   > allownonfastforward=True

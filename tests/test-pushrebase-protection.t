@@ -1,3 +1,8 @@
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
@@ -12,7 +17,7 @@ Setup pushrebase required repo
   $ cd server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > [pushrebase]
   > blocknonpushrebase = True
   > EOF
@@ -49,7 +54,7 @@ Non-pushrebase pushes should be rejected
 
 Pushrebase pushes should be allowed
 
-  $ hg push --config extensions.pushrebase=$TESTDIR/../pushrebase.py --to master -B master
+  $ hg push --config 'extensions.pushrebase =' --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
   pushing 1 commit:

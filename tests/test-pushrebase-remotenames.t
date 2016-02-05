@@ -1,10 +1,15 @@
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ $PYTHON -c 'import remotenames' || exit 80
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
   > [extensions]
   > remotenames =
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase=
   > [remotenames]
   > allownonfastforward=True
   > [experimental]
@@ -230,7 +235,7 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book master
@@ -245,7 +250,7 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
-  > pushrebase = $TESTDIR/../pushrebase.py
+  > pushrebase =
   > EOF
   $ hg up master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
