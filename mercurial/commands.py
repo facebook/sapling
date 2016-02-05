@@ -2813,6 +2813,17 @@ def debugmergestate(ui, repo, *args):
                          % (afile, _hashornull(anode)))
                 ui.write(('  other path: %s (node %s)\n')
                          % (ofile, _hashornull(onode)))
+            elif rtype == 'f':
+                filename, rawextras = record.split('\0', 1)
+                extras = rawextras.split('\0')
+                i = 0
+                extrastrings = []
+                while i < len(extras):
+                    extrastrings.append('%s = %s' % (extras[i], extras[i + 1]))
+                    i += 2
+
+                ui.write(('file extras: %s (%s)\n')
+                         % (filename, ', '.join(extrastrings)))
             else:
                 ui.write(('unrecognized entry: %s\t%s\n')
                          % (rtype, record.replace('\0', '\t')))
