@@ -65,6 +65,7 @@ class mergestate(object):
        (experimental)
     m: the external merge driver defined for this merge plus its run state
        (experimental)
+    f: a (filename, dictonary) tuple of optional values for a given file
     X: unsupported mandatory record type (used in tests)
     x: unsupported advisory record type (used in tests)
 
@@ -102,6 +103,7 @@ class mergestate(object):
 
     def reset(self, node=None, other=None):
         self._state = {}
+        self._stateextras = {}
         self._local = None
         self._other = None
         for var in ('localctx', 'otherctx'):
@@ -126,6 +128,7 @@ class mergestate(object):
         of on disk file.
         """
         self._state = {}
+        self._stateextras = {}
         self._local = None
         self._other = None
         for var in ('localctx', 'otherctx'):
@@ -152,6 +155,16 @@ class mergestate(object):
             elif rtype in 'FDC':
                 bits = record.split('\0')
                 self._state[bits[0]] = bits[1:]
+            elif rtype == 'f':
+                filename, rawextras = record.split('\0', 1)
+                extraparts = rawextras.split('\0')
+                extras = {}
+                i = 0
+                while i < len(extraparts):
+                    extras[extraparts[i]] = extraparts[i + 1]
+                    i += 2
+
+                self._stateextras[filename] = extras
             elif not rtype.islower():
                 unsupported.add(rtype)
         self._results = {}
@@ -336,6 +349,10 @@ class mergestate(object):
                 records.append(('C', '\0'.join([d] + v)))
             else:
                 records.append(('F', '\0'.join([d] + v)))
+        for filename, extras in sorted(self._stateextras.iteritems()):
+            rawextras = '\0'.join('%s\0%s' % (k, v) for k, v in
+                                  extras.iteritems())
+            records.append(('f', '%s\0%s' % (filename, rawextras)))
         return records
 
     def _writerecords(self, records):
@@ -423,6 +440,9 @@ class mergestate(object):
             if entry[0] == 'd':
                 yield f
 
+    def extras(self, filename):
+        return self._stateextras.setdefault(filename, {})
+
     def _resolve(self, preresolve, dfile, wctx, labels=None):
         """rerun merge process for file path `dfile`"""
         if self[dfile] in 'rd':
@@ -462,6 +482,7 @@ class mergestate(object):
         if r is None:
             # no real conflict
             del self._state[dfile]
+            self._stateextras.pop(dfile, None)
             self._dirty = True
         elif not r:
             self.mark(dfile, 'r')
