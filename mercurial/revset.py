@@ -1086,13 +1086,14 @@ def _follow(repo, subset, x, name, followfirst=False):
         matcher = matchmod.match(repo.root, repo.getcwd(), [x],
                                  ctx=repo[None], default='path')
 
+        files = c.manifest().walk(matcher)
+
         s = set()
-        for fname in c:
-            if matcher(fname):
-                fctx = c[fname]
-                s = s.union(set(c.rev() for c in fctx.ancestors(followfirst)))
-                # include the revision responsible for the most recent version
-                s.add(fctx.introrev())
+        for fname in files:
+            fctx = c[fname]
+            s = s.union(set(c.rev() for c in fctx.ancestors(followfirst)))
+            # include the revision responsible for the most recent version
+            s.add(fctx.introrev())
     else:
         s = _revancestors(repo, baseset([c.rev()]), followfirst)
 
