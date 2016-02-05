@@ -257,6 +257,10 @@ class remotefilelog(object):
 
         return node
 
+    def rev(self, node):
+        # This is a hack to make TortoiseHG work.
+        return node
+
     def revision(self, node):
         """returns the revlog contents at this node.
         this includes the meta data traditionally included in file revlogs.
