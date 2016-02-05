@@ -273,13 +273,17 @@ def main(repo, rules, stdscr):
         win.addstr(6, 1, conflictstr[:length])
         win.noutrefresh()
 
-    def renderhelp(win, state):
+    def helplines():
         help = """
 ?: help, up/k: move up, down/j: move down, space: select, v: view patch
-d/e/f/m/p/r: change action, C: invoke histedit, q: abort
+d: drop, e: edit, f: fold, m: mess, p: pick, r: roll
+K: move current up, J: move current down, C: invoke histedit, q: abort
 """
+        return help.strip().splitlines()
+
+    def renderhelp(win, state):
         maxy, maxx = win.getmaxyx()
-        for y, line in enumerate(help.splitlines()[1:3]):
+        for y, line in enumerate(helplines()):
             if y > maxy:
                 break
             addln(win, y, 0, line, curses.color_pair(COLOR_HELP))
@@ -350,8 +354,9 @@ d/e/f/m/p/r: change action, C: invoke histedit, q: abort
             else:
                 maxy, maxx = stdscr.getmaxyx()
                 commitwin = curses.newwin(8, maxx, maxy - 8, 0)
-                helpwin = curses.newwin(2, maxx, 0, 0)
-                editwin = curses.newwin(maxy - 2 - 8, maxx, 2, 0)
+                helplen = len(helplines())
+                helpwin = curses.newwin(helplen, maxx, 0, 0)
+                editwin = curses.newwin(maxy-helplen-8, maxx, helplen, 0)
                 # start rendering
                 commitwin.erase()
                 helpwin.erase()
