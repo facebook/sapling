@@ -87,6 +87,10 @@ A patch with other errors:
   > @@ -599,7 +599,7 @@
   >          if opts.get('all'):
   >  
+  > 
+  > +
+  > + some = otherjunk
+  > +
   > +
   > + def blah_blah(x):
   > +     pass
@@ -102,10 +106,10 @@ A patch with other errors:
    This has no topic and ends with a period.
   7: don't add trailing period on summary line
    This has no topic and ends with a period.
-  15: adds double empty line
-   +
-  16: adds a function with foo_bar naming
-   + def blah_blah(x):
   19: adds double empty line
+   +
+  20: adds a function with foo_bar naming
+   + def blah_blah(x):
+  23: adds double empty line
    +
   [1]
