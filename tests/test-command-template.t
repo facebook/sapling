@@ -1018,7 +1018,7 @@ Error if include fails:
   $ hg log --style ./t
   abort: template file ./q: Permission denied
   [255]
-  $ rm q
+  $ rm -f q
 #endif
 
 Include works:
