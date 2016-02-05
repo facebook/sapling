@@ -1003,7 +1003,7 @@ Test version number support in 'hg version':
   
   Enabled extensions:
   
-    throw  1.2.3
+    throw  external  1.2.3
   $ echo 'getversion = lambda: "1.twentythree"' >> throw.py
   $ rm -f throw.pyc throw.pyo
   $ hg version -v --config extensions.throw=throw.py
@@ -1016,7 +1016,7 @@ Test version number support in 'hg version':
   
   Enabled extensions:
   
-    throw  1.twentythree
+    throw  external  1.twentythree
 
 Refuse to load extensions with minimum version requirements
 

@@ -468,3 +468,7 @@ def moduleversion(module):
     if isinstance(version, (list, tuple)):
         version = '.'.join(str(o) for o in version)
     return version
+
+def ismoduleinternal(module):
+    exttestedwith = getattr(module, 'testedwith', None)
+    return exttestedwith == "internal"

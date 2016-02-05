@@ -7030,10 +7030,16 @@ def version_(ui):
         # format names and versions into columns
         names = []
         vers = []
+        place = []
         for name, module in extensions.extensions():
             names.append(name)
             vers.append(extensions.moduleversion(module))
+            if extensions.ismoduleinternal(module):
+                place.append(_("internal"))
+            else:
+                place.append(_("external"))
         if names:
             maxnamelen = max(len(n) for n in names)
             for i, name in enumerate(names):
-                ui.write("  %-*s  %s\n" % (maxnamelen, name, vers[i]))
+                ui.write("  %-*s  %s  %s\n" %
+                         (maxnamelen, name, place[i], vers[i]))
