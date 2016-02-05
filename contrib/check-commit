@@ -50,8 +50,7 @@ def checkcommit(commit, node = None):
     printed = node is None
     hits = []
     for exp, msg in errors:
-        m = re.search(exp, commit)
-        if m:
+        for m in re.finditer(exp, commit):
             end = m.end()
             trailing = re.search(r'(\\n)+$', exp)
             if trailing:
