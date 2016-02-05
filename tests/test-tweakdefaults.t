@@ -417,3 +417,41 @@ Test reuse message flag by taking message from previous commit
   HG: bookmark 'hyphen-book'
   HG: changed afile
 
+Test non-remotenames use of pull --rebase and --update requires --dest
+  $ cd $TESTTMP
+  $ hg clone repo clone
+  updating to branch default
+  9 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd clone
+  $ hg pull --rebase
+  abort: you must use a bookmark with tracking or manually specify a destination for the rebase
+  (set up tracking with `hg book <name> -t <destination>` or manually supply --dest / -d)
+  [255]
+  $ hg pull --update
+  abort: you must specify a destination for the update
+  (use `hg pull --update --dest <destination>`)
+  [255]
+  $ echo foo > foo
+  $ hg commit -Am 'foo'
+  adding foo
+  $ hg pull --rebase -d default
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  no changes found
+  nothing to rebase - working directory parent is also destination
+  $ hg pull --update -d default
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  no changes found
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg pull --rebase --config tweakdefaults.defaultdest=default
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  no changes found
+  nothing to rebase - working directory parent is also destination
+  $ hg pull --update --config tweakdefaults.defaultdest=default
+  pulling from $TESTTMP/repo (glob)
+  searching for changes
+  no changes found
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd $TESTTMP/repo

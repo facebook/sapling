@@ -142,7 +142,9 @@ def pull(orig, ui, repo, *args, **opts):
     rebase = opts.get('rebase')
     update = opts.get('update')
     isrebase = rebase or rebaseflag
-    if isrebase:
+    # Only use from the global rebasedest if _getrebasedest was called.  If the
+    # user isn't using remotenames, then rebasedest isn't set.
+    if rebaseflag:
         dest = rebasedest
     else:
         dest = opts.get('dest')
