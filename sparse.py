@@ -9,7 +9,7 @@
 """
 
 from mercurial import util, cmdutil, extensions, context, dirstate, commands
-from mercurial import localrepo, error
+from mercurial import localrepo, error, hg
 from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
@@ -25,6 +25,7 @@ def uisetup(ui):
     _setupcommit(ui)
 
 def extsetup(ui):
+    _setupclone(ui)
     _setuplog(ui)
     _setupadd(ui)
     _setupdirstate(ui)
@@ -210,6 +211,40 @@ def _setuplog(ui):
             revs = revs.filter(ctxmatch)
         return revs
     extensions.wrapfunction(cmdutil, '_logrevs', _logrevs)
+
+def _clonesparsecmd(orig, ui, repo, *args, **opts):
+    include_pat = opts.get('include')
+    exclude_pat = opts.get('exclude')
+    enableprofile_pat = opts.get('enable_profile')
+    include = exclude = enableprofile = False
+    if include_pat:
+        pat = include_pat
+        include = True
+    if exclude_pat:
+        pat = exclude_pat
+        exclude = True
+    if enableprofile_pat:
+        pat = enableprofile_pat
+        enableprofile = True
+    if sum([include, exclude, enableprofile]) > 1:
+        raise util.Abort(_("too many flags specified."))
+    if include or exclude or enableprofile:
+        def clone_sparse(orig, self, node, overwrite):
+            _config(self.ui, self.unfiltered(), pat, include=include,
+                    exclude=exclude, enableprofile=enableprofile)
+            return orig(self, node, overwrite)
+        extensions.wrapfunction(hg, 'updaterepo', clone_sparse)
+    orig(ui, repo, *args, **opts)
+
+def _setupclone(ui):
+    entry = commands.table['^clone']
+    entry[1].append(('', 'enable-profile', [],
+                    'enable a sparse profile'))
+    entry[1].append(('', 'include', [],
+                    'include sparse pattern'))
+    entry[1].append(('', 'exclude', [],
+                    'exclude sparse pattern'))
+    extensions.wrapcommand(commands.table, 'clone', _clonesparsecmd)
 
 def _setupadd(ui):
     entry = commands.table['^add']
