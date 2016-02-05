@@ -10,7 +10,9 @@ from __future__ import absolute_import
 import heapq
 
 from . import (
+    node,
     pathutil,
+    scmutil,
     util,
 )
 
@@ -175,7 +177,18 @@ def _forwardcopies(a, b, match=None):
     # we currently don't try to find where old files went, too expensive
     # this means we can miss a case like 'hg rm b; hg cp a b'
     cm = {}
-    missing = _computeforwardmissing(a, b, match=match)
+
+    # Computing the forward missing is quite expensive on large manifests, since
+    # it compares the entire manifests. We can optimize it in the common use
+    # case of computing what copies are in a commit versus its parent (like
+    # during a rebase or histedit). Note, we exclude merge commits from this
+    # optimization, since the ctx.files() for a merge commit is not correct for
+    # this comparison.
+    forwardmissingmatch = match
+    if not match and b.p1() == a and b.p2().node() == node.nullid:
+        forwardmissingmatch = scmutil.matchfiles(a._repo, b.files())
+    missing = _computeforwardmissing(a, b, match=forwardmissingmatch)
+
     ancestrycontext = a._repo.changelog.ancestors([b.rev()], inclusive=True)
     for f in missing:
         fctx = b[f]
