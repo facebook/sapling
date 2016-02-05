@@ -2022,7 +2022,7 @@ helps performance.
 ``backgroundclose``
     Whether to enable closing file handles on background threads during certain
     operations. Some platforms aren't very efficient at closing file
-    handles that have been written or appened to. By performing file closing
+    handles that have been written or appended to. By performing file closing
     on background threads, file write rate can increase substantially.
     (default: true on Windows, false elsewhere)
 
