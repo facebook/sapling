@@ -48,6 +48,8 @@ KEY_NEXT_ACTION = ['h', 'KEY_RIGHT']
 KEY_PREV_ACTION = ['l', 'KEY_LEFT']
 KEY_DOWN = ['j', 'KEY_DOWN']
 KEY_UP = ['k', 'KEY_UP']
+KEY_MOVE_DOWN = ['J']
+KEY_MOVE_UP = ['K']
 KEY_SEL = [' ']
 KEY_QUIT = ['q']
 KEY_HISTEDIT = ['C']
@@ -120,7 +122,8 @@ def swap(state, oldpos, newpos):
         rules[newpos].checkconflicts(rules[r])
         rules[oldpos].checkconflicts(rules[r])
 
-    makeselection(state, newpos)
+    if state['selected']:
+        makeselection(state, newpos)
 
 def changeaction(state, pos, action):
     """Change the action state on the given position to the new action"""
@@ -154,15 +157,15 @@ def event(state, ch):
     selected = state['selected']
     oldpos = state['pos']
     rules = state['rules']
-    if ch in KEY_DOWN:
+    if ch in KEY_DOWN or ch in KEY_MOVE_DOWN:
         newpos = min(oldpos + 1, len(rules) - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None:
+        if selected is not None or ch in KEY_MOVE_DOWN:
             swap(state, oldpos, newpos)
-    if ch in KEY_UP:
+    if ch in KEY_UP or ch in KEY_MOVE_UP:
         newpos = max(0, oldpos - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None:
+        if selected is not None or ch in KEY_MOVE_UP:
             swap(state, oldpos, newpos)
     if ch in KEY_NEXT_ACTION:
         cycleaction(state, oldpos, next=True)
