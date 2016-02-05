@@ -1,5 +1,12 @@
 #require unix-permissions no-root
 
+  $ cat > $TESTTMP/dumpjournal.py <<EOF
+  > import sys
+  > for entry in sys.stdin.read().split('\n'):
+  >     if entry:
+  >         print entry.split('\x00')[0]
+  > EOF
+
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "mq=">> $HGRCPATH
 
@@ -14,7 +21,7 @@
   >   hg verify
   >   echo % journal contents
   >   if [ -f .hg/store/journal ]; then
-  >       sed -e 's/\.i[^\n]*/\.i/' .hg/store/journal
+  >       cat .hg/store/journal | python $TESTTMP/dumpjournal.py
   >   else
   >       echo "(no journal)"
   >   fi
