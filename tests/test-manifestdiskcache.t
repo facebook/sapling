@@ -1,6 +1,7 @@
 Setup
 
-  $ export PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
 
 Test functionality is present
 

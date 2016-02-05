@@ -461,8 +461,10 @@ Excludes:
     try:
         enabled = True
         if masterrevset == 'tip':
-            # 'tip' is what _masterrevset always returns when it can't find master or @
-            ui.warn("warning: there is no master commit locally, try pulling from server\n")
+            # 'tip' is what _masterrevset always returns when it can't find
+            # master or @
+            ui.warn(("warning: there is no master commit locally, try pulling "
+                     "from server\n"))
 
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
