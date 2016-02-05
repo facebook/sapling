@@ -52,7 +52,7 @@ KEY_MOVE_DOWN = ['J']
 KEY_MOVE_UP = ['K']
 KEY_SEL = [' ']
 KEY_QUIT = ['q']
-KEY_HISTEDIT = ['C']
+KEY_HISTEDIT = ['c', 'C']
 KEY_SHOWPATCH = ['v']
 KEY_HELP = ['?']
 KEY_ACTION = {
@@ -294,7 +294,7 @@ def main(repo, rules, stdscr):
         help = """
 ?: help, up/k: move up, down/j: move down, space: select, v: view patch
 d: drop, e: edit, f: fold, m: mess, p: pick, r: roll
-K: move current up, J: move current down, C: invoke histedit, q: abort
+K: move current up, J: move current down, c: commit changes, q: abort
 """
         return help.strip().splitlines()
 
