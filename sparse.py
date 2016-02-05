@@ -234,7 +234,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
                     exclude=exclude, enableprofile=enableprofile)
             return orig(self, node, overwrite)
         extensions.wrapfunction(hg, 'updaterepo', clone_sparse)
-    orig(ui, repo, *args, **opts)
+    return orig(ui, repo, *args, **opts)
 
 def _setupclone(ui):
     entry = commands.table['^clone']
@@ -258,7 +258,7 @@ def _setupadd(ui):
                 dirname, basename = util.split(pat)
                 dirs.add(dirname)
             _config(ui, repo, list(dirs), include=True)
-        orig(ui, repo, *pats, **opts)
+        return orig(ui, repo, *pats, **opts)
 
     extensions.wrapcommand(commands.table, 'add', _add)
 
