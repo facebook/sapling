@@ -323,6 +323,78 @@ user has somehow managed to update to a different revision (issue4009)
 
   $ cd ..
 
+test aborting an interrupted series (issue5084)
+  $ hg init interrupted
+  $ cd interrupted
+  $ touch base
+  $ hg add base
+  $ hg commit -m base
+  $ touch a
+  $ hg add a
+  $ hg commit -m a
+  $ echo 1 > a
+  $ hg commit -m 1
+  $ touch b
+  $ hg add b
+  $ hg commit -m b
+  $ echo 2 >> a
+  $ hg commit -m c
+  $ touch d
+  $ hg add d
+  $ hg commit -m d
+  $ hg co -q 1
+  $ hg rm a
+  $ hg commit -m no-a
+  created new head
+  $ hg co 0
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg log -G --template "{rev} {desc} {bookmarks}"
+  o  6 no-a
+  |
+  | o  5 d
+  | |
+  | o  4 c
+  | |
+  | o  3 b
+  | |
+  | o  2 1
+  |/
+  o  1 a
+  |
+  @  0 base
+  
+  $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 3 -d tip
+  rebasing 3:3a71550954f1 "b"
+  rebasing 4:e80b69427d80 "c"
+  abort: ^C
+  [255]
+  $ hg rebase --abort
+  saved backup bundle to $TESTTMP/interrupted/.hg/strip-backup/3d8812cf300d-93041a90-backup.hg (glob)
+  rebase aborted
+  $ hg log -G --template "{rev} {desc} {bookmarks}"
+  o  6 no-a
+  |
+  | o  5 d
+  | |
+  | o  4 c
+  | |
+  | o  3 b
+  | |
+  | o  2 1
+  |/
+  o  1 a
+  |
+  @  0 base
+  
+  $ hg summary
+  parent: 0:df4f53cec30a 
+   base
+  branch: default
+  commit: (clean)
+  update: 6 new changesets (update)
+  phases: 7 draft
+
+  $ cd ..
 On the other hand, make sure we *do* clobber changes whenever we
 haven't somehow managed to update the repo to a different revision
 during a rebase (issue4661)

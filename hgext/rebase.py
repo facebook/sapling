@@ -975,15 +975,20 @@ def abort(repo, originalwd, target, state, activebookmark=None):
             cleanup = False
 
         if cleanup:
-            # Update away from the rebase if necessary
-            if needupdate(repo, state):
-                merge.update(repo, originalwd, False, True)
-
-            # Strip from the first rebased revision
+            shouldupdate = False
             rebased = filter(lambda x: x >= 0 and x != target, state.values())
             if rebased:
                 strippoints = [
-                        c.node()  for c in repo.set('roots(%ld)', rebased)]
+                        c.node() for c in repo.set('roots(%ld)', rebased)]
+                shouldupdate = len([
+                        c.node() for c in repo.set('. & (%ld)', rebased)]) > 0
+
+            # Update away from the rebase if necessary
+            if shouldupdate or needupdate(repo, state):
+                merge.update(repo, originalwd, False, True)
+
+            # Strip from the first rebased revision
+            if rebased:
                 # no backup of rebased cset versions needed
                 repair.strip(repo.ui, repo, strippoints)
 
