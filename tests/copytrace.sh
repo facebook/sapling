@@ -1,3 +1,4 @@
+test -f "$TESTDIR/getdb.sh" || exit 80
 DBHOSTPORT=$($TESTDIR/getdb.sh)
 DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
 DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
