@@ -189,10 +189,10 @@ Graft out of order, skipping a merge and a duplicate
    e: versions differ -> m (premerge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
   merging e
-  my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
+  my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
    e: versions differ -> m (merge)
   picked tool ':merge' for e (binary False symlink False changedelete False)
-  my e@1905859650ec+ other e@9c233e8e184d ancestor e@68795b066622
+  my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
   (use hg resolve and hg graft --continue --log)

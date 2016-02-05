@@ -263,10 +263,12 @@ insert unsupported advisory merge record
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
   unrecognized entry: x	advisory record
+  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
@@ -282,10 +284,12 @@ insert unsupported mandatory merge record
   * version 2 records
   local: 57653b9f834a4493f7240b0681efcb9ae7cab745
   other: dc77451844e37f03f5c559e3b8529b2b48d381d1
+  file extras: file1 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file1 (record type "F", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
     ancestor path: file1 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)
     other path: file1 (node 6f4310b00b9a147241b071a60c28a650827fb03d)
+  file extras: file2 (ancestorlinknode = 99726c03216e233810a2564cbc0adfe395007eac)
   file: file2 (record type "F", state "u", hash cb99b709a1978bd205ab9dfd4c5aaa1fc91c7523)
     local path: file2 (flags "")
     ancestor path: file2 (node 2ed2a3912a0b24502043eae84ee4b279c18b90dd)

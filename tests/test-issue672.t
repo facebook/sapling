@@ -68,7 +68,7 @@ https://bz.mercurial-scm.org/672
    1a: local copied/moved from 1 -> m (premerge)
   picked tool ':merge' for 1a (binary False symlink False changedelete False)
   merging 1a and 1 to 1a
-  my 1a@e327dca35ac8+ other 1@746e9549ea96 ancestor 1@81f4b099af3d
+  my 1a@e327dca35ac8+ other 1@746e9549ea96 ancestor 1@c64f439569a9
    premerge successful
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -91,7 +91,7 @@ https://bz.mercurial-scm.org/672
    1a: remote moved from 1 -> m (premerge)
   picked tool ':merge' for 1a (binary False symlink False changedelete False)
   merging 1 and 1a to 1a
-  my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@81f4b099af3d
+  my 1a@746e9549ea96+ other 1a@e327dca35ac8 ancestor 1@c64f439569a9
    premerge successful
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

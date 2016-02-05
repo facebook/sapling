@@ -686,6 +686,7 @@ Test usage of `hg resolve` in case of conflict
   * version 2 records
   local: b71750c4b0fdf719734971e3ef90dbeab5919a2d
   other: a30dd8addae3ce71b8667868478542bc417439e6
+  file extras: foo (ancestorlinknode = 91360952243723bd5b1138d5f26bd8c8564cb553)
   file: foo (record type "F", state "u", hash 0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33)
     local path: foo (flags "")
     ancestor path: foo (node f89532f44c247a0e993d63e3a734dd781ab04708)

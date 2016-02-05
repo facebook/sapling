@@ -405,6 +405,7 @@ class mergestate(object):
                            fca.path(), hex(fca.filenode()),
                            fco.path(), hex(fco.filenode()),
                            fcl.flags()]
+        self._stateextras[fd] = { 'ancestorlinknode' : hex(fca.node()) }
         self._dirty = True
 
     def __contains__(self, dfile):
@@ -450,10 +451,16 @@ class mergestate(object):
         stateentry = self._state[dfile]
         state, hash, lfile, afile, anode, ofile, onode, flags = stateentry
         octx = self._repo[self._other]
+        extras = self.extras(dfile)
+        anccommitnode = extras.get('ancestorlinknode')
+        if anccommitnode:
+            actx = self._repo[anccommitnode]
+        else:
+            actx = None
         fcd = self._filectxorabsent(hash, wctx, dfile)
         fco = self._filectxorabsent(onode, octx, ofile)
         # TODO: move this to filectxorabsent
-        fca = self._repo.filectx(afile, fileid=anode)
+        fca = self._repo.filectx(afile, fileid=anode, changeid=actx)
         # "premerge" x flags
         flo = fco.flags()
         fla = fca.flags()
