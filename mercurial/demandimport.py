@@ -174,7 +174,12 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             """
             symbol = getattr(mod, attr, nothing)
             if symbol is nothing:
-                symbol = _demandmod(attr, mod.__dict__, locals, level=1)
+                mn = '%s.%s' % (mod.__name__, attr)
+                if mn in ignore:
+                    importfunc = _origimport
+                else:
+                    importfunc = _demandmod
+                symbol = importfunc(attr, mod.__dict__, locals, level=1)
                 setattr(mod, attr, symbol)
 
             # Record the importing module references this symbol so we can
