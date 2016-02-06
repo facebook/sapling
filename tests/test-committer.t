@@ -66,6 +66,31 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit-1
   
+# test prompt username
+
+  $ cat > .hg/hgrc <<EOF
+  > [ui]
+  > askusername = True
+  > EOF
+
+  $ echo 12345 > asdf
+  $ hg commit --config ui.interactive=False -m ask
+  enter a commit username: 
+  no username found, using '[^']*' instead (re)
+  $ hg rollback -q
+
+  $ hg commit --config ui.interactive=True -m ask <<EOF
+  > Asked User <ask@example.com>
+  > EOF
+  enter a commit username: Asked User <ask@example.com>
+  $ hg tip
+  changeset:   5:84c91d963b70
+  tag:         tip
+  user:        Asked User <ask@example.com>
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ask
+  
+
 # test no .hg/hgrc (uses generated non-interactive username)
 
   $ echo space > asdf

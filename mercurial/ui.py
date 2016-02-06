@@ -798,7 +798,7 @@ class ui(object):
         If ui is not interactive, the default is returned.
         """
         if not self.interactive():
-            self.write(msg, ' ', default, "\n")
+            self.write(msg, ' ', default or '', "\n")
             return default
         try:
             r = self._readline(self.label(msg, 'ui.prompt'))
