@@ -1142,7 +1142,7 @@ def diffordiffstat(ui, repo, diffopts, node1, node2, match,
                 # node2 (inclusive). Thus, ctx2's substate won't contain that
                 # subpath. The best we can do is to ignore it.
                 tempnode2 = None
-            submatch = matchmod.narrowmatcher(subpath, match)
+            submatch = matchmod.subdirmatcher(subpath, match)
             sub.diff(ui, diffopts, tempnode2, submatch, changes=changes,
                      stat=stat, fp=fp, prefix=prefix)
 
@@ -2254,7 +2254,7 @@ def add(ui, repo, match, prefix, explicitonly, **opts):
     for subpath in sorted(wctx.substate):
         sub = wctx.sub(subpath)
         try:
-            submatch = matchmod.narrowmatcher(subpath, match)
+            submatch = matchmod.subdirmatcher(subpath, match)
             if opts.get('subrepos'):
                 bad.extend(sub.add(ui, submatch, prefix, False, **opts))
             else:
@@ -2283,7 +2283,7 @@ def forget(ui, repo, match, prefix, explicitonly):
     for subpath in sorted(wctx.substate):
         sub = wctx.sub(subpath)
         try:
-            submatch = matchmod.narrowmatcher(subpath, match)
+            submatch = matchmod.subdirmatcher(subpath, match)
             subbad, subforgot = sub.forget(submatch, prefix)
             bad.extend([subpath + '/' + f for f in subbad])
             forgot.extend([subpath + '/' + f for f in subforgot])
@@ -2340,7 +2340,7 @@ def files(ui, ctx, m, fm, fmt, subrepos):
         if subrepos or matchessubrepo(subpath):
             sub = ctx.sub(subpath)
             try:
-                submatch = matchmod.narrowmatcher(subpath, m)
+                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.printfiles(ui, submatch, fm, fmt, subrepos) == 0:
                     ret = 0
             except error.LookupError:
@@ -2369,7 +2369,7 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
         if subrepos or matchessubrepo(m, subpath):
             sub = wctx.sub(subpath)
             try:
-                submatch = matchmod.narrowmatcher(subpath, m)
+                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.removefiles(submatch, prefix, after, force, subrepos):
                     ret = 1
             except error.LookupError:
@@ -2467,7 +2467,7 @@ def cat(ui, repo, ctx, matcher, prefix, **opts):
     for subpath in sorted(ctx.substate):
         sub = ctx.sub(subpath)
         try:
-            submatch = matchmod.narrowmatcher(subpath, matcher)
+            submatch = matchmod.subdirmatcher(subpath, matcher)
 
             if not sub.cat(submatch, os.path.join(prefix, sub._path),
                            **opts):

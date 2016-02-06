@@ -963,7 +963,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in sorted(ctx.substate):
             sub = ctx.workingsub(subpath)
-            submatch = match_.narrowmatcher(subpath, matchfn)
+            submatch = match_.subdirmatcher(subpath, matchfn)
             sub._repo.lfstatus = True
             sub.archive(archiver, prefix, submatch)
 
@@ -1011,7 +1011,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
 
     for subpath in sorted(ctx.substate):
         sub = ctx.workingsub(subpath)
-        submatch = match_.narrowmatcher(subpath, match)
+        submatch = match_.subdirmatcher(subpath, match)
         sub._repo.lfstatus = True
         sub.archive(archiver, prefix + repo._path + '/', submatch)
 

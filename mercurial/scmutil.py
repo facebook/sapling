@@ -913,7 +913,7 @@ def addremove(repo, matcher, prefix, opts=None, dry_run=None, similarity=None):
         if opts.get('subrepos') or matchessubrepo(m, subpath):
             sub = wctx.sub(subpath)
             try:
-                submatch = matchmod.narrowmatcher(subpath, m)
+                submatch = matchmod.subdirmatcher(subpath, m)
                 if sub.addremove(submatch, prefix, opts, dry_run, similarity):
                     ret = 1
             except error.LookupError:

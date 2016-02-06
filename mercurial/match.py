@@ -334,13 +334,13 @@ def badmatch(match, badfn):
     m.bad = badfn
     return m
 
-class narrowmatcher(match):
+class subdirmatcher(match):
     """Adapt a matcher to work on a subdirectory only.
 
     The paths are remapped to remove/insert the path as needed:
 
     >>> m1 = match('root', '', ['a.txt', 'sub/b.txt'])
-    >>> m2 = narrowmatcher('sub', m1)
+    >>> m2 = subdirmatcher('sub', m1)
     >>> bool(m2('a.txt'))
     False
     >>> bool(m2('b.txt'))

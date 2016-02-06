@@ -365,7 +365,7 @@ class basectx(object):
                     # node1 and node2 (inclusive). Thus, ctx2's substate
                     # won't contain that subpath. The best we can do ignore it.
                     rev2 = None
-                submatch = matchmod.narrowmatcher(subpath, match)
+                submatch = matchmod.subdirmatcher(subpath, match)
                 s = sub.status(rev2, match=submatch, ignored=listignored,
                                clean=listclean, unknown=listunknown,
                                listsubrepos=True)

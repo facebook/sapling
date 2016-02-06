@@ -331,7 +331,7 @@ def archive(repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in sorted(ctx.substate):
             sub = ctx.workingsub(subpath)
-            submatch = matchmod.narrowmatcher(subpath, matchfn)
+            submatch = matchmod.subdirmatcher(subpath, matchfn)
             total += sub.archive(archiver, prefix, submatch)
 
     if total == 0:
