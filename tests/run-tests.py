@@ -1936,8 +1936,7 @@ class TestRunner(object):
             self._pythondir = self._bindir
         else:
             self._installdir = os.path.join(self._hgtmp, b"install")
-            self._bindir = osenvironb[b"BINDIR"] = \
-                os.path.join(self._installdir, b"bin")
+            self._bindir = os.path.join(self._installdir, b"bin")
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
