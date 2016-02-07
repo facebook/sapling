@@ -444,7 +444,7 @@ class Test(unittest.TestCase):
                  debug=False,
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
-                 py3kwarnings=False, shell=None,
+                 py3kwarnings=False, shell=None, hgcommand=None,
                  slowtimeout=defaults['slowtimeout']):
         """Create a test from parameters.
 
@@ -491,6 +491,7 @@ class Test(unittest.TestCase):
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
         self._shell = _bytespath(shell)
+        self._hgcommand = hgcommand or b'hg'
 
         self._aborted = False
         self._daemonpids = []
@@ -989,6 +990,8 @@ class TTest(Test):
 
         if self._debug:
             script.append(b'set -x\n')
+        if self._hgcommand != b'hg':
+            script.append(b'alias hg="%s"\n' % self._hgcommand)
         if os.getenv('MSYSTEM'):
             script.append(b'alias pwd="pwd -W"\n')
 
@@ -1817,6 +1820,7 @@ class TestRunner(object):
         self._pythondir = None
         self._coveragefile = None
         self._createdfiles = []
+        self._hgcommand = None
         self._hgpath = None
         self._portoffset = 0
         self._ports = {}
@@ -1925,6 +1929,7 @@ class TestRunner(object):
             whg = self.options.with_hg
             self._bindir = os.path.dirname(os.path.realpath(whg))
             assert isinstance(self._bindir, bytes)
+            self._hgcommand = os.path.basename(whg)
             self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
             os.makedirs(self._tmpbindir)
 
@@ -1937,6 +1942,7 @@ class TestRunner(object):
         else:
             self._installdir = os.path.join(self._hgtmp, b"install")
             self._bindir = os.path.join(self._installdir, b"bin")
+            self._hgcommand = b'hg'
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
@@ -2117,7 +2123,8 @@ class TestRunner(object):
                     startport=self._getport(count),
                     extraconfigopts=self.options.extra_config_opt,
                     py3kwarnings=self.options.py3k_warnings,
-                    shell=self.options.shell)
+                    shell=self.options.shell,
+                    hgcommand=self._hgcommand)
         t.should_reload = True
         return t
 
