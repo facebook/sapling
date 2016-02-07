@@ -1168,6 +1168,14 @@ test ',' in `_list`
   hg: parse error: can't use a list in this context
   (see hg help "revsets.x or y")
   [255]
+  $ try '0,1,2'
+  (list
+    ('symbol', '0')
+    ('symbol', '1')
+    ('symbol', '2'))
+  hg: parse error: can't use a list in this context
+  (see hg help "revsets.x or y")
+  [255]
 
 test that chained `or` operations make balanced addsets
 
@@ -1717,13 +1725,12 @@ test chained `or` operations are flattened at parsing phase
   (func
     ('symbol', 'chainedorops')
     (list
-      (list
-        (range
-          ('symbol', '0')
-          ('symbol', '1'))
-        (range
-          ('symbol', '1')
-          ('symbol', '2')))
+      (range
+        ('symbol', '0')
+        ('symbol', '1'))
+      (range
+        ('symbol', '1')
+        ('symbol', '2'))
       (range
         ('symbol', '2')
         ('symbol', '3'))))
@@ -1877,9 +1884,8 @@ far away.
   (func
     ('symbol', 'rs')
     (list
-      (list
-        ('symbol', '2')
-        ('symbol', 'data'))
+      ('symbol', '2')
+      ('symbol', 'data')
       ('symbol', '7')))
   hg: parse error: invalid number of arguments: 3
   [255]
@@ -1887,13 +1893,11 @@ far away.
   (func
     ('symbol', 'rs4')
     (list
-      (list
-        (list
-          (or
-            ('symbol', '2')
-            ('symbol', '3'))
-          ('symbol', 'x'))
-        ('symbol', 'x'))
+      (or
+        ('symbol', '2')
+        ('symbol', '3'))
+      ('symbol', 'x')
+      ('symbol', 'x')
       ('symbol', 'date')))
   (func
     ('symbol', 'reverse')
@@ -2055,11 +2059,9 @@ tests for concatenation of strings/symbols by "##"
   (func
     ('symbol', 'cat4')
     (list
-      (list
-        (list
-          ('symbol', '278')
-          ('string', '5f5'))
-        ('symbol', '1ee'))
+      ('symbol', '278')
+      ('string', '5f5')
+      ('symbol', '1ee')
       ('string', 'ce5')))
   (_concat
     (_concat

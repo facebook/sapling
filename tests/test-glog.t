@@ -1602,11 +1602,9 @@ Test falling back to slow path for non-existing files
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          (list
-            ('string', 'r:')
-            ('string', 'd:relpath'))
-          ('string', 'p:a'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
+        ('string', 'p:a')
         ('string', 'p:c'))))
 
 Test multiple --include/--exclude/paths
@@ -1617,19 +1615,13 @@ Test multiple --include/--exclude/paths
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          (list
-            (list
-              (list
-                (list
-                  (list
-                    ('string', 'r:')
-                    ('string', 'd:relpath'))
-                  ('string', 'p:a'))
-                ('string', 'p:e'))
-              ('string', 'i:a'))
-            ('string', 'i:e'))
-          ('string', 'x:b'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
+        ('string', 'p:a')
+        ('string', 'p:e')
+        ('string', 'i:a')
+        ('string', 'i:e')
+        ('string', 'x:b')
         ('string', 'x:e'))))
 
 Test glob expansion of pats
@@ -1668,9 +1660,8 @@ Test --follow on a directory
       (func
         ('symbol', '_matchfiles')
         (list
-          (list
-            ('string', 'r:')
-            ('string', 'd:relpath'))
+          ('string', 'r:')
+          ('string', 'd:relpath')
           ('string', 'p:dir')))))
   $ hg up -q tip
 
@@ -1693,9 +1684,8 @@ Test --follow and patterns
       (func
         ('symbol', '_matchfiles')
         (list
-          (list
-            ('string', 'r:')
-            ('string', 'd:relpath'))
+          ('string', 'r:')
+          ('string', 'd:relpath')
           ('string', 'p:glob:*')))))
 
 Test --follow on a single rename
@@ -1836,9 +1826,8 @@ Test "set:..." and parent revision
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
         ('string', 'p:set:copied()'))))
   $ testlog --include "set:copied()"
   []
@@ -1846,9 +1835,8 @@ Test "set:..." and parent revision
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
         ('string', 'i:set:copied()'))))
   $ testlog -r "sort(file('set:copied()'), -rev)"
   ["sort(file('set:copied()'), -rev)"]
@@ -1865,9 +1853,8 @@ Test --removed
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
         ('string', 'p:a'))))
   $ testlog --removed --follow a
   []
@@ -1879,9 +1866,8 @@ Test --removed
       (func
         ('symbol', '_matchfiles')
         (list
-          (list
-            ('string', 'r:')
-            ('string', 'd:relpath'))
+          ('string', 'r:')
+          ('string', 'd:relpath')
           ('string', 'p:a')))))
 
 Test --patch and --stat with --follow and --follow-first
@@ -2271,9 +2257,8 @@ Test subdir
     (func
       ('symbol', '_matchfiles')
       (list
-        (list
-          ('string', 'r:')
-          ('string', 'd:relpath'))
+        ('string', 'r:')
+        ('string', 'd:relpath')
         ('string', 'p:.'))))
   $ testlog ../b
   []
