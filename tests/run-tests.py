@@ -249,6 +249,8 @@ def getparser():
         metavar="HG",
         help="test using specified hg script rather than a "
              "temporary installation")
+    parser.add_option("--with-chg", metavar="CHG",
+                      help="use specified chg wrapper in place of hg")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
     parser.add_option('--extra-config-opt', action="append",
@@ -291,6 +293,15 @@ def parseargs(args, parser):
             parser.error('--local specified, but %r not found or not executable'
                          % hgbin)
         options.with_hg = hgbin
+
+    if options.with_chg:
+        if os.name == 'nt':
+            parser.error('chg does not work on %s' % os.name)
+        options.with_chg = os.path.realpath(
+            os.path.expanduser(_bytespath(options.with_chg)))
+        if not (os.path.isfile(options.with_chg) and
+                os.access(options.with_chg, os.X_OK)):
+            parser.error('--with-chg must specify a chg executable')
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
@@ -1811,6 +1822,7 @@ class TestRunner(object):
         self._createdfiles = []
         self._hgcommand = None
         self._hgpath = None
+        self._chgsockdir = None
         self._portoffset = 0
         self._ports = {}
 
@@ -1935,6 +1947,16 @@ class TestRunner(object):
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
+        # set up crafted chg environment, then replace "hg" command by "chg"
+        chgbindir = self._bindir
+        if self.options.with_chg:
+            self._chgsockdir = d = os.path.join(self._hgtmp, b'chgsock')
+            os.mkdir(d)
+            osenvironb[b'CHGSOCKNAME'] = os.path.join(d, b"server")
+            osenvironb[b'CHGHG'] = os.path.join(self._bindir, self._hgcommand)
+            chgbindir = os.path.dirname(os.path.realpath(self.options.with_chg))
+            self._hgcommand = os.path.basename(self.options.with_chg)
+
         osenvironb[b"BINDIR"] = self._bindir
         osenvironb[b"PYTHON"] = PYTHON
 
@@ -1951,6 +1973,8 @@ class TestRunner(object):
             realfile = os.path.realpath(fileb)
             realdir = os.path.abspath(os.path.dirname(realfile))
             path.insert(2, realdir)
+        if chgbindir != self._bindir:
+            path.insert(1, chgbindir)
         if self._testdir != runtestdir:
             path = [self._testdir] + path
         if self._tmpbindir != self._bindir:
@@ -2119,6 +2143,8 @@ class TestRunner(object):
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
+        if self._chgsockdir:
+            self._killchgdaemons()
 
         if self.options.keep_tmpdir:
             return
@@ -2317,6 +2343,13 @@ class TestRunner(object):
             pipe.close()
 
         return self._hgpath
+
+    def _killchgdaemons(self):
+        """Kill all background chg command servers spawned by tests"""
+        for f in os.listdir(self._chgsockdir):
+            if not f.endswith(b'.pid'):
+                continue
+            killdaemons(os.path.join(self._chgsockdir, f))
 
     def _outputcoverage(self):
         """Produce code coverage output."""
