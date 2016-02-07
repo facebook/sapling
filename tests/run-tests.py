@@ -285,11 +285,12 @@ def parseargs(args, parser):
         options.pure = True
 
     if options.with_hg:
-        options.with_hg = os.path.realpath(os.path.expanduser(options.with_hg))
+        options.with_hg = os.path.realpath(
+            os.path.expanduser(_bytespath(options.with_hg)))
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
-        if not os.path.basename(options.with_hg) == 'hg':
+        if not os.path.basename(options.with_hg) == b'hg':
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
         testdir = os.path.dirname(_bytespath(os.path.realpath(sys.argv[0])))
@@ -1922,12 +1923,6 @@ class TestRunner(object):
         if self.options.with_hg:
             self._installdir = None
             whg = self.options.with_hg
-            # If --with-hg is not specified, we have bytes already,
-            # but if it was specified in python3 we get a str, so we
-            # have to encode it back into a bytes.
-            if PYTHON3:
-                if not isinstance(whg, bytes):
-                    whg = _bytespath(whg)
             self._bindir = os.path.dirname(os.path.realpath(whg))
             assert isinstance(self._bindir, bytes)
             self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
