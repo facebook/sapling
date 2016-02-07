@@ -28,6 +28,9 @@ Mercurial-patchbomb/.* -> Mercurial-patchbomb/* (glob)
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "patchbomb=" >> $HGRCPATH
 
+Ensure hg email output is sent to stdout
+  $ unset PAGER
+
   $ hg init t
   $ cd t
   $ echo a > a
