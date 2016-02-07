@@ -1878,7 +1878,7 @@ class TestRunner(object):
                     for kw, mul in slow.items():
                         if kw in f:
                             val *= mul
-                    if f.endswith('.py'):
+                    if f.endswith(b'.py'):
                         val /= 10.0
                     perf[f] = val / 1000.0
                     return perf[f]
