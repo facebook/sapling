@@ -249,6 +249,8 @@ def getparser():
         metavar="HG",
         help="test using specified hg script rather than a "
              "temporary installation")
+    parser.add_option("--chg", action="store_true",
+                      help="install and use chg wrapper in place of hg")
     parser.add_option("--with-chg", metavar="CHG",
                       help="use specified chg wrapper in place of hg")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
@@ -294,14 +296,19 @@ def parseargs(args, parser):
                          % hgbin)
         options.with_hg = hgbin
 
+    if (options.chg or options.with_chg) and os.name == 'nt':
+        parser.error('chg does not work on %s' % os.name)
     if options.with_chg:
-        if os.name == 'nt':
-            parser.error('chg does not work on %s' % os.name)
+        options.chg = False  # no installation to temporary location
         options.with_chg = os.path.realpath(
             os.path.expanduser(_bytespath(options.with_chg)))
         if not (os.path.isfile(options.with_chg) and
                 os.access(options.with_chg, os.X_OK)):
             parser.error('--with-chg must specify a chg executable')
+    if options.chg and options.with_hg:
+        # chg shares installation location with hg
+        parser.error('--chg does not work when --with-hg is specified '
+                     '(use --with-chg instead)')
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
@@ -1949,11 +1956,14 @@ class TestRunner(object):
 
         # set up crafted chg environment, then replace "hg" command by "chg"
         chgbindir = self._bindir
-        if self.options.with_chg:
+        if self.options.chg or self.options.with_chg:
             self._chgsockdir = d = os.path.join(self._hgtmp, b'chgsock')
             os.mkdir(d)
             osenvironb[b'CHGSOCKNAME'] = os.path.join(d, b"server")
             osenvironb[b'CHGHG'] = os.path.join(self._bindir, self._hgcommand)
+        if self.options.chg:
+            self._hgcommand = b'chg'
+        elif self.options.with_chg:
             chgbindir = os.path.dirname(os.path.realpath(self.options.with_chg))
             self._hgcommand = os.path.basename(self.options.with_chg)
 
@@ -2043,6 +2053,9 @@ class TestRunner(object):
                 self._checkhglib("Testing")
             else:
                 self._usecorrectpython()
+            if self.options.chg:
+                assert self._installdir
+                self._installchg()
 
             if self.options.restart:
                 orig = list(tests)
@@ -2343,6 +2356,27 @@ class TestRunner(object):
             pipe.close()
 
         return self._hgpath
+
+    def _installchg(self):
+        """Install chg into the test environment"""
+        vlog('# Performing temporary installation of CHG')
+        assert os.path.dirname(self._bindir) == self._installdir
+        assert self._hgroot, 'must be called after _installhg()'
+        cmd = (b'"%(make)s" clean install PREFIX="%(prefix)s"'
+               % {b'make': 'make',  # TODO: switch by option or environment?
+                  b'prefix': self._installdir})
+        cwd = os.path.join(self._hgroot, b'contrib', b'chg')
+        vlog("# Running", cmd)
+        proc = subprocess.Popen(cmd, shell=True, cwd=cwd,
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        out, _err = proc.communicate()
+        if proc.returncode != 0:
+            if PYTHON3:
+                sys.stdout.buffer.write(out)
+            else:
+                sys.stdout.write(out)
+            sys.exit(1)
 
     def _killchgdaemons(self):
         """Kill all background chg command servers spawned by tests"""
