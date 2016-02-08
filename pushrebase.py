@@ -417,7 +417,7 @@ def _addpushbackchangegroup(repo, reply, outgoing):
     cgversions = set(reply.capabilities.get('changegroup'))
     if not cgversions:
         cgversions.add('01')
-    version = max(cgversions & set(changegroup.supportedversions(repo)))
+    version = max(cgversions & set(changegroup.supportedoutgoingversions(repo)))
 
     cg = changegroup.getlocalchangegroupraw(repo,
                                             'rebase:reply',
