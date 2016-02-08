@@ -197,46 +197,73 @@ class verifier(object):
         ui.progress(_('checking'), None)
         return mflinkrevs, filelinkrevs
 
-    def _verifymanifest(self, mflinkrevs):
+    def _verifymanifest(self, mflinkrevs, dir=""):
         repo = self.repo
         ui = self.ui
-        mf = self.repo.manifest
+        mf = self.repo.manifest.dirlog(dir)
 
-        ui.status(_("checking manifests\n"))
+        if not dir:
+            self.ui.status(_("checking manifests\n"))
+
         filenodes = {}
+        subdirnodes = {}
         seen = {}
         label = "manifest"
+        if dir:
+            label = dir
         if self.refersmf:
             # Do not check manifest if there are only changelog entries with
             # null manifests.
             self.checklog(mf, label, 0)
         total = len(mf)
         for i in mf:
-            ui.progress(_('checking'), i, total=total, unit=_('manifests'))
+            if not dir:
+                ui.progress(_('checking'), i, total=total, unit=_('manifests'))
             n = mf.node(i)
             lr = self.checkentry(mf, i, n, seen, mflinkrevs.get(n, []), label)
             if n in mflinkrevs:
                 del mflinkrevs[n]
+            elif dir:
+                self.err(lr, _("%s not in parent-directory manifest") %
+                         short(n), label)
             else:
                 self.err(lr, _("%s not in changesets") % short(n), label)
 
             try:
-                for f, fn in mf.readdelta(n).iteritems():
+                for f, fn, fl in mf.readshallowdelta(n).iterentries():
                     if not f:
-                        self.err(lr, _("file without name in manifest"))
-                    elif f != "/dev/null": # ignore this in very old repos
-                        if _validpath(repo, f):
-                            filenodes.setdefault(
-                                _normpath(f), {}).setdefault(fn, lr)
+                        self.err(lr, _("entry without name in manifest"))
+                    elif f == "/dev/null":  # ignore this in very old repos
+                        continue
+                    fullpath = dir + _normpath(f)
+                    if not _validpath(repo, fullpath):
+                        continue
+                    if fl == 't':
+                        subdirnodes.setdefault(fullpath + '/', {}).setdefault(
+                            fn, []).append(lr)
+                    else:
+                        filenodes.setdefault(fullpath, {}).setdefault(fn, lr)
             except Exception as inst:
                 self.exc(lr, _("reading delta %s") % short(n), inst, label)
-        ui.progress(_('checking'), None)
+        if not dir:
+            ui.progress(_('checking'), None)
 
         if self.havemf:
             for c, m in sorted([(c, m) for m in mflinkrevs
                         for c in mflinkrevs[m]]):
-                self.err(c, _("changeset refers to unknown revision %s") %
-                         short(m), label)
+                if dir:
+                    self.err(c, _("parent-directory manifest refers to unknown "
+                                  "revision %s") % short(m), label)
+                else:
+                    self.err(c, _("changeset refers to unknown revision %s") %
+                             short(m), label)
+
+        if not dir and subdirnodes:
+            self.ui.status(_("checking directory manifests\n"))
+        for subdir, linkrevs in subdirnodes.iteritems():
+            subdirfilenodes = self._verifymanifest(linkrevs, subdir)
+            for f, onefilenodes in subdirfilenodes.iteritems():
+                filenodes.setdefault(f, {}).update(onefilenodes)
 
         return filenodes
 

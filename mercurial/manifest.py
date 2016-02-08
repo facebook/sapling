@@ -325,6 +325,9 @@ class manifestdict(object):
     def iteritems(self):
         return (x[:2] for x in self._lm.iterentries())
 
+    def iterentries(self):
+        return self._lm.iterentries()
+
     def text(self, usemanifestv2=False):
         if usemanifestv2:
             return _textv2(self._lm.iterentries())
@@ -920,7 +923,8 @@ class manifest(revlog.revlog):
         return manifestdict(data)
 
     def dirlog(self, dir):
-        assert self._treeondisk
+        if dir:
+            assert self._treeondisk
         if dir not in self._dirlogcache:
             self._dirlogcache[dir] = manifest(self.opener, dir,
                                               self._dirlogcache)
@@ -944,6 +948,22 @@ class manifest(revlog.revlog):
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return self._newmanifest(d)
+
+    def readshallowdelta(self, node):
+        '''For flat manifests, this is the same as readdelta(). For
+        treemanifests, this will read the delta for this revlog's directory,
+        without recursively reading subdirectory manifests. Instead, any
+        subdirectory entry will be reported as it appears in the manifests, i.e.
+        the subdirectory will be reported among files and distinguished only by
+        its 't' flag.'''
+        if not self._treeondisk:
+            return self.readdelta(node)
+        if self._usemanifestv2:
+            raise error.Abort(
+                "readshallowdelta() not implemented for manifestv2")
+        r = self.rev(node)
+        d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
+        return manifestdict(d)
 
     def readfast(self, node):
         '''use the faster of readdelta or read

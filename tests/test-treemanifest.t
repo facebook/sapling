@@ -471,6 +471,7 @@ Verify works
   $ hg verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -502,6 +503,56 @@ Rebuilt fncache includes dirlogs
 
 Finish first server
   $ killdaemons.py
+
+Back up the recently added revlogs
+  $ cp -r .hg/store .hg/store-newcopy
+
+Verify reports missing dirlog
+  $ rm .hg/store/meta/b/00manifest.*
+  $ hg verify
+  checking changesets
+  checking manifests
+  checking directory manifests
+   0: empty or missing b/
+   b/@0: parent-directory manifest refers to unknown revision 67688a370455
+   b/@1: parent-directory manifest refers to unknown revision f38e85d334c5
+   b/@2: parent-directory manifest refers to unknown revision 99c9792fd4b0
+  crosschecking files in changesets and manifests
+   b/bar/fruits.txt@0: in changeset but not in manifest
+   b/bar/orange/fly/gnat.py@0: in changeset but not in manifest
+   b/bar/orange/fly/housefly.txt@0: in changeset but not in manifest
+   b/foo/apple/bees/flower.py@0: in changeset but not in manifest
+  checking files
+  8 files, 3 changesets, 10 total revisions
+  8 integrity errors encountered!
+  (first damaged changeset appears to be 0)
+  [1]
+  $ cp -rT .hg/store-newcopy .hg/store
+
+Verify reports missing dirlog entry
+  $ mv -f .hg/store-copy/meta/b/00manifest.* .hg/store/meta/b/
+  $ hg verify
+  checking changesets
+  checking manifests
+  checking directory manifests
+   b/@1: parent-directory manifest refers to unknown revision f38e85d334c5
+   b/@2: parent-directory manifest refers to unknown revision 99c9792fd4b0
+   b/bar/@?: rev 1 points to unexpected changeset 1
+   b/bar/@?: 5e03c4ee5e4a not in parent-directory manifest
+   b/bar/@?: rev 2 points to unexpected changeset 2
+   b/bar/@?: 1b16940d66d6 not in parent-directory manifest
+   b/bar/orange/@?: rev 1 points to unexpected changeset 2
+   (expected None)
+   b/bar/orange/fly/@?: rev 1 points to unexpected changeset 2
+   (expected None)
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
+  2 warnings encountered!
+  8 integrity errors encountered!
+  (first damaged changeset appears to be 1)
+  [1]
+  $ cp -rT .hg/store-newcopy .hg/store
 
 Test cloning a treemanifest repo over http.
   $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
@@ -547,6 +598,7 @@ Verify passes.
   $ hg verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -591,6 +643,7 @@ Local clone with basicstore
   $ hg -R local-clone-basicstore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -600,6 +653,7 @@ Local clone with encodedstore
   $ hg -R local-clone-encodedstore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -609,6 +663,7 @@ Local clone with fncachestore
   $ hg -R local-clone-fncachestore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -624,6 +679,7 @@ Stream clone with basicstore
   $ hg -R stream-clone-basicstore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -639,6 +695,7 @@ Stream clone with encodedstore
   $ hg -R stream-clone-encodedstore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
@@ -654,6 +711,7 @@ Stream clone with fncachestore
   $ hg -R stream-clone-fncachestore verify
   checking changesets
   checking manifests
+  checking directory manifests
   crosschecking files in changesets and manifests
   checking files
   8 files, 3 changesets, 10 total revisions
