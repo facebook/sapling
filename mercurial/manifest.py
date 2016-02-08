@@ -520,6 +520,15 @@ class treemanifest(object):
         self._node = node
         self._dirty = False
 
+    def iterentries(self):
+        self._load()
+        for p, n in sorted(self._dirs.items() + self._files.items()):
+            if p in self._files:
+                yield self._subpath(p), n, self._flags.get(p, '')
+            else:
+                for x in n.iterentries():
+                    yield x
+
     def iteritems(self):
         self._load()
         for p, n in sorted(self._dirs.items() + self._files.items()):
