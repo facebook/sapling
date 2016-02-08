@@ -194,7 +194,7 @@ def _destmergebranch(repo):
     """find merge destination based on branch heads"""
     node = None
     parent = repo.dirstate.p1()
-    branch = repo[None].branch()
+    branch = repo.dirstate.branch()
     bheads = repo.branchheads(branch)
     nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
 
