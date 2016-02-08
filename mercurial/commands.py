@@ -6959,23 +6959,23 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
     if rev is None or rev == '':
         rev = node
 
+    if date and rev is not None:
+        raise error.Abort(_("you can't specify a revision and a date"))
+
+    if check and clean:
+        raise error.Abort(_("cannot specify both -c/--check and -C/--clean"))
+
     warndest = False
 
     with repo.wlock():
         cmdutil.clearunfinished(repo)
 
         if date:
-            if rev is not None:
-                raise error.Abort(_("you can't specify a revision and a date"))
             rev = cmdutil.finddate(ui, repo, date)
 
         # if we defined a bookmark, we have to remember the original name
         brev = rev
         rev = scmutil.revsingle(repo, rev, rev).rev()
-
-        if check and clean:
-            raise error.Abort(_("cannot specify both -c/--check and -C/--clean")
-                             )
 
         if check:
             cmdutil.bailifchanged(repo, merge=False)
