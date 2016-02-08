@@ -176,6 +176,8 @@ utestpats = [
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
     (r'^  (cat|find): .*: No such file or directory',
      'use test -f to test for file existence'),
+    (r'^  diff -[^ -]*p',
+     "don't use (external) diff with -p for portability"),
   ],
   # warnings
   [

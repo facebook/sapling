@@ -1,3 +1,9 @@
+  $ cat >> $HGRCPATH <<EOF
+  > [defaults]
+  > # for portability
+  > extdiff = --option -Nru
+  > EOF
+
 Create a repo with some stuff in it:
 
   $ hg init a
