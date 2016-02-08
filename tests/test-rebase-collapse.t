@@ -58,7 +58,7 @@ Rebasing B onto H and collapsing changesets with different phases:
   > echo "===="
   > echo "edited manually" >> \$1
   > EOF
-  $ HGEDITOR="sh $TESTTMP/editor.sh" hg rebase --collapse --keepbranches -e
+  $ HGEDITOR="sh $TESTTMP/editor.sh" hg rebase --collapse --keepbranches -e --dest 7
   rebasing 1:42ccdea3bb16 "B"
   rebasing 2:5fddd98957c8 "C"
   rebasing 3:32af7686d403 "D"
@@ -115,7 +115,7 @@ Rebasing E onto H:
   $ cd a2
 
   $ hg phase --force --secret 6
-  $ hg rebase --source 4 --collapse
+  $ hg rebase --source 4 --collapse --dest 7
   rebasing 4:9520eea781bc "E"
   rebasing 6:eea13746799a "G"
   saved backup bundle to $TESTTMP/a2/.hg/strip-backup/9520eea781bc-fcd8edd4-backup.hg (glob)
@@ -157,7 +157,7 @@ Rebasing G onto H with custom message:
   > env | grep HGEDITFORM
   > true
   > EOF
-  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --source 4 --collapse -m 'custom message' -e
+  $ HGEDITOR="sh $TESTTMP/checkeditform.sh" hg rebase --source 4 --collapse -m 'custom message' -e --dest 7
   rebasing 4:9520eea781bc "E"
   rebasing 6:eea13746799a "G"
   HGEDITFORM=rebase.collapse
@@ -261,13 +261,13 @@ Rebase and collapse - more than one external (fail):
   $ hg clone -q -u . b b1
   $ cd b1
 
-  $ hg rebase -s 2 --collapse
+  $ hg rebase -s 2 --dest 7 --collapse
   abort: unable to collapse on top of 7, there is more than one external parent: 1, 5
   [255]
 
 Rebase and collapse - E onto H:
 
-  $ hg rebase -s 4 --collapse # root (4) is not a merge
+  $ hg rebase -s 4 --dest 7 --collapse # root (4) is not a merge
   rebasing 4:8a5212ebc852 "E"
   rebasing 5:7f219660301f "F"
   rebasing 6:c772a8b2dc17 "G"
@@ -418,7 +418,7 @@ Rebase and collapse - E onto I:
   $ hg clone -q -u . c c1
   $ cd c1
 
-  $ hg rebase -s 4 --collapse # root (4) is not a merge
+  $ hg rebase -s 4 --dest 8 --collapse # root (4) is not a merge
   rebasing 4:8a5212ebc852 "E"
   rebasing 5:dca5924bb570 "F"
   merging E
@@ -512,7 +512,7 @@ Rebase and collapse - B onto F:
   $ hg clone -q -u . d d1
   $ cd d1
 
-  $ hg rebase -s 1 --collapse
+  $ hg rebase -s 1 --collapse --dest 5
   rebasing 1:27547f69f254 "B"
   rebasing 2:f838bfaca5c7 "C"
   rebasing 3:7bbcd6078bcc "D"

@@ -82,33 +82,33 @@ These fail:
   abort: cannot specify both a revision and a base
   [255]
 
-  $ hg rebase --rev '1 & !1'
+  $ hg rebase --rev '1 & !1' --dest 8
   empty "rev" revision set - nothing to rebase
   [1]
 
-  $ hg rebase --source '1 & !1'
+  $ hg rebase --source '1 & !1' --dest 8
   empty "source" revision set - nothing to rebase
   [1]
 
-  $ hg rebase --base '1 & !1'
+  $ hg rebase --base '1 & !1' --dest 8
   empty "base" revision set - can't compute rebase set
   [1]
 
-  $ hg rebase
+  $ hg rebase --dest 8
   nothing to rebase - working directory parent is also destination
   [1]
 
-  $ hg rebase -b.
+  $ hg rebase -b . --dest 8
   nothing to rebase - e7ec4e813ba6 is both "base" and destination
   [1]
 
   $ hg up -q 7
 
-  $ hg rebase --traceback
+  $ hg rebase --dest 8 --traceback
   nothing to rebase - working directory parent is already an ancestor of destination e7ec4e813ba6
   [1]
 
-  $ hg rebase -b.
+  $ hg rebase --dest 8 -b.
   nothing to rebase - "base" 02de42196ebe is already an ancestor of destination e7ec4e813ba6
   [1]
 
@@ -402,7 +402,7 @@ Rebasing both a single revision and a merge in one command
 
   $ hg clone -q -u . a aX
   $ cd aX
-  $ hg rebase -r 3 -r 6
+  $ hg rebase -r 3 -r 6 --dest 8
   rebasing 3:32af7686d403 "D"
   rebasing 6:eea13746799a "G"
   saved backup bundle to $TESTTMP/aX/.hg/strip-backup/eea13746799a-ad273fd6-backup.hg (glob)

@@ -167,7 +167,7 @@ rebase --continue with bookmarks present (issue3802)
   created new head
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg rebase
+  $ hg rebase --dest 4
   rebasing 3:3d5fa227f4b5 "C" (Y Z)
   merging c
   warning: conflicts while merging c! (edit, then use 'hg resolve --mark')
