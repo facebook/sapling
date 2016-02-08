@@ -47,7 +47,7 @@ command = cmdutil.command(cmdtable)
 # be specifying the version(s) of Mercurial they are tested with, or
 # leave the attribute unspecified.
 testedwith = 'internal'
-lastblackbox = None
+lastfp = None
 
 filehandles = {}
 
@@ -103,42 +103,42 @@ def wrapui(ui):
             return fp
 
         def log(self, event, *msg, **opts):
-            global lastblackbox
+            global lastfp
             super(blackboxui, self).log(event, *msg, **opts)
 
             if not '*' in self.track and not event in self.track:
                 return
 
             if util.safehasattr(self, '_blackbox'):
-                blackbox = self._blackbox
+                fp = self._blackbox
             elif util.safehasattr(self, '_bbvfs'):
                 try:
-                    self._blackbox = self._openlogfile()
+                    self._bbfp = self._openlogfile()
                 except (IOError, OSError) as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
                     del self._bbvfs
-                    self._blackbox = None
-                blackbox = self._blackbox
+                    self._bbfp = None
+                fp = self._bbfp
             else:
                 # certain ui instances exist outside the context of
                 # a repo, so just default to the last blackbox that
                 # was seen.
-                blackbox = lastblackbox
+                fp = lastfp
 
-            if blackbox:
+            if fp:
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
                 pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 try:
-                    blackbox.write('%s %s (%s)> %s' %
+                    fp.write('%s %s (%s)> %s' %
                                    (date, user, pid, formattedmsg))
-                    blackbox.flush()
+                    fp.flush()
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                lastblackbox = blackbox
+                lastfp = fp
 
         def setrepo(self, repo):
             self._bbvfs = repo.vfs
@@ -170,8 +170,8 @@ def blackbox(ui, repo, *revs, **opts):
         return
 
     limit = opts.get('limit')
-    blackbox = repo.vfs('blackbox.log', 'r')
-    lines = blackbox.read().split('\n')
+    fp = repo.vfs('blackbox.log', 'r')
+    lines = fp.read().split('\n')
 
     count = 0
     output = []
