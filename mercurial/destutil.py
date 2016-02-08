@@ -216,7 +216,7 @@ def _destmergebook(repo, action='merge', sourceset=None):
     assert node is not None
     return node
 
-def _destmergebranch(repo, action='merge', sourceset=None):
+def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
     """find merge destination based on branch heads"""
     node = None
 
@@ -235,7 +235,7 @@ def _destmergebranch(repo, action='merge', sourceset=None):
             branch = ctx.branch()
 
     bheads = repo.branchheads(branch)
-    if not repo.revs('%ld and %ln', sourceset, bheads):
+    if onheadcheck and not repo.revs('%ld and %ln', sourceset, bheads):
         # Case A: working copy if not on a head. (merge only)
         #
         # This is probably a user mistake We bailout pointing at 'hg update'
@@ -275,7 +275,7 @@ def _destmergebranch(repo, action='merge', sourceset=None):
     assert node is not None
     return node
 
-def destmerge(repo, action='merge', sourceset=None):
+def destmerge(repo, action='merge', sourceset=None, onheadcheck=True):
     """return the default destination for a merge
 
     (or raise exception about why it can't pick one)
@@ -285,7 +285,8 @@ def destmerge(repo, action='merge', sourceset=None):
     if repo._activebookmark:
         node = _destmergebook(repo, action=action, sourceset=sourceset)
     else:
-        node = _destmergebranch(repo, action=action, sourceset=sourceset)
+        node = _destmergebranch(repo, action=action, sourceset=sourceset,
+                                onheadcheck=onheadcheck)
     return repo[node].rev()
 
 histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'
