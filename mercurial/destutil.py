@@ -137,41 +137,57 @@ def destupdate(repo, clean=False, check=False):
 msgdestmerge = {
     # too many matching divergent bookmark
     'toomanybookmarks':
-        (_("multiple matching bookmarks to merge -"
-           " please merge with an explicit rev or bookmark"),
-         _("run 'hg heads' to see all heads")),
+        {'merge':
+            (_("multiple matching bookmarks to merge -"
+               " please merge with an explicit rev or bookmark"),
+             _("run 'hg heads' to see all heads")),
+        },
     # no other matching divergent bookmark
     'nootherbookmarks':
-        (_("no matching bookmark to merge - "
-           "please merge with an explicit rev or bookmark"),
-         _("run 'hg heads' to see all heads")),
+        {'merge':
+            (_("no matching bookmark to merge - "
+               "please merge with an explicit rev or bookmark"),
+             _("run 'hg heads' to see all heads")),
+        },
     # branch have too many unbookmarked heads, no obvious destination
     'toomanyheads':
-        (_("branch '%s' has %d heads - please merge with an explicit rev"),
-         _("run 'hg heads .' to see heads")),
+        {'merge':
+            (_("branch '%s' has %d heads - please merge with an explicit rev"),
+             _("run 'hg heads .' to see heads")),
+        },
     # branch have no other unbookmarked heads
     'bookmarkedheads':
-        (_("heads are bookmarked - please merge with an explicit rev"),
-         _("run 'hg heads' to see all heads")),
+        {'merge':
+            (_("heads are bookmarked - please merge with an explicit rev"),
+             _("run 'hg heads' to see all heads")),
+        },
     # branch have just a single heads, but there is other branches
     'nootherbranchheads':
-        (_("branch '%s' has one head - please merge with an explicit rev"),
-         _("run 'hg heads' to see all heads")),
+        {'merge':
+            (_("branch '%s' has one head - please merge with an explicit rev"),
+             _("run 'hg heads' to see all heads")),
+        },
     # repository have a single head
     'nootherheads':
-        (_('nothing to merge'),
+            {'merge':
+                (_('nothing to merge'),
          None),
+        },
     # repository have a single head and we are not on it
     'nootherheadsbehind':
-        (_('nothing to merge'),
-         _("use 'hg update' instead")),
+        {'merge':
+            (_('nothing to merge'),
+             _("use 'hg update' instead")),
+        },
     # We are not on a head
     'notatheads':
-        (_('working directory not at a head revision'),
-         _("use 'hg update' or merge with an explicit revision"))
-        }
+        {'merge':
+            (_('working directory not at a head revision'),
+             _("use 'hg update' or merge with an explicit revision"))
+        },
+    }
 
-def _destmergebook(repo):
+def _destmergebook(repo, action='merge'):
     """find merge destination in the active bookmark case"""
     node = None
     bmheads = repo.bookmarkheads(repo._activebookmark)
@@ -182,15 +198,15 @@ def _destmergebook(repo):
         else:
             node = bmheads[0]
     elif len(bmheads) > 2:
-        msg, hint = msgdestmerge['toomanybookmarks']
+        msg, hint = msgdestmerge['toomanybookmarks'][action]
         raise error.Abort(msg, hint=hint)
     elif len(bmheads) <= 1:
-        msg, hint = msgdestmerge['nootherbookmarks']
+        msg, hint = msgdestmerge['nootherbookmarks'][action]
         raise error.Abort(msg, hint=hint)
     assert node is not None
     return node
 
-def _destmergebranch(repo):
+def _destmergebranch(repo, action='merge'):
     """find merge destination based on branch heads"""
     node = None
     parent = repo.dirstate.p1()
@@ -203,9 +219,9 @@ def _destmergebranch(repo):
         #
         # This is probably a user mistake We bailout pointing at 'hg update'
         if len(repo.heads()) <= 1:
-            msg, hint = msgdestmerge['nootherheadsbehind']
+            msg, hint = msgdestmerge['nootherheadsbehind'][action]
         else:
-            msg, hint = msgdestmerge['notatheads']
+            msg, hint = msgdestmerge['notatheads'][action]
         raise error.Abort(msg, hint=hint)
     elif len(nbhs) > 2:
         # Case B: There is more than 2 anonymous heads
@@ -213,7 +229,7 @@ def _destmergebranch(repo):
         # This means that there will be more than 1 candidate. This is
         # ambiguous. We abort asking the user to pick as explicit destination
         # instead.
-        msg, hint = msgdestmerge['toomanyheads']
+        msg, hint = msgdestmerge['toomanyheads'][action]
         msg %= (branch, len(bheads))
         raise error.Abort(msg, hint=hint)
     elif len(nbhs) <= 1:
@@ -222,12 +238,12 @@ def _destmergebranch(repo):
         # This means that there is no natural candidate to merge with.
         # We abort, with various messages for various cases.
         if len(bheads) > 1:
-            msg, hint = msgdestmerge['bookmarkedheads']
+            msg, hint = msgdestmerge['bookmarkedheads'][action]
         elif len(repo.heads()) > 1:
-            msg, hint = msgdestmerge['nootherbranchheads']
+            msg, hint = msgdestmerge['nootherbranchheads'][action]
             msg %= branch
         else:
-            msg, hint = msgdestmerge['nootherheads']
+            msg, hint = msgdestmerge['nootherheads'][action]
         raise error.Abort(msg, hint=hint)
     elif parent == nbhs[0]:
         node = nbhs[-1]
@@ -236,11 +252,17 @@ def _destmergebranch(repo):
     assert node is not None
     return node
 
-def destmerge(repo):
+def destmerge(repo, action='merge'):
+    """return the default destination for a merge
+
+    (or raise exception about why it can't pick one)
+
+    :action: the action being performed, controls emitted error message
+    """
     if repo._activebookmark:
-        node = _destmergebook(repo)
+        node = _destmergebook(repo, action=action)
     else:
-        node = _destmergebranch(repo)
+        node = _destmergebranch(repo, action=action)
     return repo[node].rev()
 
 histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'
