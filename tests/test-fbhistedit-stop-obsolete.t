@@ -73,7 +73,6 @@ stop & continue cannot preserve hashes without obsolence
   > stop e860deea161a e
   > pick 652413bf663e f
   > EOF
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as 04d2fab98077. You may amend the commit now.
   When you are done, run hg histedit --continue to resume
 
@@ -121,7 +120,6 @@ stop on a commit
   > stop 04d2fab98077 e
   > pick 794fe033d0a0 f
   > EOF
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Changes commited as d28623a90f2b. You may amend the commit now.
   When you are done, run hg histedit --continue to resume
 
@@ -175,9 +173,6 @@ fold a commit to check if other non-pick actions are handled correctly
   > stop d51720eb7a13 e
   > pick 099559071076 f
   > EOF
-  0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Changes commited as 08cf87522012. You may amend the commit now.
   When you are done, run hg histedit --continue to resume
 

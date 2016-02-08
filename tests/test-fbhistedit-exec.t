@@ -70,7 +70,6 @@ exec & continue should not preserve hashes
   this should be printed to stdout
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   this should be printed to stderr
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   5:652413bf663e
@@ -113,7 +112,6 @@ ensure we are properly executed in a shell
   > pick 652413bf663e f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 a failing command should drop us into the shell
 
@@ -206,7 +204,6 @@ Multiple exec commands must work
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
@@ -253,7 +250,6 @@ test 'execr' executing in the current directory
   > EOF
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls
   subfile
   $ cat subfile
@@ -290,7 +286,6 @@ Test continue a stopped evolve histedit
   > exec false
   > pick 652413bf663e f
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Command 'false' failed with exit status 1
   [1]
@@ -367,7 +362,6 @@ Test abort a stopped evolve histedit
   > exec false
   > pick 0d9a4961b100 f
   > EOF
-  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Command 'false' failed with exit status 1
   [1]

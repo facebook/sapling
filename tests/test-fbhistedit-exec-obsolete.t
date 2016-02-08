@@ -78,7 +78,6 @@ exec & continue should not preserve hashes
   this should be printed to stdout
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   this should be printed to stderr
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --graph
   @  changeset:   5:652413bf663e
@@ -121,7 +120,6 @@ ensure we are properly executed in a shell
   > pick 652413bf663e f
   > EOF
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 a failing command should drop us into the shell
 
@@ -138,7 +136,6 @@ a failing command should drop us into the shell
 continue should work
 
   $ hg histedit --continue
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
@@ -199,7 +196,6 @@ Multiple exec commands must work
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
