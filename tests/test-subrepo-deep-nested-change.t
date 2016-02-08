@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
-  > [defaults]
-  > # for portability
-  > extdiff = --option -Nru
+  > [extdiff]
+  > # for portability:
+  > pdiff = sh "$RUNTESTDIR/pdiff"
   > EOF
 
 Preparing the subrepository 'sub2'
@@ -717,9 +717,9 @@ Restore the trashed subrepo tracking
 
 Interaction with extdiff, largefiles and subrepos
 
-  $ hg --config extensions.extdiff= extdiff -S
+  $ hg --config extensions.extdiff= pdiff -S
 
-  $ hg --config extensions.extdiff= extdiff -r '.^' -S
+  $ hg --config extensions.extdiff= pdiff -r '.^' -S
   diff -Nru cloned.*/.hgsub cloned/.hgsub (glob)
   --- cloned.*/.hgsub	* (glob)
   +++ cloned/.hgsub	* (glob)
@@ -734,7 +734,7 @@ Interaction with extdiff, largefiles and subrepos
   -b1a26de6f2a045a9f079323693614ee322f1ff7e sub3
   [1]
 
-  $ hg --config extensions.extdiff= extdiff -r 0 -r '.^' -S
+  $ hg --config extensions.extdiff= pdiff -r 0 -r '.^' -S
   diff -Nru cloned.*/.hglf/b.dat cloned.*/.hglf/b.dat (glob)
   --- cloned.*/.hglf/b.dat	* (glob)
   +++ cloned.*/.hglf/b.dat	* (glob)
@@ -799,7 +799,7 @@ Interaction with extdiff, largefiles and subrepos
   [1]
 
   $ echo mod > sub1/sub2/sub2
-  $ hg --config extensions.extdiff= extdiff -S
+  $ hg --config extensions.extdiff= pdiff -S
   --- */cloned.*/sub1/sub2/sub2	* (glob)
   +++ */cloned/sub1/sub2/sub2	* (glob)
   @@ -1* +1* @@ (glob)

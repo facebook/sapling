@@ -6,9 +6,9 @@ directory (and ".hg/largefiles/dirstate")
   > merge = internal:fail
   > [extensions]
   > largefiles =
-  > [defaults]
-  > # for portability
-  > extdiff = --option -Nru
+  > [extdiff]
+  > # for portability:
+  > pdiff = sh "$RUNTESTDIR/pdiff"
   > EOF
 
   $ hg init repo
@@ -23,7 +23,7 @@ directory (and ".hg/largefiles/dirstate")
   $ echo 'large1 in #1' > large1
   $ echo 'normal1 in #1' > normal1
   $ hg commit -m '#1'
-  $ hg extdiff -r '.^' --config extensions.extdiff=
+  $ hg pdiff -r '.^' --config extensions.extdiff=
   diff -Nru repo.0d9d9b8dc9a3/.hglf/large1 repo/.hglf/large1
   --- repo.0d9d9b8dc9a3/.hglf/large1	* (glob)
   +++ repo/.hglf/large1	* (glob)

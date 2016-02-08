@@ -1,7 +1,7 @@
   $ cat >> $HGRCPATH <<EOF
-  > [defaults]
-  > # for portability
-  > extdiff = --option -Nru
+  > [extdiff]
+  > # for portability:
+  > pdiff = sh "$RUNTESTDIR/pdiff"
   > EOF
 
 Create a repo with some stuff in it:
@@ -348,7 +348,7 @@ Disallow grafting an already grafted cset onto its original branch
   skipping already grafted revision 7:ef0ef43d49e7 (was grafted from 2:5c095ad7e90f)
   [255]
 
-  $ hg extdiff --config extensions.extdiff= --patch -r 2 -r 13
+  $ hg pdiff --config extensions.extdiff= --patch -r 2 -r 13
   --- */hg-5c095ad7e90f.patch	* (glob)
   +++ */hg-7a4785234d87.patch	* (glob)
   @@ -1,18 +1,18 @@
@@ -379,7 +379,7 @@ Disallow grafting an already grafted cset onto its original branch
   ++a
   [1]
 
-  $ hg extdiff --config extensions.extdiff= --patch -r 2 -r 13 -X .
+  $ hg pdiff --config extensions.extdiff= --patch -r 2 -r 13 -X .
   --- */hg-5c095ad7e90f.patch	* (glob)
   +++ */hg-7a4785234d87.patch	* (glob)
   @@ -1,8 +1,8 @@
