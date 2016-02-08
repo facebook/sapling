@@ -544,15 +544,15 @@ revision branch cache is created when building the branch head cache
   0060: e3 d4 9c 05 80 00 00 02 e2 3b 55 05 00 00 00 02 |.........;U.....|
   0070: f8 94 c2 56 80 00 00 03                         |...V....|
 
-#if unix-permissions no-root
 no errors when revbranchcache is not writable
 
   $ echo >> .hg/cache/rbc-revs-v1
-  $ chmod a-w .hg/cache/rbc-revs-v1
+  $ mv .hg/cache/rbc-revs-v1 .hg/cache/rbc-revs-v1_
+  $ mkdir .hg/cache/rbc-revs-v1
   $ rm -f .hg/cache/branch* && hg head a -T '{rev}\n'
   5
-  $ chmod a+w .hg/cache/rbc-revs-v1
-#endif
+  $ rmdir .hg/cache/rbc-revs-v1
+  $ mv .hg/cache/rbc-revs-v1_ .hg/cache/rbc-revs-v1
 
 recovery from invalid cache revs file with trailing data
   $ echo >> .hg/cache/rbc-revs-v1
