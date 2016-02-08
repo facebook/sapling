@@ -609,7 +609,8 @@ def _parseconfig(ui, config):
 
     for cfg in config:
         try:
-            name, value = cfg.split('=', 1)
+            name, value = [cfgelem.strip()
+                           for cfgelem in cfg.split('=', 1)]
             section, name = name.split('.', 1)
             if not section or not name:
                 raise IndexError
