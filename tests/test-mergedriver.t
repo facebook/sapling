@@ -86,10 +86,12 @@ merge driver that always takes other versions
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -141,10 +143,12 @@ XXX 1 file merged!
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -159,10 +163,12 @@ XXX 1 file merged!
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -209,10 +215,12 @@ implicitly makes them resolved
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-driveronly.py (state "m")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "D", state "d", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "D", state "d", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -264,10 +272,12 @@ XXX shouldn't output a warning
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-special.py (state "s")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -308,10 +318,12 @@ XXX shouldn't output a warning
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-exit.py (state "m")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -357,10 +369,12 @@ raise an error
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-mark-and-raise.py (state "u")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -495,10 +509,12 @@ verify behavior with different merge driver
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:fail (state "s")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "u", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -509,10 +525,12 @@ verify behavior with different merge driver
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
@@ -551,6 +569,7 @@ this should invoke the merge driver
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   merge driver: python:$TESTTMP/mergedriver-raise.py (state "u")
+  file extras: foo.txt (ancestorlinknode = ede3d67b8d0fb0052854c85fb16823c825d21060)
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node 802224e80e899817a159d494c123fb421ac3efee)
@@ -585,10 +604,12 @@ test merge with automatic commit afterwards -- e.g. graft
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
+  file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
     ancestor path: bar.txt (node 4f30a68d92d62ca460d2c484d3fe4584c0521ae1)
     other path: bar.txt (node 18db82bb5e3b439444a63baf35364169e848cfd2)
+  file extras: foo.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: foo.txt (record type "F", state "r", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
     ancestor path: foo.txt (node ad59c7ac23656632da079904d4d40d0bab4aeb80)
