@@ -82,6 +82,11 @@ These fail:
   abort: cannot specify both a revision and a base
   [255]
 
+  $ hg rebase --base 6
+  abort: branch 'default' has 3 heads - please rebase to an explicit rev
+  (run 'hg heads .' to see heads)
+  [255]
+
   $ hg rebase --rev '1 & !1' --dest 8
   empty "rev" revision set - nothing to rebase
   [1]
