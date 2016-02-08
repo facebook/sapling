@@ -51,23 +51,23 @@ def wrapui(ui):
         def _openlogfile(self):
             def rotate(oldpath, newpath):
                 try:
-                    os.unlink(newpath)
+                    self._bbvfs.unlink(newpath)
                 except OSError as err:
                     if err.errno != errno.ENOENT:
                         self.debug("warning: cannot remove '%s': %s\n" %
                                    (newpath, err.strerror))
                 try:
                     if newpath:
-                        os.rename(oldpath, newpath)
+                        self._bbvfs.rename(oldpath, newpath)
                 except OSError as err:
                     if err.errno != errno.ENOENT:
                         self.debug("warning: cannot rename '%s' to '%s': %s\n" %
                                    (newpath, oldpath, err.strerror))
 
-            fp = self._bbopener('blackbox.log', 'a')
+            fp = self._bbvfs('blackbox.log', 'a')
             maxsize = self.configbytes('blackbox', 'maxsize', 1048576)
             if maxsize > 0:
-                st = os.fstat(fp.fileno())
+                st = self._bbvfs.fstat(fp)
                 if st.st_size >= maxsize:
                     path = fp.name
                     fp.close()
@@ -77,7 +77,7 @@ def wrapui(ui):
                                newpath='%s.%d' % (path, i))
                     rotate(oldpath=path,
                            newpath=maxfiles > 0 and path + '.1')
-                    fp = self._bbopener('blackbox.log', 'a')
+                    fp = self._bbvfs('blackbox.log', 'a')
             return fp
 
         def log(self, event, *msg, **opts):
@@ -89,13 +89,13 @@ def wrapui(ui):
 
             if util.safehasattr(self, '_blackbox'):
                 blackbox = self._blackbox
-            elif util.safehasattr(self, '_bbopener'):
+            elif util.safehasattr(self, '_bbvfs'):
                 try:
                     self._blackbox = self._openlogfile()
                 except (IOError, OSError) as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                    del self._bbopener
+                    del self._bbvfs
                     self._blackbox = None
                 blackbox = self._blackbox
             else:
@@ -119,7 +119,7 @@ def wrapui(ui):
                 lastblackbox = blackbox
 
         def setrepo(self, repo):
-            self._bbopener = repo.vfs
+            self._bbvfs = repo.vfs
 
     ui.__class__ = blackboxui
 
@@ -144,7 +144,7 @@ def blackbox(ui, repo, *revs, **opts):
     '''view the recent repository events
     '''
 
-    if not os.path.exists(repo.join('blackbox.log')):
+    if not repo.vfs.exists('blackbox.log'):
         return
 
     limit = opts.get('limit')
