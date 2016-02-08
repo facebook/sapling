@@ -789,7 +789,7 @@ class basefilectx(object):
         if fctx._customcmp:
             return fctx.cmp(self)
 
-        if (fctx._filerev is None
+        if (fctx._filenode is None
             and (self._repo._encodefilterpats
                  # if file data starts with '\1\n', empty metadata block is
                  # prepended, which adds 4 bytes to filelog.size().
