@@ -335,9 +335,9 @@ Fbamend respects the createmarkers option
   rebasing 2:3166f3b5587d "commit --amend message"
   rebasing 3:01dd7a39383a "bar"
   $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
-  o  7 3d03d0a249f0 bar
+  o  7 9752120dcffe bar
   |
-  o  6 79b4a48fba8d commit --amend message
+  o  6 bc3b6a46cdb4 commit --amend message
   |
   @  5 3a4d2824efc1 message from exec
   |
@@ -347,8 +347,8 @@ Fbamend respects the createmarkers option
   $ hg add cc
   $ hg amend --rebase --traceback
   rebasing the children of 1c16dd8e35d2.preamend
-  rebasing 6:79b4a48fba8d "commit --amend message"
-  rebasing 7:3d03d0a249f0 "bar"
+  rebasing 6:bc3b6a46cdb4 "commit --amend message"
+  rebasing 7:9752120dcffe "bar"
 
 Test that fbamend works with interactive commits (crecord)
   $ cat >> $HGRCPATH << EOF
@@ -358,7 +358,7 @@ Test that fbamend works with interactive commits (crecord)
   > crecord = True
   > crecordtest = testModeCommands
   > EOF
-  $ hg up 8827c7325bf9 -q
+  $ hg up 18b434184b29 -q
   $ echo 'This line will remain into the next amend' > afile
   $ hg add afile
   $ hg commit -m 'commit to be amended'
@@ -377,11 +377,11 @@ Just commit the file in interactive mode
   warning: the commit's children were left behind
 preamend bookmark exists
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
-  | x  8c834b834e3c.preamend
+  | x  6cd3bb4b4ada.preamend
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
-  rebasing the children of 8c834b834e3c.preamend
-  rebasing 13:22185e7d23c3 "descendant commit"
+  rebasing the children of 6cd3bb4b4ada.preamend
+  rebasing 13:ab75b93512f7 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
@@ -396,11 +396,11 @@ test hg commit -i --amend works in a stack
   1 new unstable changesets
 preamend bookmark exists
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
-  | x  e83ef86d3102.preamend
+  | x  039ee914a5fd.preamend
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
-  rebasing the children of e83ef86d3102.preamend
-  rebasing 16:6cb44dfbbe28 "descendant commit"
+  rebasing the children of 039ee914a5fd.preamend
+  rebasing 16:2c40a2aa23f1 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
