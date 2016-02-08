@@ -21,6 +21,27 @@ Define a helper to avoid the install step
   >     run-tests.py --with-hg=`which hg` "$@"
   > }
 
+error paths
+
+#if symlink
+  $ ln -s `which true` hg
+  $ run-tests.py --with-hg=./hg
+  warning: --with-hg should specify an hg script
+  
+  # Ran 0 tests, 0 skipped, 0 warned, 0 failed.
+  $ rm hg
+#endif
+
+#if execbit
+  $ touch hg
+  $ run-tests.py --with-hg=./hg
+  Usage: run-tests.py [options] [tests]
+  
+  run-tests.py: error: --with-hg must specify an executable hg script
+  [2]
+  $ rm hg
+#endif
+
 a succesful test
 =======================
 

@@ -285,7 +285,7 @@ def parseargs(args, parser):
         options.pure = True
 
     if options.with_hg:
-        options.with_hg = os.path.expanduser(options.with_hg)
+        options.with_hg = os.path.realpath(os.path.expanduser(options.with_hg))
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
