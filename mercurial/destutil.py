@@ -193,31 +193,33 @@ def _destmergebook(repo):
 def _destmergebranch(repo):
     """find merge destination based on branch heads"""
     node = None
+    parent = repo.dirstate.p1()
     branch = repo[None].branch()
     bheads = repo.branchheads(branch)
     nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
+
+    if parent not in bheads:
+        if len(repo.heads()) <= 1:
+            msg, hint = msgdestmerge['nootherheadsbehind']
+        else:
+            msg, hint = msgdestmerge['notatheads']
+        raise error.Abort(msg, hint=hint)
 
     if len(nbhs) > 2:
         msg, hint = msgdestmerge['toomanyheads']
         msg %= (branch, len(bheads))
         raise error.Abort(msg, hint=hint)
 
-    parent = repo.dirstate.p1()
     if len(nbhs) <= 1:
         if len(bheads) > 1:
             msg, hint = msgdestmerge['bookmarkedheads']
         elif len(repo.heads()) > 1:
             msg, hint = msgdestmerge['nootherbranchheads']
             msg %= branch
-        elif parent != repo.lookup(branch):
-            msg, hint = msgdestmerge['nootherheadsbehind']
         else:
             msg, hint = msgdestmerge['nootherheads']
         raise error.Abort(msg, hint=hint)
 
-    if parent not in bheads:
-        msg, hint = msgdestmerge['notatheads']
-        raise error.Abort(msg, hint=hint)
     if parent == nbhs[0]:
         node = nbhs[-1]
     else:

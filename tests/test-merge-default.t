@@ -27,8 +27,8 @@
 Should fail because not at a head:
 
   $ hg merge
-  abort: branch 'default' has 3 heads - please merge with an explicit rev
-  (run 'hg heads .' to see heads)
+  abort: working directory not at a head revision
+  (use 'hg update' or merge with an explicit revision)
   [255]
 
   $ hg up
