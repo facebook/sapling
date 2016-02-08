@@ -185,9 +185,19 @@ msgdestmerge = {
             (_('working directory not at a head revision'),
              _("use 'hg update' or merge with an explicit revision"))
         },
+    'emptysourceset':
+        {'merge':
+            (_('source set is empty'),
+             None)
+        },
+    'multiplebranchessourceset':
+        {'merge':
+            (_('source set is rooted in multiple branches'),
+             None)
+        },
     }
 
-def _destmergebook(repo, action='merge'):
+def _destmergebook(repo, action='merge', sourceset=None):
     """find merge destination in the active bookmark case"""
     node = None
     bmheads = repo.bookmarkheads(repo._activebookmark)
@@ -206,15 +216,27 @@ def _destmergebook(repo, action='merge'):
     assert node is not None
     return node
 
-def _destmergebranch(repo, action='merge'):
+def _destmergebranch(repo, action='merge', sourceset=None):
     """find merge destination based on branch heads"""
     node = None
-    parent = repo.dirstate.p1()
-    branch = repo.dirstate.branch()
-    bheads = repo.branchheads(branch)
 
-    if parent not in bheads:
-        # Case A: working copy if not on a head.
+    if sourceset is None:
+        sourceset = [repo[repo.dirstate.p1()].rev()]
+        branch = repo.dirstate.branch()
+    elif not sourceset:
+        msg, hint = msgdestmerge['emptysourceset'][action]
+        raise error.Abort(msg, hint=hint)
+    else:
+        branch = None
+        for ctx in repo.set('roots(%ld::%ld)', sourceset, sourceset):
+            if branch is not None and ctx.branch() != branch:
+                msg, hint = msgdestmerge['multiplebranchessourceset'][action]
+                raise error.Abort(msg, hint=hint)
+            branch = ctx.branch()
+
+    bheads = repo.branchheads(branch)
+    if not repo.revs('%ld and %ln', sourceset, bheads):
+        # Case A: working copy if not on a head. (merge only)
         #
         # This is probably a user mistake We bailout pointing at 'hg update'
         if len(repo.heads()) <= 1:
@@ -222,10 +244,10 @@ def _destmergebranch(repo, action='merge'):
         else:
             msg, hint = msgdestmerge['notatheads'][action]
         raise error.Abort(msg, hint=hint)
-    # remove current head from the set
-    bheads = [bh for bh in bheads if bh != parent]
+    # remove heads descendants of source from the set
+    bheads = list(repo.revs('%ln - (%ld::)', bheads, sourceset))
     # filters out bookmarked heads
-    nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
+    nbhs = list(repo.revs('%ld - bookmark()', bheads))
     if len(nbhs) > 1:
         # Case B: There is more than 1 other anonymous heads
         #
@@ -253,7 +275,7 @@ def _destmergebranch(repo, action='merge'):
     assert node is not None
     return node
 
-def destmerge(repo, action='merge'):
+def destmerge(repo, action='merge', sourceset=None):
     """return the default destination for a merge
 
     (or raise exception about why it can't pick one)
@@ -261,9 +283,9 @@ def destmerge(repo, action='merge'):
     :action: the action being performed, controls emitted error message
     """
     if repo._activebookmark:
-        node = _destmergebook(repo, action=action)
+        node = _destmergebook(repo, action=action, sourceset=sourceset)
     else:
-        node = _destmergebranch(repo, action=action)
+        node = _destmergebranch(repo, action=action, sourceset=sourceset)
     return repo[node].rev()
 
 histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'

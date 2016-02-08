@@ -116,3 +116,36 @@ Test experimental destination revset
   (run 'hg heads' to see all heads)
   [255]
 
+(on a branch with a two heads)
+
+  $ hg up 5
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo f >> a
+  $ hg commit -mf
+  created new head
+  $ hg log -r '_destmerge()'
+  changeset:   6:e88e33f3bf62
+  parent:      5:a431fabd6039
+  parent:      3:ea9ff125ff88
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     m2
+  
+
+(from the other head)
+
+  $ hg log -r '_destmerge(e88e33f3bf62)'
+  changeset:   8:b613918999e2
+  tag:         tip
+  parent:      5:a431fabd6039
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     f
+  
+
+(from unrelated branch)
+
+  $ hg log -r '_destmerge(foobranch)'
+  abort: branch 'foobranch' has one head - please merge with an explicit rev
+  (run 'hg heads' to see all heads)
+  [255]

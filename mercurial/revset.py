@@ -541,8 +541,10 @@ def _destupdate(repo, subset, x):
 @predicate('_destmerge')
 def _destmerge(repo, subset, x):
     # experimental revset for merge destination
-    getargs(x, 0, 0, _("_mergedefaultdest takes no arguments"))
-    return subset & baseset([destutil.destmerge(repo)])
+    sourceset = None
+    if x is not None:
+        sourceset = getset(repo, fullreposet(repo), x)
+    return subset & baseset([destutil.destmerge(repo, sourceset=sourceset)])
 
 @predicate('adds(pattern)', safe=True)
 def adds(repo, subset, x):
