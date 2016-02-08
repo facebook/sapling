@@ -2457,20 +2457,21 @@ def debugignore(ui, repo, *files, **opts):
             raise error.Abort(_("no ignore patterns found"))
     else:
         for f in files:
+            nf = util.normpath(f)
             ignored = None
             ignoredata = None
-            if f != '.':
-                if ignore(f):
-                    ignored = f
-                    ignoredata = repo.dirstate._ignorefileandline(f)
+            if nf != '.':
+                if ignore(nf):
+                    ignored = nf
+                    ignoredata = repo.dirstate._ignorefileandline(nf)
                 else:
-                    for p in util.finddirs(f):
+                    for p in util.finddirs(nf):
                         if ignore(p):
                             ignored = p
                             ignoredata = repo.dirstate._ignorefileandline(p)
                             break
             if ignored:
-                if ignored == f:
+                if ignored == nf:
                     ui.write("%s is ignored\n" % f)
                 else:
                     ui.write("%s is ignored because of containing folder %s\n"

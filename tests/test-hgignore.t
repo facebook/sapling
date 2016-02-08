@@ -286,3 +286,16 @@ Check include subignore at the same level
   $ hg debugignore dir1/file2
   dir1/file2 is ignored
   (ignore rule in dir2/.hgignore, line 1: 'file*2')
+
+#if windows
+
+Windows paths are accepted on input
+
+  $ rm dir1/.hgignore
+  $ echo "dir1/file*" >> .hgignore
+  $ hg debugignore "dir1\file2"
+  dir1\file2 is ignored
+  (ignore rule in $TESTTMP\ignorerepo\.hgignore, line 4: 'dir1/file*')
+  $ hg up -qC .
+
+#endif
