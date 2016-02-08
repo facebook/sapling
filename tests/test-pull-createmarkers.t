@@ -126,7 +126,6 @@ changesets
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit k
   $ hg rebase -r ".^ + ." -d 4
-  rebasing 2:1a07332e9fa1 "add c"
-  note: rebase of 2:1a07332e9fa1 created no changes to commit
+  note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 4:d446b1b2be43 "add c"
   rebasing 5:13e6318883c9 "add k" (tip)
 
