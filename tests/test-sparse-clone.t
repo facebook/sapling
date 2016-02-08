@@ -1,6 +1,6 @@
 test sparse
 
-  $ extpath=$(dirname $TESTDIR)
+  $ extpath=`dirname $TESTDIR`
   $ cp $extpath/sparse.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [ui]

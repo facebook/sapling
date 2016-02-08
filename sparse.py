@@ -227,7 +227,7 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
         pat = enableprofile_pat
         enableprofile = True
     if sum([include, exclude, enableprofile]) > 1:
-        raise util.Abort(_("too many flags specified."))
+        raise error.Abort(_("too many flags specified."))
     if include or exclude or enableprofile:
         def clone_sparse(orig, self, node, overwrite):
             _config(self.ui, self.unfiltered(), pat, include=include,
