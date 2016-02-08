@@ -738,17 +738,17 @@ Interaction with extdiff, largefiles and subrepos
   diff -Nru cloned.*/.hglf/b.dat cloned.*/.hglf/b.dat (glob)
   --- cloned.*/.hglf/b.dat	* (glob)
   +++ cloned.*/.hglf/b.dat	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +da39a3ee5e6b4b0d3255bfef95601890afd80709
   diff -Nru cloned.*/.hglf/foo/bar/large.dat cloned.*/.hglf/foo/bar/large.dat (glob)
   --- cloned.*/.hglf/foo/bar/large.dat	* (glob)
   +++ cloned.*/.hglf/foo/bar/large.dat	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +2f6933b5ee0f5fdd823d9717d8729f3c2523811b
   diff -Nru cloned.*/.hglf/large.bin cloned.*/.hglf/large.bin (glob)
   --- cloned.*/.hglf/large.bin	* (glob)
   +++ cloned.*/.hglf/large.bin	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +7f7097b041ccf68cc5561e9600da4655d21c6d18
   diff -Nru cloned.*/.hgsub cloned.*/.hgsub (glob)
   --- cloned.*/.hgsub	* (glob)
@@ -766,7 +766,7 @@ Interaction with extdiff, largefiles and subrepos
   diff -Nru cloned.*/foo/bar/def cloned.*/foo/bar/def (glob)
   --- cloned.*/foo/bar/def	* (glob)
   +++ cloned.*/foo/bar/def	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +changed
   diff -Nru cloned.*/main cloned.*/main (glob)
   --- cloned.*/main	* (glob)
@@ -783,7 +783,7 @@ Interaction with extdiff, largefiles and subrepos
   diff -Nru cloned.*/sub1/sub2/folder/test.txt cloned.*/sub1/sub2/folder/test.txt (glob)
   --- cloned.*/sub1/sub2/folder/test.txt	* (glob)
   +++ cloned.*/sub1/sub2/folder/test.txt	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +subfolder
   diff -Nru cloned.*/sub1/sub2/sub2 cloned.*/sub1/sub2/sub2 (glob)
   --- cloned.*/sub1/sub2/sub2	* (glob)
@@ -794,7 +794,7 @@ Interaction with extdiff, largefiles and subrepos
   diff -Nru cloned.*/sub3/a.txt cloned.*/sub3/a.txt (glob)
   --- cloned.*/sub3/a.txt	* (glob)
   +++ cloned.*/sub3/a.txt	* (glob)
-  @@ -0,0 +1* @@ (glob)
+  @@ -*,0 +1* @@ (glob)
   +xyz
   [1]
 
