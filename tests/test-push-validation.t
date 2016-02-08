@@ -72,7 +72,7 @@ Expected to fail:
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-   beta@1: dddc47b3ba30 in manifests not found
+   beta@1: manifest refers to unknown revision dddc47b3ba30
   2 files, 2 changesets, 2 total revisions
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)

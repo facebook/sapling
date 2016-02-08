@@ -46,13 +46,13 @@ introduce some bugs in repo
   checking files
    warning: revlog 'data/FOO.txt.i' not in fncache!
    0: empty or missing FOO.txt
-   FOO.txt@0: f62022d3d590 in manifests not found
+   FOO.txt@0: manifest refers to unknown revision f62022d3d590
    warning: revlog 'data/QUICK.txt.i' not in fncache!
    0: empty or missing QUICK.txt
-   QUICK.txt@0: 88b857db8eba in manifests not found
+   QUICK.txt@0: manifest refers to unknown revision 88b857db8eba
    warning: revlog 'data/bar.txt.i' not in fncache!
    0: empty or missing bar.txt
-   bar.txt@0: 256559129457 in manifests not found
+   bar.txt@0: manifest refers to unknown revision 256559129457
   3 files, 1 changesets, 0 total revisions
   3 warnings encountered!
   hint: run "hg debugrebuildfncache" to recover from corrupt fncache
@@ -102,8 +102,8 @@ Entire filelog missing
   $ hg verify -q
    warning: revlog 'data/file.i' not in fncache!
    0: empty or missing file
-   file@0: 362fef284ce2 in manifests not found
-   file@1: c10f2164107d in manifests not found
+   file@0: manifest refers to unknown revision 362fef284ce2
+   file@1: manifest refers to unknown revision c10f2164107d
   1 warnings encountered!
   hint: run "hg debugrebuildfncache" to recover from corrupt fncache
   3 integrity errors encountered!
@@ -130,8 +130,8 @@ Entire changelog and filelog missing
    manifest@1: 941fc4534185 not in changesets
    warning: revlog 'data/file.i' not in fncache!
    ?: empty or missing file
-   file@0: 362fef284ce2 in manifests not found
-   file@1: c10f2164107d in manifests not found
+   file@0: manifest refers to unknown revision 362fef284ce2
+   file@1: manifest refers to unknown revision c10f2164107d
   1 warnings encountered!
   hint: run "hg debugrebuildfncache" to recover from corrupt fncache
   6 integrity errors encountered!
@@ -182,7 +182,7 @@ Filelog missing entry
 
   $ cp -f .hg/store-partial/data/file.* .hg/store/data
   $ hg verify -q
-   file@1: c10f2164107d in manifests not found
+   file@1: manifest refers to unknown revision c10f2164107d
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
@@ -208,7 +208,7 @@ Changelog and filelog missing entry
   $ hg verify -q
    manifest@?: rev 1 points to nonexistent changeset 1
    manifest@?: 941fc4534185 not in changesets
-   file@?: c10f2164107d in manifests not found
+   file@?: manifest refers to unknown revision c10f2164107d
   3 integrity errors encountered!
   [1]
   $ cp -r .hg/store-full/* .hg/store

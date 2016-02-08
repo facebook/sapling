@@ -371,8 +371,8 @@ class verifier(object):
             if f in filenodes:
                 fns = [(lr, n) for n, lr in filenodes[f].iteritems()]
                 for lr, node in sorted(fns):
-                    self.err(lr, _("%s in manifests not found") % short(node),
-                             f)
+                    self.err(lr, _("manifest refers to unknown revision %s") %
+                             short(node), f)
         ui.progress(_('checking'), None)
 
         for f in storefiles:
