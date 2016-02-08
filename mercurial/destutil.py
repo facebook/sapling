@@ -199,18 +199,28 @@ def _destmergebranch(repo):
     nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
 
     if parent not in bheads:
+        # Case A: working copy if not on a head.
+        #
+        # This is probably a user mistake We bailout pointing at 'hg update'
         if len(repo.heads()) <= 1:
             msg, hint = msgdestmerge['nootherheadsbehind']
         else:
             msg, hint = msgdestmerge['notatheads']
         raise error.Abort(msg, hint=hint)
-
-    if len(nbhs) > 2:
+    elif len(nbhs) > 2:
+        # Case B: There is more than 2 anonymous heads
+        #
+        # This means that there will be more than 1 candidate. This is
+        # ambiguous. We abort asking the user to pick as explicit destination
+        # instead.
         msg, hint = msgdestmerge['toomanyheads']
         msg %= (branch, len(bheads))
         raise error.Abort(msg, hint=hint)
-
-    if len(nbhs) <= 1:
+    elif len(nbhs) <= 1:
+        # Case B: There is no other anonymous head that the one we are one
+        #
+        # This means that there is no natural candidate to merge with.
+        # We abort, with various messages for various cases.
         if len(bheads) > 1:
             msg, hint = msgdestmerge['bookmarkedheads']
         elif len(repo.heads()) > 1:
@@ -219,8 +229,7 @@ def _destmergebranch(repo):
         else:
             msg, hint = msgdestmerge['nootherheads']
         raise error.Abort(msg, hint=hint)
-
-    if parent == nbhs[0]:
+    elif parent == nbhs[0]:
         node = nbhs[-1]
     else:
         node = nbhs[0]
