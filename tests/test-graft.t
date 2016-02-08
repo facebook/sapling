@@ -349,8 +349,8 @@ Disallow grafting an already grafted cset onto its original branch
   [255]
 
   $ hg extdiff --config extensions.extdiff= --patch -r 2 -r 13
-  --- */hg-5c095ad7e90f.patch	* +0000 (glob)
-  +++ */hg-7a4785234d87.patch	* +0000 (glob)
+  --- */hg-5c095ad7e90f.patch	* (glob)
+  +++ */hg-7a4785234d87.patch	* (glob)
   @@ -1,18 +1,18 @@
    # HG changeset patch
   -# User test
@@ -380,8 +380,8 @@ Disallow grafting an already grafted cset onto its original branch
   [1]
 
   $ hg extdiff --config extensions.extdiff= --patch -r 2 -r 13 -X .
-  --- */hg-5c095ad7e90f.patch	* +0000 (glob)
-  +++ */hg-7a4785234d87.patch	* +0000 (glob)
+  --- */hg-5c095ad7e90f.patch	* (glob)
+  +++ */hg-7a4785234d87.patch	* (glob)
   @@ -1,8 +1,8 @@
    # HG changeset patch
   -# User test

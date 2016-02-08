@@ -721,14 +721,14 @@ Interaction with extdiff, largefiles and subrepos
 
   $ hg --config extensions.extdiff= extdiff -r '.^' -S
   diff -Nru cloned.*/.hgsub cloned/.hgsub (glob)
-  --- cloned.*/.hgsub	* +0000 (glob)
-  +++ cloned/.hgsub	* +0000 (glob)
+  --- cloned.*/.hgsub	* (glob)
+  +++ cloned/.hgsub	* (glob)
   @@ -1,2 +1 @@
    sub1 = ../sub1
   -sub3 = sub3
   diff -Nru cloned.*/.hgsubstate cloned/.hgsubstate (glob)
-  --- cloned.*/.hgsubstate	* +0000 (glob)
-  +++ cloned/.hgsubstate	* +0000 (glob)
+  --- cloned.*/.hgsubstate	* (glob)
+  +++ cloned/.hgsubstate	* (glob)
   @@ -1,2 +1 @@
    7a36fa02b66e61f27f3d4a822809f159479b8ab2 sub1
   -b1a26de6f2a045a9f079323693614ee322f1ff7e sub3

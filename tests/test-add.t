@@ -226,7 +226,7 @@ and OS X
   $ hg diff capsdir1/capsdir
   diff -r * CapsDir1/CapsDir/SubDir/Def.txt (glob)
   --- a/CapsDir1/CapsDir/SubDir/Def.txt	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/CapsDir1/CapsDir/SubDir/Def.txt	* +0000 (glob)
+  +++ b/CapsDir1/CapsDir/SubDir/Def.txt	* (glob)
   @@ -1,1 +1,1 @@
   -xyz
   +def

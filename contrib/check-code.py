@@ -178,6 +178,8 @@ utestpats = [
      'use test -f to test for file existence'),
     (r'^  diff -[^ -]*p',
      "don't use (external) diff with -p for portability"),
+    (r'^  [-+][-+][-+] .* [-+]0000 \(glob\)',
+     "glob timezone field in diff output for portability"),
   ],
   # warnings
   [
