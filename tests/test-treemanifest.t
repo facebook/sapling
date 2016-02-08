@@ -465,6 +465,39 @@ Add some more changes to the deep repo
   $ echo troz >> b/bar/orange/fly/gnat.py
   $ hg ci -m troz
 
+Verify works
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  8 files, 3 changesets, 10 total revisions
+
+Dirlogs are included in fncache
+  $ grep meta/.A/00manifest.i .hg/store/fncache
+  meta/.A/00manifest.i
+
+Rebuilt fncache includes dirlogs
+  $ rm .hg/store/fncache
+  $ hg debugrebuildfncache
+  adding data/.A/one.txt.i
+  adding data/.A/two.txt.i
+  adding data/b/bar/fruits.txt.i
+  adding data/b/bar/orange/fly/gnat.py.i
+  adding data/b/bar/orange/fly/housefly.txt.i
+  adding data/b/foo/apple/bees/flower.py.i
+  adding data/c.txt.i
+  adding data/d.py.i
+  adding meta/.A/00manifest.i
+  adding meta/b/00manifest.i
+  adding meta/b/bar/00manifest.i
+  adding meta/b/bar/orange/00manifest.i
+  adding meta/b/bar/orange/fly/00manifest.i
+  adding meta/b/foo/00manifest.i
+  adding meta/b/foo/apple/00manifest.i
+  adding meta/b/foo/apple/bees/00manifest.i
+  16 items added, 0 removed from fncache
+
 Test cloning a treemanifest repo over http.
   $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --errorlog=errors.log
   $ cat hg.pid >> $DAEMON_PIDS
