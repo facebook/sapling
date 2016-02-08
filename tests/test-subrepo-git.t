@@ -785,7 +785,7 @@ add new changes, including whitespace
   index 0000000..257cc56
   --- /dev/null
   +++ b/s/barfoo
-  @@ -0,0 +1 @@
+  @@ -0,0 +1* @@ (glob)
   +foo
   $ hg diff --subrepos s/foobar
   diff --git a/s/foobar b/s/foobar
@@ -827,7 +827,7 @@ adding an exclude should ignore this element
   index 0000000..257cc56
   --- /dev/null
   +++ b/s/barfoo
-  @@ -0,0 +1 @@
+  @@ -0,0 +1* @@ (glob)
   +foo
 
 moving a file should show a removal and an add

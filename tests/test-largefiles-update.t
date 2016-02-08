@@ -27,13 +27,13 @@ directory (and ".hg/largefiles/dirstate")
   diff -Nru repo.0d9d9b8dc9a3/.hglf/large1 repo/.hglf/large1
   --- repo.0d9d9b8dc9a3/.hglf/large1	* (glob)
   +++ repo/.hglf/large1	* (glob)
-  @@ -1 +1 @@
+  @@ -1* +1* @@ (glob)
   -4669e532d5b2c093a78eca010077e708a071bb64
   +58e24f733a964da346e2407a2bee99d9001184f5
   diff -Nru repo.0d9d9b8dc9a3/normal1 repo/normal1
   --- repo.0d9d9b8dc9a3/normal1	* (glob)
   +++ repo/normal1	* (glob)
-  @@ -1 +1 @@
+  @@ -1* +1* @@ (glob)
   -normal1
   +normal1 in #1
   [1]

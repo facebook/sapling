@@ -180,6 +180,12 @@ utestpats = [
      "don't use (external) diff with -p for portability"),
     (r'^  [-+][-+][-+] .* [-+]0000 \(glob\)',
      "glob timezone field in diff output for portability"),
+    (r'^  @@ -[0-9]+ [+][0-9]+,[0-9]+ @@',
+     "use '@@ -N* +N,n @@ (glob)' style chunk header for portability"),
+    (r'^  @@ -[0-9]+,[0-9]+ [+][0-9]+ @@',
+     "use '@@ -N,n +N* @@ (glob)' style chunk header for portability"),
+    (r'^  @@ -[0-9]+ [+][0-9]+ @@',
+     "use '@@ -N* +N* @@ (glob)' style chunk header for portability"),
   ],
   # warnings
   [
