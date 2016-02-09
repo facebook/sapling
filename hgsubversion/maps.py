@@ -103,8 +103,14 @@ class AuthorMap(dict):
         if search_author in self:
             result = self.super.__getitem__(search_author)
         elif self.meta.mapauthorscmd:
-            self[author] = result = subprocess.check_output (
-                self.meta.mapauthorscmd % author, shell = True).strip()
+            cmd = self.meta.mapauthorscmd % author
+            process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+            output, err = process.communicate()
+            retcode = process.poll()
+            if retcode:
+                msg = 'map author command "%s" exited with error'
+                raise hgutil.Abort(msg % cmd)
+            self[author] = result = output.strip()
         if not result:
             if self.meta.defaultauthors:
                 self[author] = result = '%s%s' % (author, self.defaulthost)
