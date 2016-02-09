@@ -277,78 +277,9 @@ def rebase(ui, repo, **opts):
                 return abort(repo, originalwd, target, state,
                              activebookmark=activebookmark)
         else:
-            if srcf and basef:
-                raise error.Abort(_('cannot specify both a '
-                                   'source and a base'))
-            if revf and basef:
-                raise error.Abort(_('cannot specify both a '
-                                   'revision and a base'))
-            if revf and srcf:
-                raise error.Abort(_('cannot specify both a '
-                                   'revision and a source'))
-
-            cmdutil.checkunfinished(repo)
-            cmdutil.bailifchanged(repo)
-
-            if destf:
-                dest = scmutil.revsingle(repo, destf)
-            else:
-                dest = repo[_destrebase(repo)]
-                destf = str(dest)
-
-            if revf:
-                rebaseset = scmutil.revrange(repo, revf)
-                if not rebaseset:
-                    ui.status(_('empty "rev" revision set - '
-                                'nothing to rebase\n'))
-                    return _nothingtorebase()
-            elif srcf:
-                src = scmutil.revrange(repo, [srcf])
-                if not src:
-                    ui.status(_('empty "source" revision set - '
-                                'nothing to rebase\n'))
-                    return _nothingtorebase()
-                rebaseset = repo.revs('(%ld)::', src)
-                assert rebaseset
-            else:
-                base = scmutil.revrange(repo, [basef or '.'])
-                if not base:
-                    ui.status(_('empty "base" revision set - '
-                                "can't compute rebase set\n"))
-                    return _nothingtorebase()
-                commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
-                if commonanc is not None:
-                    rebaseset = repo.revs('(%d::(%ld) - %d)::',
-                                          commonanc, base, commonanc)
-                else:
-                    rebaseset = []
-
-                if not rebaseset:
-                    # transform to list because smartsets are not comparable to
-                    # lists. This should be improved to honor laziness of
-                    # smartset.
-                    if list(base) == [dest.rev()]:
-                        if basef:
-                            ui.status(_('nothing to rebase - %s is both "base"'
-                                        ' and destination\n') % dest)
-                        else:
-                            ui.status(_('nothing to rebase - working directory '
-                                        'parent is also destination\n'))
-                    elif not repo.revs('%ld - ::%d', base, dest):
-                        if basef:
-                            ui.status(_('nothing to rebase - "base" %s is '
-                                        'already an ancestor of destination '
-                                        '%s\n') %
-                                      ('+'.join(str(repo[r]) for r in base),
-                                       dest))
-                        else:
-                            ui.status(_('nothing to rebase - working '
-                                        'directory parent is already an '
-                                        'ancestor of destination %s\n') % dest)
-                    else: # can it happen?
-                        ui.status(_('nothing to rebase from %s to %s\n') %
-                                  ('+'.join(str(repo[r]) for r in base), dest))
-                    return _nothingtorebase()
+            dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf)
+            if dest is None:
+                return _nothingtorebase()
 
             allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
             if (not (keepf or allowunstable)
@@ -590,6 +521,78 @@ def rebase(ui, repo, **opts):
 
     finally:
         release(lock, wlock)
+
+def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
+    """use revisions argument to define destination and rebase set
+    """
+    if srcf and basef:
+        raise error.Abort(_('cannot specify both a source and a base'))
+    if revf and basef:
+        raise error.Abort(_('cannot specify both a revision and a base'))
+    if revf and srcf:
+        raise error.Abort(_('cannot specify both a revision and a source'))
+
+    cmdutil.checkunfinished(repo)
+    cmdutil.bailifchanged(repo)
+
+    if destf:
+        dest = scmutil.revsingle(repo, destf)
+    else:
+        dest = repo[_destrebase(repo)]
+        destf = str(dest)
+
+    if revf:
+        rebaseset = scmutil.revrange(repo, revf)
+        if not rebaseset:
+            ui.status(_('empty "rev" revision set - nothing to rebase\n'))
+            return None, None
+    elif srcf:
+        src = scmutil.revrange(repo, [srcf])
+        if not src:
+            ui.status(_('empty "source" revision set - nothing to rebase\n'))
+            return None, None
+        rebaseset = repo.revs('(%ld)::', src)
+        assert rebaseset
+    else:
+        base = scmutil.revrange(repo, [basef or '.'])
+        if not base:
+            ui.status(_('empty "base" revision set - '
+                        "can't compute rebase set\n"))
+            return None, None
+        commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
+        if commonanc is not None:
+            rebaseset = repo.revs('(%d::(%ld) - %d)::',
+                                  commonanc, base, commonanc)
+        else:
+            rebaseset = []
+
+        if not rebaseset:
+            # transform to list because smartsets are not comparable to
+            # lists. This should be improved to honor laziness of
+            # smartset.
+            if list(base) == [dest.rev()]:
+                if basef:
+                    ui.status(_('nothing to rebase - %s is both "base"'
+                                ' and destination\n') % dest)
+                else:
+                    ui.status(_('nothing to rebase - working directory '
+                                'parent is also destination\n'))
+            elif not repo.revs('%ld - ::%d', base, dest):
+                if basef:
+                    ui.status(_('nothing to rebase - "base" %s is '
+                                'already an ancestor of destination '
+                                '%s\n') %
+                              ('+'.join(str(repo[r]) for r in base),
+                               dest))
+                else:
+                    ui.status(_('nothing to rebase - working '
+                                'directory parent is already an '
+                                'ancestor of destination %s\n') % dest)
+            else: # can it happen?
+                ui.status(_('nothing to rebase from %s to %s\n') %
+                          ('+'.join(str(repo[r]) for r in base), dest))
+            return None, None
+    return dest, rebaseset
 
 def externalparent(repo, state, targetancestors):
     """Return the revision that should be used as the second parent
