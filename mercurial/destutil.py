@@ -134,6 +134,43 @@ def destupdate(repo, clean=False, check=False):
 
     return rev, movemark, activemark
 
+msgdestmerge = {
+    # too many matching divergent bookmark
+    'toomanybookmarks':
+        (_("multiple matching bookmarks to merge -"
+           " please merge with an explicit rev or bookmark"),
+         _("run 'hg heads' to see all heads")),
+    # no other matching divergent bookmark
+    'nootherbookmarks':
+        (_("no matching bookmark to merge - "
+           "please merge with an explicit rev or bookmark"),
+         _("run 'hg heads' to see all heads")),
+    # branch have too many unbookmarked heads, no obvious destination
+    'toomanyheads':
+        (_("branch '%s' has %d heads - please merge with an explicit rev"),
+         _("run 'hg heads .' to see heads")),
+    # branch have no other unbookmarked heads
+    'bookmarkedheads':
+        (_("heads are bookmarked - please merge with an explicit rev"),
+         _("run 'hg heads' to see all heads")),
+    # branch have just a single heads, but there is other branches
+    'nootherbranchheads':
+        (_("branch '%s' has one head - please merge with an explicit rev"),
+         _("run 'hg heads' to see all heads")),
+    # repository have a single head
+    'nootherheads':
+        (_('nothing to merge'),
+         None),
+    # repository have a single head and we are not on it
+    'nootherheadsbehind':
+        (_('nothing to merge'),
+         _("use 'hg update' instead")),
+    # We are not on a head
+    'notatheads':
+        (_('working directory not at a head revision'),
+         _("use 'hg update' or merge with an explicit revision"))
+        }
+
 def _destmergebook(repo):
     """find merge destination in the active bookmark case"""
     node = None
@@ -145,13 +182,11 @@ def _destmergebook(repo):
         else:
             node = bmheads[0]
     elif len(bmheads) > 2:
-        raise error.Abort(_("multiple matching bookmarks to merge - "
-            "please merge with an explicit rev or bookmark"),
-            hint=_("run 'hg heads' to see all heads"))
+        msg, hint = msgdestmerge['toomanybookmarks']
+        raise error.Abort(msg, hint=hint)
     elif len(bmheads) <= 1:
-        raise error.Abort(_("no matching bookmark to merge - "
-            "please merge with an explicit rev or bookmark"),
-            hint=_("run 'hg heads' to see all heads"))
+        msg, hint = msgdestmerge['nootherbookmarks']
+        raise error.Abort(msg, hint=hint)
     assert node is not None
     return node
 
@@ -163,31 +198,26 @@ def _destmergebranch(repo):
     nbhs = [bh for bh in bheads if not repo[bh].bookmarks()]
 
     if len(nbhs) > 2:
-        raise error.Abort(_("branch '%s' has %d heads - "
-                           "please merge with an explicit rev")
-                         % (branch, len(bheads)),
-                         hint=_("run 'hg heads .' to see heads"))
+        msg, hint = msgdestmerge['toomanyheads']
+        msg %= (branch, len(bheads))
+        raise error.Abort(msg, hint=hint)
 
     parent = repo.dirstate.p1()
     if len(nbhs) <= 1:
         if len(bheads) > 1:
-            raise error.Abort(_("heads are bookmarked - "
-                               "please merge with an explicit rev"),
-                             hint=_("run 'hg heads' to see all heads"))
-        if len(repo.heads()) > 1:
-            raise error.Abort(_("branch '%s' has one head - "
-                               "please merge with an explicit rev")
-                             % branch,
-                             hint=_("run 'hg heads' to see all heads"))
-        msg, hint = _('nothing to merge'), None
-        if parent != repo.lookup(branch):
-            hint = _("use 'hg update' instead")
+            msg, hint = msgdestmerge['bookmarkedheads']
+        elif len(repo.heads()) > 1:
+            msg, hint = msgdestmerge['nootherbranchheads']
+            msg %= branch
+        elif parent != repo.lookup(branch):
+            msg, hint = msgdestmerge['nootherheadsbehind']
+        else:
+            msg, hint = msgdestmerge['nootherheads']
         raise error.Abort(msg, hint=hint)
 
     if parent not in bheads:
-        raise error.Abort(_('working directory not at a head revision'),
-                         hint=_("use 'hg update' or merge with an "
-                                "explicit revision"))
+        msg, hint = msgdestmerge['notatheads']
+        raise error.Abort(msg, hint=hint)
     if parent == nbhs[0]:
         node = nbhs[-1]
     else:
