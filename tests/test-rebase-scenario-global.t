@@ -762,12 +762,69 @@ Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
   saved backup bundle to $TESTTMP/cwd-vanish/.hg/strip-backup/779a07b1b7a0-853e0073-backup.hg (glob)
 
 Test experimental revset
+========================
 
   $ cd ..
+
+Make the repo a bit more interresting
+
+  $ hg up 1
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo aaa > aaa
+  $ hg add aaa
+  $ hg commit -m aaa
+  created new head
+  $ hg log -G
+  @  changeset:   4:5f7bc9025ed2
+  |  tag:         tip
+  |  parent:      1:58d79cc1cf43
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     aaa
+  |
+  | o  changeset:   3:1910d5ff34ea
+  | |  user:        test
+  | |  date:        Thu Jan 01 00:00:00 1970 +0000
+  | |  summary:     second source with subdir
+  | |
+  | o  changeset:   2:82901330b6ef
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     first source commit
+  |
+  o  changeset:   1:58d79cc1cf43
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     dest commit
+  |
+  o  changeset:   0:e94b687f7da3
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     initial commit
+  
+
+Testing from lower head
+
+  $ hg up 3
+  2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   3:1910d5ff34ea
+  changeset:   4:5f7bc9025ed2
   tag:         tip
+  parent:      1:58d79cc1cf43
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     second source with subdir
+  summary:     aaa
+  
+
+Testing from upper head
+
+  $ hg up 4
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ hg log -r '_destrebase()'
+  changeset:   4:5f7bc9025ed2
+  tag:         tip
+  parent:      1:58d79cc1cf43
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     aaa
   
