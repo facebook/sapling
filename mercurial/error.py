@@ -72,6 +72,15 @@ class ConfigError(Abort):
 class UpdateAbort(Abort):
     """Raised when an update is aborted for destination issue"""
 
+class MergeDestAbort(Abort):
+    """Raised when an update is aborted for destination issues"""
+
+class NoMergeDestAbort(MergeDestAbort):
+    """Raised when an update is aborted because there is nothing to merge"""
+
+class ManyMergeDestAbort(MergeDestAbort):
+    """Raised when an update is aborted because destination is ambigious"""
+
 class ResponseExpected(Abort):
     """Raised when an EOF is received for a prompt"""
     def __init__(self):

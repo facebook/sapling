@@ -209,10 +209,10 @@ def _destmergebook(repo, action='merge', sourceset=None):
             node = bmheads[0]
     elif len(bmheads) > 2:
         msg, hint = msgdestmerge['toomanybookmarks'][action]
-        raise error.Abort(msg, hint=hint)
+        raise error.ManyMergeDestAbort(msg, hint=hint)
     elif len(bmheads) <= 1:
         msg, hint = msgdestmerge['nootherbookmarks'][action]
-        raise error.Abort(msg, hint=hint)
+        raise error.NoMergeDestAbort(msg, hint=hint)
     assert node is not None
     return node
 
@@ -225,13 +225,13 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
         branch = repo.dirstate.branch()
     elif not sourceset:
         msg, hint = msgdestmerge['emptysourceset'][action]
-        raise error.Abort(msg, hint=hint)
+        raise error.NoMergeDestAbort(msg, hint=hint)
     else:
         branch = None
         for ctx in repo.set('roots(%ld::%ld)', sourceset, sourceset):
             if branch is not None and ctx.branch() != branch:
                 msg, hint = msgdestmerge['multiplebranchessourceset'][action]
-                raise error.Abort(msg, hint=hint)
+                raise error.ManyMergeDestAbort(msg, hint=hint)
             branch = ctx.branch()
 
     bheads = repo.branchheads(branch)
@@ -256,7 +256,7 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
         # instead.
         msg, hint = msgdestmerge['toomanyheads'][action]
         msg %= (branch, len(bheads) + 1)
-        raise error.Abort(msg, hint=hint)
+        raise error.ManyMergeDestAbort(msg, hint=hint)
     elif not nbhs:
         # Case B: There is no other anonymous heads
         #
@@ -269,7 +269,7 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
             msg %= branch
         else:
             msg, hint = msgdestmerge['nootherheads'][action]
-        raise error.Abort(msg, hint=hint)
+        raise error.NoMergeDestAbort(msg, hint=hint)
     else:
         node = nbhs[0]
     assert node is not None
