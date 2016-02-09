@@ -195,6 +195,9 @@ class Merge3Text(object):
         'a', start, end
              Non-clashing insertion from a[start:end]
 
+        'conflict', zstart, zend, astart, aend, bstart, bend
+            Conflict between a and b, with z as common ancestor
+
         Method is as follows:
 
         The two sequences align only on regions which match the base
