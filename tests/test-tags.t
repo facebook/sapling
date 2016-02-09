@@ -216,6 +216,10 @@ Merge the two heads:
   $ hg merge 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
+  $ hg blackbox -l3
+  1970/01/01 00:00:00 bob @c8edf04160c7f731e4589d66ab3ab3486a64ac28 (5000)> merge 1
+  1970/01/01 00:00:00 bob @(unknown) (5000)> merge 1 exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @c8edf04160c7f731e4589d66ab3ab3486a64ac28+b9154636be938d3d431e75a7c906504a079bfe07 (5000)> blackbox -l3
   $ hg id
   c8edf04160c7+b9154636be93+ tip
   $ hg status

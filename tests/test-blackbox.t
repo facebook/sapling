@@ -12,13 +12,13 @@ command, exit codes, and duration
 
   $ echo a > a
   $ hg add a
-  $ hg id > /dev/null
-  $ hg blackbox
+  $ hg id --config blackbox.dirty=True > /dev/null
+  $ hg blackbox --config blackbox.dirty=True
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
   1970/01/01 00:00:00 bob @(unknown) (5000)> add a exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> id
-  1970/01/01 00:00:00 bob @(unknown) (5000)> id exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> id
+  1970/01/01 00:00:00 bob @(unknown) (5000)> id --config blackbox.dirty=True exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000+ (5000)> blackbox
 
 incoming change tracking
 

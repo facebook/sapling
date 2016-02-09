@@ -10,10 +10,15 @@
 
 Logs event information to .hg/blackbox.log to help debug and diagnose problems.
 The events that get logged can be configured via the blackbox.track config key.
+
+If you want to record whether the repository is dirty (a `+` sign, as you'd
+get when using :hg:`id`), you can set the blackbox.dirty config key.
+
 Examples::
 
   [blackbox]
   track = *
+  dirty = True
 
   [blackbox]
   track = command, commandfinish, commandexception, exthook, pythonhook
@@ -140,6 +145,7 @@ def wrapui(ui):
                 pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
                 rev = '(unknown)'
+                changed = ''
                 if util.safehasattr(self, '_bbrepo'):
                     ctx = self._bbrepo[None]
                     if ctx.rev() is not None:
@@ -147,9 +153,14 @@ def wrapui(ui):
                     else:
                         parents = ctx.parents()
                         rev = ('+'.join([hexfn(p.node()) for p in parents]))
+                        if (self.configbool('blackbox', 'dirty', False) and (
+                            any(self._bbrepo.status()) or
+                            any(ctx.sub(s).dirty() for s in ctx.substate)
+                        )):
+                            changed = '+'
                 try:
-                    fp.write('%s %s @%s (%s)> %s' %
-                        (date, user, rev, pid, formattedmsg))
+                    fp.write('%s %s @%s%s (%s)> %s' %
+                        (date, user, rev, changed, pid, formattedmsg))
                     fp.flush()
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
