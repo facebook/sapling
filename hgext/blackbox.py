@@ -35,6 +35,8 @@ import errno
 import re
 
 from mercurial.i18n import _
+from mercurial.node import hex
+
 from mercurial import (
     cmdutil,
     util,
@@ -63,6 +65,12 @@ def _closelog(vfs):
     fp = filehandles[path]
     del filehandles[path]
     fp.close()
+
+def hexfn(node):
+    if node is None:
+        return None
+    else:
+        return hex(node)
 
 def wrapui(ui):
     class blackboxui(ui.__class__):
@@ -131,17 +139,27 @@ def wrapui(ui):
                 user = util.getuser()
                 pid = str(util.getpid())
                 formattedmsg = msg[0] % msg[1:]
+                rev = '(unknown)'
+                if util.safehasattr(self, '_bbrepo'):
+                    ctx = self._bbrepo[None]
+                    if ctx.rev() is not None:
+                        rev = hexfn(ctx.node())
+                    else:
+                        parents = ctx.parents()
+                        rev = ('+'.join([hexfn(p.node()) for p in parents]))
                 try:
-                    fp.write('%s %s (%s)> %s' %
-                                   (date, user, pid, formattedmsg))
+                    fp.write('%s %s @%s (%s)> %s' %
+                        (date, user, rev, pid, formattedmsg))
                     fp.flush()
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                lastfp = fp
+                if not lastfp or util.safehasattr(self, '_bbrepo'):
+                    lastfp = fp
 
         def setrepo(self, repo):
             self._bbvfs = repo.vfs
+            self._bbrepo = repo
 
     ui.__class__ = blackboxui
 

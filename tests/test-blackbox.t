@@ -12,10 +12,13 @@ command, exit codes, and duration
 
   $ echo a > a
   $ hg add a
+  $ hg id > /dev/null
   $ hg blackbox
-  1970/01/01 00:00:00 bob (5000)> add a
-  1970/01/01 00:00:00 bob (5000)> add a exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> add a
+  1970/01/01 00:00:00 bob @(unknown) (5000)> add a exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> id
+  1970/01/01 00:00:00 bob @(unknown) (5000)> id exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
 
 incoming change tracking
 
@@ -45,12 +48,12 @@ clone, commit, pull
   added 1 changesets with 1 changes to 1 files
   (run 'hg update' to get a working copy)
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> pull
-  1970/01/01 00:00:00 bob (5000)> updated served branch cache in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> wrote served branch cache with 1 labels and 2 nodes
-  1970/01/01 00:00:00 bob (5000)> 1 incoming changes - new heads: d02f48003e62
-  1970/01/01 00:00:00 bob (5000)> pull exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pull
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> updated served branch cache in * seconds (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> wrote served branch cache with 1 labels and 2 nodes
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> 1 incoming changes - new heads: d02f48003e62
+  1970/01/01 00:00:00 bob @(unknown) (5000)> pull exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> blackbox -l 6
 
 we must not cause a failure if we cannot write to the log
 
@@ -107,12 +110,12 @@ backup bundles get logged
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/*-backup.hg (glob)
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> strip tip
-  1970/01/01 00:00:00 bob (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg (glob)
-  1970/01/01 00:00:00 bob (5000)> updated base branch cache in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> wrote base branch cache with 1 labels and 2 nodes
-  1970/01/01 00:00:00 bob (5000)> strip tip exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @73f6ee326b27d820b0472f1a825e3a50f3dc489b (5000)> strip tip
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> saved backup bundle to $TESTTMP/blackboxtest2/.hg/strip-backup/73f6ee326b27-7612e004-backup.hg
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> updated base branch cache in * seconds (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> wrote base branch cache with 1 labels and 2 nodes
+  1970/01/01 00:00:00 bob @(unknown) (5000)> strip tip exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> blackbox -l 6
 
 extension and python hooks - use the eol extension for a pythonhook
 
@@ -125,12 +128,12 @@ extension and python hooks - use the eol extension for a pythonhook
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 other heads for branch "default"
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> update
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 0 tags
-  1970/01/01 00:00:00 bob (5000)> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> exthook-update: echo hooked finished in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> update exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> update
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> writing .hg/cache/tags2-visible with 0 tags
+  1970/01/01 00:00:00 bob @6563da9dcf87b1949716e38ff3e3dfaa3198eb06 (5000)> pythonhook-preupdate: hgext.eol.preupdate finished in * seconds (glob)
+  1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> exthook-update: echo hooked finished in * seconds (glob)
+  1970/01/01 00:00:00 bob @(unknown) (5000)> update exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @d02f48003e62c24e2659d97d30f2a83abe5d5d51 (5000)> blackbox -l 6
 
 log rotation
 
@@ -151,7 +154,7 @@ log rotation
   $ hg init blackboxtest3
   $ cd blackboxtest3
   $ hg blackbox
-  1970/01/01 00:00:00 bob (5000)> blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
   $ mv .hg/blackbox.log .hg/blackbox.log-
   $ mkdir .hg/blackbox.log
   $ sed -e 's/\(.*test1.*\)/#\1/; s#\(.*commit2.*\)#os.rmdir(".hg/blackbox.log")\nos.rename(".hg/blackbox.log-", ".hg/blackbox.log")\n\1#' $TESTDIR/test-dispatch.py > ../test-dispatch.py
@@ -178,9 +181,9 @@ log rotation
   
   result: None
   $ hg blackbox
-  1970/01/01 00:00:00 bob (5000)> blackbox
-  1970/01/01 00:00:00 bob (5000)> blackbox exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox
+  1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
+  1970/01/01 00:00:00 bob @(unknown) (5000)> blackbox exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> blackbox
 
 cleanup
   $ cd ..

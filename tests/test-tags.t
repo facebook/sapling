@@ -137,12 +137,12 @@ Tag cache debug info written to blackbox log
   $ hg identify
   b9154636be93 tip
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> identify
-  1970/01/01 00:00:00 bob (5000)> writing 48 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob (5000)> 0/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> identify exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> identify
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> writing 48 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> identify exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> blackbox -l 6
 
 Failure to acquire lock results in no write
 
@@ -151,12 +151,12 @@ Failure to acquire lock results in no write
   $ hg identify
   b9154636be93 tip
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> identify
-  1970/01/01 00:00:00 bob (5000)> not writing .hg/cache/hgtagsfnodes1 because lock cannot be acquired
-  1970/01/01 00:00:00 bob (5000)> 0/1 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> identify exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> identify
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> not writing .hg/cache/hgtagsfnodes1 because lock cannot be acquired
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> 0/1 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> identify exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @b9154636be938d3d431e75a7c906504a079bfe07 (5000)> blackbox -l 6
 
   $ fnodescacheexists
   no fnodes cache
@@ -351,12 +351,12 @@ Extra junk data at the end should get overwritten on next cache update
   bar                                1:78391a272241
 
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> tags
-  1970/01/01 00:00:00 bob (5000)> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob (5000)> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @8dbfe60eff306a54259cfe007db9e330e7ecf866 (5000)> tags
+  1970/01/01 00:00:00 bob @8dbfe60eff306a54259cfe007db9e330e7ecf866 (5000)> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob @8dbfe60eff306a54259cfe007db9e330e7ecf866 (5000)> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @8dbfe60eff306a54259cfe007db9e330e7ecf866 (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @8dbfe60eff306a54259cfe007db9e330e7ecf866 (5000)> blackbox -l 6
 
 #if unix-permissions no-root
 Errors writing to .hgtags fnodes cache are silently ignored
@@ -372,12 +372,12 @@ Errors writing to .hgtags fnodes cache are silently ignored
   bar                                1:78391a272241
 
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> tags
-  1970/01/01 00:00:00 bob (5000)> couldn't write cache/hgtagsfnodes1: [Errno 13] Permission denied: '$TESTTMP/t2/.hg/cache/hgtagsfnodes1' (glob)
-  1970/01/01 00:00:00 bob (5000)> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> tags
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> couldn't write cache/hgtagsfnodes1: [Errno 13] Permission denied: '$TESTTMP/t2/.hg/cache/hgtagsfnodes1'
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> blackbox -l 6
 
   $ chmod a+w .hg/cache/hgtagsfnodes1
 
@@ -387,12 +387,12 @@ Errors writing to .hgtags fnodes cache are silently ignored
   bar                                1:78391a272241
 
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> tags
-  1970/01/01 00:00:00 bob (5000)> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob (5000)> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> tags
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @b968051b5cf3f624b771779c6d5f84f1d4c3fb5d (5000)> blackbox -l 6
 
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=168
@@ -416,11 +416,11 @@ Stripping doesn't truncate the tags cache until new data is available
   bar                                1:78391a272241
 
   $ hg blackbox -l 5
-  1970/01/01 00:00:00 bob (5000)> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob (5000)> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 5
+  1970/01/01 00:00:00 bob @0c192d7d5e6b78a714de54a2e9627952a877e25a (5000)> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob @0c192d7d5e6b78a714de54a2e9627952a877e25a (5000)> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @0c192d7d5e6b78a714de54a2e9627952a877e25a (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @0c192d7d5e6b78a714de54a2e9627952a877e25a (5000)> blackbox -l 5
 
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=120
@@ -433,12 +433,12 @@ Stripping doesn't truncate the tags cache until new data is available
   bar                                1:78391a272241
 
   $ hg blackbox -l 6
-  1970/01/01 00:00:00 bob (5000)> tags
-  1970/01/01 00:00:00 bob (5000)> writing 24 bytes to cache/hgtagsfnodes1
-  1970/01/01 00:00:00 bob (5000)> 2/3 cache hits/lookups in * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> writing .hg/cache/tags2-visible with 1 tags
-  1970/01/01 00:00:00 bob (5000)> tags exited 0 after * seconds (glob)
-  1970/01/01 00:00:00 bob (5000)> blackbox -l 6
+  1970/01/01 00:00:00 bob @035f65efb448350f4772141702a81ab1df48c465 (5000)> tags
+  1970/01/01 00:00:00 bob @035f65efb448350f4772141702a81ab1df48c465 (5000)> writing 24 bytes to cache/hgtagsfnodes1
+  1970/01/01 00:00:00 bob @035f65efb448350f4772141702a81ab1df48c465 (5000)> 2/3 cache hits/lookups in * seconds (glob)
+  1970/01/01 00:00:00 bob @035f65efb448350f4772141702a81ab1df48c465 (5000)> writing .hg/cache/tags2-visible with 1 tags
+  1970/01/01 00:00:00 bob @(unknown) (5000)> tags exited 0 after * seconds (glob)
+  1970/01/01 00:00:00 bob @035f65efb448350f4772141702a81ab1df48c465 (5000)> blackbox -l 6
   $ f --size .hg/cache/hgtagsfnodes1
   .hg/cache/hgtagsfnodes1: size=144
 
