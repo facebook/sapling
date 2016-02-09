@@ -235,7 +235,8 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
             branch = ctx.branch()
 
     bheads = repo.branchheads(branch)
-    if onheadcheck and not repo.revs('%ld and %ln', sourceset, bheads):
+    onhead = repo.revs('%ld and %ln', sourceset, bheads)
+    if onheadcheck and not onhead:
         # Case A: working copy if not on a head. (merge only)
         #
         # This is probably a user mistake We bailout pointing at 'hg update'
@@ -267,6 +268,10 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
         elif len(repo.heads()) > 1:
             msg, hint = msgdestmerge['nootherbranchheads'][action]
             msg %= branch
+        elif not onhead:
+            # if 'onheadcheck == False' (rebase case),
+            # this was not caught in Case A.
+            msg, hint = msgdestmerge['nootherheadsbehind'][action]
         else:
             msg, hint = msgdestmerge['nootherheads'][action]
         raise error.NoMergeDestAbort(msg, hint=hint)
