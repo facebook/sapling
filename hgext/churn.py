@@ -8,11 +8,22 @@
 
 '''command to display statistics about repository history'''
 
-from mercurial.i18n import _
-from mercurial import patch, cmdutil, scmutil, util, commands, error
-from mercurial import encoding
+from __future__ import absolute_import
+
+import datetime
 import os
-import time, datetime
+import time
+
+from mercurial.i18n import _
+from mercurial import (
+    cmdutil,
+    commands,
+    encoding,
+    error,
+    patch,
+    scmutil,
+    util,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
