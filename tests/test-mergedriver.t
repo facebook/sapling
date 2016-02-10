@@ -202,7 +202,7 @@ mark a file driver-resolved, and leave others unresolved (but skip merge driver)
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
   $ hg resolve --all --skip
-  warning: skipping merge driver (you will need to regenerate files manually)
+  warning: skipping merge driver (you MUST regenerate artifacts afterwards)
   merging bar.txt
   warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   [1]
@@ -430,7 +430,7 @@ this shouldn't abort
   U foo.txt
 
   $ hg resolve --mark --all --skip
-  warning: skipping merge driver (you will need to regenerate files manually)
+  warning: skipping merge driver (you MUST regenerate artifacts afterwards)
   (no more unresolved files)
   $ hg debugmergestate | grep 'merge driver:'
   [1]
@@ -482,7 +482,7 @@ this should disable the merge driver
   $ hg help resolve | grep -- '--skip'
       --skip                skip merge driver
   $ hg resolve --all --skip
-  warning: skipping merge driver (you will need to regenerate files manually)
+  warning: skipping merge driver (you MUST regenerate artifacts afterwards)
   (no more unresolved files)
 
 this should go through

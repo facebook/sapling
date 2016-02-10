@@ -83,7 +83,7 @@ def wrapresolve(orig, ui, repo, *pats, **opts):
         ui.setconfig('experimental', 'mergedriver', '',
                      'mergedriver extension')
         ui.warn(_('warning: skipping merge driver '
-                  '(you will need to regenerate files manually)\n'))
+                  '(you MUST regenerate artifacts afterwards)\n'))
 
     try:
         ret = orig(ui, repo, *pats, **opts)
