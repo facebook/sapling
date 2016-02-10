@@ -639,7 +639,6 @@ class treemanifest(object):
 
     def setflag(self, f, flags):
         """Set the flags (symlink, executable) for path f."""
-        assert 't' not in flags
         self._load()
         dir, subpath = _splittopdir(f)
         if dir:
