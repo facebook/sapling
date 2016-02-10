@@ -485,7 +485,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         if debug:
             print name, f
         fc = 0
-        if not (re.match(match, f) or (magic and re.search(magic, f))):
+        if not (re.match(match, f) or (magic and re.search(magic, pre))):
             if debug:
                 print "Skipping %s for %s it doesn't match %s" % (
                        name, match, f)
