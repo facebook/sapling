@@ -191,9 +191,17 @@ In the examples below, we will:
 
 '''
 
+from __future__ import absolute_import
+
+import getpass
+import urllib
+
 from mercurial.i18n import _
-from mercurial import util, match, error
-import getpass, urllib
+from mercurial import (
+    error,
+    match,
+    util,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
