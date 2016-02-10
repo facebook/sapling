@@ -32,7 +32,6 @@
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
   hgext/__init__.py not using absolute_import
-  hgext/clonebundles.py not using absolute_import
   hgext/color.py not using absolute_import
   hgext/convert/__init__.py not using absolute_import
   hgext/convert/bzr.py not using absolute_import
