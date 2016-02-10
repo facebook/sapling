@@ -186,6 +186,9 @@ utestpats = [
      "use '@@ -N,n +N* @@ (glob)' style chunk header for portability"),
     (r'^  @@ -[0-9]+ [+][0-9]+ @@',
      "use '@@ -N* +N* @@ (glob)' style chunk header for portability"),
+    (uprefix + r'hg( +-[^ ]+( +[^ ]+)?)* +extdiff'
+     r'( +(-[^ po-]+|--(?!program|option)[^ ]+|[^-][^ ]*))*$',
+     "use $RUNTESTDIR/pdiff via extdiff (or -o/-p for false-positives)"),
   ],
   # warnings
   [

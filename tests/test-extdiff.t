@@ -72,7 +72,7 @@ Should diff cloned files directly:
 
 Specifying an empty revision should abort.
 
-  $ hg extdiff --patch --rev 'ancestor()' --rev 1
+  $ hg extdiff -p diff --patch --rev 'ancestor()' --rev 1
   abort: empty revision on one side of range
   [255]
 
