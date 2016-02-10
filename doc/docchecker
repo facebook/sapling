@@ -48,7 +48,7 @@ def main():
     try:
       with open(f) as file:
         work(file)
-    except:
-      print("failed to process %s" % f)
+    except BaseException as e:
+      print("failed to process %s: %s" % (f, e))
 
 main()
