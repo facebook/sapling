@@ -149,6 +149,8 @@ def topicmatch(ui, kw):
     for name, docs in itertools.chain(
         extensions.enabled(False).iteritems(),
         extensions.disabled().iteritems()):
+        if not docs:
+            continue
         mod = extensions.load(ui, name, '')
         name = name.rpartition('.')[-1]
         if lowercontains(name) or lowercontains(docs):
