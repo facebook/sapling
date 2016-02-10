@@ -14,41 +14,41 @@ hg_backtick = re.compile(r""":hg:`[^`]*'[^`]*`""")
 hg_cramped = re.compile(r'\w:hg:`')
 
 def check(line):
-  if hg_backtick.search(line):
-    print(line)
-    print("""warning: please avoid nesting ' in :hg:`...`""")
-  if hg_cramped.search(line):
-    print(line)
-    print('warning: please have a space before :hg:')
+    if hg_backtick.search(line):
+        print(line)
+        print("""warning: please avoid nesting ' in :hg:`...`""")
+    if hg_cramped.search(line):
+        print(line)
+        print('warning: please have a space before :hg:')
 
 def work(file):
-  (llead, lline) = ('', '')
+    (llead, lline) = ('', '')
 
-  for line in file:
-    # this section unwraps lines
-    match = leadingline.match(line)
-    if not match:
-      check(lline)
-      (llead, lline) = ('', '')
-      continue
+    for line in file:
+        # this section unwraps lines
+        match = leadingline.match(line)
+        if not match:
+            check(lline)
+            (llead, lline) = ('', '')
+            continue
 
-    lead, line = match.group(1), match.group(2)
-    if (lead == llead):
-      if (lline != ''):
-        lline += ' ' + line
-      else:
-        lline = line
-    else:
-      check(lline)
-      (llead, lline) = (lead, line)
-  check(lline)
+        lead, line = match.group(1), match.group(2)
+        if (lead == llead):
+            if (lline != ''):
+                lline += ' ' + line
+            else:
+                lline = line
+        else:
+            check(lline)
+            (llead, lline) = (lead, line)
+    check(lline)
 
 def main():
-  for f in sys.argv[1:]:
-    try:
-      with open(f) as file:
-        work(file)
-    except BaseException as e:
-      print("failed to process %s: %s" % (f, e))
+    for f in sys.argv[1:]:
+        try:
+            with open(f) as file:
+                work(file)
+        except BaseException as e:
+            print("failed to process %s: %s" % (f, e))
 
 main()
