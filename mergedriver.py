@@ -91,6 +91,10 @@ def wrapresolve(orig, ui, repo, *pats, **opts):
         # written out
         if backup is not None:
             ms = merge.mergestate.read(repo)
+            if opts.get('skip'):
+                # force people to resolve by hand
+                for f in ms.driverresolved():
+                    ms.mark(f, 'u')
             ms.commit()
         return ret
     finally:

@@ -185,6 +185,39 @@ mark a file driver-resolved, and leave others unresolved
   abar
   cbar
 
+mark a file driver-resolved, and leave others unresolved (but skip merge driver)
+(r = False, unresolved = y, driver-resolved = y)
+  $ hg update --clean 2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge 1
+  * preprocess called
+  merging bar.txt
+  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  0 files updated, 0 files merged, 0 files removed, 1 files unresolved
+  use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
+  [1]
+  $ hg resolve --list
+  U bar.txt
+  D foo.txt
+  $ hg debugmergestate | grep 'merge driver:'
+  merge driver: python:$TESTTMP/mergedriver-auto1.py (state "m")
+  $ hg resolve --all --skip
+  warning: skipping merge driver (you will need to regenerate files manually)
+  merging bar.txt
+  warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
+  [1]
+  $ hg resolve --list
+  U bar.txt
+  U foo.txt
+  $ hg debugmergestate | grep 'merge driver:'
+  [1]
+  $ hg resolve --mark --all
+  (no more unresolved files)
+  $ hg debugmergestate | grep 'merge driver:'
+  merge driver: python:$TESTTMP/mergedriver-auto1.py (state "s")
+  $ hg commit -m 'merged'
+  created new head
+
 leave no files unresolved, but files driver-resolved
 (r = False, unresolved = n, driver-resolved = y)
 
