@@ -97,6 +97,14 @@ password should be masked in plain output, but not in machine-readable output:
    }
   ]
 
+zeroconf wraps ui.configitems(), which shouldn't crash at least:
+
+  $ hg paths --config extensions.zeroconf=
+  dupe = $TESTTMP/b#tip (glob)
+  dupe:pushurl = https://example.com/dupe
+  expand = $TESTTMP/a/$SOMETHING/bar (glob)
+  insecure = http://foo:***@example.com/
+
   $ cd ..
 
 sub-options for an undeclared path are ignored
