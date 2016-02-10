@@ -47,7 +47,7 @@ try:
     opts = {}
     try:
         args = fancyopts.fancyopts(sys.argv[1:], options, opts)
-    except fancyopts.getopt.GetoptError, e:
+    except fancyopts.getopt.GetoptError as e:
         raise ParseError(e)
     if opts['help']:
         showhelp()
@@ -55,11 +55,11 @@ try:
     if len(args) != 3:
             raise ParseError(_('wrong number of arguments'))
     sys.exit(simplemerge.simplemerge(ui.ui(), *args, **opts))
-except ParseError, e:
+except ParseError as e:
     sys.stdout.write("%s: %s\n" % (sys.argv[0], e))
     showhelp()
     sys.exit(1)
-except error.Abort, e:
+except error.Abort as e:
     sys.stderr.write("abort: %s\n" % e)
     sys.exit(255)
 except KeyboardInterrupt:

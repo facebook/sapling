@@ -20,7 +20,7 @@ def test_features():
         check, _ = feature
         try:
             check()
-        except Exception, e:
+        except Exception as e:
             print "feature %s failed:  %s" % (name, e)
             failed += 1
     return failed
@@ -45,7 +45,7 @@ def _loadaddon():
     sys.path.insert(0, path)
     try:
         import hghaveaddon
-    except BaseException, inst:
+    except BaseException as inst:
         sys.stderr.write('failed to import hghaveaddon.py from %r: %s\n'
                          % (path, inst))
         sys.exit(2)
