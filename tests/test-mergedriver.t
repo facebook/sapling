@@ -480,7 +480,7 @@ this should abort
 
 this should disable the merge driver
   $ hg help resolve | grep -- '--skip'
-      --skip                skip merge driver and assume all files are resolved
+      --skip                skip merge driver
   $ hg resolve --all --skip
   warning: skipping merge driver (you will need to regenerate files manually)
   (no more unresolved files)

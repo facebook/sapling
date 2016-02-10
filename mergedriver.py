@@ -136,8 +136,7 @@ def extsetup(ui):
     extensions.wrapfunction(merge, 'driverconclude', wrapconclude)
     wrappropertycache(merge.mergestate, 'mergedriver', wrapmdprop)
     entry = extensions.wrapcommand(commands.table, 'resolve', wrapresolve)
-    entry[1].append(('', 'skip', None,
-                     _('skip merge driver and assume all files are resolved')))
+    entry[1].append(('', 'skip', None, _('skip merge driver')))
 
 def wrappropertycache(cls, propname, wrapper):
     """Wraps a filecache property. These can't be wrapped using the normal
