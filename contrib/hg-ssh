@@ -77,7 +77,7 @@ def main():
         sys.exit(255)
 
 def rejectpush(ui, **kwargs):
-    ui.warn("Permission denied\n")
+    ui.warn(("Permission denied\n"))
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True
