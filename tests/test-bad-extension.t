@@ -31,6 +31,19 @@ show traceback
   Traceback (most recent call last):
   ImportError: No module named badext2
 
+names of extensions failed to load can be accessed via extensions.notloaded()
+
+  $ cat <<EOF > showbadexts.py
+  > from mercurial import cmdutil, commands, extensions
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('showbadexts', norepo=True)
+  > def showbadexts(ui, *pats, **opts):
+  >     ui.write('BADEXTS: %s' % ' '.join(sorted(extensions.notloaded())))
+  > EOF
+  $ hg --config extensions.badexts=showbadexts.py showbadexts 2>&1 | grep '^BADEXTS'
+  BADEXTS: badext badext2
+
 show traceback for ImportError of hgext.name if debug is set
 (note that --debug option isn't applied yet when loading extensions)
 

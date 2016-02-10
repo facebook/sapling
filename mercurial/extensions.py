@@ -456,6 +456,10 @@ def enabled(shortname=True):
 
     return exts
 
+def notloaded():
+    '''return short names of extensions that failed to load'''
+    return [name for name, mod in _extensions.iteritems() if mod is None]
+
 def moduleversion(module):
     '''return version information from given module as a string'''
     if (util.safehasattr(module, 'getversion')
