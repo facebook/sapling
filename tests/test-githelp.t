@@ -193,6 +193,16 @@ githelp for show with too many arguments
   $ hg githelp -- show argone argtwo
   hg show argone
 
+githelp for show with --unified options
+  $ hg githelp -- show --unified=10
+  hg show --config diff.unified=10
+  $ hg githelp -- show -U100
+  hg show --config diff.unified=100
+
+githelp for show with a path and --unified
+  $ hg githelp -- show -U20 test_file
+  hg diff -r ".^" --unified=20 test_file
+
 githelp for stash drop without name
   $ hg githelp -- git stash drop
   hg shelve -d <shelve name>

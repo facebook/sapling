@@ -858,6 +858,7 @@ def show(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('', 'name-status', None, ''),
         ('', 'pretty', '', ''),
+        ('U', 'unified', int, ''),
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
@@ -875,7 +876,11 @@ def show(ui, repo, *args, **kwargs):
         if ispath(repo, showarg):
             cmd = Command('diff')
             cmd['-r'] = '".^"'
+            if opts.get('unified'):
+                cmd.append('--unified=%d' % (opts['unified'],))
         cmd.append(showarg)
+    elif opts.get('unified'):
+        cmd.append('--config diff.unified=%d' % (opts['unified'],))
 
     ui.status((str(cmd)), "\n")
 
