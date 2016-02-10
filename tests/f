@@ -106,7 +106,7 @@ def visit(opts, filenames, outfile):
                         chunk = chunk[opts.bytes:]
             if opts.hexdump:
                 for i in range(0, len(chunk), 16):
-                    s = chunk[i:i+16]
+                    s = chunk[i:i + 16]
                     outfile.write('%04x: %-47s |%s|\n' %
                                   (i, ' '.join('%02x' % ord(c) for c in s),
                                    re.sub('[^ -~]', '.', s)))
