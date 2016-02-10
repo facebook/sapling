@@ -269,6 +269,45 @@ class Merge3Text(object):
                 ia = aend
                 ib = bend
 
+    def minimize(self, merge_regions):
+        """Trim conflict regions of lines where A and B sides match.
+
+        Lines where both A and B have made the same changes at the begining
+        or the end of each merge region are eliminated from the conflict
+        region and are instead considered the same.
+        """
+        for region in merge_regions:
+            if region[0] != "conflict":
+                yield region
+                continue
+            issue, z1, z2, a1, a2, b1, b2 = region
+            alen = a2 - a1
+            blen = b2 - b1
+
+            # find matches at the front
+            ii = 0
+            while ii < alen and ii < blen and \
+                  self.a[a1 + ii] == self.b[b1 + ii]:
+                ii += 1
+            startmatches = ii
+
+            # find matches at the end
+            ii = 0
+            while ii < alen and ii < blen and \
+                  self.a[a2 - ii - 1] == self.b[b2 - ii - 1]:
+                ii += 1
+            endmatches = ii
+
+            if startmatches > 0:
+                yield 'same', a1, a1 + startmatches
+
+            yield ('conflict', z1, z2,
+                    a1 + startmatches, a2 - endmatches,
+                    b1 + startmatches, b2 - endmatches)
+
+            if endmatches > 0:
+                yield 'same', a2 - endmatches, a2
+
     def find_sync_regions(self):
         """Return a list of sync regions, where both descendants match the base.
 
