@@ -25,10 +25,20 @@ function in a meaningful way. Such commands only tolerate censored file
 revisions if they are allowed by the "censor.policy=ignore" config option.
 """
 
-from mercurial.node import short
-from mercurial import cmdutil, error, filelog, revlog, scmutil, util
+from __future__ import absolute_import
+
 from mercurial.i18n import _
-from mercurial import lock as lockmod
+from mercurial.node import short
+
+from mercurial import (
+    cmdutil,
+    error,
+    filelog,
+    lock as lockmod,
+    revlog,
+    scmutil,
+    util,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

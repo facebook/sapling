@@ -32,7 +32,6 @@
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
   hgext/__init__.py not using absolute_import
-  hgext/censor.py not using absolute_import
   hgext/children.py not using absolute_import
   hgext/churn.py not using absolute_import
   hgext/clonebundles.py not using absolute_import
