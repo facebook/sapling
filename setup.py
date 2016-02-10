@@ -23,7 +23,7 @@ setup(
         'commitextras',
         'dirsync',
         'errorredirect',
-        'ext2util',
+        'extutil',
         'fbamend',
         'fbconduit',
         'fbhistedit',
