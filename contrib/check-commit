@@ -46,7 +46,7 @@ def nonempty(first, second):
         return first
     return second
 
-def checkcommit(commit, node = None):
+def checkcommit(commit, node=None):
     exitcode = 0
     printed = node is None
     hits = []
