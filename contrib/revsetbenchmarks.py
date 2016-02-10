@@ -63,7 +63,7 @@ def perf(revset, target=None, contexts=False):
         return parseoutput(output)
     except CalledProcessError as exc:
         print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
-        if exc.output is None:
+        if getattr(exc, 'output', None) is None: # no output before 2.7
             print >> sys.stderr, '(no output)'
         else:
             print >> sys.stderr, exc.output
