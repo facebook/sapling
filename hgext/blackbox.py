@@ -29,9 +29,16 @@ Examples::
 
 """
 
-from mercurial import util, cmdutil
+from __future__ import absolute_import
+
+import errno
+import re
+
 from mercurial.i18n import _
-import errno, re
+from mercurial import (
+    cmdutil,
+    util,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
