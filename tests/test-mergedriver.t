@@ -125,7 +125,6 @@ mark a file driver-resolved, and leave others unresolved
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
-XXX 1 file merged!
   $ hg summary
   parent: 2:ede3d67b8d0f 
    c
