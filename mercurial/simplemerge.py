@@ -92,7 +92,8 @@ class Merge3Text(object):
                     mid_marker='=======',
                     end_marker='>>>>>>>',
                     base_marker=None,
-                    localorother=None):
+                    localorother=None,
+                    minimize=False):
         """Return merge in cvs-like form.
         """
         self.conflicts = False
@@ -109,6 +110,8 @@ class Merge3Text(object):
         if name_base and base_marker:
             base_marker = base_marker + ' ' + name_base
         merge_regions = self.merge_regions()
+        if minimize:
+            merge_regions = self.minimize(merge_regions)
         for t in merge_regions:
             what = t[0]
             if what == 'unchanged':
@@ -441,7 +444,10 @@ def simplemerge(ui, local, base, other, **opts):
         out = sys.stdout
 
     m3 = Merge3Text(basetext, localtext, othertext)
-    extrakwargs = {"localorother": opts.get("localorother", None)}
+    extrakwargs = {
+            "localorother": opts.get("localorother", None),
+            'minimize': True,
+        }
     if mode == 'union':
         extrakwargs['start_marker'] = None
         extrakwargs['mid_marker'] = None
@@ -449,6 +455,7 @@ def simplemerge(ui, local, base, other, **opts):
     elif name_base is not None:
         extrakwargs['base_marker'] = '|||||||'
         extrakwargs['name_base'] = name_base
+        extrakwargs['minimize'] = False
     for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
         out.write(line)
 

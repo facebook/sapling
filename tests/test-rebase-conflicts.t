@@ -305,3 +305,55 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   rebase completed
   updating the branch cache
   truncating cache/rbc-revs-v1 to 72
+
+Test minimization of merge conflicts
+  $ hg up -q null
+  $ echo a > a
+  $ hg add a
+  $ hg commit -q -m 'a'
+  $ echo b >> a
+  $ hg commit -q -m 'ab'
+  $ hg bookmark ab
+  $ hg up -q '.^'
+  $ echo b >> a
+  $ echo c >> a
+  $ hg commit -q -m 'abc'
+  $ hg rebase -s 7bc217434fc1 -d ab --keep
+  rebasing 13:7bc217434fc1 "abc" (tip)
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg diff
+  diff -r 328e4ab1f7cc a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -1,2 +1,6 @@
+   a
+   b
+  +<<<<<<< dest:   328e4ab1f7cc  ab - test: ab
+  +=======
+  +c
+  +>>>>>>> source: 7bc217434fc1 - test: abc
+  $ hg rebase --abort
+  rebase aborted
+  $ hg up -q -C 7bc217434fc1
+  $ hg rebase -s . -d ab --keep -t internal:merge3
+  rebasing 13:7bc217434fc1 "abc" (tip)
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ hg diff
+  diff -r 328e4ab1f7cc a
+  --- a/a	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/a	* (glob)
+  @@ -1,2 +1,8 @@
+   a
+  +<<<<<<< dest:   328e4ab1f7cc  ab - test: ab
+   b
+  +||||||| base
+  +=======
+  +b
+  +c
+  +>>>>>>> source: 7bc217434fc1 - test: abc

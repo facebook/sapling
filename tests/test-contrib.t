@@ -148,11 +148,10 @@ conflicts
   base
   <<<<<<< conflict-local
   not other
-  end
   =======
   other
-  end
   >>>>>>> conflict-other
+  end
   [1]
 
 1 label
@@ -161,11 +160,10 @@ conflicts
   base
   <<<<<<< foo
   not other
-  end
   =======
   other
-  end
   >>>>>>> conflict-other
+  end
   [1]
 
 2 labels
@@ -174,11 +172,10 @@ conflicts
   base
   <<<<<<< foo
   not other
-  end
   =======
   other
-  end
   >>>>>>> bar
+  end
   [1]
 
 3 labels
