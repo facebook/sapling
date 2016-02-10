@@ -167,6 +167,7 @@ class shelvedstate(object):
             pendingctx = fp.readline().strip()
             parents = [nodemod.bin(h) for h in fp.readline().split()]
             stripnodes = [nodemod.bin(h) for h in fp.readline().split()]
+            branchtorestore = fp.readline().strip()
         finally:
             fp.close()
 
@@ -176,11 +177,13 @@ class shelvedstate(object):
         obj.pendingctx = repo[nodemod.bin(pendingctx)]
         obj.parents = parents
         obj.stripnodes = stripnodes
+        obj.branchtorestore = branchtorestore
 
         return obj
 
     @classmethod
-    def save(cls, repo, name, originalwctx, pendingctx, stripnodes):
+    def save(cls, repo, name, originalwctx, pendingctx, stripnodes,
+             branchtorestore):
         fp = repo.vfs(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
@@ -190,6 +193,7 @@ class shelvedstate(object):
                  ' '.join([nodemod.hex(p) for p in repo.dirstate.parents()]))
         fp.write('%s\n' %
                  ' '.join([nodemod.hex(n) for n in stripnodes]))
+        fp.write('%s\n' % branchtorestore)
         fp.close()
 
     @classmethod
@@ -555,6 +559,12 @@ def mergefiles(ui, repo, wctx, shelvectx):
     finally:
         ui.quiet = oldquiet
 
+def restorebranch(ui, repo, branchtorestore):
+    if branchtorestore and branchtorestore != repo.dirstate.branch():
+        repo.dirstate.setbranch(branchtorestore)
+        ui.status(_('marked working directory as branch %s\n')
+                  % branchtorestore)
+
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
     if not opts.get('keep'):
@@ -594,6 +604,7 @@ def unshelvecontinue(ui, repo, state, opts):
             state.stripnodes.append(shelvectx.node())
 
         mergefiles(ui, repo, state.wctx, shelvectx)
+        restorebranch(ui, repo, state.branchtorestore)
 
         repair.strip(ui, repo, state.stripnodes, backup=False, topic='shelve')
         shelvedstate.clear(repo)
@@ -631,6 +642,10 @@ def unshelve(ui, repo, *shelved, **opts):
     (Alternatively, you can use ``--abort`` to abandon an unshelve
     that causes a conflict. This reverts the unshelved changes, and
     leaves the bundle in place.)
+
+    If bare shelved change(when no files are specified, without interactive,
+    include and exclude option) was done on newly created branch it would
+    restore branch information to the working directory.
 
     After a successful unshelve, the shelved changes are stored in a
     backup directory. Only the N most recent backups are kept. N
@@ -740,6 +755,10 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
         shelvectx = repo['tip']
 
+        branchtorestore = ''
+        if shelvectx.branch() != shelvectx.p1().branch():
+            branchtorestore = shelvectx.branch()
+
         # If the shelve is not immediately on top of the commit
         # we'll be merging with, rebase it to be on top.
         if tmpwctx.node() != shelvectx.parents()[0].node():
@@ -756,7 +775,8 @@ def _dounshelve(ui, repo, *shelved, **opts):
 
                 stripnodes = [repo.changelog.node(rev)
                               for rev in xrange(oldtiprev, len(repo))]
-                shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes)
+                shelvedstate.save(repo, basename, pctx, tmpwctx, stripnodes,
+                                  branchtorestore)
 
                 util.rename(repo.join('rebasestate'),
                             repo.join('unshelverebasestate'))
@@ -772,6 +792,7 @@ def _dounshelve(ui, repo, *shelved, **opts):
                 shelvectx = tmpwctx
 
         mergefiles(ui, repo, pctx, shelvectx)
+        restorebranch(ui, repo, branchtorestore)
 
         # Forget any files that were unknown before the shelve, unknown before
         # unshelve started, but are now added.
@@ -840,6 +861,12 @@ def shelvecmd(ui, repo, *pats, **opts):
     When no files are specified, "hg shelve" saves all not-clean
     files. If specific files or directories are named, only changes to
     those files are shelved.
+
+    In bare shelve(when no files are specified, without interactive,
+    include and exclude option), shelving remembers information if the
+    working directory was on newly created branch, in other words working
+    directory was on different branch than its first parent. In this
+    situation unshelving restores branch information to the working directory.
 
     Each shelved change has a name that makes it easier to find later.
     The name of a shelved change defaults to being based on the active

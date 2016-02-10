@@ -36,6 +36,12 @@ shelve has a help message
       specific files or directories are named, only changes to those files are
       shelved.
   
+      In bare shelve(when no files are specified, without interactive, include
+      and exclude option), shelving remembers information if the working
+      directory was on newly created branch, in other words working directory
+      was on different branch than its first parent. In this situation
+      unshelving restores branch information to the working directory.
+  
       Each shelved change has a name that makes it easier to find later. The
       name of a shelved change defaults to being based on the active bookmark,
       or if there is no active bookmark, the current named branch.  To specify a
@@ -1377,3 +1383,202 @@ We expect that bare-shelve will not keep branch in current working directory.
   $ hg branch
   default
 
+When i shelve commit on newly created branch i expect
+that after unshelve newly created branch will be preserved.
+
+  $ hg init shelve_on_new_branch_simple
+  $ cd shelve_on_new_branch_simple
+  $ echo "aaa" >> a
+  $ hg commit -A -m "a"
+  adding a
+  $ hg branch
+  default
+  $ hg branch test
+  marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "bbb" >> a
+  $ hg status
+  M a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  default
+  $ echo "bbb" >> b
+  $ hg status
+  ? b
+  $ hg unshelve
+  unshelving change 'default'
+  marked working directory as branch test
+  $ hg status
+  M a
+  ? b
+  $ hg branch
+  test
+
+When i shelve commit on newly created branch, make
+some changes, unshelve it and running into merge
+conflicts i expect that after fixing them and
+running unshelve --continue newly created branch
+will be preserved.
+
+  $ hg init shelve_on_new_branch_conflict
+  $ cd shelve_on_new_branch_conflict
+  $ echo "aaa" >> a
+  $ hg commit -A -m "a"
+  adding a
+  $ hg branch
+  default
+  $ hg branch test
+  marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "bbb" >> a
+  $ hg status
+  M a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  default
+  $ echo "ccc" >> a
+  $ hg status
+  M a
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 2:425c97ef07f3 "changes to: a" (tip)
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+  $ echo "aaabbbccc" > a
+  $ rm a.orig
+  $ hg resolve --mark a
+  (no more unresolved files)
+  continue: hg unshelve --continue
+  $ hg unshelve --continue
+  rebasing 2:425c97ef07f3 "changes to: a" (tip)
+  marked working directory as branch test
+  unshelve of 'default' complete
+  $ cat a
+  aaabbbccc
+  $ hg status
+  M a
+  $ hg branch
+  test
+  $ hg commit -m "test-commit"
+
+When i shelve on test branch, update to default branch
+and unshelve i expect that it will not preserve previous
+test branch.
+
+  $ echo "xxx" > b
+  $ hg add b
+  $ hg shelve
+  shelved as test
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg update -r default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg unshelve
+  unshelving change 'test'
+  rebasing shelved changes
+  rebasing 2:357525f34729 "changes to: test-commit" (tip)
+  $ hg status
+  A b
+  $ hg branch
+  default
+
+When i unshelve resulting in merge conflicts and makes saved
+file shelvedstate looks like in previous versions in
+mercurial(without restore branch information in 7th line) i
+expect that after resolving conflicts and succesfully
+running 'shelve --continue' the branch information won't be
+restored and branch will be unchanged.
+
+  $ hg init shelve_on_new_branch_conflict_with_previous_shelvedstate
+  $ cd shelve_on_new_branch_conflict_with_previous_shelvedstate
+  $ echo "aaa" >> a
+  $ hg commit -A -m "a"
+  adding a
+  $ hg branch
+  default
+  $ hg branch test
+  marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "bbb" >> a
+  $ hg status
+  M a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  default
+  $ echo "ccc" >> a
+  $ hg status
+  M a
+  $ hg unshelve
+  unshelving change 'default'
+  temporarily committing pending changes (restore with 'hg unshelve --abort')
+  rebasing shelved changes
+  rebasing 2:425c97ef07f3 "changes to: a" (tip)
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see 'hg resolve', then 'hg unshelve --continue')
+  [1]
+
+Removing restore branch information from shelvedstate file(making it looks like
+in previous versions) and running unshelve --continue
+
+  $ head -n 6 < .hg/shelvedstate > .hg/shelvedstate_oldformat
+  $ rm .hg/shelvedstate
+  $ mv .hg/shelvedstate_oldformat .hg/shelvedstate
+
+  $ echo "aaabbbccc" > a
+  $ rm a.orig
+  $ hg resolve --mark a
+  (no more unresolved files)
+  continue: hg unshelve --continue
+  $ hg unshelve --continue
+  rebasing 2:425c97ef07f3 "changes to: a" (tip)
+  unshelve of 'default' complete
+  $ cat a
+  aaabbbccc
+  $ hg status
+  M a
+  $ hg branch
+  default
+
+On non bare shelve the branch information shouldn't be restored
+
+  $ hg init bare_shelve_on_new_branch
+  $ cd bare_shelve_on_new_branch
+  $ echo "aaa" >> a
+  $ hg commit -A -m "a"
+  adding a
+  $ hg branch
+  default
+  $ hg branch test
+  marked working directory as branch test
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "bbb" >> a
+  $ hg status
+  M a
+  $ hg shelve a
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  test
+  $ hg branch default
+  marked working directory as branch default
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "bbb" >> b
+  $ hg status
+  ? b
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg status
+  M a
+  ? b
+  $ hg branch
+  default
