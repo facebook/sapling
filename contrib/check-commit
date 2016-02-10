@@ -23,7 +23,8 @@ beforepatch = afterheader + r"(?!\n(?!@@))"
 
 errors = [
     (beforepatch + r".*[(]bc[)]", "(BC) needs to be uppercase"),
-    (beforepatch + r".*[(]issue \d\d\d", "no space allowed between issue and number"),
+    (beforepatch + r".*[(]issue \d\d\d",
+     "no space allowed between issue and number"),
     (beforepatch + r".*[(]bug(\d|\s)", "use (issueDDDD) instead of bug"),
     (commitheader + r"# User [^@\n]+\n", "username is not an email address"),
     (commitheader + r"(?!merge with )[^#]\S+[^:] ",
