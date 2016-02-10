@@ -277,10 +277,21 @@ All the above add a comment to the Bugzilla bug record of the form::
     Changeset commit comment. Bug 1234.
 '''
 
+from __future__ import absolute_import
+
+import re
+import time
+import urlparse
+import xmlrpclib
+
 from mercurial.i18n import _
 from mercurial.node import short
-from mercurial import cmdutil, mail, util, error
-import re, time, urlparse, xmlrpclib
+from mercurial import (
+    cmdutil,
+    error,
+    mail,
+    util,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
