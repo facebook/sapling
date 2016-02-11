@@ -18,6 +18,8 @@ Examples::
   # dirty is *EXPENSIVE* (slow);
   # each log entry indicates `+` if the repository is dirty, like :hg:`id`.
   dirty = True
+  # record the source of log messages
+  logsource = True
 
   [blackbox]
   track = command, commandfinish, commandexception, exthook, pythonhook
@@ -174,9 +176,13 @@ def wrapui(ui):
                         any(ctx.sub(s).dirty() for s in ctx.substate)
                     )):
                         changed = '+'
+                if ui.configbool('blackbox', 'logsource', False):
+                    src = ' [%s]' % event
+                else:
+                    src = ''
                 try:
-                    ui._bbwrite('%s %s @%s%s (%s)> %s',
-                        date, user, rev, changed, pid, formattedmsg)
+                    ui._bbwrite('%s %s @%s%s (%s)%s> %s',
+                        date, user, rev, changed, pid, src, formattedmsg)
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
