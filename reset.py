@@ -101,6 +101,7 @@ def _touch(repo, rev):
         opts = {
             # Use 'duplicate' to avoid divergence. We may want something better
             # later.
+            'allowdivergence': False,
             'duplicate': True,
             'rev': [],
         }
