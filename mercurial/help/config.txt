@@ -800,7 +800,7 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``outgoing``
   Run after sending changes from local repository to another. ID of
   first changeset sent is in ``$HG_NODE``. Source of operation is in
-  ``$HG_SOURCE``; Also see :hg:`help config.preoutgoing` hook.
+  ``$HG_SOURCE``; Also see :hg:`help config.hooks.preoutgoing` hook.
 
 ``post-<command>``
   Run after successful invocations of the associated command. The
@@ -881,11 +881,11 @@ variables it is passed are listed with names of the form ``$HG_foo``.
 ``txnclose``
   Run after any repository transaction has been committed. At this
   point, the transaction can no longer be rolled back. The hook will run
-  after the lock is released. See :hg:`help config.pretxnclose` docs for
+  after the lock is released. See :hg:`help config.hooks.pretxnclose` docs for
   details about available variables.
 
 ``txnabort``
-  Run when a transaction is aborted. See :hg:`help config.pretxnclose`
+  Run when a transaction is aborted. See :hg:`help config.hooks.pretxnclose`
   docs for details about available variables.
 
 ``pretxnchangegroup``
