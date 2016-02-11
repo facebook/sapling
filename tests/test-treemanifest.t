@@ -418,7 +418,7 @@ Test files for a subdirectory.
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
   b/foo/apple/bees/flower.py (glob)
-  $ cp -rT .hg/store-copy .hg/store
+  $ cp -r .hg/store-copy/* .hg/store
 
 Test files with just includes and excludes.
 
@@ -427,7 +427,7 @@ Test files with just includes and excludes.
   $ rm -r .hg/store/meta/b/foo/apple/bees
   $ hg files -r . -I path:b/bar -X path:b/bar/orange/fly -I path:b/foo -X path:b/foo/apple/bees
   b/bar/fruits.txt (glob)
-  $ cp -rT .hg/store-copy .hg/store
+  $ cp -r .hg/store-copy/* .hg/store
 
 Test files for a subdirectory, excluding a directory within it.
 
@@ -437,7 +437,7 @@ Test files for a subdirectory, excluding a directory within it.
   b/bar/fruits.txt (glob)
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
-  $ cp -rT .hg/store-copy .hg/store
+  $ cp -r .hg/store-copy/* .hg/store
 
 Test files for a sub directory, including only a directory within it, and
 including an unrelated directory.
@@ -447,7 +447,7 @@ including an unrelated directory.
   $ hg files -r . -I path:b/bar/orange -I path:a b
   b/bar/orange/fly/gnat.py (glob)
   b/bar/orange/fly/housefly.txt (glob)
-  $ cp -rT .hg/store-copy .hg/store
+  $ cp -r .hg/store-copy/* .hg/store
 
 Test files for a pattern, including a directory, and excluding a directory
 within that.
@@ -457,7 +457,7 @@ within that.
   $ rm -r .hg/store/meta/b/bar/orange
   $ hg files -r . glob:**.txt -I path:b/bar -X path:b/bar/orange
   b/bar/fruits.txt (glob)
-  $ cp -rT .hg/store-copy .hg/store
+  $ cp -r .hg/store-copy/* .hg/store
 
 Add some more changes to the deep repo
   $ echo narf >> b/bar/fruits.txt
