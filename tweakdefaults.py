@@ -282,7 +282,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     for a non-match that becomes a match), use the --all flag.
 
     Returns 0 if a match is found, 1 otherwise."""
-    if not pats:
+    if not pats and not ui.configbool("tweakdefaults", "allowfullrepohistgrep"):
         m = _("can't run histgrep on the whole repo, please provide filenames")
         h = _('this is disabled to avoid very slow greps over the whole repo')
         raise error.Abort(m, hint=h)
