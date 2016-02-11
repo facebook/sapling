@@ -35,6 +35,9 @@ def role_hg(name, rawtext, text, lineno, inliner,
         if args[0] == 'config':
             # :hg:`help config`
             refuri = "hgrc.5.html"
+        elif args[0].startswith('config.'):
+            # :hg:`help config.SECTION...`
+            refuri = "hgrc.5.html#%s" % args[0].split('.', 2)[1]
         elif len(args) >= 2 and args[0] == '-c':
             # :hg:`help -c COMMAND ...` is equivalent to :hg:`COMMAND`
             # (mainly for :hg:`help -c config`)
