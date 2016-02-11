@@ -30,10 +30,19 @@ def role_hg(name, rawtext, text, lineno, inliner,
     linktext = nodes.literal(rawtext, text)
     parts = text.split()
     cmd, args = parts[1], parts[2:]
+    refuri = "hg.1.html#%s" % cmd
     if cmd == 'help' and args:
-        cmd = args[0] # link to 'dates' for 'hg help dates'
+        if args[0] == 'config':
+            # :hg:`help config`
+            refuri = "hgrc.5.html"
+        elif len(args) >= 2 and args[0] == '-c':
+            # :hg:`help -c COMMAND ...` is equivalent to :hg:`COMMAND`
+            # (mainly for :hg:`help -c config`)
+            refuri = "hg.1.html#%s" % args[1]
+        else:
+            refuri = "hg.1.html#%s" % args[0]
     node = nodes.reference(rawtext, '', linktext,
-                           refuri="hg.1.html#%s" % cmd)
+                           refuri=refuri)
     return [node], []
 
 roles.register_local_role("hg", role_hg)
