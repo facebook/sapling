@@ -57,11 +57,13 @@ if __name__ == "__main__":
                 if mdirective:
                     if not msgid[mdirective.end():].rstrip():
                         # only directive, nothing to translate here
+                        delta += 2
                         continue
                     directive = mdirective.group(1)
                     if directive in ('container', 'include'):
                         if msgid.rstrip('\n').count('\n') == 0:
                             # only rst syntax, nothing to translate
+                            delta += 2
                             continue
                         else:
                             # lines following directly, unexpected
