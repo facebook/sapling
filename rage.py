@@ -6,10 +6,26 @@ from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
 from hgext import blackbox
 import smartlog
-import os, socket, re, time
+import atexit, os, socket, re, time, traceback
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
+
+_failsafeerrors = []
+
+@atexit.register
+def _printfailsafeerrors():
+    if _failsafeerrors:
+        print('\n'.join(_failsafeerrors))
+
+def _failsafe(func):
+    try:
+        return func()
+    except Exception as ex:
+        index = len(_failsafeerrors) + 1
+        message = "[%d]: %s\n%s\n" % (index, str(ex), traceback.format_exc())
+        _failsafeerrors.append(message)
+        return '(Failed. See footnote [%d])' % index
 
 @command('^rage',
     [('p', 'preview', None,
@@ -64,19 +80,22 @@ def rage(ui, repo, *pats, **opts):
         ('date', time.ctime()),
         ('unixname', os.getenv('LOGNAME')),
         ('hostname', socket.gethostname()),
-        ('repo location', repo.root),
-        ('active bookmark', bookmarks.readactive(repo)),
+        ('repo location', _failsafe(lambda: repo.root)),
+        ('active bookmark',
+            _failsafe(lambda: bookmarks._readactive(repo, repo._bookmarks))),
     ]
 
     ui._colormode = None
 
     detailed = [
-        ('df -h', shcmd('df -h', check=False)),
-        ('hg sl', hgcmd(smartlog.smartlog)),
-        ('hg config', hgcmd(commands.config)),
+        ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
+        ('hg sl', _failsafe(lambda: hgcmd(smartlog.smartlog))),
+        ('hg config', _failsafe(lambda: hgcmd(commands.config))),
         ('first 20 lines of "hg status"',
-            '\n'.join(hgcmd(commands.status).splitlines()[:20])),
-        ('hg blackbox -l20', hgcmd(blackbox.blackbox, limit=20)),
+            _failsafe(lambda:
+                '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
+        ('hg blackbox -l20',
+            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=20))),
     ]
 
     basic_msg = '\n'.join(map(format, basic))
