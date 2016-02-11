@@ -7,10 +7,12 @@
 
 from mercurial import  util, cmdutil, graphmod, scmutil
 from mercurial import bookmarks, commands, error, revset
+from mercurial import obsolete, templatekw, phases
 from mercurial.extensions import wrapfunction
 from hgext import pager
 from mercurial.node import short, nullrev
 from mercurial.i18n import _
+from itertools import chain
 import re
 import inspect
 
@@ -72,6 +74,23 @@ def uisetup(ui):
 
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
+
+    def singlepublicsuccessor(repo, ctx, templ, **args):
+        """Get a single public successor for a given node
+        If there's none or more than one, return empty string
+
+        This is intended to be used for "Landed as" marking
+        in `hg sl` output."""
+        successorssets = obsolete.successorssets(repo, ctx.node())
+        unfiltered = repo.unfiltered()
+        ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
+        public = (c.hex() for c in ctxs if not c.mutable() and c!=ctx)
+        first = next(public, '')
+        second = next(public, '')
+
+        return '' if first and second else first
+
+    templatekw.keywords['singlepublicsuccessor'] = singlepublicsuccessor
 
 def sortnodes(nodes, parentfunc, masters):
     """Topologically sorts the nodes, using the parentfunc to find

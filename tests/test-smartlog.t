@@ -313,3 +313,28 @@ Test with weird bookmark names
   $ hg smartlog --config smartlog.master=xxxx -T compact
   abort: unknown revision 'xxxx'!
   [255]
+
+Test singlepublicsuccessor tempalte keyword
+  $ echo "[extensions]" >> $HGRCPATH
+  $ echo "rebase=" >> $HGRCPATH
+  $ echo "[experimental]" >> $HGRCPATH
+  $ echo "evolution=all" >> $HGRCPATH
+  $ cd ..
+  $ hg init kwrepo && cd kwrepo
+  $ echo a > a && hg ci -Am a
+  adding a
+  $ echo b > b && hg ci -Am b
+  adding b
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo c > c && hg ci -Am c
+  adding c
+  created new head
+  $ hg rebase -s 2 -d 1
+  rebasing 2:d36c0562f908 "c" (tip)
+  $ hg phase -r 3 --public
+  $ hg smartlog -r 2 -T "SPS: {singlepublicsuccessor}" --hidden
+  warning: there is no master commit locally, try pulling from server
+  x  SPS: 2b5806c2ca1e228838315bbffeb7d1504c38c9d6
+  |
+
