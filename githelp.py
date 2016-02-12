@@ -872,13 +872,11 @@ def show(ui, repo, *args, **kwargs):
             cmd.append('--style status')
             cmd.append('-r tip')
     elif len(args) > 0:
-        showarg = args[0]
-        if ispath(repo, showarg):
-            cmd = Command('diff')
-            cmd['-r'] = '".^"'
-            if opts.get('unified'):
-                cmd.append('--unified=%d' % (opts['unified'],))
-        cmd.append(showarg)
+        if ispath(repo, args[0]):
+            cmd.append('.')
+        cmd.extend(args)
+        if opts.get('unified'):
+            cmd.append('--unified=%d' % (opts['unified'],))
     elif opts.get('unified'):
         cmd.append('--config diff.unified=%d' % (opts['unified'],))
 

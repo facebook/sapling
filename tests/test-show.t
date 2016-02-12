@@ -33,6 +33,57 @@ Show on empty repository: checking consistency
   date:        Thu Jan 01 00:00:00 1970 +0000
   
   
+Check various git-like options:
+
+  $ hg init gitlike
+  $ echo one > one
+  $ echo two > two
+  $ hg commit -qAm twofiles
+  $ hg show --template status
+  changeset:   0:bf7b98b60f6f
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  description:
+  twofiles
+  
+  files:
+  A one
+  A two
+  
+  diff -r 000000000000 -r bf7b98b60f6f one
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/one	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +one
+  diff -r 000000000000 -r bf7b98b60f6f two
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/two	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +two
+  
+
+Check that the command parser always treats the first argument as a revision:
+
+  $ hg show two
+  abort: unknown revision 'two'!
+  [255]
+  $ hg show . two
+  changeset:   0:bf7b98b60f6f
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  files:       one two
+  description:
+  twofiles
+  
+  
+  diff -r 000000000000 -r bf7b98b60f6f two
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/two	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +two
+  
 
 Check --stat
 
@@ -209,13 +260,13 @@ Check hg show '' fails to parse the revision
 Confirm that --help works (it didn't when we used an alias)
 
   $ hg show --help
-  hg show [OPTION]... [REV]
+  hg show [OPTION]... [REV [FILE]...]
   
   Shows the given revision in detail, or '.' if no revision is given.
   
-      This behaves similarly to 'hg log -vp -r [OPTION].. REV', or if called
-      without a REV, 'hg log -vp -r [OPTION].. .' Use :hg'log' for more powerful
-      operations than supported by hg show
+      This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
+      called without a REV, 'hg log -vp -r . [OPTION]...' Use :hg'log' for more
+      powerful operations than supported by hg show
   
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.
@@ -232,13 +283,13 @@ Confirm that --help works (it didn't when we used an alias)
   
   (some details hidden, use --verbose to show complete help)
   $ hg show --help --verbose
-  hg show [OPTION]... [REV]
+  hg show [OPTION]... [REV [FILE]...]
   
   Shows the given revision in detail, or '.' if no revision is given.
   
-      This behaves similarly to 'hg log -vp -r [OPTION].. REV', or if called
-      without a REV, 'hg log -vp -r [OPTION].. .' Use :hg'log' for more powerful
-      operations than supported by hg show
+      This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
+      called without a REV, 'hg log -vp -r . [OPTION]...' Use :hg'log' for more
+      powerful operations than supported by hg show
   
       See 'hg help templates' for more about pre-packaged styles and specifying
       custom templates.

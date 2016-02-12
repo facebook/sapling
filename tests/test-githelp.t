@@ -183,15 +183,17 @@ githelp for show with no arguments
 
 githelp for show with a path
   $ hg githelp -- show test_file
-  hg diff -r ".^" test_file
+  hg show . test_file
 
 githelp for show with not a path:
   $ hg githelp -- show rev
   hg show rev
 
-githelp for show with too many arguments
+githelp for show with many arguments
   $ hg githelp -- show argone argtwo
-  hg show argone
+  hg show argone argtwo
+  $ hg githelp -- show test_file argone argtwo
+  hg show . test_file argone argtwo
 
 githelp for show with --unified options
   $ hg githelp -- show --unified=10

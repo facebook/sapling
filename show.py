@@ -30,7 +30,7 @@ For example, 'hg show --stat' prints something like:
 """
 
 from mercurial.i18n import _
-from mercurial import cmdutil, commands
+from mercurial import cmdutil, commands, error, scmutil
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -48,23 +48,30 @@ def uisetup(ui):
     # manual call of the decorator
     command('^show',
             allowed_opts,
-            _('[OPTION]... [REV]'),
+            _('[OPTION]... [REV [FILE]...]'),
             inferrepo=True)(show)
 
 def show(ui, repo, *args, **opts):
     """Shows the given revision in detail, or '.' if no revision is given.
 
-    This behaves similarly to :hg:`log -vp -r [OPTION].. REV`, or if called
-    without a REV, :hg:`log -vp -r [OPTION].. .` Use :hg`log` for more powerful
-    operations than supported by hg show
+    This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
+    if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
+    :hg`log` for more powerful operations than supported by hg show
 
     See :hg:`help templates` for more about pre-packaged styles and
     specifying custom templates.
+
     """
     if len(args) == 0:
         opts['rev'] = ['.']
+        pats = []
     else:
-        opts['rev'] = args
+        opts['rev'] = [args[0]]
+        pats = args[1:]
+        if not scmutil.revrange(repo, opts['rev']):
+            h = _("if %s is a file, try `hg show . %s`") % (args[0], args[0])
+            raise error.Abort(_("unknown revision %s") % args[0],
+                              hint=h)
 
     opts['patch'] = True
     opts['verbose'] = True
@@ -80,8 +87,7 @@ def show(ui, repo, *args, **opts):
     try:
         ui.setconfig('ui', 'verbose', True)
         ui.setconfig('diff', 'git', False)
-        newargs = []
-        commands.log(ui, repo, *newargs, **opts)
+        commands.log(ui, repo, *pats, **opts)
 
     finally:
         ui.restoreconfig(gitdiffbackup)
