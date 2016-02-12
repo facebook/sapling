@@ -581,14 +581,14 @@ def revset(context, mapping, args):
     if len(args) > 1:
         formatargs = list([a[0](context, mapping, a[1]) for a in args[1:]])
         revs = query(revsetmod.formatspec(raw, *formatargs))
-        revs = list([str(r) for r in revs])
+        revs = list(revs)
     else:
         revsetcache = mapping['cache'].setdefault("revsetcache", {})
         if raw in revsetcache:
             revs = revsetcache[raw]
         else:
             revs = query(raw)
-            revs = list([str(r) for r in revs])
+            revs = list(revs)
             revsetcache[raw] = revs
 
     return templatekw.showrevslist("revision", revs, **mapping)

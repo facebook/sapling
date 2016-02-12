@@ -490,6 +490,7 @@ def showrevslist(name, revs, **args):
     """helper to generate a list of revisions in which a mapped template will
     be evaluated"""
     repo = args['ctx'].repo()
+    revs = [str(r) for r in revs]  # ifcontains() needs a list of str
     f = _showlist(name, revs, **args)
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}})
