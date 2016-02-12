@@ -49,12 +49,12 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         with demandimport.deactivated():
             try:
                 obj = __import__(modname)
-            except ImportError:
+            except (ImportError, SyntaxError):
                 e1 = sys.exc_info()
                 try:
                     # extensions are loaded with hgext_ prefix
                     obj = __import__("hgext_%s" % modname)
-                except ImportError:
+                except (ImportError, SyntaxError):
                     e2 = sys.exc_info()
                     if ui.tracebackflag:
                         ui.warn(_('exception from first failed import '

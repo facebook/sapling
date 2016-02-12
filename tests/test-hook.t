@@ -436,6 +436,10 @@ preoutgoing hook can prevent outgoing changes for local clones
   >     unreachable = 1
   > EOF
 
+  $ cat > syntaxerror.py << EOF
+  > (foo
+  > EOF
+
 test python hooks
 
 #if windows
@@ -516,6 +520,30 @@ test python hooks
   abort: preoutgoing.unreachable hook is invalid: import of "hooktests.container" failed
   (run with --traceback for stack trace)
   [255]
+
+  $ echo '[hooks]' > ../a/.hg/hgrc
+  $ echo 'preoutgoing.syntaxerror = python:syntaxerror.syntaxerror' >> ../a/.hg/hgrc
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  abort: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
+  (run with --traceback for stack trace)
+  [255]
+
+  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])'
+  pulling from ../a
+  searching for changes
+  exception from first failed import attempt:
+  Traceback (most recent call last):
+      
+      ^
+  SyntaxError: invalid syntax
+  exception from second failed import attempt:
+  Traceback (most recent call last):
+  ImportError: No module named hgext_syntaxerror
+  Traceback (most recent call last):
+  HookLoadError: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
+  abort: preoutgoing.syntaxerror hook is invalid: import of "syntaxerror" failed
 
   $ echo '[hooks]' > ../a/.hg/hgrc
   $ echo 'preoutgoing.pass = python:hooktests.passhook' >> ../a/.hg/hgrc
