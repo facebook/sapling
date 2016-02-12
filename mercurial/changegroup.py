@@ -678,11 +678,9 @@ class cg1packer(object):
         '''yield a sequence of changegroup chunks (strings)'''
         repo = self._repo
         cl = repo.changelog
-        ml = repo.manifest
 
         clrevorder = {}
         mfs = {} # needed manifests
-        tmfnodes = {}
         fnodes = {} # needed file nodes
         # maps manifest node id -> set(changed files)
         mfchangedfiles = {}
@@ -729,6 +727,42 @@ class cg1packer(object):
         # send along with files. This could probably be fixed.
         fastpathlinkrev = fastpathlinkrev and (
             'treemanifest' not in repo.requirements)
+
+        for chunk in self.generatemanifests(commonrevs, clrevorder,
+                fastpathlinkrev, mfs, mfchangedfiles, fnodes):
+            yield chunk
+        mfs.clear()
+        clrevs = set(cl.rev(x) for x in clnodes)
+
+        if not fastpathlinkrev:
+            def linknodes(unused, fname):
+                return fnodes.get(fname, {})
+        else:
+            cln = cl.node
+            def linknodes(filerevlog, fname):
+                llr = filerevlog.linkrev
+                fln = filerevlog.node
+                revs = ((r, llr(r)) for r in filerevlog)
+                return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
+
+        changedfiles = set()
+        for x in mfchangedfiles.itervalues():
+            changedfiles.update(x)
+        for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
+                                        source):
+            yield chunk
+
+        yield self.close()
+
+        if clnodes:
+            repo.hook('outgoing', node=hex(clnodes[0]), source=source)
+
+    def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
+                          mfchangedfiles, fnodes):
+        repo = self._repo
+        ml = repo.manifest
+        tmfnodes = {}
+
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
@@ -794,32 +828,6 @@ class cg1packer(object):
         for x in self._packmanifests(
             mfnodes, tmfnodes, lookupmflinknode):
             yield x
-
-        mfs.clear()
-        clrevs = set(cl.rev(x) for x in clnodes)
-
-        if not fastpathlinkrev:
-            def linknodes(unused, fname):
-                return fnodes.get(fname, {})
-        else:
-            cln = cl.node
-            def linknodes(filerevlog, fname):
-                llr = filerevlog.linkrev
-                fln = filerevlog.node
-                revs = ((r, llr(r)) for r in filerevlog)
-                return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
-
-        changedfiles = set()
-        for x in mfchangedfiles.itervalues():
-            changedfiles.update(x)
-        for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
-                                        source):
-            yield chunk
-
-        yield self.close()
-
-        if clnodes:
-            repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     # The 'source' parameter is useful for extensions
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
