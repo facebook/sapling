@@ -106,6 +106,8 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                            '%s\n') % (hname, exc))
         if throw:
             raise
+        if not ui.tracebackflag:
+            ui.warn(_('(run with --traceback for stack trace)\n'))
         ui.traceback()
         return True, True
     finally:

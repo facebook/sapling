@@ -541,6 +541,7 @@ post- python hooks that fail to *run* don't cause an abort
   searching for changes
   no changes found
   error: post-pull.broken hook raised an exception: unsupported operand type(s) for +: 'int' and 'dict'
+  (run with --traceback for stack trace)
 
 but post- python hooks that fail to *load* do
   $ echo '[hooks]' > .hg/hgrc
