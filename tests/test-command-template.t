@@ -3251,6 +3251,11 @@ Test ifcontains function
   1 did not add a
   0 added a
 
+  $ hg log --debug -T '{rev}{ifcontains(1, parents, " is parent of 1")}\n'
+  2 is parent of 1
+  1
+  0
+
 Test revset function
 
   $ hg log --template '{rev} {ifcontains(rev, revset("."), "current rev", "not current rev")}\n'
@@ -3293,16 +3298,29 @@ Test revset function
   $ hg log --template '{revset("TIP"|lower)}\n' -l1
   2
 
- a list template is evaluated for each item of revset
+ a list template is evaluated for each item of revset/parents
 
   $ hg log -T '{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\n'
   2 p: 1:bcc7ff960b8e
   1 p: 0:f7769ec2ab97
   0 p: 
 
+  $ hg log --debug -T '{rev} p:{parents % " {rev}:{node|short}"}\n'
+  2 p: 1:bcc7ff960b8e -1:000000000000
+  1 p: 0:f7769ec2ab97 -1:000000000000
+  0 p: -1:000000000000 -1:000000000000
+
  therefore, 'revcache' should be recreated for each rev
 
   $ hg log -T '{rev} {file_adds}\np {revset("p1(%s)", rev) % "{file_adds}"}\n'
+  2 aa b
+  p 
+  1 
+  p a
+  0 a
+  p 
+
+  $ hg log --debug -T '{rev} {file_adds}\np {parents % "{file_adds}"}\n'
   2 aa b
   p 
   1 

@@ -474,11 +474,14 @@ def showparents(**args):
     revision) nothing is shown."""
     repo = args['repo']
     ctx = args['ctx']
+    pctxs = scmutil.meaningfulparents(repo, ctx)
+    prevs = [str(p.rev()) for p in pctxs]  # ifcontains() needs a list of str
     parents = [[('rev', p.rev()),
                 ('node', p.hex()),
                 ('phase', p.phasestr())]
-               for p in scmutil.meaningfulparents(repo, ctx)]
-    return showlist('parent', parents, **args)
+               for p in pctxs]
+    f = _showlist('parent', parents, **args)
+    return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}})
 
 def showphase(repo, ctx, templ, **args):
     """:phase: String. The changeset phase name."""
