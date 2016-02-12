@@ -496,7 +496,7 @@ test python hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  abort: preoutgoing.nomodule hook is invalid ("nomodule" not in a module)
+  abort: preoutgoing.nomodule hook is invalid: "nomodule" not in a module
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc

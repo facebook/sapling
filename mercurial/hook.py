@@ -36,7 +36,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
         d = funcname.rfind('.')
         if d == -1:
             raise error.HookLoadError(
-                _('%s hook is invalid ("%s" not in a module)')
+                _('%s hook is invalid: "%s" not in a module')
                 % (hname, funcname))
         modname = funcname[:d]
         oldpaths = sys.path
