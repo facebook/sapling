@@ -680,12 +680,12 @@ pushing a new bookmark on a new head does not require -f if -B is specified
 
 pushing an existing but divergent bookmark with -B still requires -f
 
-  $ hg clone -q . r
+  $ hg clone -q . ../r
   $ hg up -q X
   $ echo 1 > f2
   $ hg ci -qAml
 
-  $ cd r
+  $ cd ../r
   $ hg up -q X
   $ echo 2 > f2
   $ hg ci -qAmr
@@ -696,7 +696,7 @@ pushing an existing but divergent bookmark with -B still requires -f
   abort: push creates new remote head 54694f811df9 with bookmark 'X'!
   (pull and merge or see "hg help push" for details about pushing new heads)
   [255]
-  $ cd ..
+  $ cd ../addmarks
 
 Check summary output for incoming/outgoing bookmarks
 
