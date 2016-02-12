@@ -107,7 +107,7 @@ def sortnodes(nodes, parentfunc, masters):
         parentmap[n] = set(parents)
         for p in parents:
             childmap.setdefault(p, set()).add(n)
-        if not parents:
+        if not parents or (len(parents) == 1 and parents[0] == -1) and n != -1:
             roots.append(n)
 
     def childsort(x, y):
@@ -220,7 +220,7 @@ def getdag(ui, repo, revs, master):
             queue.extend(lookup.get(m, []))
 
     # Topologically sort the noderev numbers
-    order = sortnodes([r[0] for r in results], parentfunc, masters)
+    order = [-1] + sortnodes([r[0] for r in results], parentfunc, masters)
     order = dict((e[1], e[0]) for e in enumerate(order))
 
     # Sort the actual results based on their position in the 'order'

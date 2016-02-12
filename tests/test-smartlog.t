@@ -314,7 +314,46 @@ Test with weird bookmark names
   abort: unknown revision 'xxxx'!
   [255]
 
-Test singlepublicsuccessor tempalte keyword
+Test with two unrelated histories
+  $ hg update null
+  0 files updated, 0 files merged, 5 files removed, 0 files unresolved
+  (leaving bookmark feature2)
+  $ touch u1 && hg add u1 && hg ci -mu1
+  created new head
+  $ touch u2 && hg add u2 && hg ci -mu2
+
+  $ hg smartlog  -T compact
+  @  8[tip]   806aaef35296   1970-01-01 00:00 +0000   test
+  |    u2
+  |
+  o  7:-1   8749dc393678   1970-01-01 00:00 +0000   test
+  |    u1
+  |
+  | o    6[feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
+  | |\     create branch foo
+  | | |
+  | | .
+  | | .
+  | | |
+  | | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  | |/     c2
+  | |
+  | | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  | |/     b
+  | |
+  | .
+  |
+  |
+  o  -1   000000000000   1970-01-01 00:00 +0000
+  
+  
+  note: hiding 1 old heads without bookmarks
+  (use --all to see them)
+
+  $ hg update 26d4a421c339
+  5 files updated, 0 files merged, 2 files removed, 0 files unresolved
+
+Test singlepublicsuccessor  template keyword
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "rebase=" >> $HGRCPATH
   $ echo "[experimental]" >> $HGRCPATH
