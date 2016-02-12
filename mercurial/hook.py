@@ -64,9 +64,15 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                         ui.warn(_('exception from second failed import '
                                   'attempt:\n'))
                     ui.traceback(e2)
+
+                    if not ui.tracebackflag:
+                        tracebackhint = _(
+                            'run with --traceback for stack trace')
+                    else:
+                        tracebackhint = None
                     raise error.HookLoadError(
                         _('%s hook is invalid: import of "%s" failed') %
-                        (hname, modname))
+                        (hname, modname), hint=tracebackhint)
         sys.path = oldpaths
         try:
             for p in funcname.split('.')[1:]:

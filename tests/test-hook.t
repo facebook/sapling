@@ -505,6 +505,7 @@ test python hooks
   pulling from ../a
   searching for changes
   abort: preoutgoing.badmodule hook is invalid: import of "nomodule" failed
+  (run with --traceback for stack trace)
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -513,6 +514,7 @@ test python hooks
   pulling from ../a
   searching for changes
   abort: preoutgoing.unreachable hook is invalid: import of "hooktests.container" failed
+  (run with --traceback for stack trace)
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
