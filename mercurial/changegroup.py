@@ -659,20 +659,15 @@ class cg1packer(object):
         rr, rl = revlog.rev, revlog.linkrev
         return [n for n in missing if rl(rr(n)) not in commonrevs]
 
-    def _packmanifests(self, mfnodes, tmfnodes, lookuplinknode):
+    def _packmanifests(self, dir, mfnodes, lookuplinknode):
         """Pack flat manifests into a changegroup stream."""
-        ml = self._repo.manifest
-        size = 0
-        for chunk in self.group(
-                mfnodes, ml, lookuplinknode, units=_('manifests')):
-            size += len(chunk)
+        assert not dir
+        for chunk in self.group(mfnodes, self._repo.manifest,
+                                lookuplinknode, units=_('manifests')):
             yield chunk
-        self._verbosenote(_('%8.i (manifests)\n') % size)
-        # It looks odd to assert this here, but tmfnodes doesn't get
-        # filled in until after we've called lookuplinknode for
-        # sending root manifests, so the only way to tell the streams
-        # got crossed is to check after we've done all the work.
-        assert not tmfnodes
+
+    def _manifestsdone(self):
+        return ''
 
     def generate(self, commonrevs, clnodes, fastpathlinkrev, source):
         '''yield a sequence of changegroup chunks (strings)'''
@@ -825,9 +820,15 @@ class cg1packer(object):
                 return clnode
 
         mfnodes = self.prune(ml, mfs, commonrevs)
-        for x in self._packmanifests(
-            mfnodes, tmfnodes, lookupmflinknode):
+        size = 0
+        for x in self._packmanifests('', mfnodes, lookupmflinknode):
+            size += len(x)
             yield x
+        self._verbosenote(_('%8.i (manifests)\n') % size)
+        for dir, nodes in tmfnodes.iteritems():
+            for x in self._packmanifests(dir, nodes, nodes.get):
+                yield x
+        yield self._manifestsdone()
 
     # The 'source' parameter is useful for extensions
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
@@ -928,23 +929,15 @@ class cg3packer(cg2packer):
     version = '03'
     deltaheader = _CHANGEGROUPV3_DELTA_HEADER
 
-    def _packmanifests(self, mfnodes, tmfnodes, lookuplinknode):
-        # Note that debug prints are super confusing in this code, as
-        # tmfnodes gets populated by the calls to lookuplinknode in
-        # the superclass's manifest packer. In the future we should
-        # probably see if we can refactor this somehow to be less
-        # confusing.
-        for x in super(cg3packer, self)._packmanifests(
-            mfnodes, {}, lookuplinknode):
-            yield x
-        dirlog = self._repo.manifest.dirlog
-        for name, nodes in tmfnodes.iteritems():
-            # For now, directory headers are simply file headers with
-            # a trailing '/' on the path (already in the name).
-            yield self.fileheader(name)
-            for chunk in self.group(nodes, dirlog(name), nodes.get):
-                yield chunk
-        yield self.close()
+    def _packmanifests(self, dir, mfnodes, lookuplinknode):
+        if dir:
+            yield self.fileheader(dir)
+        for chunk in self.group(mfnodes, self._repo.manifest.dirlog(dir),
+                                lookuplinknode, units=_('manifests')):
+            yield chunk
+
+    def _manifestsdone(self):
+        return self.close()
 
     def builddeltaheader(self, node, p1n, p2n, basenode, linknode, flags):
         return struct.pack(
