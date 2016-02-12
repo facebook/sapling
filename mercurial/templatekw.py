@@ -492,7 +492,7 @@ def showrevslist(name, revs, **args):
     repo = args['ctx'].repo()
     f = _showlist(name, revs, **args)
     return _hybrid(f, revs,
-                   lambda x: {name: x, 'ctx': repo[x], 'revcache': {}})
+                   lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}})
 
 def showsubrepos(**args):
     """:subrepos: List of strings. Updated subrepositories in the changeset."""

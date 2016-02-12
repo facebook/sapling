@@ -3310,6 +3310,13 @@ Test revset function
   0 a
   p 
 
+a revset item must be evaluated as an integer revision, not an offset from tip
+
+  $ hg log -l 1 -T '{revset("null") % "{rev}:{node|short}"}\n'
+  -1:000000000000
+  $ hg log -l 1 -T '{revset("%s", "null") % "{rev}:{node|short}"}\n'
+  -1:000000000000
+
 Test active bookmark templating
 
   $ hg book foo
