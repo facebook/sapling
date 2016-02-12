@@ -824,10 +824,11 @@ class cg1packer(object):
         for x in self._packmanifests('', mfnodes, lookupmflinknode):
             size += len(x)
             yield x
-        self._verbosenote(_('%8.i (manifests)\n') % size)
         for dir, nodes in tmfnodes.iteritems():
             for x in self._packmanifests(dir, nodes, nodes.get):
+                size += len(x)
                 yield x
+        self._verbosenote(_('%8.i (manifests)\n') % size)
         yield self._manifestsdone()
 
     # The 'source' parameter is useful for extensions
