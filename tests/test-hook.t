@@ -532,6 +532,45 @@ test python hooks
   adding remote bookmark quux
   (run 'hg update' to get a working copy)
 
+post- python hooks that fail to *run* don't cause an abort
+  $ rm ../a/.hg/hgrc
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'post-pull.broken = python:hooktests.brokenhook' >> .hg/hgrc
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  error: post-pull.broken hook raised an exception: unsupported operand type(s) for +: 'int' and 'dict'
+
+but post- python hooks that fail to *load* do
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'post-pull.nomodule = python:nomodule' >> .hg/hgrc
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  abort: post-pull.nomodule hook is invalid: "nomodule" not in a module
+  [255]
+
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'post-pull.badmodule = python:nomodule.nowhere' >> .hg/hgrc
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  abort: post-pull.badmodule hook is invalid: import of "nomodule" failed
+  (run with --traceback for stack trace)
+  [255]
+
+  $ echo '[hooks]' > .hg/hgrc
+  $ echo 'post-pull.nohook = python:hooktests.nohook' >> .hg/hgrc
+  $ hg pull ../a
+  pulling from ../a
+  searching for changes
+  no changes found
+  abort: post-pull.nohook hook is invalid: "hooktests.nohook" is not defined
+  [255]
+
 make sure --traceback works
 
   $ echo '[hooks]' > .hg/hgrc
