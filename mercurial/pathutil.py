@@ -83,16 +83,17 @@ class pathauditor(object):
         parts.pop()
         normparts.pop()
         prefixes = []
-        while parts:
-            prefix = os.sep.join(parts)
-            normprefix = os.sep.join(normparts)
+        # It's important that we check the path parts starting from the root.
+        # This means we won't accidentaly traverse a symlink into some other
+        # filesystem (which is potentially expensive to access).
+        for i in range(len(parts)):
+            prefix = os.sep.join(parts[:i + 1])
+            normprefix = os.sep.join(normparts[:i + 1])
             if normprefix in self.auditeddir:
-                break
+                continue
             if self._realfs:
                 self._checkfs(prefix, path)
             prefixes.append(normprefix)
-            parts.pop()
-            normparts.pop()
 
         self.audited.add(normpath)
         # only add prefixes to the cache after checking everything: we don't
