@@ -65,7 +65,7 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                                   'attempt:\n'))
                     ui.traceback(e2)
                     raise error.HookLoadError(
-                        _('%s hook is invalid (import of "%s" failed)') %
+                        _('%s hook is invalid: import of "%s" failed') %
                         (hname, modname))
         sys.path = oldpaths
         try:
@@ -73,11 +73,11 @@ def _pythonhook(ui, repo, name, hname, funcname, args, throw):
                 obj = getattr(obj, p)
         except AttributeError:
             raise error.HookLoadError(
-                _('%s hook is invalid ("%s" is not defined)')
+                _('%s hook is invalid: "%s" is not defined')
                 % (hname, funcname))
         if not callable(obj):
             raise error.HookLoadError(
-                _('%s hook is invalid ("%s" is not callable)')
+                _('%s hook is invalid: "%s" is not callable')
                 % (hname, funcname))
 
     ui.note(_("calling hook %s: %s\n") % (hname, funcname))

@@ -480,7 +480,7 @@ test python hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  abort: preoutgoing.uncallable hook is invalid ("hooktests.uncallable" is not callable)
+  abort: preoutgoing.uncallable hook is invalid: "hooktests.uncallable" is not callable
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -488,7 +488,7 @@ test python hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  abort: preoutgoing.nohook hook is invalid ("hooktests.nohook" is not defined)
+  abort: preoutgoing.nohook hook is invalid: "hooktests.nohook" is not defined
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -504,7 +504,7 @@ test python hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  abort: preoutgoing.badmodule hook is invalid (import of "nomodule" failed)
+  abort: preoutgoing.badmodule hook is invalid: import of "nomodule" failed
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -512,7 +512,7 @@ test python hooks
   $ hg pull ../a
   pulling from ../a
   searching for changes
-  abort: preoutgoing.unreachable hook is invalid (import of "hooktests.container" failed)
+  abort: preoutgoing.unreachable hook is invalid: import of "hooktests.container" failed
   [255]
 
   $ echo '[hooks]' > ../a/.hg/hgrc
@@ -628,8 +628,8 @@ make sure --traceback works on hook import failure
   Traceback (most recent call last):
   ImportError: No module named hgext_importfail
   Traceback (most recent call last):
-  HookLoadError: precommit.importfail hook is invalid (import of "importfail" failed)
-  abort: precommit.importfail hook is invalid (import of "importfail" failed)
+  HookLoadError: precommit.importfail hook is invalid: import of "importfail" failed
+  abort: precommit.importfail hook is invalid: import of "importfail" failed
 
 Issue1827: Hooks Update & Commit not completely post operation
 
