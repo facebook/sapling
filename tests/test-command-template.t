@@ -3176,6 +3176,8 @@ Test get function:
 
   $ hg log -r 0 --template '{get(extras, "branch")}\n'
   default
+  $ hg log -r 0 --template '{get(extras, "br{"anch"}")}\n'
+  default
   $ hg log -r 0 --template '{get(files, "should_fail")}\n'
   hg: parse error: get() expects a dict as first argument
   [255]
