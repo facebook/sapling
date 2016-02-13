@@ -177,11 +177,48 @@ def _parsetemplate(tmpl, start, stop, quote=''):
         raise error.ParseError(_("unterminated string"), start)
     return parsed, pos
 
+def _unnesttemplatelist(tree):
+    """Expand list of templates to node tuple
+
+    >>> def f(tree):
+    ...     print prettyformat(_unnesttemplatelist(tree))
+    >>> f(('template', []))
+    ('string', '')
+    >>> f(('template', [('string', 'foo')]))
+    ('string', 'foo')
+    >>> f(('template', [('string', 'foo'), ('symbol', 'rev')]))
+    (template
+      ('string', 'foo')
+      ('symbol', 'rev'))
+    >>> f(('template', [('symbol', 'rev')]))  # template(rev) -> str
+    (template
+      ('symbol', 'rev'))
+    >>> f(('template', [('template', [('string', 'foo')])]))
+    ('string', 'foo')
+    """
+    if not isinstance(tree, tuple):
+        return tree
+    op = tree[0]
+    if op != 'template':
+        return (op,) + tuple(_unnesttemplatelist(x) for x in tree[1:])
+
+    assert len(tree) == 2
+    xs = tuple(_unnesttemplatelist(x) for x in tree[1])
+    if not xs:
+        return ('string', '')  # empty template ""
+    elif len(xs) == 1 and xs[0][0] == 'string':
+        return xs[0]  # fast path for string with no template fragment "x"
+    else:
+        return (op,) + xs
+
 def parse(tmpl):
     """Parse template string into tree"""
     parsed, pos = _parsetemplate(tmpl, 0, len(tmpl))
     assert pos == len(tmpl), 'unquoted template should be consumed'
-    return ('template', parsed)
+    return _unnesttemplatelist(('template', parsed))
+
+def prettyformat(tree):
+    return parser.prettyformat(tree, ('integer', 'string', 'symbol'))
 
 def compiletemplate(tmpl, context):
     """Parse and compile template string to (func, data) pair"""
@@ -281,9 +318,7 @@ def runsymbol(context, mapping, key, default=''):
     return v
 
 def buildtemplate(exp, context):
-    ctmpl = [compileexp(e, context, methods) for e in exp[1]]
-    if len(ctmpl) == 1:
-        return ctmpl[0]  # fast path for string with no template fragment
+    ctmpl = [compileexp(e, context, methods) for e in exp[1:]]
     return (runtemplate, ctmpl)
 
 def runtemplate(context, mapping, template):
