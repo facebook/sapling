@@ -220,6 +220,8 @@ def getdag(ui, repo, revs, master):
             queue.extend(lookup.get(m, []))
 
     # Topologically sort the noderev numbers
+    # the -1 is there to prevent crashing in case we have two roots in the
+    # repo and we are trying to show the rev no -1
     order = [-1] + sortnodes([r[0] for r in results], parentfunc, masters)
     order = dict((e[1], e[0]) for e in enumerate(order))
 
