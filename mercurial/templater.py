@@ -177,9 +177,15 @@ def _parsetemplate(tmpl, start, stop, quote=''):
         raise error.ParseError(_("unterminated string"), start)
     return parsed, pos
 
-def compiletemplate(tmpl, context):
+def parse(tmpl):
+    """Parse template string into tree"""
     parsed, pos = _parsetemplate(tmpl, 0, len(tmpl))
-    return [compileexp(e, context, methods) for e in parsed]
+    assert pos == len(tmpl), 'unquoted template should be consumed'
+    return ('template', parsed)
+
+def compiletemplate(tmpl, context):
+    """Parse and compile template string to (func, data) pair"""
+    return compileexp(parse(tmpl), context, methods)
 
 def compileexp(exp, context, curmethods):
     t = exp[0]
@@ -202,8 +208,10 @@ def getlist(x):
     return [x]
 
 def gettemplate(exp, context):
+    """Compile given template tree or load named template from map file;
+    returns (func, data) pair"""
     if exp[0] == 'template':
-        return [compileexp(e, context, methods) for e in exp[1]]
+        return compileexp(exp, context, methods)
     if exp[0] == 'symbol':
         # unlike runsymbol(), here 'symbol' is always taken as template name
         # even if it exists in mapping. this allows us to override mapping
@@ -308,11 +316,11 @@ def runfilter(context, mapping, data):
 
 def buildmap(exp, context):
     func, data = compileexp(exp[1], context, methods)
-    ctmpl = gettemplate(exp[2], context)
-    return (runmap, (func, data, ctmpl))
+    tfunc, tdata = gettemplate(exp[2], context)
+    return (runmap, (func, data, tfunc, tdata))
 
 def runmap(context, mapping, data):
-    func, data, ctmpl = data
+    func, data, tfunc, tdata = data
     d = func(context, mapping, data)
     if util.safehasattr(d, 'itermaps'):
         diter = d.itermaps()
@@ -330,7 +338,7 @@ def runmap(context, mapping, data):
         if isinstance(i, dict):
             lm.update(i)
             lm['originalnode'] = mapping.get('node')
-            yield runtemplate(context, lm, ctmpl)
+            yield tfunc(context, lm, tdata)
         else:
             # v is not an iterable of dicts, this happen when 'key'
             # has been fully expanded already and format is useless.
@@ -857,13 +865,13 @@ class engine(object):
         if defaults is None:
             defaults = {}
         self._defaults = defaults
-        self._cache = {}
+        self._cache = {}  # key: (func, data)
 
     def _load(self, t):
         '''load, parse, and cache a template'''
         if t not in self._cache:
             # put poison to cut recursion while compiling 't'
-            self._cache[t] = [(_runrecursivesymbol, t)]
+            self._cache[t] = (_runrecursivesymbol, t)
             try:
                 self._cache[t] = compiletemplate(self._loader(t), self)
             except: # re-raises
@@ -875,7 +883,8 @@ class engine(object):
         '''Perform expansion. t is name of map element to expand.
         mapping contains added elements for use during expansion. Is a
         generator.'''
-        return _flatten(runtemplate(self, mapping, self._load(t)))
+        func, data = self._load(t)
+        return _flatten(func(self, mapping, data))
 
 engines = {'default': engine}
 
