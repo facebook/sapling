@@ -2861,27 +2861,55 @@ Test invalid date:
 
 Test integer literal:
 
-  $ hg log -Ra -r0 -T '{(0)}\n'
+  $ hg debugtemplate -v '{(0)}\n'
+  (template
+    (group
+      ('integer', '0'))
+    ('string', '\n'))
   0
-  $ hg log -Ra -r0 -T '{(123)}\n'
+  $ hg debugtemplate -v '{(123)}\n'
+  (template
+    (group
+      ('integer', '123'))
+    ('string', '\n'))
   123
-  $ hg log -Ra -r0 -T '{(-4)}\n'
+  $ hg debugtemplate -v '{(-4)}\n'
+  (template
+    (group
+      ('integer', '-4'))
+    ('string', '\n'))
   -4
-  $ hg log -Ra -r0 -T '{(-)}\n'
+  $ hg debugtemplate '{(-)}\n'
   hg: parse error at 2: integer literal without digits
   [255]
-  $ hg log -Ra -r0 -T '{(-a)}\n'
+  $ hg debugtemplate '{(-a)}\n'
   hg: parse error at 2: integer literal without digits
   [255]
 
 top-level integer literal is interpreted as symbol (i.e. variable name):
 
-  $ hg log -Ra -r0 -T '{1}\n'
-  
-  $ hg log -Ra -r0 -T '{if("t", "{1}")}\n'
-  
-  $ hg log -Ra -r0 -T '{1|stringify}\n'
-  
+  $ hg debugtemplate -D 1=one -v '{1}\n'
+  (template
+    ('integer', '1')
+    ('string', '\n'))
+  one
+  $ hg debugtemplate -D 1=one -v '{if("t", "{1}")}\n'
+  (template
+    (func
+      ('symbol', 'if')
+      (list
+        ('string', 't')
+        (template
+          ('integer', '1'))))
+    ('string', '\n'))
+  one
+  $ hg debugtemplate -D 1=one -v '{1|stringify}\n'
+  (template
+    (|
+      ('integer', '1')
+      ('symbol', 'stringify'))
+    ('string', '\n'))
+  one
 
 unless explicit symbol is expected:
 
@@ -2894,13 +2922,29 @@ unless explicit symbol is expected:
 
 Test string literal:
 
-  $ hg log -Ra -r0 -T '{"string with no template fragment"}\n'
+  $ hg debugtemplate -Ra -r0 -v '{"string with no template fragment"}\n'
+  (template
+    ('string', 'string with no template fragment')
+    ('string', '\n'))
   string with no template fragment
-  $ hg log -Ra -r0 -T '{"template: {rev}"}\n'
+  $ hg debugtemplate -Ra -r0 -v '{"template: {rev}"}\n'
+  (template
+    (template
+      ('string', 'template: ')
+      ('symbol', 'rev'))
+    ('string', '\n'))
   template: 0
-  $ hg log -Ra -r0 -T '{r"rawstring: {rev}"}\n'
+  $ hg debugtemplate -Ra -r0 -v '{r"rawstring: {rev}"}\n'
+  (template
+    ('string', 'rawstring: {rev}')
+    ('string', '\n'))
   rawstring: {rev}
-  $ hg log -Ra -r0 -T '{files % r"rawstring: {file}"}\n'
+  $ hg debugtemplate -Ra -r0 -v '{files % r"rawstring: {file}"}\n'
+  (template
+    (%
+      ('symbol', 'files')
+      ('string', 'rawstring: {file}'))
+    ('string', '\n'))
   rawstring: {file}
 
 Test string escaping:

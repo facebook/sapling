@@ -861,6 +861,8 @@ Test list of internal help commands
    debugsub      (no help text available)
    debugsuccessorssets
                  show set of successors for revision
+   debugtemplate
+                 parse and apply a template
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)
