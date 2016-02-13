@@ -985,6 +985,15 @@ class manifest(revlog.revlog):
             return self.readdelta(node)
         return self.read(node)
 
+    def readshallowfast(self, node):
+        '''like readfast(), but calls readshallowdelta() instead of readdelta()
+        '''
+        r = self.rev(node)
+        deltaparent = self.deltaparent(r)
+        if deltaparent != revlog.nullrev and deltaparent in self.parentrevs(r):
+            return self.readshallowdelta(node)
+        return self.readshallow(node)
+
     def read(self, node):
         if node == revlog.nullid:
             return self._newmanifest() # don't upset local cache
@@ -1005,6 +1014,13 @@ class manifest(revlog.revlog):
             arraytext = array.array('c', text)
         self._mancache[node] = (m, arraytext)
         return m
+
+    def readshallow(self, node):
+        '''Reads the manifest in this directory. When using flat manifests,
+        this manifest will generally have files in subdirectories in it. Does
+        not cache the manifest as the callers generally do not read the same
+        version twice.'''
+        return manifestdict(self.revision(node))
 
     def find(self, node, f):
         '''look up entry for a single file efficiently.

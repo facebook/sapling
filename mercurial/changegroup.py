@@ -553,27 +553,6 @@ class headerlessfixup(object):
             return d
         return readexactly(self._fh, n)
 
-def _moddirs(files):
-    """Given a set of modified files, find the list of modified directories.
-
-    This returns a list of (path to changed dir, changed dir) tuples,
-    as that's what the one client needs anyway.
-
-    >>> _moddirs(['a/b/c.py', 'a/b/c.txt', 'a/d/e/f/g.txt', 'i.txt', ])
-    [('/', 'a/'), ('a/', 'b/'), ('a/', 'd/'), ('a/d/', 'e/'), ('a/d/e/', 'f/')]
-
-    """
-    alldirs = set()
-    for f in files:
-        path = f.split('/')[:-1]
-        for i in xrange(len(path) - 1, -1, -1):
-            dn = '/'.join(path[:i])
-            current = dn + '/', path[i] + '/'
-            if current in alldirs:
-                break
-            alldirs.add(current)
-    return sorted(alldirs)
-
 class cg1packer(object):
     deltaheader = _CHANGEGROUPV1_DELTA_HEADER
     version = '01'
@@ -755,7 +734,7 @@ class cg1packer(object):
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
                           mfchangedfiles, fnodes):
         repo = self._repo
-        ml = repo.manifest
+        dirlog = repo.manifest.dirlog
         tmfnodes = {'': mfs}
 
         # Callback for the manifest, used to collect linkrevs for filelog
@@ -765,9 +744,6 @@ class cg1packer(object):
             if fastpathlinkrev:
                 assert not dir
                 return mfs.__getitem__
-
-            if dir:
-                return tmfnodes[dir].get
 
             def lookupmflinknode(x):
                 """Callback for looking up the linknode for manifests.
@@ -785,43 +761,34 @@ class cg1packer(object):
                 the client before you can trust the list of files and
                 treemanifests to send.
                 """
-                clnode = mfs[x]
-                # We no longer actually care about reading deltas of
-                # the manifest here, because we already know the list
-                # of changed files, so for treemanifests (which
-                # lazily-load anyway to *generate* a readdelta) we can
-                # just load them with read() and then we'll actually
-                # be able to correctly load node IDs from the
-                # submanifest entries.
+                clnode = tmfnodes[dir][x]
+                mdata = dirlog(dir).readshallowfast(x)
                 if 'treemanifest' in repo.requirements:
-                    mdata = ml.read(x)
+                    for p, n, fl in mdata.iterentries():
+                        if fl == 't': # subdirectory manifest
+                            subdir = dir + p + '/'
+                            tmfclnodes = tmfnodes.setdefault(subdir, {})
+                            tmfclnode = tmfclnodes.setdefault(n, clnode)
+                            if clrevorder[clnode] < clrevorder[tmfclnode]:
+                                tmfclnodes[n] = clnode
+                        else:
+                            f = dir + p
+                            fclnodes = fnodes.setdefault(f, {})
+                            fclnode = fclnodes.setdefault(n, clnode)
+                            if clrevorder[clnode] < clrevorder[fclnode]:
+                                fclnodes[n] = clnode
                 else:
-                    mdata = ml.readfast(x)
-                for f in mfchangedfiles[x]:
-                    try:
-                        n = mdata[f]
-                    except KeyError:
-                        continue
-                    # record the first changeset introducing this filelog
-                    # version
-                    fclnodes = fnodes.setdefault(f, {})
-                    fclnode = fclnodes.setdefault(n, clnode)
-                    if clrevorder[clnode] < clrevorder[fclnode]:
-                        fclnodes[n] = clnode
-                # gather list of changed treemanifest nodes
-                if 'treemanifest' in repo.requirements:
-                    submfs = {'/': mdata}
-                    for dn, bn in _moddirs(mfchangedfiles[x]):
+                    for f in mfchangedfiles[x]:
                         try:
-                            submf = submfs[dn]
-                            submf = submf._dirs[bn]
+                            n = mdata[f]
                         except KeyError:
-                            continue # deleted directory, so nothing to send
-                        submfs[submf.dir()] = submf
-                        tmfclnodes = tmfnodes.setdefault(submf.dir(), {})
-                        tmfclnode = tmfclnodes.setdefault(submf._node, clnode)
-                        if clrevorder[clnode] < clrevorder[tmfclnode]:
-                            tmfclnodes[n] = clnode
+                            continue
+                        # record the first changeset introducing this filelog
+                        # version
+                        fclnodes = fnodes.setdefault(f, {})
+                        fclnode = fclnodes.setdefault(n, clnode)
+                        if clrevorder[clnode] < clrevorder[fclnode]:
+                            fclnodes[n] = clnode
                 return clnode
             return lookupmflinknode
 
@@ -829,7 +796,7 @@ class cg1packer(object):
         while tmfnodes:
             dir = min(tmfnodes)
             nodes = tmfnodes[dir]
-            prunednodes = self.prune(ml.dirlog(dir), nodes, commonrevs)
+            prunednodes = self.prune(dirlog(dir), nodes, commonrevs)
             for x in self._packmanifests(dir, prunednodes,
                                          makelookupmflinknode(dir)):
                 size += len(x)
