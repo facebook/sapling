@@ -578,7 +578,7 @@ def revset(context, mapping, args):
         return m(repo)
 
     if len(args) > 1:
-        formatargs = list([a[0](context, mapping, a[1]) for a in args[1:]])
+        formatargs = [evalfuncarg(context, mapping, a) for a in args[1:]]
         revs = query(revsetmod.formatspec(raw, *formatargs))
         revs = list(revs)
     else:

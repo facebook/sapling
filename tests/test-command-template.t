@@ -3305,6 +3305,9 @@ Test revset function
   $ hg log --template '{revset("TIP"|lower)}\n' -l1
   2
 
+  $ hg log -T '{revset("%s", "t{"ip"}")}\n' -l1
+  2
+
  a list template is evaluated for each item of revset/parents
 
   $ hg log -T '{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\n'
