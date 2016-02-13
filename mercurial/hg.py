@@ -865,6 +865,7 @@ class cachedlocalrepo(object):
         assert isinstance(repo, localrepo.localrepository)
         self._repo = repo
         self._state, self.mtime = self._repostate()
+        self._filtername = repo.filtername
 
     def fetch(self):
         """Refresh (if necessary) and return a repository.
@@ -884,7 +885,11 @@ class cachedlocalrepo(object):
         if state == self._state:
             return self._repo, False
 
-        self._repo = repository(self._repo.baseui, self._repo.url())
+        repo = repository(self._repo.baseui, self._repo.url())
+        if self._filtername:
+            self._repo = repo.filtered(self._filtername)
+        else:
+            self._repo = repo.unfiltered()
         self._state = state
         self.mtime = mtime
 
@@ -912,6 +917,10 @@ class cachedlocalrepo(object):
         completely independent of the original.
         """
         repo = repository(self._repo.baseui, self._repo.origroot)
+        if self._filtername:
+            repo = repo.filtered(self._filtername)
+        else:
+            repo = repo.unfiltered()
         c = cachedlocalrepo(repo)
         c._state = self._state
         c.mtime = self.mtime
