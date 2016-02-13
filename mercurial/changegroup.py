@@ -825,7 +825,8 @@ class cg1packer(object):
             size += len(x)
             yield x
         for dir, nodes in tmfnodes.iteritems():
-            for x in self._packmanifests(dir, nodes, nodes.get):
+            prunednodes = self.prune(ml.dirlog(dir), nodes, commonrevs)
+            for x in self._packmanifests(dir, prunednodes, nodes.get):
                 size += len(x)
                 yield x
         self._verbosenote(_('%8.i (manifests)\n') % size)
