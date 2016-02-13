@@ -209,3 +209,60 @@ pull --rebase works with bundle2 turned on
   |
   o  0: 'C1'
   
+
+pull --rebase only update if there is nothing to rebase
+
+  $ cd ../a
+  $ echo R5 > R5
+  $ hg ci -Am R5
+  adding R5
+  $ hg tglog
+  @  6: 'R5'
+  |
+  o  5: 'R4'
+  |
+  o  4: 'R3'
+  |
+  o  3: 'R2'
+  |
+  o  2: 'R1'
+  |
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  
+  $ cd ../c
+  $ echo L2 > L2
+  $ hg ci -Am L2
+  adding L2
+  $ hg up 'desc(L1)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg pull --rebase
+  pulling from $TESTTMP/a (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  rebasing 6:0d0727eb7ce0 "L1"
+  rebasing 7:c1f58876e3bf "L2"
+  saved backup bundle to $TESTTMP/c/.hg/strip-backup/0d0727eb7ce0-ef61ccb2-backup.hg (glob)
+  $ hg tglog
+  o  8: 'L2'
+  |
+  @  7: 'L1'
+  |
+  o  6: 'R5'
+  |
+  o  5: 'R4'
+  |
+  o  4: 'R3'
+  |
+  o  3: 'R2'
+  |
+  o  2: 'R1'
+  |
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  

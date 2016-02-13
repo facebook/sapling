@@ -1165,15 +1165,16 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 # --source.
                 if 'source' in opts:
                     del opts['source']
-                rebase(ui, repo, **opts)
-                branch = repo[None].branch()
-                dest = repo[branch].rev()
-                if dest != repo['.'].rev():
-                    # there was nothing to rebase we force an update
-                    hg.update(repo, dest)
-                    if bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                        ui.status(_("updating bookmark %s\n")
-                                  % repo._activebookmark)
+                if rebase(ui, repo, **opts) == _nothingtorebase():
+                    branch = repo[None].branch()
+                    dest = repo[branch].rev()
+                    if dest != repo['.'].rev():
+                        # there was nothing to rebase we force an update
+                        hg.update(repo, dest)
+                        if bookmarks.update(repo, [movemarkfrom],
+                                            repo['.'].node()):
+                            ui.status(_("updating bookmark %s\n")
+                                      % repo._activebookmark)
         finally:
             release(lock, wlock)
     else:
