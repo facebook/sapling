@@ -1982,6 +1982,7 @@ def subrepo(repo, subset, x):
     """
     # i18n: "subrepo" is a keyword
     args = getargs(x, 0, 1, _('subrepo takes at most one argument'))
+    pat = None
     if len(args) != 0:
         pat = getstring(args[0], _("subrepo requires a pattern"))
 
@@ -1997,7 +1998,7 @@ def subrepo(repo, subset, x):
         c = repo[x]
         s = repo.status(c.p1().node(), c.node(), match=m)
 
-        if len(args) == 0:
+        if pat is None:
             return s.added or s.modified or s.removed
 
         if s.added:
