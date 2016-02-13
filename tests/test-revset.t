@@ -545,14 +545,16 @@ test ancestors
     ('string', '\x08issue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ 0:9>>
+    <fullreposet+ 0:9>,
+    <grep '\x08issue\\d+'>>
   $ try 'grep(r"\bissue\d+")'
   (func
     ('symbol', 'grep')
     ('string', '\\bissue\\d+'))
   * set:
   <filteredset
-    <fullreposet+ 0:9>>
+    <fullreposet+ 0:9>,
+    <grep '\\bissue\\d+'>>
   6
   $ try 'grep(r"\")'
   hg: parse error at 7: unterminated string
@@ -1593,7 +1595,8 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:9>>
+    <fullreposet+ 0:9>,
+    <merge>>
   6
 
   $ HGPLAIN=1
@@ -1612,7 +1615,8 @@ aliases:
     None)
   * set:
   <filteredset
-    <fullreposet+ 0:9>>
+    <fullreposet+ 0:9>,
+    <merge>>
   6
 
   $ unset HGPLAIN
@@ -1666,7 +1670,8 @@ test alias recursion
   * set:
   <addset+
     <filteredset
-      <fullreposet+ 0:9>>,
+      <fullreposet+ 0:9>,
+      <merge>>,
     <generatorset+>>
   6
   7
@@ -1830,7 +1835,8 @@ far away.
   <addset
     <baseset [9]>,
     <filteredset
-      <fullreposet+ 0:9>>>
+      <fullreposet+ 0:9>,
+      <desc '$1'>>>
   9
 
   $ try 'd(2:5)'

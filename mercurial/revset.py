@@ -600,7 +600,8 @@ def author(repo, subset, x):
     # i18n: "author" is a keyword
     n = encoding.lower(getstring(x, _("author requires a string")))
     kind, pattern, matcher = _substringmatcher(n)
-    return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())))
+    return subset.filter(lambda x: matcher(encoding.lower(repo[x].user())),
+                         condrepr=('<user %r>', n))
 
 @predicate('bisect(string)', safe=True)
 def bisect(repo, subset, x):
@@ -686,19 +687,22 @@ def branch(repo, subset, x):
             # note: falls through to the revspec case if no branch with
             # this name exists and pattern kind is not specified explicitly
             if pattern in repo.branchmap():
-                return subset.filter(lambda r: matcher(getbi(r)[0]))
+                return subset.filter(lambda r: matcher(getbi(r)[0]),
+                                     condrepr=('<branch %r>', b))
             if b.startswith('literal:'):
                 raise error.RepoLookupError(_("branch '%s' does not exist")
                                             % pattern)
         else:
-            return subset.filter(lambda r: matcher(getbi(r)[0]))
+            return subset.filter(lambda r: matcher(getbi(r)[0]),
+                                 condrepr=('<branch %r>', b))
 
     s = getset(repo, fullreposet(repo), x)
     b = set()
     for r in s:
         b.add(getbi(r)[0])
     c = s.__contains__
-    return subset.filter(lambda r: c(r) or getbi(r)[0] in b)
+    return subset.filter(lambda r: c(r) or getbi(r)[0] in b,
+                         condrepr=lambda: '<branch %r>' % sorted(b))
 
 @predicate('bumped()', safe=True)
 def bumped(repo, subset, x):
@@ -753,7 +757,7 @@ def checkstatus(repo, subset, pat, field):
                 if m(f):
                     return True
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<status[%r] %r>', field, pat))
 
 def _children(repo, narrow, parentset):
     if not parentset:
@@ -785,7 +789,8 @@ def closed(repo, subset, x):
     """
     # i18n: "closed" is a keyword
     getargs(x, 0, 0, _("closed takes no arguments"))
-    return subset.filter(lambda r: repo[r].closesbranch())
+    return subset.filter(lambda r: repo[r].closesbranch(),
+                         condrepr='<branch closed>')
 
 @predicate('contains(pattern)')
 def contains(repo, subset, x):
@@ -812,7 +817,7 @@ def contains(repo, subset, x):
                     return True
         return False
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<contains %r>', pat))
 
 @predicate('converted([id])', safe=True)
 def converted(repo, subset, x):
@@ -834,7 +839,8 @@ def converted(repo, subset, x):
         source = repo[r].extra().get('convert_revision', None)
         return source is not None and (rev is None or source.startswith(rev))
 
-    return subset.filter(lambda r: _matchvalue(r))
+    return subset.filter(lambda r: _matchvalue(r),
+                         condrepr=('<converted %r>', rev))
 
 @predicate('date(interval)', safe=True)
 def date(repo, subset, x):
@@ -843,7 +849,8 @@ def date(repo, subset, x):
     # i18n: "date" is a keyword
     ds = getstring(x, _("date requires a string"))
     dm = util.matchdate(ds)
-    return subset.filter(lambda x: dm(repo[x].date()[0]))
+    return subset.filter(lambda x: dm(repo[x].date()[0]),
+                         condrepr=('<date %r>', ds))
 
 @predicate('desc(string)', safe=True)
 def desc(repo, subset, x):
@@ -856,7 +863,7 @@ def desc(repo, subset, x):
         c = repo[x]
         return ds in encoding.lower(c.description())
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<desc %r>', ds))
 
 def _descendants(repo, subset, x, followfirst=False):
     roots = getset(repo, fullreposet(repo), x)
@@ -931,7 +938,8 @@ def destination(repo, subset, x):
             r = src
             src = _getrevsource(repo, r)
 
-    return subset.filter(dests.__contains__)
+    return subset.filter(dests.__contains__,
+                         condrepr=lambda: '<destination %r>' % sorted(dests))
 
 @predicate('divergent()', safe=True)
 def divergent(repo, subset, x):
@@ -980,7 +988,8 @@ def extra(repo, subset, x):
         extra = repo[r].extra()
         return label in extra and (value is None or matcher(extra[label]))
 
-    return subset.filter(lambda r: _matchvalue(r))
+    return subset.filter(lambda r: _matchvalue(r),
+                         condrepr=('<extra[%r] %r>', label, value))
 
 @predicate('filelog(pattern)', safe=True)
 def filelog(repo, subset, x):
@@ -1118,7 +1127,7 @@ def grep(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<grep %r>', gr.pattern))
 
 @predicate('_matchfiles', safe=True)
 def _matchfiles(repo, subset, x):
@@ -1179,7 +1188,10 @@ def _matchfiles(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(matches)
+    return subset.filter(matches,
+                         condrepr=('<matchfiles patterns=%r, include=%r '
+                                   'exclude=%r, default=%r, rev=%r>',
+                                   pats, inc, exc, default, rev))
 
 @predicate('file(pattern)', safe=True)
 def hasfile(repo, subset, x):
@@ -1240,7 +1252,7 @@ def keyword(repo, subset, x):
         return any(kw in encoding.lower(t)
                    for t in c.files() + [c.user(), c.description()])
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<keyword %r>', kw))
 
 @predicate('limit(set[, n[, offset]])', safe=True)
 def limit(repo, subset, x):
@@ -1326,7 +1338,8 @@ def merge(repo, subset, x):
     # i18n: "merge" is a keyword
     getargs(x, 0, 0, _("merge takes no arguments"))
     cl = repo.changelog
-    return subset.filter(lambda r: cl.parentrevs(r)[1] != -1)
+    return subset.filter(lambda r: cl.parentrevs(r)[1] != -1,
+                         condrepr='<merge>')
 
 @predicate('branchpoint()', safe=True)
 def branchpoint(repo, subset, x):
@@ -1345,7 +1358,8 @@ def branchpoint(repo, subset, x):
         for p in cl.parentrevs(r):
             if p >= baserev:
                 parentscount[p - baserev] += 1
-    return subset.filter(lambda r: parentscount[r - baserev] > 1)
+    return subset.filter(lambda r: parentscount[r - baserev] > 1,
+                         condrepr='<branchpoint>')
 
 @predicate('min(set)', safe=True)
 def minrev(repo, subset, x):
@@ -1602,7 +1616,8 @@ def _phase(repo, subset, target):
     else:
         phase = repo._phasecache.phase
         condition = lambda r: phase(repo, r) == target
-        return subset.filter(condition, cache=False)
+        return subset.filter(condition, condrepr=('<phase %r>', target),
+                             cache=False)
 
 @predicate('draft()', safe=True)
 def draft(repo, subset, x):
@@ -1675,7 +1690,8 @@ def _notpublic(repo, subset, x):
         phase = repo._phasecache.phase
         target = phases.public
         condition = lambda r: phase(repo, r) != target
-        return subset.filter(condition, cache=False)
+        return subset.filter(condition, condrepr=('<phase %r>', target),
+                             cache=False)
 
 @predicate('public()', safe=True)
 def public(repo, subset, x):
@@ -1685,7 +1701,8 @@ def public(repo, subset, x):
     phase = repo._phasecache.phase
     target = phases.public
     condition = lambda r: phase(repo, r) == target
-    return subset.filter(condition, cache=False)
+    return subset.filter(condition, condrepr=('<phase %r>', target),
+                         cache=False)
 
 @predicate('remote([id [,path]])', safe=True)
 def remote(repo, subset, x):
@@ -1860,7 +1877,7 @@ def matching(repo, subset, x):
                 return True
         return False
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<matching%r %r>', fields, revs))
 
 @predicate('reverse(set)', safe=True)
 def reverse(repo, subset, x):
@@ -1881,7 +1898,7 @@ def roots(repo, subset, x):
             if 0 <= p and p in s:
                 return False
         return True
-    return subset & s.filter(filter)
+    return subset & s.filter(filter, condrepr='<roots>')
 
 @predicate('sort(set[, [-]key...])', safe=True)
 def sort(repo, subset, x):
@@ -1988,7 +2005,7 @@ def subrepo(repo, subset, x):
 
         return False
 
-    return subset.filter(matches)
+    return subset.filter(matches, condrepr=('<subrepo %r>', pat))
 
 def _substringmatcher(pattern):
     kind, pattern, matcher = util.stringmatcher(pattern)
