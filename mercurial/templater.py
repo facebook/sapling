@@ -466,7 +466,7 @@ def ifcontains(context, mapping, args):
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
     item = stringify(args[0][0](context, mapping, args[0][1]))
-    items = args[1][0](context, mapping, args[1][1])
+    items = evalfuncarg(context, mapping, args[1])
 
     if item in items:
         yield args[2][0](context, mapping, args[2][1])
