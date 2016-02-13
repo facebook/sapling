@@ -756,7 +756,7 @@ class cg1packer(object):
                           mfchangedfiles, fnodes):
         repo = self._repo
         ml = repo.manifest
-        tmfnodes = {}
+        tmfnodes = {'': mfs}
 
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
@@ -825,17 +825,16 @@ class cg1packer(object):
                 return clnode
             return lookupmflinknode
 
-        mfnodes = self.prune(ml, mfs, commonrevs)
         size = 0
-        for x in self._packmanifests('', mfnodes, makelookupmflinknode('')):
-            size += len(x)
-            yield x
-        for dir, nodes in tmfnodes.iteritems():
+        while tmfnodes:
+            dir = min(tmfnodes)
+            nodes = tmfnodes[dir]
             prunednodes = self.prune(ml.dirlog(dir), nodes, commonrevs)
             for x in self._packmanifests(dir, prunednodes,
                                          makelookupmflinknode(dir)):
                 size += len(x)
                 yield x
+            del tmfnodes[dir]
         self._verbosenote(_('%8.i (manifests)\n') % size)
         yield self._manifestsdone()
 
