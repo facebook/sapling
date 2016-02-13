@@ -761,9 +761,14 @@ class cg1packer(object):
         # Callback for the manifest, used to collect linkrevs for filelog
         # revisions.
         # Returns the linkrev node (collected in lookupcl).
-        if fastpathlinkrev:
-            lookupmflinknode = mfs.__getitem__
-        else:
+        def makelookupmflinknode(dir):
+            if fastpathlinkrev:
+                assert not dir
+                return mfs.__getitem__
+
+            if dir:
+                return tmfnodes[dir].get
+
             def lookupmflinknode(x):
                 """Callback for looking up the linknode for manifests.
 
@@ -818,15 +823,17 @@ class cg1packer(object):
                         if clrevorder[clnode] < clrevorder[tmfclnode]:
                             tmfclnodes[n] = clnode
                 return clnode
+            return lookupmflinknode
 
         mfnodes = self.prune(ml, mfs, commonrevs)
         size = 0
-        for x in self._packmanifests('', mfnodes, lookupmflinknode):
+        for x in self._packmanifests('', mfnodes, makelookupmflinknode('')):
             size += len(x)
             yield x
         for dir, nodes in tmfnodes.iteritems():
             prunednodes = self.prune(ml.dirlog(dir), nodes, commonrevs)
-            for x in self._packmanifests(dir, prunednodes, nodes.get):
+            for x in self._packmanifests(dir, prunednodes,
+                                         makelookupmflinknode(dir)):
                 size += len(x)
                 yield x
         self._verbosenote(_('%8.i (manifests)\n') % size)
