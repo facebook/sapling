@@ -169,7 +169,9 @@ names that should work without quoting
     ('symbol', 'a'))
   * set:
   <filteredset
-    <baseset [1]>>
+    <baseset [1]>,
+    <not
+      <baseset [0]>>>
   1
   $ try _a_b_c_
   ('symbol', '_a_b_c_')
@@ -182,7 +184,9 @@ names that should work without quoting
     ('symbol', 'a'))
   * set:
   <filteredset
-    <baseset [6]>>
+    <baseset [6]>,
+    <not
+      <baseset [0]>>>
   6
   $ try .a.b.c.
   ('symbol', '.a.b.c.')
@@ -195,7 +199,9 @@ names that should work without quoting
     ('symbol', 'a'))
   * set:
   <filteredset
-    <baseset [7]>>
+    <baseset [7]>,
+    <not
+      <baseset [0]>>>
   7
 
 names that should be caught by fallback mechanism
@@ -278,7 +284,9 @@ quoting needed
     ('symbol', 'a'))
   * set:
   <filteredset
-    <baseset [4]>>
+    <baseset [4]>,
+    <not
+      <baseset [0]>>>
   4
 
   $ log '1 or 2'

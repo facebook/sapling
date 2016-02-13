@@ -2730,6 +2730,29 @@ def funcsused(tree):
             funcs.add(tree[1][1])
         return funcs
 
+def _formatsetrepr(r):
+    """Format an optional printable representation of a set
+
+    ========  =================================
+    type(r)   example
+    ========  =================================
+    tuple     ('<not %r>', other)
+    str       '<branch closed>'
+    callable  lambda: '<branch %r>' % sorted(b)
+    object    other
+    ========  =================================
+    """
+    if r is None:
+        return ''
+    elif isinstance(r, tuple):
+        return r[0] % r[1:]
+    elif isinstance(r, str):
+        return r
+    elif callable(r):
+        return r()
+    else:
+        return repr(r)
+
 class abstractsmartset(object):
 
     def __nonzero__(self):
@@ -2810,7 +2833,7 @@ class abstractsmartset(object):
         This is part of the mandatory API for smartset."""
         if isinstance(other, fullreposet):
             return self
-        return self.filter(other.__contains__, cache=False)
+        return self.filter(other.__contains__, condrepr=other, cache=False)
 
     def __add__(self, other):
         """Returns a new object with the union of the two collections.
@@ -2823,19 +2846,21 @@ class abstractsmartset(object):
 
         This is part of the mandatory API for smartset."""
         c = other.__contains__
-        return self.filter(lambda r: not c(r), cache=False)
+        return self.filter(lambda r: not c(r), condrepr=('<not %r>', other),
+                           cache=False)
 
-    def filter(self, condition, cache=True):
+    def filter(self, condition, condrepr=None, cache=True):
         """Returns this smartset filtered by condition as a new smartset.
 
         `condition` is a callable which takes a revision number and returns a
-        boolean.
+        boolean. Optional `condrepr` provides a printable representation of
+        the given `condition`.
 
         This is part of the mandatory API for smartset."""
         # builtin cannot be cached. but do not needs to
         if cache and util.safehasattr(condition, 'func_code'):
             condition = util.cachefunc(condition)
-        return filteredset(self, condition)
+        return filteredset(self, condition, condrepr)
 
 class baseset(abstractsmartset):
     """Basic data structure that represents a revset and contains the basic
@@ -2939,13 +2964,16 @@ class filteredset(abstractsmartset):
     the subset and contains a function which tests for membership in the
     revset
     """
-    def __init__(self, subset, condition=lambda x: True):
+    def __init__(self, subset, condition=lambda x: True, condrepr=None):
         """
         condition: a function that decide whether a revision in the subset
                    belongs to the revset or not.
+        condrepr: a tuple of (format, obj, ...), a function or an object that
+                  provides a printable representation of the given condition.
         """
         self._subset = subset
         self._condition = condition
+        self._condrepr = condrepr
 
     def __contains__(self, x):
         return x in self._subset and self._condition(x)
@@ -3025,7 +3053,11 @@ class filteredset(abstractsmartset):
             return x
 
     def __repr__(self):
-        return '<%s %r>' % (type(self).__name__, self._subset)
+        xs = [repr(self._subset)]
+        s = _formatsetrepr(self._condrepr)
+        if s:
+            xs.append(s)
+        return '<%s %s>' % (type(self).__name__, ', '.join(xs))
 
 def _iterordered(ascending, iter1, iter2):
     """produce an ordered iteration from two iterators with the same order
