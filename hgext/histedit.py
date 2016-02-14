@@ -1036,7 +1036,6 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
 
     state.keep = opts.get('keep', False)
-    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
 
     # rebuild state
     if goal == 'continue':
@@ -1051,6 +1050,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     else:
         _newaction(ui, repo, state, revs, freeargs, opts)
 
+    _continueaction(ui, repo, state)
+
+def _continueaction(ui, repo, state):
+    """This action runs after either:
+    - bootstrapcontinue (if the goal is 'continue')
+    - _newaction (if the goal is 'new')
+    """
     # preprocess rules so that we can hide inner folds from the user
     # and only show one editor
     actions = state.actions[:]
@@ -1092,6 +1098,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                     for n in succs[1:]:
                         ui.debug(m % node.short(n))
 
+    supportsmarkers = obsolete.isenabled(repo, obsolete.createmarkersopt)
     if supportsmarkers:
         # Only create markers if the temp nodes weren't already removed.
         obsolete.createmarkers(repo, ((repo[t],()) for t in sorted(tmpnodes)
