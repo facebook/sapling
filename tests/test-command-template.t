@@ -3219,6 +3219,12 @@ Test shortest(node) function:
   $ hg log --template '{node|shortest}\n' -l1
   e777
 
+  $ hg log -r 0 -T '{shortest(node, "1{"0"}")}\n'
+  f7769ec2ab
+  $ hg log -r 0 -T '{shortest(node, "not an int")}\n'
+  hg: parse error: shortest() expects an integer minlength
+  [255]
+
 Test pad function
 
   $ hg log --template '{pad(rev, 20)} {author|user}\n'

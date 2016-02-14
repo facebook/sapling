@@ -621,7 +621,9 @@ def shortest(context, mapping, args):
 
     minlength = 4
     if len(args) > 1:
-        minlength = int(args[1][1])
+        minlength = evalinteger(context, mapping, args[1],
+                                # i18n: "shortest" is a keyword
+                                _("shortest() expects an integer minlength"))
 
     cl = mapping['ctx']._repo.changelog
     def isvalid(test):
