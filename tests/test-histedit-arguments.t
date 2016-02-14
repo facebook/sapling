@@ -450,3 +450,46 @@ Default base revision should stop at merge commit
   > pick 6f2f0241f119
   > pick 8cde254db839
   > EOF
+
+commit --amend should abort if histedit is in progress
+(issue4800) and markers are not being created.
+Eventually, histedit could perhaps look at `source` extra,
+in which case this test should be revisited.
+
+  $ hg -q up 8cde254db839
+  $ hg histedit 6f2f0241f119 --commands - <<EOF
+  > pick 8cde254db839
+  > edit 6f2f0241f119
+  > EOF
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  merging foo
+  warning: conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  Fix up the change (pick 8cde254db839)
+  (hg histedit --continue to resume)
+  [1]
+  $ hg resolve -m --all
+  (no more unresolved files)
+  continue: hg histedit --continue
+  $ hg histedit --cont
+  merging foo
+  warning: conflicts while merging foo! (edit, then use 'hg resolve --mark')
+  Editing (6f2f0241f119), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+  $ hg resolve -m --all
+  (no more unresolved files)
+  continue: hg histedit --continue
+  $ hg commit --amend -m 'reject this fold'
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
+
+With markers enabled, histedit does not get confused, and
+amend should not be blocked by the ongoing histedit.
+
+  $ cat >>$HGRCPATH <<EOF
+  > [experimental]
+  > evolution=createmarkers,allowunstable
+  > EOF
+  $ hg commit --amend -m 'allow this fold'
+  $ hg histedit --continue

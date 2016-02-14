@@ -1720,6 +1720,15 @@ def _docommit(ui, repo, *pats, **opts):
         if not allowunstable and old.children():
             raise error.Abort(_('cannot amend changeset with children'))
 
+        # Currently histedit gets confused if an amend happens while histedit
+        # is in progress. Since we have a checkunfinished command, we are
+        # temporarily honoring it.
+        #
+        # Note: eventually this guard will be removed. Please do not expect
+        # this behavior to remain.
+        if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+            cmdutil.checkunfinished(repo)
+
         # commitfunc is used only for temporary amend commit by cmdutil.amend
         def commitfunc(ui, repo, message, match, opts):
             return repo.commit(message,
