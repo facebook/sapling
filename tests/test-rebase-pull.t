@@ -266,3 +266,46 @@ pull --rebase only update if there is nothing to rebase
   |
   o  0: 'C1'
   
+
+pull --rebase update (no rebase) use proper update:
+
+- warn about other head.
+
+  $ cd ../a
+  $ echo R6 > R6
+  $ hg ci -Am R6
+  adding R6
+  $ cd ../c
+  $ hg up 'desc(R5)'
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg pull --rebase
+  pulling from $TESTTMP/a (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  nothing to rebase - working directory parent is already an ancestor of destination 65bc164c1d9b
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  1 other heads for branch "default"
+  $ hg tglog
+  @  9: 'R6'
+  |
+  | o  8: 'L2'
+  | |
+  | o  7: 'L1'
+  |/
+  o  6: 'R5'
+  |
+  o  5: 'R4'
+  |
+  o  4: 'R3'
+  |
+  o  3: 'R2'
+  |
+  o  2: 'R1'
+  |
+  o  1: 'C2'
+  |
+  o  0: 'C1'
+  

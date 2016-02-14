@@ -16,7 +16,7 @@ https://mercurial-scm.org/wiki/RebaseExtension
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
-from mercurial import copies, repoview, revset
+from mercurial import copies, destutil, repoview, revset
 from mercurial.commands import templateopts
 from mercurial.node import nullrev, nullid, hex, short
 from mercurial.lock import release
@@ -1145,7 +1145,6 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 ui.debug('--update and --rebase are not compatible, ignoring '
                          'the update flag\n')
 
-            movemarkfrom = repo['.'].node()
             revsprepull = len(repo)
             origpostincoming = commands.postincoming
             def _dummy(*args, **kwargs):
@@ -1166,15 +1165,11 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 if 'source' in opts:
                     del opts['source']
                 if rebase(ui, repo, **opts) == _nothingtorebase():
-                    branch = repo[None].branch()
-                    dest = repo[branch].rev()
-                    if dest != repo['.'].rev():
-                        # there was nothing to rebase we force an update
-                        hg.update(repo, dest)
-                        if bookmarks.update(repo, [movemarkfrom],
-                                            repo['.'].node()):
-                            ui.status(_("updating bookmark %s\n")
-                                      % repo._activebookmark)
+                    rev, _a, _b = destutil.destupdate(repo)
+                    if rev != repo['.'].rev(): # we could update
+                        # not passing argument to get the bare update behavior
+                        # with warning and trumpets
+                        commands.update(ui, repo)
         finally:
             release(lock, wlock)
     else:
