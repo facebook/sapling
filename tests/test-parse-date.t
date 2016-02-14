@@ -28,10 +28,12 @@ This runs with TZ="GMT"
 
 Check with local timezone other than GMT and with DST
 
-  $ TZ="PST+8PDT"
+  $ TZ="PST+8PDT+7,M4.1.0/02:00:00,M10.5.0/02:00:00"
   $ export TZ
 
 PST=UTC-8 / PDT=UTC-7
+Summer time begins on April's first Sunday at 2:00am,
+and ends on October's last Sunday at 2:00am.
 
   $ hg debugrebuildstate
   $ echo "a" > a
