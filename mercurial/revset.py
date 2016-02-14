@@ -2261,12 +2261,6 @@ def optimize(x, small):
         return w + wa, (op, x[1], ta)
     return 1, x
 
-def _getaliasarg(tree):
-    """If tree matches ('_aliasarg', X) return X, None otherwise"""
-    if tree[0] == '_aliasarg':
-        return tree[1]
-    return None
-
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
 _aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
@@ -2460,9 +2454,9 @@ def _expandargs(tree, args):
     """
     if not tree or not isinstance(tree, tuple):
         return tree
-    arg = _getaliasarg(tree)
-    if arg is not None:
-        return args[arg]
+    if tree[0] == '_aliasarg':
+        sym = tree[1]
+        return args[sym]
     return tuple(_expandargs(t, args) for t in tree)
 
 def _expandaliases(aliases, tree, expanding, cache):
