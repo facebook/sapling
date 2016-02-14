@@ -329,7 +329,7 @@ def date(context, mapping, args):
         # i18n: "date" is a keyword
         raise error.ParseError(_("date expects one or two arguments"))
 
-    date = args[0][0](context, mapping, args[0][1])
+    date = evalfuncarg(context, mapping, args[0])
     fmt = None
     if len(args) == 2:
         fmt = stringify(args[1][0](context, mapping, args[1][1]))
