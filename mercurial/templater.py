@@ -221,9 +221,10 @@ def evalfuncarg(context, mapping, arg):
     return thing
 
 def evalinteger(context, mapping, arg, err):
+    v = evalfuncarg(context, mapping, arg)
     try:
-        return int(stringify(arg[0](context, mapping, arg[1])))
-    except ValueError:
+        return int(v)
+    except (TypeError, ValueError):
         raise error.ParseError(err)
 
 def runinteger(context, mapping, data):

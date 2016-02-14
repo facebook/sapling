@@ -3148,6 +3148,9 @@ Test recursive evaluation:
   text.1:be wrapped
   text.1:desc to be
   text.1:wrapped (no-eol)
+  $ hg log -l1 -T '{fill(desc, date, "", "")}\n'
+  hg: parse error: fill expects an integer width
+  [255]
 
   $ hg log -l 1 --template '{sub(r"[0-9]", "-", author)}'
   {node|short} (no-eol)
