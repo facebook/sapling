@@ -327,14 +327,13 @@ rebase 'b2' to another lower branch head
 
   $ hg up -qr 2
   $ hg rebase
-  nothing to rebase - working directory parent is also destination
-  [1]
+  rebasing 2:792845bb77ee "b2"
+  note: rebase of 2:792845bb77ee created no changes to commit
+  saved backup bundle to $TESTTMP/case1/.hg/strip-backup/792845bb77ee-627120ee-backup.hg (glob)
   $ hg tglog
-  o  3: 'c1' c
+  o  2: 'c1' c
   |
-  | @  2: 'b2' b
-  |/
-  | o  1: 'b1' b
+  | @  1: 'b1' b
   |/
   o  0: '0'
   
@@ -373,8 +372,9 @@ rebase 'c1' to the branch head 'c2' that is closed
   o  0: '0'
   
   $ hg rebase
-  nothing to rebase - working directory parent is also destination
-  [1]
+  abort: branch 'c' has one head - please rebase to an explicit rev
+  (run 'hg heads' to see all heads)
+  [255]
   $ hg tglog
   _  4: 'c2 closed' c
   |

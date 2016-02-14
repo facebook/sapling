@@ -1095,7 +1095,7 @@ Test "pull --rebase" when rebase is enabled before largefiles (issue3861)
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  nothing to rebase - working directory parent is already an ancestor of destination bf5e395ced2c
+  nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ..

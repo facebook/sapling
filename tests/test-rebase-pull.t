@@ -85,7 +85,7 @@ Invoke pull --rebase and nothing to rebase:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  nothing to rebase - working directory parent is already an ancestor of destination 77ae9631bcca
+  nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark norebase
 
@@ -285,7 +285,7 @@ pull --rebase update (no rebase) use proper update:
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
-  nothing to rebase - working directory parent is already an ancestor of destination 65bc164c1d9b
+  nothing to rebase - updating instead
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 other heads for branch "default"
   $ hg tglog

@@ -818,13 +818,17 @@ Testing from lower head
 
 Testing from upper head
 
+  $ hg log -r '_destrebase(4)'
+  changeset:   3:1910d5ff34ea
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     second source with subdir
+  
   $ hg up 4
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
-  changeset:   4:5f7bc9025ed2
-  tag:         tip
-  parent:      1:58d79cc1cf43
+  changeset:   3:1910d5ff34ea
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     aaa
+  summary:     second source with subdir
   

@@ -141,6 +141,10 @@ msgdestmerge = {
             (_("multiple matching bookmarks to merge -"
                " please merge with an explicit rev or bookmark"),
              _("run 'hg heads' to see all heads")),
+         'rebase':
+            (_("multiple matching bookmarks to rebase -"
+               " please rebase to an explicit rev or bookmark"),
+             _("run 'hg heads' to see all heads")),
         },
     # no other matching divergent bookmark
     'nootherbookmarks':
@@ -148,11 +152,18 @@ msgdestmerge = {
             (_("no matching bookmark to merge - "
                "please merge with an explicit rev or bookmark"),
              _("run 'hg heads' to see all heads")),
+         'rebase':
+            (_("no matching bookmark to rebase - "
+               "please rebase to an explicit rev or bookmark"),
+             _("run 'hg heads' to see all heads")),
         },
     # branch have too many unbookmarked heads, no obvious destination
     'toomanyheads':
         {'merge':
             (_("branch '%s' has %d heads - please merge with an explicit rev"),
+             _("run 'hg heads .' to see heads")),
+         'rebase':
+            (_("branch '%s' has %d heads - please rebase to an explicit rev"),
              _("run 'hg heads .' to see heads")),
         },
     # branch have no other unbookmarked heads
@@ -160,40 +171,61 @@ msgdestmerge = {
         {'merge':
             (_("heads are bookmarked - please merge with an explicit rev"),
              _("run 'hg heads' to see all heads")),
+         'rebase':
+            (_("heads are bookmarked - please rebase to an explicit rev"),
+             _("run 'hg heads' to see all heads")),
         },
     # branch have just a single heads, but there is other branches
     'nootherbranchheads':
         {'merge':
             (_("branch '%s' has one head - please merge with an explicit rev"),
              _("run 'hg heads' to see all heads")),
+         'rebase':
+            (_("branch '%s' has one head - please rebase to an explicit rev"),
+             _("run 'hg heads' to see all heads")),
         },
     # repository have a single head
     'nootherheads':
-            {'merge':
-                (_('nothing to merge'),
-         None),
+        {'merge':
+            (_('nothing to merge'),
+            None),
+         'rebase':
+            (_('nothing to rebase'),
+            None),
         },
     # repository have a single head and we are not on it
     'nootherheadsbehind':
         {'merge':
             (_('nothing to merge'),
              _("use 'hg update' instead")),
+         'rebase':
+            (_('nothing to rebase'),
+             _("use 'hg update' instead")),
         },
     # We are not on a head
     'notatheads':
         {'merge':
             (_('working directory not at a head revision'),
-             _("use 'hg update' or merge with an explicit revision"))
+             _("use 'hg update' or merge with an explicit revision")),
+         'rebase':
+            (_('working directory not at a head revision'),
+             _("use 'hg update' or rebase to an explicit revision"))
         },
     'emptysourceset':
         {'merge':
             (_('source set is empty'),
-             None)
+             None),
+         'rebase':
+            (_('source set is empty'),
+             None),
         },
     'multiplebranchessourceset':
         {'merge':
             (_('source set is rooted in multiple branches'),
-             None)
+             None),
+         'rebase':
+            (_('rebaseset is rooted in multiple named branches'),
+             _('specify an explicit destination with --dest')),
         },
     }
 

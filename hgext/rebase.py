@@ -69,11 +69,12 @@ def _makeextrafn(copiers):
             c(ctx, extra)
     return extrafn
 
-def _destrebase(repo):
-    # Destination defaults to the latest revision in the
-    # current branch
-    branch = repo[None].branch()
-    return repo[branch].rev()
+def _destrebase(repo, sourceset):
+    """small wrapper around destmerge to pass the right extra args
+
+    Please wrap destutil.destmerge instead."""
+    return destutil.destmerge(repo, action='rebase', sourceset=sourceset,
+                              onheadcheck=False)
 
 revsetpredicate = revset.extpredicate()
 
@@ -83,12 +84,12 @@ def _revsetdestrebase(repo, subset, x):
 
     # default destination for rebase.
     # # XXX: Currently private because I expect the signature to change.
-    # # XXX: - taking rev as arguments,
     # # XXX: - bailing out in case of ambiguity vs returning all data.
-    # # XXX: - probably merging with the merge destination.
     # i18n: "_rebasedefaultdest" is a keyword
-    revset.getargs(x, 0, 0, _("_rebasedefaultdest takes no arguments"))
-    return subset & revset.baseset([_destrebase(repo)])
+    sourceset = None
+    if x is not None:
+        sourceset = revset.getset(repo, revset.fullreposet(repo), x)
+    return subset & revset.baseset([_destrebase(repo, sourceset)])
 
 @command('rebase',
     [('s', 'source', '',
@@ -127,10 +128,13 @@ def rebase(ui, repo, **opts):
     Published commits cannot be rebased (see :hg:`help phases`).
     To copy commits, see :hg:`help graft`.
 
-    If you don't specify a destination changeset (``-d/--dest``),
-    rebase uses the current branch tip as the destination. (The
-    destination changeset is not modified by rebasing, but new
-    changesets are added as its descendants.)
+    If you don't specify a destination changeset (``-d/--dest``), rebase
+    will use the same logic as :hg:`merge` to pick a destination.  if
+    the current branch contains exactly one other head, the other head
+    is merged with by default.  Otherwise, an explicit revision with
+    which to merge with must be provided.  (destination changeset is not
+    modified by rebasing, but new changesets are added as its
+    descendants.)
 
     Here are the ways to select changesets:
 
@@ -544,9 +548,6 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
 
     if destf:
         dest = scmutil.revsingle(repo, destf)
-    else:
-        dest = repo[_destrebase(repo)]
-        destf = str(dest)
 
     if revf:
         rebaseset = scmutil.revrange(repo, revf)
@@ -566,6 +567,10 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
             ui.status(_('empty "base" revision set - '
                         "can't compute rebase set\n"))
             return None, None
+        if not destf:
+            dest = repo[_destrebase(repo, base)]
+            destf = str(dest)
+
         commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
         if commonanc is not None:
             rebaseset = repo.revs('(%d::(%ld) - %d)::',
@@ -599,6 +604,11 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
                 ui.status(_('nothing to rebase from %s to %s\n') %
                           ('+'.join(str(repo[r]) for r in base), dest))
             return None, None
+
+    if not destf:
+        dest = repo[_destrebase(repo, rebaseset)]
+        destf = str(dest)
+
     return dest, rebaseset
 
 def externalparent(repo, state, targetancestors):
@@ -1198,9 +1208,15 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 # --source.
                 if 'source' in opts:
                     del opts['source']
-                if rebase(ui, repo, **opts) == _nothingtorebase():
+                try:
+                    rebase(ui, repo, **opts)
+                except error.NoMergeDestAbort:
+                    # we can maybe update instead
                     rev, _a, _b = destutil.destupdate(repo)
-                    if rev != repo['.'].rev(): # we could update
+                    if rev == repo['.'].rev():
+                        ui.status(_('nothing to rebase\n'))
+                    else:
+                        ui.status(_('nothing to rebase - updating instead\n'))
                         # not passing argument to get the bare update behavior
                         # with warning and trumpets
                         commands.update(ui, repo)
