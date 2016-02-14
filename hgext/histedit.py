@@ -982,7 +982,16 @@ def histedit(ui, repo, *freeargs, **opts):
     finally:
         release(state.lock, state.wlock)
 
-def _histedit(ui, repo, state, *freeargs, **opts):
+def _getgoal(opts):
+    if opts.get('continue'):
+        return 'continue'
+    if opts.get('abort'):
+        return 'abort'
+    if opts.get('edit_plan'):
+        return 'edit-plan'
+    return 'new'
+
+def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
     # TODO only abort if we try to histedit mq patches, not just
     # blanket if mq patches are applied somewhere
     mq = getattr(repo, 'mq', None)
@@ -991,28 +1000,21 @@ def _histedit(ui, repo, state, *freeargs, **opts):
 
     # basic argument incompatibility processing
     outg = opts.get('outgoing')
-    cont = opts.get('continue')
     editplan = opts.get('edit_plan')
     abort = opts.get('abort')
     force = opts.get('force')
-    rules = opts.get('commands', '')
-    revs = opts.get('rev', [])
-    goal = 'new' # This invocation goal, in new, continue, abort
     if force and not outg:
         raise error.Abort(_('--force only allowed with --outgoing'))
-    if cont:
+    if goal == 'continue':
         if any((outg, abort, revs, freeargs, rules, editplan)):
             raise error.Abort(_('no arguments allowed with --continue'))
-        goal = 'continue'
-    elif abort:
+    elif goal == 'abort':
         if any((outg, revs, freeargs, rules, editplan)):
             raise error.Abort(_('no arguments allowed with --abort'))
-        goal = 'abort'
-    elif editplan:
+    elif goal == 'edit-plan':
         if any((outg, revs, freeargs)):
             raise error.Abort(_('only --commands argument allowed with '
                                '--edit-plan'))
-        goal = 'edit-plan'
     else:
         if os.path.exists(os.path.join(repo.path, 'histedit-state')):
             raise error.Abort(_('history edit already in progress, try '
@@ -1034,8 +1036,13 @@ def _histedit(ui, repo, state, *freeargs, **opts):
                 raise error.Abort(
                     _('histedit requires exactly one ancestor revision'))
 
-
+def _histedit(ui, repo, state, *freeargs, **opts):
+    goal = _getgoal(opts)
+    revs = opts.get('rev', [])
+    rules = opts.get('commands', '')
     state.keep = opts.get('keep', False)
+
+    _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs)
 
     # rebuild state
     if goal == 'continue':
