@@ -210,7 +210,7 @@ def getlist(x):
 def gettemplate(exp, context):
     """Compile given template tree or load named template from map file;
     returns (func, data) pair"""
-    if exp[0] == 'template':
+    if exp[0] in ('template', 'string'):
         return compileexp(exp, context, methods)
     if exp[0] == 'symbol':
         # unlike runsymbol(), here 'symbol' is always taken as template name

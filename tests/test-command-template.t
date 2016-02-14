@@ -2900,12 +2900,8 @@ Test string literal:
   template: 0
   $ hg log -Ra -r0 -T '{r"rawstring: {rev}"}\n'
   rawstring: {rev}
-
-because map operation requires template, raw string can't be used
-
-  $ hg log -Ra -r0 -T '{files % r"rawstring"}\n'
-  hg: parse error: expected template specifier
-  [255]
+  $ hg log -Ra -r0 -T '{files % r"rawstring: {file}"}\n'
+  rawstring: {file}
 
 Test string escaping:
 
