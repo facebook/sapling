@@ -1820,25 +1820,12 @@ but 'all()' should never be substituded to '0()'.
     <spanset+ 0:9>>
   0
 
-  $ echo 'injectparamasstring2 = max(_aliasarg("$1"))' >> .hg/hgrc
-  $ echo 'callinjection2($1) = descendants(injectparamasstring2)' >> .hg/hgrc
-  $ try 'callinjection2(2:5)'
-  (func
-    ('symbol', 'callinjection2')
-    (range
-      ('symbol', '2')
-      ('symbol', '5')))
-  abort: failed to parse the definition of revset alias "injectparamasstring2": unknown identifier: _aliasarg
-  [255]
   $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
   ('symbol', 'tip')
   warning: failed to parse the definition of revset alias "anotherbadone": at 7: not a prefix: end
-  warning: failed to parse the definition of revset alias "injectparamasstring2": unknown identifier: _aliasarg
   * set:
   <baseset [9]>
   9
-  >>> data = file('.hg/hgrc', 'rb').read()
-  >>> file('.hg/hgrc', 'wb').write(data.replace('_aliasarg', ''))
 
   $ try 'tip'
   ('symbol', 'tip')

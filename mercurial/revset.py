@@ -2261,14 +2261,10 @@ def optimize(x, small):
         return w + wa, (op, x[1], ta)
     return 1, x
 
-_aliasarg = ('func', ('symbol', '_aliasarg'))
 def _getaliasarg(tree):
-    """If tree matches ('func', ('symbol', '_aliasarg'), ('string', X))
-    return X, None otherwise.
-    """
-    if (len(tree) == 3 and tree[:2] == _aliasarg
-        and tree[2][0] == 'string'):
-        return tree[2][1]
+    """If tree matches ('_aliasarg', X) return X, None otherwise"""
+    if tree[0] == '_aliasarg':
+        return tree[1]
     return None
 
 def _checkaliasarg(tree, known=None):
@@ -2369,70 +2365,64 @@ def _parsealiasdecl(decl):
     except error.ParseError as inst:
         return (decl, None, None, parseerrordetail(inst))
 
+def _relabelaliasargs(tree, args):
+    if not isinstance(tree, tuple):
+        return tree
+    op = tree[0]
+    if op != 'symbol':
+        return (op,) + tuple(_relabelaliasargs(x, args) for x in tree[1:])
+
+    assert len(tree) == 2
+    sym = tree[1]
+    if sym in args:
+        op = '_aliasarg'
+    elif sym.startswith('$'):
+        raise error.ParseError(_("'$' not for alias arguments"))
+    return (op, sym)
+
 def _parsealiasdefn(defn, args):
     """Parse alias definition ``defn``
 
-    This function also replaces alias argument references in the
-    specified definition by ``_aliasarg(ARGNAME)``.
+    This function marks alias argument references as ``_aliasarg``.
 
     ``args`` is a list of alias argument names, or None if the alias
     is declared as a symbol.
 
     This returns "tree" as parsing result.
 
+    >>> def prettyformat(tree):
+    ...     return parser.prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
     >>> args = ['$1', '$2', 'foo']
     >>> print prettyformat(_parsealiasdefn('$1 or foo', args))
     (or
-      (func
-        ('symbol', '_aliasarg')
-        ('string', '$1'))
-      (func
-        ('symbol', '_aliasarg')
-        ('string', 'foo')))
+      ('_aliasarg', '$1')
+      ('_aliasarg', 'foo'))
     >>> try:
     ...     _parsealiasdefn('$1 or $bar', args)
     ... except error.ParseError, inst:
     ...     print parseerrordetail(inst)
-    at 6: '$' not for alias arguments
+    '$' not for alias arguments
     >>> args = ['$1', '$10', 'foo']
     >>> print prettyformat(_parsealiasdefn('$10 or foobar', args))
     (or
-      (func
-        ('symbol', '_aliasarg')
-        ('string', '$10'))
+      ('_aliasarg', '$10')
       ('symbol', 'foobar'))
     >>> print prettyformat(_parsealiasdefn('"$1" or "foo"', args))
     (or
       ('string', '$1')
       ('string', 'foo'))
     """
-    def tokenizedefn(program, lookup=None):
-        if args:
-            argset = set(args)
-        else:
-            argset = set()
-
-        for t, value, pos in _tokenizealias(program, lookup=lookup):
-            if t == 'symbol':
-                if value in argset:
-                    # emulate tokenization of "_aliasarg('ARGNAME')":
-                    # "_aliasarg()" is an unknown symbol only used separate
-                    # alias argument placeholders from regular strings.
-                    yield ('symbol', '_aliasarg', pos)
-                    yield ('(', None, pos)
-                    yield ('string', value, pos)
-                    yield (')', None, pos)
-                    continue
-                elif value.startswith('$'):
-                    raise error.ParseError(_("'$' not for alias arguments"),
-                                           pos)
-            yield (t, value, pos)
+    if args:
+        args = set(args)
+    else:
+        args = set()
 
     p = parser.parser(elements)
-    tree, pos = p.parse(tokenizedefn(defn))
+    tree, pos = p.parse(_tokenizealias(defn))
     if pos != len(defn):
         raise error.ParseError(_('invalid token'), pos)
-    return parser.simplifyinfixops(tree, ('list', 'or'))
+    tree = parser.simplifyinfixops(tree, ('list', 'or'))
+    return _relabelaliasargs(tree, args)
 
 class revsetalias(object):
     # whether own `error` information is already shown or not.
@@ -2523,7 +2513,6 @@ def _expandaliases(aliases, tree, expanding, cache):
     return result
 
 def findaliases(ui, tree, showwarning=None):
-    _checkaliasarg(tree)
     aliases = {}
     for k, v in ui.configitems('revsetalias'):
         alias = revsetalias(k, v)
