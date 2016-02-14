@@ -1820,6 +1820,15 @@ but 'all()' should never be substituded to '0()'.
     <spanset+ 0:9>>
   0
 
+test unknown reference:
+
+  $ try "unknownref(0)" --config 'revsetalias.unknownref($1)=$1:$2'
+  (func
+    ('symbol', 'unknownref')
+    ('symbol', '0'))
+  abort: failed to parse the definition of revset alias "unknownref": '$' not for alias arguments
+  [255]
+
   $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
   ('symbol', 'tip')
   warning: failed to parse the definition of revset alias "anotherbadone": at 7: not a prefix: end

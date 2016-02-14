@@ -2267,17 +2267,6 @@ def _getaliasarg(tree):
         return tree[1]
     return None
 
-def _checkaliasarg(tree, known=None):
-    """Check tree contains no _aliasarg construct or only ones which
-    value is in known. Used to avoid alias placeholders injection.
-    """
-    if isinstance(tree, tuple):
-        arg = _getaliasarg(tree)
-        if arg is not None and (not known or arg not in known):
-            raise error.UnknownIdentifier('_aliasarg', [])
-        for t in tree:
-            _checkaliasarg(t, known)
-
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
 _aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
@@ -2443,8 +2432,6 @@ class revsetalias(object):
 
         try:
             self.replacement = _parsealiasdefn(value, self.args)
-            # Check for placeholder injection
-            _checkaliasarg(self.replacement, self.args)
         except error.ParseError as inst:
             self.error = _('failed to parse the definition of revset alias'
                            ' "%s": %s') % (self.name, parseerrordetail(inst))
