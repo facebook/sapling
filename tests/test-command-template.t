@@ -2790,6 +2790,14 @@ Test new-style inline templating:
   $ hg log -R latesttag -r tip --template 'modified files: {file_mods % " {file}\n"}\n'
   modified files:  .hgtags
   
+
+  $ hg log -R latesttag -r tip -T '{rev % "a"}\n'
+  hg: parse error: keyword 'rev' is not iterable
+  [255]
+  $ hg log -R latesttag -r tip -T '{get(extras, "unknown") % "a"}\n'
+  hg: parse error: None is not iterable
+  [255]
+
 Test the sub function of templating for expansion:
 
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'

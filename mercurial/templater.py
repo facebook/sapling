@@ -305,9 +305,17 @@ def runmap(context, mapping, data):
     func, data, ctmpl = data
     d = func(context, mapping, data)
     if util.safehasattr(d, 'itermaps'):
-        d = d.itermaps()
+        diter = d.itermaps()
+    else:
+        try:
+            diter = iter(d)
+        except TypeError:
+            if func is runsymbol:
+                raise error.ParseError(_("keyword '%s' is not iterable") % data)
+            else:
+                raise error.ParseError(_("%r is not iterable") % d)
 
-    for i in d:
+    for i in diter:
         lm = mapping.copy()
         if isinstance(i, dict):
             lm.update(i)
