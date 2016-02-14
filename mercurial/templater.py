@@ -398,7 +398,9 @@ def pad(context, mapping, args):
         # i18n: "pad" is a keyword
         raise error.ParseError(_("pad() expects two to four arguments"))
 
-    width = int(args[1][1])
+    width = evalinteger(context, mapping, args[1],
+                        # i18n: "pad" is a keyword
+                        _("pad() expects an integer width"))
 
     text = stringify(args[0][0](context, mapping, args[0][1]))
 

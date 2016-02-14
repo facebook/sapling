@@ -3244,6 +3244,14 @@ Test template string in pad function
   $ hg log -r 0 -T '{pad(r"\{rev}", 10)} {author|user}\n'
   \{rev}     test
 
+Test width argument passed to pad function
+
+  $ hg log -r 0 -T '{pad(rev, "1{"0"}")} {author|user}\n'
+  0          test
+  $ hg log -r 0 -T '{pad(rev, "not an int")}\n'
+  hg: parse error: pad() expects an integer width
+  [255]
+
 Test ifcontains function
 
   $ hg log --template '{rev} {ifcontains(rev, "2 two 0", "is in the string", "is not")}\n'
