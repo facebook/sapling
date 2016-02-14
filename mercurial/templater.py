@@ -220,6 +220,12 @@ def evalfuncarg(context, mapping, arg):
         thing = stringify(thing)
     return thing
 
+def evalinteger(context, mapping, arg, err):
+    try:
+        return int(stringify(arg[0](context, mapping, arg[1])))
+    except ValueError:
+        raise error.ParseError(err)
+
 def runinteger(context, mapping, data):
     return int(data)
 
@@ -373,11 +379,9 @@ def fill(context, mapping, args):
     initindent = ''
     hangindent = ''
     if 2 <= len(args) <= 4:
-        try:
-            width = int(stringify(args[1][0](context, mapping, args[1][1])))
-        except ValueError:
-            # i18n: "fill" is a keyword
-            raise error.ParseError(_("fill expects an integer width"))
+        width = evalinteger(context, mapping, args[1],
+                            # i18n: "fill" is a keyword
+                            _("fill expects an integer width"))
         try:
             initindent = stringify(args[2][0](context, mapping, args[2][1]))
             hangindent = stringify(args[3][0](context, mapping, args[3][1]))
@@ -710,11 +714,9 @@ def word(context, mapping, args):
         raise error.ParseError(_("word expects two or three arguments, got %d")
                                % len(args))
 
-    try:
-        num = int(stringify(args[0][0](context, mapping, args[0][1])))
-    except ValueError:
-        # i18n: "word" is a keyword
-        raise error.ParseError(_("word expects an integer index"))
+    num = evalinteger(context, mapping, args[0],
+                      # i18n: "word" is a keyword
+                      _("word expects an integer index"))
     text = stringify(args[1][0](context, mapping, args[1][1]))
     if len(args) == 3:
         splitter = stringify(args[2][0](context, mapping, args[2][1]))
