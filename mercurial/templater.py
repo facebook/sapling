@@ -227,6 +227,10 @@ def evalinteger(context, mapping, arg, err):
     except (TypeError, ValueError):
         raise error.ParseError(err)
 
+def evalstring(context, mapping, arg):
+    func, data = arg
+    return stringify(func(context, mapping, data))
+
 def runinteger(context, mapping, data):
     return int(data)
 
@@ -339,7 +343,7 @@ def date(context, mapping, args):
     date = evalfuncarg(context, mapping, args[0])
     fmt = None
     if len(args) == 2:
-        fmt = stringify(args[1][0](context, mapping, args[1][1]))
+        fmt = evalstring(context, mapping, args[1])
     try:
         if fmt is None:
             return util.datestr(date)
@@ -358,7 +362,7 @@ def diff(context, mapping, args):
 
     def getpatterns(i):
         if i < len(args):
-            s = stringify(args[i][0](context, mapping, args[i][1])).strip()
+            s = evalstring(context, mapping, args[i]).strip()
             if s:
                 return [s]
         return []
@@ -375,7 +379,7 @@ def fill(context, mapping, args):
         # i18n: "fill" is a keyword
         raise error.ParseError(_("fill expects one to four arguments"))
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
+    text = evalstring(context, mapping, args[0])
     width = 76
     initindent = ''
     hangindent = ''
@@ -384,8 +388,8 @@ def fill(context, mapping, args):
                             # i18n: "fill" is a keyword
                             _("fill expects an integer width"))
         try:
-            initindent = stringify(args[2][0](context, mapping, args[2][1]))
-            hangindent = stringify(args[3][0](context, mapping, args[3][1]))
+            initindent = evalstring(context, mapping, args[2])
+            hangindent = evalstring(context, mapping, args[3])
         except IndexError:
             pass
 
@@ -402,12 +406,12 @@ def pad(context, mapping, args):
                         # i18n: "pad" is a keyword
                         _("pad() expects an integer width"))
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
+    text = evalstring(context, mapping, args[0])
 
     right = False
     fillchar = ' '
     if len(args) > 2:
-        fillchar = stringify(args[2][0](context, mapping, args[2][1]))
+        fillchar = evalstring(context, mapping, args[2])
     if len(args) > 3:
         right = util.parsebool(args[3][1])
 
@@ -425,11 +429,11 @@ def indent(context, mapping, args):
         # i18n: "indent" is a keyword
         raise error.ParseError(_("indent() expects two or three arguments"))
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
-    indent = stringify(args[1][0](context, mapping, args[1][1]))
+    text = evalstring(context, mapping, args[0])
+    indent = evalstring(context, mapping, args[1])
 
     if len(args) == 3:
-        firstline = stringify(args[2][0](context, mapping, args[2][1]))
+        firstline = evalstring(context, mapping, args[2])
     else:
         firstline = indent
 
@@ -459,7 +463,7 @@ def if_(context, mapping, args):
         # i18n: "if" is a keyword
         raise error.ParseError(_("if expects two or three arguments"))
 
-    test = stringify(args[0][0](context, mapping, args[0][1]))
+    test = evalstring(context, mapping, args[0])
     if test:
         yield args[1][0](context, mapping, args[1][1])
     elif len(args) == 3:
@@ -472,7 +476,7 @@ def ifcontains(context, mapping, args):
         # i18n: "ifcontains" is a keyword
         raise error.ParseError(_("ifcontains expects three or four arguments"))
 
-    item = stringify(args[0][0](context, mapping, args[0][1]))
+    item = evalstring(context, mapping, args[0])
     items = evalfuncarg(context, mapping, args[1])
 
     if item in items:
@@ -487,8 +491,8 @@ def ifeq(context, mapping, args):
         # i18n: "ifeq" is a keyword
         raise error.ParseError(_("ifeq expects three or four arguments"))
 
-    test = stringify(args[0][0](context, mapping, args[0][1]))
-    match = stringify(args[1][0](context, mapping, args[1][1]))
+    test = evalstring(context, mapping, args[0])
+    match = evalstring(context, mapping, args[1])
     if test == match:
         yield args[2][0](context, mapping, args[2][1])
     elif len(args) == 4:
@@ -507,7 +511,7 @@ def join(context, mapping, args):
 
     joiner = " "
     if len(args) > 1:
-        joiner = stringify(args[1][0](context, mapping, args[1][1]))
+        joiner = evalstring(context, mapping, args[1])
 
     first = True
     for x in joinset:
@@ -537,7 +541,7 @@ def latesttag(context, mapping, args):
 
     pattern = None
     if len(args) == 1:
-        pattern = stringify(args[0][0](context, mapping, args[0][1]))
+        pattern = evalstring(context, mapping, args[0])
 
     return templatekw.showlatesttags(pattern, **mapping)
 
@@ -576,7 +580,7 @@ def revset(context, mapping, args):
         # i18n: "revset" is a keyword
         raise error.ParseError(_("revset expects one or more arguments"))
 
-    raw = stringify(args[0][0](context, mapping, args[0][1]))
+    raw = evalstring(context, mapping, args[0])
     ctx = mapping['ctx']
     repo = ctx.repo()
 
@@ -605,8 +609,8 @@ def rstdoc(context, mapping, args):
         # i18n: "rstdoc" is a keyword
         raise error.ParseError(_("rstdoc expects two arguments"))
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
-    style = stringify(args[1][0](context, mapping, args[1][1]))
+    text = evalstring(context, mapping, args[0])
+    style = evalstring(context, mapping, args[1])
 
     return minirst.format(text, style=style, keep=['verbose'])
 
@@ -617,7 +621,7 @@ def shortest(context, mapping, args):
         # i18n: "shortest" is a keyword
         raise error.ParseError(_("shortest() expects one or two arguments"))
 
-    node = stringify(args[0][0](context, mapping, args[0][1]))
+    node = evalstring(context, mapping, args[0])
 
     minlength = 4
     if len(args) > 1:
@@ -671,9 +675,9 @@ def strip(context, mapping, args):
         # i18n: "strip" is a keyword
         raise error.ParseError(_("strip expects one or two arguments"))
 
-    text = stringify(args[0][0](context, mapping, args[0][1]))
+    text = evalstring(context, mapping, args[0])
     if len(args) == 2:
-        chars = stringify(args[1][0](context, mapping, args[1][1]))
+        chars = evalstring(context, mapping, args[1])
         return text.strip(chars)
     return text.strip()
 
@@ -684,9 +688,9 @@ def sub(context, mapping, args):
         # i18n: "sub" is a keyword
         raise error.ParseError(_("sub expects three arguments"))
 
-    pat = stringify(args[0][0](context, mapping, args[0][1]))
-    rpl = stringify(args[1][0](context, mapping, args[1][1]))
-    src = stringify(args[2][0](context, mapping, args[2][1]))
+    pat = evalstring(context, mapping, args[0])
+    rpl = evalstring(context, mapping, args[1])
+    src = evalstring(context, mapping, args[2])
     try:
         patre = re.compile(pat)
     except re.error:
@@ -705,8 +709,8 @@ def startswith(context, mapping, args):
         # i18n: "startswith" is a keyword
         raise error.ParseError(_("startswith expects two arguments"))
 
-    patn = stringify(args[0][0](context, mapping, args[0][1]))
-    text = stringify(args[1][0](context, mapping, args[1][1]))
+    patn = evalstring(context, mapping, args[0])
+    text = evalstring(context, mapping, args[1])
     if text.startswith(patn):
         return text
     return ''
@@ -722,9 +726,9 @@ def word(context, mapping, args):
     num = evalinteger(context, mapping, args[0],
                       # i18n: "word" is a keyword
                       _("word expects an integer index"))
-    text = stringify(args[1][0](context, mapping, args[1][1]))
+    text = evalstring(context, mapping, args[1])
     if len(args) == 3:
-        splitter = stringify(args[2][0](context, mapping, args[2][1]))
+        splitter = evalstring(context, mapping, args[2])
     else:
         splitter = None
 
