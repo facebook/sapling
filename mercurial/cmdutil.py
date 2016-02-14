@@ -3347,13 +3347,56 @@ afterresolvedstates = [
      _('hg graft --continue')),
     ]
 
-def checkafterresolved(repo):
-    contmsg = _("continue: %s\n")
+def howtocontinue(repo):
+    '''Check for an unfinished operation and return the command to finish
+    it.
+
+    afterresolvedstates tupples define a .hg/{file} and the corresponding
+    command needed to finish it.
+
+    Returns a (msg, warning) tuple. 'msg' is a string and 'warning' is
+    a boolean.
+    '''
+    contmsg = _("continue: %s")
     for f, msg in afterresolvedstates:
         if repo.vfs.exists(f):
-            repo.ui.warn(contmsg % msg)
-            return
-    repo.ui.note(contmsg % _("hg commit"))
+            return contmsg % msg, True
+    workingctx = repo[None]
+    dirty = any(repo.status()) or any(workingctx.sub(s).dirty()
+                                         for s in workingctx.substate)
+    if dirty:
+        return contmsg % _("hg commit"), False
+    return None, None
+
+def checkafterresolved(repo):
+    '''Inform the user about the next action after completing hg resolve
+
+    If there's a matching afterresolvedstates, howtocontinue will yield
+    repo.ui.warn as the reporter.
+
+    Otherwise, it will yield repo.ui.note.
+    '''
+    msg, warning = howtocontinue(repo)
+    if msg is not None:
+        if warning:
+            repo.ui.warn("%s\n" % msg)
+        else:
+            repo.ui.note("%s\n" % msg)
+
+def wrongtooltocontinue(repo, task):
+    '''Raise an abort suggesting how to properly continue if there is an
+    active task.
+
+    Uses howtocontinue() to find the active task.
+
+    If there's no task (repo.ui.note for 'hg commit'), it does not offer
+    a hint.
+    '''
+    after = howtocontinue(repo)
+    hint = None
+    if after[1]:
+        hint = after[0]
+    raise error.Abort(_('no %s in progress') % task, hint=hint)
 
 class dirstateguard(object):
     '''Restore dirstate at unexpected failure.
