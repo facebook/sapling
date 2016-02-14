@@ -1799,6 +1799,27 @@ far away.
   abort: unknown revision '$1'!
   [255]
 
+test scope of alias expansion: 'universe' is expanded prior to 'shadowall(0)',
+but 'all()' should never be substituded to '0()'.
+
+  $ echo 'universe = all()' >> .hg/hgrc
+  $ echo 'shadowall(all) = all and universe' >> .hg/hgrc
+  $ try 'shadowall(0)'
+  (func
+    ('symbol', 'shadowall')
+    ('symbol', '0'))
+  * expanded:
+  (and
+    ('symbol', '0')
+    (func
+      ('symbol', 'all')
+      None))
+  * set:
+  <filteredset
+    <baseset [0]>,
+    <spanset+ 0:9>>
+  0
+
   $ echo 'injectparamasstring2 = max(_aliasarg("$1"))' >> .hg/hgrc
   $ echo 'callinjection2($1) = descendants(injectparamasstring2)' >> .hg/hgrc
   $ try 'callinjection2(2:5)'
