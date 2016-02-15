@@ -40,7 +40,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
             match = scmutil.match(repo[None], pats, opts)
             added, removed = _interestingfiles(repo, match)
             renames = _findrenames(repo, match, added, removed, threshold)
-            _markchanges(repo, renames)
+            scmutil._markchanges(repo, (), (), renames)
 
     return orig(ui, repo, *pats, **opts)
 
@@ -80,13 +80,3 @@ def _findrenames(repo, matcher, added, removed, similarity):
     if renames:
         repo.ui.status(_('detected move of %d files\n') % len(renames))
     return renames
-
-def _markchanges(repo, renames):
-    """Marks the files in renames as copied."""
-    wctx = repo[None]
-    wlock = repo.wlock()
-    try:
-        for dst, src in renames.iteritems():
-            wctx.copy(src, dst)
-    finally:
-        wlock.release()
