@@ -1064,6 +1064,7 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         _newaction(ui, repo, state, revs, freeargs, opts)
 
     _continueaction(ui, repo, state)
+    _finishaction(ui, repo, state)
 
 def _continueaction(ui, repo, state):
     """This action runs after either:
@@ -1094,6 +1095,8 @@ def _continueaction(ui, repo, state):
     state.write()
     ui.progress(_("editing"), None)
 
+def _finishaction(ui, repo, state):
+    """This action runs when histedit is finishing its session"""
     repo.ui.pushbuffer()
     hg.update(repo, state.parentctxnode, quietempty=True)
     repo.ui.popbuffer()
