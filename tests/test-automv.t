@@ -1,3 +1,5 @@
+Tests for the automv extension; detect moved files at commit time.
+
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > automv=
