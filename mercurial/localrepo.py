@@ -282,23 +282,14 @@ class localrepository(object):
 
         if not self.vfs.isdir():
             if create:
-                if not self.wvfs.exists():
-                    self.wvfs.makedirs()
-                self.vfs.makedir(notindexed=True)
                 requirements = set(self._baserequirements(create))
                 if self.ui.configbool('format', 'usestore', True):
-                    self.vfs.mkdir("store")
                     requirements.add("store")
                     if self.ui.configbool('format', 'usefncache', True):
                         requirements.add("fncache")
                         if self.ui.configbool('format', 'dotencode', True):
                             requirements.add('dotencode')
-                    # create an invalid changelog
-                    self.vfs.append(
-                        "00changelog.i",
-                        '\0\0\0\2' # represents revlogv2
-                        ' dummy changelog to prevent using the old repo layout'
-                    )
+
                 if scmutil.gdinitconfig(self.ui):
                     requirements.add("generaldelta")
                 if self.ui.configbool('experimental', 'treemanifest', False):
@@ -307,6 +298,20 @@ class localrepository(object):
                     requirements.add("manifestv2")
 
                 self.requirements = requirements
+
+                if not self.wvfs.exists():
+                    self.wvfs.makedirs()
+                self.vfs.makedir(notindexed=True)
+
+                if 'store' in requirements:
+                    self.vfs.mkdir("store")
+
+                    # create an invalid changelog
+                    self.vfs.append(
+                        "00changelog.i",
+                        '\0\0\0\2' # represents revlogv2
+                        ' dummy changelog to prevent using the old repo layout'
+                    )
             else:
                 raise error.RepoError(_("repository %s not found") % path)
         elif create:
