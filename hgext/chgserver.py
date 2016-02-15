@@ -289,6 +289,12 @@ class chgcmdserver(commandserver.server):
         _log('chdir to %r\n' % path)
         os.chdir(path)
 
+    def setumask(self):
+        """Change umask"""
+        mask = struct.unpack('>I', self._read(4))[0]
+        _log('setumask %r\n' % mask)
+        os.umask(mask)
+
     def getpager(self):
         """Read cmdargs and write pager command to r-channel if enabled
 
@@ -341,7 +347,8 @@ class chgcmdserver(commandserver.server):
     capabilities.update({'attachio': attachio,
                          'chdir': chdir,
                          'getpager': getpager,
-                         'setenv': setenv})
+                         'setenv': setenv,
+                         'setumask': setumask})
 
 # copied from mercurial/commandserver.py
 class _requesthandler(SocketServer.StreamRequestHandler):
