@@ -214,11 +214,7 @@ class server(object):
         and writes the return code to the result channel """
         from . import dispatch  # avoid cycle
 
-        length = struct.unpack('>I', self._read(4))[0]
-        if not length:
-            args = []
-        else:
-            args = self._read(length).split('\0')
+        args = self._readlist()
 
         # copy the uis so changes (e.g. --config or --verbose) don't
         # persist between requests
