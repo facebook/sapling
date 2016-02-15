@@ -41,9 +41,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
             renames = _findrenames(repo, match, added, removed, threshold)
             _markchanges(repo, renames)
 
-    # developer config: automv.testmode
-    if not ui.configbool('automv', 'testmode'):
-        return orig(ui, repo, *pats, **opts)
+    return orig(ui, repo, *pats, **opts)
 
 def _interestingfiles(repo, matcher):
     stat = repo.status(match=matcher)
