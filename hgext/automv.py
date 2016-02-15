@@ -46,7 +46,7 @@ def mvcheck(orig, ui, repo, *pats, **opts):
         return orig(ui, repo, *pats, **opts)
 
 def _interestingfiles(repo, matcher):
-    stat = repo.status(repo['.'], repo[None], matcher)
+    stat = repo.status(match=matcher)
     added = stat[1]
     removed = stat[2]
 
