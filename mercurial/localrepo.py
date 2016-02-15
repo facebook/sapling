@@ -242,9 +242,6 @@ class localrepository(object):
     # only functions defined in module of enabled extensions are invoked
     featuresetupfuncs = set()
 
-    def _baserequirements(self, create):
-        return ['revlogv1']
-
     def __init__(self, baseui, path=None, create=False):
         self.requirements = set()
         self.wvfs = scmutil.vfs(path, expandpath=True, realpath=True)
@@ -282,28 +279,13 @@ class localrepository(object):
 
         if not self.vfs.isdir():
             if create:
-                requirements = set(self._baserequirements(create))
-                if self.ui.configbool('format', 'usestore', True):
-                    requirements.add("store")
-                    if self.ui.configbool('format', 'usefncache', True):
-                        requirements.add("fncache")
-                        if self.ui.configbool('format', 'dotencode', True):
-                            requirements.add('dotencode')
-
-                if scmutil.gdinitconfig(self.ui):
-                    requirements.add("generaldelta")
-                if self.ui.configbool('experimental', 'treemanifest', False):
-                    requirements.add("treemanifest")
-                if self.ui.configbool('experimental', 'manifestv2', False):
-                    requirements.add("manifestv2")
-
-                self.requirements = requirements
+                self.requirements = newreporequirements(self)
 
                 if not self.wvfs.exists():
                     self.wvfs.makedirs()
                 self.vfs.makedir(notindexed=True)
 
-                if 'store' in requirements:
+                if 'store' in self.requirements:
                     self.vfs.mkdir("store")
 
                     # create an invalid changelog
@@ -1969,3 +1951,27 @@ def instance(ui, path, create):
 
 def islocal(path):
     return True
+
+def newreporequirements(repo):
+    """Determine the set of requirements for a new local repository.
+
+    Extensions can wrap this function to specify custom requirements for
+    new repositories.
+    """
+    ui = repo.ui
+    requirements = set(['revlogv1'])
+    if ui.configbool('format', 'usestore', True):
+        requirements.add('store')
+        if ui.configbool('format', 'usefncache', True):
+            requirements.add('fncache')
+            if ui.configbool('format', 'dotencode', True):
+                requirements.add('dotencode')
+
+    if scmutil.gdinitconfig(ui):
+        requirements.add('generaldelta')
+    if ui.configbool('experimental', 'treemanifest', False):
+        requirements.add('treemanifest')
+    if ui.configbool('experimental', 'manifestv2', False):
+        requirements.add('manifestv2')
+
+    return requirements
