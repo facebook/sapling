@@ -32,6 +32,7 @@ def extsetup(ui):
          _('disable automatic file move detection')))
 
 def mvcheck(orig, ui, repo, *pats, **opts):
+    """Hook to check for moves at commit time"""
     disabled = opts.pop('no_automv', False)
     if not disabled:
         threshold = float(ui.config('automv', 'similarity', '1.00'))
@@ -44,6 +45,12 @@ def mvcheck(orig, ui, repo, *pats, **opts):
     return orig(ui, repo, *pats, **opts)
 
 def _interestingfiles(repo, matcher):
+    """Find what files were added or removed in this commit.
+
+    Returns a tuple of two lists: (added, removed). Only files not *already*
+    marked as moved are included in the added list.
+
+    """
     stat = repo.status(match=matcher)
     added = stat[1]
     removed = stat[2]
@@ -55,8 +62,12 @@ def _interestingfiles(repo, matcher):
     return added, removed
 
 def _findrenames(repo, matcher, added, removed, similarity):
-    """Find renames from removed files of the current commit/amend files
-    to the added ones"""
+    """Find what files in added are really moved files.
+
+    Any file named in removed that is at least similarity% similar to a file
+    in added is seen as a rename.
+
+    """
     renames = {}
     if similarity > 0:
         for src, dst, score in similar.findrenames(
