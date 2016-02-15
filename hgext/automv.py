@@ -33,6 +33,7 @@ def extsetup(ui):
 
 def mvcheck(orig, ui, repo, *pats, **opts):
     """Hook to check for moves at commit time"""
+    renames = None
     disabled = opts.pop('no_automv', False)
     if not disabled:
         threshold = float(ui.config('automv', 'similarity', '1.00'))
@@ -40,9 +41,11 @@ def mvcheck(orig, ui, repo, *pats, **opts):
             match = scmutil.match(repo[None], pats, opts)
             added, removed = _interestingfiles(repo, match)
             renames = _findrenames(repo, match, added, removed, threshold)
-            scmutil._markchanges(repo, (), (), renames)
 
-    return orig(ui, repo, *pats, **opts)
+    with repo.wlock():
+        if renames is not None:
+            scmutil._markchanges(repo, (), (), renames)
+        return orig(ui, repo, *pats, **opts)
 
 def _interestingfiles(repo, matcher):
     """Find what files were added or removed in this commit.
