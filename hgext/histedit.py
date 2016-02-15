@@ -982,14 +982,19 @@ def histedit(ui, repo, *freeargs, **opts):
     finally:
         release(state.lock, state.wlock)
 
+goalcontinue = 'continue'
+goalabort = 'abort'
+goaleditplan = 'edit-plan'
+goalnew = 'new'
+
 def _getgoal(opts):
     if opts.get('continue'):
-        return 'continue'
+        return goalcontinue
     if opts.get('abort'):
-        return 'abort'
+        return goalabort
     if opts.get('edit_plan'):
-        return 'edit-plan'
-    return 'new'
+        return goaleditplan
+    return goalnew
 
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
     # TODO only abort if we try to histedit mq patches, not just
@@ -1045,16 +1050,17 @@ def _histedit(ui, repo, state, *freeargs, **opts):
     _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs)
 
     # rebuild state
-    if goal == 'continue':
+    if goal == goalcontinue:
         state.read()
         state = bootstrapcontinue(ui, state, opts)
-    elif goal == 'edit-plan':
+    elif goal == goaleditplan:
         _editplanaction(ui, repo, state, rules)
         return
-    elif goal == 'abort':
+    elif goal == goalabort:
         _abortaction(ui, repo, state)
         return
     else:
+        # goal == goalnew
         _newaction(ui, repo, state, revs, freeargs, opts)
 
     _continueaction(ui, repo, state)
