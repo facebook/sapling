@@ -1054,22 +1054,22 @@ def _histedit(ui, repo, state, *freeargs, **opts):
         state.read()
         state = bootstrapcontinue(ui, state, opts)
     elif goal == goaleditplan:
-        _editplanaction(ui, repo, state, rules)
+        _edithisteditplan(ui, repo, state, rules)
         return
     elif goal == goalabort:
-        _abortaction(ui, repo, state)
+        _aborthistedit(ui, repo, state)
         return
     else:
         # goal == goalnew
-        _newaction(ui, repo, state, revs, freeargs, opts)
+        _newhistedit(ui, repo, state, revs, freeargs, opts)
 
-    _continueaction(ui, repo, state)
-    _finishaction(ui, repo, state)
+    _continuehistedit(ui, repo, state)
+    _finishhistedit(ui, repo, state)
 
-def _continueaction(ui, repo, state):
-    """This action runs after either:
+def _continuehistedit(ui, repo, state):
+    """This function runs after either:
     - bootstrapcontinue (if the goal is 'continue')
-    - _newaction (if the goal is 'new')
+    - _newhistedit (if the goal is 'new')
     """
     # preprocess rules so that we can hide inner folds from the user
     # and only show one editor
@@ -1095,7 +1095,7 @@ def _continueaction(ui, repo, state):
     state.write()
     ui.progress(_("editing"), None)
 
-def _finishaction(ui, repo, state):
+def _finishhistedit(ui, repo, state):
     """This action runs when histedit is finishing its session"""
     repo.ui.pushbuffer()
     hg.update(repo, state.parentctxnode, quietempty=True)
@@ -1144,7 +1144,7 @@ def _finishaction(ui, repo, state):
     if repo.vfs.exists('histedit-last-edit.txt'):
         repo.vfs.unlink('histedit-last-edit.txt')
 
-def _abortaction(ui, repo, state):
+def _aborthistedit(ui, repo, state):
     try:
         state.read()
         tmpnodes, leafs = newnodestoabort(state)
@@ -1181,7 +1181,7 @@ def _abortaction(ui, repo, state):
     finally:
             state.clear()
 
-def _editplanaction(ui, repo, state, rules):
+def _edithisteditplan(ui, repo, state, rules):
     state.read()
     if not rules:
         comment = geteditcomment(node.short(state.parentctxnode),
@@ -1201,7 +1201,7 @@ def _editplanaction(ui, repo, state, rules):
     state.actions = actions
     state.write()
 
-def _newaction(ui, repo, state, revs, freeargs, opts):
+def _newhistedit(ui, repo, state, revs, freeargs, opts):
     outg = opts.get('outgoing')
     rules = opts.get('commands', '')
     force = opts.get('force')
