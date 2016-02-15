@@ -2139,9 +2139,15 @@ def getlogrevs(repo, pats, opts):
         # Revset matches can reorder revisions. "A or B" typically returns
         # returns the revision matching A then the revision matching B. Sort
         # again to fix that.
+        fixopts = ['branch', 'only_branch', 'keyword', 'user']
+        oldrevs = revs
         revs = matcher(repo, revs)
         if not opts.get('rev'):
             revs.sort(reverse=True)
+        elif len(pats) > 1 or any(len(opts.get(op, [])) > 1 for op in fixopts):
+            # XXX "A or B" is known to change the order; fix it by filtering
+            # matched set again (issue5100)
+            revs = oldrevs & revs
     if limit is not None:
         limitedrevs = []
         for idx, r in enumerate(revs):
