@@ -33,6 +33,7 @@ enum {
 	CAP_CHDIR = 0x0200,
 	CAP_GETPAGER = 0x0400,
 	CAP_SETENV = 0x0800,
+	CAP_SETUMASK = 0x1000,
 };
 
 typedef struct {
@@ -47,6 +48,7 @@ static const cappair_t captable[] = {
 	{"chdir", CAP_CHDIR},
 	{"getpager", CAP_GETPAGER},
 	{"setenv", CAP_SETENV},
+	{"setumask", CAP_SETUMASK},
 	{NULL, 0},  /* terminator */
 };
 
@@ -385,6 +387,17 @@ static void chdirtocwd(hgclient_t *hgc)
 	writeblockrequest(hgc, "chdir");
 }
 
+static void forwardumask(hgclient_t *hgc)
+{
+	mode_t mask = umask(0);
+	umask(mask);
+
+	static const char command[] = "setumask\n";
+	sendall(hgc->sockfd, command, sizeof(command) - 1);
+	uint32_t data = htonl(mask);
+	sendall(hgc->sockfd, &data, sizeof(data));
+}
+
 /*!
  * Open connection to per-user cmdserver
  *
@@ -433,6 +446,8 @@ hgclient_t *hgc_open(const char *sockname)
 		attachio(hgc);
 	if (hgc->capflags & CAP_CHDIR)
 		chdirtocwd(hgc);
+	if (hgc->capflags & CAP_SETUMASK)
+		forwardumask(hgc);
 
 	return hgc;
 }
