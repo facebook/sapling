@@ -10,7 +10,8 @@ This extension checks at commit/amend time if any of the committed files
 comes from an unrecorded mv.
 
 The threshold at which a file is considered a move can be set with the
-``automv.similarity`` config option; the default value is 1.00.
+``automv.similarity`` config option. This option takes a percentage between 0
+(disabled) and 100 (files must be identical), the default is 100.
 
 """
 from __future__ import absolute_import
@@ -36,11 +37,12 @@ def mvcheck(orig, ui, repo, *pats, **opts):
     renames = None
     disabled = opts.pop('no_automv', False)
     if not disabled:
-        threshold = float(ui.config('automv', 'similarity', '1.00'))
+        threshold = float(ui.config('automv', 'similarity', '100'))
         if threshold > 0:
             match = scmutil.match(repo[None], pats, opts)
             added, removed = _interestingfiles(repo, match)
-            renames = _findrenames(repo, match, added, removed, threshold)
+            renames = _findrenames(repo, match, added, removed,
+                                   threshold / 100.0)
 
     with repo.wlock():
         if renames is not None:
