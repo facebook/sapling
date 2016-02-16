@@ -2885,12 +2885,17 @@ class baseset(abstractsmartset):
 
     Every method in this class should be implemented by any smartset class.
     """
-    def __init__(self, data=()):
+    def __init__(self, data=(), datarepr=None):
+        """
+        datarepr: a tuple of (format, obj, ...), a function or an object that
+                  provides a printable representation of the given data.
+        """
         if not isinstance(data, list):
             if isinstance(data, set):
                 self._set = data
             data = list(data)
         self._list = data
+        self._datarepr = datarepr
         self._ascending = None
 
     @util.propertycache
@@ -2974,7 +2979,10 @@ class baseset(abstractsmartset):
 
     def __repr__(self):
         d = {None: '', False: '-', True: '+'}[self._ascending]
-        return '<%s%s %r>' % (type(self).__name__, d, self._list)
+        s = _formatsetrepr(self._datarepr)
+        if not s:
+            s = repr(self._list)
+        return '<%s%s %s>' % (type(self).__name__, d, s)
 
 class filteredset(abstractsmartset):
     """Duck type for baseset class which iterates lazily over the revisions in
