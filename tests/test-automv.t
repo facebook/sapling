@@ -13,7 +13,7 @@ Setup repo
 
 Test automv command for commit
 
-  $ echo 'foo' > a.txt
+  $ printf 'foo\nbar\nbaz\n' > a.txt
   $ hg add a.txt
   $ hg commit -m 'init repo with a'
 
@@ -26,6 +26,24 @@ mv/rm/add
   R a.txt
   $ hg commit -m 'msg'
   detected move of 1 files
+  $ hg status --change . -C
+  A b.txt
+    a.txt
+  R a.txt
+  $ hg up -r 0
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+mv/rm/add/modif
+  $ mv a.txt b.txt
+  $ hg rm a.txt
+  $ hg add b.txt
+  $ printf '\n' >> b.txt
+  $ hg status -C
+  A b.txt
+  R a.txt
+  $ hg commit -m 'msg'
+  detected move of 1 files
+  created new head
   $ hg status --change . -C
   A b.txt
     a.txt
@@ -139,6 +157,29 @@ mv/rm/add
   $ mv a.txt b.txt
   $ hg rm a.txt
   $ hg add b.txt
+  $ hg status -C
+  A b.txt
+  R a.txt
+  $ hg commit --amend -m 'amended'
+  detected move of 1 files
+  saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
+  $ hg status --change . -C
+  A b.txt
+    a.txt
+  A c.txt
+  R a.txt
+  $ hg up -r 0
+  1 files updated, 0 files merged, 2 files removed, 0 files unresolved
+
+mv/rm/add/modif
+  $ echo 'c' > c.txt
+  $ hg add c.txt
+  $ hg commit -m 'revision to amend to'
+  created new head
+  $ mv a.txt b.txt
+  $ hg rm a.txt
+  $ hg add b.txt
+  $ printf '\n' >> b.txt
   $ hg status -C
   A b.txt
   R a.txt
@@ -285,3 +326,13 @@ mv/rm/commit/add/amend
   $ hg status --change . -C
   A b.txt
   R a.txt
+
+error conditions
+
+  $ cat >> $HGRCPATH << EOF
+  > [automv]
+  > similarity=110
+  > EOF
+  $ hg commit -m 'revision to amend to'
+  abort: automv.similarity must be between 0 and 100
+  [255]

@@ -11,14 +11,25 @@ comes from an unrecorded mv.
 
 The threshold at which a file is considered a move can be set with the
 ``automv.similarity`` config option. This option takes a percentage between 0
-(disabled) and 100 (files must be identical), the default is 100.
+(disabled) and 100 (files must be identical), the default is 95.
 
 """
+
+# Using 95 as a default similarity is based on an analysis of the mercurial
+# repositories of the cpython, mozilla-central & mercurial repositories, as
+# well as 2 very large facebook repositories. At 95 50% of all potential
+# missed moves would be caught, as well as correspond with 87% of all
+# explicitly marked moves.  Together, 80% of moved files are 95% similar or
+# more.
+#
+# See http://markmail.org/thread/5pxnljesvufvom57 for context.
+
 from __future__ import absolute_import
 
 from mercurial import (
     commands,
     copies,
+    error,
     extensions,
     scmutil,
     similar
@@ -37,7 +48,9 @@ def mvcheck(orig, ui, repo, *pats, **opts):
     renames = None
     disabled = opts.pop('no_automv', False)
     if not disabled:
-        threshold = float(ui.config('automv', 'similarity', '100'))
+        threshold = ui.configint('automv', 'similarity', 95)
+        if not 0 <= threshold <= 100:
+            raise error.Abort(_('automv.similarity must be between 0 and 100'))
         if threshold > 0:
             match = scmutil.match(repo[None], pats, opts)
             added, removed = _interestingfiles(repo, match)
