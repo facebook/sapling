@@ -2310,6 +2310,50 @@ methods = {
     "parentpost": p1,
 }
 
+# Constants for ordering requirement, used in _analyze():
+#
+# If 'define', any nested functions and operations can change the ordering of
+# the entries in the set. If 'follow', any nested functions and operations
+# should take the ordering specified by the first operand to the '&' operator.
+#
+# For instance,
+#
+#   X & (Y | Z)
+#   ^   ^^^^^^^
+#   |   follow
+#   define
+#
+# will be evaluated as 'or(y(x()), z(x()))', where 'x()' can change the order
+# of the entries in the set, but 'y()', 'z()' and 'or()' shouldn't.
+#
+# 'any' means the order doesn't matter. For instance,
+#
+#   X & !Y
+#        ^
+#        any
+#
+# 'y()' can either enforce its ordering requirement or take the ordering
+# specified by 'x()' because 'not()' doesn't care the order.
+#
+# Transition of ordering requirement:
+#
+# 1. starts with 'define'
+# 2. shifts to 'follow' by 'x & y'
+# 3. changes back to 'define' on function call 'f(x)' or function-like
+#    operation 'x (f) y' because 'f' may have its own ordering requirement
+#    for 'x' and 'y' (e.g. 'first(x)')
+#
+anyorder = 'any'        # don't care the order
+defineorder = 'define'  # should define the order
+followorder = 'follow'  # must follow the current order
+
+# transition table for 'x & y', from the current expression 'x' to 'y'
+_tofolloworder = {
+    anyorder: anyorder,
+    defineorder: followorder,
+    followorder: followorder,
+}
+
 def _matchonly(revs, bases):
     """
     >>> f = lambda *args: _matchonly(*map(parse, args))
@@ -2349,65 +2393,68 @@ def _fixops(x):
 
     return (op,) + tuple(_fixops(y) for y in x[1:])
 
-def _analyze(x):
+def _analyze(x, order):
     if x is None:
         return x
 
     op = x[0]
     if op == 'minus':
-        return _analyze(('and', x[1], ('not', x[2])))
+        return _analyze(('and', x[1], ('not', x[2])), order)
     elif op == 'only':
         t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _analyze(t)
+        return _analyze(t, order)
     elif op == 'onlypost':
-        return _analyze(('func', ('symbol', 'only'), x[1]))
+        return _analyze(('func', ('symbol', 'only'), x[1]), order)
     elif op == 'dagrangepre':
-        return _analyze(('func', ('symbol', 'ancestors'), x[1]))
+        return _analyze(('func', ('symbol', 'ancestors'), x[1]), order)
     elif op == 'dagrangepost':
-        return _analyze(('func', ('symbol', 'descendants'), x[1]))
+        return _analyze(('func', ('symbol', 'descendants'), x[1]), order)
     elif op == 'rangeall':
-        return _analyze(('range', ('string', '0'), ('string', 'tip')))
+        return _analyze(('range', ('string', '0'), ('string', 'tip')), order)
     elif op == 'rangepre':
-        return _analyze(('range', ('string', '0'), x[1]))
+        return _analyze(('range', ('string', '0'), x[1]), order)
     elif op == 'rangepost':
-        return _analyze(('range', x[1], ('string', 'tip')))
+        return _analyze(('range', x[1], ('string', 'tip')), order)
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
-        return _analyze(('string', '-' + s))
+        return _analyze(('string', '-' + s), order)
     elif op in ('string', 'symbol'):
         return x
     elif op == 'and':
-        ta = _analyze(x[1])
-        tb = _analyze(x[2])
+        ta = _analyze(x[1], order)
+        tb = _analyze(x[2], _tofolloworder[order])
         return (op, ta, tb)
     elif op == 'or':
-        return (op, _analyze(x[1]))
+        return (op, _analyze(x[1], order))
     elif op == 'not':
-        return (op, _analyze(x[1]))
+        return (op, _analyze(x[1], anyorder))
     elif op == 'parentpost':
-        return (op, _analyze(x[1]))
+        return (op, _analyze(x[1], defineorder))
     elif op == 'group':
-        return _analyze(x[1])
+        return _analyze(x[1], order)
     elif op in ('dagrange', 'range', 'parent', 'ancestor'):
-        ta = _analyze(x[1])
-        tb = _analyze(x[2])
+        ta = _analyze(x[1], defineorder)
+        tb = _analyze(x[2], defineorder)
         return (op, ta, tb)
     elif op == 'list':
-        return (op,) + tuple(_analyze(y) for y in x[1:])
+        return (op,) + tuple(_analyze(y, order) for y in x[1:])
     elif op == 'keyvalue':
-        return (op, x[1], _analyze(x[2]))
+        return (op, x[1], _analyze(x[2], order))
     elif op == 'func':
-        return (op, x[1], _analyze(x[2]))
+        return (op, x[1], _analyze(x[2], defineorder))
     raise ValueError('invalid operator %r' % op)
 
-def analyze(x):
+def analyze(x, order=defineorder):
     """Transform raw parsed tree to evaluatable tree which can be fed to
     optimize() or getset()
 
     All pseudo operations should be mapped to real operations or functions
     defined in methods or symbols table respectively.
+
+    'order' specifies how the current expression 'x' is ordered (see the
+    constants defined above.)
     """
-    return _analyze(x)
+    return _analyze(x, order)
 
 def _optimize(x, small):
     if x is None:
