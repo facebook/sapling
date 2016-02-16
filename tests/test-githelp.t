@@ -203,7 +203,7 @@ githelp for show with --unified options
 
 githelp for show with a path and --unified
   $ hg githelp -- show -U20 test_file
-  hg diff -r ".^" --unified=20 test_file
+  hg show . test_file --config diff.unified=20
 
 githelp for stash drop without name
   $ hg githelp -- git stash drop
@@ -225,6 +225,14 @@ githelp for git branch -m renaming
 When the old name is omitted, git branch -m new renames the current branch.
   $ hg githelp -- git branch -m new
   hg bookmark -m `hg log -T"{activebookmark}" -r .` new
+
+Branch deletion in git strips commits
+  $ hg githelp -- git branch -d
+  hg strip -B
+  $ hg githelp -- git branch -d feature
+  hg strip -B feature -B
+  $ hg githelp -- git branch --delete experiment1 experiment2
+  hg strip -B experiment1 -B experiment2 -B
 
 githelp for apply with no options
   $ hg githelp -- apply

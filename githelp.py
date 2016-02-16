@@ -211,9 +211,11 @@ def branch(ui, repo, *args, **kwargs):
         ui.status(_("Mercurial has no concept of upstream branches\n"))
         return
     elif opts.get('delete'):
-        cmd['-d'] = None
-        if len(args) > 0:
-            cmd.append(args[0])
+        cmd = Command("strip")
+        for branch in args:
+            cmd['-B'] = branch
+        else:
+            cmd['-B'] = None
     elif opts.get('move'):
         if len(args) > 0:
             if len(args) > 1:
@@ -876,7 +878,7 @@ def show(ui, repo, *args, **kwargs):
             cmd.append('.')
         cmd.extend(args)
         if opts.get('unified'):
-            cmd.append('--unified=%d' % (opts['unified'],))
+            cmd.append('--config diff.unified=%d' % (opts['unified'],))
     elif opts.get('unified'):
         cmd.append('--config diff.unified=%d' % (opts['unified'],))
 
