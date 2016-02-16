@@ -190,6 +190,25 @@ class server(object):
 
         return data
 
+    def _readstr(self):
+        """read a string from the channel
+
+        format:
+        data length (uint32), data
+        """
+        length = struct.unpack('>I', self._read(4))[0]
+        if not length:
+            return ''
+        return self._read(length)
+
+    def _readlist(self):
+        """read a list of NULL separated strings from the channel"""
+        s = self._readstr()
+        if s:
+            return s.split('\0')
+        else:
+            return []
+
     def runcommand(self):
         """ reads a list of \0 terminated arguments, executes
         and writes the return code to the result channel """
