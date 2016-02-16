@@ -1147,7 +1147,7 @@ def _finishhistedit(ui, repo, state):
 def _aborthistedit(ui, repo, state):
     try:
         state.read()
-        tmpnodes, leafs = newnodestoabort(state)
+        __, leafs, tmpnodes, __ = processreplacement(state)
         ui.debug('restore wc to old parent %s\n'
                 % node.short(state.topmost))
 
@@ -1385,25 +1385,6 @@ def verifyactions(actions, state, ctxs):
                 missing[0][:12],
                 hint=_('use "drop %s" to discard, see also: '
                        '"hg help -e histedit.config"') % missing[0][:12])
-
-def newnodestoabort(state):
-    """process the list of replacements to return
-
-    1) the list of final node
-    2) the list of temporary node
-
-    This is meant to be used on abort as less data are required in this case.
-    """
-    replacements = state.replacements
-    allsuccs = set()
-    replaced = set()
-    for rep in replacements:
-        allsuccs.update(rep[1])
-        replaced.add(rep[0])
-    newnodes = allsuccs - replaced
-    tmpnodes = allsuccs & replaced
-    return newnodes, tmpnodes
-
 
 def processreplacement(state):
     """process the list of replacements to return
