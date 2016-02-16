@@ -1984,11 +1984,48 @@ issue4553: check that revset aliases override existing hash prefix
 
 issue2549 - correct optimizations
 
-  $ log 'limit(1 or 2 or 3, 2) and not 2'
+  $ try 'limit(1 or 2 or 3, 2) and not 2'
+  (and
+    (func
+      ('symbol', 'limit')
+      (list
+        (or
+          ('symbol', '1')
+          ('symbol', '2')
+          ('symbol', '3'))
+        ('symbol', '2')))
+    (not
+      ('symbol', '2')))
+  * set:
+  <filteredset
+    <baseset
+      <limit n=2, offset=0,
+        <fullreposet+ 0:9>,
+        <baseset [1, 2, 3]>>>,
+    <not
+      <baseset [2]>>>
   1
   $ log 'max(1 or 2) and not 2'
   $ log 'min(1 or 2) and not 1'
-  $ log 'last(1 or 2, 1) and not 2'
+  $ try 'last(1 or 2, 1) and not 2'
+  (and
+    (func
+      ('symbol', 'last')
+      (list
+        (or
+          ('symbol', '1')
+          ('symbol', '2'))
+        ('symbol', '1')))
+    (not
+      ('symbol', '2')))
+  * set:
+  <filteredset
+    <baseset
+      <last n=1,
+        <fullreposet+ 0:9>,
+        <baseset [2, 1]>>>,
+    <not
+      <baseset [2]>>>
 
 issue4289 - ordering of built-ins
   $ hg log -M -q -r 3:2
