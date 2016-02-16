@@ -435,11 +435,11 @@ def analyzeremotephases(repo, subset, roots):
             continue
         node = bin(nhex)
         phase = int(phase)
-        if phase == 0:
+        if phase == public:
             if node != nullid:
                 repo.ui.warn(_('ignoring inconsistent public root'
                                ' from remote: %s\n') % nhex)
-        elif phase == 1:
+        elif phase == draft:
             if node in nodemap:
                 draftroots.append(node)
         else:
