@@ -1325,12 +1325,12 @@ def maxrev(repo, subset, x):
     try:
         m = os.max()
         if m in subset:
-            return baseset([m])
+            return baseset([m], datarepr=('<max %r, %r>', subset, os))
     except ValueError:
         # os.max() throws a ValueError when the collection is empty.
         # Same as python's max().
         pass
-    return baseset()
+    return baseset(datarepr=('<max %r, %r>', subset, os))
 
 @predicate('merge()', safe=True)
 def merge(repo, subset, x):
@@ -1370,12 +1370,12 @@ def minrev(repo, subset, x):
     try:
         m = os.min()
         if m in subset:
-            return baseset([m])
+            return baseset([m], datarepr=('<min %r, %r>', subset, os))
     except ValueError:
         # os.min() throws a ValueError when the collection is empty.
         # Same as python's min().
         pass
-    return baseset()
+    return baseset(datarepr=('<min %r, %r>', subset, os))
 
 @predicate('modifies(pattern)', safe=True)
 def modifies(repo, subset, x):

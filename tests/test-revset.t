@@ -1727,7 +1727,10 @@ test nesting and variable passing
       ('symbol', '2')
       ('symbol', '5')))
   * set:
-  <baseset [5]>
+  <baseset
+    <max
+      <fullreposet+ 0:9>,
+      <spanset+ 2:5>>>
   5
 
 test chained `or` operations are flattened at parsing phase
@@ -2005,8 +2008,40 @@ issue2549 - correct optimizations
     <not
       <baseset [2]>>>
   1
-  $ log 'max(1 or 2) and not 2'
-  $ log 'min(1 or 2) and not 1'
+  $ try 'max(1 or 2) and not 2'
+  (and
+    (func
+      ('symbol', 'max')
+      (or
+        ('symbol', '1')
+        ('symbol', '2')))
+    (not
+      ('symbol', '2')))
+  * set:
+  <filteredset
+    <baseset
+      <max
+        <fullreposet+ 0:9>,
+        <baseset [1, 2]>>>,
+    <not
+      <baseset [2]>>>
+  $ try 'min(1 or 2) and not 1'
+  (and
+    (func
+      ('symbol', 'min')
+      (or
+        ('symbol', '1')
+        ('symbol', '2')))
+    (not
+      ('symbol', '1')))
+  * set:
+  <filteredset
+    <baseset
+      <min
+        <fullreposet+ 0:9>,
+        <baseset [1, 2]>>>,
+    <not
+      <baseset [1]>>>
   $ try 'last(1 or 2, 1) and not 2'
   (and
     (func
