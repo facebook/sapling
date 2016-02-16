@@ -283,10 +283,9 @@ class chgcmdserver(commandserver.server):
         Note that the behavior of --cwd option is bit different from this.
         It does not affect --config parameter.
         """
-        length = struct.unpack('>I', self._read(4))[0]
-        if not length:
+        path = self._readstr()
+        if not path:
             return
-        path = self._read(length)
         _log('chdir to %r\n' % path)
         os.chdir(path)
 
@@ -296,11 +295,7 @@ class chgcmdserver(commandserver.server):
         If pager isn't enabled, this writes '\0' because channeledoutput
         does not allow to write empty data.
         """
-        length = struct.unpack('>I', self._read(4))[0]
-        if not length:
-            args = []
-        else:
-            args = self._read(length).split('\0')
+        args = self._readlist()
         try:
             cmd, _func, args, options, _cmdoptions = dispatch._parse(self.ui,
                                                                      args)
@@ -323,12 +318,9 @@ class chgcmdserver(commandserver.server):
 
         Note that not all variables can make an effect on the running process.
         """
-        length = struct.unpack('>I', self._read(4))[0]
-        if not length:
-            return
-        s = self._read(length)
+        l = self._readlist()
         try:
-            newenv = dict(l.split('=', 1) for l in s.split('\0'))
+            newenv = dict(s.split('=', 1) for s in l)
         except ValueError:
             raise ValueError('unexpected value in setenv request')
 
