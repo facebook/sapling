@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -34,10 +35,12 @@ struct cmdserveropts {
 	char pidfile[UNIX_PATH_MAX];
 	size_t argsize;
 	const char **args;
+	int lockfd;
 };
 
 static void initcmdserveropts(struct cmdserveropts *opts) {
 	memset(opts, 0, sizeof(struct cmdserveropts));
+	opts->lockfd = -1;
 }
 
 static void freecmdserveropts(struct cmdserveropts *opts) {
@@ -158,21 +161,33 @@ static void setcmdserveropts(struct cmdserveropts *opts)
 }
 
 /*
- * Make lock file that indicates cmdserver process is about to start. Created
- * lock file will be deleted by server. (0: success, -1: lock exists)
+ * Acquire a file lock that indicates a client is trying to start and connect
+ * to a server, before executing a command. The lock is released upon exit or
+ * explicit unlock. Will block if the lock is held by another process.
  */
-static int lockcmdserver(const struct cmdserveropts *opts)
+static void lockcmdserver(struct cmdserveropts *opts)
 {
-	int r;
-	char info[32];
-	r = snprintf(info, sizeof(info), "%d", getpid());
-	if (r < 0 || (size_t)r >= sizeof(info))
-		abortmsg("failed to format lock info");
-	r = symlink(info, opts->lockfile);
-	if (r < 0 && errno != EEXIST)
-		abortmsg("failed to make lock %s (errno = %d)",
-			 opts->lockfile, errno);
-	return r;
+	if (opts->lockfd == -1) {
+		opts->lockfd = open(opts->lockfile, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+		if (opts->lockfd == -1)
+			abortmsg("cannot create lock file %s", opts->lockfile);
+	}
+	int r = flock(opts->lockfd, LOCK_EX);
+	if (r == -1)
+		abortmsg("cannot acquire lock");
+}
+
+/*
+ * Release the file lock held by calling lockcmdserver. Will do nothing if
+ * lockcmdserver is not called.
+ */
+static void unlockcmdserver(struct cmdserveropts *opts)
+{
+	if (opts->lockfd == -1)
+		return;
+	flock(opts->lockfd, LOCK_UN);
+	close(opts->lockfd);
+	opts->lockfd = -1;
 }
 
 static void execcmdserver(const struct cmdserveropts *opts)
@@ -189,7 +204,7 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--cwd", "/",
 		"--cmdserver", "chgunix",
 		"--address", opts->sockname,
-		"--daemon-postexec", opts->lockfile,
+		"--daemon-postexec", "none",
 		"--pid-file", opts->pidfile,
 		"--config", "extensions.chgserver=",
 		/* wrap root ui so that it can be disabled/enabled by config */
@@ -208,28 +223,20 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	free(argv);
 }
 
-/*
- * Sleep until lock file is deleted, i.e. cmdserver process starts listening.
- * If pid is given, it also checks if the child process fails to start.
- */
-static void waitcmdserver(const struct cmdserveropts *opts, pid_t pid)
+/* Retry until we can connect to the server. Give up after some time. */
+static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 {
 	static const struct timespec sleepreq = {0, 10 * 1000000};
 	int pst = 0;
 
 	for (unsigned int i = 0; i < 10 * 100; i++) {
-		int r;
-		struct stat lst;
-
-		r = lstat(opts->lockfile, &lst);
-		if (r < 0 && errno == ENOENT)
-			return;  /* lock file deleted by server */
-		if (r < 0)
-			goto cleanup;
+		hgclient_t *hgc = hgc_open(opts->sockname);
+		if (hgc)
+			return hgc;
 
 		if (pid > 0) {
 			/* collect zombie if child process fails to start */
-			r = waitpid(pid, &pst, WNOHANG);
+			int r = waitpid(pid, &pst, WNOHANG);
 			if (r != 0)
 				goto cleanup;
 		}
@@ -237,13 +244,10 @@ static void waitcmdserver(const struct cmdserveropts *opts, pid_t pid)
 		nanosleep(&sleepreq, NULL);
 	}
 
-	abortmsg("timed out waiting for cmdserver %s", opts->lockfile);
-	return;
+	abortmsg("timed out waiting for cmdserver %s", opts->sockname);
+	return NULL;
 
 cleanup:
-	if (pid > 0)
-		/* lockfile should be made by this process */
-		unlink(opts->lockfile);
 	if (WIFEXITED(pst)) {
 		abortmsg("cmdserver exited with status %d", WEXITSTATUS(pst));
 	} else if (WIFSIGNALED(pst)) {
@@ -251,26 +255,32 @@ cleanup:
 	} else {
 		abortmsg("error white waiting cmdserver");
 	}
+	return NULL;
 }
 
-/* Spawn new background cmdserver */
-static void startcmdserver(const struct cmdserveropts *opts)
+/* Connect to a cmdserver. Will start a new server on demand. */
+static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 {
-	debugmsg("start cmdserver at %s", opts->sockname);
+	hgclient_t *hgc = hgc_open(opts->sockname);
+	if (hgc)
+		return hgc;
 
-	if (lockcmdserver(opts) < 0) {
-		debugmsg("lock file exists, waiting...");
-		waitcmdserver(opts, 0);
-		return;
+	lockcmdserver(opts);
+	hgc = hgc_open(opts->sockname);
+	if (hgc) {
+		unlockcmdserver(opts);
+		debugmsg("cmdserver is started by another process");
+		return hgc;
 	}
 
-	/* remove dead cmdserver socket if any */
-	unlink(opts->sockname);
+	debugmsg("start cmdserver at %s", opts->sockname);
 
 	pid_t pid = fork();
 	if (pid < 0)
 		abortmsg("failed to fork cmdserver process");
 	if (pid == 0) {
+		/* do not leak lockfd to hg */
+		close(opts->lockfd);
 		/* bypass uisetup() of pager extension */
 		int nullfd = open("/dev/null", O_WRONLY);
 		if (nullfd >= 0) {
@@ -279,8 +289,11 @@ static void startcmdserver(const struct cmdserveropts *opts)
 		}
 		execcmdserver(opts);
 	} else {
-		waitcmdserver(opts, pid);
+		hgc = retryconnectcmdserver(opts, pid);
 	}
+
+	unlockcmdserver(opts);
+	return hgc;
 }
 
 static void killcmdserver(const struct cmdserveropts *opts, int sig)
@@ -448,11 +461,7 @@ int main(int argc, const char *argv[], const char *envp[])
 		}
 	}
 
-	hgclient_t *hgc = hgc_open(opts.sockname);
-	if (!hgc) {
-		startcmdserver(&opts);
-		hgc = hgc_open(opts.sockname);
-	}
+	hgclient_t *hgc = connectcmdserver(&opts);
 	if (!hgc)
 		abortmsg("cannot open hg client");
 
