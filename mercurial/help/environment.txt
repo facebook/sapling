@@ -69,6 +69,8 @@ HGPLAINEXCEPT
         Preserve internationalization.
     ``revsetalias``
         Don't remove revset aliases.
+    ``progress``
+        Don't hide progress output.
 
     Setting HGPLAINEXCEPT to anything (even an empty string) will
     enable plain mode.
