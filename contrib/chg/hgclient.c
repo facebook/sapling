@@ -84,10 +84,7 @@ static void enlargecontext(context_t *ctx, size_t newsize)
 
 	newsize = defaultdatasize
 		* ((newsize + defaultdatasize - 1) / defaultdatasize);
-	char *p = realloc(ctx->data, newsize);
-	if (!p)
-		abortmsg("failed to allocate buffer");
-	ctx->data = p;
+	ctx->data = reallocx(ctx->data, newsize);
 	ctx->maxdatasize = newsize;
 	debugmsg("enlarge context buffer to %zu", ctx->maxdatasize);
 }
@@ -195,9 +192,7 @@ static const char **unpackcmdargsnul(const context_t *ctx)
 	for (;;) {
 		if (nargs + 1 >= maxnargs) {  /* including last NULL */
 			maxnargs += 256;
-			args = realloc(args, maxnargs * sizeof(args[0]));
-			if (!args)
-				abortmsg("failed to allocate args buffer");
+			args = reallocx(args, maxnargs * sizeof(args[0]));
 		}
 		args[nargs] = s;
 		nargs++;
@@ -432,9 +427,7 @@ hgclient_t *hgc_open(const char *sockname)
 			 addr.sun_path, errno);
 	}
 
-	hgclient_t *hgc = malloc(sizeof(hgclient_t));
-	if (!hgc)
-		abortmsg("failed to allocate hgclient object");
+	hgclient_t *hgc = mallocx(sizeof(hgclient_t));
 	memset(hgc, 0, sizeof(*hgc));
 	hgc->sockfd = fd;
 	initcontext(&hgc->ctx);
