@@ -239,6 +239,25 @@ def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, parser.splitargspec(keys),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
+# cache of {spec: raw parsed tree} built internally
+_treecache = {}
+
+def _cachedtree(spec):
+    # thread safe because parse() is reentrant and dict.__setitem__() is atomic
+    tree = _treecache.get(spec)
+    if tree is None:
+        _treecache[spec] = tree = parse(spec)
+    return tree
+
+def _build(tmplspec, *repls):
+    """Create raw parsed tree from a template revset statement
+
+    >>> _build('f(_) and _', ('string', '1'), ('symbol', '2'))
+    ('and', ('func', ('symbol', 'f'), ('string', '1')), ('symbol', '2'))
+    """
+    template = _cachedtree(tmplspec)
+    return parser.buildtree(template, ('symbol', '_'), *repls)
+
 def _isnamedfunc(x, funcname):
     """Check if given tree matches named function"""
     return x and x[0] == 'func' and getsymbol(x[1]) == funcname
@@ -302,16 +321,15 @@ def _analyze(x):
 
     op = x[0]
     if op == 'minus':
-        return _analyze(('and', x[1], ('not', x[2])))
+        return _analyze(_build('_ and not _', *x[1:]))
     elif op == 'only':
-        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return _analyze(t)
+        return _analyze(_build('only(_, _)', *x[1:]))
     elif op == 'onlypost':
-        return _analyze(('func', ('symbol', 'only'), x[1]))
+        return _analyze(_build('only(_)', x[1]))
     elif op == 'dagrangepre':
-        return _analyze(('func', ('symbol', 'ancestors'), x[1]))
+        return _analyze(_build('ancestors(_)', x[1]))
     elif op == 'dagrangepost':
-        return _analyze(('func', ('symbol', 'descendants'), x[1]))
+        return _analyze(_build('descendants(_)', x[1]))
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
         return _analyze(('string', '-' + s))
@@ -367,9 +385,9 @@ def _optimize(x, small):
         w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
-        tm = _matchonly(ta, tb) or _matchonly(tb, ta)
-        if tm:
-            return w, ('func', ('symbol', 'only'), tm)
+        m = _matchonly(ta, tb) or _matchonly(tb, ta)
+        if m:
+            return w, _build('only(_, _)', *m[1:])
 
         if tb is not None and tb[0] == 'not':
             return wa, ('difference', ta, tb[1])
@@ -387,7 +405,7 @@ def _optimize(x, small):
                 w, t = ss[0]
             else:
                 s = '\0'.join(t[1] for w, t in ss)
-                y = ('func', ('symbol', '_list'), ('string', s))
+                y = _build('_list(_)', ('string', s))
                 w, t = _optimize(y, False)
             ws.append(w)
             ts.append(t)
@@ -407,8 +425,7 @@ def _optimize(x, small):
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1][:3] == ('func', ('symbol', 'public'), None):
-            newsym = ('func', ('symbol', '_notpublic'), None)
-            o = _optimize(newsym, not small)
+            o = _optimize(_build('_notpublic()'), not small)
             return o[0], o[1]
         else:
             o = _optimize(x[1], not small)
