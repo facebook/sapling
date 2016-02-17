@@ -771,7 +771,7 @@ If a rebase is going to create divergence, it should abort
   phases: 8 draft
   unstable: 1 changesets
   $ hg rebase -s 10 -d 12
-  abort: this rebase will cause divergence
+  abort: this rebase will cause divergences from: 121d9e3bc4c6
   (to force the rebase please set rebase.allowdivergence=True)
   [255]
   $ hg log -G

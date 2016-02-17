@@ -307,10 +307,13 @@ def rebase(ui, repo, **opts):
                 divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
 
                 if divergencebasecandidates and not divergenceok:
-                    msg = _("this rebase will cause divergence")
+                    divhashes = (str(repo[r])
+                                 for r in divergencebasecandidates)
+                    msg = _("this rebase will cause "
+                            "divergences from: %s")
                     h = _("to force the rebase please set "
                           "rebase.allowdivergence=True")
-                    raise error.Abort(msg, hint=h)
+                    raise error.Abort(msg % (",".join(divhashes),), hint=h)
 
                 # - plain prune (no successor) changesets are rebased
                 # - split changesets are not rebased if at least one of the
