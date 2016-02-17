@@ -263,9 +263,11 @@ def rebase(ui, repo, **opts):
             try:
                 (originalwd, target, state, skipped, collapsef, keepf,
                  keepbranchesf, external, activebookmark) = restorestatus(repo)
+                collapsemsg = restorecollapsemsg(repo)
             except error.RepoLookupError:
                 if abortf:
                     clearstatus(repo)
+                    clearcollapsemsg(repo)
                     repo.ui.warn(_('rebase aborted (no revision is removed,'
                                    ' only broken state is cleared)\n'))
                     return 0
@@ -388,6 +390,7 @@ def rebase(ui, repo, **opts):
                                              targetancestors)
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                             keepbranchesf, external, activebookmark)
+                storecollapsemsg(repo, collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
@@ -509,6 +512,7 @@ def rebase(ui, repo, **opts):
                     # active bookmark was divergent one and has been deleted
                     activebookmark = None
         clearstatus(repo)
+        clearcollapsemsg(repo)
 
         ui.note(_("rebase completed\n"))
         util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
@@ -846,6 +850,29 @@ def updatebookmarks(repo, targetnode, nstate, originalbookmarks, tr):
             bookmarks.deletedivergent(repo, [targetnode], k)
     marks.recordchange(tr)
 
+def storecollapsemsg(repo, collapsemsg):
+    'Store the collapse message to allow recovery'
+    collapsemsg = collapsemsg or ''
+    f = repo.vfs("last-message.txt", "w")
+    f.write("%s\n" % collapsemsg)
+    f.close()
+
+def clearcollapsemsg(repo):
+    'Remove collapse message file'
+    util.unlinkpath(repo.join("last-message.txt"), ignoremissing=True)
+
+def restorecollapsemsg(repo):
+    'Restore previously stored collapse message'
+    try:
+        f = repo.vfs("last-message.txt")
+        collapsemsg = f.readline().strip()
+        f.close()
+    except IOError as err:
+        if err.errno != errno.ENOENT:
+            raise
+        raise error.Abort(_('no rebase in progress'))
+    return collapsemsg
+
 def storestatus(repo, originalwd, target, state, collapse, keep, keepbranches,
                 external, activebookmark):
     'Store the current status to allow recovery'
@@ -1005,6 +1032,7 @@ def abort(repo, originalwd, target, state, activebookmark=None):
 
     finally:
         clearstatus(repo)
+        clearcollapsemsg(repo)
         repo.ui.warn(_('rebase aborted\n'))
     return 0
 

@@ -804,3 +804,52 @@ Test collapsing changes that add then remove a file
   base
 
   $ cd ..
+
+Test that rebase --collapse will remember message after
+running into merge conflict and invoking rebase --continue.
+
+  $ hg init collapse_remember_message
+  $ cd collapse_remember_message
+  $ touch a
+  $ hg add a
+  $ hg commit -m "a"
+  $ echo "a-default" > a
+  $ hg commit -m "a-default"
+  $ hg update -r 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch dev
+  marked working directory as branch dev
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "a-dev" > a
+  $ hg commit -m "a-dev"
+  $ hg rebase --collapse -m "a-default-dev" -d 1
+  rebasing 2:b8d8db2b242d "a-dev" (tip)
+  merging a
+  warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
+  unresolved conflicts (see hg resolve, then hg rebase --continue)
+  [1]
+  $ rm a.orig
+  $ hg resolve --mark a
+  (no more unresolved files)
+  continue: hg rebase --continue
+  $ hg rebase --continue
+  rebasing 2:b8d8db2b242d "a-dev" (tip)
+  saved backup bundle to $TESTTMP/collapse_remember_message/.hg/strip-backup/b8d8db2b242d-f474c19a-backup.hg (glob)
+  $ hg log
+  changeset:   2:12bb766dceb1
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a-default-dev
+  
+  changeset:   1:3c8db56a44bc
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a-default
+  
+  changeset:   0:3903775176ed
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+  $ cd ..
