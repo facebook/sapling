@@ -736,8 +736,6 @@ class Test(unittest.TestCase):
             self._portmap(0),
             self._portmap(1),
             self._portmap(2),
-            self._portmap(3),
-            self._portmap(4),
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
             ]
@@ -764,9 +762,7 @@ class Test(unittest.TestCase):
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
         # This number should match portneeded in _getport
-        # XXX currently it does not, this is a bug that will be fixed
-        # in the next commit.
-        for port in xrange(5):
+        for port in xrange(3):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
         env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
