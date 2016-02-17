@@ -258,6 +258,18 @@ def _build(tmplspec, *repls):
     template = _cachedtree(tmplspec)
     return parser.buildtree(template, ('symbol', '_'), *repls)
 
+def _match(patspec, tree):
+    """Test if a tree matches the given pattern statement; return the matches
+
+    >>> _match('f(_)', parse('f()'))
+    >>> _match('f(_)', parse('f(1)'))
+    [('func', ('symbol', 'f'), ('symbol', '1')), ('symbol', '1')]
+    >>> _match('f(_)', parse('f(1, 2)'))
+    """
+    pattern = _cachedtree(patspec)
+    return parser.matchtree(pattern, tree, ('symbol', '_'),
+                            {'keyvalue', 'list'})
+
 def _isnamedfunc(x, funcname):
     """Check if given tree matches named function"""
     return x and x[0] == 'func' and getsymbol(x[1]) == funcname
@@ -278,15 +290,7 @@ def _matchnamedfunc(x, funcname):
     return x[2]
 
 def _matchonly(revs, bases):
-    """
-    >>> f = lambda *args: _matchonly(*map(parse, args))
-    >>> f('ancestors(A)', 'not ancestors(B)')
-    ('list', ('symbol', 'A'), ('symbol', 'B'))
-    """
-    ta = _matchnamedfunc(revs, 'ancestors')
-    tb = bases and bases[0] == 'not' and _matchnamedfunc(bases[1], 'ancestors')
-    if _isposargs(ta, 1) and _isposargs(tb, 1):
-        return ('list', ta, tb)
+    return _match('ancestors(_) and not ancestors(_)', ('and', revs, bases))
 
 def _fixops(x):
     """Rewrite raw parsed tree to resolve ambiguous syntax which cannot be
@@ -389,8 +393,9 @@ def _optimize(x, small):
         if m:
             return w, _build('only(_, _)', *m[1:])
 
-        if tb is not None and tb[0] == 'not':
-            return wa, ('difference', ta, tb[1])
+        m = _match('not _', tb)
+        if m:
+            return wa, ('difference', ta, m[1])
         if wa > wb:
             op = 'andsmally'
         return w, (op, ta, tb)
@@ -424,7 +429,7 @@ def _optimize(x, small):
         return max(ws), (op, ('list',) + tuple(ts))
     elif op == 'not':
         # Optimize not public() to _notpublic() because we have a fast version
-        if x[1][:3] == ('func', ('symbol', 'public'), None):
+        if _match('public()', x[1]):
             o = _optimize(_build('_notpublic()'), not small)
             return o[0], o[1]
         else:
