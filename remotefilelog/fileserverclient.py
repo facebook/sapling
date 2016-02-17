@@ -452,13 +452,10 @@ class localcache(object):
         if not os.path.exists(dirpath):
             makedirs(self.cachepath, dirpath, self.uid)
 
-        f = None
-        try:
-            f = util.atomictempfile(path, 'w')
-            f.write(data)
-        finally:
-            if f:
-                f.close()
+        f = util.atomictempfile(path, 'w')
+        f.write(data)
+        # after a successful write, close will rename us in to place
+        f.close()
 
         if self._validatecachelog:
             if not self._validatekey(path, 'write'):
