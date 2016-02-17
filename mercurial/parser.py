@@ -312,6 +312,59 @@ def buildtree(template, placeholder, *repls):
         raise error.ProgrammingError('too many replacements')
     return r
 
+def _matchtree(pattern, tree, placeholder, incompletenodes, matches):
+    if pattern == tree:
+        return True
+    if not isinstance(pattern, tuple) or not isinstance(tree, tuple):
+        return False
+    if pattern == placeholder and tree[0] not in incompletenodes:
+        matches.append(tree)
+        return True
+    if len(pattern) != len(tree):
+        return False
+    return all(_matchtree(p, x, placeholder, incompletenodes, matches)
+               for p, x in zip(pattern, tree))
+
+def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
+    """If a tree matches the pattern, return a list of the tree and nodes
+    matched with the placeholder; Otherwise None
+
+    >>> def f(pattern, tree):
+    ...     m = matchtree(pattern, tree, _, {'keyvalue', 'list'})
+    ...     if m:
+    ...         return m[1:]
+
+    >>> _ = ('symbol', '_')
+    >>> f(('func', ('symbol', 'ancestors'), _),
+    ...   ('func', ('symbol', 'ancestors'), ('symbol', '1')))
+    [('symbol', '1')]
+    >>> f(('func', ('symbol', 'ancestors'), _),
+    ...   ('func', ('symbol', 'ancestors'), None))
+    >>> f(('range', ('dagrange', _, _), _),
+    ...   ('range',
+    ...     ('dagrange', ('symbol', '1'), ('symbol', '2')),
+    ...     ('symbol', '3')))
+    [('symbol', '1'), ('symbol', '2'), ('symbol', '3')]
+
+    The placeholder does not match the specified incomplete nodes because
+    an incomplete node (e.g. argument list) cannot construct an expression.
+
+    >>> f(('func', ('symbol', 'ancestors'), _),
+    ...   ('func', ('symbol', 'ancestors'),
+    ...     ('list', ('symbol', '1'), ('symbol', '2'))))
+
+    The placeholder may be omitted, but which shouldn't match a None node.
+
+    >>> _ = None
+    >>> f(('func', ('symbol', 'ancestors'), None),
+    ...   ('func', ('symbol', 'ancestors'), ('symbol', '0')))
+    """
+    if placeholder is not None and not isinstance(placeholder, tuple):
+        raise error.ProgrammingError('placeholder must be a node tuple')
+    matches = [tree]
+    if _matchtree(pattern, tree, placeholder, incompletenodes, matches):
+        return matches
+
 def parseerrordetail(inst):
     """Compose error message from specified ParseError object
     """
