@@ -181,16 +181,6 @@ class remotefilectx(context.filectx):
         ancestormap = self.ancestormap()
         p1, p2, linknode, copyfrom = ancestormap[fnode]
 
-        # First use the C fastpath to check if the given linknode is correct.
-        srcnode = cl.node(srcrev)
-        try:
-            if cl.isancestor(linknode, srcnode):
-                return linknode
-        except error.LookupError:
-            # The node read from the blob may be old and not present, thus not
-            # existing in the changelog.
-            pass
-
         # hack to reuse ancestor computation when searching for renames
         memberanc = getattr(self, '_ancestrycontext', None)
         iteranc = None
@@ -200,6 +190,18 @@ class remotefilectx(context.filectx):
             inclusive = True # we skipped the real (revless) source
         else:
             revs = [srcrev]
+
+        # First use the C fastpath to check if the given linknode is correct.
+        try:
+            if revs:
+                srcnode = cl.node(revs[0])
+                if cl.isancestor(linknode, srcnode):
+                    return linknode
+        except error.LookupError:
+            # The node read from the blob may be old and not present, thus not
+            # existing in the changelog.
+            pass
+
         if memberanc is None:
             memberanc = cl.ancestors(revs, inclusive=inclusive)
 
