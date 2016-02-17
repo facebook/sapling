@@ -50,6 +50,22 @@ void debugmsg(const char *fmt, ...)
 	va_end(args);
 }
 
+void *mallocx(size_t size)
+{
+	void *result = malloc(size);
+	if (!result)
+		abortmsg("failed to malloc");
+	return result;
+}
+
+void *reallocx(void *ptr, size_t size)
+{
+	void *result = realloc(ptr, size);
+	if (!result)
+		abortmsg("failed to realloc");
+	return result;
+}
+
 /*
  * Execute a shell command in mostly the same manner as system(), with the
  * give environment variables, after chdir to the given cwd. Returns a status

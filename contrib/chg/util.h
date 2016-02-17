@@ -19,6 +19,9 @@ void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
 void enabledebugmsg(void);
 void debugmsg(const char *fmt, ...) PRINTF_FORMAT_;
 
+void *mallocx(size_t size);
+void *reallocx(void *ptr, size_t size);
+
 int runshellcmd(const char *cmd, const char *envp[], const char *cwd);
 
 #endif  /* UTIL_H_ */
