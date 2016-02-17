@@ -84,7 +84,7 @@ def uisetup(ui):
         successorssets = obsolete.successorssets(repo, ctx.node())
         unfiltered = repo.unfiltered()
         ctxs = (unfiltered[n] for n in chain.from_iterable(successorssets))
-        public = (c.hex() for c in ctxs if not c.mutable() and c!=ctx)
+        public = (c.hex() for c in ctxs if not c.mutable() and c != ctx)
         first = next(public, '')
         second = next(public, '')
 
