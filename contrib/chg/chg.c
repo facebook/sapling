@@ -32,7 +32,79 @@ struct cmdserveropts {
 	char sockname[UNIX_PATH_MAX];
 	char lockfile[UNIX_PATH_MAX];
 	char pidfile[UNIX_PATH_MAX];
+	size_t argsize;
+	const char **args;
 };
+
+static void initcmdserveropts(struct cmdserveropts *opts) {
+	memset(opts, 0, sizeof(struct cmdserveropts));
+}
+
+static void freecmdserveropts(struct cmdserveropts *opts) {
+	free(opts->args);
+	opts->args = NULL;
+	opts->argsize = 0;
+}
+
+/*
+ * Test if an argument is a sensitive flag that should be passed to the server.
+ * Return 0 if not, otherwise the number of arguments starting from the current
+ * one that should be passed to the server.
+ */
+static size_t testsensitiveflag(const char *arg)
+{
+	static const struct {
+		const char *name;
+		size_t narg;
+	} flags[] = {
+		{"--config", 1},
+		{"--cwd", 1},
+		{"--repo", 1},
+		{"--repository", 1},
+		{"--traceback", 0},
+		{"-R", 1},
+	};
+	size_t i;
+	for (i = 0; i < sizeof(flags) / sizeof(flags[0]); ++i) {
+		size_t len = strlen(flags[i].name);
+		size_t narg = flags[i].narg;
+		if (memcmp(arg, flags[i].name, len) == 0) {
+			if (arg[len] == '\0') {  /* --flag (value) */
+				return narg + 1;
+			} else if (arg[len] == '=' && narg > 0) {  /* --flag=value */
+				return 1;
+			} else if (flags[i].name[1] != '-') {  /* short flag */
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+
+/*
+ * Parse argv[] and put sensitive flags to opts->args
+ */
+static void setcmdserverargs(struct cmdserveropts *opts,
+			     int argc, const char *argv[])
+{
+	size_t i, step;
+	opts->argsize = 0;
+	for (i = 0, step = 1; i < (size_t)argc; i += step, step = 1) {
+		if (!argv[i])
+			continue;  /* pass clang-analyse */
+		if (strcmp(argv[i], "--") == 0)
+			break;
+		size_t n = testsensitiveflag(argv[i]);
+		if (n == 0 || i + n > (size_t)argc)
+			continue;
+		opts->args = reallocx(opts->args,
+				      (n + opts->argsize) * sizeof(char *));
+		memcpy(opts->args + opts->argsize, argv + i,
+		       sizeof(char *) * n);
+		opts->argsize += n;
+		step = n;
+	}
+}
 
 static void preparesockdir(const char *sockdir)
 {
@@ -111,7 +183,7 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	if (!hgcmd || hgcmd[0] == '\0')
 		hgcmd = "hg";
 
-	const char *argv[] = {
+	const char *baseargv[] = {
 		hgcmd,
 		"serve",
 		"--cwd", "/",
@@ -122,10 +194,18 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--config", "extensions.chgserver=",
 		/* wrap root ui so that it can be disabled/enabled by config */
 		"--config", "progress.assume-tty=1",
-		NULL,
 	};
+	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
+	size_t argsize = baseargvsize + opts->argsize + 1;
+
+	const char **argv = mallocx(sizeof(char *) * argsize);
+	memcpy(argv, baseargv, sizeof(baseargv));
+	memcpy(argv + baseargvsize, opts->args, sizeof(char *) * opts->argsize);
+	argv[argsize - 1] = NULL;
+
 	if (execvp(hgcmd, (char **)argv) < 0)
 		abortmsg("failed to exec cmdserver (errno = %d)", errno);
+	free(argv);
 }
 
 /*
@@ -352,7 +432,9 @@ int main(int argc, const char *argv[], const char *envp[])
 		enabledebugmsg();
 
 	struct cmdserveropts opts;
+	initcmdserveropts(&opts);
 	setcmdserveropts(&opts);
+	setcmdserverargs(&opts, argc, argv);
 
 	if (argc == 2) {
 		int sig = 0;
@@ -379,5 +461,6 @@ int main(int argc, const char *argv[], const char *envp[])
 	setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	hgc_close(hgc);
+	freecmdserveropts(&opts);
 	return exitcode;
 }
