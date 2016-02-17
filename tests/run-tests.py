@@ -720,6 +720,10 @@ class Test(unittest.TestCase):
         """Terminate execution of this test."""
         self._aborted = True
 
+    def _portmap(self, i):
+        offset = '' if i == 0 else '%s' % i
+        return (br':%d\b' % (self._startport + i), b':$HGPORT%s' % offset)
+
     def _getreplacements(self):
         """Obtain a mapping of text replacements to apply to test output.
 
@@ -728,11 +732,12 @@ class Test(unittest.TestCase):
         occur.
         """
         r = [
-            (br':%d\b' % self._startport, b':$HGPORT'),
-            (br':%d\b' % (self._startport + 1), b':$HGPORT1'),
-            (br':%d\b' % (self._startport + 2), b':$HGPORT2'),
-            (br':%d\b' % (self._startport + 2), b':$HGPORT3'),
-            (br':%d\b' % (self._startport + 2), b':$HGPORT4'),
+            # This list should be parallel to defineport in _getenv
+            self._portmap(0),
+            self._portmap(1),
+            self._portmap(2),
+            self._portmap(3),
+            self._portmap(4),
             (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
              br'\1 (glob)'),
             ]
@@ -752,14 +757,18 @@ class Test(unittest.TestCase):
 
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
+        def defineport(i):
+            offset = '' if i == 0 else '%s' % i
+            env["HGPORT%s" % offset] = '%s' % (self._startport + i)
         env = os.environ.copy()
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
-        env["HGPORT"] = str(self._startport)
-        env["HGPORT1"] = str(self._startport + 1)
-        env["HGPORT2"] = str(self._startport + 2)
-        env["HGPORT3"] = str(self._startport + 3)
-        env["HGPORT4"] = str(self._startport + 4)
+        # This number should match portneeded in _getport
+        # XXX currently it does not, this is a bug that will be fixed
+        # in the next commit.
+        for port in xrange(5):
+            # This list should be parallel to _portmap in _getreplacements
+            defineport(port)
         env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b'daemon.pids')
         env["HGEDITOR"] = ('"' + sys.executable + '"'
