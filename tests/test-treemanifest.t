@@ -1,3 +1,5 @@
+#require killdaemons
+
   $ cat << EOF >> $HGRCPATH
   > [format]
   > usegeneraldelta=yes
@@ -498,14 +500,17 @@ Rebuilt fncache includes dirlogs
   adding meta/b/foo/apple/bees/00manifest.i
   16 items added, 0 removed from fncache
 
+Finish first server
+  $ killdaemons.py
+
 Test cloning a treemanifest repo over http.
-  $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 We can clone even with the knob turned off and we'll get a treemanifest repo.
   $ hg clone --config experimental.treemanifest=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT2 deepclone
+  >   http://localhost:$HGPORT deepclone
   requesting all changes
   adding changesets
   adding manifests
@@ -550,7 +555,7 @@ Verify passes.
 Create clones using old repo formats to use in later tests
   $ hg clone --config format.usestore=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT2 deeprepo-basicstore
+  >   http://localhost:$HGPORT deeprepo-basicstore
   requesting all changes
   adding changesets
   adding manifests
@@ -561,12 +566,12 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-basicstore
   $ grep store .hg/requires
   [1]
-  $ hg serve -p $HGPORT3 -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p $HGPORT1 -d --pid-file=hg.pid --errorlog=errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ hg clone --config format.usefncache=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT2 deeprepo-encodedstore
+  >   http://localhost:$HGPORT deeprepo-encodedstore
   requesting all changes
   adding changesets
   adding manifests
@@ -577,7 +582,7 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-encodedstore
   $ grep fncache .hg/requires
   [1]
-  $ hg serve -p $HGPORT4 -d --pid-file=hg.pid --errorlog=errors.log
+  $ hg serve -p $HGPORT2 -d --pid-file=hg.pid --errorlog=errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
@@ -610,7 +615,7 @@ Local clone with fncachestore
 
 Stream clone with basicstore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
-  >   http://localhost:$HGPORT3 stream-clone-basicstore
+  >   http://localhost:$HGPORT1 stream-clone-basicstore
   streaming all changes
   18 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -625,7 +630,7 @@ Stream clone with basicstore
 
 Stream clone with encodedstore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
-  >   http://localhost:$HGPORT4 stream-clone-encodedstore
+  >   http://localhost:$HGPORT2 stream-clone-encodedstore
   streaming all changes
   18 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -640,7 +645,7 @@ Stream clone with encodedstore
 
 Stream clone with fncachestore
   $ hg clone --config experimental.changegroup3=True --uncompressed -U \
-  >   http://localhost:$HGPORT2 stream-clone-fncachestore
+  >   http://localhost:$HGPORT stream-clone-fncachestore
   streaming all changes
   18 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
