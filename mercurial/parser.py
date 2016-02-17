@@ -285,6 +285,33 @@ def simplifyinfixops(tree, targetnodes):
     simplified.append(op)
     return tuple(reversed(simplified))
 
+def _buildtree(template, placeholder, replstack):
+    if template == placeholder:
+        return replstack.pop()
+    if not isinstance(template, tuple):
+        return template
+    return tuple(_buildtree(x, placeholder, replstack) for x in template)
+
+def buildtree(template, placeholder, *repls):
+    """Create new tree by substituting placeholders by replacements
+
+    >>> _ = ('symbol', '_')
+    >>> def f(template, *repls):
+    ...     return buildtree(template, _, *repls)
+    >>> f(('func', ('symbol', 'only'), ('list', _, _)),
+    ...   ('symbol', '1'), ('symbol', '2'))
+    ('func', ('symbol', 'only'), ('list', ('symbol', '1'), ('symbol', '2')))
+    >>> f(('and', _, ('not', _)), ('symbol', '1'), ('symbol', '2'))
+    ('and', ('symbol', '1'), ('not', ('symbol', '2')))
+    """
+    if not isinstance(placeholder, tuple):
+        raise error.ProgrammingError('placeholder must be a node tuple')
+    replstack = list(reversed(repls))
+    r = _buildtree(template, placeholder, replstack)
+    if replstack:
+        raise error.ProgrammingError('too many replacements')
+    return r
+
 def parseerrordetail(inst):
     """Compose error message from specified ParseError object
     """
