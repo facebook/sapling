@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer, hg, error, util, wireproto
+from mercurial import util, sshpeer, hg, error, util, wireproto, node
 import os, socket, lz4, time, grp, io
 import errno
 
@@ -419,6 +419,13 @@ class localcache(object):
         if not self.cachepath:
             raise util.Abort(_("could not find config option remotefilelog.cachepath"))
         self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
+        self._validatecache = self.ui.config("remotefilelog", "validatecache",
+                                             'on')
+        if self._validatecache not in ('on', 'strict', 'off'):
+            self._validatecache = 'on'
+        if self._validatecache == 'off':
+            self._validatecache = False
+
         if self.cachepath:
             self.cachepath = util.expandpath(self.cachepath)
         self.uid = os.getuid()
@@ -440,8 +447,11 @@ class localcache(object):
     def __contains__(self, key):
         path = os.path.join(self.cachepath, key)
         exists = os.path.exists(path)
-        if exists and self._validatecachelog and not self._validatekey(path,
-            'contains'):
+
+        # only validate during contains if strict mode is enabled
+        # to avoid doubling iops in the hot path
+        if exists and self._validatecache == 'strict' and not \
+                self._validatekey(path, 'contains'):
             return False
 
         return exists
@@ -457,7 +467,7 @@ class localcache(object):
         # after a successful write, close will rename us in to place
         f.close()
 
-        if self._validatecachelog:
+        if self._validatecache:
             if not self._validatekey(path, 'write'):
                 raise util.Abort(_("local cache write was corrupted %s") % path)
 
@@ -476,9 +486,12 @@ class localcache(object):
                 os.remove(path)
                 raise KeyError("empty local cache file %s" % path)
 
-            if self._validatecachelog and not self._validatedata(result):
-                with open(self._validatecachelog, 'a+') as f:
-                    f.write("corrupt %s during read\n" % path)
+            if self._validatecache and not self._validatedata(result, path):
+                if self._validatecachelog:
+                    with open(self._validatecachelog, 'a+') as f:
+                        f.write("corrupt %s during read\n" % path)
+
+                os.rename(path, path + ".corrupt")
                 raise KeyError("corrupt local cache file %s" % path)
 
             return result
@@ -489,23 +502,33 @@ class localcache(object):
         with open(path, 'r') as f:
             data = f.read()
 
-        if self._validatedata(data):
+        if self._validatedata(data, path):
             return True
 
-        with open(self._validatecachelog, 'a+') as f:
-            f.write("corrupt %s during %s\n" % (path, action))
+        if self._validatecachelog:
+            with open(self._validatecachelog, 'a+') as f:
+                f.write("corrupt %s during %s\n" % (path, action))
 
         os.rename(path, path + ".corrupt")
         return False
 
-    def _validatedata(self, data):
+    def _validatedata(self, data, path):
         try:
             if len(data) > 0:
-                size = data.split('\0', 1)[0]
+                size, remainder = data.split('\0', 1)
                 size = int(size)
-                if size < len(data):
-                    # The data looks to be well formed.
+                if len(data) <= size:
+                    # it is truncated
+                    return False
+
+                # extract the node from the metadata
+                datanode = remainder[size:size+20]
+
+                # and compare against the path
+                if os.path.basename(path) == node.hex(datanode):
+                    # Content matches the intended path
                     return True
+                return False
         except ValueError:
             pass
 
