@@ -55,7 +55,6 @@ def _pull(orig, ui, repo, *args, **opts):
         n = repo[rev]
         diff = getdiff(n)
         if diff in landeddiffs:
-            obsolete.createmarkers(repo,
-                [(n, (landeddiffs[diff],))], metadata={'landed': str(diff)})
+            obsolete.createmarkers(repo, [(n, (landeddiffs[diff],))])
 
     return r
