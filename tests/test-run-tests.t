@@ -718,3 +718,13 @@ test support for --allow-slow-tests
   $ rt $HGTEST_RUN_TESTS_PURE --allow-slow-tests test-very-slow-test.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+support for running a test outside the current directory
+  $ mkdir nonlocal
+  $ cat > nonlocal/test-is-not-here.t << EOF
+  >   $ echo pass
+  >   pass
+  > EOF
+  $ rt nonlocal/test-is-not-here.t
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
