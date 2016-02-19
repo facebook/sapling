@@ -239,8 +239,6 @@ Test that we still don't allow non-ff bm changes
   abort: updating bookmark bm failed!
   [255]
 
-  $ cd ..
-
 Test force pushes
   $ hg init forcepushserver
   $ cd forcepushserver
@@ -256,9 +254,7 @@ Test force pushes
   $ hg book master
   $ cd ..
 
-  $ hg clone --config 'extensions.remotenames=' forcepushserver forcepushclient
-  updating to branch default
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q --config 'extensions.remotenames=' ssh://user@dummy/forcepushserver forcepushclient
   $ cd forcepushserver
   $ echo a >> a && hg commit -Aqm aa
 
@@ -279,8 +275,8 @@ Test force pushes
   $ hg push -f --to master
   pushing rev 1846eede8b68 to destination * (glob)
   searching for changes
-  pushing 1 commit:
-      1846eede8b68  b
+  remote: pushing 1 commit:
+  remote:     1846eede8b68  b
   updating bookmark master
   $ hg pull
   pulling from * (glob)
@@ -313,7 +309,7 @@ Test 'hg push' with a tracking bookmark
   $ echo a > a && hg commit -Aqm a
   $ hg book master
   $ cd ..
-  $ hg clone -q trackingserver trackingclient
+  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/trackingserver trackingclient
   $ cd trackingclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
@@ -330,14 +326,17 @@ Test 'hg push' with a tracking bookmark
   $ cd ../trackingserver
   $ echo c > c && hg commit -Aqm c
   $ cd ../trackingclient
-  $ hg push --debug | grep -i rebase
-  pushing 1 commit:
-      d2ae7f538514  b
-  2 new commits from the server will be downloaded
-  validated revset for rebase
-  bundle2-output-part: "B2X:REBASE" (params: 2 mandatory) streamed payload
-  bundle2-input-part: "b2x:rebase" (params: 2 mandatory) supported
-  validated revset for rebase
+  $ hg push
+  pushing rev d2ae7f538514 to destination ssh://user@dummy/trackingserver bookmark master
+  searching for changes
+  remote: pushing 1 commit:
+  remote:     d2ae7f538514  b
+  remote: 2 new commits from the server will be downloaded
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 2 files (+1 heads)
+  updating bookmark master
   $ hg log -T '{rev} {desc}' -G
   o  3 b
   |
