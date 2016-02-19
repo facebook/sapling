@@ -7,20 +7,20 @@ Setup
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"
-  > [extensions]
-  > remotenames =
-  > bundle2hooks =
-  > pushrebase =
-  > [remotenames]
-  > allownonfastforward=True
-  > [experimental]
-  > bundle2-exp=True
   > EOF
 
 Set up server repository
 
   $ hg init server
   $ cd server
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > bundle2hooks =
+  > pushrebase =
+  > remotenames = !
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
   $ echo foo > a
   $ echo foo > b
   $ hg commit -Am 'initial'
@@ -31,7 +31,7 @@ Set up server repository
 
 Set up client repository
 
-  $ hg clone ssh://user@dummy/server client -q
+  $ hg clone --config 'extensions.remotenames=' ssh://user@dummy/server client -q
 
 Test that pushing to a remotename gets rebased
 
@@ -39,6 +39,16 @@ Test that pushing to a remotename gets rebased
   $ hg up -q master
   $ echo x >> a && hg commit -m "master's commit"
   $ cd ../client
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > remotenames =
+  > bundle2hooks =
+  > pushrebase =
+  > [remotenames]
+  > allownonfastforward=True
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
   $ echo x >> b && hg commit -m "client's commit"
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   @  1 "client's commit"
@@ -238,12 +248,15 @@ Test force pushes
   > [extensions]
   > bundle2hooks =
   > pushrebase =
+  > remotenames = !
+  > [experimental]
+  > bundle2-exp=True
   > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book master
   $ cd ..
 
-  $ hg clone forcepushserver forcepushclient
+  $ hg clone --config 'extensions.remotenames=' forcepushserver forcepushclient
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd forcepushserver
@@ -254,6 +267,11 @@ Test force pushes
   > [extensions]
   > bundle2hooks =
   > pushrebase =
+  > remotenames =
+  > [remotenames]
+  > allownonfastforward=True
+  > [experimental]
+  > bundle2-exp=True
   > EOF
   $ hg up master
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -284,11 +302,29 @@ Test force pushes
 Test 'hg push' with a tracking bookmark
   $ hg init trackingserver
   $ cd trackingserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks =
+  > pushrebase =
+  > remotenames = !
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
   $ echo a > a && hg commit -Aqm a
   $ hg book master
   $ cd ..
   $ hg clone -q trackingserver trackingclient
   $ cd trackingclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks =
+  > pushrebase =
+  > remotenames =
+  > [remotenames]
+  > allownonfastforward=True
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
   $ hg book feature -t default/master
   $ echo b > b && hg commit -Aqm b
   $ cd ../trackingserver
