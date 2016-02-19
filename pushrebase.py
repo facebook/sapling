@@ -469,7 +469,7 @@ def bundle2rebase(op, part):
         bundle = repository(op.repo.ui, bundlepath)
 
         # Allow running hooks on the new commits before we take the lock
-        prelockrebaseargs = dict()
+        prelockrebaseargs = op.hookargs.copy()
         prelockrebaseargs['source'] = 'push'
         prelockrebaseargs['bundle2'] = '1'
         prelockrebaseargs['node'] = scmutil.revsingle(bundle,

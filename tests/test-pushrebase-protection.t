@@ -17,6 +17,7 @@ Setup pushrebase required repo
   $ cd server
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > [pushrebase]
   > blocknonpushrebase = True
@@ -54,7 +55,7 @@ Non-pushrebase pushes should be rejected
 
 Pushrebase pushes should be allowed
 
-  $ hg push --config 'extensions.pushrebase=' --to master -B master
+  $ hg push --config 'extensions.bundle2hooks=' --config 'extensions.pushrebase=' --to master -B master
   pushing to $TESTTMP/server (glob)
   searching for changes
   pushing 1 commit:

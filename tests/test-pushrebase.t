@@ -35,6 +35,7 @@ Set up client repository
   $ hg clone ssh://user@dummy/server client -q
   $ cd client
   $ echo "[extensions]" >> .hg/hgrc
+  $ echo "bundle2hooks =" >> .hg/hgrc
   $ echo "pushrebase =" >> .hg/hgrc
 
 Without server extension
@@ -83,6 +84,7 @@ Stack of non-conflicting commits should be accepted
 
   $ cd ../server
   $ echo "[extensions]" >> .hg/hgrc
+  $ echo "bundle2hooks =" >> .hg/hgrc
   $ echo "pushrebase =" >> .hg/hgrc
   $ log
   @  a => bar [draft:add0c792bfce]
@@ -526,6 +528,7 @@ Test that the prepushrebase hook can run against the bundle repo
   > [hooks]
   > prepushrebase = $TESTTMP/prerebase.sh
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > [experimental]
   > bundle2lazylocking = True
@@ -545,6 +548,7 @@ Test that the prepushrebase hook can run against the bundle repo
   $ cd prepushrebaseclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ touch b && hg add b && hg commit -qm b
@@ -582,6 +586,7 @@ Test that hooks are fired with the correct variables
   > prepushrebase = python "$RUNTESTDIR/printenv.py" prepushrebase
   > prepushkey = python "$RUNTESTDIR/printenv.py" prepushkey
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ touch file && hg ci -Aqm initial
@@ -600,6 +605,7 @@ Test that hooks are fired with the correct variables
   $ cd hookclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ hg update master
@@ -631,6 +637,7 @@ Test date rewriting
   $ cd rewritedate
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > [pushrebase]
   > rewritedates = True
@@ -646,6 +653,7 @@ Test date rewriting
   $ cd rewritedateclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ hg up 0
@@ -715,6 +723,7 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ echo a > a && hg commit -Aqm a
@@ -729,6 +738,7 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ hg up 0

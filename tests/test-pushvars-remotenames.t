@@ -1,3 +1,8 @@
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ $PYTHON -c 'import remotenames' || exit 80
   $ extpath=`dirname $TESTDIR`
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
@@ -9,7 +14,8 @@
   $ cp $extpath/pushvars.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > pushvars=$TESTTMP/pushvars.py
+  > bundle2hooks=
+  > pushvars=
   > remotenames=
   > [hooks]
   > pretxnchangegroup = $TESTTMP/pretxnchangegroup.sh

@@ -46,13 +46,14 @@ exchange.b2partsgenorder.insert(0, exchange.b2partsgenorder.pop())
 @bundle2.parthandler('pushvars')
 def bundle2getvars(op, part):
     '''unbundle a bundle2 containing shellvars on the server'''
-    tr = op.gettransaction()
+    hookargs = {}
     for key, value in part.advisoryparams:
         key = key.upper()
         # We want pushed variables to have USERVAR_ prepended so we know
         # they came from the pushvar extension.
         key = "USERVAR_" + key
-        tr.hookargs[key] = value
+        hookargs[key] = value
+    op.addhookargs(hookargs)
 
 def push(orig, ui, repo, *args, **opts):
     repo._shellvars = opts['pushvars']

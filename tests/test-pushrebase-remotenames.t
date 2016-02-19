@@ -9,7 +9,8 @@ Setup
   > ssh = python "$RUNTESTDIR/dummyssh"
   > [extensions]
   > remotenames =
-  > pushrebase=
+  > bundle2hooks =
+  > pushrebase =
   > [remotenames]
   > allownonfastforward=True
   > [experimental]
@@ -235,6 +236,7 @@ Test force pushes
   $ cd forcepushserver
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ echo a > a && hg commit -Aqm a
@@ -250,6 +252,7 @@ Test force pushes
   $ cd ../forcepushclient
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
+  > bundle2hooks =
   > pushrebase =
   > EOF
   $ hg up master
