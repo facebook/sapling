@@ -5708,7 +5708,8 @@ def push(ui, repo, dest=None, **opts):
 
     If -B/--bookmark is used, the specified bookmarked revision, its
     ancestors, and the bookmark will be pushed to the remote
-    repository.
+    repository. Specifying ``.`` is equivalent to specifying the active
+    bookmark's name.
 
     Please see :hg:`help urls` for important details about ``ssh://``
     URLs. If DESTINATION is omitted, a default path will be used.
@@ -5720,6 +5721,7 @@ def push(ui, repo, dest=None, **opts):
         ui.setconfig('bookmarks', 'pushing', opts['bookmark'], 'push')
         for b in opts['bookmark']:
             # translate -B options to -r so changesets get pushed
+            b = repo._bookmarks.expandname(b)
             if b in repo._bookmarks:
                 opts.setdefault('rev', []).append(b)
             else:

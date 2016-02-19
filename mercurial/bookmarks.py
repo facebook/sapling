@@ -182,6 +182,11 @@ class bmstore(dict):
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
         self._clean = True
 
+    def expandname(self, bname):
+        if bname == '.':
+            return self.active
+        return bname
+
 def _readactive(repo, marks):
     """
     Get the active bookmark. We can have an active bookmark that updates

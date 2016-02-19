@@ -103,6 +103,29 @@ delete a remote bookmark
   deleting remote bookmark W
   [1]
 
+export the active bookmark
+
+  $ hg bookmark V
+  $ hg push -B . ../a
+  pushing to ../a
+  searching for changes
+  no changes found
+  exporting bookmark V
+  [1]
+
+delete the bookmark
+
+  $ hg book -d V
+  $ hg push -B V ../a
+  pushing to ../a
+  searching for changes
+  no changes found
+  deleting remote bookmark V
+  [1]
+  $ hg up foobar
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark foobar)
+
 push/pull name that doesn't exist
 
   $ hg push -B badname ../a

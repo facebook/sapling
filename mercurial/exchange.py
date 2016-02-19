@@ -576,7 +576,8 @@ def _pushdiscoverybookmarks(pushop):
         ancestors = repo.changelog.ancestors(revnums, inclusive=True)
     remotebookmark = remote.listkeys('bookmarks')
 
-    explicit = set(pushop.bookmarks)
+    explicit = set([repo._bookmarks.expandname(bookmark)
+                    for bookmark in pushop.bookmarks])
 
     comp = bookmod.compare(repo, repo._bookmarks, remotebookmark, srchex=hex)
     addsrc, adddst, advsrc, advdst, diverge, differ, invalid, same = comp
