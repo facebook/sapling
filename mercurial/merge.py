@@ -1058,29 +1058,30 @@ def batchget(repo, mctx, actions):
     wwrite = repo.wwrite
     ui = repo.ui
     i = 0
-    for f, (flags, backup), msg in actions:
-        repo.ui.debug(" %s: %s -> g\n" % (f, msg))
-        if verbose:
-            repo.ui.note(_("getting %s\n") % f)
+    if True:
+        for f, (flags, backup), msg in actions:
+            repo.ui.debug(" %s: %s -> g\n" % (f, msg))
+            if verbose:
+                repo.ui.note(_("getting %s\n") % f)
 
-        if backup:
-            absf = repo.wjoin(f)
-            orig = scmutil.origpath(ui, repo, absf)
-            try:
-                # TODO Mercurial has always aborted if an untracked directory
-                # is replaced by a tracked file, or generally with
-                # file/directory merges. This needs to be sorted out.
-                if repo.wvfs.isfileorlink(f):
-                    util.rename(absf, orig)
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
+            if backup:
+                absf = repo.wjoin(f)
+                orig = scmutil.origpath(ui, repo, absf)
+                try:
+                    # TODO Mercurial has always aborted if an untracked
+                    # directory is replaced by a tracked file, or generally
+                    # with file/directory merges. This needs to be sorted out.
+                    if repo.wvfs.isfileorlink(f):
+                        util.rename(absf, orig)
+                except OSError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
 
-        wwrite(f, fctx(f).data(), flags)
-        if i == 100:
-            yield i, f
-            i = 0
-        i += 1
+            wwrite(f, fctx(f).data(), flags)
+            if i == 100:
+                yield i, f
+                i = 0
+            i += 1
     if i > 0:
         yield i, f
 
