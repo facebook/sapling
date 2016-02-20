@@ -276,8 +276,8 @@ class abstractvfs(object):
         with self(path, mode=mode) as fp:
             return fp.readlines()
 
-    def write(self, path, data):
-        with self(path, 'wb') as fp:
+    def write(self, path, data, backgroundclose=False):
+        with self(path, 'wb', backgroundclose=backgroundclose) as fp:
             return fp.write(data)
 
     def writelines(self, path, data, mode='wb', notindexed=False):
