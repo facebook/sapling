@@ -1058,7 +1058,7 @@ def batchget(repo, mctx, actions):
     wwrite = repo.wwrite
     ui = repo.ui
     i = 0
-    if True:
+    with repo.wvfs.backgroundclosing(ui, expectedcount=len(actions)):
         for f, (flags, backup), msg in actions:
             repo.ui.debug(" %s: %s -> g\n" % (f, msg))
             if verbose:
@@ -1077,7 +1077,7 @@ def batchget(repo, mctx, actions):
                     if e.errno != errno.ENOENT:
                         raise
 
-            wwrite(f, fctx(f).data(), flags)
+            wwrite(f, fctx(f).data(), flags, backgroundclose=True)
             if i == 100:
                 yield i, f
                 i = 0
