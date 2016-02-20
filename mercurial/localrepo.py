@@ -974,7 +974,7 @@ class localrepository(object):
             data = self.wvfs.read(filename)
         return self._filter(self._encodefilterpats, filename, data)
 
-    def wwrite(self, filename, data, flags):
+    def wwrite(self, filename, data, flags, backgroundclose=False):
         """write ``data`` into ``filename`` in the working directory
 
         This returns length of written (maybe decoded) data.
@@ -983,7 +983,7 @@ class localrepository(object):
         if 'l' in flags:
             self.wvfs.symlink(data, filename)
         else:
-            self.wvfs.write(filename, data)
+            self.wvfs.write(filename, data, backgroundclose=backgroundclose)
             if 'x' in flags:
                 self.wvfs.setflags(filename, False, True)
         return len(data)
