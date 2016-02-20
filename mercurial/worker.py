@@ -152,14 +152,11 @@ if os.name != 'nt':
     _exitstatus = _posixexitstatus
 
 def partition(lst, nslices):
-    '''partition a list into N slices of equal size'''
-    n = len(lst)
-    chunk, slop = n / nslices, n % nslices
-    end = 0
-    for i in xrange(nslices):
-        start = end
-        end = start + chunk
-        if slop:
-            end += 1
-            slop -= 1
-        yield lst[start:end]
+    '''partition a list into N slices of roughly equal size
+
+    The current strategy takes every Nth element from the input. If
+    we ever write workers that need to preserve grouping in input
+    we should consider allowing callers to specify a partition strategy.
+    '''
+    for i in range(nslices):
+        yield lst[i::nslices]
