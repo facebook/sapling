@@ -861,9 +861,7 @@ class treemanifest(object):
     def text(self, usemanifestv2=False):
         """Get the full data of this manifest as a bytestring."""
         self._load()
-        flags = self.flags
-        return _text(((f, self[f], flags(f)) for f in self.keys()),
-                     usemanifestv2)
+        return _text(self.iterentries(), usemanifestv2)
 
     def dirtext(self, usemanifestv2=False):
         """Get the full data of this directory as a bytestring. Make sure that
