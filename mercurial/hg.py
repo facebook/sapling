@@ -356,7 +356,7 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
               rev=rev, update=False, stream=stream)
 
     sharerepo = repository(ui, path=sharepath)
-    share(ui, sharerepo, dest=dest, update=update, bookmarks=False)
+    share(ui, sharerepo, dest=dest, update=False, bookmarks=False)
 
     # We need to perform a pull against the dest repo to fetch bookmarks
     # and other non-store data that isn't shared by default. In the case of
@@ -365,6 +365,8 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
     # way to pull just non-changegroup data.
     destrepo = repository(ui, path=dest)
     exchange.pull(destrepo, srcpeer, heads=revs)
+
+    _postshareupdate(destrepo, update)
 
     return srcpeer, peer(ui, peeropts, dest)
 
