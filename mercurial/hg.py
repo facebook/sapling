@@ -236,20 +236,7 @@ def share(ui, source, dest=None, update=True, bookmarks=True):
 
     r = repository(ui, destwvfs.base)
     postshare(srcrepo, r, bookmarks=bookmarks)
-
-    if update:
-        r.ui.status(_("updating working directory\n"))
-        if update is not True:
-            checkout = update
-        for test in (checkout, 'default', 'tip'):
-            if test is None:
-                continue
-            try:
-                uprev = r.lookup(test)
-                break
-            except error.RepoLookupError:
-                continue
-        _update(r, uprev)
+    _postshareupdate(r, update, checkout=checkout)
 
 def postshare(sourcerepo, destrepo, bookmarks=True):
     """Called after a new shared repo is created.
@@ -271,6 +258,27 @@ def postshare(sourcerepo, destrepo, bookmarks=True):
         fp = destrepo.vfs('shared', 'w')
         fp.write('bookmarks\n')
         fp.close()
+
+def _postshareupdate(repo, update, checkout=None):
+    """Maybe perform a working directory update after a shared repo is created.
+
+    ``update`` can be a boolean or a revision to update to.
+    """
+    if not update:
+        return
+
+    repo.ui.status(_("updating working directory\n"))
+    if update is not True:
+        checkout = update
+    for test in (checkout, 'default', 'tip'):
+        if test is None:
+            continue
+        try:
+            uprev = repo.lookup(test)
+            break
+        except error.RepoLookupError:
+            continue
+    _update(repo, uprev)
 
 def copystore(ui, srcrepo, destpath):
     '''copy files from store of srcrepo in destpath
