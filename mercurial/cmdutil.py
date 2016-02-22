@@ -765,7 +765,7 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         try:
             if not runargs:
                 runargs = util.hgcmd() + sys.argv[1:]
-            runargs.append('--daemon-postexec=%s' % lockpath)
+            runargs.append('--daemon-postexec=unlink:%s' % lockpath)
             # Don't pass --cwd to the child process, because we've already
             # changed directory.
             for i in xrange(1, len(runargs)):
@@ -799,12 +799,16 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         writepid(util.getpid())
 
     if opts['daemon_postexec']:
-        lockpath = opts['daemon_postexec']
+        inst = opts['daemon_postexec']
         try:
             os.setsid()
         except AttributeError:
             pass
-        os.unlink(lockpath)
+        if inst.startswith('unlink:'):
+            lockpath = inst[7:]
+            os.unlink(lockpath)
+        elif inst != 'none':
+            raise error.Abort(_('invalid value for --daemon-postexec'))
         util.hidewindow()
         sys.stdout.flush()
         sys.stderr.flush()
