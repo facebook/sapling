@@ -189,7 +189,7 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--cwd", "/",
 		"--cmdserver", "chgunix",
 		"--address", opts->sockname,
-		"--daemon-pipefds", opts->lockfile,
+		"--daemon-postexec", opts->lockfile,
 		"--pid-file", opts->pidfile,
 		"--config", "extensions.chgserver=",
 		/* wrap root ui so that it can be disabled/enabled by config */

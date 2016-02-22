@@ -758,14 +758,14 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
             fp.write(str(pid) + '\n')
             fp.close()
 
-    if opts['daemon'] and not opts['daemon_pipefds']:
+    if opts['daemon'] and not opts['daemon_postexec']:
         # Signal child process startup with file removal
         lockfd, lockpath = tempfile.mkstemp(prefix='hg-service-')
         os.close(lockfd)
         try:
             if not runargs:
                 runargs = util.hgcmd() + sys.argv[1:]
-            runargs.append('--daemon-pipefds=%s' % lockpath)
+            runargs.append('--daemon-postexec=%s' % lockpath)
             # Don't pass --cwd to the child process, because we've already
             # changed directory.
             for i in xrange(1, len(runargs)):
@@ -798,8 +798,8 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
     if not opts['daemon']:
         writepid(util.getpid())
 
-    if opts['daemon_pipefds']:
-        lockpath = opts['daemon_pipefds']
+    if opts['daemon_postexec']:
+        lockpath = opts['daemon_postexec']
         try:
             os.setsid()
         except AttributeError:
