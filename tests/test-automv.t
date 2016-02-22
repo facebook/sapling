@@ -75,7 +75,7 @@ mv/rm/add/modif/changethreshold
   $ hg status -C
   A b.txt
   R a.txt
-  $ hg commit --config automv.similarity='0.6' -m 'msg'
+  $ hg commit --config automv.similarity='60' -m 'msg'
   detected move of 1 files
   created new head
   $ hg status --change . -C
@@ -227,7 +227,7 @@ mv/rm/add/modif/changethreshold
   $ hg status -C
   A b.txt
   R a.txt
-  $ hg commit --amend --config automv.similarity='0.6' -m 'amended'
+  $ hg commit --amend --config automv.similarity='60' -m 'amended'
   detected move of 1 files
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/*-amend-backup.hg (glob)
   $ hg status --change . -C
