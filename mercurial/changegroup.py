@@ -656,8 +656,7 @@ class cg1packer(object):
         clrevorder = {}
         mfs = {} # needed manifests
         fnodes = {} # needed file nodes
-        # maps manifest node id -> set(changed files)
-        mfchangedfiles = {}
+        changedfiles = set()
 
         # Callback for the changelog, used to collect changed files and manifest
         # nodes.
@@ -670,7 +669,7 @@ class cg1packer(object):
             mfs.setdefault(n, x)
             # Record a complete list of potentially-changed files in
             # this manifest.
-            mfchangedfiles.setdefault(n, set()).update(c[3])
+            changedfiles.update(c[3])
             return x
 
         self._verbosenote(_('uncompressed size of bundle content:\n'))
@@ -703,7 +702,7 @@ class cg1packer(object):
             'treemanifest' not in repo.requirements)
 
         for chunk in self.generatemanifests(commonrevs, clrevorder,
-                fastpathlinkrev, mfs, mfchangedfiles, fnodes):
+                fastpathlinkrev, mfs, fnodes):
             yield chunk
         mfs.clear()
         clrevs = set(cl.rev(x) for x in clnodes)
@@ -719,9 +718,6 @@ class cg1packer(object):
                 revs = ((r, llr(r)) for r in filerevlog)
                 return dict((fln(r), cln(lr)) for r, lr in revs if lr in clrevs)
 
-        changedfiles = set()
-        for x in mfchangedfiles.itervalues():
-            changedfiles.update(x)
         for chunk in self.generatefiles(changedfiles, linknodes, commonrevs,
                                         source):
             yield chunk
@@ -732,7 +728,7 @@ class cg1packer(object):
             repo.hook('outgoing', node=hex(clnodes[0]), source=source)
 
     def generatemanifests(self, commonrevs, clrevorder, fastpathlinkrev, mfs,
-                          mfchangedfiles, fnodes):
+                          fnodes):
         repo = self._repo
         dirlog = repo.manifest.dirlog
         tmfnodes = {'': mfs}
@@ -763,28 +759,15 @@ class cg1packer(object):
                 """
                 clnode = tmfnodes[dir][x]
                 mdata = dirlog(dir).readshallowfast(x)
-                if 'treemanifest' in repo.requirements:
-                    for p, n, fl in mdata.iterentries():
-                        if fl == 't': # subdirectory manifest
-                            subdir = dir + p + '/'
-                            tmfclnodes = tmfnodes.setdefault(subdir, {})
-                            tmfclnode = tmfclnodes.setdefault(n, clnode)
-                            if clrevorder[clnode] < clrevorder[tmfclnode]:
-                                tmfclnodes[n] = clnode
-                        else:
-                            f = dir + p
-                            fclnodes = fnodes.setdefault(f, {})
-                            fclnode = fclnodes.setdefault(n, clnode)
-                            if clrevorder[clnode] < clrevorder[fclnode]:
-                                fclnodes[n] = clnode
-                else:
-                    for f in mfchangedfiles[x]:
-                        try:
-                            n = mdata[f]
-                        except KeyError:
-                            continue
-                        # record the first changeset introducing this filelog
-                        # version
+                for p, n, fl in mdata.iterentries():
+                    if fl == 't': # subdirectory manifest
+                        subdir = dir + p + '/'
+                        tmfclnodes = tmfnodes.setdefault(subdir, {})
+                        tmfclnode = tmfclnodes.setdefault(n, clnode)
+                        if clrevorder[clnode] < clrevorder[tmfclnode]:
+                            tmfclnodes[n] = clnode
+                    else:
+                        f = dir + p
                         fclnodes = fnodes.setdefault(f, {})
                         fclnode = fclnodes.setdefault(n, clnode)
                         if clrevorder[clnode] < clrevorder[fclnode]:
