@@ -1004,5 +1004,74 @@ bookmarks change
   (use --hidden to access hidden revisions)
   [255]
 
+Test ability to pull changeset with locally applying obsolescence markers
+(issue4945)
 
+  $ cd ..
+  $ hg init issue4845
+  $ cd issue4845
+
+  $ echo foo > f0
+  $ hg add f0
+  $ hg ci -m '0'
+  $ echo foo > f1
+  $ hg add f1
+  $ hg ci -m '1'
+  $ echo foo > f2
+  $ hg add f2
+  $ hg ci -m '2'
+
+  $ echo bar > f2
+  $ hg commit --amend --config experimetnal.evolution=createmarkers
+  $ hg log -G
+  @  4:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+  $ hg log -G --hidden
+  @  4:b0551702f918 (draft) [tip ] 2
+  |
+  | x  3:f27abbcc1f77 (draft) [ ] temporary amend commit for e008cf283490
+  | |
+  | x  2:e008cf283490 (draft) [ ] 2
+  |/
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  o  0:a78f55e5508c (draft) [ ] 0
+  
+
+  $ hg strip -r 1 --config extensions.strip=
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/tmpe/issue4845/.hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg (glob)
+  $ hg log -G
+  @  0:a78f55e5508c (draft) [tip ] 0
+  
+  $ hg log -G --hidden
+  @  0:a78f55e5508c (draft) [tip ] 0
+  
+
+  $ hg pull .hg/strip-backup/*
+  pulling from .hg/strip-backup/e016b03fd86f-c41c6bcc-backup.hg
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  (run 'hg update' to get a working copy)
+  $ hg log -G
+  o  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  @  0:a78f55e5508c (draft) [ ] 0
+  
+  $ hg log -G --hidden
+  o  2:b0551702f918 (draft) [tip ] 2
+  |
+  o  1:e016b03fd86f (draft) [ ] 1
+  |
+  @  0:a78f55e5508c (draft) [ ] 0
+  
 

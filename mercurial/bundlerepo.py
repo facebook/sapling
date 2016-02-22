@@ -362,7 +362,8 @@ class bundlerepository(localrepo.localrepository):
 
         if f in self.bundlefilespos:
             self.bundle.seek(self.bundlefilespos[f])
-            return bundlefilelog(self.svfs, f, self.bundle, self.changelog.rev)
+            linkmapper = self.unfiltered().changelog.rev
+            return bundlefilelog(self.svfs, f, self.bundle, linkmapper)
         else:
             return filelog.filelog(self.svfs, f)
 
