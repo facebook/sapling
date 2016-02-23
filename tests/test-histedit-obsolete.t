@@ -14,6 +14,51 @@ Enable obsolete
   > rebase=
   > EOF
 
+Test that histedit learns about obsolescence not stored in histedit state
+  $ hg init boo
+  $ cd boo
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+  $ echo a > b
+  $ echo a > c
+  $ echo a > c
+  $ hg ci -Am b
+  adding b
+  adding c
+  $ echo a > d
+  $ hg ci -Am c
+  adding d
+  $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
+  $ echo "pick `hg log -r 2 -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 1 -T '{node|short}'`" >> plan
+  $ hg histedit -r 'all()' --commands plan
+  Editing (1b2d564fad96), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+  $ hg st
+  A b
+  A c
+  ? plan
+  $ hg commit --amend b
+  $ hg histedit --continue
+  $ hg log -G
+  @  6:46abc7c4d873 b
+  |
+  o  5:49d44ab2be1b c
+  |
+  o  0:cb9a9f314b8b a
+  
+  $ hg debugobsolete
+  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
+  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
+  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+  $ cd ..
+
+Base setup for the rest of the testing
+======================================
+
   $ hg init base
   $ cd base
 

@@ -1386,13 +1386,48 @@ def verifyactions(actions, state, ctxs):
                 hint=_('use "drop %s" to discard, see also: '
                        '"hg help -e histedit.config"') % missing[0][:12])
 
+def adjustreplacementsfrommarkers(repo, oldreplacements):
+    """Adjust replacements from obsolescense markers
+
+    Replacements structure is originally generated based on
+    histedit's state and does not account for changes that are
+    not recorded there. This function fixes that by adding
+    data read from obsolescense markers"""
+    if not obsolete.isenabled(repo, obsolete.createmarkersopt):
+        return oldreplacements
+
+    unfi = repo.unfiltered()
+    newreplacements = list(oldreplacements)
+    oldsuccs = [r[1] for r in oldreplacements]
+    # successors that have already been added to succstocheck once
+    seensuccs = set().union(*oldsuccs) # create a set from an iterable of tuples
+    succstocheck = list(seensuccs)
+    while succstocheck:
+        n = succstocheck.pop()
+        try:
+            ctx = unfi[n]
+        except error.RepoError:
+            # XXX node unknown locally, we should properly follow marker
+            newreplacements.append((n, ()))
+            continue
+
+        for marker in obsolete.successormarkers(ctx):
+            nsuccs = marker.succnodes()
+            newreplacements.append((n, nsuccs))
+            for nsucc in nsuccs:
+                if nsucc not in seensuccs:
+                    seensuccs.add(nsucc)
+                    succstocheck.append(nsucc)
+
+    return newreplacements
+
 def processreplacement(state):
     """process the list of replacements to return
 
     1) the final mapping between original and created nodes
     2) the list of temporary node created by histedit
     3) the list of new commit created by histedit"""
-    replacements = state.replacements
+    replacements = adjustreplacementsfrommarkers(state.repo, state.replacements)
     allsuccs = set()
     replaced = set()
     fullmapping = {}
