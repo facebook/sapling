@@ -2846,10 +2846,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
     mf = ctx.manifest()
     if node == p2:
         parent = p2
-    if node == parent:
-        pmf = mf
-    else:
-        pmf = None
 
     # need all matching names in dirstate and manifest of target rev,
     # so have to walk both. do not print errors if files exist in one
@@ -2964,11 +2960,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # in case of merge, files that are actually added can be reported as
         # modified, we need to post process the result
         if p2 != nullid:
-            if pmf is None:
-                # only need parent manifest in the merge case,
-                # so do not read by default
-                pmf = repo[parent].manifest()
-            mergeadd = dsmodified - set(pmf)
+            mergeadd = dsmodified - smf
             dsadded |= mergeadd
             dsmodified -= mergeadd
 
