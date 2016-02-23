@@ -110,20 +110,12 @@ def sortnodes(nodes, parentfunc, masters):
         if not parents or (len(parents) == 1 and parents[0] == -1) and n != -1:
             roots.append(n)
 
-    def childsort(x, y):
-        xm = x in masters
-        ym = y in masters
-        # Process children in the master line last.
-        # This makes them always appear on the left side of the dag,
-        # resulting in a nice straight master line in the ascii output.
-        if xm and not ym:
-            return 1
-        elif not xm and ym:
-            return -1
-        else:
-            # If both children are not in the master line, show the oldest
-            # first, so the graph is approximately in chronological order.
-            return x - y
+    def childsortkey(x):
+        # Process children in the master line last. This makes them always
+        # appear on the left side of the dag, resulting in a nice straight
+        # master line in the ascii output. Otherwise show the oldest first, so
+        # the graph is approximately in chronological order.
+        return (x in masters, x)
 
     # Process roots, adding children to the queue as they become roots
     results = []
@@ -134,7 +126,7 @@ def sortnodes(nodes, parentfunc, masters):
             children = list(childmap[n])
             # reverse=True here because we insert(0) below, resulting
             # in a reversed insertion of the children.
-            children = sorted(children, reverse=True, cmp=childsort)
+            children = sorted(children, reverse=True, key=childsortkey)
             for c in children:
                 childparents = parentmap[c]
                 childparents.remove(n)
