@@ -801,10 +801,8 @@ def manifestmerge(repo, wctx, p2, pa, branchmerge, force, matcher,
 
     if '.hgsubstate' in m1:
         # check whether sub state is modified
-        for s in sorted(wctx.substate):
-            if wctx.sub(s).dirty():
-                m1['.hgsubstate'] += '+'
-                break
+        if any(wctx.sub(s).dirty() for s in wctx.substate):
+            m1['.hgsubstate'] += '+'
 
     # Compare manifests
     if matcher is not None:
