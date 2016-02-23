@@ -72,7 +72,7 @@ def gcdisable(orig):
 def parentrev(ui, repo, meta, hashes):
     """Find the svn parent revision of the repo's dirstate.
     """
-    workingctx = repo.parents()[0]
+    workingctx = repo[None].parents()[0]
     outrev = outgoing_revisions(repo, hashes, workingctx.node())
     if outrev:
         workingctx = repo[outrev[-1]].parents()[0]
