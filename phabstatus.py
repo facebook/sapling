@@ -61,6 +61,8 @@ def getdiffstatus(repo, *diffid):
     Returns status of the diff"""
 
     try:
+        if not diffid:
+            return []
         proc = subprocess.Popen(['arc', 'call-conduit', 'differential.query'],
                      stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                      preexec_fn=os.setsid)
