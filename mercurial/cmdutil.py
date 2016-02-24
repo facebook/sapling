@@ -2976,13 +2976,6 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         clean    = set(changes.clean)
         modadded = set()
 
-        # determine the exact nature of the deleted changesets
-        deladded = set(_deleted)
-        for path in _deleted:
-            if path in mf:
-                deladded.remove(path)
-        deleted = _deleted - deladded
-
         # We need to account for the state of the file in the dirstate,
         # even when we revert against something else than parent. This will
         # slightly alter the behavior of revert (doing back up or not, delete
@@ -3039,6 +3032,13 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             if src and src not in names and repo.dirstate[src] == 'r':
                 dsremoved.add(src)
                 names[src] = (repo.pathto(src, cwd), True)
+
+        # determine the exact nature of the deleted changesets
+        deladded = set(_deleted)
+        for path in _deleted:
+            if path in mf:
+                deladded.remove(path)
+        deleted = _deleted - deladded
 
         # distinguish between file to forget and the other
         added = set()
