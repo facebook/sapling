@@ -133,6 +133,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
     # be provided as arguments to future operations.
     paths = Bundle('paths')
     contents = Bundle('contents')
+    branches = Bundle('branches')
     committimes = Bundle('committimes')
 
     def __init__(self):
@@ -249,6 +250,13 @@ class verifyingstatemachine(RuleBasedStateMachine):
         ))
     def gencontent(self, content):
         return content
+
+    @rule(
+        target=branches,
+        name=safetext,
+    )
+    def genbranch(self, name):
+        return name
 
     @rule(target=paths, source=paths)
     def lowerpath(self, source):
@@ -368,6 +376,32 @@ class verifyingstatemachine(RuleBasedStateMachine):
     @rule()
     def export(self):
         self.hg("export")
+
+    # Section: Branch management
+    @rule()
+    def checkbranch(self):
+        self.hg("branch")
+
+    @rule(branch=branches)
+    def switchbranch(self, branch):
+        with acceptableerrors(
+            'cannot use an integer as a name',
+            'cannot be used in a name',
+            'a branch of the same name already exists',
+            'is reserved',
+        ):
+            self.hg("branch", "--", branch)
+
+    @rule(branch=branches, clean=st.booleans())
+    def update(self, branch, clean):
+        with acceptableerrors(
+            'unknown revision',
+            'parse error',
+        ):
+            if clean:
+                self.hg("update", "-C", "--", branch)
+            else:
+                self.hg("update", "--", branch)
 
 settings.register_profile(
     'default',  settings(
