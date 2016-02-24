@@ -37,7 +37,8 @@ import silenttestrunner
 import subprocess
 
 from hypothesis.errors import HypothesisException
-from hypothesis.stateful import rule, RuleBasedStateMachine, Bundle
+from hypothesis.stateful import (
+    rule, RuleBasedStateMachine, Bundle, precondition)
 from hypothesis import settings, note, strategies as st
 from hypothesis.configuration import set_hypothesis_home_dir
 
@@ -155,6 +156,9 @@ class verifyingstatemachine(RuleBasedStateMachine):
         self.mkdirp("repo1")
         self.cd("repo1")
         self.hg("init")
+        self.extensions = {}
+        self.all_extensions = set()
+        self.non_skippable_extensions = set()
 
     def teardown(self):
         """On teardown we clean up after ourselves as usual, but we also
@@ -185,6 +189,17 @@ class verifyingstatemachine(RuleBasedStateMachine):
         e = None
         if not self.failed:
             try:
+                for ext in (
+                    self.all_extensions - self.non_skippable_extensions
+                ):
+                    try:
+                        os.environ["SKIP_EXTENSION"] = ext
+                        output = subprocess.check_output([
+                            runtests, path, "--local",
+                        ], stderr=subprocess.STDOUT)
+                        assert "Ran 1 test" in output, output
+                    finally:
+                        del os.environ["SKIP_EXTENSION"]
                 output = subprocess.check_output([
                     runtests, path, "--local", "--pure"
                 ], stderr=subprocess.STDOUT)
@@ -470,6 +485,50 @@ class verifyingstatemachine(RuleBasedStateMachine):
                 self.hg("update", "-C", "--", branch)
             else:
                 self.hg("update", "--", branch)
+
+    # Section: Extension management
+    def hasextension(self, extension):
+        repo = self.currentrepo
+        return repo in self.extensions and extension in self.extensions[repo]
+
+    def commandused(self, extension):
+        assert extension in self.all_extensions
+        self.non_skippable_extensions.add(extension)
+
+    @rule(extension=st.sampled_from((
+        'shelve', 'mq', 'blackbox',
+    )))
+    def addextension(self, extension):
+        self.all_extensions.add(extension)
+        extensions = self.extensions.setdefault(self.currentrepo, set())
+        if extension in extensions:
+            return
+        extensions.add(extension)
+        if not os.path.exists(hgrc):
+            self.command("touch", hgrc)
+        with open(hgrc, 'a') as o:
+            line = "[extensions]\n%s=\n" % (extension,)
+            o.write(line)
+        for l in line.splitlines():
+            self.log.append((
+                '$ if test "$SKIP_EXTENSION" != "%s" ; '
+                'then echo %r >> %s; fi') % (
+                    extension, l, hgrc,))
+
+    # Section: Commands from the shelve extension
+    @rule()
+    @precondition(lambda self: self.hasextension("shelve"))
+    def shelve(self):
+        self.commandused("shelve")
+        with acceptableerrors("nothing changed"):
+            self.hg("shelve")
+
+    @rule()
+    @precondition(lambda self: self.hasextension("shelve"))
+    def unshelve(self):
+        self.commandused("shelve")
+        with acceptableerrors("no shelved changes to apply"):
+            self.hg("unshelve")
 
 settings.register_profile(
     'default',  settings(
