@@ -144,6 +144,22 @@ def _mtimehash(paths):
             pass
     return _hashlist(map(trystat, paths))[:12]
 
+class hashstate(object):
+    """a structure storing confighash, mtimehash, paths used for mtimehash"""
+    def __init__(self, confighash, mtimehash, mtimepaths):
+        self.confighash = confighash
+        self.mtimehash = mtimehash
+        self.mtimepaths = mtimepaths
+
+    @staticmethod
+    def fromui(ui, mtimepaths=None):
+        if mtimepaths is None:
+            mtimepaths = _getmtimepaths(ui)
+        confighash = _confighash(ui)
+        mtimehash = _mtimehash(mtimepaths)
+        _log('confighash = %s mtimehash = %s\n' % (confighash, mtimehash))
+        return hashstate(confighash, mtimehash, mtimepaths)
+
 # copied from hgext/pager.py:uisetup()
 def _setuppagercmd(ui, options, cmd):
     if not ui.formatted():
