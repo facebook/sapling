@@ -357,11 +357,10 @@ def _statusotherbook(ui, repo):
 def _statusotherbranchheads(ui, repo):
     currentbranch = repo.dirstate.branch()
     heads = repo.branchheads(currentbranch)
-    l = len(heads)
     if repo.revs('%ln and parents()', heads):
         # we are on a head
         otherheads = repo.revs('%ln - parents()', heads)
-        if otherheads and l != len(otherheads):
+        if otherheads:
             ui.status(_('%i other heads for branch "%s"\n') %
                       (len(otherheads), currentbranch))
 
