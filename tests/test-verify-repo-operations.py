@@ -41,6 +41,7 @@ from hypothesis.stateful import (
     rule, RuleBasedStateMachine, Bundle, precondition)
 from hypothesis import settings, note, strategies as st
 from hypothesis.configuration import set_hypothesis_home_dir
+from hypothesis.database import ExampleDatabase
 
 testdir = os.path.abspath(os.environ["TESTDIR"])
 
@@ -530,6 +531,23 @@ class verifyingstatemachine(RuleBasedStateMachine):
         with acceptableerrors("no shelved changes to apply"):
             self.hg("unshelve")
 
+class writeonlydatabase(ExampleDatabase):
+    def __init__(self, underlying):
+        super(ExampleDatabase, self).__init__()
+        self.underlying = underlying
+
+    def fetch(self, key):
+        return ()
+
+    def save(self, key, value):
+        self.underlying.save(key, value)
+
+    def delete(self, key, value):
+        self.underlying.delete(key, value)
+
+    def close(self):
+        self.underlying.close()
+
 settings.register_profile(
     'default',  settings(
         timeout=300,
@@ -545,6 +563,16 @@ settings.register_profile(
         max_examples=5,
         min_satisfying_examples=1,
         max_shrinks=0,
+    )
+)
+
+settings.register_profile(
+    'continuous', settings(
+        timeout=-1,
+        stateful_step_count=1000,
+        max_examples=10 ** 8,
+        max_iterations=10 ** 8,
+        database=writeonlydatabase(settings.default.database)
     )
 )
 
