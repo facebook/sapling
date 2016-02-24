@@ -84,7 +84,7 @@ Entire changelog missing
   3 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Entire manifest log missing
 
@@ -94,7 +94,7 @@ Entire manifest log missing
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Entire filelog missing
 
@@ -109,7 +109,7 @@ Entire filelog missing
   3 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Entire changelog and manifest log missing
 
@@ -118,7 +118,7 @@ Entire changelog and manifest log missing
   $ hg verify -q
   warning: orphan revlog 'data/file.i'
   1 warnings encountered!
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Entire changelog and filelog missing
 
@@ -137,7 +137,7 @@ Entire changelog and filelog missing
   6 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Entire manifest log and filelog missing
 
@@ -152,7 +152,7 @@ Entire manifest log and filelog missing
   2 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Changelog missing entry
 
@@ -165,7 +165,7 @@ Changelog missing entry
   1 warnings encountered!
   3 integrity errors encountered!
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Manifest log missing entry
 
@@ -176,7 +176,7 @@ Manifest log missing entry
   2 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Filelog missing entry
 
@@ -186,7 +186,7 @@ Filelog missing entry
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Changelog and manifest log missing entry
 
@@ -199,7 +199,7 @@ Changelog and manifest log missing entry
   1 warnings encountered!
   2 integrity errors encountered!
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Changelog and filelog missing entry
 
@@ -211,7 +211,7 @@ Changelog and filelog missing entry
    file@?: manifest refers to unknown revision c10f2164107d
   3 integrity errors encountered!
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Manifest and filelog missing entry
 
@@ -222,7 +222,7 @@ Manifest and filelog missing entry
   1 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Corrupt changelog base node to cause failure to read revision
 
@@ -238,7 +238,7 @@ Corrupt changelog base node to cause failure to read revision
   4 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Corrupt manifest log base node to cause failure to read revision
 
@@ -250,7 +250,7 @@ Corrupt manifest log base node to cause failure to read revision
   2 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
 Corrupt filelog base node to cause failure to read revision
 
@@ -261,7 +261,7 @@ Corrupt filelog base node to cause failure to read revision
   1 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -r .hg/store-full/* .hg/store
+  $ cp -r .hg/store-full/. .hg/store
 
   $ cd ..
 
