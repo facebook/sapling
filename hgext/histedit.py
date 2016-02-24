@@ -1397,6 +1397,8 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
         return oldreplacements
 
     unfi = repo.unfiltered()
+    nm = unfi.changelog.nodemap
+    obsstore = repo.obsstore
     newreplacements = list(oldreplacements)
     oldsuccs = [r[1] for r in oldreplacements]
     # successors that have already been added to succstocheck once
@@ -1404,15 +1406,13 @@ def adjustreplacementsfrommarkers(repo, oldreplacements):
     succstocheck = list(seensuccs)
     while succstocheck:
         n = succstocheck.pop()
-        try:
-            ctx = unfi[n]
-        except error.RepoError:
-            # XXX node unknown locally, we should properly follow marker
+        missing = nm.get(n) is None
+        markers = obsstore.successors.get(n, ())
+        if missing and not markers:
+            # dead end, mark it as such
             newreplacements.append((n, ()))
-            continue
-
-        for marker in obsolete.successormarkers(ctx):
-            nsuccs = marker.succnodes()
+        for marker in markers:
+            nsuccs = marker[1]
             newreplacements.append((n, nsuccs))
             for nsucc in nsuccs:
                 if nsucc not in seensuccs:

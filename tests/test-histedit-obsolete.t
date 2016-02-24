@@ -54,6 +54,40 @@ Test that histedit learns about obsolescence not stored in histedit state
   3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
   1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
   114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+
+With some node gone missing during the edit.
+
+  $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
+  $ echo "pick `hg log -r 6 -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 5 -T '{node|short}'`" >> plan
+  $ hg histedit -r 'all()' --commands plan
+  Editing (49d44ab2be1b), you may commit or record as needed now.
+  (hg histedit --continue to resume)
+  [1]
+  $ hg st
+  A b
+  A d
+  ? plan
+  $ hg commit --amend -X . -m XXXXXX
+  $ hg commit --amend -X . -m b2
+  $ hg --hidden --config extensions.strip= strip 'desc(XXXXXX)' --no-backup
+  $ hg histedit --continue
+  $ hg log -G
+  @  9:273c1f3b8626 c
+  |
+  o  8:aba7da937030 b2
+  |
+  o  0:cb9a9f314b8b a
+  
+  $ hg debugobsolete
+  e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+  3e30a45cf2f719e96ab3922dfe039cfd047956ce 0 {e72d22b19f8ecf4150ab4f91d0973fd9955d3ddf} (*) {'user': 'test'} (glob)
+  1b2d564fad96311b45362f17c2aa855150efb35f 46abc7c4d8738e8563e577f7889e1b6db3da4199 0 (*) {'user': 'test'} (glob)
+  114f4176969ef342759a8a57e6bccefc4234829b 49d44ab2be1b67a79127568a67c9c99430633b48 0 (*) {'user': 'test'} (glob)
+  76f72745eac0643d16530e56e2f86e36e40631f1 2ca853e48edbd6453a0674dc0fe28a0974c51b9c 0 (*) {'user': 'test'} (glob)
+  2ca853e48edbd6453a0674dc0fe28a0974c51b9c aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (*) {'user': 'test'} (glob)
+  49d44ab2be1b67a79127568a67c9c99430633b48 273c1f3b86267ed3ec684bb13af1fa4d6ba56e02 0 (*) {'user': 'test'} (glob)
+  46abc7c4d8738e8563e577f7889e1b6db3da4199 aba7da93703075eec9fb1dbaf143ff2bc1c49d46 0 (*) {'user': 'test'} (glob)
   $ cd ..
 
 Base setup for the rest of the testing
