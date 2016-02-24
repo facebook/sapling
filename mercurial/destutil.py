@@ -92,12 +92,13 @@ def _destupdatebranch(repo, clean, check):
     wc = repo[None]
     movemark = node = None
     currentbranch = wc.branch()
-    try:
-        node = repo.revs('max(.::(head() and branch(%s)))'
-                         , currentbranch).first()
+    if currentbranch in repo.branchmap():
+        heads = repo.branchheads(currentbranch, closed=True)
+        if heads:
+            node = repo.revs('max(.::(%ln))', heads).first()
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
-    except error.RepoLookupError:
+    else:
         if currentbranch == 'default': # no default branch!
             node = repo.lookup('tip') # update to tip
         else:
