@@ -1076,3 +1076,72 @@ check resulting directory against the --all run
   $ cd ..
   $ diff -U 0 -- content-base-all.txt content-base-explicit.txt | grep _
   [1]
+
+Revert to an ancestor of P2 during a merge (issue5052)
+-----------------------------------------------------
+
+(prepare the repository)
+
+  $ hg init issue5052
+  $ cd issue5052
+  $ echo '.\.orig' > .hgignore
+  $ echo 0 > root
+  $ hg ci -qAm C0
+  $ echo 0 > A
+  $ hg ci -qAm C1
+  $ echo 1 >> A
+  $ hg ci -qm C2
+  $ hg up -q 0
+  $ echo 1 > B
+  $ hg ci -qAm C3
+  $ hg status --rev 'ancestor(.,2)' --rev 2
+  A A
+  $ hg log -G -T '{rev} ({files})\n'
+  @  3 (B)
+  |
+  | o  2 (A)
+  | |
+  | o  1 (A)
+  |/
+  o  0 (.hgignore root)
+  
+
+actual tests: reverting to something else than a merge parent
+
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg status --rev 'p1()'
+  M A
+  $ hg status --rev 'p2()'
+  A B
+  $ hg status --rev '1'
+  M A
+  A B
+  $ hg revert --rev 1 --all
+  reverting A
+  removing B
+  $ hg status --rev 1
+
+From the other parents
+
+  $ hg up -C 'p2()'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg merge
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+  $ hg status --rev 'p1()'
+  M B
+  $ hg status --rev 'p2()'
+  A A
+  $ hg status --rev '1'
+  M A
+  A B
+  $ hg revert --rev 1 --all
+  reverting A
+  removing B
+  $ hg status --rev 1
+
+  $ cd ..

@@ -163,8 +163,8 @@ def config(orig, self, section, key, default=None, untrusted=False):
                 return path
     return orig(self, section, key, default, untrusted)
 
-def configitems(orig, self, section, untrusted=False):
-    repos = orig(self, section, untrusted)
+def configitems(orig, self, section, *args, **kwargs):
+    repos = orig(self, section, *args, **kwargs)
     if section == "paths":
         repos += getzcpaths()
     return repos

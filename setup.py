@@ -304,7 +304,7 @@ class hgbuildext(build_ext):
 
 class hgbuildscripts(build_scripts):
     def run(self):
-        if os.name != 'nt':
+        if os.name != 'nt' or self.distribution.pure:
             return build_scripts.run(self)
 
         exebuilt = False

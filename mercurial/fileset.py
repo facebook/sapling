@@ -435,8 +435,8 @@ def eol(mctx, x):
     styles.
     """
 
-    # i18n: "encoding" is a keyword
-    enc = getstring(x, _("encoding requires an encoding name"))
+    # i18n: "eol" is a keyword
+    enc = getstring(x, _("eol requires a style name"))
 
     s = []
     for f in mctx.existing():
