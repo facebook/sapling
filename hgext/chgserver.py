@@ -34,6 +34,8 @@ import os
 import re
 import signal
 import struct
+import threading
+import time
 import traceback
 
 from mercurial.i18n import _
@@ -380,20 +382,93 @@ class _requesthandler(SocketServer.StreamRequestHandler):
             traceback.print_exc(file=sv.cerr)
             raise
 
+def _tempaddress(address):
+    return '%s.%d.tmp' % (address, os.getpid())
+
+class AutoExitMixIn:  # use old-style to comply with SocketServer design
+    lastactive = time.time()
+    idletimeout = 3600  # default 1 hour
+
+    def startautoexitthread(self):
+        # note: the auto-exit check here is cheap enough to not use a thread,
+        # be done in serve_forever. however SocketServer is hook-unfriendly,
+        # you simply cannot hook serve_forever without copying a lot of code.
+        # besides, serve_forever's docstring suggests using thread.
+        thread = threading.Thread(target=self._autoexitloop)
+        thread.daemon = True
+        thread.start()
+
+    def _autoexitloop(self, interval=1):
+        while True:
+            time.sleep(interval)
+            if not self.issocketowner():
+                _log('%s is not owned, exiting.\n' % self.server_address)
+                break
+            if time.time() - self.lastactive > self.idletimeout:
+                _log('being idle too long. exiting.\n')
+                break
+        self.shutdown()
+
+    def process_request(self, request, address):
+        self.lastactive = time.time()
+        return SocketServer.ForkingMixIn.process_request(
+            self, request, address)
+
+    def server_bind(self):
+        # use a unique temp address so we can stat the file and do ownership
+        # check later
+        tempaddress = _tempaddress(self.server_address)
+        self.socket.bind(tempaddress)
+        self._socketstat = os.stat(tempaddress)
+        # rename will replace the old socket file if exists atomically. the
+        # old server will detect ownership change and exit.
+        util.rename(tempaddress, self.server_address)
+
+    def issocketowner(self):
+        try:
+            stat = os.stat(self.server_address)
+            return (stat.st_ino == self._socketstat.st_ino and
+                    stat.st_mtime == self._socketstat.st_mtime)
+        except OSError:
+            return False
+
+    def unlinksocketfile(self):
+        if not self.issocketowner():
+            return
+        # it is possible to have a race condition here that we may
+        # remove another server's socket file. but that's okay
+        # since that server will detect and exit automatically and
+        # the client will start a new server on demand.
+        try:
+            os.unlink(self.server_address)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise
+
 class chgunixservice(commandserver.unixservice):
     def init(self):
         # drop options set for "hg serve --cmdserver" command
         self.ui.setconfig('progress', 'assume-tty', None)
         signal.signal(signal.SIGHUP, self._reloadconfig)
-        class cls(SocketServer.ForkingMixIn, SocketServer.UnixStreamServer):
+        class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
+                  SocketServer.UnixStreamServer):
             ui = self.ui
             repo = self.repo
         self.server = cls(self.address, _requesthandler)
+        self.server.idletimeout = self.ui.configint(
+            'chgserver', 'idletimeout', self.server.idletimeout)
+        self.server.startautoexitthread()
         # avoid writing "listening at" message to stdout before attachio
         # request, which calls setvbuf()
 
     def _reloadconfig(self, signum, frame):
         self.ui = self.server.ui = _renewui(self.ui)
+
+    def run(self):
+        try:
+            self.server.serve_forever()
+        finally:
+            self.server.unlinksocketfile()
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
