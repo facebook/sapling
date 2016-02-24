@@ -358,9 +358,10 @@ def _statusotherbook(ui, repo):
 
 def _statusotherbranchheads(ui, repo):
     currentbranch = repo.dirstate.branch()
+    allheads = repo.branchheads(currentbranch, closed=True)
     heads = repo.branchheads(currentbranch)
-    if repo.revs('%ln and parents()', heads):
-        # we are on a head
+    if repo.revs('%ln and parents()', allheads):
+        # we are on a head, even though it might be closed
         otherheads = repo.revs('%ln - parents()', heads)
         if otherheads:
             ui.status(_('%i other heads for branch "%s"\n') %
