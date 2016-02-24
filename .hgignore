@@ -21,6 +21,8 @@ syntax: glob
 .\#*
 tests/.coverage*
 tests/.testtimes*
+tests/.hypothesis
+tests/hypothesis-generated
 tests/annotated
 tests/*.err
 tests/htmlcov
