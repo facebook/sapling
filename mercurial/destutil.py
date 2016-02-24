@@ -360,10 +360,10 @@ def _statusotherbranchheads(ui, repo):
     l = len(heads)
     if repo.revs('%ln and parents()', heads):
         # we are on a head
-        heads = repo.revs('%ln - parents()', heads)
-        if heads and l != len(heads):
+        otherheads = repo.revs('%ln - parents()', heads)
+        if otherheads and l != len(otherheads):
             ui.status(_('%i other heads for branch "%s"\n') %
-                      (len(heads), currentbranch))
+                      (len(otherheads), currentbranch))
 
 def statusotherdests(ui, repo):
     """Print message about other head"""
