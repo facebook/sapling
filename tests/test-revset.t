@@ -693,12 +693,11 @@ Test opreand of '%' is optimized recursively (issue4670)
   * optimized:
   (func
     ('symbol', 'only')
-    (and
+    (difference
       (range
         ('symbol', '8')
         ('symbol', '9'))
-      (not
-        ('symbol', '8'))))
+      ('symbol', '8')))
   * set:
   <baseset+ [8, 9]>
   8

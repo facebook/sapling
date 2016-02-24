@@ -436,6 +436,9 @@ def dagrange(repo, subset, x, y):
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)
 
+def differenceset(repo, subset, x, y):
+    return getset(repo, subset, x) - getset(repo, subset, y)
+
 def orset(repo, subset, *xs):
     assert xs
     if len(xs) == 1:
@@ -2147,6 +2150,7 @@ methods = {
     "and": andset,
     "or": orset,
     "not": notset,
+    "difference": differenceset,
     "list": listset,
     "keyvalue": keyvaluepair,
     "func": func,
@@ -2206,6 +2210,9 @@ def optimize(x, small):
             return w, ('func', ('symbol', 'only'), ('list', ta[2], tb[1][2]))
         if isonly(tb, ta):
             return w, ('func', ('symbol', 'only'), ('list', tb[2], ta[1][2]))
+
+        if tb is not None and tb[0] == 'not':
+            return wa, ('difference', ta, tb[1])
 
         if wa > wb:
             return w, (op, tb, ta)
