@@ -91,16 +91,17 @@ def _destupdatebranch(repo, clean, check):
     """decide on an update destination from current branch"""
     wc = repo[None]
     movemark = node = None
+    currentbranch = wc.branch()
     try:
         node = repo.revs('max(.::(head() and branch(%s)))'
-                         , wc.branch()).first()
+                         , currentbranch).first()
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
     except error.RepoLookupError:
-        if wc.branch() == 'default': # no default branch!
+        if currentbranch == 'default': # no default branch!
             node = repo.lookup('tip') # update to tip
         else:
-            raise error.Abort(_("branch %s not found") % wc.branch())
+            raise error.Abort(_("branch %s not found") % currentbranch)
     return node, movemark, None
 
 # order in which each step should be evalutated
