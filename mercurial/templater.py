@@ -296,9 +296,8 @@ def runmap(context, mapping, data):
     if util.safehasattr(d, 'itermaps'):
         d = d.itermaps()
 
-    lm = mapping.copy()
-
     for i in d:
+        lm = mapping.copy()
         if isinstance(i, dict):
             lm.update(i)
             lm['originalnode'] = mapping.get('node')
