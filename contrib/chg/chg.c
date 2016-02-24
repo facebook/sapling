@@ -190,13 +190,22 @@ static void unlockcmdserver(struct cmdserveropts *opts)
 	opts->lockfd = -1;
 }
 
+static const char *gethgcmd(void)
+{
+	static const char *hgcmd = NULL;
+	if (!hgcmd) {
+		hgcmd = getenv("CHGHG");
+		if (!hgcmd || hgcmd[0] == '\0')
+			hgcmd = getenv("HG");
+		if (!hgcmd || hgcmd[0] == '\0')
+			hgcmd = "hg";
+	}
+	return hgcmd;
+}
+
 static void execcmdserver(const struct cmdserveropts *opts)
 {
-	const char *hgcmd = getenv("CHGHG");
-	if (!hgcmd || hgcmd[0] == '\0')
-		hgcmd = getenv("HG");
-	if (!hgcmd || hgcmd[0] == '\0')
-		hgcmd = "hg";
+	const char *hgcmd = gethgcmd();
 
 	const char *baseargv[] = {
 		hgcmd,
