@@ -9,8 +9,8 @@ Create an extension to test bundle2 API
   $ cat > bundle2.py << EOF
   > """A small extension to test bundle2 implementation
   > 
-  > Current bundle2 implementation is far too limited to be used in any core
-  > code. We still need to be able to test it while it grow up.
+  > This extension allows detailed testing of the various bundle2 API and
+  > behaviors.
   > """
   > 
   > import sys, os, gc
