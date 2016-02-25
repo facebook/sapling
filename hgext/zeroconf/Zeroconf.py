@@ -1266,8 +1266,8 @@ class Zeroconf(object):
 			# work as expected.
 			#
 			pass
-		self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, 255)
-		self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
+		self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_TTL, "\xff")
+		self.socket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, "\x01")
 		try:
 			self.socket.bind(self.group)
 		except Exception:
