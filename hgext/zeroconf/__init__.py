@@ -169,6 +169,16 @@ def configitems(orig, self, section, *args, **kwargs):
         repos += getzcpaths()
     return repos
 
+def configsuboptions(orig, self, section, name, *args, **kwargs):
+    opt, sub = orig(self, section, name, *args, **kwargs)
+    if section == "paths" and name.startswith("zc-"):
+        # We have to find the URL in the zeroconf paths.  We can't cons up any
+        # suboptions, so we use any that we found in the original config.
+        for zcname, zcurl in getzcpaths():
+            if zcname == name:
+                return zcurl, sub
+    return opt, sub
+
 def defaultdest(orig, source):
     for name, path in getzcpaths():
         if path == source:
@@ -189,5 +199,6 @@ extensions.wrapfunction(dispatch, '_runcommand', cleanupafterdispatch)
 
 extensions.wrapfunction(ui.ui, 'config', config)
 extensions.wrapfunction(ui.ui, 'configitems', configitems)
+extensions.wrapfunction(ui.ui, 'configsuboptions', configsuboptions)
 extensions.wrapfunction(hg, 'defaultdest', defaultdest)
 extensions.wrapfunction(servermod, 'create_server', zc_create_server)
