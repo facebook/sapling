@@ -30,10 +30,12 @@ from __future__ import absolute_import
 
 import SocketServer
 import errno
+import inspect
 import os
 import re
 import signal
 import struct
+import sys
 import threading
 import time
 import traceback
@@ -46,6 +48,7 @@ from mercurial import (
     commandserver,
     dispatch,
     error,
+    extensions,
     osutil,
     util,
 )
@@ -96,6 +99,50 @@ def _confighash(ui):
     envitems = [(k, v) for k, v in os.environ.iteritems() if _envre.match(k)]
     envhash = _hashlist(sorted(envitems))
     return sectionhash[:6] + envhash[:6]
+
+def _getmtimepaths(ui):
+    """get a list of paths that should be checked to detect change
+
+    The list will include:
+    - extensions (will not cover all files for complex extensions)
+    - mercurial/__version__.py
+    - python binary
+    """
+    modules = [m for n, m in extensions.extensions(ui)]
+    try:
+        from mercurial import __version__
+        modules.append(__version__)
+    except ImportError:
+        pass
+    files = [sys.executable]
+    for m in modules:
+        try:
+            files.append(inspect.getabsfile(m))
+        except TypeError:
+            pass
+    return sorted(set(files))
+
+def _mtimehash(paths):
+    """return a quick hash for detecting file changes
+
+    mtimehash calls stat on given paths and calculate a hash based on size and
+    mtime of each file. mtimehash does not read file content because reading is
+    expensive. therefore it's not 100% reliable for detecting content changes.
+    it's possible to return different hashes for same file contents.
+    it's also possible to return a same hash for different file contents for
+    some carefully crafted situation.
+
+    for chgserver, it is designed that once mtimehash changes, the server is
+    considered outdated immediately and should no longer provide service.
+    """
+    def trystat(path):
+        try:
+            st = os.stat(path)
+            return (st.st_mtime, st.st_size)
+        except OSError:
+            # could be ENOENT, EPERM etc. not fatal in any case
+            pass
+    return _hashlist(map(trystat, paths))[:12]
 
 # copied from hgext/pager.py:uisetup()
 def _setuppagercmd(ui, options, cmd):
