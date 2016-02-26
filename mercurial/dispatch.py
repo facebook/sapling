@@ -685,16 +685,17 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
               result=ret, pats=cmdpats, opts=cmdoptions)
     return ret
 
-def _getlocal(ui, rpath):
+def _getlocal(ui, rpath, wd=None):
     """Return (path, local ui object) for the given target path.
 
     Takes paths in [cwd]/.hg/hgrc into account."
     """
-    try:
-        wd = os.getcwd()
-    except OSError as e:
-        raise error.Abort(_("error getting current working directory: %s") %
-                         e.strerror)
+    if wd is None:
+        try:
+            wd = os.getcwd()
+        except OSError as e:
+            raise error.Abort(_("error getting current working directory: %s") %
+                              e.strerror)
     path = cmdutil.findrepo(wd) or ""
     if not path:
         lui = ui
