@@ -5543,13 +5543,12 @@ def phase(ui, repo, *revs, **opts):
             ui.warn(_('no phases changed\n'))
     return ret
 
-def postincoming(ui, repo, modheads, optupdate, checkout):
+def postincoming(ui, repo, modheads, optupdate, checkout, brev):
     if modheads == 0:
         return
     if optupdate:
         warndest = False
         try:
-            brev = checkout
             movemarkfrom = None
             if not checkout:
                 warndest = True
@@ -5655,11 +5654,28 @@ def pull(ui, repo, source="default", **opts):
                                  force=opts.get('force'),
                                  bookmarks=opts.get('bookmark', ()),
                                  opargs=pullopargs).cgresult
+
+        # brev is a name, which might be a bookmark to be activated at
+        # the end of the update. In other words, it is an explicit
+        # destination of the update
+        brev = None
+
         if checkout:
             checkout = str(repo.changelog.rev(checkout))
+
+            # order below depends on implementation of
+            # hg.addbranchrevs(). opts['bookmark'] is ignored,
+            # because 'checkout' is determined without it.
+            if opts.get('rev'):
+                brev = opts['rev'][0]
+            elif opts.get('branch'):
+                brev = opts['branch'][0]
+            else:
+                brev = branches[0]
         repo._subtoppath = source
         try:
-            ret = postincoming(ui, repo, modheads, opts.get('update'), checkout)
+            ret = postincoming(ui, repo, modheads, opts.get('update'),
+                               checkout, brev)
 
         finally:
             del repo._subtoppath
@@ -6898,7 +6914,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
             else:
                 modheads = gen.apply(repo, 'unbundle', 'bundle:' + fname)
 
-    return postincoming(ui, repo, modheads, opts.get('update'), None)
+    return postincoming(ui, repo, modheads, opts.get('update'), None, None)
 
 @command('^update|up|checkout|co',
     [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
