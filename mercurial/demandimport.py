@@ -230,6 +230,8 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
 ignore = [
     '__future__',
     '_hashlib',
+    # ImportError during pkg_resources/__init__.py:fixup_namespace_package
+    '_imp',
     '_xmlplus',
     'fcntl',
     'win32com.gen_py',
