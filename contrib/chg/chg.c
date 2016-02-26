@@ -227,6 +227,8 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	memcpy(argv + baseargvsize, opts->args, sizeof(char *) * opts->argsize);
 	argv[argsize - 1] = NULL;
 
+	if (putenv("CHGINTERNALMARK=") != 0)
+		abortmsg("failed to putenv (errno = %d)", errno);
 	if (execvp(hgcmd, (char **)argv) < 0)
 		abortmsg("failed to exec cmdserver (errno = %d)", errno);
 	free(argv);
@@ -489,6 +491,12 @@ int main(int argc, const char *argv[], const char *envp[])
 {
 	if (getenv("CHGDEBUG"))
 		enabledebugmsg();
+
+	if (getenv("CHGINTERNALMARK"))
+		abortmsg("chg started by chg detected.\n"
+			 "Please make sure ${HG:-hg} is not a symlink or "
+			 "wrapper to chg. Alternatively, set $CHGHG to the "
+			 "path of real hg.");
 
 	if (isunsupported(argc - 1, argv + 1))
 		execoriginalhg(argv);

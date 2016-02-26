@@ -472,3 +472,8 @@ class chgunixservice(commandserver.unixservice):
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
+
+    # CHGINTERNALMARK is temporarily set by chg client to detect if chg will
+    # start another chg. drop it to avoid possible side effects.
+    if 'CHGINTERNALMARK' in os.environ:
+        del os.environ['CHGINTERNALMARK']
