@@ -58,6 +58,45 @@ testedwith = 'internal'
 
 _log = commandserver.log
 
+def _hashlist(items):
+    """return sha1 hexdigest for a list"""
+    return util.sha1(str(items)).hexdigest()
+
+# sensitive config sections affecting confighash
+_configsections = ['extensions']
+
+# sensitive environment variables affecting confighash
+_envre = re.compile(r'''\A(?:
+                    CHGHG
+                    |HG.*
+                    |LANG(?:UAGE)?
+                    |LC_.*
+                    |LD_.*
+                    |PATH
+                    |PYTHON.*
+                    |TERM(?:INFO)?
+                    |TZ
+                    )\Z''', re.X)
+
+def _confighash(ui):
+    """return a quick hash for detecting config/env changes
+
+    confighash is the hash of sensitive config items and environment variables.
+
+    for chgserver, it is designed that once confighash changes, the server is
+    not qualified to serve its client and should redirect the client to a new
+    server. different from mtimehash, confighash change will not mark the
+    server outdated and exit since the user can have different configs at the
+    same time.
+    """
+    sectionitems = []
+    for section in _configsections:
+        sectionitems.append(ui.configitems(section))
+    sectionhash = _hashlist(sectionitems)
+    envitems = [(k, v) for k, v in os.environ.iteritems() if _envre.match(k)]
+    envhash = _hashlist(sorted(envitems))
+    return sectionhash[:6] + envhash[:6]
+
 # copied from hgext/pager.py:uisetup()
 def _setuppagercmd(ui, options, cmd):
     if not ui.formatted():
