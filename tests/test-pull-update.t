@@ -123,4 +123,92 @@ explicit destination of the update.
    * active-after-pull         4:f815b3da6163
      active-before-pull        3:483b76ad4309
 
+(discard pulled changes)
+
+  $ hg update -q 483b76ad4309
+  $ hg rollback -q
+
+Test that updating deactivates current active bookmark, if the
+destination of the update is explicitly specified, and it doesn't
+match with the name of any exsiting bookmarks.
+
+  $ cd ../t
+  $ hg bookmark -d active-after-pull
+  $ hg branch bar -q
+  $ hg commit -m "#5 (bar #1)"
+  $ cd ../tt
+
+(1) deactivating by --rev REV
+
+  $ hg bookmark -f active-before-pull
+  $ hg bookmarks
+   * active-before-pull        3:483b76ad4309
+
+  $ hg pull -u -r b5e4babfaaa7
+  pulling from $TESTTMP/t (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark active-before-pull)
+
+  $ hg parents -q
+  5:b5e4babfaaa7
+  $ hg bookmarks
+     active-before-pull        3:483b76ad4309
+
+(discard pulled changes)
+
+  $ hg update -q 483b76ad4309
+  $ hg rollback -q
+
+(2) deactivating by --branch BRANCH
+
+  $ hg bookmark -f active-before-pull
+  $ hg bookmarks
+   * active-before-pull        3:483b76ad4309
+
+  $ hg pull -u -b bar
+  pulling from $TESTTMP/t (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark active-before-pull)
+
+  $ hg parents -q
+  5:b5e4babfaaa7
+  $ hg bookmarks
+     active-before-pull        3:483b76ad4309
+
+(discard pulled changes)
+
+  $ hg update -q 483b76ad4309
+  $ hg rollback -q
+
+(3) deactivating by URL#ANOTHER-BRANCH
+
+  $ hg bookmark -f active-before-pull
+  $ hg bookmarks
+   * active-before-pull        3:483b76ad4309
+
+  $ hg pull -u $TESTTMP/t#bar
+  pulling from $TESTTMP/t (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 1 changes to 1 files
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark active-before-pull)
+
+  $ hg parents -q
+  5:b5e4babfaaa7
+  $ hg bookmarks
+     active-before-pull        3:483b76ad4309
+
   $ cd ..

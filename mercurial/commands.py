@@ -5570,6 +5570,11 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
             if brev != repo._activebookmark:
                 ui.status(_("(activating bookmark %s)\n") % brev)
             bookmarks.activate(repo, brev)
+        elif brev:
+            if repo._activebookmark:
+                ui.status(_("(leaving bookmark %s)\n") %
+                          repo._activebookmark)
+            bookmarks.deactivate(repo)
         return ret
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
