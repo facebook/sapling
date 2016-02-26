@@ -448,10 +448,50 @@ error:
 	abortmsg("failed to prepare pager (errno = %d)", errno);
 }
 
+/*
+ * Test whether the command is unsupported or not. This is not designed to
+ * cover all cases. But it's fast, does not depend on the server and does
+ * not return false positives.
+ */
+static int isunsupported(int argc, const char *argv[])
+{
+	enum {
+		SERVE = 1,
+		DAEMON = 2,
+		SERVEDAEMON = SERVE | DAEMON,
+		TIME = 4,
+	};
+	unsigned int state = 0;
+	int i;
+	for (i = 0; i < argc; ++i) {
+		if (strcmp(argv[i], "--") == 0)
+			break;
+		if (i == 0 && strcmp("serve", argv[i]) == 0)
+			state |= SERVE;
+		else if (strcmp("-d", argv[i]) == 0 ||
+			 strcmp("--daemon", argv[i]) == 0)
+			state |= DAEMON;
+		else if (strcmp("--time", argv[i]) == 0)
+			state |= TIME;
+	}
+	return (state & TIME) == TIME ||
+	       (state & SERVEDAEMON) == SERVEDAEMON;
+}
+
+static void execoriginalhg(const char *argv[])
+{
+	debugmsg("execute original hg");
+	if (execvp(gethgcmd(), (char **)argv) < 0)
+		abortmsg("failed to exec original hg (errno = %d)", errno);
+}
+
 int main(int argc, const char *argv[], const char *envp[])
 {
 	if (getenv("CHGDEBUG"))
 		enabledebugmsg();
+
+	if (isunsupported(argc - 1, argv + 1))
+		execoriginalhg(argv);
 
 	struct cmdserveropts opts;
 	initcmdserveropts(&opts);
