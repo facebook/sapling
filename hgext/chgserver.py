@@ -180,17 +180,35 @@ def _newchgui(srcui, csystem):
 
     return chgui(srcui)
 
-def _renewui(srcui):
+def _renewui(srcui, args=None):
+    if not args:
+        args = []
+
     newui = srcui.__class__()
     for a in ['fin', 'fout', 'ferr', 'environ']:
         setattr(newui, a, getattr(srcui, a))
     if util.safehasattr(srcui, '_csystem'):
         newui._csystem = srcui._csystem
+
+    # load wd and repo config, copied from dispatch.py
+    cwds = dispatch._earlygetopt(['--cwd'], args)
+    cwd = cwds and os.path.realpath(cwds[-1]) or None
+    rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
+    path, newui = dispatch._getlocal(newui, rpath, wd=cwd)
+
+    # internal config: extensions.chgserver
+    # copy it. it can only be overrided from command line.
+    newui.setconfig('extensions', 'chgserver',
+                    srcui.config('extensions', 'chgserver'), '--config')
+
+    # command line args
+    dispatch._parseconfig(newui, dispatch._earlygetopt(['--config'], args))
+
     # stolen from tortoisehg.util.copydynamicconfig()
     for section, name, value in srcui.walkconfig():
         source = srcui.configsource(section, name)
-        if ':' in source:
-            # path:line
+        if ':' in source or source == '--config':
+            # path:line or command line
             continue
         if source == 'none':
             # ui.configsource returns 'none' by default
