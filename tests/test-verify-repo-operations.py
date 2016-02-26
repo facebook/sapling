@@ -97,6 +97,8 @@ safetext = st.text(st.characters(
     lambda s: s.encode('utf-8')
 )
 
+extensions = st.sampled_from(('shelve', 'mq', 'blackbox',))
+
 @contextmanager
 def acceptableerrors(*args):
     """Sometimes we know an operation we're about to perform might fail, and
@@ -151,15 +153,15 @@ class verifyingstatemachine(RuleBasedStateMachine):
         os.chdir(testtmp)
         self.log = []
         self.failed = False
+        self.configperrepo = {}
+        self.all_extensions = set()
+        self.non_skippable_extensions = set()
 
         self.mkdirp("repos")
         self.cd("repos")
         self.mkdirp("repo1")
         self.cd("repo1")
         self.hg("init")
-        self.extensions = {}
-        self.all_extensions = set()
-        self.non_skippable_extensions = set()
 
     def teardown(self):
         """On teardown we clean up after ourselves as usual, but we also
@@ -190,29 +192,32 @@ class verifyingstatemachine(RuleBasedStateMachine):
         e = None
         if not self.failed:
             try:
-                for ext in (
-                    self.all_extensions - self.non_skippable_extensions
-                ):
-                    try:
-                        os.environ["SKIP_EXTENSION"] = ext
-                        output = subprocess.check_output([
-                            runtests, path, "--local",
-                        ], stderr=subprocess.STDOUT)
-                        assert "Ran 1 test" in output, output
-                    finally:
-                        del os.environ["SKIP_EXTENSION"]
                 output = subprocess.check_output([
                     runtests, path, "--local", "--pure"
                 ], stderr=subprocess.STDOUT)
                 assert "Ran 1 test" in output, output
+                for ext in (
+                    self.all_extensions - self.non_skippable_extensions
+                ):
+                    tf = os.path.join(testtmp, "test-generated-no-%s.t" % (
+                        ext,
+                    ))
+                    with open(tf, 'w') as o:
+                        for l in ttest.splitlines():
+                            if l.startswith("  $ hg"):
+                                l = l.replace(
+                                    "--config %s=" % (
+                                        extensionconfigkey(ext),), "")
+                            o.write(l + os.linesep)
+                    with open(tf, 'r') as r:
+                        t = r.read()
+                        assert ext not in t, t
+                    output = subprocess.check_output([
+                        runtests, tf, "--local",
+                    ], stderr=subprocess.STDOUT)
+                    assert "Ran 1 test" in output, output
             except subprocess.CalledProcessError as e:
                 note(e.output)
-            finally:
-                os.unlink(path)
-                try:
-                    os.unlink(path + ".err")
-                except OSError:
-                    pass
         if self.failed or e is not None:
             with open(savefile, "wb") as o:
                 o.write(ttest)
@@ -244,7 +249,11 @@ class verifyingstatemachine(RuleBasedStateMachine):
         self.log.append("$ cd -- %s" % (pipes.quote(path),))
 
     def hg(self, *args):
-        self.command("hg", *args)
+        extra_flags = []
+        for key, value in self.config.items():
+            extra_flags.append("--config")
+            extra_flags.append("%s=%s" % (key, value))
+        self.command("hg", *(tuple(extra_flags) + args))
 
     def command(self, *args):
         self.log.append("$ " + ' '.join(map(pipes.quote, args)))
@@ -384,6 +393,10 @@ class verifyingstatemachine(RuleBasedStateMachine):
     def currentrepo(self):
         return os.path.basename(os.getcwd())
 
+    @property
+    def config(self):
+        return self.configperrepo.setdefault(self.currentrepo, {})
+
     @rule(
         target=repos,
         source=repos,
@@ -489,32 +502,20 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
     # Section: Extension management
     def hasextension(self, extension):
-        repo = self.currentrepo
-        return repo in self.extensions and extension in self.extensions[repo]
+        return extensionconfigkey(extension) in self.config
 
     def commandused(self, extension):
         assert extension in self.all_extensions
         self.non_skippable_extensions.add(extension)
 
-    @rule(extension=st.sampled_from((
-        'shelve', 'mq', 'blackbox',
-    )))
+    @rule(extension=extensions)
     def addextension(self, extension):
         self.all_extensions.add(extension)
-        extensions = self.extensions.setdefault(self.currentrepo, set())
-        if extension in extensions:
-            return
-        extensions.add(extension)
-        if not os.path.exists(hgrc):
-            self.command("touch", hgrc)
-        with open(hgrc, 'a') as o:
-            line = "[extensions]\n%s=\n" % (extension,)
-            o.write(line)
-        for l in line.splitlines():
-            self.log.append((
-                '$ if test "$SKIP_EXTENSION" != "%s" ; '
-                'then echo %r >> %s; fi') % (
-                    extension, l, hgrc,))
+        self.config[extensionconfigkey(extension)] = ""
+
+    @rule(extension=extensions)
+    def removeextension(self, extension):
+        self.config.pop(extensionconfigkey(extension), None)
 
     # Section: Commands from the shelve extension
     @rule()
@@ -547,6 +548,9 @@ class writeonlydatabase(ExampleDatabase):
 
     def close(self):
         self.underlying.close()
+
+def extensionconfigkey(extension):
+    return "extensions." + extension
 
 settings.register_profile(
     'default',  settings(
