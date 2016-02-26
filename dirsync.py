@@ -31,6 +31,7 @@ projectY.dir3 = foo/goo/hoo
 """
 
 from collections import defaultdict
+import errno
 from mercurial import extensions, localrepo, util
 from mercurial import match as matchmod
 from mercurial import error
@@ -151,11 +152,11 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             util.makedirs(repo.wjoin(mirrorpathdir))
 
             util.copyfile(fullsource, fulltarget)
+            if dirstate[mirrorpath] in '?r':
+                dirstate.add(mirrorpath)
 
 
             if action == 'a':
-                dirstate.add(mirrorpath)
-
                 # For adds, detect copy data as well
                 copysource = dirstate.copied(sourcepath)
                 if copysource and copysource.startswith(sourcemirror):
@@ -171,9 +172,18 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                 repo.ui.status(("mirrored changes in '%s' to '%s'\n") %
                                (sourcepath, mirrorpath))
         elif action == 'r':
-            util.unlink(fulltarget)
-            dirstate.remove(mirrorpath)
-            repo.ui.status(("mirrored remove of '%s' to '%s'\n")
-                            % (sourcepath, mirrorpath))
+            try:
+                util.unlink(fulltarget)
+            except OSError as e:
+                if e.errno == errno.ENOENT:
+                    repo.ui.status("not mirroring remove of '%s' to '%s'; it "
+                                   "is already removed\n" %
+                                   (sourcepath, mirrorpath))
+                else:
+                    raise
+            else:
+                dirstate.remove(mirrorpath)
+                repo.ui.status("mirrored remove of '%s' to '%s'\n" %
+                               (sourcepath, mirrorpath))
 
     return mirroredfiles

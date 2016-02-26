@@ -460,3 +460,108 @@ Test quiet non-conflicting edits
   -aa
   +aaa
 
+  $ cd ..
+
+Test deleting file with missing mirror
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ mkdir dir1
+  $ echo a > dir1/a
+  $ hg add dir1
+  adding dir1/a
+  $ hg commit -m 'add dir1/a'
+  $ cat >> .hg/hgrc <<EOF
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ hg rm dir1/a
+  $ hg status
+  R dir1/a
+  $ hg commit -m 'rm dir1/a'
+  not mirroring remove of 'dir1/a' to 'dir2/a'; it is already removed
+  $ hg diff --git -r .^ -r .
+  diff --git a/dir1/a b/dir1/a
+  deleted file mode 100644
+  --- a/dir1/a
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -a
+
+  $ cd ..
+
+Test modifying file with missing mirror
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ mkdir dir1
+  $ echo a > dir1/a
+  $ hg add dir1
+  adding dir1/a
+  $ hg commit -m 'add dir1/a'
+  $ cat >> .hg/hgrc <<EOF
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ echo a2 > dir1/a
+  $ hg status
+  M dir1/a
+  $ hg commit -m 'modify dir1/a'
+  mirrored changes in 'dir1/a' to 'dir2/a'
+  $ cat dir2/a
+  a2
+  $ hg diff --git -r .^ -r .
+  diff --git a/dir1/a b/dir1/a
+  --- a/dir1/a
+  +++ b/dir1/a
+  @@ -1,1 +1,1 @@
+  -a
+  +a2
+  diff --git a/dir2/a b/dir2/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/dir2/a
+  @@ -0,0 +1,1 @@
+  +a2
+
+  $ cd ..
+
+Test updating missing mirror
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ mkdir dir1
+  $ echo a > dir1/a
+  $ hg add dir1
+  adding dir1/a
+  $ hg commit -m 'add dir1/a'
+  $ cat >> .hg/hgrc <<EOF
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ mkdir dir2
+  $ echo a2 > dir2/a
+  $ hg add dir2
+  adding dir2/a
+  $ hg status
+  A dir2/a
+  $ hg commit -m 'add dir2/a'
+  mirrored adding 'dir2/a' to 'dir1/a'
+  $ hg diff --git -r .^ -r .
+  diff --git a/dir1/a b/dir1/a
+  --- a/dir1/a
+  +++ b/dir1/a
+  @@ -1,1 +1,1 @@
+  -a
+  +a2
+  diff --git a/dir2/a b/dir2/a
+  new file mode 100644
+  --- /dev/null
+  +++ b/dir2/a
+  @@ -0,0 +1,1 @@
+  +a2
+
+  $ cd ..
