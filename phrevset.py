@@ -130,6 +130,12 @@ def forksearch(repo, diffid):
 
 def parsedesc(repo, resp, ignoreparsefailure):
     desc = resp['description']
+    if desc is None:
+        if ignoreparsefailure:
+            return None
+        else:
+            raise error.Abort("No Conduit description")
+
     match = DESCRIPTION_REGEX.match(desc)
 
     if not match:
@@ -224,6 +230,7 @@ def revsetdiff(repo, subset, diffid):
         # find their counterpart by parsing the log
         for idx, rev in enumerate(revs):
             if rev not in repo:
+                repo.ui.warn(_('Commit not found - doing a linear search\n'))
                 parsed_rev = finddiff(repo, diffid)
 
                 if not parsed_rev:
