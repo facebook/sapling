@@ -108,6 +108,10 @@ def acceptableerrors(*args):
             note(e.output)
             raise
 
+reponames = st.text("abcdefghijklmnopqrstuvwxyz01234556789", min_size=1).map(
+    lambda s: s.encode('ascii')
+)
+
 class verifyingstatemachine(RuleBasedStateMachine):
     """This defines the set of acceptable operations on a Mercurial repository
     using Hypothesis's RuleBasedStateMachine.
@@ -131,6 +135,7 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
     # A bundle is a reusable collection of previously generated data which may
     # be provided as arguments to future operations.
+    repos = Bundle('repos')
     paths = Bundle('paths')
     contents = Bundle('contents')
     branches = Bundle('branches')
@@ -138,15 +143,17 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
     def __init__(self):
         super(verifyingstatemachine, self).__init__()
-        self.repodir = os.path.join(testtmp, "repo")
+        self.repodir = os.path.join(testtmp, "repos")
         if os.path.exists(self.repodir):
             shutil.rmtree(self.repodir)
         os.chdir(testtmp)
         self.log = []
         self.failed = False
 
-        self.mkdirp("repo")
-        self.cd("repo")
+        self.mkdirp("repos")
+        self.cd("repos")
+        self.mkdirp("repo1")
+        self.cd("repo1")
         self.hg("init")
 
     def teardown(self):
@@ -355,6 +362,67 @@ class verifyingstatemachine(RuleBasedStateMachine):
 
         with acceptableerrors(*errors):
             self.hg(*command)
+
+    # Section: Repository management
+    @property
+    def currentrepo(self):
+        return os.path.basename(os.getcwd())
+
+    @rule(
+        target=repos,
+        source=repos,
+        name=reponames,
+    )
+    def clone(self, source, name):
+        if not os.path.exists(os.path.join("..", name)):
+            self.cd("..")
+            self.hg("clone", source, name)
+            self.cd(name)
+        return name
+
+    @rule(
+        target=repos,
+        name=reponames,
+    )
+    def fresh(self, name):
+        if not os.path.exists(os.path.join("..", name)):
+            self.cd("..")
+            self.mkdirp(name)
+            self.cd(name)
+            self.hg("init")
+        return name
+
+    @rule(name=repos)
+    def switch(self, name):
+        self.cd(os.path.join("..", name))
+        assert self.currentrepo == name
+        assert os.path.exists(".hg")
+
+    @rule(target=repos)
+    def origin(self):
+        return "repo1"
+
+    @rule()
+    def pull(self, repo=repos):
+        with acceptableerrors(
+            "repository default not found",
+            "repository is unrelated",
+        ):
+            self.hg("pull")
+
+    @rule(newbranch=st.booleans())
+    def push(self, newbranch):
+        with acceptableerrors(
+            "default repository not configured",
+            "no changes found",
+        ):
+            if newbranch:
+                self.hg("push", "--new-branch")
+            else:
+                with acceptableerrors(
+                    "creates new branches"
+                ):
+                    self.hg("push")
 
     # Section: Simple side effect free "check" operations
     @rule()
