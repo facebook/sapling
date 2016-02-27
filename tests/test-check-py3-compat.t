@@ -19,7 +19,6 @@
   doc/check-seclevel.py not using absolute_import
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
-  hgext/__init__.py not using absolute_import
   hgext/color.py not using absolute_import
   hgext/eol.py not using absolute_import
   hgext/extdiff.py not using absolute_import
