@@ -100,6 +100,23 @@ should succeed
   /a/
   /b/
   
+  $ get-with-headers.py localhost:$HGPORT '?style=json'
+  200 Script output follows
+  
+  {
+  "entries": [{
+  "name": "a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *] (glob)
+  }, {
+  "name": "b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *] (glob)
+  }]
+  } (no-eol)
+
   $ get-with-headers.py localhost:$HGPORT 'a/file/tip/a?style=raw'
   200 Script output follows
   

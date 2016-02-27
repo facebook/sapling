@@ -172,3 +172,12 @@ help = '\{
   }'
 filenodelink = ''
 filenolink = ''
+index = '\{
+  "entries": [{join(entries%indexentry, ", ")}]
+  }'
+indexentry = '\{
+  "name": {name|utf8|json},
+  "description": {description|utf8|json},
+  "contact": {contact|utf8|json},
+  "lastchange": {lastchange|json}
+  }'
