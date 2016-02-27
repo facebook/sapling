@@ -627,8 +627,6 @@ class chgunixservice(commandserver.unixservice):
             'chgserver', 'idletimeout', self.server.idletimeout)
         self.server.startautoexitthread()
         self._createsymlink()
-        # avoid writing "listening at" message to stdout before attachio
-        # request, which calls setvbuf()
 
     def _inithashstate(self):
         self.baseaddress = self.address
