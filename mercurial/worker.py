@@ -157,6 +157,28 @@ def partition(lst, nslices):
     The current strategy takes every Nth element from the input. If
     we ever write workers that need to preserve grouping in input
     we should consider allowing callers to specify a partition strategy.
+
+    mpm is not a fan of this partitioning strategy when files are involved.
+    In his words:
+
+        Single-threaded Mercurial makes a point of creating and visiting
+        files in a fixed order (alphabetical). When creating files in order,
+        a typical filesystem is likely to allocate them on nearby regions on
+        disk. Thus, when revisiting in the same order, locality is maximized
+        and various forms of OS and disk-level caching and read-ahead get a
+        chance to work.
+
+        This effect can be quite significant on spinning disks. I discovered it
+        circa Mercurial v0.4 when revlogs were named by hashes of filenames.
+        Tarring a repo and copying it to another disk effectively randomized
+        the revlog ordering on disk by sorting the revlogs by hash and suddenly
+        performance of my kernel checkout benchmark dropped by ~10x because the
+        "working set" of sectors visited no longer fit in the drive's cache and
+        the workload switched from streaming to random I/O.
+
+        What we should really be doing is have workers read filenames from a
+        ordered queue. This preserves locality and also keeps any worker from
+        getting more than one file out of balance.
     '''
     for i in range(nslices):
         yield lst[i::nslices]
