@@ -345,7 +345,7 @@ class KeepAliveHandler(object):
                     h.putheader('Content-length', '%d' % len(data))
             else:
                 h.putrequest('GET', req.get_selector(), **skipheaders)
-        except (socket.error) as err:
+        except socket.error as err:
             raise urllib2.URLError(err)
         for k, v in headers.items():
             h.putheader(k, v)
