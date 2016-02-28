@@ -2223,13 +2223,11 @@ class TestRunner(object):
             pure = b"--pure"
         else:
             pure = b""
-        py3 = ''
 
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
         exe = sys.executable
         if PYTHON3:
-            py3 = b'--c2to3'
             compiler = _bytespath(compiler)
             script = _bytespath(script)
             exe = _bytespath(exe)
@@ -2243,12 +2241,12 @@ class TestRunner(object):
             # least on Windows for now, deal with .pydistutils.cfg bugs
             # when they happen.
             nohome = b''
-        cmd = (b'%(exe)s setup.py %(py3)s %(pure)s clean --all'
+        cmd = (b'%(exe)s setup.py %(pure)s clean --all'
                b' build %(compiler)s --build-base="%(base)s"'
                b' install --force --prefix="%(prefix)s"'
                b' --install-lib="%(libdir)s"'
                b' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-               % {b'exe': exe, b'py3': py3, b'pure': pure,
+               % {b'exe': exe, b'pure': pure,
                   b'compiler': compiler,
                   b'base': os.path.join(self._hgtmp, b"build"),
                   b'prefix': self._installdir, b'libdir': self._pythondir,
