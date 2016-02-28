@@ -6,9 +6,6 @@
   contrib/check-code.py not using absolute_import
   contrib/check-code.py requires print_function
   contrib/debugshell.py not using absolute_import
-  contrib/hgfixes/fix_bytes.py not using absolute_import
-  contrib/hgfixes/fix_bytesmod.py not using absolute_import
-  contrib/hgfixes/fix_leftover_imports.py not using absolute_import
   contrib/import-checker.py not using absolute_import
   contrib/import-checker.py requires print_function
   contrib/memory.py not using absolute_import

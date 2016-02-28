@@ -495,10 +495,6 @@ def verify_stdlib_on_own_line(root):
     """Given some python source, verify that stdlib imports are done
     in separate statements from relative local module imports.
 
-    Observing this limitation is important as it works around an
-    annoying lib2to3 bug in relative import rewrites:
-    http://bugs.python.org/issue19510.
-
     >>> list(verify_stdlib_on_own_line(ast.parse('import sys, foo')))
     [('mixed imports\\n   stdlib:    sys\\n   relative:  foo', 1)]
     >>> list(verify_stdlib_on_own_line(ast.parse('import sys, os')))
