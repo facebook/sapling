@@ -334,12 +334,20 @@ class changelog(revlog.revlog):
         (.*)            : comment (free text, ideally utf-8)
 
         changelog v0 doesn't use extra
+
+        Returns a 6-tuple consisting of the following:
+          - manifest node (binary)
+          - user (encoding.localstr)
+          - (time, timezone) 2-tuple of a float and int offset
+          - list of files modified by the cset
+          - commit message / description (binary)
+          - dict of extra entries
         """
         text = self.revision(node)
         if not text:
             return nullid, "", (0, 0), [], "", _defaultextra
         last = text.index("\n\n")
-        desc = encoding.tolocal(text[last + 2:])
+        desc = text[last + 2:]
         l = text[:last].split('\n')
         manifest = bin(l[0])
         user = encoding.tolocal(l[1])
