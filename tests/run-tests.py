@@ -698,7 +698,8 @@ class Test(unittest.TestCase):
 
         if self._keeptmpdir:
             log('\nKeeping testtmp dir: %s\nKeeping threadtmp dir: %s' %
-                (self._testtmp, self._threadtmp))
+                (self._testtmp.decode('utf-8'),
+                 self._threadtmp.decode('utf-8')))
         else:
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
@@ -721,7 +722,7 @@ class Test(unittest.TestCase):
         self._aborted = True
 
     def _portmap(self, i):
-        offset = '' if i == 0 else '%s' % i
+        offset = b'' if i == 0 else b'%d' % i
         return (br':%d\b' % (self._startport + i), b':$HGPORT%s' % offset)
 
     def _getreplacements(self):
@@ -909,8 +910,8 @@ if PYTHON3:
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
-    SKIPPED_PREFIX = 'skipped: '
-    FAILED_PREFIX = 'hghave check failed: '
+    SKIPPED_PREFIX = b'skipped: '
+    FAILED_PREFIX = b'hghave check failed: '
     NEEDESCAPE = re.compile(br'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 
     ESCAPESUB = re.compile(br'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
@@ -1213,7 +1214,7 @@ class TTest(Test):
         if el:
             if el.endswith(b" (?)\n"):
                 retry = "retry"
-                el = el[:-5] + "\n"
+                el = el[:-5] + b"\n"
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
                     el = el[:-7].decode('unicode_escape') + '\n'
@@ -1245,10 +1246,10 @@ class TTest(Test):
         for line in lines:
             if line.startswith(TTest.SKIPPED_PREFIX):
                 line = line.splitlines()[0]
-                missing.append(line[len(TTest.SKIPPED_PREFIX):])
+                missing.append(line[len(TTest.SKIPPED_PREFIX):].decode('utf-8'))
             elif line.startswith(TTest.FAILED_PREFIX):
                 line = line.splitlines()[0]
-                failed.append(line[len(TTest.FAILED_PREFIX):])
+                failed.append(line[len(TTest.FAILED_PREFIX):].decode('utf-8'))
 
         return missing, failed
 
@@ -1642,7 +1643,7 @@ class TestSuite(unittest.TestSuite):
 def loadtimes(testdir):
     times = []
     try:
-        with open(os.path.join(testdir, '.testtimes-')) as fp:
+        with open(os.path.join(testdir, b'.testtimes-')) as fp:
             for line in fp:
                 ts = line.split()
                 times.append((ts[0], [float(t) for t in ts[1:]]))
@@ -1662,12 +1663,12 @@ def savetimes(testdir, result):
             ts.append(real)
             ts[:] = ts[-maxruns:]
 
-    fd, tmpname = tempfile.mkstemp(prefix='.testtimes',
+    fd, tmpname = tempfile.mkstemp(prefix=b'.testtimes',
                                    dir=testdir, text=True)
     with os.fdopen(fd, 'w') as fp:
-        for name, ts in sorted(saved.iteritems()):
+        for name, ts in sorted(saved.items()):
             fp.write('%s %s\n' % (name, ' '.join(['%.3f' % (t,) for t in ts])))
-    timepath = os.path.join(testdir, '.testtimes')
+    timepath = os.path.join(testdir, b'.testtimes')
     try:
         os.unlink(timepath)
     except OSError:
@@ -1739,7 +1740,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 
             if self._runner.options.json:
-                jsonpath = os.path.join(self._runner._testdir, 'report.json')
+                jsonpath = os.path.join(self._runner._testdir, b'report.json')
                 with open(jsonpath, 'w') as fp:
                     timesd = {}
                     for tdata in result.times:
@@ -1754,14 +1755,14 @@ class TextTestRunner(unittest.TextTestRunner):
                     for res, testcases in groups:
                         for tc, __ in testcases:
                             if tc.name in timesd:
+                                diff = result.faildata.get(tc.name, b'')
                                 tres = {'result': res,
                                         'time': ('%0.3f' % timesd[tc.name][2]),
                                         'cuser': ('%0.3f' % timesd[tc.name][0]),
                                         'csys': ('%0.3f' % timesd[tc.name][1]),
                                         'start': ('%0.3f' % timesd[tc.name][3]),
                                         'end': ('%0.3f' % timesd[tc.name][4]),
-                                        'diff': result.faildata.get(tc.name,
-                                                                    ''),
+                                        'diff': diff.decode('unicode_escape'),
                                         }
                             else:
                                 # blacklisted test
