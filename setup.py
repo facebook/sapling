@@ -84,19 +84,6 @@ from distutils.errors import (
 from distutils.sysconfig import get_python_inc, get_config_var
 from distutils.version import StrictVersion
 
-convert2to3 = '--c2to3' in sys.argv
-if convert2to3:
-    try:
-        from distutils.command.build_py import build_py_2to3 as build_py
-        from lib2to3.refactor import get_fixers_from_package as getfixers
-    except ImportError:
-        if sys.version_info[0] < 3:
-            raise SystemExit("--c2to3 is only compatible with python3.")
-        raise
-    sys.path.append('contrib')
-elif sys.version_info[0] >= 3:
-    raise SystemExit("setup.py with python3 needs --c2to3 (experimental)")
-
 scripts = ['hg']
 if os.name == 'nt':
     # We remove hg.bat if we are able to build hg.exe.
@@ -235,15 +222,7 @@ except ImportError:
 class hgbuild(build):
     # Insert hgbuildmo first so that files in mercurial/locale/ are found
     # when build_py is run next.
-    sub_commands = [('build_mo', None),
-
-    # We also need build_ext before build_py. Otherwise, when 2to3 is
-    # called (in build_py), it will not find osutil & friends,
-    # thinking that those modules are global and, consequently, making
-    # a mess, now that all module imports are global.
-
-                    ('build_ext', build.has_ext_modules),
-                   ] + build.sub_commands
+    sub_commands = [('build_mo', None)] + build.sub_commands
 
 class hgbuildmo(build):
 
@@ -282,8 +261,6 @@ class hgdist(Distribution):
     global_options = Distribution.global_options + \
                      [('pure', None, "use pure (slow) Python "
                         "code instead of C extensions"),
-                      ('c2to3', None, "(experimental!) convert "
-                        "code with 2to3"),
                      ]
 
     def has_ext_modules(self):
@@ -328,10 +305,6 @@ class hgbuildscripts(build_scripts):
         return build_scripts.run(self)
 
 class hgbuildpy(build_py):
-    if convert2to3:
-        fixer_names = sorted(set(getfixers("lib2to3.fixes") +
-                                 getfixers("hgfixes")))
-
     def finalize_options(self):
         build_py.finalize_options(self)
 
