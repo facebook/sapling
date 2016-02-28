@@ -335,17 +335,30 @@ def clonewithshare(ui, peeropts, sharepath, source, srcpeer, dest, pull=False,
                                "support clone by revision"))
         revs = [srcpeer.lookup(r) for r in rev]
 
+    # Obtain a lock before checking for or cloning the pooled repo otherwise
+    # 2 clients may race creating or populating it.
+    pooldir = os.path.dirname(sharepath)
+    # lock class requires the directory to exist.
+    try:
+        util.makedir(pooldir, False)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+
+    poolvfs = scmutil.vfs(pooldir)
     basename = os.path.basename(sharepath)
 
-    if os.path.exists(sharepath):
-        ui.status(_('(sharing from existing pooled repository %s)\n') %
-                  basename)
-    else:
-        ui.status(_('(sharing from new pooled repository %s)\n') % basename)
-        # Always use pull mode because hardlinks in share mode don't work well.
-        # Never update because working copies aren't necessary in share mode.
-        clone(ui, peeropts, source, dest=sharepath, pull=True,
-              rev=rev, update=False, stream=stream)
+    with lock.lock(poolvfs, '%s.lock' % basename):
+        if os.path.exists(sharepath):
+            ui.status(_('(sharing from existing pooled repository %s)\n') %
+                      basename)
+        else:
+            ui.status(_('(sharing from new pooled repository %s)\n') % basename)
+            # Always use pull mode because hardlinks in share mode don't work
+            # well. Never update because working copies aren't necessary in
+            # share mode.
+            clone(ui, peeropts, source, dest=sharepath, pull=True,
+                  rev=rev, update=False, stream=stream)
 
     sharerepo = repository(ui, path=sharepath)
     share(ui, sharerepo, dest=dest, update=update, bookmarks=False)

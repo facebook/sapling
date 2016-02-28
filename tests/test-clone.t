@@ -1025,3 +1025,49 @@ Test that auto sharing doesn't cause failure of "hg clone local remote"
   $ hg --config share.pool=share -q clone -e "python \"$TESTDIR/dummyssh\"" a ssh://user@dummy/remote
   $ hg -R remote id -r 0
   acb14030fe0a
+
+Cloning into pooled storage doesn't race (issue5104)
+
+  $ HGPOSTLOCKDELAY=2.0 hg --config share.pool=racepool --config extensions.lockdelay=$TESTDIR/lockdelay.py clone source1a share-destrace1 > race1.log 2>&1 &
+  $ HGPRELOCKDELAY=1.0 hg --config share.pool=racepool --config extensions.lockdelay=$TESTDIR/lockdelay.py clone source1a share-destrace2  > race2.log 2>&1
+  $ wait
+
+  $ hg -R share-destrace1 log -r tip
+  changeset:   2:e5bfe23c0b47
+  bookmark:    bookA
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1a
+  
+
+  $ hg -R share-destrace2 log -r tip
+  changeset:   2:e5bfe23c0b47
+  bookmark:    bookA
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     1a
+  
+  $ cat race1.log
+  (sharing from new pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 3 changesets with 3 changes to 1 files
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  searching for changes
+  no changes found
+  adding remote bookmark bookA
+
+  $ cat race2.log
+  (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  waiting for lock on repository share-destrace2 held by * (glob)
+  got lock after \d+ seconds (re)
+  searching for changes
+  no changes found
+  adding remote bookmark bookA
