@@ -363,7 +363,7 @@ class cg1unpacker(object):
 
                 efiles = set()
                 def onchangelog(cl, node):
-                    efiles.update(cl.read(node)[3])
+                    efiles.update(cl.readfiles(node))
 
                 self.changelogheader()
                 srccontent = cl.addgroup(self, csmap, trp,
