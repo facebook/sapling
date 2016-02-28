@@ -337,7 +337,7 @@ class changelog(revlog.revlog):
         """
         text = self.revision(node)
         if not text:
-            return (nullid, "", (0, 0), [], "", _defaultextra)
+            return nullid, "", (0, 0), [], "", _defaultextra
         last = text.index("\n\n")
         desc = encoding.tolocal(text[last + 2:])
         l = text[:last].split('\n')
@@ -358,7 +358,7 @@ class changelog(revlog.revlog):
             extra = decodeextra(tdata[2])
 
         files = l[3:]
-        return (manifest, user, (time, timezone), files, desc, extra)
+        return manifest, user, (time, timezone), files, desc, extra
 
     def readfiles(self, node):
         """
