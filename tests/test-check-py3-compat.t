@@ -86,7 +86,6 @@
   hgext/win32text.py not using absolute_import
   i18n/check-translation.py not using absolute_import
   i18n/polib.py not using absolute_import
-  mercurial/cmdutil.py not using absolute_import
   mercurial/commands.py not using absolute_import
   setup.py not using absolute_import
   tests/filterpyflakes.py requires print_function

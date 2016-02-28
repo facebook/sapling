@@ -5,18 +5,47 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from node import hex, bin, nullid, nullrev, short
-from i18n import _
-import os, sys, errno, re, tempfile, cStringIO
-import util, scmutil, templater, patch, error, templatekw, revlog, copies
-import match as matchmod
-import repair, graphmod, revset, phases, obsolete, pathutil
-import changelog
-import bookmarks
-import encoding
-import formatter
-import crecord as crecordmod
-import lock as lockmod
+from __future__ import absolute_import
+
+import cStringIO
+import errno
+import os
+import re
+import sys
+import tempfile
+
+from .i18n import _
+from .node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
+
+from . import (
+    bookmarks,
+    changelog,
+    copies,
+    crecord as crecordmod,
+    encoding,
+    error,
+    formatter,
+    graphmod,
+    lock as lockmod,
+    match as matchmod,
+    obsolete,
+    patch,
+    pathutil,
+    phases,
+    repair,
+    revlog,
+    revset,
+    scmutil,
+    templatekw,
+    templater,
+    util,
+)
 
 def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
@@ -78,8 +107,7 @@ def recordfilter(ui, originalhunks, operation=None):
 
 def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             filterfn, *pats, **opts):
-    import merge as mergemod
-
+    from . import merge as mergemod
     if not ui.interactive():
         if cmdsuggest:
             msg = _('running non-interactively, use %s instead') % cmdsuggest
@@ -867,7 +895,7 @@ def tryimportone(ui, repo, hunk, parents, opts, msgs, updatefunc):
                  updatefunc(<repo>, <node>)
     """
     # avoid cycle context -> subrepo -> cmdutil
-    import context
+    from . import context
     extractdata = patch.extract(ui, hunk)
     tmpname = extractdata.get('filename')
     message = extractdata.get('message')
@@ -2507,7 +2535,7 @@ def commit(ui, repo, commitfunc, pats, opts):
 
 def amend(ui, repo, commitfunc, old, extra, pats, opts):
     # avoid cycle context -> subrepo -> cmdutil
-    import context
+    from . import context
 
     # amend will reuse the existing user if not specified, but the obsolete
     # marker creation requires that the current user's name is specified.
