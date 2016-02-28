@@ -548,7 +548,7 @@ class changectx(basectx):
         return self._changeset[0]
 
     def user(self):
-        return self._changeset[1]
+        return encoding.tolocal(self._changeset[1])
     def date(self):
         return self._changeset[2]
     def files(self):

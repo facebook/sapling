@@ -337,7 +337,7 @@ class changelog(revlog.revlog):
 
         Returns a 6-tuple consisting of the following:
           - manifest node (binary)
-          - user (encoding.localstr)
+          - user (binary)
           - (time, timezone) 2-tuple of a float and int offset
           - list of files modified by the cset
           - commit message / description (binary)
@@ -350,7 +350,7 @@ class changelog(revlog.revlog):
         desc = text[last + 2:]
         l = text[:last].split('\n')
         manifest = bin(l[0])
-        user = encoding.tolocal(l[1])
+        user = l[1]
 
         tdata = l[2].split(' ', 2)
         if len(tdata) != 3:
