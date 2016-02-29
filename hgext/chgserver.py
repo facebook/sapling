@@ -22,8 +22,19 @@
 'setenv' command
     replace os.environ completely
 
+'setumask' command
+    set umask
+
 'SIGHUP' signal
     reload configuration files
+
+Config
+------
+
+::
+
+  [chgserver]
+  idletimeout = 3600 # seconds, after which an idle server will exit
 """
 
 from __future__ import absolute_import
