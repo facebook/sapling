@@ -374,7 +374,7 @@ New-commit as draft (default)
   $ cd ..
 
 
-New-commit as draft (default)
+New-commit as secret (config)
 
   $ cp -r base simple-secret
   $ cd simple-secret
