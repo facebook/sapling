@@ -211,14 +211,14 @@ class unionrepository(localrepo.localrepository):
     @localrepo.unfilteredpropertycache
     def manifest(self):
         return unionmanifest(self.svfs, self.repo2.svfs,
-                             self._clrev)
+                             self.unfiltered()._clrev)
 
     def url(self):
         return self._url
 
     def file(self, f):
         return unionfilelog(self.svfs, f, self.repo2.svfs,
-                            self._clrev, self)
+                            self.unfiltered()._clrev, self)
 
     def close(self):
         self.repo2.close()
