@@ -54,8 +54,8 @@ class channeledoutput(object):
     def write(self, data):
         if not data:
             return
-        self.out.write(struct.pack('>cI', self.channel, len(data)))
-        self.out.write(data)
+        # single write() to guarantee the same atomicity as the underlying file
+        self.out.write(struct.pack('>cI', self.channel, len(data)) + data)
         self.out.flush()
 
     def __getattr__(self, attr):
