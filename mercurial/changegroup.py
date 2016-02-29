@@ -394,9 +394,8 @@ class cg1unpacker(object):
 
                 # process the files
                 repo.ui.status(_("adding file changes\n"))
-                pr = prog(_('files'), efiles)
                 newrevs, newfiles = _addchangegroupfiles(
-                    repo, self, revmap, trp, pr, needfiles)
+                    repo, self, revmap, trp, efiles, needfiles)
                 revisions += newrevs
                 files += newfiles
 
@@ -1068,16 +1067,18 @@ def changegroup(repo, basenodes, source):
     # to avoid a race we use changegroupsubset() (issue1320)
     return changegroupsubset(repo, basenodes, repo.heads(), source)
 
-def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
+def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
     revisions = 0
     files = 0
     while True:
         chunkdata = source.filelogheader()
         if not chunkdata:
             break
+        files += 1
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)
-        pr()
+        repo.ui.progress(_('files'), files, unit=_('files'),
+                         total=expectedfiles)
         fl = repo.file(f)
         o = len(fl)
         try:
@@ -1086,7 +1087,6 @@ def _addchangegroupfiles(repo, source, revmap, trp, pr, needfiles):
         except error.CensoredBaseError as e:
             raise error.Abort(_("received delta base is censored: %s") % e)
         revisions += len(fl) - o
-        files += 1
         if f in needfiles:
             needs = needfiles[f]
             for new in xrange(o, len(fl)):
