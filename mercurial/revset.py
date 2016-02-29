@@ -2256,72 +2256,9 @@ class _aliasrules(parser.basealiasrules):
     _parse = staticmethod(_parsealias)
     _getlist = staticmethod(getlist)
 
-def _getalias(aliases, tree):
-    """If tree looks like an unexpanded alias, return it. Return None
-    otherwise.
-    """
-    if not isinstance(tree, tuple):
-        return None
-    if tree[0] == 'symbol':
-        name = tree[1]
-        alias = aliases.get(name)
-        if alias and alias.args is None and alias.tree == tree:
-            return alias
-    if tree[0] == 'func' and tree[1][0] == 'symbol':
-        name = tree[1][1]
-        alias = aliases.get(name)
-        if alias and alias.args is not None and alias.tree == tree[:2]:
-            return alias
-    return None
-
-def _expandargs(tree, args):
-    """Replace _aliasarg instances with the substitution value of the
-    same name in args, recursively.
-    """
-    if not isinstance(tree, tuple):
-        return tree
-    if tree[0] == '_aliasarg':
-        sym = tree[1]
-        return args[sym]
-    return tuple(_expandargs(t, args) for t in tree)
-
-def _expandaliases(aliases, tree, expanding, cache):
-    """Expand aliases in tree, recursively.
-
-    'aliases' is a dictionary mapping user defined aliases to
-    alias objects.
-    """
-    if not isinstance(tree, tuple):
-        # Do not expand raw strings
-        return tree
-    alias = _getalias(aliases, tree)
-    if alias is not None:
-        if alias.error:
-            raise error.Abort(alias.error)
-        if alias in expanding:
-            raise error.ParseError(_('infinite expansion of revset alias "%s" '
-                                     'detected') % alias.name)
-        expanding.append(alias)
-        if alias.name not in cache:
-            cache[alias.name] = _expandaliases(aliases, alias.replacement,
-                                               expanding, cache)
-        result = cache[alias.name]
-        expanding.pop()
-        if alias.args is not None:
-            l = getlist(tree[2])
-            if len(l) != len(alias.args):
-                raise error.ParseError(
-                    _('invalid number of arguments: %d') % len(l))
-            l = [_expandaliases(aliases, a, [], cache) for a in l]
-            result = _expandargs(result, dict(zip(alias.args, l)))
-    else:
-        result = tuple(_expandaliases(aliases, t, expanding, cache)
-                       for t in tree)
-    return result
-
 def findaliases(ui, tree, showwarning=None):
     aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
-    tree = _expandaliases(aliases, tree, [], {})
+    tree = _aliasrules.expand(aliases, tree)
     if showwarning:
         # warn about problematic (but not referred) aliases
         for name, alias in sorted(aliases.iteritems()):

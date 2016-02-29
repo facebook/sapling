@@ -472,3 +472,73 @@ class basealiasrules(object):
             a = cls.build(decl, defn)
             aliases[a.name] = a
         return aliases
+
+    @classmethod
+    def _getalias(cls, aliases, tree):
+        """If tree looks like an unexpanded alias, return it. Return None
+        otherwise.
+        """
+        if not isinstance(tree, tuple):
+            return None
+        if tree[0] == cls._symbolnode:
+            name = tree[1]
+            a = aliases.get(name)
+            if a and a.args is None and a.tree == tree:
+                return a
+        if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
+            name = tree[1][1]
+            a = aliases.get(name)
+            if a and a.args is not None and a.tree == tree[:2]:
+                return a
+        return None
+
+    @classmethod
+    def _expandargs(cls, tree, args):
+        """Replace _aliasarg instances with the substitution value of the
+        same name in args, recursively.
+        """
+        if not isinstance(tree, tuple):
+            return tree
+        if tree[0] == '_aliasarg':
+            sym = tree[1]
+            return args[sym]
+        return tuple(cls._expandargs(t, args) for t in tree)
+
+    @classmethod
+    def _expand(cls, aliases, tree, expanding, cache):
+        if not isinstance(tree, tuple):
+            return tree
+        a = cls._getalias(aliases, tree)
+        if a is not None:
+            if a.error:
+                raise error.Abort(a.error)
+            if a in expanding:
+                raise error.ParseError(_('infinite expansion of %(section)s '
+                                         '"%(name)s" detected')
+                                       % {'section': cls._section,
+                                          'name': a.name})
+            expanding.append(a)
+            if a.name not in cache:
+                cache[a.name] = cls._expand(aliases, a.replacement, expanding,
+                                            cache)
+            result = cache[a.name]
+            expanding.pop()
+            if a.args is not None:
+                l = cls._getlist(tree[2])
+                if len(l) != len(a.args):
+                    raise error.ParseError(_('invalid number of arguments: %d')
+                                           % len(l))
+                l = [cls._expand(aliases, t, [], cache) for t in l]
+                result = cls._expandargs(result, dict(zip(a.args, l)))
+        else:
+            result = tuple(cls._expand(aliases, t, expanding, cache)
+                           for t in tree)
+        return result
+
+    @classmethod
+    def expand(cls, aliases, tree):
+        """Expand aliases in tree, recursively.
+
+        'aliases' is a dictionary mapping user defined aliases to alias objects.
+        """
+        return cls._expand(aliases, tree, [], {})
