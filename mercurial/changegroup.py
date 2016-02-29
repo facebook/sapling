@@ -376,6 +376,7 @@ class cg1unpacker(object):
                 clend = len(cl)
                 changesets = clend - clstart
                 repo.ui.progress(_('changesets'), None)
+                self.callback = None
 
                 # pull off the manifest group
                 repo.ui.status(_("adding manifests\n"))
