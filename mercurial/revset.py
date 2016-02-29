@@ -332,25 +332,6 @@ def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, keys.split(),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
-def isvalidfunc(tree):
-    """Examine whether specified ``tree`` is valid ``func`` or not
-    """
-    return tree[0] == 'func' and tree[1][0] == 'symbol'
-
-def getfuncname(tree):
-    """Get function name from valid ``func`` in ``tree``
-
-    This assumes that ``tree`` is already examined by ``isvalidfunc``.
-    """
-    return tree[1][1]
-
-def getfuncargs(tree):
-    """Get list of function arguments from valid ``func`` in ``tree``
-
-    This assumes that ``tree`` is already examined by ``isvalidfunc``.
-    """
-    return getlist(tree[2])
-
 def getset(repo, subset, x):
     if not x:
         raise error.ParseError(_("missing argument"))
@@ -2314,13 +2295,13 @@ def _parsealiasdecl(decl):
                 return (decl, None, None, _("'$' not for alias arguments"))
             return (name, ('symbol', name), None, None)
 
-        if isvalidfunc(tree):
+        if tree[0] == 'func' and tree[1][0] == 'symbol':
             # "name(arg, ....) = ...." style
-            name = getfuncname(tree)
+            name = tree[1][1]
             if name.startswith('$'):
                 return (decl, None, None, _("'$' not for alias arguments"))
             args = []
-            for arg in getfuncargs(tree):
+            for arg in getlist(tree[2]):
                 if arg[0] != 'symbol':
                     return (decl, None, None, _("invalid argument list"))
                 args.append(arg[1])
