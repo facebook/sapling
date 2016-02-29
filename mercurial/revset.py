@@ -2237,75 +2237,18 @@ def _tokenizealias(program, lookup=None):
 def _parsealiasdecl(decl):
     """Parse alias declaration ``decl``
 
-    This returns ``(name, tree, args, errorstr)`` tuple:
-
-    - ``name``: of declared alias (may be ``decl`` itself at error)
-    - ``tree``: parse result (or ``None`` at error)
-    - ``args``: list of alias argument names (or None for symbol declaration)
-    - ``errorstr``: detail about detected error (or None)
-
-    >>> _parsealiasdecl('foo')
-    ('foo', ('symbol', 'foo'), None, None)
-    >>> _parsealiasdecl('$foo')
-    ('$foo', None, None, "'$' not for alias arguments")
-    >>> _parsealiasdecl('foo::bar')
-    ('foo::bar', None, None, 'invalid format')
+    >>> _parsealiasdecl('foo($1)')
+    ('func', ('symbol', 'foo'), ('symbol', '$1'))
     >>> _parsealiasdecl('foo bar')
-    ('foo bar', None, None, 'at 4: invalid token')
-    >>> _parsealiasdecl('foo()')
-    ('foo', ('func', ('symbol', 'foo')), [], None)
-    >>> _parsealiasdecl('$foo()')
-    ('$foo()', None, None, "'$' not for alias arguments")
-    >>> _parsealiasdecl('foo($1, $2)')
-    ('foo', ('func', ('symbol', 'foo')), ['$1', '$2'], None)
-    >>> _parsealiasdecl('foo(bar_bar, baz.baz)')
-    ('foo', ('func', ('symbol', 'foo')), ['bar_bar', 'baz.baz'], None)
-    >>> _parsealiasdecl('foo($1, $2, nested($1, $2))')
-    ('foo($1, $2, nested($1, $2))', None, None, 'invalid argument list')
-    >>> _parsealiasdecl('foo(bar($1, $2))')
-    ('foo(bar($1, $2))', None, None, 'invalid argument list')
-    >>> _parsealiasdecl('foo("string")')
-    ('foo("string")', None, None, 'invalid argument list')
-    >>> _parsealiasdecl('foo($1, $2')
-    ('foo($1, $2', None, None, 'at 10: unexpected token: end')
-    >>> _parsealiasdecl('foo("string')
-    ('foo("string', None, None, 'at 5: unterminated string')
-    >>> _parsealiasdecl('foo($1, $2, $1)')
-    ('foo', None, None, 'argument names collide with each other')
+    Traceback (most recent call last):
+      ...
+    ParseError: ('invalid token', 4)
     """
     p = parser.parser(elements)
-    try:
-        tree, pos = p.parse(_tokenizealias(decl))
-        if (pos != len(decl)):
-            raise error.ParseError(_('invalid token'), pos)
-        tree = parser.simplifyinfixops(tree, ('list',))
-    except error.ParseError as inst:
-        return (decl, None, None, parser.parseerrordetail(inst))
-
-    if True:  # XXX to be removed
-        if tree[0] == 'symbol':
-            # "name = ...." style
-            name = tree[1]
-            if name.startswith('$'):
-                return (decl, None, None, _("'$' not for alias arguments"))
-            return (name, tree, None, None)
-
-        if tree[0] == 'func' and tree[1][0] == 'symbol':
-            # "name(arg, ....) = ...." style
-            name = tree[1][1]
-            if name.startswith('$'):
-                return (decl, None, None, _("'$' not for alias arguments"))
-            args = []
-            for arg in getlist(tree[2]):
-                if arg[0] != 'symbol':
-                    return (decl, None, None, _("invalid argument list"))
-                args.append(arg[1])
-            if len(args) != len(set(args)):
-                return (name, None, None,
-                        _("argument names collide with each other"))
-            return (name, tree[:2], args, None)
-
-        return (decl, None, None, _("invalid format"))
+    tree, pos = p.parse(_tokenizealias(decl))
+    if pos != len(decl):
+        raise error.ParseError(_('invalid token'), pos)
+    return parser.simplifyinfixops(tree, ('list',))
 
 def _relabelaliasargs(tree, args):
     if not isinstance(tree, tuple):
@@ -2369,6 +2312,7 @@ def _parsealiasdefn(defn, args):
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
+    _parsedecl = staticmethod(_parsealiasdecl)
     _getlist = staticmethod(getlist)
 
 class revsetalias(object):
@@ -2382,7 +2326,8 @@ class revsetalias(object):
         h = heads(default)
         b($1) = ancestors($1) - ancestors(default)
         '''
-        self.name, self.tree, self.args, self.error = _parsealiasdecl(name)
+        r = _aliasrules._builddecl(name)
+        self.name, self.tree, self.args, self.error = r
         if self.error:
             self.error = _('failed to parse the declaration of revset alias'
                            ' "%s": %s') % (self.name, self.error)

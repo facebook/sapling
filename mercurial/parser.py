@@ -264,3 +264,108 @@ class basealiasrules(object):
     def _getlist(tree):
         """Extract a list of arguments from parsed tree"""
         raise NotImplementedError
+
+    @classmethod
+    def _builddecl(cls, decl):
+        """Parse an alias declaration into ``(name, tree, args, errorstr)``
+
+        This function analyzes the parsed tree. The parsing rule is provided
+        by ``_parsedecl()``.
+
+        - ``name``: of declared alias (may be ``decl`` itself at error)
+        - ``tree``: parse result (or ``None`` at error)
+        - ``args``: list of argument names (or None for symbol declaration)
+        - ``errorstr``: detail about detected error (or None)
+
+        >>> sym = lambda x: ('symbol', x)
+        >>> symlist = lambda *xs: ('list',) + tuple(sym(x) for x in xs)
+        >>> func = lambda n, a: ('func', sym(n), a)
+        >>> parsemap = {
+        ...     'foo': sym('foo'),
+        ...     '$foo': sym('$foo'),
+        ...     'foo::bar': ('dagrange', sym('foo'), sym('bar')),
+        ...     'foo()': func('foo', None),
+        ...     '$foo()': func('$foo', None),
+        ...     'foo($1, $2)': func('foo', symlist('$1', '$2')),
+        ...     'foo(bar_bar, baz.baz)':
+        ...         func('foo', symlist('bar_bar', 'baz.baz')),
+        ...     'foo(bar($1, $2))':
+        ...         func('foo', func('bar', symlist('$1', '$2'))),
+        ...     'foo($1, $2, nested($1, $2))':
+        ...         func('foo', (symlist('$1', '$2') +
+        ...                      (func('nested', symlist('$1', '$2')),))),
+        ...     'foo("bar")': func('foo', ('string', 'bar')),
+        ...     'foo($1, $2': error.ParseError('unexpected token: end', 10),
+        ...     'foo("bar': error.ParseError('unterminated string', 5),
+        ...     'foo($1, $2, $1)': func('foo', symlist('$1', '$2', '$1')),
+        ... }
+        >>> def parse(expr):
+        ...     x = parsemap[expr]
+        ...     if isinstance(x, Exception):
+        ...         raise x
+        ...     return x
+        >>> def getlist(tree):
+        ...     if not tree:
+        ...         return []
+        ...     if tree[0] == 'list':
+        ...         return list(tree[1:])
+        ...     return [tree]
+        >>> class aliasrules(basealiasrules):
+        ...     _parsedecl = staticmethod(parse)
+        ...     _getlist = staticmethod(getlist)
+        >>> builddecl = aliasrules._builddecl
+        >>> builddecl('foo')
+        ('foo', ('symbol', 'foo'), None, None)
+        >>> builddecl('$foo')
+        ('$foo', None, None, "'$' not for alias arguments")
+        >>> builddecl('foo::bar')
+        ('foo::bar', None, None, 'invalid format')
+        >>> builddecl('foo()')
+        ('foo', ('func', ('symbol', 'foo')), [], None)
+        >>> builddecl('$foo()')
+        ('$foo()', None, None, "'$' not for alias arguments")
+        >>> builddecl('foo($1, $2)')
+        ('foo', ('func', ('symbol', 'foo')), ['$1', '$2'], None)
+        >>> builddecl('foo(bar_bar, baz.baz)')
+        ('foo', ('func', ('symbol', 'foo')), ['bar_bar', 'baz.baz'], None)
+        >>> builddecl('foo($1, $2, nested($1, $2))')
+        ('foo($1, $2, nested($1, $2))', None, None, 'invalid argument list')
+        >>> builddecl('foo(bar($1, $2))')
+        ('foo(bar($1, $2))', None, None, 'invalid argument list')
+        >>> builddecl('foo("bar")')
+        ('foo("bar")', None, None, 'invalid argument list')
+        >>> builddecl('foo($1, $2')
+        ('foo($1, $2', None, None, 'at 10: unexpected token: end')
+        >>> builddecl('foo("bar')
+        ('foo("bar', None, None, 'at 5: unterminated string')
+        >>> builddecl('foo($1, $2, $1)')
+        ('foo', None, None, 'argument names collide with each other')
+        """
+        try:
+            tree = cls._parsedecl(decl)
+        except error.ParseError as inst:
+            return (decl, None, None, parseerrordetail(inst))
+
+        if tree[0] == cls._symbolnode:
+            # "name = ...." style
+            name = tree[1]
+            if name.startswith('$'):
+                return (decl, None, None, _("'$' not for alias arguments"))
+            return (name, tree, None, None)
+
+        if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
+            # "name(arg, ....) = ...." style
+            name = tree[1][1]
+            if name.startswith('$'):
+                return (decl, None, None, _("'$' not for alias arguments"))
+            args = []
+            for arg in cls._getlist(tree[2]):
+                if arg[0] != cls._symbolnode:
+                    return (decl, None, None, _("invalid argument list"))
+                args.append(arg[1])
+            if len(args) != len(set(args)):
+                return (name, None, None,
+                        _("argument names collide with each other"))
+            return (name, tree[:2], args, None)
+
+        return (decl, None, None, _("invalid format"))
