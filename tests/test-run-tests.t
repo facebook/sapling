@@ -52,6 +52,12 @@ a succesful test
   >   never happens (?)
   >   xyzzy
   >   nor this (?)
+  >   $ printf 'abc\ndef\nxyz\n'
+  >   123 (?)
+  >   abc
+  >   def (?)
+  >   456 (?)
+  >   xyz
   > EOF
 
   $ rt
@@ -286,6 +292,12 @@ Running In Debug Mode
   xyzzy
   + echo *SALT* 6 0 (glob)
   *SALT* 6 0 (glob)
+  + printf *abc\ndef\nxyz\n* (glob)
+  abc
+  def
+  xyz
+  + echo *SALT* 12 0 (glob)
+  *SALT* 12 0 (glob)
   .
   # Ran 2 tests, 0 skipped, 0 warned, 0 failed.
 

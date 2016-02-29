@@ -1138,14 +1138,13 @@ class TTest(Test):
                     elif warnonly == 1: # Is "not yet" and line is warn only.
                         warnonly = 2 # Yes do warn.
                 break
-
-            # clean up any optional leftovers
-            while expected.get(pos, None):
-                el = expected[pos].pop(0)
-                if not el.endswith(b" (?)\n"):
-                    expected[pos].insert(0, el)
-                    break
-                postout.append(b'  ' + el)
+            else:
+                # clean up any optional leftovers
+                while expected.get(pos, None):
+                    el = expected[pos].pop(0)
+                    if el and not el.endswith(b" (?)\n"):
+                        break
+                    postout.append(b'  ' + el)
 
             if lcmd:
                 # Add on last return code.
