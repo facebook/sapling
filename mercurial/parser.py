@@ -220,3 +220,11 @@ def simplifyinfixops(tree, targetnodes):
     simplified.append(simplifyinfixops(x, targetnodes))
     simplified.append(op)
     return tuple(reversed(simplified))
+
+def parseerrordetail(inst):
+    """Compose error message from specified ParseError object
+    """
+    if len(inst.args) > 1:
+        return _('at %s: %s') % (inst.args[1], inst.args[0])
+    else:
+        return inst.args[0]

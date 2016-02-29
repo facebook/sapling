@@ -300,14 +300,6 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
         pos += 1
     yield ('end', None, pos)
 
-def parseerrordetail(inst):
-    """Compose error message from specified ParseError object
-    """
-    if len(inst.args) > 1:
-        return _('at %s: %s') % (inst.args[1], inst.args[0])
-    else:
-        return inst.args[0]
-
 # helpers
 
 def getstring(x, err):
@@ -2312,7 +2304,7 @@ def _parsealiasdecl(decl):
 
         return (decl, None, None, _("invalid format"))
     except error.ParseError as inst:
-        return (decl, None, None, parseerrordetail(inst))
+        return (decl, None, None, parser.parseerrordetail(inst))
 
 def _relabelaliasargs(tree, args):
     if not isinstance(tree, tuple):
@@ -2349,7 +2341,7 @@ def _parsealiasdefn(defn, args):
     >>> try:
     ...     _parsealiasdefn('$1 or $bar', args)
     ... except error.ParseError, inst:
-    ...     print parseerrordetail(inst)
+    ...     print parser.parseerrordetail(inst)
     '$' not for alias arguments
     >>> args = ['$1', '$10', 'foo']
     >>> print prettyformat(_parsealiasdefn('$10 or foobar', args))
@@ -2394,7 +2386,8 @@ class revsetalias(object):
             self.replacement = _parsealiasdefn(value, self.args)
         except error.ParseError as inst:
             self.error = _('failed to parse the definition of revset alias'
-                           ' "%s": %s') % (self.name, parseerrordetail(inst))
+                           ' "%s": %s') % (self.name,
+                                           parser.parseerrordetail(inst))
 
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
