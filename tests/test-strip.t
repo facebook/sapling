@@ -659,7 +659,7 @@ Make sure no one adds back a -b option:
 
   $ hg strip -b tip
   hg strip: option -b not recognized
-  hg strip [-k] [-f] [-n] [-B bookmark] [-r] REV...
+  hg strip [-k] [-f] [-B bookmark] [-r] REV...
   
   strip changesets and all their descendants from the repository
   

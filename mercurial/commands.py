@@ -1232,7 +1232,7 @@ def branch(ui, repo, label=None, **opts):
       _('show only branches that have unmerged heads (DEPRECATED)')),
      ('c', 'closed', False, _('show normal and closed branches')),
     ] + formatteropts,
-    _('[-ac]'))
+    _('[-c]'))
 def branches(ui, repo, active=False, closed=False, **opts):
     """list repository named branches
 
@@ -5175,7 +5175,7 @@ def manifest(ui, repo, node=None, rev=None, **opts):
     ('P', 'preview', None,
      _('review revisions to merge (no merge is performed)'))
      ] + mergetoolopts,
-    _('[-P] [-f] [[-r] REV]'))
+    _('[-P] [[-r] REV]'))
 def merge(ui, repo, node=None, **opts):
     """merge another revision into working directory
 
