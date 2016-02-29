@@ -335,7 +335,7 @@ def getargsdict(x, funcname, keys):
 def isvalidsymbol(tree):
     """Examine whether specified ``tree`` is valid ``symbol`` or not
     """
-    return tree[0] == 'symbol' and len(tree) > 1
+    return tree[0] == 'symbol'
 
 def getsymbol(tree):
     """Get symbol name from valid ``symbol`` in ``tree``
@@ -347,7 +347,7 @@ def getsymbol(tree):
 def isvalidfunc(tree):
     """Examine whether specified ``tree`` is valid ``func`` or not
     """
-    return tree[0] == 'func' and len(tree) > 1 and isvalidsymbol(tree[1])
+    return tree[0] == 'func' and isvalidsymbol(tree[1])
 
 def getfuncname(tree):
     """Get function name from valid ``func`` in ``tree``
@@ -361,10 +361,7 @@ def getfuncargs(tree):
 
     This assumes that ``tree`` is already examined by ``isvalidfunc``.
     """
-    if len(tree) > 2:
-        return getlist(tree[2])
-    else:
-        return []
+    return getlist(tree[2])
 
 def getset(repo, subset, x):
     if not x:
@@ -2434,14 +2431,14 @@ def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
     otherwise.
     """
-    if isinstance(tree, tuple) and tree:
-        if tree[0] == 'symbol' and len(tree) == 2:
+    if isinstance(tree, tuple):
+        if tree[0] == 'symbol':
             name = tree[1]
             alias = aliases.get(name)
             if alias and alias.args is None and alias.tree == tree:
                 return alias
-        if tree[0] == 'func' and len(tree) > 1:
-            if tree[1][0] == 'symbol' and len(tree[1]) == 2:
+        if tree[0] == 'func':
+            if tree[1][0] == 'symbol':
                 name = tree[1][1]
                 alias = aliases.get(name)
                 if alias and alias.args is not None and alias.tree == tree[:2]:
@@ -2452,7 +2449,7 @@ def _expandargs(tree, args):
     """Replace _aliasarg instances with the substitution value of the
     same name in args, recursively.
     """
-    if not tree or not isinstance(tree, tuple):
+    if not isinstance(tree, tuple):
         return tree
     if tree[0] == '_aliasarg':
         sym = tree[1]
