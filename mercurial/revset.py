@@ -2250,57 +2250,19 @@ def _parsealiasdecl(decl):
         raise error.ParseError(_('invalid token'), pos)
     return parser.simplifyinfixops(tree, ('list',))
 
-def _relabelaliasargs(tree, args):
-    return _aliasrules._relabelargs(tree, args)
-
-def _parsealiasdefn(defn, args):
-    """Parse alias definition ``defn``
-
-    This function marks alias argument references as ``_aliasarg``.
-
-    ``args`` is a list of alias argument names, or None if the alias
-    is declared as a symbol.
-
-    This returns "tree" as parsing result.
-
-    >>> def prettyformat(tree):
-    ...     return parser.prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
-    >>> args = ['$1', '$2', 'foo']
-    >>> print prettyformat(_parsealiasdefn('$1 or foo', args))
-    (or
-      ('_aliasarg', '$1')
-      ('_aliasarg', 'foo'))
-    >>> try:
-    ...     _parsealiasdefn('$1 or $bar', args)
-    ... except error.ParseError, inst:
-    ...     print parser.parseerrordetail(inst)
-    '$' not for alias arguments
-    >>> args = ['$1', '$10', 'foo']
-    >>> print prettyformat(_parsealiasdefn('$10 or foobar', args))
-    (or
-      ('_aliasarg', '$10')
-      ('symbol', 'foobar'))
-    >>> print prettyformat(_parsealiasdefn('"$1" or "foo"', args))
-    (or
-      ('string', '$1')
-      ('string', 'foo'))
-    """
-    if args:
-        args = set(args)
-    else:
-        args = set()
-
+def _parsealiasdefn(defn):
+    """Parse alias definition ``defn``"""
     p = parser.parser(elements)
     tree, pos = p.parse(_tokenizealias(defn))
     if pos != len(defn):
         raise error.ParseError(_('invalid token'), pos)
-    tree = parser.simplifyinfixops(tree, ('list', 'or'))
-    return _relabelaliasargs(tree, args)
+    return parser.simplifyinfixops(tree, ('list', 'or'))
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
     _parsedecl = staticmethod(_parsealiasdecl)
+    _parsedefn = staticmethod(_parsealiasdefn)
     _getlist = staticmethod(getlist)
 
 class revsetalias(object):
@@ -2322,7 +2284,7 @@ class revsetalias(object):
             return
 
         try:
-            self.replacement = _parsealiasdefn(value, self.args)
+            self.replacement = _aliasrules._builddefn(value, self.args)
         except error.ParseError as inst:
             self.error = _('failed to parse the definition of revset alias'
                            ' "%s": %s') % (self.name,

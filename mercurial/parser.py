@@ -386,3 +386,52 @@ class basealiasrules(object):
         elif sym.startswith('$'):
             raise error.ParseError(_("'$' not for alias arguments"))
         return (op, sym)
+
+    @classmethod
+    def _builddefn(cls, defn, args):
+        """Parse an alias definition into a tree and marks substitutions
+
+        This function marks alias argument references as ``_aliasarg``. The
+        parsing rule is provided by ``_parsedefn()``.
+
+        ``args`` is a list of alias argument names, or None if the alias
+        is declared as a symbol.
+
+        >>> parsemap = {
+        ...     '$1 or foo': ('or', ('symbol', '$1'), ('symbol', 'foo')),
+        ...     '$1 or $bar': ('or', ('symbol', '$1'), ('symbol', '$bar')),
+        ...     '$10 or baz': ('or', ('symbol', '$10'), ('symbol', 'baz')),
+        ...     '"$1" or "foo"': ('or', ('string', '$1'), ('string', 'foo')),
+        ... }
+        >>> class aliasrules(basealiasrules):
+        ...     _parsedefn = staticmethod(parsemap.__getitem__)
+        ...     _getlist = staticmethod(lambda x: [])
+        >>> builddefn = aliasrules._builddefn
+        >>> def pprint(tree):
+        ...     print prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
+        >>> args = ['$1', '$2', 'foo']
+        >>> pprint(builddefn('$1 or foo', args))
+        (or
+          ('_aliasarg', '$1')
+          ('_aliasarg', 'foo'))
+        >>> try:
+        ...     builddefn('$1 or $bar', args)
+        ... except error.ParseError as inst:
+        ...     print parseerrordetail(inst)
+        '$' not for alias arguments
+        >>> args = ['$1', '$10', 'foo']
+        >>> pprint(builddefn('$10 or baz', args))
+        (or
+          ('_aliasarg', '$10')
+          ('symbol', 'baz'))
+        >>> pprint(builddefn('"$1" or "foo"', args))
+        (or
+          ('string', '$1')
+          ('string', 'foo'))
+        """
+        tree = cls._parsedefn(defn)
+        if args:
+            args = set(args)
+        else:
+            args = set()
+        return cls._relabelargs(tree, args)
