@@ -306,6 +306,7 @@ class cg1unpacker(object):
         self.manifestheader()
         repo.manifest.addgroup(self, revmap, trp)
         repo.ui.progress(_('manifests'), None)
+        self.callback = None
 
     def apply(self, repo, srctype, url, emptyok=False,
               targetphase=phases.draft, expectedtotal=None):
@@ -393,7 +394,6 @@ class cg1unpacker(object):
 
                 # process the files
                 repo.ui.status(_("adding file changes\n"))
-                self.callback = None
                 pr = prog(_('files'), efiles)
                 newrevs, newfiles = _addchangegroupfiles(
                     repo, self, revmap, trp, pr, needfiles)
