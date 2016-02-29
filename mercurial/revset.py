@@ -2293,7 +2293,7 @@ def _parsealiasdecl(decl):
             name = tree[1]
             if name.startswith('$'):
                 return (decl, None, None, _("'$' not for alias arguments"))
-            return (name, ('symbol', name), None, None)
+            return (name, tree, None, None)
 
         if tree[0] == 'func' and tree[1][0] == 'symbol':
             # "name(arg, ....) = ...." style
@@ -2308,7 +2308,7 @@ def _parsealiasdecl(decl):
             if len(args) != len(set(args)):
                 return (name, None, None,
                         _("argument names collide with each other"))
-            return (name, ('func', ('symbol', name)), args, None)
+            return (name, tree[:2], args, None)
 
         return (decl, None, None, _("invalid format"))
     except error.ParseError as inst:
