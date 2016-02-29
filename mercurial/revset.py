@@ -2260,18 +2260,18 @@ def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
     otherwise.
     """
-    if isinstance(tree, tuple):
-        if tree[0] == 'symbol':
-            name = tree[1]
-            alias = aliases.get(name)
-            if alias and alias.args is None and alias.tree == tree:
-                return alias
-        if tree[0] == 'func':
-            if tree[1][0] == 'symbol':
-                name = tree[1][1]
-                alias = aliases.get(name)
-                if alias and alias.args is not None and alias.tree == tree[:2]:
-                    return alias
+    if not isinstance(tree, tuple):
+        return None
+    if tree[0] == 'symbol':
+        name = tree[1]
+        alias = aliases.get(name)
+        if alias and alias.args is None and alias.tree == tree:
+            return alias
+    if tree[0] == 'func' and tree[1][0] == 'symbol':
+        name = tree[1][1]
+        alias = aliases.get(name)
+        if alias and alias.args is not None and alias.tree == tree[:2]:
+            return alias
     return None
 
 def _expandargs(tree, args):
