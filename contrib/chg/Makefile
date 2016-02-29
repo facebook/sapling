@@ -38,7 +38,6 @@ serve:
 	$(HG) serve --cwd / --cmdserver chgunix \
 		--address $(CHGSOCKNAME) \
 		--config extensions.chgserver= \
-		--config progress.assume-tty=1 \
 		--config cmdserver.log=/dev/stderr
 
 .PHONY: clean

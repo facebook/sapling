@@ -216,8 +216,6 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--daemon-postexec", "none",
 		"--pid-file", opts->pidfile,
 		"--config", "extensions.chgserver=",
-		/* wrap root ui so that it can be disabled/enabled by config */
-		"--config", "progress.assume-tty=1",
 	};
 	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
 	size_t argsize = baseargvsize + opts->argsize + 1;

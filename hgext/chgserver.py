@@ -582,8 +582,6 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
 
 class chgunixservice(commandserver.unixservice):
     def init(self):
-        # drop options set for "hg serve --cmdserver" command
-        self.ui.setconfig('progress', 'assume-tty', None)
         signal.signal(signal.SIGHUP, self._reloadconfig)
         self._inithashstate()
         class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
