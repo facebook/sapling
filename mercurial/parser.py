@@ -239,7 +239,8 @@ class alias(object):
         self.error = err
         self.replacement = replacement
         # whether own `error` information is already shown or not.
-        # this avoids showing same warning multiple times at each `findaliases`.
+        # this avoids showing same warning multiple times at each
+        # `expandaliases`.
         self.warned = False
 
 class basealiasrules(object):

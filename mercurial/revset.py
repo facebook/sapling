@@ -2256,7 +2256,7 @@ class _aliasrules(parser.basealiasrules):
     _parse = staticmethod(_parsealias)
     _getlist = staticmethod(getlist)
 
-def findaliases(ui, tree, showwarning=None):
+def expandaliases(ui, tree, showwarning=None):
     aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
     tree = _aliasrules.expand(aliases, tree)
     if showwarning:
@@ -2328,7 +2328,7 @@ def matchany(ui, specs, repo=None):
 
 def _makematcher(ui, tree, repo):
     if ui:
-        tree = findaliases(ui, tree, showwarning=ui.warn)
+        tree = expandaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
     weight, tree = optimize(tree, True)
     posttreebuilthook(tree, repo)
