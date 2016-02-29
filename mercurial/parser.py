@@ -369,3 +369,20 @@ class basealiasrules(object):
             return (name, tree[:2], args, None)
 
         return (decl, None, None, _("invalid format"))
+
+    @classmethod
+    def _relabelargs(cls, tree, args):
+        """Mark alias arguments as ``_aliasarg``"""
+        if not isinstance(tree, tuple):
+            return tree
+        op = tree[0]
+        if op != cls._symbolnode:
+            return (op,) + tuple(cls._relabelargs(x, args) for x in tree[1:])
+
+        assert len(tree) == 2
+        sym = tree[1]
+        if sym in args:
+            op = '_aliasarg'
+        elif sym.startswith('$'):
+            raise error.ParseError(_("'$' not for alias arguments"))
+        return (op, sym)

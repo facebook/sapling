@@ -2251,19 +2251,7 @@ def _parsealiasdecl(decl):
     return parser.simplifyinfixops(tree, ('list',))
 
 def _relabelaliasargs(tree, args):
-    if not isinstance(tree, tuple):
-        return tree
-    op = tree[0]
-    if op != 'symbol':
-        return (op,) + tuple(_relabelaliasargs(x, args) for x in tree[1:])
-
-    assert len(tree) == 2
-    sym = tree[1]
-    if sym in args:
-        op = '_aliasarg'
-    elif sym.startswith('$'):
-        raise error.ParseError(_("'$' not for alias arguments"))
-    return (op, sym)
+    return _aliasrules._relabelargs(tree, args)
 
 def _parsealiasdefn(defn, args):
     """Parse alias definition ``defn``
