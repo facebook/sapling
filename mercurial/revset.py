@@ -332,29 +332,17 @@ def getargsdict(x, funcname, keys):
     return parser.buildargsdict(getlist(x), funcname, keys.split(),
                                 keyvaluenode='keyvalue', keynode='symbol')
 
-def isvalidsymbol(tree):
-    """Examine whether specified ``tree`` is valid ``symbol`` or not
-    """
-    return tree[0] == 'symbol'
-
-def getsymbol(tree):
-    """Get symbol name from valid ``symbol`` in ``tree``
-
-    This assumes that ``tree`` is already examined by ``isvalidsymbol``.
-    """
-    return tree[1]
-
 def isvalidfunc(tree):
     """Examine whether specified ``tree`` is valid ``func`` or not
     """
-    return tree[0] == 'func' and isvalidsymbol(tree[1])
+    return tree[0] == 'func' and tree[1][0] == 'symbol'
 
 def getfuncname(tree):
     """Get function name from valid ``func`` in ``tree``
 
     This assumes that ``tree`` is already examined by ``isvalidfunc``.
     """
-    return getsymbol(tree[1])
+    return tree[1][1]
 
 def getfuncargs(tree):
     """Get list of function arguments from valid ``func`` in ``tree``
@@ -2319,9 +2307,9 @@ def _parsealiasdecl(decl):
             raise error.ParseError(_('invalid token'), pos)
         tree = parser.simplifyinfixops(tree, ('list',))
 
-        if isvalidsymbol(tree):
+        if tree[0] == 'symbol':
             # "name = ...." style
-            name = getsymbol(tree)
+            name = tree[1]
             if name.startswith('$'):
                 return (decl, None, None, _("'$' not for alias arguments"))
             return (name, ('symbol', name), None, None)
@@ -2333,9 +2321,9 @@ def _parsealiasdecl(decl):
                 return (decl, None, None, _("'$' not for alias arguments"))
             args = []
             for arg in getfuncargs(tree):
-                if not isvalidsymbol(arg):
+                if arg[0] != 'symbol':
                     return (decl, None, None, _("invalid argument list"))
-                args.append(getsymbol(arg))
+                args.append(arg[1])
             if len(args) != len(set(args)):
                 return (name, None, None,
                         _("argument names collide with each other"))
