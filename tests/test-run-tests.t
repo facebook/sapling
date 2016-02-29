@@ -66,6 +66,8 @@ failing test
   >   rataxes
   > This is a noop statement so that
   > this test is still more bytes than success.
+  > pad pad pad pad............................................................
+  > pad pad pad pad............................................................
   > EOF
 
   >>> fh = open('test-failure-unicode.t', 'wb')
@@ -76,12 +78,13 @@ failing test
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !.
@@ -105,12 +108,13 @@ test --xunit support
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !.
@@ -143,12 +147,13 @@ test --xunit support
     <testcase name="test-failure.t" time="*"> (glob)
   <![CDATA[--- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   ]]>  </testcase>
   </testsuite>
 
@@ -161,12 +166,13 @@ test for --retest
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !
@@ -195,12 +201,13 @@ failed
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !
@@ -214,12 +221,13 @@ failure w/ keyword
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !
@@ -266,8 +274,8 @@ Running In Debug Mode
   *SALT* 0 0 (glob)
   + echo babar
   babar
-  + echo *SALT* 4 0 (glob)
-  *SALT* 4 0 (glob)
+  + echo *SALT* 6 0 (glob)
+  *SALT* 6 0 (glob)
   *+ echo *SALT* 0 0 (glob)
   *SALT* 0 0 (glob)
   + echo babar
@@ -303,12 +311,13 @@ failures in parallel with --first should only print one failure
   
   --- $TESTTMP/test-failure*.t (glob)
   +++ $TESTTMP/test-failure*.t.err (glob)
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   Failed test-failure*.t: output changed (glob)
   Failed test-nothing.t: output changed
@@ -333,12 +342,13 @@ Refuse the fix
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   Accept this change? [n] 
   ERROR: test-failure.t output changed
   !.
@@ -352,6 +362,8 @@ Refuse the fix
     rataxes
   This is a noop statement so that
   this test is still more bytes than success.
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
 
 Interactive with custom view
 
@@ -389,12 +401,14 @@ Accept the fix
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,9 +1,9 @@
+  @@ -1,11 +1,11 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
+   pad pad pad pad............................................................
      $ echo 'saved backup bundle to $TESTTMP/foo.hg'
   -  saved backup bundle to $TESTTMP/foo.hg
   +  saved backup bundle to $TESTTMP/foo.hg* (glob)
@@ -409,6 +423,8 @@ Accept the fix
     babar
   This is a noop statement so that
   this test is still more bytes than success.
+  pad pad pad pad............................................................
+  pad pad pad pad............................................................
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
     saved backup bundle to $TESTTMP/foo.hg (glob)<
     $ echo 'saved backup bundle to $TESTTMP/foo.hg'
@@ -537,12 +553,13 @@ test for --json
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   
   ERROR: test-failure.t output changed
   !.s
@@ -590,12 +607,13 @@ Test that failed test accepted through interactive are properly reported:
   
   --- $TESTTMP/test-failure.t
   +++ $TESTTMP/test-failure.t.err
-  @@ -1,4 +1,4 @@
+  @@ -1,5 +1,5 @@
      $ echo babar
   -  rataxes
   +  babar
    This is a noop statement so that
    this test is still more bytes than success.
+   pad pad pad pad............................................................
   Accept this change? [n] ..s
   Skipped test-skip.t: missing feature: nail clipper
   # Ran 2 tests, 1 skipped, 0 warned, 0 failed.
