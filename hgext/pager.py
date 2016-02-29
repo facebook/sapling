@@ -58,9 +58,21 @@ you can use --pager=<value>::
   will also work).
 
 '''
+from __future__ import absolute_import
 
-import atexit, sys, os, signal, subprocess
-from mercurial import commands, dispatch, util, extensions, cmdutil
+import atexit
+import os
+import signal
+import subprocess
+import sys
+
+from mercurial import (
+    cmdutil,
+    commands,
+    dispatch,
+    extensions,
+    util,
+    )
 from mercurial.i18n import _
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for

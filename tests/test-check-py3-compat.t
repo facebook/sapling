@@ -73,7 +73,6 @@
   hgext/largefiles/wirestore.py not using absolute_import
   hgext/mq.py not using absolute_import
   hgext/notify.py not using absolute_import
-  hgext/pager.py not using absolute_import
   hgext/patchbomb.py not using absolute_import
   hgext/purge.py not using absolute_import
   hgext/rebase.py not using absolute_import
