@@ -2279,7 +2279,10 @@ def _parsealiasdecl(decl):
         if (pos != len(decl)):
             raise error.ParseError(_('invalid token'), pos)
         tree = parser.simplifyinfixops(tree, ('list',))
+    except error.ParseError as inst:
+        return (decl, None, None, parser.parseerrordetail(inst))
 
+    if True:  # XXX to be removed
         if tree[0] == 'symbol':
             # "name = ...." style
             name = tree[1]
@@ -2303,8 +2306,6 @@ def _parsealiasdecl(decl):
             return (name, tree[:2], args, None)
 
         return (decl, None, None, _("invalid format"))
-    except error.ParseError as inst:
-        return (decl, None, None, parser.parseerrordetail(inst))
 
 def _relabelaliasargs(tree, args):
     if not isinstance(tree, tuple):
