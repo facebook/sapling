@@ -72,6 +72,7 @@ This should use bar@rev2 as the ancestor:
    branchmerge: True, force: False, partial: False
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 0555950ead28
    preserving bar for resolve of bar
+  starting 4 threads for background file closing (?)
    bar: versions differ -> m (premerge)
   picked tool ':merge' for bar (binary False symlink False changedelete False)
   merging bar
@@ -158,6 +159,7 @@ This should use bar@rev2 as the ancestor:
    branchmerge: True, force: False, partial: False
    ancestor: 0f2ff26688b9, local: 2263c1be0967+, remote: 3ffa6b9e35f0
    preserving bar for resolve of bar
+  starting 4 threads for background file closing (?)
    bar: versions differ -> m (premerge)
   picked tool ':merge' for bar (binary False symlink False changedelete False)
   merging bar

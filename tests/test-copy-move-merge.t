@@ -34,6 +34,7 @@
    preserving a for resolve of b
    preserving a for resolve of c
   removing a
+  starting 4 threads for background file closing (?)
    b: remote moved from a -> m (premerge)
   picked tool ':merge' for b (binary False symlink False changedelete False)
   merging a and b to b

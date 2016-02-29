@@ -792,6 +792,7 @@ check strip behavior
   removing c
    d: other deleted -> r
   removing d
+  starting 4 threads for background file closing (?)
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   2 changesets found
   list of changesets:

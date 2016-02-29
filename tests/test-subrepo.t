@@ -259,6 +259,7 @@ merge tests
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 1f14a2e2d3ec, local: f0d2028bf86d+, remote: 1831e14459c4
+  starting 4 threads for background file closing (?)
    .hgsubstate: versions differ -> m (premerge)
   subrepo merge f0d2028bf86d+ 1831e14459c4 1f14a2e2d3ec
     subrepo t: other changed, get t:6747d179aa9a688023c4b0cad32e4c92bb7f34ad:hg
@@ -285,6 +286,7 @@ merge tests
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 1831e14459c4, local: e45c8b14af55+, remote: f94576341bcf
+  starting 4 threads for background file closing (?)
    .hgsubstate: versions differ -> m (premerge)
   subrepo merge e45c8b14af55+ f94576341bcf 1831e14459c4
     subrepo t: both sides changed 
@@ -296,6 +298,7 @@ merge tests
    branchmerge: True, force: False, partial: False
    ancestor: 6747d179aa9a, local: 20a0db6fbf6c+, remote: 7af322bc1198
    preserving t for resolve of t
+  starting 4 threads for background file closing (?)
    t: versions differ -> m (premerge)
   picked tool ':merge' for t (binary False symlink False changedelete False)
   merging t

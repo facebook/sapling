@@ -88,6 +88,7 @@ $4 = expected result
    ancestor: 924404dff337, local: e300d1c794ec+, remote: 4ce40f5aca24
    preserving a for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    a: remote unchanged -> k
    b: remote copied from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
@@ -168,6 +169,7 @@ $4 = expected result
    preserving a for resolve of b
    preserving rev for resolve of rev
   removing a
+  starting 4 threads for background file closing (?)
    b: remote moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging a and b to b
@@ -205,6 +207,7 @@ $4 = expected result
    ancestor: 924404dff337, local: 02963e448370+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b and a to b
@@ -274,6 +277,7 @@ $4 = expected result
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: 97c705ade336
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False changedelete False)
   merging rev
@@ -339,6 +343,7 @@ $4 = expected result
    branchmerge: True, force: False, partial: False
    ancestor: 924404dff337, local: 02963e448370+, remote: 97c705ade336
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    rev: versions differ -> m (premerge)
   picked tool 'python ../merge' for rev (binary False symlink False changedelete False)
   merging rev
@@ -367,6 +372,7 @@ $4 = expected result
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: 49b6d8032493
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    b: both renamed from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -446,6 +452,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 86a2aa42fc76+, remote: af30c7647fc7
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -486,6 +493,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: other deleted -> r
   removing a
+  starting 4 threads for background file closing (?)
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -565,6 +573,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving rev for resolve of rev
    a: other deleted -> r
   removing a
+  starting 4 threads for background file closing (?)
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b
@@ -642,6 +651,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 0b76e65c8289+, remote: 4ce40f5aca24
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    a: remote unchanged -> k
    b: both created -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
@@ -681,6 +691,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 02963e448370+, remote: 8dbce441892a
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    a: prompt deleted/changed -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   remote changed a which local deleted
@@ -725,6 +736,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving a for resolve of a
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    a: prompt changed/deleted -> m (premerge)
   picked tool ':prompt' for a (binary False symlink False changedelete True)
   local changed a which remote deleted
@@ -772,6 +784,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    preserving a for resolve of b
    preserving rev for resolve of rev
   removing a
+  starting 4 threads for background file closing (?)
    b: remote moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging a and b to b
@@ -813,6 +826,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
    ancestor: 924404dff337, local: 62e7bf090eba+, remote: f4db7e329e71
    preserving b for resolve of b
    preserving rev for resolve of rev
+  starting 4 threads for background file closing (?)
    b: local copied/moved from a -> m (premerge)
   picked tool 'python ../merge' for b (binary False symlink False changedelete False)
   merging b and a to b

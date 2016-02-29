@@ -167,6 +167,7 @@ Graft out of order, skipping a merge and a duplicate
    branchmerge: True, force: True, partial: False
    ancestor: 68795b066622, local: ef0ef43d49e7+, remote: 5d205f8b35b6
    preserving b for resolve of b
+  starting 4 threads for background file closing (?)
    b: local copied/moved from a -> m (premerge)
   picked tool ':merge' for b (binary False symlink False changedelete False)
   merging b and a to b

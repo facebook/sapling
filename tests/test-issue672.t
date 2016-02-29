@@ -65,6 +65,7 @@ https://bz.mercurial-scm.org/672
    branchmerge: True, force: False, partial: False
    ancestor: c64f439569a9, local: e327dca35ac8+, remote: 746e9549ea96
    preserving 1a for resolve of 1a
+  starting 4 threads for background file closing (?)
    1a: local copied/moved from 1 -> m (premerge)
   picked tool ':merge' for 1a (binary False symlink False changedelete False)
   merging 1a and 1 to 1a
@@ -88,6 +89,7 @@ https://bz.mercurial-scm.org/672
    ancestor: c64f439569a9, local: 746e9549ea96+, remote: e327dca35ac8
    preserving 1 for resolve of 1a
   removing 1
+  starting 4 threads for background file closing (?)
    1a: remote moved from 1 -> m (premerge)
   picked tool ':merge' for 1a (binary False symlink False changedelete False)
   merging 1 and 1a to 1a

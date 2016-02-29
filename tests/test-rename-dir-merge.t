@@ -85,6 +85,7 @@
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: f9b20c0d4c51, local: 397f8b00a740+, remote: ce36d17b18fb
+  starting 4 threads for background file closing (?)
    b/c: local directory rename - get from a/c -> dg
   getting a/c to b/c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

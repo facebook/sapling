@@ -73,6 +73,7 @@
    preserving a for resolve of a
    b: other deleted -> r
   removing b
+  starting 4 threads for background file closing (?)
    a: versions differ -> m (premerge)
   picked tool 'true' for a (binary False symlink False changedelete False)
   merging a
