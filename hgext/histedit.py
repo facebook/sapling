@@ -1282,7 +1282,8 @@ def between(repo, old, new, keep):
     if ctxs and not keep:
         if (not obsolete.isenabled(repo, obsolete.allowunstableopt) and
             repo.revs('(%ld::) - (%ld)', ctxs, ctxs)):
-            raise error.Abort(_('cannot edit history that would orphan nodes'))
+            raise error.Abort(_('can only histedit a changeset together '
+                                'with all its descendants'))
         if repo.revs('(%ld) and merge()', ctxs):
             raise error.Abort(_('cannot edit history that contains merges'))
         root = ctxs[0] # list is already sorted by repo.set
