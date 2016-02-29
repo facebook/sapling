@@ -2320,10 +2320,7 @@ def _expandaliases(aliases, tree, expanding, cache):
     return result
 
 def findaliases(ui, tree, showwarning=None):
-    aliases = {}
-    for k, v in ui.configitems('revsetalias'):
-        alias = _aliasrules.build(k, v)
-        aliases[alias.name] = alias
+    aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
     tree = _expandaliases(aliases, tree, [], {})
     if showwarning:
         # warn about problematic (but not referred) aliases

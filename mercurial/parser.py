@@ -462,3 +462,13 @@ class basealiasrules(object):
         if err:
             err = efmt % {'section': cls._section, 'name': name, 'error': err}
         return alias(name, tree, args, err, repl)
+
+    @classmethod
+    def buildmap(cls, items):
+        """Parse a list of alias (name, replacement) pairs into a dict of
+        alias objects"""
+        aliases = {}
+        for decl, defn in items:
+            a = cls.build(decl, defn)
+            aliases[a.name] = a
+        return aliases
