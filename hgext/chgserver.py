@@ -334,11 +334,13 @@ _iochannels = [
 ]
 
 class chgcmdserver(commandserver.server):
-    def __init__(self, ui, repo, fin, fout, sock):
+    def __init__(self, ui, repo, fin, fout, sock, hashstate, baseaddress):
         super(chgcmdserver, self).__init__(
             _newchgui(ui, channeledsystem(fin, fout, 'S')), repo, fin, fout)
         self.clientsock = sock
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
+        self.hashstate = hashstate
+        self.baseaddress = baseaddress
 
     def cleanup(self):
         # dispatch._runcatch() does not flush outputs if exception is not
@@ -493,7 +495,8 @@ class _requesthandler(SocketServer.StreamRequestHandler):
         os.setpgid(0, 0)
         ui = self.server.ui
         repo = self.server.repo
-        sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection)
+        sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
+                          self.server.hashstate, self.server.baseaddress)
         try:
             try:
                 sv.serve()
@@ -588,6 +591,8 @@ class chgunixservice(commandserver.unixservice):
                   SocketServer.UnixStreamServer):
             ui = self.ui
             repo = self.repo
+            hashstate = self.hashstate
+            baseaddress = self.baseaddress
         self.server = cls(self.address, _requesthandler)
         self.server.idletimeout = self.ui.configint(
             'chgserver', 'idletimeout', self.server.idletimeout)
