@@ -229,6 +229,19 @@ def parseerrordetail(inst):
     else:
         return inst.args[0]
 
+class alias(object):
+    """Parsed result of alias"""
+
+    def __init__(self, name, tree, args, err, replacement):
+        self.name = name
+        self.tree = tree
+        self.args = args
+        self.error = err
+        self.replacement = replacement
+        # whether own `error` information is already shown or not.
+        # this avoids showing same warning multiple times at each `findaliases`.
+        self.warned = False
+
 class basealiasrules(object):
     """Parsing and expansion rule set of aliases
 
@@ -430,3 +443,22 @@ class basealiasrules(object):
         else:
             args = set()
         return cls._relabelargs(tree, args)
+
+    @classmethod
+    def build(cls, decl, defn):
+        """Parse an alias declaration and definition into an alias object"""
+        repl = efmt = None
+        name, tree, args, err = cls._builddecl(decl)
+        if err:
+            efmt = _('failed to parse the declaration of %(section)s '
+                     '"%(name)s": %(error)s')
+        else:
+            try:
+                repl = cls._builddefn(defn, args)
+            except error.ParseError as inst:
+                err = parseerrordetail(inst)
+                efmt = _('failed to parse the definition of %(section)s '
+                         '"%(name)s": %(error)s')
+        if err:
+            err = efmt % {'section': cls._section, 'name': name, 'error': err}
+        return alias(name, tree, args, err, repl)

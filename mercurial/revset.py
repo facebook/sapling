@@ -2256,31 +2256,6 @@ class _aliasrules(parser.basealiasrules):
     _parse = staticmethod(_parsealias)
     _getlist = staticmethod(getlist)
 
-class revsetalias(object):
-    # whether own `error` information is already shown or not.
-    # this avoids showing same warning multiple times at each `findaliases`.
-    warned = False
-
-    def __init__(self, name, value):
-        '''Aliases like:
-
-        h = heads(default)
-        b($1) = ancestors($1) - ancestors(default)
-        '''
-        r = _aliasrules._builddecl(name)
-        self.name, self.tree, self.args, self.error = r
-        if self.error:
-            self.error = _('failed to parse the declaration of revset alias'
-                           ' "%s": %s') % (self.name, self.error)
-            return
-
-        try:
-            self.replacement = _aliasrules._builddefn(value, self.args)
-        except error.ParseError as inst:
-            self.error = _('failed to parse the definition of revset alias'
-                           ' "%s": %s') % (self.name,
-                                           parser.parseerrordetail(inst))
-
 def _getalias(aliases, tree):
     """If tree looks like an unexpanded alias, return it. Return None
     otherwise.
@@ -2314,7 +2289,7 @@ def _expandaliases(aliases, tree, expanding, cache):
     """Expand aliases in tree, recursively.
 
     'aliases' is a dictionary mapping user defined aliases to
-    revsetalias objects.
+    alias objects.
     """
     if not isinstance(tree, tuple):
         # Do not expand raw strings
@@ -2347,7 +2322,7 @@ def _expandaliases(aliases, tree, expanding, cache):
 def findaliases(ui, tree, showwarning=None):
     aliases = {}
     for k, v in ui.configitems('revsetalias'):
-        alias = revsetalias(k, v)
+        alias = _aliasrules.build(k, v)
         aliases[alias.name] = alias
     tree = _expandaliases(aliases, tree, [], {})
     if showwarning:
