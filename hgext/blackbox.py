@@ -11,13 +11,12 @@
 Logs event information to .hg/blackbox.log to help debug and diagnose problems.
 The events that get logged can be configured via the blackbox.track config key.
 
-If you want to record whether the repository is dirty (a `+` sign, as you'd
-get when using :hg:`id`), you can set the blackbox.dirty config key.
-
 Examples::
 
   [blackbox]
   track = *
+  # dirty is *EXPENSIVE* (slow);
+  # each log entry indicates `+` if the repository is dirty, like :hg:`id`.
   dirty = True
 
   [blackbox]
