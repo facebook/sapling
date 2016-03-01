@@ -39,7 +39,7 @@ class batcher(object):
             return resref
         return call
     def submit(self):
-        pass
+        raise NotImplementedError()
 
 class localbatch(batcher):
     '''performs the queued calls directly'''
