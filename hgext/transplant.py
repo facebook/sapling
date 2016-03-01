@@ -13,13 +13,28 @@ possibly in another repository. The transplant is done using 'diff' patches.
 Transplanted patches are recorded in .hg/transplant/transplants, as a
 map from a changeset hash to its hash in the source repository.
 '''
+from __future__ import absolute_import
 
+import os
+import tempfile
 from mercurial.i18n import _
-import os, tempfile
-from mercurial import node as nodemod
-from mercurial import bundlerepo, hg, merge, match
-from mercurial import patch, revlog, scmutil, util, error, cmdutil
-from mercurial import registrar, revset, templatekw, exchange
+from mercurial import (
+    bundlerepo,
+    cmdutil,
+    error,
+    exchange,
+    hg,
+    match,
+    merge,
+    node as nodemod,
+    patch,
+    registrar,
+    revlog,
+    revset,
+    scmutil,
+    templatekw,
+    util,
+)
 
 class TransplantError(error.Abort):
     pass

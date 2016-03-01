@@ -48,7 +48,6 @@
   hgext/mq.py not using absolute_import
   hgext/rebase.py not using absolute_import
   hgext/share.py not using absolute_import
-  hgext/transplant.py not using absolute_import
   hgext/win32text.py not using absolute_import
   i18n/check-translation.py not using absolute_import
   i18n/polib.py not using absolute_import
