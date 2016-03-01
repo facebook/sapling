@@ -80,6 +80,7 @@ __author__ = "Paul Scott-Murphy"
 __email__ = "paul at scott dash murphy dot com"
 __version__ = "0.12"
 
+import itertools
 import select
 import socket
 import string
@@ -852,9 +853,8 @@ class DNSCache(object):
 
     def entries(self):
         """Returns a list of all entries"""
-        def add(x, y): return x + y
         try:
-            return reduce(add, self.cache.values())
+            return list(itertools.chain.from_iterable(self.cache.values()))
         except Exception:
             return []
 
