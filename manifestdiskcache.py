@@ -48,6 +48,7 @@ from extutil import replaceclass
 
 CACHE_SUBDIR = 'manifestdiskcache'
 CONFIG_KEY = 'manifestdiskcache'
+REPO_ROOT_KEY = 'manifestdiskcachee.repo_root'
 HEX_SHA_SIZE_BYTES = 40
 
 testedwith = 'internal'
@@ -198,6 +199,7 @@ class manifestwithdc(manifest.manifest):
                 self.diskcachedir = CACHE_SUBDIR
 
             self.inbatchoperation = False
+            self.repo_root = opts[REPO_ROOT_KEY]
 
     def markbatchoperationstart(self):
         self.inbatchoperation = True
@@ -304,7 +306,9 @@ class manifestwithdc(manifest.manifest):
         # becomes an issue, we can have the spawned subprocess execute the
         # double-fork daemonization.
         cmd = util.hgcmd()[:]
-        cmd.append("prunemanifestdiskcache")
+        cmd.extend(["--repository",
+                    self.repo_root,
+                    "prunemanifestdiskcache"])
         subprocess.Popen(cmd, close_fds=True)
 
 @replaceclass(localrepo, 'localrepository')
@@ -313,6 +317,7 @@ class repowithmdc(localrepo.localrepository):
         super(repowithmdc, self)._applyopenerreqs()
         self.svfs.options[CONFIG_KEY] = self.ui.configbool(
             CONFIG_KEY, 'enabled', False)
+        self.svfs.options[REPO_ROOT_KEY] = self.root
 
 def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.

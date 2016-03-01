@@ -91,6 +91,34 @@ Test that we prune the cache.
   OK
   $ cd ..
 
+Test that prunes happen correctly with --repository/-R
+
+  $ mkdir cache_prune_repository
+  $ cd cache_prune_repository
+  $ hg init
+  $ cat >> .hg/hgrc << EOF
+  > [extensions]
+  > manifestdiskcache=
+  > [manifestdiskcache]
+  > logging=True
+  > enabled=True
+  > runs-between-prunes=1
+  > EOF
+  $ echo "abcabc" > abcabc
+  $ hg add abcabc
+  $ hg commit -m "testing 123"
+  $ checkpresent .hg/store/manifestdiskcache/ce/e3/cee32e58a3ba8300f0a7f0d4d9a014c98cc2fc33
+  OK
+  $ echo "defdef" > defdef
+  $ hg add defdef
+  $ hg commit -m "testing 456"
+  $ checkpresent .hg/store/manifestdiskcache/8a/85/8a854c1c1a950742983621c0632c0828e0fd8e12
+  OK
+  $ echo "ghighi" > ghighi
+  $ hg add ghighi
+  $ cd ..
+  $ hg -R cache_prune_repository commit -m "testing 789"
+
 Test that a corrupt cache does not interfere with correctness.
 
   $ mkdir corrupt_cache
