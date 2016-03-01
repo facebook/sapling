@@ -915,7 +915,7 @@ class Engine(threading.Thread):
 
     def delReader(self, socket):
         self.condition.acquire()
-        del(self.readers[socket])
+        del self.readers[socket]
         self.condition.notify()
         self.condition.release()
 
@@ -1011,7 +1011,7 @@ class ServiceBrowser(threading.Thread):
                 if not expired:
                     oldrecord.resetTTL(record)
                 else:
-                    del(self.services[record.alias.lower()])
+                    del self.services[record.alias.lower()]
                     callback = (lambda x:
                         self.listener.removeService(x, self.type, record.alias))
                     self.list.append(callback)
@@ -1380,7 +1380,7 @@ class Zeroconf(object):
         for browser in self.browsers:
             if browser.listener == listener:
                 browser.cancel()
-                del(browser)
+                del browser
 
     def registerService(self, info, ttl=_DNS_TTL):
         """Registers service information to the network with a default TTL
@@ -1423,7 +1423,7 @@ class Zeroconf(object):
     def unregisterService(self, info):
         """Unregister a service."""
         try:
-            del(self.services[info.name.lower()])
+            del self.services[info.name.lower()]
             if self.servicetypes[info.type] > 1:
                 self.servicetypes[info.type] -= 1
             else:
