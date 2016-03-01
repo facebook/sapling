@@ -87,7 +87,6 @@
   hgext/win32mbcs.py not using absolute_import
   hgext/win32text.py not using absolute_import
   hgext/zeroconf/Zeroconf.py not using absolute_import
-  hgext/zeroconf/Zeroconf.py requires print_function
   hgext/zeroconf/__init__.py not using absolute_import
   i18n/check-translation.py not using absolute_import
   i18n/polib.py not using absolute_import
