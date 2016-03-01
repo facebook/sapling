@@ -34,7 +34,7 @@ from mercurial import (
     encoding,
     extensions,
     hg,
-    ui,
+    ui as uimod,
 )
 from mercurial.hgweb import (
     server as servermod
@@ -206,8 +206,8 @@ def cleanupafterdispatch(orig, ui, options, cmd, cmdfunc):
 
 extensions.wrapfunction(dispatch, '_runcommand', cleanupafterdispatch)
 
-extensions.wrapfunction(ui.ui, 'config', config)
-extensions.wrapfunction(ui.ui, 'configitems', configitems)
-extensions.wrapfunction(ui.ui, 'configsuboptions', configsuboptions)
+extensions.wrapfunction(uimod.ui, 'config', config)
+extensions.wrapfunction(uimod.ui, 'configitems', configitems)
+extensions.wrapfunction(uimod.ui, 'configsuboptions', configsuboptions)
 extensions.wrapfunction(hg, 'defaultdest', defaultdest)
 extensions.wrapfunction(servermod, 'create_server', zc_create_server)
