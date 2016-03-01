@@ -71,12 +71,6 @@ def _closelog(vfs):
     del filehandles[path]
     fp.close()
 
-def hexfn(node):
-    if node is None:
-        return None
-    else:
-        return hex(node)
-
 def wrapui(ui):
     class blackboxui(ui.__class__):
         def __init__(self, src=None):
@@ -173,16 +167,13 @@ def wrapui(ui):
                 changed = ''
                 if ui._bbrepo:
                     ctx = ui._bbrepo[None]
-                    if ctx.rev() is not None:
-                        rev = hexfn(ctx.node())
-                    else:
-                        parents = ctx.parents()
-                        rev = ('+'.join([hexfn(p.node()) for p in parents]))
-                        if (ui.configbool('blackbox', 'dirty', False) and (
-                            any(ui._bbrepo.status()) or
-                            any(ctx.sub(s).dirty() for s in ctx.substate)
-                        )):
-                            changed = '+'
+                    parents = ctx.parents()
+                    rev = ('+'.join([hex(p.node()) for p in parents]))
+                    if (ui.configbool('blackbox', 'dirty', False) and (
+                        any(ui._bbrepo.status()) or
+                        any(ctx.sub(s).dirty() for s in ctx.substate)
+                    )):
+                        changed = '+'
                 try:
                     ui._bbwrite('%s %s @%s%s (%s)> %s',
                         date, user, rev, changed, pid, formattedmsg)
