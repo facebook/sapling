@@ -14,7 +14,7 @@ Go back in the hg repo
   $ for node in `hg log --rev 'not public() and ::.' --template '{node|short}\n'`; do
   >    hg export $node | contrib/check-commit > ${TESTTMP}/check-commit.out
   >    if [ $? -ne 0 ]; then
-  >        echo "Revision $node does not comply to rules"
+  >        echo "Revision $node does not comply with rules"
   >        echo '------------------------------------------------------'
   >        cat ${TESTTMP}/check-commit.out
   >        echo
