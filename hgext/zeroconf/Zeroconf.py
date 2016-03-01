@@ -1,4 +1,4 @@
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 """ Multicast DNS Service Discovery for Python, v0.12
     Copyright (C) 2003, Paul Scott-Murphy
@@ -80,12 +80,12 @@ __author__ = "Paul Scott-Murphy"
 __email__ = "paul at scott dash murphy dot com"
 __version__ = "0.12"
 
-import string
-import time
-import struct
-import socket
-import threading
 import select
+import socket
+import string
+import struct
+import threading
+import time
 import traceback
 
 __all__ = ["Zeroconf", "ServiceInfo", "ServiceBrowser"]
@@ -763,8 +763,8 @@ class DNSOutgoing(object):
 			self.finished = 1
 			for question in self.questions:
 				self.writeQuestion(question)
-			for answer, time in self.answers:
-				self.writeRecord(answer, time)
+			for answer, time_ in self.answers:
+				self.writeRecord(answer, time_)
 			for authority in self.authorities:
 				self.writeRecord(authority, 0)
 			for additional in self.additionals:
@@ -868,9 +868,9 @@ class Engine(threading.Thread):
 			else:
 				try:
 					rr, wr, er = select.select(rs, [], [], self.timeout)
-					for socket in rr:
+					for sock in rr:
 						try:
-							self.readers[socket].handle_read()
+							self.readers[sock].handle_read()
 						except Exception:
 							if not globals()['_GLOBAL_DONE']:
 								traceback.print_exc()
