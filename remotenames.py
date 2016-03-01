@@ -60,7 +60,7 @@ def exbookcalcupdate(orig, ui, repo, checkout):
 
 def expush(orig, repo, remote, *args, **kwargs):
     res = orig(repo, remote, *args, **kwargs)
-    pullremotenames(repo, remote)
+    pullremotenames(repo, remote, remote.listkeys('bookmarks'))
     return res
 
 def expushop(orig, pushop, repo, remote, force=False, revs=None,
@@ -71,11 +71,12 @@ def expushop(orig, pushop, repo, remote, force=False, revs=None,
         setattr(pushop, flag, kwargs.get(flag))
 
 def expull(orig, repo, remote, *args, **kwargs):
+    bookmarks = remote.listkeys('bookmarks')
     res = orig(repo, remote, *args, **kwargs)
-    pullremotenames(repo, remote)
+    pullremotenames(repo, remote, bookmarks)
     return res
 
-def pullremotenames(repo, remote):
+def pullremotenames(repo, remote, bookmarks):
     path = activepath(repo.ui, remote)
     if path:
         # on a push, we don't want to keep obsolete heads since
@@ -89,7 +90,7 @@ def pullremotenames(repo, remote):
             for node in nodes:
                 if node in repo and not repo[node].obsolete():
                     bmap[branch].append(node)
-        saveremotenames(repo, path, bmap, remote.listkeys('bookmarks'))
+        saveremotenames(repo, path, bmap, bookmarks)
 
     precachedistance(repo)
 
@@ -125,7 +126,7 @@ def exclone(orig, ui, *args, **opts):
     """
     srcpeer, dstpeer = orig(ui, *args, **opts)
 
-    pullremotenames(dstpeer.local(), srcpeer)
+    pullremotenames(dstpeer.local(), srcpeer, srcpeer.listkeys('bookmarks'))
 
     if not ui.configbool('remotenames', 'syncbookmarks', False):
         ui.debug('remotenames: removing cloned bookmarks\n')
