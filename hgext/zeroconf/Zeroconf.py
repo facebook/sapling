@@ -477,10 +477,10 @@ class DNSIncoming(object):
         self.data = data
         self.questions = []
         self.answers = []
-        self.numQuestions = 0
-        self.numAnswers = 0
-        self.numAuthorities = 0
-        self.numAdditionals = 0
+        self.numquestions = 0
+        self.numanswers = 0
+        self.numauthorities = 0
+        self.numadditionals = 0
 
         self.readHeader()
         self.readQuestions()
@@ -496,16 +496,16 @@ class DNSIncoming(object):
 
         self.id = info[0]
         self.flags = info[1]
-        self.numQuestions = info[2]
-        self.numAnswers = info[3]
-        self.numAuthorities = info[4]
-        self.numAdditionals = info[5]
+        self.numquestions = info[2]
+        self.numanswers = info[3]
+        self.numauthorities = info[4]
+        self.numadditionals = info[5]
 
     def readQuestions(self):
         """Reads questions section of packet"""
         format = '!HH'
         length = struct.calcsize(format)
-        for i in range(0, self.numQuestions):
+        for i in range(0, self.numquestions):
             name = self.readName()
             info = struct.unpack(format,
                                  self.data[self.offset:self.offset + length])
@@ -554,7 +554,7 @@ class DNSIncoming(object):
         """Reads answers, authorities and additionals section of the packet"""
         format = '!HHiH'
         length = struct.calcsize(format)
-        n = self.numAnswers + self.numAuthorities + self.numAdditionals
+        n = self.numanswers + self.numAuthorities + self.numadditionals
         for i in range(0, n):
             domain = self.readName()
             info = struct.unpack(format,
@@ -990,7 +990,7 @@ class ServiceBrowser(threading.Thread):
         self.type = type
         self.listener = listener
         self.services = {}
-        self.nextTime = currentTimeMillis()
+        self.nexttime = currentTimeMillis()
         self.delay = _BROWSER_TIME
         self.list = []
 
@@ -1024,8 +1024,8 @@ class ServiceBrowser(threading.Thread):
                     self.list.append(callback)
 
             expires = record.getExpirationTime(75)
-            if expires < self.nextTime:
-                self.nextTime = expires
+            if expires < self.nexttime:
+                self.nexttime = expires
 
     def cancel(self):
         self.done = 1
@@ -1035,20 +1035,20 @@ class ServiceBrowser(threading.Thread):
         while True:
             event = None
             now = currentTimeMillis()
-            if len(self.list) == 0 and self.nextTime > now:
-                self.zeroconf.wait(self.nextTime - now)
+            if len(self.list) == 0 and self.nexttime > now:
+                self.zeroconf.wait(self.nexttime - now)
             if globals()['_GLOBAL_DONE'] or self.done:
                 return
             now = currentTimeMillis()
 
-            if self.nextTime <= now:
+            if self.nexttime <= now:
                 out = DNSOutgoing(_FLAGS_QR_QUERY)
                 out.addQuestion(DNSQuestion(self.type, _TYPE_PTR, _CLASS_IN))
                 for record in self.services.values():
                     if not record.isExpired(now):
                         out.addAnswerAtTime(record, now)
                 self.zeroconf.send(out)
-                self.nextTime = now + self.delay
+                self.nexttime = now + self.delay
                 self.delay = min(20 * 1000, self.delay * 2)
 
             if len(self.list) > 0:
@@ -1394,11 +1394,11 @@ class Zeroconf(object):
         else:
             self.servicetypes[info.type] = 1
         now = currentTimeMillis()
-        nextTime = now
+        nexttime = now
         i = 0
         while i < 3:
-            if now < nextTime:
-                self.wait(nextTime - now)
+            if now < nexttime:
+                self.wait(nexttime - now)
                 now = currentTimeMillis()
                 continue
             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
@@ -1418,7 +1418,7 @@ class Zeroconf(object):
                     _CLASS_IN, ttl, info.address), 0)
             self.send(out)
             i += 1
-            nextTime += _REGISTER_TIME
+            nexttime += _REGISTER_TIME
 
     def unregisterService(self, info):
         """Unregister a service."""
@@ -1431,11 +1431,11 @@ class Zeroconf(object):
         except KeyError:
             pass
         now = currentTimeMillis()
-        nextTime = now
+        nexttime = now
         i = 0
         while i < 3:
-            if now < nextTime:
-                self.wait(nextTime - now)
+            if now < nexttime:
+                self.wait(nexttime - now)
                 now = currentTimeMillis()
                 continue
             out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
@@ -1453,17 +1453,17 @@ class Zeroconf(object):
                     _CLASS_IN, 0, info.address), 0)
             self.send(out)
             i += 1
-            nextTime += _UNREGISTER_TIME
+            nexttime += _UNREGISTER_TIME
 
     def unregisterAllServices(self):
         """Unregister all registered services."""
         if len(self.services) > 0:
             now = currentTimeMillis()
-            nextTime = now
+            nexttime = now
             i = 0
             while i < 3:
-                if now < nextTime:
-                    self.wait(nextTime - now)
+                if now < nexttime:
+                    self.wait(nexttime - now)
                     now = currentTimeMillis()
                     continue
                 out = DNSOutgoing(_FLAGS_QR_RESPONSE | _FLAGS_AA)
@@ -1482,13 +1482,13 @@ class Zeroconf(object):
                            _CLASS_IN, 0, info.address), 0)
                 self.send(out)
                 i += 1
-                nextTime += _UNREGISTER_TIME
+                nexttime += _UNREGISTER_TIME
 
     def checkService(self, info):
         """Checks the network for a unique service name, modifying the
         ServiceInfo passed in if it is not unique."""
         now = currentTimeMillis()
-        nextTime = now
+        nexttime = now
         i = 0
         while i < 3:
             for record in self.cache.entriesWithName(info.type):
@@ -1500,8 +1500,8 @@ class Zeroconf(object):
                         self.checkService(info)
                         return
                     raise NonUniqueNameException
-            if now < nextTime:
-                self.wait(nextTime - now)
+            if now < nexttime:
+                self.wait(nexttime - now)
                 now = currentTimeMillis()
                 continue
             out = DNSOutgoing(_FLAGS_QR_QUERY | _FLAGS_AA)
@@ -1511,7 +1511,7 @@ class Zeroconf(object):
                 _CLASS_IN, _DNS_TTL, info.name))
             self.send(out)
             i += 1
-            nextTime += _CHECK_TIME
+            nexttime += _CHECK_TIME
 
     def addListener(self, listener, question):
         """Adds a listener for a given question.  The listener will have
