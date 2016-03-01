@@ -114,6 +114,25 @@ class remotebatch(peer.batcher):
             encresref.set(encres)
             resref.set(batchable.next())
 
+class remoteiterbatcher(peer.iterbatcher):
+    def __init__(self, remote):
+        super(remoteiterbatcher, self).__init__()
+        self._remote = remote
+
+    def submit(self):
+        """Break the batch request into many patch calls and pipeline them.
+
+        This is mostly valuable over http where request sizes can be
+        limited, but can be used in other places as well.
+        """
+        rb = self._remote.batch()
+        rb.calls = self.calls
+        rb.submit()
+
+    def results(self):
+        for name, args, opts, resref in self.calls:
+            yield resref.value
+
 # Forward a couple of names from peer to make wireproto interactions
 # slightly more sensible.
 batchable = peer.batchable
@@ -192,6 +211,9 @@ class wirepeer(peer.peerrepository):
         return [unescapearg(r) for r in rsp.split(';')]
     def _submitone(self, op, args):
         return self._call(op, **args)
+
+    def iterbatch(self):
+        return remoteiterbatcher(self)
 
     @batchable
     def lookup(self, key):

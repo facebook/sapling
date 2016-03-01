@@ -41,6 +41,14 @@ class batcher(object):
     def submit(self):
         raise NotImplementedError()
 
+class iterbatcher(batcher):
+
+    def submit(self):
+        raise NotImplementedError()
+
+    def results(self):
+        raise NotImplementedError()
+
 class localbatch(batcher):
     '''performs the queued calls directly'''
     def __init__(self, local):
@@ -49,6 +57,19 @@ class localbatch(batcher):
     def submit(self):
         for name, args, opts, resref in self.calls:
             resref.set(getattr(self.local, name)(*args, **opts))
+
+class localiterbatcher(iterbatcher):
+    def __init__(self, local):
+        super(iterbatcher, self).__init__()
+        self.local = local
+
+    def submit(self):
+        # submit for a local iter batcher is a noop
+        pass
+
+    def results(self):
+        for name, args, opts, resref in self.calls:
+            yield getattr(self.local, name)(*args, **opts)
 
 def batchable(f):
     '''annotation for batchable methods
@@ -90,6 +111,14 @@ class peerrepository(object):
 
     def batch(self):
         return localbatch(self)
+
+    def iterbatch(self):
+        """Batch requests but allow iterating over the results.
+
+        This is to allow interleaving responses with things like
+        progress updates for clients.
+        """
+        return localiterbatcher(self)
 
     def capable(self, name):
         '''tell whether repo supports named capability.
