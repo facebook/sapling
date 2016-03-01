@@ -647,7 +647,7 @@ class DNSIncoming(object):
 class DNSOutgoing(object):
     """Object representation of an outgoing packet"""
 
-    def __init__(self, flags, multicast = 1):
+    def __init__(self, flags, multicast=1):
         self.finished = 0
         self.id = 0
         self.multicast = multicast
@@ -1629,7 +1629,7 @@ class Zeroconf(object):
             out.id = msg.id
             self.send(out, addr, port)
 
-    def send(self, out, addr = _MDNS_ADDR, port = _MDNS_PORT):
+    def send(self, out, addr=_MDNS_ADDR, port=_MDNS_PORT):
         """Sends an outgoing packet."""
         # This is a quick test to see if we can parse the packets we generate
         #temp = DNSIncoming(out.packet())
