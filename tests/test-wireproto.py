@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import StringIO
+
 from mercurial import wireproto
 
 class proto(object):
@@ -20,6 +22,9 @@ class clientpeer(wireproto.wirepeer):
 
     def _call(self, cmd, **args):
         return wireproto.dispatch(self.serverrepo, proto(args), cmd)
+
+    def _callstream(self, cmd, **args):
+        return StringIO.StringIO(self._call(cmd, **args))
 
     @wireproto.batchable
     def greet(self, name):

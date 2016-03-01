@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import itertools
 import os
 import sys
 import tempfile
@@ -119,19 +120,35 @@ class remoteiterbatcher(peer.iterbatcher):
         super(remoteiterbatcher, self).__init__()
         self._remote = remote
 
+    def __getattr__(self, name):
+        if not getattr(self._remote, name, False):
+            raise AttributeError(
+                'Attempted to iterbatch non-batchable call to %r' % name)
+        return super(remoteiterbatcher, self).__getattr__(name)
+
     def submit(self):
         """Break the batch request into many patch calls and pipeline them.
 
         This is mostly valuable over http where request sizes can be
         limited, but can be used in other places as well.
         """
-        rb = self._remote.batch()
-        rb.calls = self.calls
-        rb.submit()
+        req, rsp = [], []
+        for name, args, opts, resref in self.calls:
+            mtd = getattr(self._remote, name)
+            batchable = mtd.batchable(mtd.im_self, *args, **opts)
+            encargsorres, encresref = batchable.next()
+            assert encresref
+            req.append((name, encargsorres))
+            rsp.append((batchable, encresref))
+        if req:
+            self._resultiter = self._remote._submitbatch(req)
+        self._rsp = rsp
 
     def results(self):
-        for name, args, opts, resref in self.calls:
-            yield resref.value
+        for (batchable, encresref), encres in itertools.izip(
+                self._rsp, self._resultiter):
+            encresref.set(encres)
+            yield batchable.next()
 
 # Forward a couple of names from peer to make wireproto interactions
 # slightly more sensible.
@@ -202,13 +219,28 @@ class wirepeer(peer.peerrepository):
         else:
             return peer.localbatch(self)
     def _submitbatch(self, req):
+        """run batch request <req> on the server
+
+        Returns an iterator of the raw responses from the server.
+        """
         cmds = []
         for op, argsdict in req:
             args = ','.join('%s=%s' % (escapearg(k), escapearg(v))
                             for k, v in argsdict.iteritems())
             cmds.append('%s %s' % (op, args))
-        rsp = self._call("batch", cmds=';'.join(cmds))
-        return [unescapearg(r) for r in rsp.split(';')]
+        rsp = self._callstream("batch", cmds=';'.join(cmds))
+        # TODO this response parsing is probably suboptimal for large
+        # batches with large responses.
+        work = rsp.read(1024)
+        chunk = work
+        while chunk:
+            while ';' in work:
+                one, work = work.split(';', 1)
+                yield unescapearg(one)
+            chunk = rsp.read(1024)
+            work += chunk
+        yield unescapearg(work)
+
     def _submitone(self, op, args):
         return self._call(op, **args)
 
