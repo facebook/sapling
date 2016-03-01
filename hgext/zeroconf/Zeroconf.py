@@ -490,7 +490,8 @@ class DNSIncoming(object):
         """Reads header portion of packet"""
         format = '!HHHHHH'
         length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
+        info = struct.unpack(format,
+                             self.data[self.offset:self.offset + length])
         self.offset += length
 
         self.id = info[0]
@@ -507,7 +508,7 @@ class DNSIncoming(object):
         for i in range(0, self.numQuestions):
             name = self.readName()
             info = struct.unpack(format,
-                                 self.data[self.offset:self.offset+length])
+                                 self.data[self.offset:self.offset + length])
             self.offset += length
 
             try:
@@ -520,7 +521,8 @@ class DNSIncoming(object):
         """Reads an integer from the packet"""
         format = '!I'
         length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
+        info = struct.unpack(format,
+                             self.data[self.offset:self.offset + length])
         self.offset += length
         return info[0]
 
@@ -534,7 +536,8 @@ class DNSIncoming(object):
         """Reads a string of a given length from the packet"""
         format = '!' + str(len) + 's'
         length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
+        info = struct.unpack(format,
+                             self.data[self.offset:self.offset + length])
         self.offset += length
         return info[0]
 
@@ -542,7 +545,8 @@ class DNSIncoming(object):
         """Reads an unsigned short from the packet"""
         format = '!H'
         length = struct.calcsize(format)
-        info = struct.unpack(format, self.data[self.offset:self.offset+length])
+        info = struct.unpack(format,
+                             self.data[self.offset:self.offset + length])
         self.offset += length
         return info[0]
 
@@ -554,7 +558,7 @@ class DNSIncoming(object):
         for i in range(0, n):
             domain = self.readName()
             info = struct.unpack(format,
-                                 self.data[self.offset:self.offset+length])
+                                 self.data[self.offset:self.offset + length])
             self.offset += length
 
             rec = None
@@ -604,7 +608,7 @@ class DNSIncoming(object):
 
     def readUTF(self, offset, len):
         """Reads a UTF-8 string of a given length from the packet"""
-        return self.data[offset:offset+len].decode('utf-8')
+        return self.data[offset:offset + len].decode('utf-8')
 
     def readName(self):
         """Reads a domain name from the packet"""
@@ -848,7 +852,7 @@ class DNSCache(object):
 
     def entries(self):
         """Returns a list of all entries"""
-        def add(x, y): return x+y
+        def add(x, y): return x + y
         try:
             return reduce(add, self.cache.values())
         except Exception:
@@ -1123,7 +1127,7 @@ class ServiceInfo(object):
             while index < end:
                 length = ord(text[index])
                 index += 1
-                strs.append(text[index:index+length])
+                strs.append(text[index:index + length])
                 index += length
 
             for s in strs:
@@ -1134,7 +1138,7 @@ class ServiceInfo(object):
                     value = 0
                 else:
                     key = s[:eindex]
-                    value = s[eindex+1:]
+                    value = s[eindex + 1:]
                     if value == 'true':
                         value = 1
                     elif value == 'false' or not value:
@@ -1346,7 +1350,7 @@ class Zeroconf(object):
         """Calling thread waits for a given number of milliseconds or
         until notified."""
         self.condition.acquire()
-        self.condition.wait(timeout/1000)
+        self.condition.wait(timeout / 1000)
         self.condition.release()
 
     def notifyAll(self):
@@ -1386,9 +1390,9 @@ class Zeroconf(object):
         self.checkService(info)
         self.services[info.name.lower()] = info
         if self.servicetypes.has_key(info.type):
-            self.servicetypes[info.type]+=1
+            self.servicetypes[info.type] += 1
         else:
-            self.servicetypes[info.type]=1
+            self.servicetypes[info.type] = 1
         now = currentTimeMillis()
         nextTime = now
         i = 0
@@ -1420,8 +1424,8 @@ class Zeroconf(object):
         """Unregister a service."""
         try:
             del(self.services[info.name.lower()])
-            if self.servicetypes[info.type]>1:
-                self.servicetypes[info.type]-=1
+            if self.servicetypes[info.type] > 1:
+                self.servicetypes[info.type] -= 1
             else:
                 del self.servicetypes[info.type]
         except KeyError:
