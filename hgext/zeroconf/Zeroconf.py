@@ -105,9 +105,9 @@ _BROWSER_TIME = 500
 # Some DNS constants
 
 _MDNS_ADDR = '224.0.0.251'
-_MDNS_PORT = 5353;
-_DNS_PORT = 53;
-_DNS_TTL = 60 * 60; # one hour default TTL
+_MDNS_PORT = 5353
+_DNS_PORT = 53
+_DNS_TTL = 60 * 60 # one hour default TTL
 
 _MAX_MSG_TYPICAL = 1460 # unused
 _MAX_MSG_ABSOLUTE = 8972
