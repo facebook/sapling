@@ -147,12 +147,11 @@ def findcommonheads(ui, local, remote,
     sample = _limitsample(ownheads, initialsamplesize)
     # indices between sample and externalized version must match
     sample = list(sample)
-    batch = remote.batch()
-    srvheadhashesref = batch.heads()
-    yesnoref = batch.known(dag.externalizeall(sample))
+    batch = remote.iterbatch()
+    batch.heads()
+    batch.known(dag.externalizeall(sample))
     batch.submit()
-    srvheadhashes = srvheadhashesref.value
-    yesno = yesnoref.value
+    srvheadhashes, yesno = batch.results()
 
     if cl.tip() == nullid:
         if srvheadhashes != [nullid]:
