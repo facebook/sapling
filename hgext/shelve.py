@@ -20,17 +20,36 @@ You can have more than one shelved change outstanding at a time; each
 shelved change has a distinct name. For details, see the help for "hg
 shelve".
 """
+from __future__ import absolute_import
 
 import collections
-import itertools
-from mercurial.i18n import _
-from mercurial.node import nullid, nullrev, bin, hex
-from mercurial import changegroup, cmdutil, scmutil, phases, commands
-from mercurial import error, hg, mdiff, merge, patch, repair, util
-from mercurial import templatefilters, exchange, bundlerepo, bundle2
-from mercurial import lock as lockmod
-from hgext import rebase
 import errno
+import itertools
+from mercurial import (
+    bundle2,
+    bundlerepo,
+    changegroup,
+    cmdutil,
+    commands,
+    error,
+    exchange,
+    hg,
+    lock as lockmod,
+    mdiff,
+    merge,
+    node as nodemod,
+    patch,
+    phases,
+    repair,
+    scmutil,
+    templatefilters,
+    util,
+)
+from mercurial.i18n import _
+
+from . import (
+    rebase,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -146,15 +165,15 @@ class shelvedstate(object):
             name = fp.readline().strip()
             wctx = fp.readline().strip()
             pendingctx = fp.readline().strip()
-            parents = [bin(h) for h in fp.readline().split()]
-            stripnodes = [bin(h) for h in fp.readline().split()]
+            parents = [nodemod.bin(h) for h in fp.readline().split()]
+            stripnodes = [nodemod.bin(h) for h in fp.readline().split()]
         finally:
             fp.close()
 
         obj = cls()
         obj.name = name
-        obj.wctx = repo[bin(wctx)]
-        obj.pendingctx = repo[bin(pendingctx)]
+        obj.wctx = repo[nodemod.bin(wctx)]
+        obj.pendingctx = repo[nodemod.bin(pendingctx)]
         obj.parents = parents
         obj.stripnodes = stripnodes
 
@@ -165,10 +184,12 @@ class shelvedstate(object):
         fp = repo.vfs(cls._filename, 'wb')
         fp.write('%i\n' % cls._version)
         fp.write('%s\n' % name)
-        fp.write('%s\n' % hex(originalwctx.node()))
-        fp.write('%s\n' % hex(pendingctx.node()))
-        fp.write('%s\n' % ' '.join([hex(p) for p in repo.dirstate.parents()]))
-        fp.write('%s\n' % ' '.join([hex(n) for n in stripnodes]))
+        fp.write('%s\n' % nodemod.hex(originalwctx.node()))
+        fp.write('%s\n' % nodemod.hex(pendingctx.node()))
+        fp.write('%s\n' %
+                 ' '.join([nodemod.hex(p) for p in repo.dirstate.parents()]))
+        fp.write('%s\n' %
+                 ' '.join([nodemod.hex(n) for n in stripnodes]))
         fp.close()
 
     @classmethod
@@ -233,7 +254,7 @@ def _docreatecmd(ui, repo, pats, opts):
         """return all mutable ancestors for ctx (included)
 
         Much faster than the revset ancestors(ctx) & draft()"""
-        seen = set([nullrev])
+        seen = set([nodemod.nullrev])
         visit = collections.deque()
         visit.append(ctx)
         while visit:
@@ -264,7 +285,7 @@ def _docreatecmd(ui, repo, pats, opts):
         for i in xrange(1, 100):
             yield '%s-%02d' % (label, i)
 
-    if parent.node() != nullid:
+    if parent.node() != nodemod.nullid:
         desc = "changes to: %s" % parent.description().split('\n', 1)[0]
     else:
         desc = '(changes in empty repository)'
