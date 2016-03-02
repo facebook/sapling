@@ -1,28 +1,52 @@
 # Subversion 1.4/1.5 Python API backend
 #
 # Copyright(C) 2007 Daniel Holth et al
+from __future__ import absolute_import
 
-import os, re, sys, tempfile, urllib, urllib2
-import xml.dom.minidom
 import cPickle as pickle
+import cStringIO
+import os
+import re
+import sys
+import tempfile
+import urllib
+import urllib2
+import xml.dom.minidom
 
-from mercurial import strutil, scmutil, util, encoding, error
+from mercurial import (
+    encoding,
+    error,
+    scmutil,
+    strutil,
+    util,
+)
 from mercurial.i18n import _
 
+from . import common
+
+StringIO = cStringIO.StringIO
 propertycache = util.propertycache
+
+commandline = common.commandline
+commit = common.commit
+converter_sink = common.converter_sink
+converter_source = common.converter_source
+decodeargs = common.decodeargs
+encodeargs = common.encodeargs
+makedatetimestamp = common.makedatetimestamp
+mapfile = common.mapfile
+MissingTool = common.MissingTool
+NoRepo = common.NoRepo
 
 # Subversion stuff. Works best with very recent Python SVN bindings
 # e.g. SVN 1.5 or backports. Thanks to the bzr folks for enhancing
 # these bindings.
 
-from cStringIO import StringIO
-
-from common import NoRepo, MissingTool, commit, encodeargs, decodeargs
-from common import commandline, converter_source, converter_sink, mapfile
-from common import makedatetimestamp
-
 try:
-    from svn.core import SubversionException, Pool
+    from svn.core import (
+        Pool,
+        SubversionException,
+    )
     import svn
     import svn.client
     import svn.core
