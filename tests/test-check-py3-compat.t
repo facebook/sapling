@@ -23,7 +23,6 @@
   hgext/color.py not using absolute_import
   hgext/convert/__init__.py not using absolute_import
   hgext/convert/bzr.py not using absolute_import
-  hgext/convert/common.py not using absolute_import
   hgext/convert/cvs.py not using absolute_import
   hgext/convert/transport.py not using absolute_import
   hgext/eol.py not using absolute_import

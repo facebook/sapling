@@ -4,10 +4,21 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-import base64, errno, subprocess, os, datetime, re
+import base64
 import cPickle as pickle
-from mercurial import phases, util, error
+import datetime
+import errno
+import os
+import re
+import subprocess
+
+from mercurial import (
+    error,
+    phases,
+    util,
+)
 from mercurial.i18n import _
 
 propertycache = util.propertycache
