@@ -44,10 +44,17 @@ You can specify the encoding by config option::
 
 It is useful for the users who want to commit with UTF-8 log message.
 '''
+from __future__ import absolute_import
 
-import os, sys
+import os
+import sys
+
+from mercurial import (
+    encoding,
+    error,
+)
 from mercurial.i18n import _
-from mercurial import error, encoding
+
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or
