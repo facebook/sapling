@@ -7,11 +7,19 @@
 
 '''import revisions from foreign VCS repositories into Mercurial'''
 
-import convcmd
-import cvsps
-import subversion
-from mercurial import cmdutil, templatekw
+from __future__ import absolute_import
+
+from mercurial import (
+    cmdutil,
+    templatekw,
+)
 from mercurial.i18n import _
+
+from . import (
+    convcmd,
+    cvsps,
+    subversion,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
