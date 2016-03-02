@@ -58,7 +58,6 @@
   hgext/patchbomb.py not using absolute_import
   hgext/purge.py not using absolute_import
   hgext/rebase.py not using absolute_import
-  hgext/record.py not using absolute_import
   hgext/share.py not using absolute_import
   hgext/transplant.py not using absolute_import
   hgext/win32mbcs.py not using absolute_import

@@ -6,10 +6,15 @@
 # GNU General Public License version 2 or any later version.
 
 '''commands to interactively select changes for commit/qrefresh'''
+from __future__ import absolute_import
 
+from mercurial import (
+    cmdutil,
+    commands,
+    error,
+    extensions,
+)
 from mercurial.i18n import _
-from mercurial import cmdutil, commands, extensions
-from mercurial import error
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
