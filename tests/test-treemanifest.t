@@ -541,7 +541,7 @@ Verify reports missing dirlog
   8 integrity errors encountered!
   (first damaged changeset appears to be 0)
   [1]
-  $ cp -rT .hg/store-newcopy .hg/store
+  $ cp -r .hg/store-newcopy/. .hg/store
 
 Verify reports missing dirlog entry
   $ mv -f .hg/store-copy/meta/b/00manifest.* .hg/store/meta/b/
@@ -566,7 +566,7 @@ Verify reports missing dirlog entry
   8 integrity errors encountered!
   (first damaged changeset appears to be 1)
   [1]
-  $ cp -rT .hg/store-newcopy .hg/store
+  $ cp -r .hg/store-newcopy/. .hg/store
 
 Test cloning a treemanifest repo over http.
   $ hg serve -p $HGPORT -d --pid-file=hg.pid --errorlog=errors.log
