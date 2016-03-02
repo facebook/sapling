@@ -549,6 +549,7 @@ int main(int argc, const char *argv[], const char *envp[])
 	}
 
 	hgclient_t *hgc;
+	size_t retry = 0;
 	while (1) {
 		hgc = connectcmdserver(&opts);
 		if (!hgc)
@@ -560,6 +561,13 @@ int main(int argc, const char *argv[], const char *envp[])
 		runinstructions(&opts, insts);
 		free(insts);
 		hgc_close(hgc);
+		if (++retry > 10)
+			abortmsg("too many redirections.\n"
+				 "Please make sure %s is not a wrapper which "
+				 "changes sensitive environment variables "
+				 "before executing hg. If you have to use a "
+				 "wrapper, wrap chg instead of hg.",
+				 gethgcmd());
 	}
 
 	setupsignalhandler(hgc_peerpid(hgc));
