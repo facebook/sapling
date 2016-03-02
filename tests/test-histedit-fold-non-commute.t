@@ -117,12 +117,14 @@ fix up
   (hg histedit --continue to resume)
 
 just continue this time
+keep the non-commuting change, and thus the pending change will be dropped
   $ hg revert -r 'p1()' e
   $ hg resolve --mark e
   (no more unresolved files)
   continue: hg histedit --continue
+  $ hg diff
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: empty changeset
+  7b4e2f4b7bcd: skipping changeset (no changes)
 
 log after edit
   $ hg log --graph
@@ -262,7 +264,7 @@ just continue this time
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: empty changeset
+  7b4e2f4b7bcd: skipping changeset (no changes)
 
 log after edit
   $ hg log --graph

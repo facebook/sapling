@@ -171,7 +171,7 @@ just continue this time
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: empty changeset
+  7b4e2f4b7bcd: skipping changeset (no changes)
 
 log after edit
   $ hg log --graph
@@ -254,7 +254,7 @@ second edit also fails, but just continue
   (no more unresolved files)
   continue: hg histedit --continue
   $ hg histedit --continue 2>&1 | fixbundle
-  7b4e2f4b7bcd: empty changeset
+  7b4e2f4b7bcd: skipping changeset (no changes)
 
 post message fix
   $ hg log --graph

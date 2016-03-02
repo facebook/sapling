@@ -482,7 +482,7 @@ class histeditaction(object):
         rulectx."""
         ctx = self.repo['.']
         if ctx.node() == self.state.parentctxnode:
-            self.repo.ui.warn(_('%s: empty changeset\n') %
+            self.repo.ui.warn(_('%s: skipping changeset (no changes)\n') %
                               node.short(self.node))
             return ctx, [(self.node, tuple())]
         if ctx.node() == self.node:
