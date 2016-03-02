@@ -44,7 +44,6 @@
   hgext/largefiles/uisetup.py not using absolute_import
   hgext/largefiles/wirestore.py not using absolute_import
   hgext/mq.py not using absolute_import
-  hgext/notify.py not using absolute_import
   hgext/rebase.py not using absolute_import
   hgext/share.py not using absolute_import
   hgext/transplant.py not using absolute_import

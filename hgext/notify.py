@@ -132,11 +132,21 @@ web.baseurl
   references. See also ``notify.strip``.
 
 '''
+from __future__ import absolute_import
 
-import email, socket, time
-from mercurial.i18n import _
-from mercurial import patch, cmdutil, util, mail, error
+import email
 import fnmatch
+import socket
+import time
+
+from mercurial import (
+    cmdutil,
+    error,
+    mail,
+    patch,
+    util,
+)
+from mercurial.i18n import _
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
