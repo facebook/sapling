@@ -532,6 +532,8 @@ extmodules = [
     Extension('mercurial.osutil', ['mercurial/osutil.c'],
               extra_link_args=osutil_ldflags,
               depends=common_depends),
+    Extension('hgext.fsmonitor.pywatchman.bser',
+              ['hgext/fsmonitor/pywatchman/bser.c']),
     ]
 
 try:

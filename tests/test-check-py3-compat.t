@@ -25,6 +25,10 @@
   hgext/extdiff.py not using absolute_import
   hgext/factotum.py not using absolute_import
   hgext/fetch.py not using absolute_import
+  hgext/fsmonitor/pywatchman/__init__.py not using absolute_import
+  hgext/fsmonitor/pywatchman/__init__.py requires print_function
+  hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
+  hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   hgext/gpg.py not using absolute_import
   hgext/graphlog.py not using absolute_import
   hgext/hgcia.py not using absolute_import
