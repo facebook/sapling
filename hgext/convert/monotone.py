@@ -5,28 +5,34 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-import os, re
-from mercurial import util, error
-from common import NoRepo, commit, converter_source, checktool
-from common import commandline
+import os
+import re
+
+from mercurial import (
+    error,
+    util,
+)
 from mercurial.i18n import _
 
-class monotone_source(converter_source, commandline):
+from . import common
+
+class monotone_source(common.converter_source, common.commandline):
     def __init__(self, ui, path=None, revs=None):
-        converter_source.__init__(self, ui, path, revs)
+        common.converter_source.__init__(self, ui, path, revs)
         if revs and len(revs) > 1:
             raise error.Abort(_('monotone source does not support specifying '
                                'multiple revs'))
-        commandline.__init__(self, ui, 'mtn')
+        common.commandline.__init__(self, ui, 'mtn')
 
         self.ui = ui
         self.path = path
         self.automatestdio = False
         self.revs = revs
 
-        norepo = NoRepo(_("%s does not look like a monotone repository")
-                        % path)
+        norepo = common.NoRepo(_("%s does not look like a monotone repository")
+                             % path)
         if not os.path.exists(os.path.join(path, '_MTN')):
             # Could be a monotone repository (SQLite db file)
             try:
@@ -69,7 +75,7 @@ class monotone_source(converter_source, commandline):
         self.files = None
         self.dirs  = None
 
-        checktool('mtn', abort=False)
+        common.checktool('mtn', abort=False)
 
     def mtnrun(self, *args, **kwargs):
         if self.automatestdio:
@@ -302,7 +308,7 @@ class monotone_source(converter_source, commandline):
         certs = self.mtngetcerts(rev)
         if certs.get('suspend') == certs["branch"]:
             extra['close'] = 1
-        return commit(
+        return common.commit(
             author=certs["author"],
             date=util.datestr(util.strdate(certs["date"], "%Y-%m-%dT%H:%M:%S")),
             desc=certs["changelog"],
