@@ -18,6 +18,8 @@ from mercurial import scmutil
 
 
 UPDATEARGS = 'updateargs'
+HG_UPDATE_CLEAN = ('hg update --clean .    (warning: this will '
+                   'erase all uncommitted changed)')
 
 
 def prefixlines(raw):
@@ -62,7 +64,7 @@ def unshelvemsg(repo, ui):
 
 def graftmsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, 'hg graft --continue', 'hg update .')
+    helpmessage(ui, 'hg graft --continue', HG_UPDATE_CLEAN)
 
 def updatemsg(repo, ui):
     previousargs = repo.vfs.tryread(UPDATEARGS)
@@ -75,8 +77,7 @@ def updatemsg(repo, ui):
 
 def mergemsg(repo, ui):
     # tweakdefaults requires `update` to have a rev hence the `.`
-    helpmessage(ui, 'hg commit', 'hg update --clean .    (warning: this will '
-            'erase all uncommitted changed)')
+    helpmessage(ui, 'hg commit', HG_UPDATE_CLEAN)
 
 def bisectmsg(repo, ui):
     msg = _('To mark the commit good:       hg bisect --good\n'
