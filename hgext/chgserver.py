@@ -35,6 +35,7 @@ Config
 
   [chgserver]
   idletimeout = 3600 # seconds, after which an idle server will exit
+  skiphash = False   # whether to skip config or env change checks
 """
 
 from __future__ import absolute_import
@@ -516,6 +517,9 @@ class _requesthandler(SocketServer.StreamRequestHandler):
 def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
 
+def _hashaddress(address, hashstr):
+    return '%s-%s' % (address, hashstr)
+
 class AutoExitMixIn:  # use old-style to comply with SocketServer design
     lastactive = time.time()
     idletimeout = 3600  # default 1 hour
@@ -581,6 +585,7 @@ class chgunixservice(commandserver.unixservice):
         # drop options set for "hg serve --cmdserver" command
         self.ui.setconfig('progress', 'assume-tty', None)
         signal.signal(signal.SIGHUP, self._reloadconfig)
+        self._inithashstate()
         class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
                   SocketServer.UnixStreamServer):
             ui = self.ui
@@ -589,8 +594,24 @@ class chgunixservice(commandserver.unixservice):
         self.server.idletimeout = self.ui.configint(
             'chgserver', 'idletimeout', self.server.idletimeout)
         self.server.startautoexitthread()
+        self._createsymlink()
         # avoid writing "listening at" message to stdout before attachio
         # request, which calls setvbuf()
+
+    def _inithashstate(self):
+        self.baseaddress = self.address
+        if self.ui.configbool('chgserver', 'skiphash', False):
+            self.hashstate = None
+            return
+        self.hashstate = hashstate.fromui(self.ui)
+        self.address = _hashaddress(self.address, self.hashstate.confighash)
+
+    def _createsymlink(self):
+        if self.baseaddress == self.address:
+            return
+        tempaddress = _tempaddress(self.baseaddress)
+        os.symlink(self.address, tempaddress)
+        util.rename(tempaddress, self.baseaddress)
 
     def _reloadconfig(self, signum, frame):
         self.ui = self.server.ui = _renewui(self.ui)
