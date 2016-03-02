@@ -26,12 +26,14 @@ demandimport.ignore.extend([
 
 try:
     # bazaar imports
-    from bzrlib import (
-        bzrdir,
-        errors,
-        revision,
-    )
-    from bzrlib.revisionspec import RevisionSpec
+    import bzrlib.bzrdir
+    import bzrlib.errors
+    import bzrlib.revision
+    import bzrlib.revisionspec.RevisionSpec
+    bzrdir = bzrlib.bzrdir
+    errors = bzrlib.errors
+    revision = bzrlib.revision
+    revisionspec = bzrlib.revisionspec
 except ImportError:
     pass
 
@@ -66,7 +68,6 @@ class bzr_source(common.converter_source):
         # Lightweight checkouts detection is informational but probably
         # fragile at API level. It should not terminate the conversion.
         try:
-            from bzrlib import bzrdir
             dir = bzrdir.BzrDir.open_containing(path)[0]
             try:
                 tree = dir.open_workingtree(recommend_upgrade=False)
@@ -109,7 +110,7 @@ class bzr_source(common.converter_source):
             revid = None
             for branch in self._bzrbranches():
                 try:
-                    r = RevisionSpec.from_string(self.revs[0])
+                    r = revisionspec.RevisionSpec.from_string(self.revs[0])
                     info = r.in_history(branch)
                 except errors.BzrError:
                     pass
