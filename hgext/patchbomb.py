@@ -63,14 +63,27 @@ overwritten by command line flags like --intro and --desc::
 You can set patchbomb to always ask for confirmation by setting
 ``patchbomb.confirm`` to true.
 '''
+from __future__ import absolute_import
 
-import os, errno, socket, tempfile, cStringIO
+import cStringIO
 import email as emailmod
+import errno
+import os
+import socket
+import tempfile
 
-from mercurial import cmdutil, commands, hg, mail, patch, util, error
-from mercurial import scmutil
+from mercurial import (
+    cmdutil,
+    commands,
+    error,
+    hg,
+    mail,
+    node as nodemod,
+    patch,
+    scmutil,
+    util,
+)
 from mercurial.i18n import _
-from mercurial.node import bin
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -167,7 +180,7 @@ def makepatch(ui, repo, patchlines, opts, _charsets, idx, total, numbered,
             msg.attach(mail.mimeencode(ui, body, _charsets, opts.get('test')))
         p = mail.mimetextpatch('\n'.join(patchlines), 'x-patch',
                                opts.get('test'))
-        binnode = bin(node)
+        binnode = nodemod.bin(node)
         # if node is mq patch, it will have the patch file's name as a tag
         if not patchname:
             patchtags = [t for t in repo.nodetags(binnode)
