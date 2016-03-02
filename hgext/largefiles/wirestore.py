@@ -29,12 +29,8 @@ class wirestore(remotestore.remotestore):
         '''For each hash, return 0 if it is available, other values if not.
         It is usually 2 if the largefile is missing, but might be 1 the server
         has a corrupted copy.'''
-        batch = self.remote.batch()
-        futures = {}
+        batch = self.remote.iterbatch()
         for hash in hashes:
-            futures[hash] = batch.statlfile(hash)
+            batch.statlfile(hash)
         batch.submit()
-        retval = {}
-        for hash in hashes:
-            retval[hash] = futures[hash].value
-        return retval
+        return dict(zip(hashes, batch.results()))
