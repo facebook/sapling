@@ -554,7 +554,7 @@ class changectx(basectx):
     def files(self):
         return self._changeset[3]
     def description(self):
-        return encoding.tolocal(self._changeset[4])
+        return self._changeset[4]
     def branch(self):
         return encoding.tolocal(self._changeset[5].get("branch"))
     def closesbranch(self):
