@@ -39,9 +39,18 @@ For convenience, the extension adds these schemes by default::
 You can override a predefined scheme by defining a new scheme with the
 same name.
 """
+from __future__ import absolute_import
 
-import os, re
-from mercurial import extensions, hg, templater, util, error, cmdutil
+import os
+import re
+from mercurial import (
+    cmdutil,
+    error,
+    extensions,
+    hg,
+    templater,
+    util,
+)
 from mercurial.i18n import _
 
 cmdtable = {}
