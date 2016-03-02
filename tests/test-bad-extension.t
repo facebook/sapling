@@ -39,7 +39,7 @@ names of extensions failed to load can be accessed via extensions.notloaded()
   > command = cmdutil.command(cmdtable)
   > @command('showbadexts', norepo=True)
   > def showbadexts(ui, *pats, **opts):
-  >     ui.write('BADEXTS: %s' % ' '.join(sorted(extensions.notloaded())))
+  >     ui.write('BADEXTS: %s\n' % ' '.join(sorted(extensions.notloaded())))
   > EOF
   $ hg --config extensions.badexts=showbadexts.py showbadexts 2>&1 | grep '^BADEXTS'
   BADEXTS: badext badext2
