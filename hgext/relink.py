@@ -6,10 +6,18 @@
 # GNU General Public License version 2 or any later version.
 
 """recreates hardlinks between repository clones"""
+from __future__ import absolute_import
 
-from mercurial import cmdutil, hg, util, error
+import os
+import stat
+
+from mercurial import (
+    cmdutil,
+    error,
+    hg,
+    util,
+)
 from mercurial.i18n import _
-import os, stat
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
