@@ -5175,7 +5175,7 @@ msgstr "    - `roll` como `fold`, mas descartando a descrição da revisão"
 msgid "    - `edit` to edit this changeset"
 msgstr "    - `edit` para editar a revisão"
 
-msgid "    There are a number of ways to select the root changset:"
+msgid "    There are a number of ways to select the root changeset:"
 msgstr "    Há diversas maneiras de selecionar a revisão raiz:"
 
 msgid "    - Specify ANCESTOR directly"
@@ -18670,6 +18670,10 @@ msgstr ""
 "    contendo quebras de linha misturadas são incluídos em cada\n"
 "    um dos estilos correspondentes."
 
+#. i18n: "eol" is a keyword
+msgid "eol requires a style name"
+msgstr "eol requer um nome de estilo"
+
 msgid ""
 "``copied()``\n"
 "    File that is recorded as being copied."
@@ -19569,8 +19573,8 @@ msgstr ""
 "fará com que ``hg echo foo`` imprima ``foo`` em seu terminal.\n"
 "Um exemplo melhor (em um Unix) poderia ser::"
 
-msgid "   purge = !$HG status --no-status --unknown -0 | xargs -0 rm"
-msgstr "   purge = !$HG status --no-status --unknown -0 | xargs -0 rm"
+msgid "   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm"
+msgstr "   purge = !$HG status --no-status --unknown -0 re: | xargs -0 rm"
 
 msgid ""
 "which will make ``hg purge`` delete all unknown files in the\n"
@@ -19694,12 +19698,12 @@ msgstr ""
 "autenticação. Por exemplo::"
 
 msgid ""
-"    foo.prefix = hg.intevation.org/mercurial\n"
+"    foo.prefix = hg.intevation.de/mercurial\n"
 "    foo.username = foo\n"
 "    foo.password = bar\n"
 "    foo.schemes = http https"
 msgstr ""
-"    foo.prefix = hg.intevation.org/mercurial\n"
+"    foo.prefix = hg.intevation.de/mercurial\n"
 "    foo.username = foo\n"
 "    foo.password = bar\n"
 "    foo.schemes = http https"
@@ -21079,10 +21083,12 @@ msgstr "Por exemplo::"
 
 msgid ""
 "    [hostfingerprints]\n"
-"    hg.intevation.org = fa:1f:d9:48:f1:e7:74:30:38:8d:d8:58:b6:94:b8:58:28:7d:8b:d0"
+"    hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33"
 msgstr ""
 "    [hostfingerprints]\n"
-"    hg.intevation.org = fa:1f:d9:48:f1:e7:74:30:38:8d:d8:58:b6:94:b8:58:28:7d:8b:d0"
+"    hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33\n"
+"    hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33"
 
 msgid "This feature is only supported when using Python 2.6 or later."
 msgstr ""
@@ -23447,7 +23453,7 @@ msgid ""
 "``backgroundclose``\n"
 "    Whether to enable closing file handles on background threads during certain\n"
 "    operations. Some platforms aren't very efficient at closing file\n"
-"    handles that have been written or appened to. By performing file closing\n"
+"    handles that have been written or appended to. By performing file closing\n"
 "    on background threads, file write rate can increase substantially.\n"
 "    (default: true on Windows, false elsewhere)"
 msgstr ""
@@ -27665,22 +27671,22 @@ msgid ".. functionsmarker"
 msgstr ".. functionsmarker"
 
 msgid ""
-"Also, for any expression that returns a list, there is a list operator:"
+"Also, for any expression that returns a list, there is a list operator::"
 msgstr ""
 "Além disso, para cada expressão que devolve uma lista, há um\n"
-"operador de lista:"
+"operador de lista::"
 
-msgid "- expr % \"{template}\""
-msgstr "- expr % \"{modelo}\""
+msgid "    expr % \"{template}\""
+msgstr "    expr % \"{modelo}\""
 
 msgid ""
-"As seen in the above example, \"{template}\" is interpreted as a template.\n"
-"To prevent it from being interpreted, you can use an escape character \"\\{\"\n"
-"or a raw string prefix, \"r'...'\"."
+"As seen in the above example, ``{template}`` is interpreted as a template.\n"
+"To prevent it from being interpreted, you can use an escape character ``\\{``\n"
+"or a raw string prefix, ``r'...'``."
 msgstr ""
-"Como visto no exemplo acima, \"{modelo}\" é interpretado como um modelo.\n"
+"Como visto no exemplo acima, ``{modelo}`` é interpretado como um modelo.\n"
 "Para impedir que seja interpretado, você pode usar um caractere de\n"
-"escape \"\\{\" ou um prefixo de string literal \"r'...'\"."
+"escape ``\\{`` ou um prefixo de string literal ``r'...'``."
 
 msgid "Some sample command line templates:"
 msgstr "Alguns exemplos de modelos de linha de comando:"
@@ -32230,7 +32236,7 @@ msgstr "arquivo sem nome no manifesto"
 
 #, python-format
 msgid "reading manifest delta %s"
-msgstr "lendo alterações no manifesto %s"
+msgstr "lendo delta %s do manifesto"
 
 msgid "crosschecking files in changesets and manifests\n"
 msgstr "checagem cruzada de arquivos em revisões e no manifesto\n"
@@ -32321,6 +32327,121 @@ msgstr "procurar mudanças remotas"
 msgid "number of cpus must be an integer"
 msgstr "o número de cpus deve ser um inteiro"
 
+#~ msgid "Check for unrecorded moves at commit time (EXPERIMENTAL)"
+#~ msgstr ""
+#~ "Testa por renomeações não registradas no momento da consolidação "
+#~ "(EXPERIMENTAL)"
+
+#~ msgid ""
+#~ "This extension checks at commit/amend time if any of the committed files\n"
+#~ "comes from an unrecorded mv."
+#~ msgstr ""
+#~ "Esta extensão verifica durante consolidações se algum arquivo consolidado\n"
+#~ "foi renomeado sem registrar essa renomeação pelo comando mv."
+
+#~ msgid ""
+#~ "The threshold at which a file is considered a move can be set with the\n"
+#~ "``automv.similarity`` config option. This option takes a percentage between 0\n"
+#~ "(disabled) and 100 (files must be identical), the default is 95."
+#~ msgstr ""
+#~ "O limiar no qual um arquivo será considerado uma renomeação\n"
+#~ "pode ser definido com a opção de configuração ``automv.similarity``.\n"
+#~ "Esta opção recebe uma porcentagem entre 0 (desabilitado) e 100\n"
+#~ "(os arquivos devem ser idênticos). O valor padrão é 95."
+
+#~ msgid "disable automatic file move detection"
+#~ msgstr "desabilita detecção automática de renomeações"
+
+#~ msgid "automv.similarity must be between 0 and 100"
+#~ msgstr "automv.similarity deve ser um número entre 0 e 100"
+
+#~ msgid "detected move of %s as %s (%d%% similar)\n"
+#~ msgstr "detectada remoção de %s como %s (%d%% de similaridade)\n"
+
+#~ msgid "detected move of %d files\n"
+#~ msgstr "foram detectadas renomeações de %d arquivos\n"
+
+#~ msgid ""
+#~ "  [blackbox]\n"
+#~ "  track = *\n"
+#~ "  dirty = True"
+#~ msgstr ""
+#~ "  [blackbox]\n"
+#~ "  track = *"
+
+#~ msgid "histedit"
+#~ msgstr "histedit"
+
+#~ msgid "rebase"
+#~ msgstr "%d rebaseados"
+
+#~ msgid "nothing to rebase - updating instead\n"
+#~ msgstr "nada para rebasear de %s para %s\n"
+
+#~ msgid "invalid value for --daemon-postexec"
+#~ msgstr "valor %r inválido para a opção %s, int esperado"
+
+#~ msgid "forget added file %s (yn)?$$ &Yes $$ &No"
+#~ msgstr "a mesclagem de '%s' teve sucesso (yn)?$$ (&Y) sim $$ &Não"
+
+#~ msgid "no %s in progress"
+#~ msgstr "nenhum rebaseamento em andamento"
+
+#~ msgid "graft"
+#~ msgstr "força o enxerto"
+
+#~ msgid ""
+#~ "multiple matching bookmarks to rebase - please rebase to an explicit rev or "
+#~ "bookmark"
+#~ msgstr ""
+#~ "múltiplos marcadores para mesclar - por favor mescle com uma revisão ou "
+#~ "marcador explícitos"
+
+#~ msgid ""
+#~ "no matching bookmark to rebase - please rebase to an explicit rev or "
+#~ "bookmark"
+#~ msgstr ""
+#~ "nenhum marcador correspondente para mesclar - por favor mescle com uma "
+#~ "revisão ou marcador explícitos"
+
+#~ msgid "branch '%s' has %d heads - please rebase to an explicit rev"
+#~ msgstr ""
+#~ "o ramo '%s' tem %d cabeças - por favor mescle com uma revisão explícita"
+
+#~ msgid "heads are bookmarked - please rebase to an explicit rev"
+#~ msgstr ""
+#~ "as cabeças estão marcadas com bookmarks - por favor mescle com uma revisão "
+#~ "explícita"
+
+#~ msgid "branch '%s' has one head - please rebase to an explicit rev"
+#~ msgstr ""
+#~ "o ramo '%s' tem apenas uma cabeça - por favor mescle com uma revisão "
+#~ "explícita"
+
+#~ msgid "nothing to rebase"
+#~ msgstr "nada para rebasear\n"
+
+#~ msgid "use 'hg update' or rebase to an explicit revision"
+#~ msgstr "use 'hg update' ou mescle com uma revisão explícita"
+
+#~ msgid "source set is empty"
+#~ msgstr "o patch %s é vazio\n"
+
+#~ msgid "source set is rooted in multiple branches"
+#~ msgstr "a origem cvs não suporta a especificação de múltiplas revisões"
+
+#~ msgid "rebaseset is rooted in multiple named branches"
+#~ msgstr "não é possível colapsar múltiplos ramos nomeados"
+
+#~ msgid "specify an explicit destination with --dest"
+#~ msgstr "você não pode especificar uma revisão com --all"
+
+#~ msgid "%i other divergent bookmarks for \"%s\"\n"
+#~ msgstr "marcador divergente %s guardado como %s\n"
+
+#~ msgid "%i other heads for branch \"%s\"\n"
+#~ msgstr "novas cabeças remotas no ramo '%s':\n"
+
 #~ msgid ""
 #~ "``merge``\n"
 #~ "---------"
@@ -32367,6 +32488,25 @@ msgstr "o número de cpus deve ser um inteiro"
 #~ "   Opera de forma similar a ``merge.checkignored``, mas para arquivos\n"
 #~ "   que não são ignorados.\n"
 #~ "   (padrão: ``abort``)"
+
+#~ msgid "%s not in parent-directory manifest"
+#~ msgstr "abre o manifesto do diretório"
+
+#~ msgid "parent-directory manifest refers to unknown revision %s"
+#~ msgstr "revisão se refere a manifesto desconhecido %s"
+
+#~ msgid "checking directory manifests\n"
+#~ msgstr "abre o manifesto do diretório"
+
+#~ msgid "manifest refers to unknown revision %s"
+#~ msgstr "revisão se refere a manifesto desconhecido %s"
+
+#~ msgid ""
+#~ "    [hostfingerprints]\n"
+#~ "    hg.intevation.org = fa:1f:d9:48:f1:e7:74:30:38:8d:d8:58:b6:94:b8:58:28:7d:8b:d0"
+#~ msgstr ""
+#~ "    [hostfingerprints]\n"
+#~ "    hg.intevation.org = fa:1f:d9:48:f1:e7:74:30:38:8d:d8:58:b6:94:b8:58:28:7d:8b:d0"
 
 #~ msgid ""
 #~ "# Edit history between %s and %s\n"
