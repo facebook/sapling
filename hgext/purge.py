@@ -23,10 +23,18 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 '''command to delete untracked files from the working directory'''
+from __future__ import absolute_import
 
-from mercurial import util, commands, cmdutil, scmutil, error
-from mercurial.i18n import _
 import os
+
+from mercurial import (
+    cmdutil,
+    commands,
+    error,
+    scmutil,
+    util,
+)
+from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
