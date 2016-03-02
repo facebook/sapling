@@ -342,7 +342,7 @@ class changelog(revlog.revlog):
         desc = encoding.tolocal(text[last + 2:])
         l = text[:last].split('\n')
         manifest = bin(l[0])
-        user = l[1]
+        user = encoding.tolocal(l[1])
 
         tdata = l[2].split(' ', 2)
         if len(tdata) != 3:
