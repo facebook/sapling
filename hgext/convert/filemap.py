@@ -3,12 +3,16 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 import posixpath
 import shlex
+from mercurial import (
+    error,
+)
 from mercurial.i18n import _
-from mercurial import error
-from common import SKIPREV, converter_source
+from . import common
+SKIPREV = common.SKIPREV
 
 def rpairs(path):
     '''Yield tuples with path split at '/', starting with the full path.
@@ -164,7 +168,7 @@ class filemapper(object):
 #   touch files we're interested in, but also merges that merge two
 #   or more interesting revisions.
 
-class filemap_source(converter_source):
+class filemap_source(common.converter_source):
     def __init__(self, ui, baseconverter, filemap):
         super(filemap_source, self).__init__(ui)
         self.base = baseconverter

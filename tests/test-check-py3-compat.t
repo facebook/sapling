@@ -31,7 +31,6 @@
   hgext/convert/cvs.py not using absolute_import
   hgext/convert/cvsps.py not using absolute_import
   hgext/convert/darcs.py not using absolute_import
-  hgext/convert/filemap.py not using absolute_import
   hgext/convert/hg.py not using absolute_import
   hgext/convert/monotone.py not using absolute_import
   hgext/convert/p4.py not using absolute_import
