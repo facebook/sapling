@@ -125,7 +125,7 @@ Run additional tests for the import checker
   testpackage/relativestdlib.py:2: relative import of stdlib module
   testpackage/requirerelative.py:2: import should be relative: testpackage.unsorted
   testpackage/sortedentries.py:2: imports from testpackage not lexically sorted: bar < foo
-  testpackage/stdafterlocal.py:3: stdlib import follows local import: os
+  testpackage/stdafterlocal.py:3: stdlib import "os" follows local import: testpackage
   testpackage/subpackage/levelpriority.py:3: higher-level import should come first: testpackage
   testpackage/subpackage/localimport.py:7: multiple "from .. import" statements
   testpackage/subpackage/localimport.py:8: import should be relative: testpackage.subpackage.levelpriority
