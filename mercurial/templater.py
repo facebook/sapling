@@ -891,6 +891,8 @@ def stylelist():
     stylelist = []
     for file in dirlist:
         split = file.split(".")
+        if split[-1] in ('orig', 'rej'):
+            continue
         if split[0] == "map-cmdline":
             stylelist.append(split[1])
     return ", ".join(sorted(stylelist))
