@@ -5,14 +5,22 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-from common import NoRepo, commandline, commit, converter_source
+import email
+import os
+import shutil
+import stat
+import tempfile
+from mercurial import (
+    encoding,
+    error,
+    util,
+)
 from mercurial.i18n import _
-from mercurial import encoding, util, error
-import os, shutil, tempfile, stat
-from email.Parser import Parser
+from . import common
 
-class gnuarch_source(converter_source, commandline):
+class gnuarch_source(common.converter_source, common.commandline):
 
     class gnuarch_rev(object):
         def __init__(self, rev):
@@ -31,7 +39,7 @@ class gnuarch_source(converter_source, commandline):
         super(gnuarch_source, self).__init__(ui, path, revs=revs)
 
         if not os.path.exists(os.path.join(path, '{arch}')):
-            raise NoRepo(_("%s does not look like a GNU Arch repository")
+            raise common.NoRepo(_("%s does not look like a GNU Arch repository")
                          % path)
 
         # Could use checktool, but we want to check for baz or tla.
@@ -44,7 +52,7 @@ class gnuarch_source(converter_source, commandline):
             else:
                 raise error.Abort(_('cannot find a GNU Arch tool'))
 
-        commandline.__init__(self, ui, self.execmd)
+        common.commandline.__init__(self, ui, self.execmd)
 
         self.path = os.path.realpath(path)
         self.tmppath = None
@@ -54,7 +62,7 @@ class gnuarch_source(converter_source, commandline):
         self.changes = {}
         self.parents = {}
         self.tags = {}
-        self.catlogparser = Parser()
+        self.catlogparser = email.Parser.Parser()
         self.encoding = encoding.encoding
         self.archives = []
 
@@ -175,8 +183,9 @@ class gnuarch_source(converter_source, commandline):
 
     def getcommit(self, rev):
         changes = self.changes[rev]
-        return commit(author=changes.author, date=changes.date,
-                      desc=changes.summary, parents=self.parents[rev], rev=rev)
+        return common.commit(author=changes.author, date=changes.date,
+                             desc=changes.summary, parents=self.parents[rev],
+                             rev=rev)
 
     def gettags(self):
         return self.tags
