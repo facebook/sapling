@@ -1,3 +1,10 @@
+  > mkcommit()
+  > {
+  >    echo $1 > $1
+  >    hg add $1
+  >    hg ci -m "add $1"
+  > }
+
 Set up extension and repos to clone over wire protocol
 
   $ cat >> $HGRCPATH << EOF
@@ -185,4 +192,48 @@ Test traditional push with subrepo
   remote: adding file changes
   remote: added 2 changesets with 3 changes to 3 files (+1 heads)
   exporting bookmark @
+  $ cd ..
+
+Set up server repo
+  $ hg init rnserver
+  $ cd rnserver
+  $ mkcommit a
+  $ hg book -r 0 rbook
+  $ cd ..
+
+Set up client repo
+  $ hg clone rnserver rnclient
+  updating to branch default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd rnclient
+  $ hg book --all
+  no bookmarks set
+     default/rbook             0:1f0dee641bb7
+  $ cd ..
+
+Advance a server bookmark to an unknown commit and create a new server bookmark
+We want to test both the advancement of locally known remote bookmark and the
+creation of a new one (locally unknonw).
+  $ cd rnserver
+  $ mkcommit b
+  $ hg book -r 1 rbook
+  moving bookmark 'rbook' forward from 1f0dee641bb7
+  $ hg book -r 1 rbook2
+  $ hg book
+     rbook                     1:7c3bad9141dc
+     rbook2                    1:7c3bad9141dc
+  $ cd ..
+
+Force client to get data about new bookmarks without getting commits
+  $ cd rnclient
+  $ hg push
+  pushing to $TESTTMP/rnserver (glob)
+  searching for changes
+  no changes found
+  [1]
+  $ hg book --all
+  no bookmarks set
+     default/rbook             0:1f0dee641bb7
+  $ hg update rbook
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

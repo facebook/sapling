@@ -1313,6 +1313,7 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
 
         # read in all data first before opening file to write
         olddata = set(readremotenames(repo))
+        oldbooks = {}
 
         f = vfs('remotenames', 'w')
 
@@ -1322,15 +1323,23 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
             if oldremote != remotepath:
                 n = joinremotename(oldremote, rname)
                 f.write('%s %s %s\n' % (node, nametype, n))
+            elif nametype == 'bookmarks':
+                oldbooks[rname] = node
 
         for branch, nodes in branches.iteritems():
             for n in nodes:
                 rname = joinremotename(remotepath, branch)
                 f.write('%s branches %s\n' % (hex(n), rname))
 
+        nm = repo.unfiltered().changelog.nodemap
         for bookmark, n in bookmarks.iteritems():
-            f.write('%s bookmarks %s\n' %
-                    (n, joinremotename(remotepath, bookmark)))
+            bookhex = n
+            if not bin(bookhex) in nm:
+                # node is unknown locally, don't change the bookmark
+                bookhex = oldbooks.get(bookmark)
+            if bookhex:
+                f.write('%s bookmarks %s\n' %
+                    (bookhex, joinremotename(remotepath, bookmark)))
         f.close()
 
         # Old paths have been deleted, refresh remotenames
