@@ -29,7 +29,6 @@
   hgext/convert/common.py not using absolute_import
   hgext/convert/convcmd.py not using absolute_import
   hgext/convert/cvs.py not using absolute_import
-  hgext/convert/hg.py not using absolute_import
   hgext/convert/monotone.py not using absolute_import
   hgext/convert/p4.py not using absolute_import
   hgext/convert/subversion.py not using absolute_import
