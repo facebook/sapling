@@ -25,7 +25,7 @@ filediff(){
         file2=/dev/null
     fi
 
-    if cmp -s "$file1" "$file2"; then
+    if cmp -s "$file1" "$file2" 2> /dev/null; then
         # Return immediately, because comparison isn't needed. This
         # also avoids redundant message of diff like "No differences
         # encountered" (on Solaris)
