@@ -396,9 +396,12 @@ class wirepeer(peer.peerrepository):
     def _callstream(self, cmd, **args):
         """execute <cmd> on the server
 
-        The command is expected to return a stream.
+        The command is expected to return a stream. Note that if the
+        command doesn't return a stream, _callstream behaves
+        differently for ssh and http peers.
 
-        returns the server reply as a file like object."""
+        returns the server reply as a file like object.
+        """
         raise NotImplementedError()
 
     def _callcompressable(self, cmd, **args):
