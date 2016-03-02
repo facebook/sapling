@@ -4,15 +4,32 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-import os, re, socket, errno
-from cStringIO import StringIO
-from mercurial import encoding, util, error
+import cStringIO
+import errno
+import os
+import re
+import socket
+
+from mercurial import (
+    encoding,
+    error,
+    util,
+)
 from mercurial.i18n import _
 
-from common import NoRepo, commit, converter_source, checktool
-from common import makedatetimestamp
-import cvsps
+from . import (
+    common,
+    cvsps,
+)
+
+StringIO = cStringIO.StringIO
+checktool = common.checktool
+commit = common.commit
+converter_source = common.converter_source
+makedatetimestamp = common.makedatetimestamp
+NoRepo = common.NoRepo
 
 class convert_cvs(converter_source):
     def __init__(self, ui, path, revs=None):
