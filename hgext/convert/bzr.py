@@ -7,9 +7,16 @@
 
 # This module is for handling 'bzr', that was formerly known as Bazaar-NG;
 # it cannot access 'bar' repositories, but they were never used very much
+from __future__ import absolute_import
 
 import os
-from mercurial import demandimport, error
+from mercurial import (
+    demandimport,
+    error
+)
+from mercurial.i18n import _
+from . import common
+
 # these do not work with demandimport, blacklist
 demandimport.ignore.extend([
         'bzrlib.transactions',
@@ -17,42 +24,42 @@ demandimport.ignore.extend([
         'ElementPath',
     ])
 
-from mercurial.i18n import _
-from mercurial import error
-from common import NoRepo, commit, converter_source
-
 try:
     # bazaar imports
-    from bzrlib import bzrdir, revision, errors
+    from bzrlib import (
+        bzrdir,
+        errors,
+        revision,
+    )
     from bzrlib.revisionspec import RevisionSpec
 except ImportError:
     pass
 
 supportedkinds = ('file', 'symlink')
 
-class bzr_source(converter_source):
+class bzr_source(common.converter_source):
     """Reads Bazaar repositories by using the Bazaar Python libraries"""
 
     def __init__(self, ui, path, revs=None):
         super(bzr_source, self).__init__(ui, path, revs=revs)
 
         if not os.path.exists(os.path.join(path, '.bzr')):
-            raise NoRepo(_('%s does not look like a Bazaar repository')
-                         % path)
+            raise common.NoRepo(_('%s does not look like a Bazaar repository')
+                              % path)
 
         try:
             # access bzrlib stuff
             bzrdir
         except NameError:
-            raise NoRepo(_('Bazaar modules could not be loaded'))
+            raise common.NoRepo(_('Bazaar modules could not be loaded'))
 
         path = os.path.abspath(path)
         self._checkrepotype(path)
         try:
             self.sourcerepo = bzrdir.BzrDir.open(path).open_repository()
         except errors.NoRepositoryPresent:
-            raise NoRepo(_('%s does not look like a Bazaar repository')
-                         % path)
+            raise common.NoRepo(_('%s does not look like a Bazaar repository')
+                              % path)
         self._parentids = {}
 
     def _checkrepotype(self, path):
@@ -160,7 +167,7 @@ class bzr_source(converter_source):
         branch = self.recode(rev.properties.get('branch-nick', u'default'))
         if branch == 'trunk':
             branch = 'default'
-        return commit(parents=parents,
+        return common.commit(parents=parents,
                 date='%d %d' % (rev.timestamp, -rev.timezone),
                 author=self.recode(rev.committer),
                 desc=self.recode(rev.message),
