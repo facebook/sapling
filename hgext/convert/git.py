@@ -4,14 +4,21 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 import os
 import subprocess
-from mercurial import util, config, error
-from mercurial.node import hex, nullid
+from mercurial import (
+    config,
+    error,
+    node as nodemod,
+    util,
+)
 from mercurial.i18n import _
 
-from common import NoRepo, commit, converter_source, checktool
+from . import (
+    common,
+)
 
 class submodule(object):
     def __init__(self, path, node, url):
@@ -25,7 +32,7 @@ class submodule(object):
     def hgsubstate(self):
         return "%s %s" % (self.node, self.path)
 
-class convert_git(converter_source):
+class convert_git(common.converter_source):
     # Windows does not support GIT_DIR= construct while other systems
     # cannot remove environment variable. Just assume none have
     # both issues.
@@ -92,7 +99,8 @@ class convert_git(converter_source):
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):
-            raise NoRepo(_("%s does not look like a Git repository") % path)
+            raise common.NoRepo(_("%s does not look like a Git repository") %
+                                path)
 
         # The default value (50) is based on the default for 'git diff'.
         similarity = ui.configint('convert', 'git.similarity', default=50)
@@ -107,7 +115,7 @@ class convert_git(converter_source):
         else:
             self.simopt = ''
 
-        checktool('git', 'git')
+        common.checktool('git', 'git')
 
         self.path = path
         self.submodules = []
@@ -134,7 +142,7 @@ class convert_git(converter_source):
         return heads
 
     def catfile(self, rev, type):
-        if rev == hex(nullid):
+        if rev == nodemod.nullhex:
             raise IOError
         self.catfilepipe[0].write(rev+'\n')
         self.catfilepipe[0].flush()
@@ -151,7 +159,7 @@ class convert_git(converter_source):
         return data
 
     def getfile(self, name, rev):
-        if rev == hex(nullid):
+        if rev == nodemod.nullhex:
             return None, None
         if name == '.hgsub':
             data = '\n'.join([m.hgsub() for m in self.submoditer()])
@@ -165,7 +173,7 @@ class convert_git(converter_source):
         return data, mode
 
     def submoditer(self):
-        null = hex(nullid)
+        null = nodemod.nullhex
         for m in sorted(self.submodules, key=lambda p: p.path):
             if m.node != null:
                 yield m
@@ -240,7 +248,7 @@ class convert_git(converter_source):
                 subexists[0] = True
                 if entry[4] == 'D' or renamesource:
                     subdeleted[0] = True
-                    changes.append(('.hgsub', hex(nullid)))
+                    changes.append(('.hgsub', nodemod.nullhex))
                 else:
                     changes.append(('.hgsub', ''))
             elif entry[1] == '160000' or entry[0] == ':160000':
@@ -248,7 +256,7 @@ class convert_git(converter_source):
                     subexists[0] = True
             else:
                 if renamesource:
-                    h = hex(nullid)
+                    h = nodemod.nullhex
                 self.modecache[(f, h)] = (p and "x") or (s and "l") or ""
                 changes.append((f, h))
 
@@ -287,7 +295,7 @@ class convert_git(converter_source):
 
         if subexists[0]:
             if subdeleted[0]:
-                changes.append(('.hgsubstate', hex(nullid)))
+                changes.append(('.hgsubstate', nodemod.nullhex))
             else:
                 self.retrievegitmodules(version)
                 changes.append(('.hgsubstate', ''))
@@ -324,8 +332,9 @@ class convert_git(converter_source):
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
 
-        c = commit(parents=parents, date=date, author=author, desc=message,
-                   rev=version)
+        c = common.commit(parents=parents, date=date, author=author,
+                          desc=message,
+                          rev=version)
         return c
 
     def numcommits(self):
