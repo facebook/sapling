@@ -4,39 +4,52 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
-from common import NoRepo, checktool, commandline, commit, converter_source
+import errno
+import os
+import re
+import shutil
+import tempfile
 from mercurial.i18n import _
-from mercurial import util, error
-import os, shutil, tempfile, re, errno
+from mercurial import (
+    error,
+    util,
+)
+from . import common
+NoRepo = common.NoRepo
 
 # The naming drift of ElementTree is fun!
 
 try:
-    from xml.etree.cElementTree import ElementTree, XMLParser
+    import xml.etree.cElementTree.ElementTree as ElementTree
+    import xml.etree.cElementTree.XMLParser as XMLParser
 except ImportError:
     try:
-        from xml.etree.ElementTree import ElementTree, XMLParser
+        import xml.etree.ElementTree.ElementTree as ElementTree
+        import xml.etree.ElementTree.XMLParser as XMLParser
     except ImportError:
         try:
-            from elementtree.cElementTree import ElementTree, XMLParser
+            import elementtree.cElementTree.ElementTree as ElementTree
+            import elementtree.cElementTree.XMLParser as XMLParser
         except ImportError:
             try:
-                from elementtree.ElementTree import ElementTree, XMLParser
+                import elementtree.ElementTree.ElementTree as ElementTree
+                import elementtree.ElementTree.XMLParser  as XMLParser
             except ImportError:
                 pass
 
-class darcs_source(converter_source, commandline):
+class darcs_source(common.converter_source, common.commandline):
     def __init__(self, ui, path, revs=None):
-        converter_source.__init__(self, ui, path, revs=revs)
-        commandline.__init__(self, ui, 'darcs')
+        common.converter_source.__init__(self, ui, path, revs=revs)
+        common.commandline.__init__(self, ui, 'darcs')
 
         # check for _darcs, ElementTree so that we can easily skip
         # test-convert-darcs if ElementTree is not around
         if not os.path.exists(os.path.join(path, '_darcs')):
             raise NoRepo(_("%s does not look like a darcs repository") % path)
 
-        checktool('darcs')
+        common.checktool('darcs')
         version = self.run0('--version').splitlines()[0].strip()
         if version < '2.1':
             raise error.Abort(_('darcs version 2.1 or newer needed (found %r)')
@@ -139,10 +152,10 @@ class darcs_source(converter_source, commandline):
         desc = elt.findtext('name') + '\n' + elt.findtext('comment', '')
         # etree can return unicode objects for name, comment, and author,
         # so recode() is used to ensure str objects are emitted.
-        return commit(author=self.recode(elt.get('author')),
-                      date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
-                      desc=self.recode(desc).strip(),
-                      parents=self.parents[rev])
+        return common.commit(author=self.recode(elt.get('author')),
+                             date=util.datestr(date, '%Y-%m-%d %H:%M:%S %1%2'),
+                             desc=self.recode(desc).strip(),
+                             parents=self.parents[rev])
 
     def pull(self, rev):
         output, status = self.run('pull', self.path, all=True,
