@@ -154,7 +154,9 @@ log rotation
   1970/01/01 00:00:00 bob @0000000000000000000000000000000000000000 (5000)> blackbox
   $ mv .hg/blackbox.log .hg/blackbox.log-
   $ mkdir .hg/blackbox.log
-  $ sed -e 's/\(.*test1.*\)/#\1/; s#\(.*commit2.*\)#os.rmdir(".hg/blackbox.log")\nos.rename(".hg/blackbox.log-", ".hg/blackbox.log")\n\1#' $TESTDIR/test-dispatch.py > ../test-dispatch.py
+  $ sed -e 's/\(.*test1.*\)/#\1/; s#\(.*commit2.*\)#os.rmdir(".hg/blackbox.log")\
+  > os.rename(".hg/blackbox.log-", ".hg/blackbox.log")\
+  > \1#' $TESTDIR/test-dispatch.py > ../test-dispatch.py
   $ python ../test-dispatch.py
   running: add foo
   result: 0
