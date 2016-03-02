@@ -3,11 +3,23 @@
 This extension allows you to strip changesets and all their descendants from the
 repository. See the command help for details.
 """
+from __future__ import absolute_import
+
+from mercurial import (
+    bookmarks as bookmarksmod,
+    cmdutil,
+    error,
+    hg,
+    lock as lockmod,
+    merge,
+    node as nodemod,
+    repair,
+    scmutil,
+    util,
+)
 from mercurial.i18n import _
-from mercurial.node import nullid
-from mercurial.lock import release
-from mercurial import cmdutil, hg, scmutil, util, error
-from mercurial import repair, bookmarks as bookmarksmod , merge
+nullid = nodemod.nullid
+release = lockmod.release
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
