@@ -1,0 +1,52 @@
+# Blacklist for a full testsuite run with fsmonitor enabled.
+# Use with
+#     run-tests --blacklist=blacklists/fsmonitor \
+#         --extra-config="extensions.fsmonitor="
+# The following tests all fail because they either use extensions that conflict
+# with fsmonitor, use subrepositories, or don't anticipate the extra file in
+# the .hg directory that fsmonitor adds.
+test-basic.t
+test-blackbox.t
+test-check-commit.t
+test-commandserver.t
+test-copy.t
+test-debugextensions.t
+test-eol-add.t
+test-eol-clone.t
+test-eol-hook.t
+test-eol-patch.t
+test-eol-tag.t
+test-eol-update.t
+test-eol.t
+test-eolfilename.t
+test-extension.t
+test-fncache.t
+test-hardlinks.t
+test-help.t
+test-inherit-mode.t
+test-issue3084.t
+test-largefiles-cache.t
+test-largefiles-misc.t
+test-largefiles-small-disk.t
+test-largefiles-update.t
+test-largefiles-wireproto.t
+test-largefiles.t
+test-lfconvert.t
+test-merge-tools.t
+test-nested-repo.t
+test-permissions.t
+test-push-warn.t
+test-subrepo-deep-nested-change.t
+test-subrepo-recursion.t
+test-subrepo.t
+test-tags.t
+
+# The following tests remain enabled; they fail *too*, but only because they
+# occasionally use blacklisted extensions and don't anticipate the warning
+# generated.
+#test-log.t
+#test-hook.t
+#test-rename.t
+#test-histedit-fold.t
+#test-fileset-generated.t
+#test-init.t
