@@ -10,16 +10,23 @@ import sys
 import re
 
 leadingline = re.compile(r'(^\s*)(\S.*)$')
-hg_backtick = re.compile(r""":hg:`[^`]*'[^`]*`""")
-hg_cramped = re.compile(r'\w:hg:`')
+
+checks = [
+  (r""":hg:`[^`]*'[^`]*`""",
+    """warning: please avoid nesting ' in :hg:`...`"""),
+  (r'\w:hg:`',
+    'warning: please have a space before :hg:'),
+]
 
 def check(line):
-    if hg_backtick.search(line):
+    messages = []
+    for match, msg in checks:
+        if re.search(match, line):
+            messages.append(msg)
+    if messages:
         print(line)
-        print("""warning: please avoid nesting ' in :hg:`...`""")
-    if hg_cramped.search(line):
-        print(line)
-        print('warning: please have a space before :hg:')
+        for msg in messages:
+            print(msg)
 
 def work(file):
     (llead, lline) = ('', '')
