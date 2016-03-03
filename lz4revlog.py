@@ -82,14 +82,14 @@ def decompress(orig, bin):
         return _decompress(bin[1:])
     return orig(bin)
 
+def requirements(orig, repo):
+    reqs = orig(repo)
+    if repo.ui.configbool('format', 'uselz4', True):
+        reqs.add('lz4revlog')
+    return reqs
+
 if usable:
-    @replaceclass(localrepo, 'localrepository')
-    class lz4repo(localrepo.localrepository):
-        def _baserequirements(self, create):
-            reqs = super(lz4repo, self)._baserequirements(create)
-            if create and self.ui.configbool('format', 'uselz4', True):
-                reqs.append('lz4revlog')
-            return reqs
+    extensions.wrapfunction(localrepo, 'newreporequirements', requirements)
 
     @replaceclass(revlog, 'revlog')
     class lz4revlog(revlog.revlog):
