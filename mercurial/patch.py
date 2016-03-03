@@ -31,6 +31,7 @@ from . import (
     diffhelpers,
     encoding,
     error,
+    mail,
     mdiff,
     pathutil,
     scmutil,
@@ -210,8 +211,8 @@ def extract(ui, fileobj):
     try:
         msg = email.Parser.Parser().parse(fileobj)
 
-        subject = msg['Subject']
-        data['user'] = msg['From']
+        subject = msg['Subject'] and mail.headdecode(msg['Subject'])
+        data['user'] = msg['From'] and mail.headdecode(msg['From'])
         if not subject and not data['user']:
             # Not an email, restore parsed headers if any
             subject = '\n'.join(': '.join(h) for h in msg.items()) + '\n'

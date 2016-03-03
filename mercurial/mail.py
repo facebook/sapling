@@ -332,3 +332,21 @@ def mimeencode(ui, s, charsets=None, display=False):
     if not display:
         s, cs = _encode(ui, s, charsets)
     return mimetextqp(s, 'plain', cs)
+
+def headdecode(s):
+    '''Decodes RFC-2047 header'''
+    uparts = []
+    for part, charset in email.Header.decode_header(s):
+        if charset is not None:
+            try:
+                uparts.append(part.decode(charset))
+                continue
+            except UnicodeDecodeError:
+                pass
+        try:
+            uparts.append(part.decode('UTF-8'))
+            continue
+        except UnicodeDecodeError:
+            pass
+        uparts.append(part.decode('ISO-8859-1'))
+    return encoding.tolocal(u' '.join(uparts).encode('UTF-8'))

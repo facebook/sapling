@@ -822,4 +822,27 @@ Test corner case involving copies and multiple hunks (issue3384)
   > EOF
   applying patch from stdin
 
+Test email metadata
+
+  $ hg revert -qa
+  $ hg --encoding utf-8 import - <<EOF
+  > From: =?UTF-8?q?Rapha=C3=ABl=20Hertzog?= <hertzog@debian.org>
+  > Subject: [PATCH] =?UTF-8?q?=C5=A7=E2=82=AC=C3=9F=E1=B9=AA?=
+  > 
+  > diff --git a/a b/a
+  > --- a/a
+  > +++ b/a
+  > @@ -1,1 +1,2 @@
+  >  a
+  > +a
+  > EOF
+  applying patch from stdin
+  $ hg --encoding utf-8 log -r .
+  changeset:   2:* (glob)
+  tag:         tip
+  user:        Rapha\xc3\xabl Hertzog <hertzog@debian.org> (esc)
+  date:        * (glob)
+  summary:     \xc5\xa7\xe2\x82\xac\xc3\x9f\xe1\xb9\xaa (esc)
+  
+
   $ cd ..
