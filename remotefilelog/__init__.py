@@ -514,10 +514,7 @@ def filelogrevset(orig, repo, subset, x):
 
     return [r for r in subset if r in s]
 
-
-commands.norepo += " gc"
-
-@command('gc', [], _('hg gc [REPO...]'))
+@command('gc', [], _('hg gc [REPO...]'), norepo=True)
 def gc(ui, *args, **opts):
     '''garbage collect the client and server filelog caches
     '''
@@ -725,19 +722,15 @@ def _revertprefetch(orig, repo, ctx, *files):
         repo.fileservice.prefetch(allfiles)
     return orig(repo, ctx, *files)
 
-commands.norepo += " debugremotefilelog"
-
 @command('debugremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelog first')),
-    ], _('hg debugremotefilelog <path>'))
+    ], _('hg debugremotefilelog <path>'), norepo=True)
 def debugremotefilelog(ui, *args, **opts):
     return debugcommands.debugremotefilelog(ui, *args, **opts)
 
-commands.norepo += " verifyremotefilelog"
-
 @command('verifyremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelogs first')),
-    ], _('hg verifyremotefilelogs <directory>'))
+    ], _('hg verifyremotefilelogs <directory>'), norepo=True)
 def verifyremotefilelog(ui, *args, **opts):
     return debugcommands.verifyremotefilelog(ui, *args, **opts)
 
