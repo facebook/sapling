@@ -1067,18 +1067,18 @@ Cloning into pooled storage doesn't race (issue5104)
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat race2.log
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   waiting for lock on repository share-destrace2 held by * (glob)
   got lock after \d+ seconds (re)
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
