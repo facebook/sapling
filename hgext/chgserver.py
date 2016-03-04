@@ -613,7 +613,7 @@ class chgunixservice(commandserver.unixservice):
         if self.baseaddress == self.address:
             return
         tempaddress = _tempaddress(self.baseaddress)
-        os.symlink(self.address, tempaddress)
+        os.symlink(os.path.basename(self.address), tempaddress)
         util.rename(tempaddress, self.baseaddress)
 
     def _reloadconfig(self, signum, frame):
