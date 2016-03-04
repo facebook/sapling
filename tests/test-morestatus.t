@@ -82,7 +82,7 @@ Test graft state
   # 
   # To mark files as resolved:  hg resolve --mark FILE
   # To continue:                hg graft --continue
-  # To abort:                   hg update .
+  # To abort:                   hg update --clean .    (warning: this will erase all uncommitted changed)
 
 Test hg status is normal after graft abort
   $ hg up --clean -q
