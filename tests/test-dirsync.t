@@ -481,7 +481,7 @@ Test deleting file with missing mirror
   R dir1/a
   $ hg commit -m 'rm dir1/a'
   not mirroring remove of 'dir1/a' to 'dir2/a'; it is already removed
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r '.^' -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
   --- a/dir1/a
@@ -512,7 +512,7 @@ Test modifying file with missing mirror
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ cat dir2/a
   a2
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r '.^' -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
   +++ b/dir1/a
@@ -550,7 +550,7 @@ Test updating missing mirror
   A dir2/a
   $ hg commit -m 'add dir2/a'
   mirrored adding 'dir2/a' to 'dir1/a'
-  $ hg diff --git -r .^ -r .
+  $ hg diff --git -r '.^' -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
   +++ b/dir1/a
