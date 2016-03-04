@@ -28,6 +28,9 @@ from . import (
 )
 
 CHANGESET = 'C'
+PARENT = 'P'
+GRANDPARENT = 'G'
+MISSINGPARENT = 'M'
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
     """Yield revisions from heads to roots one (topo) branch at a time.
@@ -228,12 +231,16 @@ def groupbranchiter(revs, parentsfunc, firstbranch=()):
             yield r
 
 def dagwalker(repo, revs):
-    """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
+    """cset DAG generator yielding (id, CHANGESET, ctx, [parentinfo]) tuples
 
     This generator function walks through revisions (which should be ordered
-    from bigger to lower). It returns a tuple for each node. The node and parent
-    ids are arbitrary integers which identify a node in the context of the graph
+    from bigger to lower). It returns a tuple for each node.
+
+    Each parentinfo entry is a tuple with (edgetype, parentid), where edgetype
+    is one of PARENT, GRANDPARENT or MISSINGPARENT. The node and parent ids
+    are arbitrary integers which identify a node in the context of the graph
     returned.
+
     """
     if not revs:
         return
@@ -252,10 +259,13 @@ def dagwalker(repo, revs):
 
     for rev in revs:
         ctx = repo[rev]
-        parents = sorted(set([p.rev() for p in ctx.parents()
-                              if p.rev() in revs]))
-        mpars = [p.rev() for p in ctx.parents() if
-                 p.rev() != nullrev and p.rev() not in parents]
+        # partition into parents in the rev set and missing parents, then
+        # augment the lists with markers, to inform graph drawing code about
+        # what kind of edge to draw between nodes.
+        pset = set(p.rev() for p in ctx.parents() if p.rev() in revs)
+        mpars = [p.rev() for p in ctx.parents()
+                 if p.rev() != nullrev and p.rev() not in pset]
+        parents = [(PARENT, p) for p in sorted(pset)]
 
         for mpar in mpars:
             gp = gpcache.get(mpar)
@@ -264,11 +274,14 @@ def dagwalker(repo, revs):
                 # through all revs (issue4782)
                 if not isinstance(revs, revset.baseset):
                     revs = revset.baseset(revs)
-                gp = gpcache[mpar] = revset.reachableroots(repo, revs, [mpar])
+                gp = gpcache[mpar] = sorted(set(revset.reachableroots(
+                    repo, revs, [mpar])))
             if not gp:
-                parents.append(mpar)
+                parents.append((MISSINGPARENT, mpar))
+                pset.add(mpar)
             else:
-                parents.extend(g for g in gp if g not in parents)
+                parents.extend((GRANDPARENT, g) for g in gp if g not in pset)
+                pset.update(gp)
 
         yield (ctx.rev(), CHANGESET, ctx, parents)
 
@@ -281,7 +294,8 @@ def nodes(repo, nodes):
     include = set(nodes)
     for node in nodes:
         ctx = repo[node]
-        parents = set([p.rev() for p in ctx.parents() if p.node() in include])
+        parents = set((PARENT, p.rev()) for p in ctx.parents()
+                      if p.node() in include)
         yield (ctx.rev(), CHANGESET, ctx, sorted(parents))
 
 def colored(dag, repo):
@@ -330,7 +344,7 @@ def colored(dag, repo):
         next = seen[:]
 
         # Add parents to next
-        addparents = [p for p in parents if p not in next]
+        addparents = [p for pt, p in parents if p not in next]
         next[col:col + 1] = addparents
 
         # Set colors for the parents
@@ -351,7 +365,7 @@ def colored(dag, repo):
                     bconf.get('width', -1),
                     bconf.get('color', '')))
             elif eid == cur:
-                for p in parents:
+                for ptype, p in parents:
                     bconf = getconf(p)
                     edges.append((
                         ecol, next.index(p), color,
@@ -371,7 +385,7 @@ def asciiedges(type, char, lines, state, rev, parents):
 
     knownparents = []
     newparents = []
-    for parent in parents:
+    for ptype, parent in parents:
         if parent in seen:
             knownparents.append(parent)
         else:
