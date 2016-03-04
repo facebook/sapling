@@ -77,7 +77,18 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   |
   o  root |  |
   
-  $ hg pull --rebase -q
+  $ hg pull --rebase
+  pulling from $TESTTMP/remoterepo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files (+2 heads)
+  updating to active bookmark bmnottracking
+  nothing to rebase
+  $ hg rebase -d 3
+  rebasing 1:6a7c7fb59c1e "localcommit" (bmnottracking)
+  saved backup bundle to $TESTTMP/localrepo/.hg/strip-backup/6a7c7fb59c1e-55f908e9-backup.hg (glob)
   $ printdag
   @  localcommit | bmnottracking |
   |
