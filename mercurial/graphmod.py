@@ -362,8 +362,9 @@ def colored(dag, repo):
         yield (cur, type, data, (col, color), edges)
         seen = next
 
-def asciiedges(type, char, lines, seen, rev, parents):
+def asciiedges(type, char, lines, state, rev, parents):
     """adds edge info to changelog DAG walk suitable for ascii()"""
+    seen = state['seen']
     if rev not in seen:
         seen.append(rev)
     nodeidx = seen.index(rev)
@@ -461,7 +462,7 @@ def _getpaddingline(ni, n_columns, edges):
 
 def asciistate():
     """returns the initial value for the "state" argument to ascii()"""
-    return [0, 0]
+    return {'seen': [], 'lastcoldiff': 0, 'lastindex': 0}
 
 def ascii(ui, state, type, char, text, coldata):
     """prints an ASCII graph of the DAG
@@ -519,8 +520,8 @@ def ascii(ui, state, type, char, text, coldata):
     nodeline.extend([char, " "])
 
     nodeline.extend(
-        _getnodelineedgestail(idx, state[1], ncols, coldiff,
-                              state[0], fix_nodeline_tail))
+        _getnodelineedgestail(idx, state['lastindex'], ncols, coldiff,
+                              state['lastcoldiff'], fix_nodeline_tail))
 
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
@@ -562,5 +563,5 @@ def ascii(ui, state, type, char, text, coldata):
         ui.write(ln.rstrip() + '\n')
 
     # ... and start over
-    state[0] = coldiff
-    state[1] = idx
+    state['lastcoldiff'] = coldiff
+    state['lastindex'] = idx

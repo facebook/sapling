@@ -2212,7 +2212,7 @@ def _graphnodeformatter(ui, displayer):
 def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                  filematcher=None):
     formatnode = _graphnodeformatter(ui, displayer)
-    seen, state = [], graphmod.asciistate()
+    state = graphmod.asciistate()
     for rev, type, ctx, parents in dag:
         char = formatnode(repo, ctx)
         copies = None
@@ -2230,7 +2230,7 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         if not lines[-1]:
             del lines[-1]
         displayer.flush(ctx)
-        edges = edgefn(type, char, lines, seen, rev, parents)
+        edges = edgefn(type, char, lines, state, rev, parents)
         for type, char, lines, coldata in edges:
             graphmod.ascii(ui, state, type, char, lines, coldata)
     displayer.close()
