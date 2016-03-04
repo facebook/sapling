@@ -490,6 +490,9 @@ def svn(ui, repo, subcommand, *args, **opts):
         else:
             raise
 
+svn.optionalrepo=True
+svn.norepo = False
+
 table = {
     'genignore': genignore,
     'info': info,

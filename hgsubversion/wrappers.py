@@ -128,7 +128,7 @@ def findcommonoutgoing(repo, other, onlyheads=None, force=False,
     # split off #rev; TODO implement --revision/#rev support
     svn = other.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
-    parent = repo.parents()[0].node()
+    parent = repo[None].parents()[0].node()
     hashes = meta.revmap.hashes()
     common, heads = util.outgoing_common_and_heads(repo, hashes, parent)
     outobj = getattr(discovery, 'outgoing', None)
@@ -147,7 +147,7 @@ def findoutgoing(repo, dest=None, heads=None, force=False):
     # svnurl, revs, checkout = util.parseurl(dest.svnurl, heads)
     svn = dest.svn
     meta = repo.svnmeta(svn.uuid, svn.subdir)
-    parent = repo.parents()[0].node()
+    parent = repo[None].parents()[0].node()
     hashes = meta.revmap.hashes()
     return util.outgoing_revisions(repo, hashes, parent)
 
@@ -160,7 +160,7 @@ def diff(orig, ui, repo, *args, **opts):
     meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     if not opts.get('rev', None):
-        parent = repo.parents()[0]
+        parent = repo[None].parents()[0]
         o_r = util.outgoing_revisions(repo, hashes, parent.node())
         if o_r:
             parent = repo[o_r[-1]].parents()[0]
@@ -213,7 +213,7 @@ def push(repo, dest, force, revs):
 
         # Strategy:
         # 1. Find all outgoing commits from this head
-        if len(repo.parents()) != 1:
+        if len(repo[None].parents()) != 1:
             ui.status('Cowardly refusing to push branch merge\n')
             return 0 # results in nonzero exit status, see hg's commands.py
         workingrev = repo[None].parents()[0]
@@ -564,7 +564,7 @@ def rebase(orig, ui, repo, **opts):
         """
         extra['branch'] = ctx.branch()
     extrafn = opts.get('svnextrafn', extrafn2)
-    sourcerev = opts.get('svnsourcerev', repo.parents()[0].node())
+    sourcerev = opts.get('svnsourcerev', repo[None].parents()[0].node())
     meta = repo.svnmeta()
     hashes = meta.revmap.hashes()
     o_r = util.outgoing_revisions(repo, hashes, sourcerev=sourcerev)

@@ -195,7 +195,8 @@ hg.schemes.update({ 'file': _lookup, 'http': svnrepo, 'https': svnrepo,
                     'svn': svnrepo, 'svn+ssh': svnrepo, 'svn+http': svnrepo,
                     'svn+https': svnrepo})
 
-commands.optionalrepo += ' svn'
+if hgutil.safehasattr(commands, 'optionalrepo'):
+    commands.optionalrepo += ' svn'
 
 cmdtable = {
     "svn":
