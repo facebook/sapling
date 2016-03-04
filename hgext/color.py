@@ -490,6 +490,7 @@ def templatelabel(context, mapping, args):
     mapping.update(dict([(k, k) for k in _effects]))
 
     thing = args[1][0](context, mapping, args[1][1])
+    thing = templater.stringify(thing)
 
     # apparently, repo could be a string that is the favicon?
     repo = mapping.get('repo', '')
@@ -497,8 +498,6 @@ def templatelabel(context, mapping, args):
         return thing
 
     label = args[0][0](context, mapping, args[0][1])
-
-    thing = templater.stringify(thing)
     label = templater.stringify(label)
 
     return repo.ui.label(thing, label)
