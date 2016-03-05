@@ -35,6 +35,7 @@ import errno
 from mercurial import extensions, localrepo, util
 from mercurial import match as matchmod
 from mercurial import error
+from mercurial.i18n import _
 
 testedwith = 'internal'
 
@@ -112,7 +113,8 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             sourcemirror = mirror
             break
     if not sourcemirror:
-        raise error.Abort("unable to detect source mirror of '%s'" % sourcepath)
+        raise error.Abort(_("unable to detect source mirror of '%s'") %
+                          sourcepath)
 
     relpath = sourcepath[len(sourcemirror):]
 
@@ -129,15 +131,15 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             if (sourcepath not in wctx and mirrorpath not in wctx and
                 sourcepath in status.removed and mirrorpath in status.removed):
                 if repo.ui.verbose:
-                    repo.ui.status(("not mirroring remove of '%s' to '%s';"
-                                    " it is already removed\n")
+                    repo.ui.status(_("not mirroring remove of '%s' to '%s';"
+                                     " it is already removed\n")
                                     % (sourcepath, mirrorpath))
                 continue
 
             if wctx[sourcepath].data() == wctx[mirrorpath].data():
                 if repo.ui.verbose:
-                    repo.ui.status(("not mirroring '%s' to '%s'; it already "
-                                    "matches\n") % (sourcepath, mirrorpath))
+                    repo.ui.status(_("not mirroring '%s' to '%s'; it already "
+                                     "matches\n") % (sourcepath, mirrorpath))
                 continue
             raise error.Abort("path '%s' needs to be mirrored to '%s', but the "
                              "target already has pending changes" %
@@ -162,28 +164,28 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                 if copysource and copysource.startswith(sourcemirror):
                     mirrorcopysource = mirror + copysource[len(sourcemirror):]
                     dirstate.copy(mirrorcopysource, mirrorpath)
-                    repo.ui.status(("mirrored copy '%s -> %s' to '%s -> %s'\n")
+                    repo.ui.status(_("mirrored copy '%s -> %s' to '%s -> %s'\n")
                                     % (copysource, sourcepath,
                                     mirrorcopysource, mirrorpath))
                 else:
-                    repo.ui.status(("mirrored adding '%s' to '%s'\n") %
+                    repo.ui.status(_("mirrored adding '%s' to '%s'\n") %
                                    (sourcepath, mirrorpath))
             else:
-                repo.ui.status(("mirrored changes in '%s' to '%s'\n") %
+                repo.ui.status(_("mirrored changes in '%s' to '%s'\n") %
                                (sourcepath, mirrorpath))
         elif action == 'r':
             try:
                 util.unlink(fulltarget)
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    repo.ui.status("not mirroring remove of '%s' to '%s'; it "
-                                   "is already removed\n" %
+                    repo.ui.status(("not mirroring remove of '%s' to '%s'; it "
+                                    "is already removed\n") %
                                    (sourcepath, mirrorpath))
                 else:
                     raise
             else:
                 dirstate.remove(mirrorpath)
-                repo.ui.status("mirrored remove of '%s' to '%s'\n" %
+                repo.ui.status(_("mirrored remove of '%s' to '%s'\n") %
                                (sourcepath, mirrorpath))
 
     return mirroredfiles
