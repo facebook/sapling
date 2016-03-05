@@ -5,3 +5,4 @@
 ^.*\.egg-info/
 ^dist/
 tests/getdb\.sh
+tests/.testtimes*
