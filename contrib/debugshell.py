@@ -1,9 +1,10 @@
 # debugshell extension
 """a python shell with repo, changelog & manifest objects"""
 
-import sys
-import mercurial
+from __future__ import absolute_import
 import code
+import mercurial
+import sys
 from mercurial import (
     cmdutil,
     demandimport,
