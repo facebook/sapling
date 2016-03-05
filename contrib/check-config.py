@@ -7,6 +7,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from __future__ import absolute_import, print_function
 import re
 import sys
 
@@ -82,9 +83,9 @@ def main(args):
                 if re.match('[a-z.]+$', default):
                     default = '<variable>'
                 if name in foundopts and (ctype, default) != foundopts[name]:
-                    print l
-                    print "conflict on %s: %r != %r" % (name, (ctype, default),
-                                                        foundopts[name])
+                    print(l)
+                    print("conflict on %s: %r != %r" % (name, (ctype, default),
+                                                        foundopts[name]))
                 foundopts[name] = (ctype, default)
                 carryover = ''
             else:
@@ -102,7 +103,7 @@ def main(args):
                 ctype, default = foundopts[name]
                 if default:
                     default = ' [%s]' % default
-                print "undocumented: %s (%s)%s" % (name, ctype, default)
+                print("undocumented: %s (%s)%s" % (name, ctype, default))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
