@@ -25,6 +25,9 @@
 'setumask' command
     set umask
 
+'validate' command
+    reload the config and check if the server is up to date
+
 'SIGHUP' signal
     reload configuration files
 
@@ -341,6 +344,9 @@ class chgcmdserver(commandserver.server):
         self._oldios = []  # original (self.ch, ui.fp, fd) before "attachio"
         self.hashstate = hashstate
         self.baseaddress = baseaddress
+        if hashstate is not None:
+            self.capabilities = self.capabilities.copy()
+            self.capabilities['validate'] = chgcmdserver.validate
 
     def cleanup(self):
         # dispatch._runcatch() does not flush outputs if exception is not
@@ -412,6 +418,31 @@ class chgcmdserver(commandserver.server):
             setattr(self, cn, ch)
             setattr(ui, fn, fp)
         del self._oldios[:]
+
+    def validate(self):
+        """Reload the config and check if the server is up to date
+
+        Read a list of '\0' separated arguments.
+        Write a non-empty list of '\0' separated instruction strings or '\0'
+        if the list is empty.
+        An instruction string could be either:
+            - "unlink $path", the client should unlink the path to stop the
+              outdated server.
+            - "redirect $path", the client should try to connect to another
+              server instead.
+        """
+        args = self._readlist()
+        self.ui = _renewui(self.ui, args)
+        newhash = hashstate.fromui(self.ui, self.hashstate.mtimepaths)
+        insts = []
+        if newhash.mtimehash != self.hashstate.mtimehash:
+            addr = _hashaddress(self.baseaddress, self.hashstate.confighash)
+            insts.append('unlink %s' % addr)
+        if newhash.confighash != self.hashstate.confighash:
+            addr = _hashaddress(self.baseaddress, newhash.confighash)
+            insts.append('redirect %s' % addr)
+        _log('validate: %s\n' % insts)
+        self.cresult.write('\0'.join(insts) or '\0')
 
     def chdir(self):
         """Change current directory
