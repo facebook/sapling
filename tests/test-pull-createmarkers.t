@@ -60,8 +60,16 @@ The first client works on a diff while the second client lands one of her diff
   updating bookmark master
   $ cd ../client
   $ mkcommit c 123 # 123 is the phabricator rev number (see function above)
+  $ mkcommit d 124
+  $ mkcommit e 131
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  @  2 "add c
+  @  4 "add e
+  |
+  |  Differential Revision: https://phabricator.fb.com/D131"
+  o  3 "add d
+  |
+  |  Differential Revision: https://phabricator.fb.com/D124"
+  o  2 "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
   o  1 "add secondcommit" default/master
@@ -69,32 +77,41 @@ The first client works on a diff while the second client lands one of her diff
   o  0 "add initial"
   
   $ hg push --to master
-  pushing rev 1a07332e9fa1 to destination ssh://user@dummy/server bookmark master
+  pushing rev 9cd182f81720 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 commit:
+  remote: pushing 3 commits:
   remote:     1a07332e9fa1  add c
-  remote: 2 new commits from the server will be downloaded
+  remote:     15b001df9359  add d
+  remote:     9cd182f81720  add e
+  remote: 4 new commits from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 1 changes to 2 files (+1 heads)
+  added 4 changesets with 1 changes to 4 files (+1 heads)
   updating bookmark master
 
-Here we strip commit 4 to simulate what happens with landcastle, the push
-don't directly go to the server
+Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
+push doesn't directly go to the server
 
-  $ hg strip 4
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-5832344b-backup.hg (glob)
+  $ hg strip 6
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-b0d4fb6e-backup.hg (glob)
 
-We update to commit 1 to avoid keeping 2 visible with inhibit
+We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 
   $ hg update 1
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
-Here pull should mark 2 as obsolete since it landed as 4 on the remote
+Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on
+the remote
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  o  3 "add b"
+  o  5 "add b"
   |
+  | o  4 "add e
+  | |
+  | |  Differential Revision: https://phabricator.fb.com/D131"
+  | o  3 "add d
+  | |
+  | |  Differential Revision: https://phabricator.fb.com/D124"
   | o  2 "add c
   |/
   |    Differential Revision: https://phabricator.fb.com/D123"
@@ -108,13 +125,19 @@ Here pull should mark 2 as obsolete since it landed as 4 on the remote
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 1 files
+  added 3 changesets with 0 changes to 3 files
   (run 'hg update' to get a working copy)
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  o  4 "add c
+  o  8 "add e
   |
-  |  Differential Revision: https://phabricator.fb.com/D123" default/master
-  o  3 "add b"
+  |  Differential Revision: https://phabricator.fb.com/D131" default/master
+  o  7 "add d
+  |
+  |  Differential Revision: https://phabricator.fb.com/D124"
+  o  6 "add c
+  |
+  |  Differential Revision: https://phabricator.fb.com/D123"
+  o  5 "add b"
   |
   @  1 "add secondcommit"
   |
@@ -123,10 +146,12 @@ Here pull should mark 2 as obsolete since it landed as 4 on the remote
 Rebasing a stack containing landed changesets should only rebase the non-landed
 changesets
 
-  $ hg up --hidden 2 # --hidden because directaccess works only with hashes
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg up --hidden 4 # --hidden because directaccess works only with hashes
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkcommit k
-  $ hg rebase -r ".^ + ." -d 4
-  note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 4:d446b1b2be43 "add c"
-  rebasing 5:13e6318883c9 "add k" (tip)
+  $ hg rebase -d default/master
+  note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 6:d446b1b2be43 "add c"
+  note: not rebasing 3:15b001df9359 "add d", already in destination as 7:9ca38f3a0945 "add d"
+  note: not rebasing 4:9cd182f81720 "add e", already in destination as 8:a1875357147f "add e"
+  rebasing 9:1032a1515abe "add k" (tip)
 

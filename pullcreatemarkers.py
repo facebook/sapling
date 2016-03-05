@@ -50,11 +50,22 @@ def _pull(orig, ui, repo, *args, **opts):
             if diff is not None:
                 landeddiffs[diff] = n
 
+    if not landeddiffs:
+        return r
+
     # Try to find match with the drafts
+    tocreate = []
     for rev in repo.revs("draft()"):
         n = repo[rev]
         diff = getdiff(n)
         if diff in landeddiffs:
-            obsolete.createmarkers(repo, [(n, (landeddiffs[diff],))])
+            tocreate.append((n, (landeddiffs[diff],)))
+
+    if not tocreate:
+        return r
+
+    with repo.lock() as l:
+        with repo.transaction('pullcreatemarkers') as t:
+            obsolete.createmarkers(repo, tocreate)
 
     return r
