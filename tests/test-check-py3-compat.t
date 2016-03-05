@@ -6,8 +6,6 @@
   contrib/check-code.py not using absolute_import
   contrib/check-code.py requires print_function
   contrib/debugshell.py not using absolute_import
-  contrib/fixpax.py not using absolute_import
-  contrib/fixpax.py requires print_function
   contrib/hgclient.py not using absolute_import
   contrib/hgclient.py requires print_function
   contrib/hgfixes/fix_bytes.py not using absolute_import
