@@ -7,10 +7,12 @@
 # $ ./hg serve --cmds pipe | ./contrib/debugcmdserver.py -
 # o, 52   -> 'capabilities: getencoding runcommand\nencoding: UTF-8'
 
-import sys, struct
+from __future__ import absolute_import, print_function
+import struct
+import sys
 
 if len(sys.argv) != 2:
-    print 'usage: debugcmdserver.py FILE'
+    print('usage: debugcmdserver.py FILE')
     sys.exit(1)
 
 outputfmt = '>cI'
