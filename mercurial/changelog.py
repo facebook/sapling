@@ -156,7 +156,7 @@ class changelogrevision(object):
         'extra',
         'files',
         '_rawmanifest',
-        'user',
+        '_rawuser',
     )
 
     def __new__(cls, text):
@@ -191,8 +191,10 @@ class changelogrevision(object):
         nl1 = text.index('\n')
         self._rawmanifest = text[0:nl1]
 
+        nl2 = text.index('\n', nl1 + 1)
+        self._rawuser = text[nl1 + 1:nl2]
+
         l = text[:doublenl].split('\n')
-        self.user = encoding.tolocal(l[1])
 
         tdata = l[2].split(' ', 2)
         if len(tdata) != 3:
@@ -215,6 +217,10 @@ class changelogrevision(object):
     @property
     def manifest(self):
         return bin(self._rawmanifest)
+
+    @property
+    def user(self):
+        return encoding.tolocal(self._rawuser)
 
     @property
     def description(self):
