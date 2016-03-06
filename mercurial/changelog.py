@@ -152,7 +152,7 @@ class changelogrevision(object):
 
     __slots__ = (
         'date',
-        'description',
+        '_rawdesc',
         'extra',
         'files',
         'manifest',
@@ -185,9 +185,10 @@ class changelogrevision(object):
         #
         # changelog v0 doesn't use extra
 
-        last = text.index("\n\n")
-        self.description = encoding.tolocal(text[last + 2:])
-        l = text[:last].split('\n')
+        doublenl = text.index('\n\n')
+        self._rawdesc = text[doublenl + 2:]
+
+        l = text[:doublenl].split('\n')
         self.manifest = bin(l[0])
         self.user = encoding.tolocal(l[1])
 
@@ -208,6 +209,10 @@ class changelogrevision(object):
         self.files = l[3:]
 
         return self
+
+    @property
+    def description(self):
+        return encoding.tolocal(self._rawdesc)
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
