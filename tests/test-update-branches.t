@@ -186,27 +186,110 @@ Test updating with closed head
 Test updating if at least one non-closed branch head exists
 
 if on the closed branch head:
-- updating is no-op
+- update to "."
+- "updated to a closed branch head ...." message is displayed
 - "N other heads for ...." message is displayed
 
   $ hg update -q -C 3
   $ hg commit --close-branch -m 6
   $ norevtest "on closed branch head" clean 6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
+  1 other heads for branch "default"
+  parent=6
+
+if descendant non-closed branch head exists, and it is only one branch head:
+- update to it, even if its revision is less than closed one
+- "N other heads for ...." message isn't displayed
+
+  $ norevtest "non-closed 2 should be chosen" clean 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=2
+
+if all descendant branch heads are closed, but there is another branch head:
+- update to the tipmost descendant head
+- "updated to a closed branch head ...." message is displayed
+- "N other heads for ...." message is displayed
+
+  $ norevtest "all descendant branch heads are closed" clean 3
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
   1 other heads for branch "default"
   parent=6
 
 Test updating if all branch heads are closed
 
 if on the closed branch head:
-- updating is no-op
-- "N other heads for ...." message isn't displayed
+- update to "."
+- "updated to a closed branch head ...." message is displayed
+- "all heads of branch ...." message is displayed
 
   $ hg update -q -C 2
   $ hg commit --close-branch -m 7
   $ norevtest "all heads of branch default are closed" clean 6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
+  all heads for branch "default" are closed.
   parent=6
+
+if not on the closed branch head:
+- update to the tipmost descendant (closed) head
+- "updated to a closed branch head ...." message is displayed
+- "all heads of branch ...." message is displayed
+
+  $ norevtest "all heads of branch default are closed" clean 1
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
+  all heads for branch "default" are closed.
+  parent=7
+
+  $ cd ..
+
+Test updating if "default" branch doesn't exist and no revision is
+checked out (= "default" is used as current branch)
+
+  $ hg init no-default-branch
+  $ cd no-default-branch
+
+  $ hg branch foobar
+  marked working directory as branch foobar
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo a > a
+  $ hg commit -m "#0" -A
+  adding a
+  $ echo 1 >> a
+  $ hg commit -m "#1"
+  $ hg update -q 0
+  $ echo 3 >> a
+  $ hg commit -m "#2"
+  created new head
+  $ hg commit --close-branch -m "#3"
+
+if there is at least one non-closed branch head:
+- update to the tipmost branch head
+
+  $ norevtest "non-closed 1 should be chosen" clean null
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  parent=1
+
+if all branch heads are closed
+- update to "tip"
+- "updated to a closed branch head ...." message is displayed
+- "all heads for branch "XXXX" are closed" message is displayed
+
+  $ hg update -q -C 1
+  $ hg commit --close-branch -m "#4"
+
+  $ norevtest "all branches are closed" clean null
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
+  all heads for branch "foobar" are closed.
+  parent=4
 
   $ cd ../b1
 

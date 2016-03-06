@@ -202,3 +202,22 @@ issue 4552 -- simulate a pull moving the active bookmark
   Z
   $ hg log -T '{bookmarks % "{active}\n"}' -r Z
   Z
+
+test that updating to closed branch head also advances active bookmark
+
+  $ hg commit --close-branch -m "closed"
+  $ hg update -q ".^1"
+  $ hg bookmark Y
+  $ hg bookmarks
+     X                         3:4d6bd4bfb1ae
+   * Y                         3:4d6bd4bfb1ae
+     Z                         0:719295282060
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updating bookmark Y
+  $ hg bookmarks
+     X                         3:4d6bd4bfb1ae
+   * Y                         4:8fa964221e8e
+     Z                         0:719295282060
+  $ hg parents -q
+  4:8fa964221e8e

@@ -88,30 +88,55 @@ def _destupdatebook(repo, clean, check):
     return node, movemark, activemark
 
 def _destupdatebranch(repo, clean, check):
-    """decide on an update destination from current branch"""
+    """decide on an update destination from current branch
+
+    This ignores closed branch heads.
+    """
     wc = repo[None]
     movemark = node = None
     currentbranch = wc.branch()
     if currentbranch in repo.branchmap():
-        heads = repo.branchheads(currentbranch, closed=True)
+        heads = repo.branchheads(currentbranch)
         if heads:
             node = repo.revs('max(.::(%ln))', heads).first()
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
     else:
         if currentbranch == 'default': # no default branch!
-            node = repo.lookup('tip') # update to tip
+            # update to the tipmost non-closed branch head
+            node = repo.revs('max(head() and not closed())').first()
         else:
             raise error.Abort(_("branch %s not found") % currentbranch)
     return node, movemark, None
 
+def _destupdatebranchfallback(repo, clean, check):
+    """decide on an update destination from closed heads in current branch"""
+    wc = repo[None]
+    currentbranch = wc.branch()
+    movemark = None
+    if currentbranch in repo.branchmap():
+        # here, all descendant branch heads are closed
+        heads = repo.branchheads(currentbranch, closed=True)
+        assert heads, "any branch has at least one head"
+        node = repo.revs('max(.::(%ln))', heads).first()
+        assert node is not None, ("any revision has at least "
+                                  "one descendant branch head")
+        if bookmarks.isactivewdirparent(repo):
+            movemark = repo['.'].node()
+    else:
+        # here, no "default" branch, and all branches are closed
+        node = repo.lookup('tip')
+        assert node is not None, "'tip' exists even in empty repository"
+    return node, movemark, None
+
 # order in which each step should be evalutated
 # steps are run until one finds a destination
-destupdatesteps = ['evolution', 'bookmark', 'branch']
+destupdatesteps = ['evolution', 'bookmark', 'branch', 'branchfallback']
 # mapping to ease extension overriding steps.
 destupdatestepmap = {'evolution': _destupdateobs,
                      'bookmark': _destupdatebook,
                      'branch': _destupdatebranch,
+                     'branchfallback': _destupdatebranchfallback,
                      }
 
 def destupdate(repo, clean=False, check=False):
@@ -362,8 +387,27 @@ def _statusotherbranchheads(ui, repo):
     heads = repo.branchheads(currentbranch)
     if repo.revs('%ln and parents()', allheads):
         # we are on a head, even though it might be closed
+        #
+        #  on closed otherheads
+        #  ========= ==========
+        #      o        0       all heads for current branch are closed
+        #               N       only descendant branch heads are closed
+        #      x        0       there is only one non-closed branch head
+        #               N       there are some non-closed branch heads
+        #  ========= ==========
         otherheads = repo.revs('%ln - parents()', heads)
-        if otherheads:
+        if repo['.'].closesbranch():
+            ui.status(_('updated to a closed branch head, '
+                        'because all descendant heads are closed.\n'
+                        'beware of re-opening closed head '
+                        'by subsequent commit here.\n'))
+            if otherheads:
+                ui.status(_('%i other heads for branch "%s"\n') %
+                          (len(otherheads), currentbranch))
+            else:
+                ui.status(_('all heads for branch "%s" are closed.\n') %
+                          currentbranch)
+        elif otherheads:
             ui.status(_('%i other heads for branch "%s"\n') %
                       (len(otherheads), currentbranch))
 
