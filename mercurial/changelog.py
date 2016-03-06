@@ -184,9 +184,6 @@ class changelogrevision(object):
         #
         # changelog v0 doesn't use extra
 
-        doublenl = text.index('\n\n')
-        self._rawdesc = text[doublenl + 2:]
-
         nl1 = text.index('\n')
         self._rawmanifest = text[0:nl1]
 
@@ -198,10 +195,13 @@ class changelogrevision(object):
 
         # The list of files may be empty. Which means nl3 is the first of the
         # double newline that precedes the description.
-        if nl3 == doublenl:
+        if text[nl3 + 1] == '\n':
             self._rawfiles = None
+            self._rawdesc = text[nl3 + 2:]
         else:
+            doublenl = text.index('\n\n', nl3 + 1)
             self._rawfiles = text[nl3 + 1:doublenl]
+            self._rawdesc = text[doublenl + 2:]
 
         return self
 
