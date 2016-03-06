@@ -259,7 +259,7 @@ class basectx(object):
             if path in self._manifestdelta:
                 return (self._manifestdelta[path],
                         self._manifestdelta.flags(path))
-        node, flag = self._repo.manifest.find(self._changeset[0], path)
+        node, flag = self._repo.manifest.find(self._changeset.manifest, path)
         if not node:
             raise error.ManifestLookupError(self._node, path,
                                             _('not found in manifest'))
@@ -524,15 +524,15 @@ class changectx(basectx):
 
     @propertycache
     def _changeset(self):
-        return self._repo.changelog.read(self.rev())
+        return self._repo.changelog.changelogrevision(self.rev())
 
     @propertycache
     def _manifest(self):
-        return self._repo.manifest.read(self._changeset[0])
+        return self._repo.manifest.read(self._changeset.manifest)
 
     @propertycache
     def _manifestdelta(self):
-        return self._repo.manifest.readdelta(self._changeset[0])
+        return self._repo.manifest.readdelta(self._changeset.manifest)
 
     @propertycache
     def _parents(self):
@@ -543,24 +543,32 @@ class changectx(basectx):
         return [changectx(repo, p1), changectx(repo, p2)]
 
     def changeset(self):
-        return self._changeset
+        c = self._changeset
+        return (
+            c.manifest,
+            c.user,
+            c.date,
+            c.files,
+            c.description,
+            c.extra,
+        )
     def manifestnode(self):
-        return self._changeset[0]
+        return self._changeset.manifest
 
     def user(self):
-        return self._changeset[1]
+        return self._changeset.user
     def date(self):
-        return self._changeset[2]
+        return self._changeset.date
     def files(self):
-        return self._changeset[3]
+        return self._changeset.files
     def description(self):
-        return self._changeset[4]
+        return self._changeset.description
     def branch(self):
-        return encoding.tolocal(self._changeset[5].get("branch"))
+        return encoding.tolocal(self._changeset.extra.get("branch"))
     def closesbranch(self):
-        return 'close' in self._changeset[5]
+        return 'close' in self._changeset.extra
     def extra(self):
-        return self._changeset[5]
+        return self._changeset.extra
     def tags(self):
         return self._repo.nodetags(self._node)
     def bookmarks(self):
