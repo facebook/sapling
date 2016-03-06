@@ -34,6 +34,7 @@ enum {
 	CAP_GETPAGER = 0x0400,
 	CAP_SETENV = 0x0800,
 	CAP_SETUMASK = 0x1000,
+	CAP_VALIDATE = 0x2000,
 };
 
 typedef struct {
@@ -49,6 +50,7 @@ static const cappair_t captable[] = {
 	{"getpager", CAP_GETPAGER},
 	{"setenv", CAP_SETENV},
 	{"setumask", CAP_SETUMASK},
+	{"validate", CAP_VALIDATE},
 	{NULL, 0},  /* terminator */
 };
 
@@ -460,6 +462,40 @@ pid_t hgc_peerpid(const hgclient_t *hgc)
 {
 	assert(hgc);
 	return hgc->pid;
+}
+
+/*!
+ * Send command line arguments to let the server load the repo config and check
+ * whether it can process our request directly or not.
+ * Make sure hgc_setenv is called before calling this.
+ *
+ * @return - NULL, the server believes it can handle our request, or does not
+ *           support "validate" command.
+ *         - a list of strings, the server cannot handle our request and it
+ *           sent instructions telling us how to fix the issue. See
+ *           chgserver.py for possible instruction formats.
+ *           the list should be freed by the caller.
+ *           the last string is guaranteed to be NULL.
+ */
+const char **hgc_validate(hgclient_t *hgc, const char *const args[],
+			  size_t argsize)
+{
+	assert(hgc);
+	if (!(hgc->capflags & CAP_VALIDATE))
+		return NULL;
+
+	packcmdargs(&hgc->ctx, args, argsize);
+	writeblockrequest(hgc, "validate");
+	handleresponse(hgc);
+
+	/* the server returns '\0' if it can handle our request */
+	if (hgc->ctx.datasize <= 1)
+		return NULL;
+
+	/* make sure the buffer is '\0' terminated */
+	enlargecontext(&hgc->ctx, hgc->ctx.datasize + 1);
+	hgc->ctx.data[hgc->ctx.datasize] = '\0';
+	return unpackcmdargsnul(&hgc->ctx);
 }
 
 /*!
