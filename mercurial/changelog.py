@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import collections
+
 from .i18n import _
 from .node import (
     bin,
@@ -135,6 +137,77 @@ def _delayopener(opener, target, buf):
             return opener(name, mode)
         return appender(opener, name, mode, buf)
     return _delay
+
+_changelogrevision = collections.namedtuple('changelogrevision',
+                                            ('manifest', 'user', 'date',
+                                             'files', 'description', 'extra'))
+
+class changelogrevision(object):
+    """Holds results of a parsed changelog revision.
+
+    Changelog revisions consist of multiple pieces of data, including
+    the manifest node, user, and date. This object exposes a view into
+    the parsed object.
+    """
+
+    __slots__ = (
+        'date',
+        'description',
+        'extra',
+        'files',
+        'manifest',
+        'user',
+    )
+
+    def __new__(cls, text):
+        if not text:
+            return _changelogrevision(
+                manifest=nullid,
+                user='',
+                date=(0, 0),
+                files=[],
+                description='',
+                extra=_defaultextra,
+            )
+
+        self = super(changelogrevision, cls).__new__(cls)
+        # We could return here and implement the following as an __init__.
+        # But doing it here is equivalent and saves an extra function call.
+
+        # format used:
+        # nodeid\n        : manifest node in ascii
+        # user\n          : user, no \n or \r allowed
+        # time tz extra\n : date (time is int or float, timezone is int)
+        #                 : extra is metadata, encoded and separated by '\0'
+        #                 : older versions ignore it
+        # files\n\n       : files modified by the cset, no \n or \r allowed
+        # (.*)            : comment (free text, ideally utf-8)
+        #
+        # changelog v0 doesn't use extra
+
+        last = text.index("\n\n")
+        self.description = encoding.tolocal(text[last + 2:])
+        l = text[:last].split('\n')
+        self.manifest = bin(l[0])
+        self.user = encoding.tolocal(l[1])
+
+        tdata = l[2].split(' ', 2)
+        if len(tdata) != 3:
+            time = float(tdata[0])
+            try:
+                # various tools did silly things with the time zone field.
+                timezone = int(tdata[1])
+            except ValueError:
+                timezone = 0
+            self.extra = _defaultextra
+        else:
+            time, timezone = float(tdata[0]), int(tdata[1])
+            self.extra = decodeextra(tdata[2])
+
+        self.date = (time, timezone)
+        self.files = l[3:]
+
+        return self
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
@@ -323,42 +396,34 @@ class changelog(revlog.revlog):
             revlog.revlog.checkinlinesize(self, tr, fp)
 
     def read(self, node):
+        """Obtain data from a parsed changelog revision.
+
+        Returns a 6-tuple of:
+
+           - manifest node in binary
+           - author/user as a localstr
+           - date as a 2-tuple of (time, timezone)
+           - list of files
+           - commit message as a localstr
+           - dict of extra metadata
+
+        Unless you need to access all fields, consider calling
+        ``changelogrevision`` instead, as it is faster for partial object
+        access.
         """
-        format used:
-        nodeid\n        : manifest node in ascii
-        user\n          : user, no \n or \r allowed
-        time tz extra\n : date (time is int or float, timezone is int)
-                        : extra is metadata, encoded and separated by '\0'
-                        : older versions ignore it
-        files\n\n       : files modified by the cset, no \n or \r allowed
-        (.*)            : comment (free text, ideally utf-8)
+        c = changelogrevision(self.revision(node))
+        return (
+            c.manifest,
+            c.user,
+            c.date,
+            c.files,
+            c.description,
+            c.extra
+        )
 
-        changelog v0 doesn't use extra
-        """
-        text = self.revision(node)
-        if not text:
-            return nullid, "", (0, 0), [], "", _defaultextra
-        last = text.index("\n\n")
-        desc = encoding.tolocal(text[last + 2:])
-        l = text[:last].split('\n')
-        manifest = bin(l[0])
-        user = encoding.tolocal(l[1])
-
-        tdata = l[2].split(' ', 2)
-        if len(tdata) != 3:
-            time = float(tdata[0])
-            try:
-                # various tools did silly things with the time zone field.
-                timezone = int(tdata[1])
-            except ValueError:
-                timezone = 0
-            extra = _defaultextra
-        else:
-            time, timezone = float(tdata[0]), int(tdata[1])
-            extra = decodeextra(tdata[2])
-
-        files = l[3:]
-        return manifest, user, (time, timezone), files, desc, extra
+    def changelogrevision(self, nodeorrev):
+        """Obtain a ``changelogrevision`` for a node or revision."""
+        return changelogrevision(self.revision(nodeorrev))
 
     def readfiles(self, node):
         """
