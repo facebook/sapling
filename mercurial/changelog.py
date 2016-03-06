@@ -151,11 +151,8 @@ class changelogrevision(object):
     """
 
     __slots__ = (
-        '_rawdateextra',
-        '_rawdesc',
-        '_rawfiles',
-        '_rawmanifest',
-        '_rawuser',
+        '_offsets',
+        '_text',
     )
 
     def __new__(cls, text):
@@ -185,41 +182,41 @@ class changelogrevision(object):
         # changelog v0 doesn't use extra
 
         nl1 = text.index('\n')
-        self._rawmanifest = text[0:nl1]
-
         nl2 = text.index('\n', nl1 + 1)
-        self._rawuser = text[nl1 + 1:nl2]
-
         nl3 = text.index('\n', nl2 + 1)
-        self._rawdateextra = text[nl2 + 1:nl3]
 
         # The list of files may be empty. Which means nl3 is the first of the
         # double newline that precedes the description.
         if text[nl3 + 1] == '\n':
-            self._rawfiles = None
-            self._rawdesc = text[nl3 + 2:]
+            doublenl = nl3
         else:
             doublenl = text.index('\n\n', nl3 + 1)
-            self._rawfiles = text[nl3 + 1:doublenl]
-            self._rawdesc = text[doublenl + 2:]
+
+        self._offsets = (nl1, nl2, nl3, doublenl)
+        self._text = text
 
         return self
 
     @property
     def manifest(self):
-        return bin(self._rawmanifest)
+        return bin(self._text[0:self._offsets[0]])
 
     @property
     def user(self):
-        return encoding.tolocal(self._rawuser)
+        off = self._offsets
+        return encoding.tolocal(self._text[off[0] + 1:off[1]])
 
     @property
     def _rawdate(self):
-        return self._rawdateextra.split(' ', 2)[0:2]
+        off = self._offsets
+        dateextra = self._text[off[1] + 1:off[2]]
+        return dateextra.split(' ', 2)[0:2]
 
     @property
     def _rawextra(self):
-        fields = self._rawdateextra.split(' ', 2)
+        off = self._offsets
+        dateextra = self._text[off[1] + 1:off[2]]
+        fields = dateextra.split(' ', 2)
         if len(fields) != 3:
             return None
 
@@ -247,14 +244,15 @@ class changelogrevision(object):
 
     @property
     def files(self):
-        if self._rawfiles is None:
+        off = self._offsets
+        if off[2] == off[3]:
             return []
 
-        return self._rawfiles.split('\n')
+        return self._text[off[2] + 1:off[3]].split('\n')
 
     @property
     def description(self):
-        return encoding.tolocal(self._rawdesc)
+        return encoding.tolocal(self._text[self._offsets[3] + 2:])
 
 class changelog(revlog.revlog):
     def __init__(self, opener):
