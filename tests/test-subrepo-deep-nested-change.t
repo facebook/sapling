@@ -297,6 +297,12 @@ Files sees uncommitted adds and removes in subrepos
   sub1/sub2/folder/bar (glob)
   sub1/sub2/x.txt (glob)
 
+  $ hg files
+  .hgsub
+  .hgsubstate
+  foo/bar/abc (glob)
+  main
+
   $ hg files -S -r '.^' sub1/sub2/folder
   sub1/sub2/folder/test.txt (glob)
 
