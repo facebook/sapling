@@ -153,7 +153,7 @@ class changelogrevision(object):
     __slots__ = (
         '_rawdateextra',
         '_rawdesc',
-        'files',
+        '_rawfiles',
         '_rawmanifest',
         '_rawuser',
     )
@@ -196,8 +196,12 @@ class changelogrevision(object):
         nl3 = text.index('\n', nl2 + 1)
         self._rawdateextra = text[nl2 + 1:nl3]
 
-        l = text[:doublenl].split('\n')
-        self.files = l[3:]
+        # The list of files may be empty. Which means nl3 is the first of the
+        # double newline that precedes the description.
+        if nl3 == doublenl:
+            self._rawfiles = None
+        else:
+            self._rawfiles = text[nl3 + 1:doublenl]
 
         return self
 
@@ -240,6 +244,13 @@ class changelogrevision(object):
             return _defaultextra
 
         return decodeextra(raw)
+
+    @property
+    def files(self):
+        if self._rawfiles is None:
+            return []
+
+        return self._rawfiles.split('\n')
 
     @property
     def description(self):
