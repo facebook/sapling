@@ -151,9 +151,8 @@ class changelogrevision(object):
     """
 
     __slots__ = (
-        'date',
+        '_rawdateextra',
         '_rawdesc',
-        'extra',
         'files',
         '_rawmanifest',
         '_rawuser',
@@ -194,22 +193,10 @@ class changelogrevision(object):
         nl2 = text.index('\n', nl1 + 1)
         self._rawuser = text[nl1 + 1:nl2]
 
+        nl3 = text.index('\n', nl2 + 1)
+        self._rawdateextra = text[nl2 + 1:nl3]
+
         l = text[:doublenl].split('\n')
-
-        tdata = l[2].split(' ', 2)
-        if len(tdata) != 3:
-            time = float(tdata[0])
-            try:
-                # various tools did silly things with the time zone field.
-                timezone = int(tdata[1])
-            except ValueError:
-                timezone = 0
-            self.extra = _defaultextra
-        else:
-            time, timezone = float(tdata[0]), int(tdata[1])
-            self.extra = decodeextra(tdata[2])
-
-        self.date = (time, timezone)
         self.files = l[3:]
 
         return self
@@ -221,6 +208,38 @@ class changelogrevision(object):
     @property
     def user(self):
         return encoding.tolocal(self._rawuser)
+
+    @property
+    def _rawdate(self):
+        return self._rawdateextra.split(' ', 2)[0:2]
+
+    @property
+    def _rawextra(self):
+        fields = self._rawdateextra.split(' ', 2)
+        if len(fields) != 3:
+            return None
+
+        return fields[2]
+
+    @property
+    def date(self):
+        raw = self._rawdate
+        time = float(raw[0])
+        # Various tools did silly things with the timezone.
+        try:
+            timezone = int(raw[1])
+        except ValueError:
+            timezone = 0
+
+        return time, timezone
+
+    @property
+    def extra(self):
+        raw = self._rawextra
+        if raw is None:
+            return _defaultextra
+
+        return decodeextra(raw)
 
     @property
     def description(self):
