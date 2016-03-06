@@ -31,6 +31,7 @@
 
 struct cmdserveropts {
 	char sockname[UNIX_PATH_MAX];
+	char redirectsockname[UNIX_PATH_MAX];
 	char lockfile[UNIX_PATH_MAX];
 	char pidfile[UNIX_PATH_MAX];
 	size_t argsize;
@@ -270,17 +271,26 @@ cleanup:
 /* Connect to a cmdserver. Will start a new server on demand. */
 static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 {
-	hgclient_t *hgc = hgc_open(opts->sockname);
+	const char *sockname = opts->redirectsockname[0] ?
+		opts->redirectsockname : opts->sockname;
+	hgclient_t *hgc = hgc_open(sockname);
 	if (hgc)
 		return hgc;
 
 	lockcmdserver(opts);
-	hgc = hgc_open(opts->sockname);
+	hgc = hgc_open(sockname);
 	if (hgc) {
 		unlockcmdserver(opts);
 		debugmsg("cmdserver is started by another process");
 		return hgc;
 	}
+
+	/* prevent us from being connected to an outdated server: we were
+	 * told by a server to redirect to opts->redirectsockname and that
+	 * address does not work. we do not want to connect to the server
+	 * again because it will probably tell us the same thing. */
+	if (sockname == opts->redirectsockname)
+		unlink(opts->sockname);
 
 	debugmsg("start cmdserver at %s", opts->sockname);
 
@@ -448,6 +458,28 @@ error:
 	abortmsg("failed to prepare pager (errno = %d)", errno);
 }
 
+/* Run instructions sent from the server like unlink and set redirect path */
+static void runinstructions(struct cmdserveropts *opts, const char **insts)
+{
+	assert(insts);
+	opts->redirectsockname[0] = '\0';
+	const char **pinst;
+	for (pinst = insts; *pinst; pinst++) {
+		debugmsg("instruction: %s", *pinst);
+		if (strncmp(*pinst, "unlink ", 7) == 0) {
+			unlink(*pinst + 7);
+		} else if (strncmp(*pinst, "redirect ", 9) == 0) {
+			int r = snprintf(opts->redirectsockname,
+					 sizeof(opts->redirectsockname),
+					 "%s", *pinst + 9);
+			if (r < 0 || r >= (int)sizeof(opts->redirectsockname))
+				abortmsg("redirect path is too long (%d)", r);
+		} else {
+			abortmsg("unknown instruction: %s", *pinst);
+		}
+	}
+}
+
 /*
  * Test whether the command is unsupported or not. This is not designed to
  * cover all cases. But it's fast, does not depend on the server and does
@@ -516,12 +548,21 @@ int main(int argc, const char *argv[], const char *envp[])
 		}
 	}
 
-	hgclient_t *hgc = connectcmdserver(&opts);
-	if (!hgc)
-		abortmsg("cannot open hg client");
+	hgclient_t *hgc;
+	while (1) {
+		hgc = connectcmdserver(&opts);
+		if (!hgc)
+			abortmsg("cannot open hg client");
+		hgc_setenv(hgc, envp);
+		const char **insts = hgc_validate(hgc, argv + 1, argc - 1);
+		if (insts == NULL)
+			break;
+		runinstructions(&opts, insts);
+		free(insts);
+		hgc_close(hgc);
+	}
 
 	setupsignalhandler(hgc_peerpid(hgc));
-	hgc_setenv(hgc, envp);
 	setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	hgc_close(hgc);
