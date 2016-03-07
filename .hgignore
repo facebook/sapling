@@ -4,3 +4,4 @@ syntax: regexp
 ^build/
 \.err$
 tests/getdb\.sh
+.testtimes
