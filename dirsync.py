@@ -114,7 +114,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
             break
     if not sourcemirror:
         raise error.Abort(_("unable to detect source mirror of '%s'") %
-                          sourcepath)
+                          (sourcepath,))
 
     relpath = sourcepath[len(sourcemirror):]
 
@@ -133,7 +133,7 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                 if repo.ui.verbose:
                     repo.ui.status(_("not mirroring remove of '%s' to '%s';"
                                      " it is already removed\n")
-                                    % (sourcepath, mirrorpath))
+                                   % (sourcepath, mirrorpath))
                 continue
 
             if wctx[sourcepath].data() == wctx[mirrorpath].data():
@@ -141,9 +141,9 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                     repo.ui.status(_("not mirroring '%s' to '%s'; it already "
                                      "matches\n") % (sourcepath, mirrorpath))
                 continue
-            raise error.Abort("path '%s' needs to be mirrored to '%s', but the "
-                             "target already has pending changes" %
-                             (sourcepath, mirrorpath))
+            raise error.Abort(_("path '%s' needs to be mirrored to '%s', but "
+                                "the target already has pending changes") %
+                              (sourcepath, mirrorpath))
 
         fullsource = repo.wjoin(sourcepath)
         fulltarget = repo.wjoin(mirrorpath)
@@ -165,8 +165,8 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                     mirrorcopysource = mirror + copysource[len(sourcemirror):]
                     dirstate.copy(mirrorcopysource, mirrorpath)
                     repo.ui.status(_("mirrored copy '%s -> %s' to '%s -> %s'\n")
-                                    % (copysource, sourcepath,
-                                    mirrorcopysource, mirrorpath))
+                                   % (copysource, sourcepath,
+                                      mirrorcopysource, mirrorpath))
                 else:
                     repo.ui.status(_("mirrored adding '%s' to '%s'\n") %
                                    (sourcepath, mirrorpath))
@@ -178,8 +178,8 @@ def applytomirrors(repo, status, sourcepath, mirrors, action):
                 util.unlink(fulltarget)
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    repo.ui.status(("not mirroring remove of '%s' to '%s'; it "
-                                    "is already removed\n") %
+                    repo.ui.status(_("not mirroring remove of '%s' to '%s'; it "
+                                     "is already removed\n") %
                                    (sourcepath, mirrorpath))
                 else:
                     raise
