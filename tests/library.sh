@@ -1,3 +1,4 @@
+test -f "$TESTDIR/getdb.sh" || (echo "getdb.sh missing" && exit 80)
 DBHOSTPORT=$($TESTDIR/getdb.sh)
 DBHOST=`echo $DBHOSTPORT | cut -d : -f 1`
 DBPORT=`echo $DBHOSTPORT | cut -d : -f 2`
@@ -36,7 +37,6 @@ name VARCHAR(256) BINARY,
 value char(40) BINARY NOT NULL,
 UNIQUE KEY bookmarkindex (repo, namespace, name)
 );' 2>/dev/null
-
 
 function initserver() {
   hg init $1
