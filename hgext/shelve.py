@@ -334,6 +334,11 @@ def _docreatecmd(ui, repo, pats, opts):
                 extra['shelve_unknown'] = '\0'.join(s.unknown)
                 repo[None].add(s.unknown)
 
+        if _iswctxonnewbranch(repo) and not _isbareshelve(pats, opts):
+            # In non-bare shelve we don't store newly created branch
+            # at bundled commit
+            repo.dirstate.setbranch(repo['.'].branch())
+
         def commitfunc(ui, repo, message, match, opts):
             hasmq = util.safehasattr(repo, 'mq')
             if hasmq:
@@ -391,6 +396,9 @@ def _isbareshelve(pats, opts):
             and not opts.get('interactive', False)
             and not opts.get('include', False)
             and not opts.get('exclude', False))
+
+def _iswctxonnewbranch(repo):
+    return repo[None].branch() != repo['.'].branch()
 
 def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
