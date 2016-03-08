@@ -92,7 +92,6 @@
   tests/test-context.py requires print_function
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
-  tests/test-dispatch.py not using absolute_import
   tests/test-dispatch.py requires print_function
   tests/test-doctest.py not using absolute_import
   tests/test-duplicateoptions.py not using absolute_import

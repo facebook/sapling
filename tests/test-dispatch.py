@@ -1,5 +1,8 @@
+from __future__ import absolute_import
 import os
-from mercurial import dispatch
+from mercurial import (
+    dispatch,
+)
 
 def testdispatch(cmd):
     """Simple wrapper around dispatch.dispatch()
