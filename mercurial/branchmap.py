@@ -55,6 +55,7 @@ def read(repo):
         if not partial.validfor(repo):
             # invalidate the cache
             raise ValueError('tip differs')
+        cl = repo.changelog
         for l in lines:
             if not l:
                 continue
@@ -62,9 +63,9 @@ def read(repo):
             if state not in 'oc':
                 raise ValueError('invalid branch state')
             label = encoding.tolocal(label.strip())
-            if not node in repo:
-                raise ValueError('node %s does not exist' % node)
             node = bin(node)
+            if not cl.hasnode(node):
+                raise ValueError('node %s does not exist' % hex(node))
             partial.setdefault(label, []).append(node)
             if state == 'c':
                 partial._closednodes.add(node)
