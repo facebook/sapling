@@ -1446,20 +1446,26 @@ static PyObject *index_headrevs(indexObject *self, PyObject *args)
 		goto bail;
 	}
 
-	for (i = 0; i < len; i++) {
+	for (i = len - 1; i >= 0; i--) {
 		int isfiltered;
 		int parents[2];
 
-		isfiltered = check_filter(filter, i);
-		if (isfiltered == -1) {
-			PyErr_SetString(PyExc_TypeError,
-				"unable to check filter");
-			goto bail;
-		}
+		/* If nothead[i] == 1, it means we've seen an unfiltered child of this
+		 * node already, and therefore this node is not filtered. So we can skip
+		 * the expensive check_filter step.
+		 */
+		if (nothead[i] != 1) {
+			isfiltered = check_filter(filter, i);
+			if (isfiltered == -1) {
+				PyErr_SetString(PyExc_TypeError,
+					"unable to check filter");
+				goto bail;
+			}
 
-		if (isfiltered) {
-			nothead[i] = 1;
-			continue;
+			if (isfiltered) {
+				nothead[i] = 1;
+				continue;
+			}
 		}
 
 		if (index_get_parents(self, i, parents, (int)len - 1) < 0)
