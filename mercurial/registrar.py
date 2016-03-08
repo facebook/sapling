@@ -205,3 +205,36 @@ class _funcregistrarbase(object):
         """Execute exra setup for registered function, if needed
         """
         pass
+
+class revsetpredicate(_funcregistrarbase):
+    """Decorator to register revset predicate
+
+    Usage::
+
+        revsetpredicate = registrar.revsetpredicate()
+
+        @revsetpredicate('mypredicate(arg1, arg2[, arg3])')
+        def mypredicatefunc(repo, subset, x):
+            '''Explanation of this revset predicate ....
+            '''
+            pass
+
+    The first string argument is used also in online help.
+
+    Optional argument 'safe' indicates whether a predicate is safe for
+    DoS attack (False by default).
+
+    'revsetpredicate' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'revsetpredicate' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'revset.loadpredicate()' is needed.
+    """
+    _getname = _funcregistrarbase._parsefuncdecl
+    _docformat = "``%s``\n    %s"
+
+    def _extrasetup(self, name, func, safe=False):
+        func._safe = safe

@@ -3628,5 +3628,13 @@ def prettyformatset(revs):
         p = q
     return '\n'.join('  ' * l + s for l, s in lines)
 
+def loadpredicate(ui, extname, registrarobj):
+    """Load revset predicates from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        symbols[name] = func
+        if func._safe:
+            safesymbols.add(name)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
