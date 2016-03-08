@@ -30,6 +30,15 @@ hg status in repo root:
   [status.unknown|? ][status.unknown|b/in_b]
   [status.unknown|? ][status.unknown|in_root]
 
+hg status with template
+  $ hg status -T "{label('red', path)}\n" --color=debug
+  [red|a/1/in_a_1]
+  [red|a/in_a]
+  [red|b/1/in_b_1]
+  [red|b/2/in_b_2]
+  [red|b/in_b]
+  [red|in_root]
+
 hg status . in repo root:
 
   $ hg status --color=always .

@@ -153,7 +153,7 @@ class templateformatter(baseformatter):
         self._topic = topic
         self._t = gettemplater(ui, topic, opts.get('template', ''))
     def _showitem(self):
-        g = self._t(self._topic, **self._item)
+        g = self._t(self._topic, ui=self._ui, **self._item)
         self._ui.write(templater.stringify(g))
 
 def lookuptemplate(ui, topic, tmpl):

@@ -549,16 +549,15 @@ def label(context, mapping, args):
 
     thing = evalstring(context, mapping, args[1])
 
-    # apparently, repo could be a string that is the favicon?
-    repo = mapping.get('repo', '')
-    if isinstance(repo, str):
+    ui = mapping.get('ui', '')
+    if isinstance(ui, str):
         return thing
 
     # preserve unknown symbol as literal so effects like 'red', 'bold',
     # etc. don't need to be quoted
     label = evalstringliteral(context, mapping, args[0])
 
-    return repo.ui.label(thing, label)
+    return ui.label(thing, label)
 
 def latesttag(context, mapping, args):
     """:latesttag([pattern]): The global tags matching the given pattern on the

@@ -1502,6 +1502,7 @@ class changeset_templater(changeset_printer):
         props['templ'] = self.t
         props['ctx'] = ctx
         props['repo'] = self.repo
+        props['ui'] = self.repo.ui
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
 
