@@ -33,6 +33,7 @@ from . import (
     fancyopts,
     hg,
     hook,
+    revset,
     ui as uimod,
     util,
 )
@@ -752,6 +753,7 @@ _loaded = set()
 #   extraobj) arguments
 extraloaders = [
     ('cmdtable', commands, 'loadcmdtable'),
+    ('revsetpredicate', revset, 'loadpredicate'),
 ]
 
 def _dispatch(req):

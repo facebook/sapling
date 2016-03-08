@@ -70,6 +70,7 @@ from mercurial import extensions, error, phases
 from mercurial import patch as patchmod
 from mercurial import lock as lockmod
 from mercurial import localrepo
+from mercurial import registrar
 from mercurial import subrepo
 import os, re, errno, shutil
 
@@ -3536,7 +3537,7 @@ def summaryhook(ui, repo):
         # i18n: column positioning for "hg summary"
         ui.note(_("mq:     (empty queue)\n"))
 
-revsetpredicate = revset.extpredicate()
+revsetpredicate = registrar.revsetpredicate()
 
 @revsetpredicate('mq()')
 def revsetmq(repo, subset, x):
@@ -3574,8 +3575,6 @@ def extsetup(ui):
     for extname, extmodule in extensions.extensions():
         if extmodule.__file__ != __file__:
             dotable(getattr(extmodule, 'cmdtable', {}))
-
-    revsetpredicate.setup()
 
 colortable = {'qguard.negative': 'red',
               'qguard.positive': 'yellow',

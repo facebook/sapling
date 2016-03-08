@@ -171,5 +171,3 @@ def uisetup(ui):
         if name == 'transplant':
             extensions.wrapcommand(getattr(module, 'cmdtable'), 'transplant',
                 overrides.overridetransplant)
-
-    overrides.revsetpredicate.setup()

@@ -12,7 +12,7 @@ import os
 import copy
 
 from mercurial import hg, util, cmdutil, scmutil, match as match_, \
-        archival, pathutil, revset, error
+        archival, pathutil, registrar, revset, error
 from mercurial.i18n import _
 
 import lfutil
@@ -801,7 +801,7 @@ def overridepull(orig, ui, repo, source=None, **opts):
         ui.status(_("%d largefiles cached\n") % numcached)
     return result
 
-revsetpredicate = revset.extpredicate()
+revsetpredicate = registrar.revsetpredicate()
 
 @revsetpredicate('pulled()')
 def pulledrevsetsymbol(repo, subset, x):

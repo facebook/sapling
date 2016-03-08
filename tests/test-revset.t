@@ -2191,28 +2191,21 @@ test error message of bad revset
 
   $ cd ..
 
-Test registrar.delayregistrar via revset.extpredicate
-
-'extpredicate' decorator shouldn't register any functions until
-'setup()' on it.
+Test that revset predicate of extension isn't loaded at failure of
+loading it
 
   $ cd repo
 
   $ cat <<EOF > $TESTTMP/custompredicate.py
-  > from mercurial import revset
+  > from mercurial import error, registrar, revset
   > 
-  > revsetpredicate = revset.extpredicate()
+  > revsetpredicate = registrar.revsetpredicate()
   > 
   > @revsetpredicate('custom1()')
   > def custom1(repo, subset, x):
   >     return revset.baseset([1])
-  > @revsetpredicate('custom2()')
-  > def custom2(repo, subset, x):
-  >     return revset.baseset([2])
   > 
-  > def uisetup(ui):
-  >     if ui.configbool('custompredicate', 'enabled'):
-  >         revsetpredicate.setup()
+  > raise error.Abort('intentional failure of loading extension')
   > EOF
   $ cat <<EOF > .hg/hgrc
   > [extensions]
@@ -2220,13 +2213,8 @@ Test registrar.delayregistrar via revset.extpredicate
   > EOF
 
   $ hg debugrevspec "custom1()"
+  *** failed to import extension custompredicate from $TESTTMP/custompredicate.py: intentional failure of loading extension
   hg: parse error: unknown identifier: custom1
   [255]
-  $ hg debugrevspec "custom2()"
-  hg: parse error: unknown identifier: custom2
-  [255]
-  $ hg debugrevspec "custom1() or custom2()" --config custompredicate.enabled=true
-  1
-  2
 
   $ cd ..

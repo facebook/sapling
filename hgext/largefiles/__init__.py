@@ -111,6 +111,7 @@ import lfcommands
 import proto
 import reposetup
 import uisetup as uisetupmod
+import overrides
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -130,3 +131,4 @@ def uisetup(ui):
     uisetupmod.uisetup(ui)
 
 cmdtable = lfcommands.cmdtable
+revsetpredicate = overrides.revsetpredicate

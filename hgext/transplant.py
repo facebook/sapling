@@ -19,7 +19,7 @@ import os, tempfile
 from mercurial.node import short
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
-from mercurial import revset, templatekw, exchange
+from mercurial import registrar, revset, templatekw, exchange
 
 class TransplantError(error.Abort):
     pass
@@ -694,7 +694,7 @@ def _dotransplant(ui, repo, *revs, **opts):
         if cleanupfn:
             cleanupfn()
 
-revsetpredicate = revset.extpredicate()
+revsetpredicate = registrar.revsetpredicate()
 
 @revsetpredicate('transplanted([set])')
 def revsettransplanted(repo, subset, x):
@@ -714,7 +714,6 @@ def kwtransplanted(repo, ctx, **args):
     return n and revlog.hex(n) or ''
 
 def extsetup(ui):
-    revsetpredicate.setup()
     templatekw.keywords['transplanted'] = kwtransplanted
     cmdutil.unfinishedstates.append(
         ['transplant/journal', True, False, _('transplant in progress'),

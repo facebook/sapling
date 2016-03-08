@@ -16,7 +16,7 @@ https://mercurial-scm.org/wiki/RebaseExtension
 
 from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
 from mercurial import extensions, patch, scmutil, phases, obsolete, error
-from mercurial import copies, destutil, repoview, revset
+from mercurial import copies, destutil, repoview, registrar, revset
 from mercurial.commands import templateopts
 from mercurial.node import nullrev, nullid, hex, short
 from mercurial.lock import release
@@ -76,7 +76,7 @@ def _destrebase(repo, sourceset):
     return destutil.destmerge(repo, action='rebase', sourceset=sourceset,
                               onheadcheck=False)
 
-revsetpredicate = revset.extpredicate()
+revsetpredicate = registrar.revsetpredicate()
 
 @revsetpredicate('_destrebase')
 def _revsetdestrebase(repo, subset, x):
@@ -1325,4 +1325,3 @@ def uisetup(ui):
         ['rebasestate', _('hg rebase --continue')])
     # ensure rebased rev are not hidden
     extensions.wrapfunction(repoview, '_getdynamicblockers', _rebasedvisible)
-    revsetpredicate.setup()
