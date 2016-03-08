@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 """extension for tweaking Mercurial features to improve performance."""
 
-from mercurial import branchmap, merge, revlog, scmutil, tags
+from mercurial import branchmap, merge, revlog, scmutil, tags, util
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev
@@ -20,6 +20,9 @@ def extsetup(ui):
     wrapfunction(branchmap.branchcache, 'update', _branchmapupdate)
     if ui.configbool('perftweaks', 'preferdeltas'):
         wrapfunction(revlog.revlog, '_isgooddelta', _isgooddelta)
+
+    wrapfunction(branchmap.branchcache, 'write', _branchmapwrite)
+    wrapfunction(branchmap, 'read', _branchmapread)
 
 def _readtagcache(orig, ui, repo):
     """Disables reading tags if the repo is known to not contain any."""
@@ -64,6 +67,23 @@ def _branchmapupdate(orig, self, repo, revgen):
     repo.ui.log('branchcache', 'perftweaks updated %s branch cache\n',
                 repo.filtername)
 
+def _branchmapread(orig, repo):
+    _preloadrevs(repo)
+    return orig(repo)
+
+def _branchmapwrite(orig, self, repo):
+    result = orig(self, repo)
+    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+        revs = set()
+        nodemap = repo.changelog.nodemap
+        for branch, heads in self.iteritems():
+            revs.update(nodemap[n] for n in heads)
+        name = 'branchheads-%s' % repo.filtername
+        _savepreloadrevs(repo, name, revs)
+
+    return result
+
+
 def _isgooddelta(orig, self, d, textlen):
     """Returns True if the given delta is good. Good means that it is within
     the disk span, disk size, and chain length bounds that we know to be
@@ -92,3 +112,52 @@ def _isgooddelta(orig, self, d, textlen):
         return False
 
     return True
+
+def _cachepath(repo, name):
+    return repo.vfs.join('cache', 'noderevs', name)
+
+def _preloadrevs(repo):
+    # Preloading the node-rev map for likely to be used revs saves 100ms on
+    # every command. This is because normally to look up a node, hg has to scan
+    # the changelog.i file backwards, potentially reading through hundreds of
+    # thousands of entries and building a cache of them.  Looking up a rev
+    # however is fast, because we know exactly what offset in the file to read.
+    # Reading old commits is common, since the branchmap needs to to convert old
+    # branch heads from node to rev.
+
+    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+        repo = repo.unfiltered()
+        revs = set()
+        cachedir = repo.vfs.join('cache', 'noderevs')
+        try:
+            if os.path.exists(cachedir):
+                for cachefile in os.listdir(cachedir):
+                    path = _cachepath(repo, cachefile)
+                    revs.update(int(r) for r in open(path).readlines())
+
+                getnode = repo.changelog.node
+                nodemap = repo.changelog.nodemap
+                for r in revs:
+                    try:
+                        node = getnode(r)
+                        nodemap[node] = r
+                    except IndexError:
+                        # Rev no longer exists
+                        pass
+        except IOError:
+            # No permission to read? No big deal
+            pass
+
+def _savepreloadrevs(repo, name, revs):
+    if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+        try:
+            cachedir = repo.vfs.join('cache', 'noderevs')
+            if not os.path.exists(cachedir):
+                os.mkdir(cachedir)
+            path = _cachepath(repo, name)
+            f = util.atomictempfile(path, 'w+')
+            f.write('\n'.join(str(r) for r in revs))
+            f.close()
+        except IOError:
+            # No permission to write? No big deal
+            pass
