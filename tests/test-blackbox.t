@@ -157,7 +157,7 @@ log rotation
   $ sed -e 's/\(.*test1.*\)/#\1/; s#\(.*commit2.*\)#os.rmdir(".hg/blackbox.log")\
   > os.rename(".hg/blackbox.log-", ".hg/blackbox.log")\
   > \1#' $TESTDIR/test-dispatch.py > ../test-dispatch.py
-  $ python ../test-dispatch.py
+  $ python $TESTDIR/blackbox-readonly-dispatch.py
   running: add foo
   result: 0
   running: commit -m commit1 -d 2000-01-01 foo
