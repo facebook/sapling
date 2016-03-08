@@ -81,6 +81,7 @@ def wrapui(ui):
                 self._partialinit()
             else:
                 self._bbfp = src._bbfp
+                self._bbinlog = False
                 self._bbrepo = src._bbrepo
                 self._bbvfs = src._bbvfs
 
@@ -88,6 +89,7 @@ def wrapui(ui):
             if util.safehasattr(self, '_bbvfs'):
                 return
             self._bbfp = None
+            self._bbinlog = False
             self._bbrepo = None
             self._bbvfs = None
 
@@ -160,7 +162,15 @@ def wrapui(ui):
                 # was seen.
                 ui = lastui
 
-            if ui and ui._bbfp:
+            if not ui or not ui._bbfp:
+                return
+            if not lastui or ui._bbrepo:
+                lastui = ui
+            if ui._bbinlog:
+                # recursion guard
+                return
+            try:
+                ui._bbinlog = True
                 date = util.datestr(None, '%Y/%m/%d %H:%M:%S')
                 user = util.getuser()
                 pid = str(util.getpid())
@@ -186,11 +196,12 @@ def wrapui(ui):
                 except IOError as err:
                     self.debug('warning: cannot write to blackbox.log: %s\n' %
                                err.strerror)
-                if not lastui or ui._bbrepo:
-                    lastui = ui
+            finally:
+                ui._bbinlog = False
 
         def setrepo(self, repo):
             self._bbfp = None
+            self._bbinlog = False
             self._bbrepo = repo
             self._bbvfs = repo.vfs
 

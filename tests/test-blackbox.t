@@ -191,5 +191,19 @@ log rotation
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> log -r tip exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @45589e459b2edfbf3dbde7e01f611d2c1e7453d7 (5000)> blackbox
 
+Test log recursion from dirty status check
+
+  $ cat > ../r.py <<EOF
+  > from mercurial import context, error, extensions
+  > x=[False]
+  > def status(orig, *args, **opts):
+  >     args[0].repo().ui.log("broken", "recursion?")
+  >     return orig(*args, **opts)
+  > def reposetup(ui, repo):
+  >     extensions.wrapfunction(context.basectx, 'status', status)
+  > EOF
+  $ hg id --config extensions.x=../r.py --config blackbox.dirty=True
+  45589e459b2e tip
+
 cleanup
   $ cd ..
