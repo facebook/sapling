@@ -7147,3 +7147,12 @@ def version_(ui):
             for i, name in enumerate(names):
                 ui.write("  %-*s  %s  %s\n" %
                          (maxnamelen, name, place[i], vers[i]))
+
+def loadcmdtable(ui, name, cmdtable):
+    """Load command functions from specified cmdtable
+    """
+    overrides = [cmd for cmd in cmdtable if cmd in table]
+    if overrides:
+        ui.warn(_("extension '%s' overrides commands: %s\n")
+                % (name, " ".join(overrides)))
+    table.update(cmdtable)

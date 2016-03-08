@@ -743,6 +743,17 @@ def _checkshellalias(lui, ui, args, precheck=True):
                                   [], {})
 
 _loaded = set()
+
+# list of (objname, loadermod, loadername) tuple:
+# - objname is the name of an object in extension module, from which
+#   extra information is loaded
+# - loadermod is the module where loader is placed
+# - loadername is the name of the function, which takes (ui, extensionname,
+#   extraobj) arguments
+extraloaders = [
+    ('cmdtable', commands, 'loadcmdtable'),
+]
+
 def _dispatch(req):
     args = req.args
     ui = req.ui
@@ -772,12 +783,10 @@ def _dispatch(req):
     # (uisetup and extsetup are handled in extensions.loadall)
 
     for name, module in exts:
-        cmdtable = getattr(module, 'cmdtable', {})
-        overrides = [cmd for cmd in cmdtable if cmd in commands.table]
-        if overrides:
-            ui.warn(_("extension '%s' overrides commands: %s\n")
-                    % (name, " ".join(overrides)))
-        commands.table.update(cmdtable)
+        for objname, loadermod, loadername in extraloaders:
+            extraobj = getattr(module, objname, None)
+            if extraobj is not None:
+                getattr(loadermod, loadername)(ui, name, extraobj)
         _loaded.add(name)
 
     # (reposetup is handled in hg.repository)
