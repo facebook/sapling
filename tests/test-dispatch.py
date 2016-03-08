@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 from mercurial import (
     dispatch,
@@ -9,11 +9,10 @@ def testdispatch(cmd):
 
     Prints command and result value, but does not handle quoting.
     """
-    print "running: %s" % (cmd,)
+    print("running: %s" % (cmd,))
     req = dispatch.request(cmd.split())
     result = dispatch.dispatch(req)
-    print "result: %r" % (result,)
-
+    print("result: %r" % (result,))
 
 testdispatch("init test1")
 os.chdir('test1')
