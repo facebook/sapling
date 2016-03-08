@@ -463,6 +463,8 @@ Attempting to fold a change into a public change should not work:
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending

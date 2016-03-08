@@ -69,6 +69,8 @@
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending
@@ -129,6 +131,8 @@
   # Edit history between b346ab9a313d and cacdfd884a93
   #
   # Commits are listed from least to most recent
+  #
+  # You can reorder changesets by reordering the lines
   #
   # Commands:
   #

@@ -63,6 +63,8 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending
@@ -294,6 +296,8 @@ Test that trimming description using multi-byte characters
   # Edit history between 3d3ea1f3a10b and 3d3ea1f3a10b
   #
   # Commits are listed from least to most recent
+  #
+  # You can reorder changesets by reordering the lines
   #
   # Commands:
   #

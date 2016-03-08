@@ -63,6 +63,8 @@ show the edit commands offered
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending
@@ -338,6 +340,8 @@ Verify that revsetalias entries work with histedit:
   # Edit history between ece0b8d93dda and 9c863c565126
   #
   # Commits are listed from least to most recent
+  #
+  # You can reorder changesets by reordering the lines
   #
   # Commands:
   #

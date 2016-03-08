@@ -234,6 +234,8 @@ def geteditcomment(first, last):
 
 Commits are listed from least to most recent
 
+You can reorder changesets by reordering the lines
+
 Commands:
 """)
     actions = []

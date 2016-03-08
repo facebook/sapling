@@ -45,6 +45,8 @@ show the edit commands offered by outgoing
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending
@@ -77,6 +79,8 @@ show the error from unrelated repos
   #
   # Commits are listed from least to most recent
   #
+  # You can reorder changesets by reordering the lines
+  #
   # Commands:
   #
   #  e, edit = use commit, but stop for amending
@@ -100,6 +104,8 @@ test sensitivity to branch in URL:
   # Edit history between f26599ee3441 and f26599ee3441
   #
   # Commits are listed from least to most recent
+  #
+  # You can reorder changesets by reordering the lines
   #
   # Commands:
   #
