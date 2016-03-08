@@ -482,36 +482,7 @@ symbols = {}
 # functions that just return a lot of changesets (like all) don't count here
 safesymbols = set()
 
-class predicate(registrar.funcregistrar):
-    """Decorator to register revset predicate
-
-    Usage::
-
-        @predicate('mypredicate(arg1, arg2[, arg3])')
-        def mypredicatefunc(repo, subset, x):
-            '''Explanation of this revset predicate ....
-            '''
-            pass
-
-    The first string argument of the constructor is used also in
-    online help.
-
-    Use 'extpredicate' instead of this to register revset predicate in
-    extensions.
-    """
-    table = symbols
-    formatdoc = "``%s``\n    %s"
-    getname = registrar.funcregistrar.parsefuncdecl
-
-    def __init__(self, decl, safe=False):
-        """'safe' indicates whether a predicate is safe for DoS attack
-        """
-        super(predicate, self).__init__(decl)
-        self.safe = safe
-
-    def extraaction(self, name, func):
-        if self.safe:
-            safesymbols.add(name)
+predicate = registrar.revsetpredicate()
 
 class extpredicate(registrar.delayregistrar):
     """Decorator to register revset predicate in extensions
@@ -3635,6 +3606,9 @@ def loadpredicate(ui, extname, registrarobj):
         symbols[name] = func
         if func._safe:
             safesymbols.add(name)
+
+# load built-in predicates explicitly to setup safesymbols
+loadpredicate(None, None, predicate)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
