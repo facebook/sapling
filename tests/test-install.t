@@ -6,6 +6,7 @@ hg debuginstall
   checking Python lib (*lib*)... (glob)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
+  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
@@ -25,6 +26,7 @@ hg debuginstall JSON
     "encoding": "ascii",
     "encodingerror": null,
     "extensionserror": null,
+    "hgmodulepolicy": "*", (glob)
     "hgmodules": "*mercurial", (glob)
     "hgver": "*", (glob)
     "hgverextra": "*", (glob)
@@ -47,6 +49,7 @@ hg debuginstall with no username
   checking Python lib (*lib*)... (glob)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
+  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
@@ -70,6 +73,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking Python lib (*lib*)... (glob)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
+  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)

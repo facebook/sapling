@@ -59,6 +59,7 @@ from . import (
     obsolete,
     patch,
     phases,
+    policy,
     pvec,
     repair,
     revlog,
@@ -2749,6 +2750,8 @@ def debuginstall(ui, **opts):
              '+'.join(hgver.split('+')[1:]))
 
     # compiled modules
+    fm.write('hgmodulepolicy', _("checking module policy (%s)\n"),
+             policy.policy)
     fm.write('hgmodules', _("checking installed modules (%s)...\n"),
              os.path.dirname(__file__))
 
