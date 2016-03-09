@@ -19,11 +19,14 @@ __all__ = []
 #    c - require C extensions
 #    allow - allow pure Python implementation when C loading fails
 #    py - only load pure Python modules
-modulepolicy = '@MODULELOADPOLICY@'
-
+#
 # By default, require the C extensions for performance reasons.
-if modulepolicy == '@' 'MODULELOADPOLICY' '@':
-    modulepolicy = 'c'
+modulepolicy = 'c'
+try:
+    from . import __modulepolicy__
+    modulepolicy = __modulepolicy__.modulepolicy
+except ImportError:
+    pass
 
 # PyPy doesn't load C extensions.
 #

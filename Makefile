@@ -63,6 +63,7 @@ clean:
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f $(addprefix mercurial/,$(notdir $(wildcard mercurial/pure/[a-z]*.py)))
 	rm -f MANIFEST MANIFEST.in hgext/__index__.py tests/*.err
+	rm -f mercurial/__modulepolicy__.py
 	if test -d .hg; then rm -f mercurial/__version__.py; fi
 	rm -rf build mercurial/locale
 	$(MAKE) -C doc clean

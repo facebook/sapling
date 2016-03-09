@@ -40,6 +40,7 @@ doc/*.[0-9].{x,ht}ml
 MANIFEST
 MANIFEST.in
 patches
+mercurial/__modulepolicy__.py
 mercurial/__version__.py
 mercurial/hgpythonlib.h
 mercurial.egg-info
