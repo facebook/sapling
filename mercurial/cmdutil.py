@@ -835,6 +835,8 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
             if inst.startswith('unlink:'):
                 lockpath = inst[7:]
                 os.unlink(lockpath)
+            elif inst.startswith('chdir:'):
+                os.chdir(inst[6:])
             elif inst != 'none':
                 raise error.Abort(_('invalid value for --daemon-postexec: %s')
                                   % inst)
