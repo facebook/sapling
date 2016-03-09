@@ -297,7 +297,8 @@ def rebase(ui, repo, **opts):
                     hint=_('use --keep to keep original changesets'))
 
             obsoletenotrebased = {}
-            if ui.configbool('experimental', 'rebaseskipobsolete'):
+            if ui.configbool('experimental', 'rebaseskipobsolete',
+                             default=True):
                 rebasesetrevs = set(rebaseset)
                 rebaseobsrevs = _filterobsoleterevs(repo, rebasesetrevs)
                 obsoletenotrebased = _computeobsoletenotrebased(repo,

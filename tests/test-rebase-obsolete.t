@@ -527,7 +527,7 @@ Test hidden changesets in the rebase set (issue4504)
   $ hg commit -m J
   $ hg debugobsolete `hg log --rev . -T '{node}'`
 
-  $ hg rebase --rev .~1::. --dest 'max(desc(D))' --traceback
+  $ hg rebase --rev .~1::. --dest 'max(desc(D))' --traceback --config experimental.rebaseskipobsolete=off
   rebasing 9:4bde274eefcf "I"
   rebasing 13:06edfc82198f "J" (tip)
   $ hg log -G
