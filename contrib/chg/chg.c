@@ -211,10 +211,9 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	const char *baseargv[] = {
 		hgcmd,
 		"serve",
-		"--cwd", "/",
 		"--cmdserver", "chgunix",
 		"--address", opts->sockname,
-		"--daemon-postexec", "none",
+		"--daemon-postexec", "chdir:/",
 		"--pid-file", opts->pidfile,
 		"--config", "extensions.chgserver=",
 	};
