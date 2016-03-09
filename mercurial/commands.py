@@ -4784,7 +4784,7 @@ def identify(ui, repo, source=None, rev=None,
     ('', 'partial', None,
      _('commit even if some hunks fail')),
     ('', 'exact', None,
-     _('apply patch to the nodes from which it was generated')),
+     _('abort if patch would apply lossily')),
     ('', 'prefix', '',
      _('apply patch to subdirectory'), _('DIR')),
     ('', 'import-branch', None,
@@ -4824,8 +4824,9 @@ def import_(ui, repo, patch1=None, *patches, **opts):
     If --exact is specified, import will set the working directory to
     the parent of each patch before applying it, and will abort if the
     resulting changeset has a different ID than the one recorded in
-    the patch. This may happen due to character set problems or other
-    deficiencies in the text patch format.
+    the patch. This will guard against various ways that portable
+    patch formats and mail systems might fail to transfer Mercurial
+    data or metadata. See ':hg: bundle' for lossless transmission.
 
     Use --partial to ensure a changeset will be created from the patch
     even if some hunks fail to apply. Hunks that fail to apply will be
