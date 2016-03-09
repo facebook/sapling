@@ -827,16 +827,17 @@ def service(opts, parentfn=None, initfn=None, runfn=None, logfile=None,
         writepid(util.getpid())
 
     if opts['daemon_postexec']:
-        inst = opts['daemon_postexec']
         try:
             os.setsid()
         except AttributeError:
             pass
-        if inst.startswith('unlink:'):
-            lockpath = inst[7:]
-            os.unlink(lockpath)
-        elif inst != 'none':
-            raise error.Abort(_('invalid value for --daemon-postexec'))
+        for inst in opts['daemon_postexec']:
+            if inst.startswith('unlink:'):
+                lockpath = inst[7:]
+                os.unlink(lockpath)
+            elif inst != 'none':
+                raise error.Abort(_('invalid value for --daemon-postexec: %s')
+                                  % inst)
         util.hidewindow()
         sys.stdout.flush()
         sys.stderr.flush()

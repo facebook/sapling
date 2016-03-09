@@ -38,7 +38,7 @@ if __name__ == '__main__':
     parser.add_option('-f', '--foreground', dest='foreground',
         action='store_true',
         help='do not start the HTTP server in the background')
-    parser.add_option('--daemon-postexec')
+    parser.add_option('--daemon-postexec', action='append')
 
     (options, args) = parser.parse_args()
 
