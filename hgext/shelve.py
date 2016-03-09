@@ -290,10 +290,10 @@ def _docreatecmd(ui, repo, pats, opts):
     else:
         desc = '(changes in empty repository)'
 
-    if not opts['message']:
+    if not opts.get('message'):
         opts['message'] = desc
 
-    name = opts['name']
+    name = opts.get('name')
 
     lock = tr = None
     try:
@@ -540,7 +540,7 @@ def mergefiles(ui, repo, wctx, shelvectx):
 
 def unshelvecleanup(ui, repo, name, opts):
     """remove related files after an unshelve"""
-    if not opts['keep']:
+    if not opts.get('keep'):
         for filetype in 'hg patch'.split():
             shelvedfile(repo, name, filetype).movetobackup()
         cleanupoldbackups(repo)
@@ -630,8 +630,8 @@ def unshelve(ui, repo, *shelved, **opts):
         return _dounshelve(ui, repo, *shelved, **opts)
 
 def _dounshelve(ui, repo, *shelved, **opts):
-    abortf = opts['abort']
-    continuef = opts['continue']
+    abortf = opts.get('abort')
+    continuef = opts.get('continue')
     if not abortf and not continuef:
         cmdutil.checkunfinished(repo)
 
@@ -850,7 +850,7 @@ def shelvecmd(ui, repo, *pats, **opts):
         ('stat', set(['stat', 'list'])),
     ]
     def checkopt(opt):
-        if opts[opt]:
+        if opts.get(opt):
             for i, allowable in allowables:
                 if opts[i] and opt not in allowable:
                     raise error.Abort(_("options '--%s' and '--%s' may not be "
