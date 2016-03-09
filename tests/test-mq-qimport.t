@@ -331,3 +331,12 @@ check reserved patch names
   2.diff
   taken__2
 
+check very long patch name
+
+  $ hg qpop -qa
+  patch queue now empty
+  $ echo >> b
+  $ hg commit -m 'abcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi pqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  $ hg qimport -r .
+  $ hg qap
+  abcdefghi_pqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi_pqrstuvwxyzabcdefg

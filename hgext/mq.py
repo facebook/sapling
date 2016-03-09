@@ -1117,6 +1117,7 @@ class queue(object):
         """Return a suitable filename for title, adding a suffix to make
         it unique in the existing list"""
         namebase = re.sub('[\s\W_]+', '_', title.lower()).strip('_')
+        namebase = namebase[:75] # avoid too long name (issue5117)
         if namebase:
             try:
                 self.checkreservedname(namebase)
