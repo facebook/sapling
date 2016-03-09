@@ -254,7 +254,7 @@ Show all commands + options
   debugignore: 
   debugindex: changelog, manifest, dir, format
   debugindexdot: changelog, manifest, dir
-  debuginstall: 
+  debuginstall: template
   debugknown: 
   debuglabelcomplete: 
   debuglocks: force-lock, force-wlock

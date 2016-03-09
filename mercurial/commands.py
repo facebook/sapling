@@ -2700,8 +2700,8 @@ def debugdeltachain(ui, repo, file_=None, **opts):
 
     fm.end()
 
-@command('debuginstall', [], '', norepo=True)
-def debuginstall(ui):
+@command('debuginstall', [] + formatteropts, '', norepo=True)
+def debuginstall(ui, **opts):
     '''test Mercurial installation
 
     Returns 0 on success.
@@ -2716,25 +2716,33 @@ def debuginstall(ui):
 
     problems = 0
 
+    fm = ui.formatter('debuginstall', opts)
+    fm.startitem()
+
     # encoding
-    ui.status(_("checking encoding (%s)...\n") % encoding.encoding)
+    fm.write('encoding', _("checking encoding (%s)...\n"), encoding.encoding)
+    err = None
     try:
         encoding.fromlocal("test")
     except error.Abort as inst:
-        ui.write(" %s\n" % inst)
-        ui.write(_(" (check that your locale is properly set)\n"))
+        err = inst
         problems += 1
+    fm.condwrite(err, 'encodingerror', _(" %s\n"
+                 " (check that your locale is properly set)\n"), err)
 
     # Python
-    ui.status(_("checking Python executable (%s)\n") % sys.executable)
-    ui.status(_("checking Python version (%s)\n")
-              % ("%s.%s.%s" % sys.version_info[:3]))
-    ui.status(_("checking Python lib (%s)...\n")
-              % os.path.dirname(os.__file__))
+    fm.write('pythonexe', _("checking Python executable (%s)\n"),
+             sys.executable)
+    fm.write('pythonver', _("checking Python version (%s)\n"),
+             ("%s.%s.%s" % sys.version_info[:3]))
+    fm.write('pythonlib', _("checking Python lib (%s)...\n"),
+             os.path.dirname(os.__file__))
 
     # compiled modules
-    ui.status(_("checking installed modules (%s)...\n")
-              % os.path.dirname(__file__))
+    fm.write('hgmodules', _("checking installed modules (%s)...\n"),
+             os.path.dirname(__file__))
+
+    err = None
     try:
         from . import (
             base85,
@@ -2744,63 +2752,74 @@ def debuginstall(ui):
         )
         dir(bdiff), dir(mpatch), dir(base85), dir(osutil) # quiet pyflakes
     except Exception as inst:
-        ui.write(" %s\n" % inst)
-        ui.write(_(" One or more extensions could not be found"))
-        ui.write(_(" (check that you compiled the extensions)\n"))
+        err = inst
         problems += 1
+    fm.condwrite(err, 'extensionserror', " %s\n", err)
 
     # templates
     from . import templater
     p = templater.templatepaths()
-    ui.status(_("checking templates (%s)...\n") % ' '.join(p))
+    fm.write('templatedirs', 'checking templates (%s)...\n', ' '.join(p))
+    fm.condwrite(not p, '', _(" no template directories found\n"))
     if p:
         m = templater.templatepath("map-cmdline.default")
         if m:
             # template found, check if it is working
+            err = None
             try:
                 templater.templater(m)
             except Exception as inst:
-                ui.write(" %s\n" % inst)
+                err = inst
                 p = None
+            fm.condwrite(err, 'defaulttemplateerror', " %s\n", err)
         else:
-            ui.write(_(" template 'default' not found\n"))
             p = None
-    else:
-        ui.write(_(" no template directories found\n"))
+        fm.condwrite(p, 'defaulttemplate',
+                     _("checking default template (%s)\n"), m)
+        fm.condwrite(not m, 'defaulttemplatenotfound',
+                     _(" template '%s' not found\n"), "default")
     if not p:
-        ui.write(_(" (templates seem to have been installed incorrectly)\n"))
         problems += 1
+    fm.condwrite(not p, '',
+                 _(" (templates seem to have been installed incorrectly)\n"))
 
     # editor
-    ui.status(_("checking commit editor...\n"))
     editor = ui.geteditor()
     editor = util.expandpath(editor)
+    fm.write('editor', _("checking commit editor... (%s)\n"), editor)
     cmdpath = util.findexe(shlex.split(editor)[0])
-    if not cmdpath:
-        if editor == 'vi':
-            ui.write(_(" No commit editor set and can't find vi in PATH\n"))
-            ui.write(_(" (specify a commit editor in your configuration"
-                       " file)\n"))
-        else:
-            ui.write(_(" Can't find editor '%s' in PATH\n") % editor)
-            ui.write(_(" (specify a commit editor in your configuration"
-                       " file)\n"))
-            problems += 1
-
-    # check username
-    ui.status(_("checking username...\n"))
-    try:
-        ui.username()
-    except error.Abort as e:
-        ui.write(" %s\n" % e)
-        ui.write(_(" (specify a username in your configuration file)\n"))
+    fm.condwrite(not cmdpath and editor == 'vi', 'vinotfound',
+                 _(" No commit editor set and can't find %s in PATH\n"
+                   " (specify a commit editor in your configuration"
+                   " file)\n"), not cmdpath and editor == 'vi' and editor)
+    fm.condwrite(not cmdpath and editor != 'vi', 'editornotfound',
+                 _(" Can't find editor '%s' in PATH\n"
+                   " (specify a commit editor in your configuration"
+                   " file)\n"), not cmdpath and editor)
+    if not cmdpath and editor != 'vi':
         problems += 1
 
+    # check username
+    username = None
+    err = None
+    try:
+        username = ui.username()
+    except error.Abort as e:
+        err = e
+        problems += 1
+
+    fm.condwrite(username, 'username',  _("checking username (%s)\n"), username)
+    fm.condwrite(err, 'usernameerror', _("checking username...\n %s\n"
+        " (specify a username in your configuration file)\n"), err)
+
+    fm.condwrite(not problems, '',
+                 _("no problems detected\n"))
     if not problems:
-        ui.status(_("no problems detected\n"))
-    else:
-        ui.write(_("%s problems detected,"
-                   " please check your install!\n") % problems)
+        fm.data(problems=problems)
+    fm.condwrite(problems, 'problems',
+                 _("%s problems detected,"
+                   " please check your install!\n"), problems)
+    fm.end()
 
     return problems
 

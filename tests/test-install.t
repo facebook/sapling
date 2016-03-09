@@ -6,9 +6,34 @@ hg debuginstall
   checking Python lib (*lib*)... (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
-  checking commit editor...
-  checking username...
+  checking default template (*mercurial?templates?map-cmdline.default) (glob)
+  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
+  checking username (test)
   no problems detected
+
+hg debuginstall JSON
+  $ hg debuginstall -Tjson
+  [
+   {
+    "defaulttemplate": "*mercurial?templates?map-cmdline.default", (glob)
+    "defaulttemplateerror": null,
+    "defaulttemplatenotfound": "default",
+    "editor": "*python* -c \"import sys; sys.exit(0)\"", (glob)
+    "editornotfound": false,
+    "encoding": "ascii",
+    "encodingerror": null,
+    "extensionserror": null,
+    "hgmodules": "*mercurial", (glob)
+    "problems": 0,
+    "pythonexe": "*python", (glob)
+    "pythonlib": "*python*", (glob)
+    "pythonver": "*.*.*", (glob)
+    "templatedirs": "*mercurial?templates", (glob)
+    "username": "test",
+    "usernameerror": null,
+    "vinotfound": false
+   }
+  ]
 
 hg debuginstall with no username
   $ HGUSER= hg debuginstall
@@ -18,7 +43,8 @@ hg debuginstall with no username
   checking Python lib (*lib*)... (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
-  checking commit editor...
+  checking default template (*mercurial?templates?map-cmdline.default) (glob)
+  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
   checking username...
    no username supplied
    (specify a username in your configuration file)
@@ -38,8 +64,9 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking Python lib (*lib*)... (glob)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
-  checking commit editor...
-  checking username...
+  checking default template (*mercurial?templates?map-cmdline.default) (glob)
+  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
+  checking username (test)
   no problems detected
 
 #if test-repo
