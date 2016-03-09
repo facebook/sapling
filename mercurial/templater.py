@@ -547,12 +547,8 @@ def label(context, mapping, args):
         # i18n: "label" is a keyword
         raise error.ParseError(_("label expects two arguments"))
 
+    ui = mapping['ui']
     thing = evalstring(context, mapping, args[1])
-
-    ui = mapping.get('ui', '')
-    if isinstance(ui, str):
-        return thing
-
     # preserve unknown symbol as literal so effects like 'red', 'bold',
     # etc. don't need to be quoted
     label = evalstringliteral(context, mapping, args[0])
