@@ -2206,6 +2206,7 @@ def _graphnodeformatter(ui, displayer):
     def formatnode(repo, ctx):
         props['ctx'] = ctx
         props['repo'] = repo
+        props['ui'] = repo.ui
         props['revcache'] = {}
         return templater.stringify(templ('graphnode', **props))
     return formatnode

@@ -2407,4 +2407,11 @@ node template with changeset_templater (shared cache variable):
   o |  5 null+5
   | |
 
+label() should just work in node template:
+
+  $ hg log -Gqr 7 --config extensions.color= --color=debug \
+  > --config ui.graphnodetemplate='{label("branch.{branch}", rev)}'
+  [branch.default|7]  [log.node|7:02dbb8e276b8]
+  |
+
   $ cd ..
