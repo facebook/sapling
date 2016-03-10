@@ -245,7 +245,7 @@ def fixupamend(ui, repo):
         active = bmactive(repo)
         opts = {
             'rev' : [str(c.rev()) for c in old.descendants()],
-            'dest' : active
+            'dest' : current.rev()
         }
 
         if opts['rev'] and opts['rev'][0]:

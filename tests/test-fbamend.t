@@ -58,6 +58,14 @@ Test basic functions
   $ hg amend
   warning: the commit's children were left behind
   (use 'hg amend --fixup' to rebase them)
+  $ hg up 0
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo x >> x
+  $ hg commit -Am 'extra commit to test multiple heads'
+  adding x
+  created new head
+  $ hg up 3
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg amend --fixup
   rebasing the children of 34414ab6546d.preamend
   rebasing 2:a764265b74cf "b"
@@ -66,7 +74,7 @@ Test basic functions
   $ echo a >> a
   $ hg amend --rebase
   rebasing the children of 7817096bf624.preamend
-  rebasing 2:e1c831172263 "b"
+  rebasing 3:e1c831172263 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/e1c831172263-eee3b8f6-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/34414ab6546d-72d06a8e-preamend-backup.hg (glob)
 
@@ -74,15 +82,15 @@ Test that current bookmark is maintained
 
   $ hg bookmark bm
   $ hg bookmarks
-   * bm                        1:7817096bf624
+   * bm                        2:7817096bf624
   $ echo a >> a
   $ hg amend --rebase
   rebasing the children of bm.preamend
-  rebasing 2:1e390e3ec656 "b"
+  rebasing 3:1e390e3ec656 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/1e390e3ec656-8362bab7-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7817096bf624-d72fddeb-preamend-backup.hg (glob)
   $ hg bookmarks
-   * bm                        1:7635008c16e1
+   * bm                        2:7635008c16e1
 
 Set up education
 
@@ -106,6 +114,8 @@ Test that bookmarked re-amends work well
   | |
   | o  7635008c16e1 aa bm.preamend
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ echo a >> a
@@ -118,11 +128,13 @@ Test that bookmarked re-amends work well
   | |
   | o  7635008c16e1 aa bm.preamend
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ hg amend --fixup
   rebasing the children of bm.preamend
-  rebasing 2:2d6884e15790 "b"
+  rebasing 3:2d6884e15790 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/2d6884e15790-909076cb-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/7635008c16e1-65f65ff6-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -130,10 +142,12 @@ Test that bookmarked re-amends work well
   |
   @  0889a0030a17 aa bm
   |
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ hg bookmarks
-   * bm                        1:0889a0030a17
+   * bm                        2:0889a0030a17
 
 Test that unbookmarked re-amends work well
 
@@ -151,6 +165,8 @@ Test that unbookmarked re-amends work well
   | |
   | o  0889a0030a17 aa 94eb429c9465.preamend
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ echo a >> a
@@ -163,11 +179,13 @@ Test that unbookmarked re-amends work well
   | |
   | o  0889a0030a17 aa 83455f1f6049.preamend
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ hg amend --fixup
   rebasing the children of 83455f1f6049.preamend
-  rebasing 2:6ba7926ba204 "b"
+  rebasing 3:6ba7926ba204 "b"
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/6ba7926ba204-9ac223ef-backup.hg (glob)
   saved backup bundle to $TESTTMP/repo/.hg/strip-backup/0889a0030a17-6bebea0c-preamend-backup.hg (glob)
   $ hg log -G -T '{node|short} {desc} {bookmarks}\n'
@@ -175,6 +193,8 @@ Test that unbookmarked re-amends work well
   |
   @  83455f1f6049 aa
   |
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
 
@@ -192,6 +212,7 @@ Test interaction with histedit
   765b28efbe8b c
   455e4104f605 b
   83455f1f6049 aa
+  3f6197b00eba extra commit to test multiple heads
   cb9a9f314b8b a
   $ hg histedit ".^^" --commands - <<EOF
   > pick 83455f1f6049
@@ -219,6 +240,8 @@ Test interaction with histedit
   | |
   | o  83455f1f6049 aa
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ hg amend --rebase
@@ -238,6 +261,8 @@ Test interaction with histedit
   | |
   | o  83455f1f6049 aa
   |/
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
   $ hg histedit --continue
@@ -249,6 +274,8 @@ Test interaction with histedit
   |
   o  048e86baa19d message from exec
   |
+  | o  3f6197b00eba extra commit to test multiple heads
+  |/
   o  cb9a9f314b8b a
   
 Test that --message is respected
@@ -302,12 +329,14 @@ no warning if only obsolete markers are enabled
 Fbamend respects the createmarkers option
 
   $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
-  @  3 01dd7a39383a bar
+  @  4 01dd7a39383a bar
   |
-  o  2 3166f3b5587d commit --amend message
+  o  3 3166f3b5587d commit --amend message
   |
-  o  1 048e86baa19d message from exec
+  o  2 048e86baa19d message from exec
   |
+  | o  1 3f6197b00eba extra commit to test multiple heads
+  |/
   o  0 cb9a9f314b8b a
   
   $ hg up 048e86
@@ -332,23 +361,25 @@ Fbamend respects the createmarkers option
   (use 'hg amend --fixup' to rebase them)
   $ hg amend --fixup
   rebasing the children of 3a4d2824efc1.preamend
-  rebasing 2:3166f3b5587d "commit --amend message"
-  rebasing 3:01dd7a39383a "bar"
+  rebasing 3:3166f3b5587d "commit --amend message"
+  rebasing 4:01dd7a39383a "bar"
   $ hg log -G -T '{rev} {node|short} {desc} {bookmarks}\n'
-  o  7 9752120dcffe bar
+  o  8 9752120dcffe bar
   |
-  o  6 bc3b6a46cdb4 commit --amend message
+  o  7 bc3b6a46cdb4 commit --amend message
   |
-  @  5 3a4d2824efc1 message from exec
+  @  6 3a4d2824efc1 message from exec
   |
+  | o  1 3f6197b00eba extra commit to test multiple heads
+  |/
   o  0 cb9a9f314b8b a
   
   $ echo "cc" > cc
   $ hg add cc
   $ hg amend --rebase --traceback
   rebasing the children of 1c16dd8e35d2.preamend
-  rebasing 6:bc3b6a46cdb4 "commit --amend message"
-  rebasing 7:9752120dcffe "bar"
+  rebasing 7:bc3b6a46cdb4 "commit --amend message"
+  rebasing 8:9752120dcffe "bar"
 
 Test that fbamend works with interactive commits (crecord)
   $ cat >> $HGRCPATH << EOF
@@ -381,7 +412,7 @@ preamend bookmark exists
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
   rebasing the children of 6cd3bb4b4ada.preamend
-  rebasing 13:ab75b93512f7 "descendant commit"
+  rebasing 14:ab75b93512f7 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
@@ -400,7 +431,7 @@ preamend bookmark exists
 Make sure fixup gets rid of preamend bookmarks (there should be none)
   $ hg amend --fixup
   rebasing the children of 039ee914a5fd.preamend
-  rebasing 16:2c40a2aa23f1 "descendant commit"
+  rebasing 17:2c40a2aa23f1 "descendant commit"
 preamend bookmark has been removed
   $ hg log -G -T '{bookmarks}' | grep 'preamend'
   [1]
