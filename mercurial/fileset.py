@@ -14,6 +14,7 @@ from . import (
     error,
     merge,
     parser,
+    registrar,
     util,
 )
 
@@ -144,34 +145,7 @@ _statuscallers = set()
 # filesets using matchctx.existing()
 _existingcallers = set()
 
-def predicate(decl, callstatus=False, callexisting=False):
-    """Return a decorator for fileset predicate function
-
-    'decl' argument is the declaration (including argument list like
-    'adds(pattern)') or the name (for internal use only) of predicate.
-
-    Optional 'callstatus' argument indicates whether predicate implies
-    'matchctx.status()' at runtime or not (False, by default).
-
-    Optional 'callexisting' argument indicates whether predicate
-    implies 'matchctx.existing()' at runtime or not (False, by
-    default).
-    """
-    def decorator(func):
-        i = decl.find('(')
-        if i > 0:
-            name = decl[:i]
-        else:
-            name = decl
-        symbols[name] = func
-        if callstatus:
-            _statuscallers.add(name)
-        if callexisting:
-            _existingcallers.add(name)
-        if func.__doc__:
-            func.__doc__ = "``%s``\n    %s" % (decl, func.__doc__.strip())
-        return func
-    return decorator
+predicate = registrar.filesetpredicate()
 
 @predicate('modified()', callstatus=True)
 def modified(mctx, x):
@@ -569,6 +543,9 @@ def loadpredicate(ui, extname, registrarobj):
             _statuscallers.add(name)
         if func._callexisting:
             _existingcallers.add(name)
+
+# load built-in predicates explicitly to setup _statuscallers/_existingcallers
+loadpredicate(None, None, predicate)
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()
