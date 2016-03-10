@@ -266,10 +266,10 @@ def _canusebundle2(op):
 class pushoperation(object):
     """A object that represent a single push operation
 
-    It purpose is to carry push related state and very common operation.
+    Its purpose is to carry push related state and very common operations.
 
-    A new should be created at the beginning of each push and discarded
-    afterward.
+    A new pushoperation should be created at the beginning of each push and
+    discarded afterward.
     """
 
     def __init__(self, repo, remote, force=False, revs=None, newbranch=False,
