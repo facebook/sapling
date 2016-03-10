@@ -530,13 +530,13 @@ test python hooks
   (run with --traceback for stack trace)
   [255]
 
-  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])'
+The second egrep is to filter out lines like '    ^', which are slightly
+different between Python 2.6 and Python 2.7.
+  $ hg pull ../a --traceback 2>&1 | egrep -v '^( +File|    [_a-zA-Z*(])' | egrep -v '^( )+(\^)?$'
   pulling from ../a
   searching for changes
   exception from first failed import attempt:
   Traceback (most recent call last):
-      
-      ^
   SyntaxError: invalid syntax
   exception from second failed import attempt:
   Traceback (most recent call last):
