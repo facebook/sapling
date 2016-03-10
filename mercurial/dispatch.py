@@ -31,6 +31,7 @@ from . import (
     error,
     extensions,
     fancyopts,
+    fileset,
     hg,
     hook,
     revset,
@@ -753,6 +754,7 @@ _loaded = set()
 #   extraobj) arguments
 extraloaders = [
     ('cmdtable', commands, 'loadcmdtable'),
+    ('filesetpredicate', fileset, 'loadpredicate'),
     ('revsetpredicate', revset, 'loadpredicate'),
 ]
 

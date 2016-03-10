@@ -560,5 +560,15 @@ def getfileset(ctx, expr):
 def prettyformat(tree):
     return parser.prettyformat(tree, ('string', 'symbol'))
 
+def loadpredicate(ui, extname, registrarobj):
+    """Load fileset predicates from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        symbols[name] = func
+        if func._callstatus:
+            _statuscallers.add(name)
+        if func._callexisting:
+            _existingcallers.add(name)
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = symbols.values()

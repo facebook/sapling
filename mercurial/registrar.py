@@ -122,3 +122,42 @@ class revsetpredicate(_funcregistrarbase):
 
     def _extrasetup(self, name, func, safe=False):
         func._safe = safe
+
+class filesetpredicate(_funcregistrarbase):
+    """Decorator to register fileset predicate
+
+    Usage::
+
+        filesetpredicate = registrar.filesetpredicate()
+
+        @filesetpredicate('mypredicate()')
+        def mypredicatefunc(mctx, x):
+            '''Explanation of this fileset predicate ....
+            '''
+            pass
+
+    The first string argument is used also in online help.
+
+    Optional argument 'callstatus' indicates whether a predicate
+     implies 'matchctx.status()' at runtime or not (False, by
+     default).
+
+    Optional argument 'callexisting' indicates whether a predicate
+    implies 'matchctx.existing()' at runtime or not (False, by
+    default).
+
+    'filesetpredicate' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'filesetpredicate' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'fileset.loadpredicate()' is needed.
+    """
+    _getname = _funcregistrarbase._parsefuncdecl
+    _docformat = "``%s``\n    %s"
+
+    def _extrasetup(self, name, func, callstatus=False, callexisting=False):
+        func._callstatus = callstatus
+        func._callexisting = callexisting

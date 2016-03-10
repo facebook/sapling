@@ -351,9 +351,10 @@ Test safety of 'encoding' on removed files
 Test detection of unintentional 'matchctx.existing()' invocation
 
   $ cat > $TESTTMP/existingcaller.py <<EOF
-  > from mercurial import fileset
+  > from mercurial import registrar
   > 
-  > @fileset.predicate('existingcaller()', callexisting=False)
+  > filesetpredicate = registrar.filesetpredicate()
+  > @filesetpredicate('existingcaller()', callexisting=False)
   > def existingcaller(mctx, x):
   >     # this 'mctx.existing()' invocation is unintentional
   >     return [f for f in mctx.existing()]
