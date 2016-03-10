@@ -99,6 +99,7 @@ from mercurial import (
     context,
     extensions,
     localrepo,
+    merge,
     pathutil,
     scmutil,
     util,
@@ -547,6 +548,8 @@ def extsetup(ui):
         # An assist for avoiding the dangling-symlink fsevents bug
         extensions.wrapfunction(os, 'symlink', wrapsymlink)
 
+    extensions.wrapfunction(merge, 'update', wrapupdate)
+
 def wrapsymlink(orig, source, link_name):
     ''' if we create a dangling symlink, also touch the parent dir
     to encourage fsevents notifications to work more correctly '''
@@ -557,6 +560,71 @@ def wrapsymlink(orig, source, link_name):
             os.utime(os.path.dirname(link_name), None)
         except OSError:
             pass
+
+class state_update(object):
+    ''' This context mananger is responsible for dispatching the state-enter
+        and state-leave signals to the watchman service '''
+
+    def __init__(self, repo, node, distance, partial):
+        self.repo = repo
+        self.node = node
+        self.distance = distance
+        self.partial = partial
+
+    def __enter__(self):
+        self._state('state-enter')
+        return self
+
+    def __exit__(self, type_, value, tb):
+        status = 'ok' if type_ is None else 'failed'
+        self._state('state-leave', status=status)
+
+    def _state(self, cmd, status='ok'):
+        if not util.safehasattr(self.repo, '_watchmanclient'):
+            return
+        try:
+            commithash = self.repo[self.node].hex()
+            self.repo._watchmanclient.command(cmd, {
+                'name': 'hg.update',
+                'metadata': {
+                    # the target revision
+                    'rev': commithash,
+                    # approximate number of commits between current and target
+                    'distance': self.distance,
+                    # success/failure (only really meaningful for state-leave)
+                    'status': status,
+                    # whether the working copy parent is changing
+                    'partial': self.partial,
+            }})
+        except Exception as e:
+            # Swallow any errors; fire and forget
+            self.repo.ui.log(
+                'watchman', 'Exception %s while running %s\n', e, cmd)
+
+# Bracket working copy updates with calls to the watchman state-enter
+# and state-leave commands.  This allows clients to perform more intelligent
+# settling during bulk file change scenarios
+# https://facebook.github.io/watchman/docs/cmd/subscribe.html#advanced-settling
+def wrapupdate(orig, repo, node, branchmerge, force, ancestor=None,
+               mergeancestor=False, labels=None, matcher=None, **kwargs):
+
+    distance = 0
+    partial = True
+    if matcher is None or matcher.always():
+        partial = False
+        wc = repo[None]
+        parents = wc.parents()
+        if len(parents) == 2:
+            anc = repo.changelog.ancestor(parents[0].node(), parents[1].node())
+            ancrev = repo[anc].rev()
+            distance = abs(repo[node].rev() - ancrev)
+        elif len(parents) == 1:
+            distance = abs(repo[node].rev() - parents[0].rev())
+
+    with state_update(repo, node, distance, partial):
+        return orig(
+            repo, node, branchmerge, force, ancestor, mergeancestor,
+            labels, matcher, *kwargs)
 
 def reposetup(ui, repo):
     # We don't work with largefiles or inotify
