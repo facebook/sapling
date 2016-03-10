@@ -170,6 +170,14 @@ def add(ui, repo, *args, **kwargs):
 
     ui.status((str(cmd)), "\n")
 
+def am(ui, repo, *args, **kwargs):
+    cmdoptions=[
+    ]
+    args, opts = parseoptions(ui, cmdoptions, args)
+    cmd = Command('mimport -m')
+    ui.status(str(cmd), "\n\n")
+    ui.status(_("note: requires the MboxExtension and the MqExtension.\n"))
+
 def apply(ui, repo, *args, **kwargs):
     cmdoptions = [
         ('p', 'p', int, ''),
@@ -1012,6 +1020,7 @@ def tag(ui, repo, *args, **kwargs):
 
 gitcommands = {
     'add': add,
+    'am': am,
     'apply': apply,
     'bisect': bisect,
     'blame': blame,
