@@ -2384,9 +2384,9 @@ class TestRunner(object):
     def _killchgdaemons(self):
         """Kill all background chg command servers spawned by tests"""
         for f in os.listdir(self._chgsockdir):
-            if not f.endswith(b'.pid'):
+            if '.' in f:
                 continue
-            killdaemons(os.path.join(self._chgsockdir, f))
+            os.unlink(os.path.join(self._chgsockdir, f))
 
     def _outputcoverage(self):
         """Produce code coverage output."""

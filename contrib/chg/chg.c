@@ -33,7 +33,6 @@ struct cmdserveropts {
 	char sockname[UNIX_PATH_MAX];
 	char redirectsockname[UNIX_PATH_MAX];
 	char lockfile[UNIX_PATH_MAX];
-	char pidfile[UNIX_PATH_MAX];
 	size_t argsize;
 	const char **args;
 	int lockfd;
@@ -149,15 +148,11 @@ static void setcmdserveropts(struct cmdserveropts *opts)
 	const char *basename = (envsockname) ? envsockname : sockdir;
 	const char *sockfmt = (envsockname) ? "%s" : "%s/server";
 	const char *lockfmt = (envsockname) ? "%s.lock" : "%s/lock";
-	const char *pidfmt = (envsockname) ? "%s.pid" : "%s/pid";
 	r = snprintf(opts->sockname, sizeof(opts->sockname), sockfmt, basename);
 	if (r < 0 || (size_t)r >= sizeof(opts->sockname))
 		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
 	r = snprintf(opts->lockfile, sizeof(opts->lockfile), lockfmt, basename);
 	if (r < 0 || (size_t)r >= sizeof(opts->lockfile))
-		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
-	r = snprintf(opts->pidfile, sizeof(opts->pidfile), pidfmt, basename);
-	if (r < 0 || (size_t)r >= sizeof(opts->pidfile))
 		abortmsg("too long TMPDIR or CHGSOCKNAME (r = %d)", r);
 }
 
@@ -214,7 +209,6 @@ static void execcmdserver(const struct cmdserveropts *opts)
 		"--cmdserver", "chgunix",
 		"--address", opts->sockname,
 		"--daemon-postexec", "chdir:/",
-		"--pid-file", opts->pidfile,
 		"--config", "extensions.chgserver=",
 	};
 	size_t baseargvsize = sizeof(baseargv) / sizeof(baseargv[0]);
@@ -314,21 +308,13 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 	return hgc;
 }
 
-static void killcmdserver(const struct cmdserveropts *opts, int sig)
+static void killcmdserver(const struct cmdserveropts *opts)
 {
-	FILE *fp = fopen(opts->pidfile, "r");
-	if (!fp)
-		abortmsg("cannot open %s (errno = %d)", opts->pidfile, errno);
-	int pid = 0;
-	int n = fscanf(fp, "%d", &pid);
-	fclose(fp);
-	if (n != 1 || pid <= 0)
-		abortmsg("cannot read pid from %s", opts->pidfile);
-
-	if (kill((pid_t)pid, sig) < 0) {
-		if (errno == ESRCH)
-			return;
-		abortmsg("cannot kill %d (errno = %d)", pid, errno);
+	/* resolve config hash */
+	char *resolvedpath = realpath(opts->sockname, NULL);
+	if (resolvedpath) {
+		unlink(resolvedpath);
+		free(resolvedpath);
 	}
 }
 
@@ -536,11 +522,8 @@ int main(int argc, const char *argv[], const char *envp[])
 	setcmdserverargs(&opts, argc, argv);
 
 	if (argc == 2) {
-		int sig = 0;
-		if (strcmp(argv[1], "--kill-chg-daemon") == 0)
-			sig = SIGTERM;
-		if (sig > 0) {
-			killcmdserver(&opts, sig);
+		if (strcmp(argv[1], "--kill-chg-daemon") == 0) {
+			killcmdserver(&opts);
 			return 0;
 		}
 	}
