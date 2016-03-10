@@ -76,9 +76,8 @@ def uisetup(ui):
     revset.safesymbols.add('smartlog')
 
     def singlepublicsuccessor(repo, ctx, templ, **args):
-        """Get a single public successor for a given node
-        If there's none or more than one, return empty string
-
+        """:singlepublicsuccessor: String. Get a single public successor for a
+        given node.  If there's none or more than one, return empty string.
         This is intended to be used for "Landed as" marking
         in `hg sl` output."""
         successorssets = obsolete.successorssets(repo, ctx.node())
