@@ -13,7 +13,6 @@ Usage:
  $ chg help                 # show help of Mercurial
  $ alias hg=chg             # replace hg command
  $ chg --kill-chg-daemon    # terminate background server
- $ chg --reload-chg-daemon  # reload configuration files
 
 Environment variables:
 
@@ -21,8 +20,7 @@ Although cHg tries to update environment variables, some of them cannot be
 changed after spawning the server. The following variables are specially
 handled:
 
- * configuration files are reloaded if HGPLAIN or HGPLAINEXCEPT changed, but
-   some behaviors won't change correctly.
+ * configuration files are reloaded automatically by default.
  * CHGHG or HG specifies the path to the hg executable spawned as the
    background command server.
 

@@ -539,8 +539,6 @@ int main(int argc, const char *argv[], const char *envp[])
 		int sig = 0;
 		if (strcmp(argv[1], "--kill-chg-daemon") == 0)
 			sig = SIGTERM;
-		if (strcmp(argv[1], "--reload-chg-daemon") == 0)
-			sig = SIGHUP;
 		if (sig > 0) {
 			killcmdserver(&opts, sig);
 			return 0;

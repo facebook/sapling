@@ -28,9 +28,6 @@
 'validate' command
     reload the config and check if the server is up to date
 
-'SIGHUP' signal
-    reload configuration files
-
 Config
 ------
 
@@ -48,7 +45,6 @@ import errno
 import inspect
 import os
 import re
-import signal
 import struct
 import sys
 import threading
@@ -616,7 +612,6 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
 
 class chgunixservice(commandserver.unixservice):
     def init(self):
-        signal.signal(signal.SIGHUP, self._reloadconfig)
         self._inithashstate()
         class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
                   SocketServer.UnixStreamServer):
@@ -646,9 +641,6 @@ class chgunixservice(commandserver.unixservice):
         tempaddress = _tempaddress(self.baseaddress)
         os.symlink(os.path.basename(self.address), tempaddress)
         util.rename(tempaddress, self.baseaddress)
-
-    def _reloadconfig(self, signum, frame):
-        self.ui = self.server.ui = _renewui(self.ui)
 
     def run(self):
         try:
