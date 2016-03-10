@@ -168,6 +168,10 @@ docker-debian-jessie:
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
 
+docker-ubuntu-trusty:
+	mkdir -p packages/ubuntu-trusty
+	contrib/dockerdeb ubuntu trusty
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
