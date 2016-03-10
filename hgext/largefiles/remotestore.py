@@ -96,3 +96,18 @@ class remotestore(basestore.basestore):
     def batch(self):
         '''Support for remote batching.'''
         return wireproto.remotebatch(self)
+
+    def _put(self, hash, fd):
+        '''Put file with the given hash in the remote store.'''
+        raise NotImplementedError('abstract method')
+
+    def _get(self, hash):
+        '''Get file with the given hash from the remote store.'''
+        raise NotImplementedError('abstract method')
+
+    def _stat(self, hashes):
+        '''Get information about availability of files specified by
+        hashes in the remote store. Return dictionary mapping hashes
+        to return code where 0 means that file is available, other
+        values if not.'''
+        raise NotImplementedError('abstract method')
