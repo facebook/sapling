@@ -45,6 +45,11 @@ class webproto(wireproto.abstractserverproto):
         return [data[k] for k in keys]
     def _args(self):
         args = self.req.form.copy()
+        postlen = int(self.req.env.get('HTTP_X_HGARGS_POST', 0))
+        if postlen:
+            args.update(cgi.parse_qs(
+                self.req.read(postlen), keep_blank_values=True))
+            return args
         chunks = []
         i = 1
         while True:

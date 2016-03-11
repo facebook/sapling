@@ -19,7 +19,9 @@ Local:
 
 HTTP:
 
-  $ hg serve -R repo -p $HGPORT -d --pid-file=hg1.pid -E error.log -A access.log
+  $ hg  serve -R repo -p $HGPORT -d --pid-file=hg1.pid \
+  >   -E error.log -A access.log \
+  >   --config experimental.httppostargs=yes
   $ cat hg1.pid >> $DAEMON_PIDS
 
   $ hg debugwireargs http://localhost:$HGPORT/ un deux trois quatre
@@ -36,6 +38,61 @@ HTTP:
   un deux trois onethousandcharactersxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx None
   $ cat error.log
   $ cat access.log
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:39 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:39 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:43 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:43 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:27 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:27 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:1033 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:1033 (glob)
+
+HTTP without args-in-POST:
+  $ hg serve -R repo -p $HGPORT1 -d --pid-file=hg1.pid -E error.log -A access.log
+  $ cat hg1.pid >> $DAEMON_PIDS
+
+  $ hg debugwireargs http://localhost:$HGPORT1/ un deux trois quatre
+  un deux trois quatre None
+  $ hg debugwireargs http://localhost:$HGPORT1/ \ un deux trois\  qu\ \ atre
+   un deux trois  qu  atre None
+  $ hg debugwireargs http://localhost:$HGPORT1/ eins zwei --four vier
+  eins zwei None vier None
+  $ hg debugwireargs http://localhost:$HGPORT1/ eins zwei
+  eins zwei None None None
+  $ hg debugwireargs http://localhost:$HGPORT1/ eins zwei --five fuenf
+  eins zwei None None None
+  $ hg debugwireargs http://localhost:$HGPORT1/ un deux trois onethousandcharactersxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  un deux trois onethousandcharactersxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx None
+  $ cat error.log
+  $ cat access.log
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:39 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:39 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:43 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:43 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:27 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:27 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:17 (glob)
+  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:1033 (glob)
+  * - - [*] "POST /?cmd=debugwireargs HTTP/1.1" 200 - x-hgargs-post:1033 (glob)
   * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
   * - - [*] "GET /?cmd=debugwireargs HTTP/1.1" 200 - x-hgarg-1:four=quatre&one=un&three=trois&two=deux (glob)
   * - - [*] "GET /?cmd=debugwireargs HTTP/1.1" 200 - x-hgarg-1:four=quatre&one=un&three=trois&two=deux (glob)

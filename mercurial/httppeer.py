@@ -97,7 +97,22 @@ class httppeer(wireproto.wirepeer):
         self.ui.debug("sending %s command\n" % cmd)
         q = [('cmd', cmd)]
         headersize = 0
-        if True:
+        # Important: don't use self.capable() here or else you end up
+        # with infinite recursion when trying to look up capabilities
+        # for the first time.
+        postargsok = self.caps is not None and 'httppostargs' in self.caps
+        # TODO: support for httppostargs when data is a file-like
+        # object rather than a basestring
+        canmungedata = not data or isinstance(data, basestring)
+        if postargsok and canmungedata:
+            strargs = urllib.urlencode(sorted(args.items()))
+            if strargs:
+                if not data:
+                    data = strargs
+                elif isinstance(data, basestring):
+                    data = strargs + data
+                headers['X-HgArgs-Post'] = len(strargs)
+        else:
             if len(args) > 0:
                 httpheader = self.capable('httpheader')
                 if httpheader:
