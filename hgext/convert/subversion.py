@@ -52,7 +52,7 @@ try:
     import svn.core
     import svn.ra
     import svn.delta
-    import transport
+    from . import transport
     import warnings
     warnings.filterwarnings('ignore',
             module='svn.core',
