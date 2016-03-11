@@ -16,7 +16,7 @@ map from a changeset hash to its hash in the source repository.
 
 from mercurial.i18n import _
 import os, tempfile
-from mercurial.node import short
+from mercurial import node as nodemod
 from mercurial import bundlerepo, hg, merge, match
 from mercurial import patch, revlog, scmutil, util, error, cmdutil
 from mercurial import registrar, revset, templatekw, exchange
@@ -64,7 +64,7 @@ class transplants(object):
             fp = self.opener(self.transplantfile, 'w')
             for list in self.transplants.itervalues():
                 for t in list:
-                    l, r = map(revlog.hex, (t.lnode, t.rnode))
+                    l, r = map(nodemod.hex, (t.lnode, t.rnode))
                     fp.write(l + ':' + r + '\n')
             fp.close()
         self.dirty = False
@@ -133,7 +133,7 @@ class transplanter(object):
             tr = repo.transaction('transplant')
             for rev in revs:
                 node = revmap[rev]
-                revstr = '%s:%s' % (rev, short(node))
+                revstr = '%s:%s' % (rev, nodemod.short(node))
 
                 if self.applied(repo, node, p1):
                     self.ui.warn(_('skipping already applied revision %s\n') %
@@ -168,13 +168,14 @@ class transplanter(object):
                 if parents[1] != revlog.nullid:
                     if not opts.get('parent'):
                         self.ui.note(_('skipping merge changeset %s:%s\n')
-                                     % (rev, short(node)))
+                                     % (rev, nodemod.short(node)))
                         skipmerge = True
                     else:
                         parent = source.lookup(opts['parent'])
                         if parent not in parents:
                             raise error.Abort(_('%s is not a parent of %s') %
-                                             (short(parent), short(node)))
+                                              (nodemod.short(parent),
+                                               nodemod.short(node)))
                 else:
                     parent = parents[0]
 
@@ -204,11 +205,11 @@ class transplanter(object):
                             raise
                         if n and domerge:
                             self.ui.status(_('%s merged at %s\n') % (revstr,
-                                      short(n)))
+                                      nodemod.short(n)))
                         elif n:
                             self.ui.status(_('%s transplanted to %s\n')
-                                           % (short(node),
-                                              short(n)))
+                                           % (nodemod.short(node),
+                                              nodemod.short(n)))
                     finally:
                         if patchfile:
                             os.unlink(patchfile)
@@ -241,7 +242,7 @@ class transplanter(object):
             self.ui.system('%s %s %s' % (filter, util.shellquote(headerfile),
                                          util.shellquote(patchfile)),
                            environ={'HGUSER': changelog[1],
-                                    'HGREVISION': revlog.hex(node),
+                                    'HGREVISION': nodemod.hex(node),
                                     },
                            onerr=error.Abort, errprefix=_('filter failed'))
             user, date, msg = self.parselog(file(headerfile))[1:4]
@@ -261,9 +262,9 @@ class transplanter(object):
 
         if log:
             # we don't translate messages inserted into commits
-            message += '\n(transplanted from %s)' % revlog.hex(node)
+            message += '\n(transplanted from %s)' % nodemod.hex(node)
 
-        self.ui.status(_('applying %s\n') % short(node))
+        self.ui.status(_('applying %s\n') % nodemod.short(node))
         self.ui.note('%s %s\n%s\n' % (user, date, message))
 
         if not patchfile and not merge:
@@ -295,7 +296,8 @@ class transplanter(object):
         n = repo.commit(message, user, date, extra=extra, match=m,
                         editor=self.getcommiteditor())
         if not n:
-            self.ui.warn(_('skipping emptied changeset %s\n') % short(node))
+            self.ui.warn(_('skipping emptied changeset %s\n') %
+                           nodemod.short(node))
             return None
         if not merge:
             self.transplants.set(n, node)
@@ -310,11 +312,12 @@ class transplanter(object):
         if os.path.exists(os.path.join(self.path, 'journal')):
             n, node = self.recover(repo, source, opts)
             if n:
-                self.ui.status(_('%s transplanted as %s\n') % (short(node),
-                                                               short(n)))
+                self.ui.status(_('%s transplanted as %s\n') %
+                                 (nodemod.short(node),
+                                  nodemod.short(n)))
             else:
                 self.ui.status(_('%s skipped due to empty diff\n')
-                               % (short(node),))
+                               % (nodemod.short(node),))
         seriespath = os.path.join(self.path, 'series')
         if not os.path.exists(seriespath):
             self.transplants.write()
@@ -341,7 +344,8 @@ class transplanter(object):
                 parent = source.lookup(opts['parent'])
                 if parent not in parents:
                     raise error.Abort(_('%s is not a parent of %s') %
-                                     (short(parent), short(node)))
+                                      (nodemod.short(parent),
+                                       nodemod.short(node)))
             else:
                 merge = True
 
@@ -350,7 +354,7 @@ class transplanter(object):
             p1, p2 = repo.dirstate.parents()
             if p1 != parent:
                 raise error.Abort(_('working directory not at transplant '
-                                   'parent %s') % revlog.hex(parent))
+                                   'parent %s') % nodemod.hex(parent))
             if merge:
                 repo.setparents(p1, parents[1])
             modified, added, removed, deleted = repo.status()[:4]
@@ -391,11 +395,11 @@ class transplanter(object):
             os.mkdir(self.path)
         series = self.opener('series', 'w')
         for rev in sorted(revmap):
-            series.write(revlog.hex(revmap[rev]) + '\n')
+            series.write(nodemod.hex(revmap[rev]) + '\n')
         if merges:
             series.write('# Merges\n')
             for m in merges:
-                series.write(revlog.hex(m) + '\n')
+                series.write(nodemod.hex(m) + '\n')
         series.close()
 
     def parselog(self, fp):
@@ -431,10 +435,10 @@ class transplanter(object):
         fp = self.opener('journal', 'w')
         fp.write('# User %s\n' % user)
         fp.write('# Date %s\n' % date)
-        fp.write('# Node ID %s\n' % revlog.hex(p2))
-        fp.write('# Parent ' + revlog.hex(p1) + '\n')
+        fp.write('# Node ID %s\n' % nodemod.hex(p2))
+        fp.write('# Parent ' + nodemod.hex(p1) + '\n')
         if merge:
-            fp.write('# Parent ' + revlog.hex(p2) + '\n')
+            fp.write('# Parent ' + nodemod.hex(p2) + '\n')
         fp.write(message.rstrip() + '\n')
         fp.close()
 
@@ -711,7 +715,7 @@ def kwtransplanted(repo, ctx, **args):
     """:transplanted: String. The node identifier of the transplanted
     changeset if any."""
     n = ctx.extra().get('transplant_source')
-    return n and revlog.hex(n) or ''
+    return n and nodemod.hex(n) or ''
 
 def extsetup(ui):
     templatekw.keywords['transplanted'] = kwtransplanted
