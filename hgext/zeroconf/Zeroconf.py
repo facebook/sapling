@@ -555,7 +555,7 @@ class DNSIncoming(object):
         """Reads answers, authorities and additionals section of the packet"""
         format = '!HHiH'
         length = struct.calcsize(format)
-        n = self.numanswers + self.numAuthorities + self.numadditionals
+        n = self.numanswers + self.numauthorities + self.numadditionals
         for i in range(0, n):
             domain = self.readName()
             info = struct.unpack(format,
