@@ -2553,7 +2553,7 @@ class hooks(object):
 def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
     Skips the 'skip' last entries. By default it will flush stdout first.
-    It can be used everywhere and do intentionally not require an ui object.
+    It can be used everywhere and intentionally does not require an ui object.
     Not be used in production code but very convenient while developing.
     '''
     if otherf:
