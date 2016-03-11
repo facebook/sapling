@@ -108,12 +108,12 @@ class httppeer(wireproto.wirepeer):
                 headerfmt = 'X-HgArg-%s'
                 contentlen = headersize - len(headerfmt % '000' + ': \r\n')
                 headernum = 0
+                varyheaders = []
                 for i in xrange(0, len(encargs), contentlen):
                     headernum += 1
                     header = headerfmt % str(headernum)
                     headers[header] = encargs[i:i + contentlen]
-                varyheaders = [
-                    headerfmt % str(h) for h in range(1, headernum + 1)]
+                    varyheaders.append(header)
                 headers['Vary'] = ','.join(varyheaders)
             else:
                 q += sorted(args.items())
