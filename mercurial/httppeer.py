@@ -97,24 +97,26 @@ class httppeer(wireproto.wirepeer):
         self.ui.debug("sending %s command\n" % cmd)
         q = [('cmd', cmd)]
         headersize = 0
-        if len(args) > 0:
-            httpheader = self.capable('httpheader')
-            if httpheader:
-                headersize = int(httpheader.split(',', 1)[0])
-        if headersize > 0:
-            # The headers can typically carry more data than the URL.
-            encargs = urllib.urlencode(sorted(args.items()))
-            headerfmt = 'X-HgArg-%s'
-            contentlen = headersize - len(headerfmt % '000' + ': \r\n')
-            headernum = 0
-            for i in xrange(0, len(encargs), contentlen):
-                headernum += 1
-                header = headerfmt % str(headernum)
-                headers[header] = encargs[i:i + contentlen]
-            varyheaders = [headerfmt % str(h) for h in range(1, headernum + 1)]
-            headers['Vary'] = ','.join(varyheaders)
-        else:
-            q += sorted(args.items())
+        if True:
+            if len(args) > 0:
+                httpheader = self.capable('httpheader')
+                if httpheader:
+                    headersize = int(httpheader.split(',', 1)[0])
+            if headersize > 0:
+                # The headers can typically carry more data than the URL.
+                encargs = urllib.urlencode(sorted(args.items()))
+                headerfmt = 'X-HgArg-%s'
+                contentlen = headersize - len(headerfmt % '000' + ': \r\n')
+                headernum = 0
+                for i in xrange(0, len(encargs), contentlen):
+                    headernum += 1
+                    header = headerfmt % str(headernum)
+                    headers[header] = encargs[i:i + contentlen]
+                varyheaders = [
+                    headerfmt % str(h) for h in range(1, headernum + 1)]
+                headers['Vary'] = ','.join(varyheaders)
+            else:
+                q += sorted(args.items())
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         size = 0
