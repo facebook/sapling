@@ -71,6 +71,14 @@ def loadpath(path, module_name):
                 exc.filename = path # python does not fill this
             raise
 
+def _importh(name):
+    """import and return the <name> module"""
+    mod = __import__(name)
+    components = name.split('.')
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
+
 def load(ui, name, path):
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
@@ -87,20 +95,14 @@ def load(ui, name, path):
         # conflicts with other modules
         mod = loadpath(path, 'hgext.%s' % name)
     else:
-        def importh(name):
-            mod = __import__(name)
-            components = name.split('.')
-            for comp in components[1:]:
-                mod = getattr(mod, comp)
-            return mod
         try:
-            mod = importh("hgext.%s" % name)
+            mod = _importh("hgext.%s" % name)
         except ImportError as err:
             ui.debug('could not import hgext.%s (%s): trying %s\n'
                      % (name, err, name))
             if ui.debugflag:
                 ui.traceback()
-            mod = importh(name)
+            mod = _importh(name)
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their
