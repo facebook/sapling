@@ -57,9 +57,9 @@ Convert while testing all possible outputs
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@2
   converting: 1/6 revisions (16.67%)
   reparent to file://*/svn-repo/trunk (glob)
-  scanning paths: /trunk/\xc3\xa0 0/3 (0.00%) (esc)
-  scanning paths: /trunk/\xc3\xa0/e\xcc\x81 1/3 (33.33%) (esc)
-  scanning paths: /trunk/\xc3\xa9 2/3 (66.67%) (esc)
+  scanning paths: /trunk/\xc3\xa0 0/3 paths (0.00%) (esc)
+  scanning paths: /trunk/\xc3\xa0/e\xcc\x81 1/3 paths (33.33%) (esc)
+  scanning paths: /trunk/\xc3\xa9 2/3 paths (66.67%) (esc)
   committing files:
   \xc3\xa0/e\xcc\x81 (esc)
   getting files: \xc3\xa0/e\xcc\x81 1/2 files (50.00%) (esc)
@@ -70,17 +70,17 @@ Convert while testing all possible outputs
   3 copy files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@3
   converting: 2/6 revisions (33.33%)
-  scanning paths: /trunk/\xc3\xa0 0/4 (0.00%) (esc)
+  scanning paths: /trunk/\xc3\xa0 0/4 paths (0.00%) (esc)
   gone from -1
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/trunk (glob)
-  scanning paths: /trunk/\xc3\xa8 1/4 (25.00%) (esc)
+  scanning paths: /trunk/\xc3\xa8 1/4 paths (25.00%) (esc)
   copied to \xc3\xa8 from \xc3\xa9@2 (esc)
-  scanning paths: /trunk/\xc3\xa9 2/4 (50.00%) (esc)
+  scanning paths: /trunk/\xc3\xa9 2/4 paths (50.00%) (esc)
   gone from -1
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/trunk (glob)
-  scanning paths: /trunk/\xc3\xb9 3/4 (75.00%) (esc)
+  scanning paths: /trunk/\xc3\xb9 3/4 paths (75.00%) (esc)
   mark /trunk/\xc3\xb9 came from \xc3\xa0:2 (esc)
   getting files: \xc3\xa0/e\xcc\x81 1/4 files (25.00%) (esc)
   getting files: \xc3\xa9 2/4 files (50.00%) (esc)
@@ -96,11 +96,11 @@ Convert while testing all possible outputs
   2 remove files
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/trunk@4
   converting: 3/6 revisions (50.00%)
-  scanning paths: /trunk/\xc3\xa8 0/2 (0.00%) (esc)
+  scanning paths: /trunk/\xc3\xa8 0/2 paths (0.00%) (esc)
   gone from -1
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/trunk (glob)
-  scanning paths: /trunk/\xc3\xb9 1/2 (50.00%) (esc)
+  scanning paths: /trunk/\xc3\xb9 1/2 paths (50.00%) (esc)
   gone from -1
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/trunk (glob)
@@ -113,13 +113,13 @@ Convert while testing all possible outputs
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?@5
   converting: 4/6 revisions (66.67%)
   reparent to file://*/svn-repo/branches/branch%C3%A9 (glob)
-  scanning paths: /branches/branch\xc3\xa9 0/1 (0.00%) (esc)
+  scanning paths: /branches/branch\xc3\xa9 0/1 paths (0.00%) (esc)
   committing changelog
   0 branch to branch?e
   source: svn:afeb9c47-92ff-4c0c-9f72-e1f6eb8ac9af/branches/branch?e@6
   converting: 5/6 revisions (83.33%)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)
-  scanning paths: /branches/branch\xc3\xa9e 0/1 (0.00%) (esc)
+  scanning paths: /branches/branch\xc3\xa9e 0/1 paths (0.00%) (esc)
   committing changelog
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/branches/branch%C3%A9e (glob)

@@ -749,7 +749,7 @@ class svn_source(converter_source):
 
         for i, (path, ent) in enumerate(paths):
             self.ui.progress(_('scanning paths'), i, item=path,
-                             total=len(paths))
+                             total=len(paths), unit=_('paths'))
             entrypath = self.getrelpath(path)
 
             kind = self._checkpath(entrypath, revnum)
