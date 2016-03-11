@@ -77,7 +77,10 @@ def _hashlist(items):
     return util.sha1(str(items)).hexdigest()
 
 # sensitive config sections affecting confighash
-_configsections = ['extensions']
+_configsections = [
+    'extdiff',  # uisetup will register new commands
+    'extensions',
+]
 
 # sensitive environment variables affecting confighash
 _envre = re.compile(r'''\A(?:
