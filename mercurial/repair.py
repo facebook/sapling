@@ -254,7 +254,8 @@ def rebuildfncache(ui, repo):
 
         repolen = len(repo)
         for rev in repo:
-            ui.progress(_('rebuilding'), rev, total=repolen)
+            ui.progress(_('rebuilding'), rev, total=repolen,
+                        unit=_('changesets'))
 
             ctx = repo[rev]
             for f in ctx.files():
