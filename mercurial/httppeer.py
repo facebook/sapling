@@ -112,7 +112,7 @@ class httppeer(wireproto.wirepeer):
         if len(args) > 0:
             httpheader = self.capable('httpheader')
             if httpheader:
-                headersize = int(httpheader.split(',')[0])
+                headersize = int(httpheader.split(',', 1)[0])
         if headersize > 0:
             # The headers can typically carry more data than the URL.
             encargs = urllib.urlencode(sorted(args.items()))
