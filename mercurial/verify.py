@@ -342,7 +342,7 @@ class verifier(object):
         total = len(files)
         revisions = 0
         for i, f in enumerate(files):
-            ui.progress(_('checking'), i, item=f, total=total)
+            ui.progress(_('checking'), i, item=f, total=total, unit=_('files'))
             try:
                 linkrevs = filelinkrevs[f]
             except KeyError:
