@@ -1,5 +1,9 @@
 #require svn svn-bindings
 
+  $ filter_svn_output () {
+  >     egrep -v 'Committing|Updating' | sed -e 's/done$//' || true
+  > }
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > convert =
@@ -27,37 +31,35 @@ Initial svn import
   $ mkdir tags
   $ cd ..
 
-  $ svn import -m "init projB" projB "$SVNREPOURL/proj%20B" | sort
-  
+  $ svn import -m "init projB" projB "$SVNREPOURL/proj%20B" | filter_svn_output | sort
   Adding         projB/mytrunk (glob)
   Adding         projB/tags (glob)
   Committed revision 1.
 
 Update svn repository
 
-  $ svn co "$SVNREPOURL/proj%20B/mytrunk" B
+  $ svn co "$SVNREPOURL/proj%20B/mytrunk" B | filter_svn_output
   Checked out revision 1.
   $ cd B
   $ echo hello > 'letter .txt'
-  $ svn add 'letter .txt'
+  $ svn add 'letter .txt' | filter_svn_output
   A         letter .txt
-  $ svn ci -m hello
+  $ svn ci -m hello | filter_svn_output
   Adding         letter .txt
   Transmitting file data .
   Committed revision 2.
 
   $ svn-safe-append.py world 'letter .txt'
-  $ svn ci -m world
+  $ svn ci -m world | filter_svn_output
   Sending        letter .txt
   Transmitting file data .
   Committed revision 3.
 
-  $ svn copy -m "tag v0.1" "$SVNREPOURL/proj%20B/mytrunk" "$SVNREPOURL/proj%20B/tags/v0.1"
-  
+  $ svn copy -m "tag v0.1" "$SVNREPOURL/proj%20B/mytrunk" "$SVNREPOURL/proj%20B/tags/v0.1" | filter_svn_output
   Committed revision 4.
 
   $ svn-safe-append.py 'nice day today!' 'letter .txt'
-  $ svn ci -m "nice day"
+  $ svn ci -m "nice day" | filter_svn_output
   Sending        letter .txt
   Transmitting file data .
   Committed revision 5.
@@ -88,20 +90,19 @@ Update svn repository again
   $ cd B
   $ svn-safe-append.py "see second letter" 'letter .txt'
   $ echo "nice to meet you" > letter2.txt
-  $ svn add letter2.txt
+  $ svn add letter2.txt | filter_svn_output
   A         letter2.txt
-  $ svn ci -m "second letter"
+  $ svn ci -m "second letter" | filter_svn_output
   Sending        letter .txt
   Adding         letter2.txt
   Transmitting file data ..
   Committed revision 6.
 
-  $ svn copy -m "tag v0.2" "$SVNREPOURL/proj%20B/mytrunk" "$SVNREPOURL/proj%20B/tags/v0.2"
-  
+  $ svn copy -m "tag v0.2" "$SVNREPOURL/proj%20B/mytrunk" "$SVNREPOURL/proj%20B/tags/v0.2" | filter_svn_output
   Committed revision 7.
 
   $ svn-safe-append.py "blah-blah-blah" letter2.txt
-  $ svn ci -m "work in progress"
+  $ svn ci -m "work in progress" | filter_svn_output
   Sending        letter2.txt
   Transmitting file data .
   Committed revision 8.
@@ -172,7 +173,7 @@ Convert with --full adds and removes files that didn't change
 
   $ cd B
   $ echo >> "letter .txt"
-  $ svn ci -m 'nothing'
+  $ svn ci -m 'nothing' | filter_svn_output
   Sending        letter .txt
   Transmitting file data .
   Committed revision 9.

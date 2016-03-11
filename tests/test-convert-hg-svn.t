@@ -1,5 +1,9 @@
 #require svn svn-bindings
 
+  $ filter_svn_output () {
+  >     egrep -v 'Committing|Updating' | sed -e 's/done$//' || true
+  > }
+
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > convert =
@@ -37,7 +41,7 @@
   $ echo a > a
   $ svn add a
   A         a
-  $ svn ci -m'added a' a
+  $ svn ci -m'added a' a | filter_svn_output
   Adding         a
   Transmitting file data .
   Committed revision 1.
