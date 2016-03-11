@@ -62,9 +62,9 @@ Convert while testing all possible outputs
   scanning paths: /trunk/\xc3\xa9 2/3 (66.67%) (esc)
   committing files:
   \xc3\xa0/e\xcc\x81 (esc)
-  getting files: \xc3\xa0/e\xcc\x81 1/2 (50.00%) (esc)
+  getting files: \xc3\xa0/e\xcc\x81 1/2 files (50.00%) (esc)
   \xc3\xa9 (esc)
-  getting files: \xc3\xa9 2/2 (100.00%) (esc)
+  getting files: \xc3\xa9 2/2 files (100.00%) (esc)
   committing manifest
   committing changelog
   3 copy files
@@ -82,14 +82,14 @@ Convert while testing all possible outputs
   reparent to file://*/svn-repo/trunk (glob)
   scanning paths: /trunk/\xc3\xb9 3/4 (75.00%) (esc)
   mark /trunk/\xc3\xb9 came from \xc3\xa0:2 (esc)
-  getting files: \xc3\xa0/e\xcc\x81 1/4 (25.00%) (esc)
-  getting files: \xc3\xa9 2/4 (50.00%) (esc)
+  getting files: \xc3\xa0/e\xcc\x81 1/4 files (25.00%) (esc)
+  getting files: \xc3\xa9 2/4 files (50.00%) (esc)
   committing files:
   \xc3\xa8 (esc)
-  getting files: \xc3\xa8 3/4 (75.00%) (esc)
+  getting files: \xc3\xa8 3/4 files (75.00%) (esc)
    \xc3\xa8: copy \xc3\xa9:6b67ccefd5ce6de77e7ead4f5292843a0255329f (esc)
   \xc3\xb9/e\xcc\x81 (esc)
-  getting files: \xc3\xb9/e\xcc\x81 4/4 (100.00%) (esc)
+  getting files: \xc3\xb9/e\xcc\x81 4/4 files (100.00%) (esc)
    \xc3\xb9/e\xcc\x81: copy \xc3\xa0/e\xcc\x81:a9092a3d84a37b9993b5c73576f6de29b7ea50f6 (esc)
   committing manifest
   committing changelog
@@ -104,8 +104,8 @@ Convert while testing all possible outputs
   gone from -1
   reparent to file://*/svn-repo (glob)
   reparent to file://*/svn-repo/trunk (glob)
-  getting files: \xc3\xa8 1/2 (50.00%) (esc)
-  getting files: \xc3\xb9/e\xcc\x81 2/2 (100.00%) (esc)
+  getting files: \xc3\xa8 1/2 files (50.00%) (esc)
+  getting files: \xc3\xb9/e\xcc\x81 2/2 files (100.00%) (esc)
   committing files:
   committing manifest
   committing changelog

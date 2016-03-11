@@ -145,7 +145,7 @@ class progresssource(object):
     def getfile(self, file, rev):
         self.retrieved += 1
         self.ui.progress(_('getting files'), self.retrieved,
-                         item=file, total=self.filecount)
+                         item=file, total=self.filecount, unit=_('files'))
         return self.source.getfile(file, rev)
 
     def targetfilebelongstosource(self, targetfilename):
