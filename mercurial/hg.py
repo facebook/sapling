@@ -19,6 +19,7 @@ from . import (
     bookmarks,
     bundlerepo,
     cmdutil,
+    destutil,
     discovery,
     error,
     exchange,
@@ -693,6 +694,63 @@ def clean(repo, node, show_stats=True, quietempty=False):
     if show_stats:
         _showstats(repo, stats, quietempty)
     return stats[3] > 0
+
+# naming conflict in updatetotally()
+_clean = clean
+
+def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
+    """Update the working directory with extra care for non-file components
+
+    This takes care of non-file components below:
+
+    :bookmark: might be advanced or (in)activated
+
+    This takes arguments below:
+
+    :checkout: to which revision the working directory is updated
+    :brev: a name, which might be a bookmark to be activated after updating
+    :clean: whether changes in the working directory can be discarded
+    :check: whether changes in the working directory should be checked
+
+    This returns whether conflict is detected at updating or not.
+    """
+    if True:
+        movemarkfrom = None
+        warndest = False
+        if checkout is None:
+            updata = destutil.destupdate(repo, clean=clean, check=check)
+            checkout, movemarkfrom, brev = updata
+            warndest = True
+
+        if clean:
+            ret = _clean(repo, checkout)
+        else:
+            ret = _update(repo, checkout)
+
+        if not ret and movemarkfrom:
+            if movemarkfrom == repo['.'].node():
+                pass # no-op update
+            elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
+                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
+            else:
+                # this can happen with a non-linear update
+                ui.status(_("(leaving bookmark %s)\n") %
+                          repo._activebookmark)
+                bookmarks.deactivate(repo)
+        elif brev in repo._bookmarks:
+            if brev != repo._activebookmark:
+                ui.status(_("(activating bookmark %s)\n") % brev)
+            bookmarks.activate(repo, brev)
+        elif brev:
+            if repo._activebookmark:
+                ui.status(_("(leaving bookmark %s)\n") %
+                          repo._activebookmark)
+            bookmarks.deactivate(repo)
+
+        if warndest:
+            destutil.statusotherdests(ui, repo)
+
+    return ret
 
 def merge(repo, node, force=None, remind=True, mergeforce=False):
     """Branch merge with node, resolving changes. Return true if any

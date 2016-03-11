@@ -5618,35 +5618,12 @@ def postincoming(ui, repo, modheads, optupdate, checkout, brev):
     if modheads == 0:
         return
     if optupdate:
-        warndest = False
         try:
-            movemarkfrom = None
-            if not checkout:
-                warndest = True
-                updata = destutil.destupdate(repo)
-                checkout, movemarkfrom, brev = updata
-            ret = hg.update(repo, checkout)
-            if warndest:
-                destutil.statusotherdests(ui, repo)
+            return hg.updatetotally(ui, repo, checkout, brev)
         except error.UpdateAbort as inst:
             msg = _("not updating: %s") % str(inst)
             hint = inst.hint
             raise error.UpdateAbort(msg, hint=hint)
-        if not ret and movemarkfrom:
-            if movemarkfrom == repo['.'].node():
-                pass # no-op update
-            elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
-        elif brev in repo._bookmarks:
-            if brev != repo._activebookmark:
-                ui.status(_("(activating bookmark %s)\n") % brev)
-            bookmarks.activate(repo, brev)
-        elif brev:
-            if repo._activebookmark:
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
-            bookmarks.deactivate(repo)
-        return ret
     if modheads > 1:
         currentbranchheads = len(repo.branchheads())
         if currentbranchheads == modheads:
@@ -7071,7 +7048,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     Returns 0 on success, 1 if there are unresolved files.
     """
-    movemarkfrom = None
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
@@ -7083,8 +7059,6 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
     if check and clean:
         raise error.Abort(_("cannot specify both -c/--check and -C/--clean"))
-
-    warndest = False
 
     with repo.wlock():
         cmdutil.clearunfinished(repo)
@@ -7098,40 +7072,10 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
 
         if check:
             cmdutil.bailifchanged(repo, merge=False)
-        if rev is None:
-            updata = destutil.destupdate(repo, clean=clean, check=check)
-            rev, movemarkfrom, brev = updata
-            warndest = True
 
         repo.ui.setconfig('ui', 'forcemerge', tool, 'update')
 
-        if clean:
-            ret = hg.clean(repo, rev)
-        else:
-            ret = hg.update(repo, rev)
-
-        if not ret and movemarkfrom:
-            if movemarkfrom == repo['.'].node():
-                pass # no-op update
-            elif bookmarks.update(repo, [movemarkfrom], repo['.'].node()):
-                ui.status(_("updating bookmark %s\n") % repo._activebookmark)
-            else:
-                # this can happen with a non-linear update
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
-                bookmarks.deactivate(repo)
-        elif brev in repo._bookmarks:
-            if brev != repo._activebookmark:
-                ui.status(_("(activating bookmark %s)\n") % brev)
-            bookmarks.activate(repo, brev)
-        elif brev:
-            if repo._activebookmark:
-                ui.status(_("(leaving bookmark %s)\n") %
-                          repo._activebookmark)
-            bookmarks.deactivate(repo)
-        if warndest:
-            destutil.statusotherdests(ui, repo)
-    return ret
+        return hg.updatetotally(ui, repo, rev, brev, clean=clean, check=check)
 
 @command('verify', [])
 def verify(ui, repo):
