@@ -291,7 +291,7 @@ largefiles pulled on update - no server side problems:
   using http://localhost:$HGPORT2/
   sending capabilities command
   sending batch command
-  getting largefiles: 0/1 lfile (0.00%)
+  getting largefiles: 0/1 files (0.00%)
   getting f1:02a439e5c31c526465ab1a0ca1f431f76b827b90
   sending getlfile command
   found 02a439e5c31c526465ab1a0ca1f431f76b827b90 in store

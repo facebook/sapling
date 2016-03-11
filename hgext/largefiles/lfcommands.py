@@ -346,7 +346,7 @@ def uploadlfiles(ui, rsrc, rdst, files):
     ui.debug("%d largefiles need to be uploaded\n" % len(files))
 
     for hash in files:
-        ui.progress(_('uploading largefiles'), at, unit='largefile',
+        ui.progress(_('uploading largefiles'), at, unit=_('files'),
                     total=len(files))
         source = lfutil.findfile(rsrc, hash)
         if not source:

@@ -63,7 +63,7 @@ class basestore(object):
         at = 0
         available = self.exists(set(hash for (_filename, hash) in files))
         for filename, hash in files:
-            ui.progress(_('getting largefiles'), at, unit='lfile',
+            ui.progress(_('getting largefiles'), at, unit=_('files'),
                 total=len(files))
             at += 1
             ui.note(_('getting %s:%s\n') % (filename, hash))
