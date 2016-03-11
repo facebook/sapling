@@ -5615,6 +5615,15 @@ def phase(ui, repo, *revs, **opts):
     return ret
 
 def postincoming(ui, repo, modheads, optupdate, checkout, brev):
+    """Run after a changegroup has been added via pull/unbundle
+
+    This takes arguments below:
+
+    :modheads: change of heads by pull/unbundle
+    :optupdate: updating working directory is needed or not
+    :checkout: update destination revision (or None to default destination)
+    :brev: a name, which might be a bookmark to be activated after updating
+    """
     if modheads == 0:
         return
     if optupdate:
