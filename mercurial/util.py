@@ -2550,6 +2550,28 @@ class hooks(object):
             results.append(hook(*args))
         return results
 
+def getstackframes(skip=0, line=' %-*s in %s\n', fileline='%s:%s'):
+    '''Yields lines for a nicely formatted stacktrace.
+    Skips the 'skip' last entries.
+    Each file+linenumber is formatted according to fileline.
+    Each line is formatted according to line.
+    If line is None, it yields:
+      length of longest filepath+line number,
+      filepath+linenumber,
+      function
+
+    Not be used in production code but very convenient while developing.
+    '''
+    entries = [(fileline % (fn, ln), func)
+        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]]
+    if entries:
+        fnmax = max(len(entry[0]) for entry in entries)
+        for fnln, func in entries:
+            if line is None:
+                yield (fnmax, fnln, func)
+            else:
+                yield line % (fnmax, fnln, func)
+
 def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
     '''Writes a message to f (stderr) with a nicely formatted stacktrace.
     Skips the 'skip' last entries. By default it will flush stdout first.
@@ -2559,12 +2581,8 @@ def debugstacktrace(msg='stacktrace', skip=0, f=sys.stderr, otherf=sys.stdout):
     if otherf:
         otherf.flush()
     f.write('%s at:\n' % msg)
-    entries = [('%s:%s' % (fn, ln), func)
-        for fn, ln, func, _text in traceback.extract_stack()[:-skip - 1]]
-    if entries:
-        fnmax = max(len(entry[0]) for entry in entries)
-        for fnln, func in entries:
-            f.write(' %-*s in %s\n' % (fnmax, fnln, func))
+    for line in getstackframes(skip + 1):
+        f.write(line)
     f.flush()
 
 class dirs(object):
