@@ -18,16 +18,16 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 from __future__ import absolute_import
 
-from mercurial import (
-    util,
-)
-
 import svn.client
 import svn.core
 import svn.ra
 
 Pool = svn.core.Pool
 SubversionException = svn.core.SubversionException
+
+from mercurial import (
+    util,
+)
 
 # Some older versions of the Python bindings need to be
 # explicitly initialized. But what we want to do probably
