@@ -22,9 +22,10 @@ list bookmarks with color
 
 update to bookmark X
 
+  $ hg bookmarks
+   * X                         -1:000000000000
   $ hg update X
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark X)
 
 list bookmarks
 

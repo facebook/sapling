@@ -599,7 +599,6 @@ pull --update works the same as pull && update
   $ hg -R ../cloned-bookmarks-manual-update update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark Y)
 
 (all in one version)
 
@@ -643,7 +642,6 @@ We warn about divergent during bare update to the active bookmark
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence update
   updating to active bookmark Y
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark Y)
   1 other divergent bookmarks for "Y"
 
 test wrongly formated bookmark
@@ -738,9 +736,11 @@ tipmost surviving ancestor of the stripped revision.
 
 no-op update doesn't deactive bookmarks
 
+  $ hg bookmarks
+   * four                      3:9ba5f110a0b3
+     should-end-on-two         2:db815d6d32e6
   $ hg up four
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark four)
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum

@@ -7121,8 +7121,9 @@ def update(ui, repo, node=None, rev=None, clean=False, date=None, check=False,
                           repo._activebookmark)
                 bookmarks.deactivate(repo)
         elif brev in repo._bookmarks:
+            if brev != repo._activebookmark:
+                ui.status(_("(activating bookmark %s)\n") % brev)
             bookmarks.activate(repo, brev)
-            ui.status(_("(activating bookmark %s)\n") % brev)
         elif brev:
             if repo._activebookmark:
                 ui.status(_("(leaving bookmark %s)\n") %
