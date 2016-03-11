@@ -7,7 +7,13 @@ operations and test Mercurial using them, both to see if there are any
 unexpected errors and to compare different versions of it."""
 
 import os
+import subprocess
 import sys
+
+# Only run if slow tests are allowed
+if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
+                    'slow']):
+    sys.exit(80)
 
 # These tests require Hypothesis and pytz to be installed.
 # Running 'pip install hypothesis pytz' will achieve that.
