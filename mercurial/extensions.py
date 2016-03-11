@@ -105,7 +105,11 @@ def load(ui, name, path):
             mod = _importh("hgext.%s" % name)
         except ImportError as err:
             _reportimporterror(ui, err, "hgext.%s" % name, name)
-            mod = _importh(name)
+            try:
+                mod = _importh("hgext3rd.%s" % name)
+            except ImportError as err:
+                _reportimporterror(ui, err, "hgext3rd.%s" % name, name)
+                mod = _importh(name)
 
     # Before we do anything with the extension, check against minimum stated
     # compatibility. This gives extension authors a mechanism to have their

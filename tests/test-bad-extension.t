@@ -56,6 +56,9 @@ show traceback for ImportError of hgext.name if debug is set
   could not import hgext.badext2 (No module named *badext2): trying badext2 (glob)
   Traceback (most recent call last):
   ImportError: No module named *badext2 (glob)
+  could not import hgext3rd.badext2 (No module named badext2): trying badext2
+  Traceback (most recent call last):
+  ImportError: No module named badext2
   *** failed to import extension badext2: No module named badext2
   Traceback (most recent call last):
   ImportError: No module named badext2

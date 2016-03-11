@@ -506,7 +506,7 @@ cmdclass = {'build': hgbuild,
 packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
             'mercurial.pure',
             'hgext', 'hgext.convert', 'hgext.highlight', 'hgext.zeroconf',
-            'hgext.largefiles']
+            'hgext.largefiles', 'hgext3rd']
 
 common_depends = ['mercurial/util.h']
 
