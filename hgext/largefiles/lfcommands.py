@@ -99,7 +99,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             lfiletohash = {}
             for ctx in ctxs:
                 ui.progress(_('converting revisions'), ctx.rev(),
-                    unit=_('revision'), total=rsrc['tip'].rev())
+                    unit=_('revisions'), total=rsrc['tip'].rev())
                 _lfconvert_addchangeset(rsrc, rdst, ctx, revmap,
                     lfiles, normalfiles, matcher, size, lfiletohash)
             ui.progress(_('converting revisions'), None)
