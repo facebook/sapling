@@ -16,12 +16,12 @@ def check_compat(f):
     """Check Python 3 compatibility for a file."""
     with open(f, 'rb') as fh:
         content = fh.read()
+    root = ast.parse(content)
 
     # Ignore empty files.
-    if not content.strip():
+    if not root.body:
         return
 
-    root = ast.parse(content)
     futures = set()
     haveprint = False
     for node in ast.walk(root):
