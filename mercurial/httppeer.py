@@ -92,19 +92,7 @@ class httppeer(wireproto.wirepeer):
         if cmd == 'pushkey':
             args['data'] = ''
         data = args.pop('data', None)
-        size = 0
-        if util.safehasattr(data, 'length'):
-            size = data.length
-        elif data is not None:
-            size = len(data)
         headers = args.pop('headers', {})
-        if data is not None and 'Content-Type' not in headers:
-            headers['Content-Type'] = 'application/mercurial-0.1'
-
-
-        if size and self.ui.configbool('ui', 'usehttp2', False):
-            headers['Expect'] = '100-Continue'
-            headers['X-HgHttp2'] = '1'
 
         self.ui.debug("sending %s command\n" % cmd)
         q = [('cmd', cmd)]
@@ -129,6 +117,16 @@ class httppeer(wireproto.wirepeer):
             q += sorted(args.items())
         qs = '?%s' % urllib.urlencode(q)
         cu = "%s%s" % (self._url, qs)
+        size = 0
+        if util.safehasattr(data, 'length'):
+            size = data.length
+        elif data is not None:
+            size = len(data)
+        if size and self.ui.configbool('ui', 'usehttp2', False):
+            headers['Expect'] = '100-Continue'
+            headers['X-HgHttp2'] = '1'
+        if data is not None and 'Content-Type' not in headers:
+            headers['Content-Type'] = 'application/mercurial-0.1'
         req = self.requestbuilder(cu, data, headers)
         if data is not None:
             self.ui.debug("sending %s bytes\n" % size)
