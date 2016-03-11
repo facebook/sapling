@@ -1,5 +1,8 @@
 #require serve
 
+Initialize repository
+the status call is to check for issue5130
+
   $ hg init server
   $ cd server
   $ touch foo
@@ -8,6 +11,7 @@
   ...     with open(str(i), 'wb') as fh:
   ...         fh.write(str(i))
   $ hg -q commit -A -m 'add a lot of files'
+  $ hg st
   $ hg serve -p $HGPORT -d --pid-file=hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..

@@ -2374,14 +2374,15 @@ def files(ui, ctx, m, fm, fmt, subrepos):
 
     for subpath in sorted(ctx.substate):
         def matchessubrepo(subpath):
-            return (m.always() or m.exact(subpath)
+            return (m.exact(subpath)
                     or any(f.startswith(subpath + '/') for f in m.files()))
 
         if subrepos or matchessubrepo(subpath):
             sub = ctx.sub(subpath)
             try:
                 submatch = matchmod.subdirmatcher(subpath, m)
-                if sub.printfiles(ui, submatch, fm, fmt, subrepos) == 0:
+                recurse = m.exact(subpath) or subrepos
+                if sub.printfiles(ui, submatch, fm, fmt, recurse) == 0:
                     ret = 0
             except error.LookupError:
                 ui.status(_("skipping missing subrepository: %s\n")
