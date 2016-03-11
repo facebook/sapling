@@ -430,10 +430,8 @@ def demo(ui, repo, *args, **opts):
             ui.readconfig(opts.get('rcfile'))
         if args:
             # simulate hgrc parsing
-            rcmaps = ['[keywordmaps]\n'] + [a + '\n' for a in args]
-            fp = repo.vfs('hgrc', 'w')
-            fp.writelines(rcmaps)
-            fp.close()
+            rcmaps = '[keywordmaps]\n%s\n' % '\n'.join(args)
+            repo.vfs.write('hgrc', rcmaps)
             ui.readconfig(repo.join('hgrc'))
         kwmaps = dict(ui.configitems('keywordmaps'))
     elif opts.get('default'):
