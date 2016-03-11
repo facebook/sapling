@@ -714,7 +714,7 @@ def updatetotally(ui, repo, checkout, brev, clean=False, check=False):
 
     This returns whether conflict is detected at updating or not.
     """
-    if True:
+    with repo.wlock():
         movemarkfrom = None
         warndest = False
         if checkout is None:
