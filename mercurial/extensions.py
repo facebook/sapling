@@ -79,6 +79,12 @@ def _importh(name):
         mod = getattr(mod, comp)
     return mod
 
+def _reportimporterror(ui, err, failed, next):
+    ui.debug('could not import %s (%s): trying %s\n'
+             % (failed, err, next))
+    if ui.debugflag:
+        ui.traceback()
+
 def load(ui, name, path):
     if name.startswith('hgext.') or name.startswith('hgext/'):
         shortname = name[6:]
@@ -98,10 +104,7 @@ def load(ui, name, path):
         try:
             mod = _importh("hgext.%s" % name)
         except ImportError as err:
-            ui.debug('could not import hgext.%s (%s): trying %s\n'
-                     % (name, err, name))
-            if ui.debugflag:
-                ui.traceback()
+            _reportimporterror(ui, err, "hgext.%s" % name, name)
             mod = _importh(name)
 
     # Before we do anything with the extension, check against minimum stated
