@@ -716,7 +716,8 @@ def email(ui, repo, *revs, **opts):
                 finally:
                     ui.setconfig('smtp', 'verifycert', verifycert, 'patchbomb')
             ui.status(_('sending '), subj, ' ...\n')
-            ui.progress(_('sending'), i, item=subj, total=len(msgs))
+            ui.progress(_('sending'), i, item=subj, total=len(msgs),
+                        unit=_('emails'))
             if not mbox:
                 # Exim does not remove the Bcc field
                 del m['Bcc']
