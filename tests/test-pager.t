@@ -151,3 +151,29 @@ doesn't result in history being paged.
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify a 9
   
+
+Pager with color enabled allows colors to come through by default,
+even though stdout is no longer a tty.
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > color=
+  > [color]
+  > mode = ansi
+  > EOF
+  $ hg log --limit 3
+  paged! '\x1b[0;33mchangeset:   10:46106edeeb38\x1b[0m\n'
+  paged! 'tag:         tip\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 10\n'
+  paged! '\n'
+  paged! '\x1b[0;33mchangeset:   9:6dd8ea7dd621\x1b[0m\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 9\n'
+  paged! '\n'
+  paged! '\x1b[0;33mchangeset:   8:cff05a6312fe\x1b[0m\n'
+  paged! 'user:        test\n'
+  paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
+  paged! 'summary:     modify a 8\n'
+  paged! '\n'
