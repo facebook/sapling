@@ -574,5 +574,11 @@ keywords = {
     'tags': showtags,
 }
 
+def loadkeyword(ui, extname, registrarobj):
+    """Load template keyword from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        keywords[name] = func
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()

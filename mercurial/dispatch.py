@@ -35,6 +35,7 @@ from . import (
     hg,
     hook,
     revset,
+    templatekw,
     ui as uimod,
     util,
 )
@@ -758,6 +759,7 @@ extraloaders = [
     ('cmdtable', commands, 'loadcmdtable'),
     ('filesetpredicate', fileset, 'loadpredicate'),
     ('revsetpredicate', revset, 'loadpredicate'),
+    ('templatekeyword', templatekw, 'loadkeyword'),
 ]
 
 def _dispatch(req):

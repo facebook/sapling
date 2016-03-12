@@ -161,3 +161,33 @@ class filesetpredicate(_funcregistrarbase):
     def _extrasetup(self, name, func, callstatus=False, callexisting=False):
         func._callstatus = callstatus
         func._callexisting = callexisting
+
+class _templateregistrarbase(_funcregistrarbase):
+    """Base of decorator to register functions as template specific one
+    """
+    _docformat = ":%s: %s"
+
+class templatekeyword(_templateregistrarbase):
+    """Decorator to register template keyword
+
+    Usage::
+
+        templaetkeyword = registrar.templatekeyword()
+
+        @templatekeyword('mykeyword')
+        def mykeywordfunc(repo, ctx, templ, cache, revcache, **args):
+            '''Explanation of this template keyword ....
+            '''
+            pass
+
+    The first string argument is used also in online help.
+
+    'templatekeyword' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'templatekeyword' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'templatekw.loadkeyword()' is needed.
+    """
