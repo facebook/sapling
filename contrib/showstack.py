@@ -2,7 +2,10 @@
 #
 # binds to both SIGQUIT (Ctrl-\) and SIGINFO (Ctrl-T on BSDs)
 
-import sys, signal, traceback
+from __future__ import absolute_import
+import signal
+import sys
+import traceback
 
 def sigshow(*args):
     sys.stderr.write("\n")
