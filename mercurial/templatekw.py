@@ -13,6 +13,7 @@ from . import (
     error,
     hbisect,
     patch,
+    registrar,
     scmutil,
     util,
 )
@@ -196,23 +197,38 @@ def getrenamedfn(repo, endrev=None):
 
     return getrenamed
 
+# keywords are callables like:
+# fn(repo, ctx, templ, cache, revcache, **args)
+# with:
+# repo - current repository instance
+# ctx - the changectx being displayed
+# templ - the templater instance
+# cache - a cache dictionary for the whole templater run
+# revcache - a cache dictionary for the current revision
+keywords = {}
 
+templatekeyword = registrar.templatekeyword(keywords)
+
+@templatekeyword('author')
 def showauthor(repo, ctx, templ, **args):
-    """:author: String. The unmodified author of the changeset."""
+    """String. The unmodified author of the changeset."""
     return ctx.user()
 
+@templatekeyword('bisect')
 def showbisect(repo, ctx, templ, **args):
-    """:bisect: String. The changeset bisection status."""
+    """String. The changeset bisection status."""
     return hbisect.label(repo, ctx.node())
 
+@templatekeyword('branch')
 def showbranch(**args):
-    """:branch: String. The name of the branch on which the changeset was
+    """String. The name of the branch on which the changeset was
     committed.
     """
     return args['ctx'].branch()
 
+@templatekeyword('branches')
 def showbranches(**args):
-    """:branches: List of strings. The name of the branch on which the
+    """List of strings. The name of the branch on which the
     changeset was committed. Will be empty if the branch name was
     default. (DEPRECATED)
     """
@@ -221,8 +237,9 @@ def showbranches(**args):
         return showlist('branch', [branch], plural='branches', **args)
     return showlist('branch', [], plural='branches', **args)
 
+@templatekeyword('bookmarks')
 def showbookmarks(**args):
-    """:bookmarks: List of strings. Any bookmarks associated with the
+    """List of strings. Any bookmarks associated with the
     changeset. Also sets 'active', the name of the active bookmark.
     """
     repo = args['ctx']._repo
@@ -232,32 +249,37 @@ def showbookmarks(**args):
     f = _showlist('bookmark', bookmarks, **args)
     return _hybrid(f, bookmarks, makemap, lambda x: x['bookmark'])
 
+@templatekeyword('children')
 def showchildren(**args):
-    """:children: List of strings. The children of the changeset."""
+    """List of strings. The children of the changeset."""
     ctx = args['ctx']
     childrevs = ['%d:%s' % (cctx, cctx) for cctx in ctx.children()]
     return showlist('children', childrevs, element='child', **args)
 
 # Deprecated, but kept alive for help generation a purpose.
+@templatekeyword('currentbookmark')
 def showcurrentbookmark(**args):
-    """:currentbookmark: String. The active bookmark, if it is
+    """String. The active bookmark, if it is
     associated with the changeset (DEPRECATED)"""
     return showactivebookmark(**args)
 
+@templatekeyword('activebookmark')
 def showactivebookmark(**args):
-    """:activebookmark: String. The active bookmark, if it is
+    """String. The active bookmark, if it is
     associated with the changeset"""
     active = args['repo']._activebookmark
     if active and active in args['ctx'].bookmarks():
         return active
     return ''
 
+@templatekeyword('date')
 def showdate(repo, ctx, templ, **args):
-    """:date: Date information. The date when the changeset was committed."""
+    """Date information. The date when the changeset was committed."""
     return ctx.date()
 
+@templatekeyword('desc')
 def showdescription(repo, ctx, templ, **args):
-    """:desc: String. The text of the changeset description."""
+    """String. The text of the changeset description."""
     s = ctx.description()
     if isinstance(s, encoding.localstr):
         # try hard to preserve utf-8 bytes
@@ -265,16 +287,18 @@ def showdescription(repo, ctx, templ, **args):
     else:
         return s.strip()
 
+@templatekeyword('diffstat')
 def showdiffstat(repo, ctx, templ, **args):
-    """:diffstat: String. Statistics of changes with the following format:
+    """String. Statistics of changes with the following format:
     "modified files: +added/-removed lines"
     """
     stats = patch.diffstatdata(util.iterlines(ctx.diff()))
     maxname, maxtotal, adds, removes, binary = patch.diffstatsum(stats)
     return '%s: +%s/-%s' % (len(stats), adds, removes)
 
+@templatekeyword('extras')
 def showextras(**args):
-    """:extras: List of dicts with key, value entries of the 'extras'
+    """List of dicts with key, value entries of the 'extras'
     field of this changeset."""
     extras = args['ctx'].extra()
     extras = util.sortdict((k, extras[k]) for k in sorted(extras))
@@ -284,14 +308,16 @@ def showextras(**args):
     return _hybrid(f, extras, makemap,
                    lambda x: '%s=%s' % (x['key'], x['value']))
 
+@templatekeyword('file_adds')
 def showfileadds(**args):
-    """:file_adds: List of strings. Files added by this changeset."""
+    """List of strings. Files added by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_add', getfiles(repo, ctx, revcache)[1],
                     element='file', **args)
 
+@templatekeyword('file_copies')
 def showfilecopies(**args):
-    """:file_copies: List of strings. Files copied in this changeset with
+    """List of strings. Files copied in this changeset with
     their sources.
     """
     cache, ctx = args['cache'], args['ctx']
@@ -316,8 +342,9 @@ def showfilecopies(**args):
 # showfilecopiesswitch() displays file copies only if copy records are
 # provided before calling the templater, usually with a --copies
 # command line switch.
+@templatekeyword('file_copies_switch')
 def showfilecopiesswitch(**args):
-    """:file_copies_switch: List of strings. Like "file_copies" but displayed
+    """List of strings. Like "file_copies" but displayed
     only if the --copied switch is set.
     """
     copies = args['revcache'].get('copies') or []
@@ -328,26 +355,30 @@ def showfilecopiesswitch(**args):
     return _hybrid(f, copies, makemap,
                    lambda x: '%s (%s)' % (x['name'], x['source']))
 
+@templatekeyword('file_dels')
 def showfiledels(**args):
-    """:file_dels: List of strings. Files removed by this changeset."""
+    """List of strings. Files removed by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_del', getfiles(repo, ctx, revcache)[2],
                     element='file', **args)
 
+@templatekeyword('file_mods')
 def showfilemods(**args):
-    """:file_mods: List of strings. Files modified by this changeset."""
+    """List of strings. Files modified by this changeset."""
     repo, ctx, revcache = args['repo'], args['ctx'], args['revcache']
     return showlist('file_mod', getfiles(repo, ctx, revcache)[0],
                     element='file', **args)
 
+@templatekeyword('files')
 def showfiles(**args):
-    """:files: List of strings. All files modified, added, or removed by this
+    """List of strings. All files modified, added, or removed by this
     changeset.
     """
     return showlist('file', args['ctx'].files(), **args)
 
+@templatekeyword('graphnode')
 def showgraphnode(repo, ctx, **args):
-    """:graphnode: String. The character representing the changeset node in
+    """String. The character representing the changeset node in
     an ASCII revision graph"""
     wpnodes = repo.dirstate.parents()
     if wpnodes[1] == nullid:
@@ -361,8 +392,9 @@ def showgraphnode(repo, ctx, **args):
     else:
         return 'o'
 
+@templatekeyword('latesttag')
 def showlatesttag(**args):
-    """:latesttag: List of strings. The global tags on the most recent globally
+    """List of strings. The global tags on the most recent globally
     tagged ancestor of this changeset.
     """
     return showlatesttags(None, **args)
@@ -387,12 +419,14 @@ def showlatesttags(pattern, **args):
     f = _showlist('latesttag', tags, separator=':', **args)
     return _hybrid(f, tags, makemap, lambda x: x['latesttag'])
 
+@templatekeyword('latesttagdistance')
 def showlatesttagdistance(repo, ctx, templ, cache, **args):
-    """:latesttagdistance: Integer. Longest path to the latest tag."""
+    """Integer. Longest path to the latest tag."""
     return getlatesttags(repo, ctx, cache)[1]
 
+@templatekeyword('changessincelatesttag')
 def showchangessincelatesttag(repo, ctx, templ, cache, **args):
-    """:changessincelatesttag: Integer. All ancestors not in the latest tag."""
+    """Integer. All ancestors not in the latest tag."""
     latesttag = getlatesttags(repo, ctx, cache)[2][0]
 
     return _showchangessincetag(repo, ctx, tag=latesttag, **args)
@@ -409,6 +443,7 @@ def _showchangessincetag(repo, ctx, **args):
 
     return len(repo.revs('only(%ld, %s)', revs, tag)) + offset
 
+@templatekeyword('manifest')
 def showmanifest(**args):
     repo, ctx, templ = args['repo'], args['ctx'], args['templ']
     mnode = ctx.manifestnode()
@@ -427,8 +462,9 @@ def shownames(namespace, **args):
     names = ns.names(repo, ctx.node())
     return showlist(ns.templatename, names, plural=namespace, **args)
 
+@templatekeyword('namespaces')
 def shownamespaces(**args):
-    """:namespaces: Dict of lists. Names attached to this changeset per
+    """Dict of lists. Names attached to this changeset per
     namespace."""
     ctx = args['ctx']
     repo = ctx.repo()
@@ -440,36 +476,42 @@ def shownamespaces(**args):
                    lambda k: {'namespace': k, 'names': namespaces[k]},
                    lambda x: x['namespace'])
 
+@templatekeyword('node')
 def shownode(repo, ctx, templ, **args):
-    """:node: String. The changeset identification hash, as a 40 hexadecimal
+    """String. The changeset identification hash, as a 40 hexadecimal
     digit string.
     """
     return ctx.hex()
 
+@templatekeyword('p1rev')
 def showp1rev(repo, ctx, templ, **args):
-    """:p1rev: Integer. The repository-local revision number of the changeset's
+    """Integer. The repository-local revision number of the changeset's
     first parent, or -1 if the changeset has no parents."""
     return ctx.p1().rev()
 
+@templatekeyword('p2rev')
 def showp2rev(repo, ctx, templ, **args):
-    """:p2rev: Integer. The repository-local revision number of the changeset's
+    """Integer. The repository-local revision number of the changeset's
     second parent, or -1 if the changeset has no second parent."""
     return ctx.p2().rev()
 
+@templatekeyword('p1node')
 def showp1node(repo, ctx, templ, **args):
-    """:p1node: String. The identification hash of the changeset's first parent,
+    """String. The identification hash of the changeset's first parent,
     as a 40 digit hexadecimal string. If the changeset has no parents, all
     digits are 0."""
     return ctx.p1().hex()
 
+@templatekeyword('p2node')
 def showp2node(repo, ctx, templ, **args):
-    """:p2node: String. The identification hash of the changeset's second
+    """String. The identification hash of the changeset's second
     parent, as a 40 digit hexadecimal string. If the changeset has no second
     parent, all digits are 0."""
     return ctx.p2().hex()
 
+@templatekeyword('parents')
 def showparents(**args):
-    """:parents: List of strings. The parents of the changeset in "rev:node"
+    """List of strings. The parents of the changeset in "rev:node"
     format. If the changeset has only one "natural" parent (the predecessor
     revision) nothing is shown."""
     repo = args['repo']
@@ -483,16 +525,19 @@ def showparents(**args):
     f = _showlist('parent', parents, **args)
     return _hybrid(f, prevs, lambda x: {'ctx': repo[int(x)], 'revcache': {}})
 
+@templatekeyword('phase')
 def showphase(repo, ctx, templ, **args):
-    """:phase: String. The changeset phase name."""
+    """String. The changeset phase name."""
     return ctx.phasestr()
 
+@templatekeyword('phaseidx')
 def showphaseidx(repo, ctx, templ, **args):
-    """:phaseidx: Integer. The changeset phase index."""
+    """Integer. The changeset phase index."""
     return ctx.phase()
 
+@templatekeyword('rev')
 def showrev(repo, ctx, templ, **args):
-    """:rev: Integer. The repository-local changeset revision number."""
+    """Integer. The repository-local changeset revision number."""
     return scmutil.intrev(ctx.rev())
 
 def showrevslist(name, revs, **args):
@@ -504,8 +549,9 @@ def showrevslist(name, revs, **args):
     return _hybrid(f, revs,
                    lambda x: {name: x, 'ctx': repo[int(x)], 'revcache': {}})
 
+@templatekeyword('subrepos')
 def showsubrepos(**args):
-    """:subrepos: List of strings. Updated subrepositories in the changeset."""
+    """List of strings. Updated subrepositories in the changeset."""
     ctx = args['ctx']
     substate = ctx.substate
     if not substate:
@@ -523,56 +569,10 @@ def showsubrepos(**args):
 # don't remove "showtags" definition, even though namespaces will put
 # a helper function for "tags" keyword into "keywords" map automatically,
 # because online help text is built without namespaces initialization
+@templatekeyword('tags')
 def showtags(**args):
-    """:tags: List of strings. Any tags associated with the changeset."""
+    """List of strings. Any tags associated with the changeset."""
     return shownames('tags', **args)
-
-# keywords are callables like:
-# fn(repo, ctx, templ, cache, revcache, **args)
-# with:
-# repo - current repository instance
-# ctx - the changectx being displayed
-# templ - the templater instance
-# cache - a cache dictionary for the whole templater run
-# revcache - a cache dictionary for the current revision
-keywords = {
-    'activebookmark': showactivebookmark,
-    'author': showauthor,
-    'bisect': showbisect,
-    'branch': showbranch,
-    'branches': showbranches,
-    'bookmarks': showbookmarks,
-    'changessincelatesttag': showchangessincelatesttag,
-    'children': showchildren,
-    # currentbookmark is deprecated
-    'currentbookmark': showcurrentbookmark,
-    'date': showdate,
-    'desc': showdescription,
-    'diffstat': showdiffstat,
-    'extras': showextras,
-    'file_adds': showfileadds,
-    'file_copies': showfilecopies,
-    'file_copies_switch': showfilecopiesswitch,
-    'file_dels': showfiledels,
-    'file_mods': showfilemods,
-    'files': showfiles,
-    'graphnode': showgraphnode,
-    'latesttag': showlatesttag,
-    'latesttagdistance': showlatesttagdistance,
-    'manifest': showmanifest,
-    'namespaces': shownamespaces,
-    'node': shownode,
-    'p1rev': showp1rev,
-    'p1node': showp1node,
-    'p2rev': showp2rev,
-    'p2node': showp2node,
-    'parents': showparents,
-    'phase': showphase,
-    'phaseidx': showphaseidx,
-    'rev': showrev,
-    'subrepos': showsubrepos,
-    'tags': showtags,
-}
 
 def loadkeyword(ui, extname, registrarobj):
     """Load template keyword from specified registrarobj
