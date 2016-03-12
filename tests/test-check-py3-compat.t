@@ -3,8 +3,6 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
-  contrib/check-code.py not using absolute_import
-  contrib/check-code.py requires print_function
   contrib/import-checker.py not using absolute_import
   contrib/import-checker.py requires print_function
   contrib/memory.py not using absolute_import

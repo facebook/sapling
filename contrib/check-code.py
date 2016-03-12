@@ -19,9 +19,13 @@ when a rule triggers wrong, do one of the following (prefer one from top):
  * ONLY use no--check-code for skipping entire files from external sources
 """
 
-import re, glob, os, sys
+from __future__ import absolute_import, print_function
+import glob
 import keyword
 import optparse
+import os
+import re
+import sys
 try:
     import re2
 except ImportError:
@@ -443,12 +447,12 @@ class norepeatlogger(object):
         msgid = fname, lineno, line
         if msgid != self._lastseen:
             if blame:
-                print "%s:%d (%s):" % (fname, lineno, blame)
+                print("%s:%d (%s):" % (fname, lineno, blame))
             else:
-                print "%s:%d:" % (fname, lineno)
-            print " > %s" % line
+                print("%s:%d:" % (fname, lineno))
+            print(" > %s" % line)
             self._lastseen = msgid
-        print " " + msg
+        print(" " + msg)
 
 _defaultlogger = norepeatlogger()
 
@@ -478,19 +482,19 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     try:
         fp = open(f)
     except IOError as e:
-        print "Skipping %s, %s" % (f, str(e).split(':', 1)[0])
+        print("Skipping %s, %s" % (f, str(e).split(':', 1)[0]))
         return result
     pre = post = fp.read()
     fp.close()
 
     for name, match, magic, filters, pats in checks:
         if debug:
-            print name, f
+            print(name, f)
         fc = 0
         if not (re.match(match, f) or (magic and re.search(magic, pre))):
             if debug:
-                print "Skipping %s for %s it doesn't match %s" % (
-                       name, match, f)
+                print("Skipping %s for %s it doesn't match %s" % (
+                       name, match, f))
             continue
         if "no-" "check-code" in pre:
             # If you're looking at this line, it's because a file has:
@@ -499,7 +503,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             # tests easier. So, instead of writing it with a normal
             # spelling, we write it with the expected spelling from
             # tests/test-check-code.t
-            print "Skipping %s it has no-che?k-code (glob)" % f
+            print("Skipping %s it has no-che?k-code (glob)" % f)
             return "Skip" # skip checking this file
         for p, r in filters:
             post = re.sub(p, r, post)
@@ -511,7 +515,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
         # print post # uncomment to show filtered version
 
         if debug:
-            print "Checking %s for %s" % (name, f)
+            print("Checking %s for %s" % (name, f))
 
         prelines = None
         errors = []
@@ -542,8 +546,8 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
                 if ignore and re.search(ignore, l, re.MULTILINE):
                     if debug:
-                        print "Skipping %s for %s:%s (ignore pattern)" % (
-                            name, f, n)
+                        print("Skipping %s for %s:%s (ignore pattern)" % (
+                            name, f, n))
                     continue
                 bd = ""
                 if blame:
@@ -563,7 +567,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
             logfunc(*e)
             fc += 1
             if maxerr and fc >= maxerr:
-                print " (too many errors, giving up)"
+                print(" (too many errors, giving up)")
                 break
 
     return result
