@@ -11,6 +11,7 @@ Reads current and peak memory usage from ``/proc/self/status`` and
 prints it to ``stderr`` on exit.
 '''
 
+from __future__ import absolute_import
 import atexit
 
 def memusage(ui):
