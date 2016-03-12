@@ -338,8 +338,9 @@ class _requesthandler(SocketServer.StreamRequestHandler):
     def handle(self):
         ui = self.server.ui
         repo = self.server.repo
-        sv = server(ui, repo, self.rfile, self.wfile)
+        sv = None
         try:
+            sv = server(ui, repo, self.rfile, self.wfile)
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -354,7 +355,11 @@ class _requesthandler(SocketServer.StreamRequestHandler):
         except: # re-raises
             # also write traceback to error channel. otherwise client cannot
             # see it because it is written to server's stderr by default.
-            traceback.print_exc(file=sv.cerr)
+            if sv:
+                cerr = sv.cerr
+            else:
+                cerr = channeledoutput(self.wfile, 'e')
+            traceback.print_exc(file=cerr)
             raise
 
 class unixservice(object):

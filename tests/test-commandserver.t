@@ -717,6 +717,35 @@ unix domain socket:
   listening at .hg/server.sock
   abort: unknown command unknowncommand
   killed!
+  $ rm .hg/server.log
+
+ if server crashed before hello, traceback will be sent to 'e' channel as
+ last ditch:
+
+  $ cat <<EOF >> .hg/hgrc
+  > [cmdserver]
+  > log = inexistent/path.log
+  > EOF
+  >>> from hgclient import unixserver, readchannel, check
+  >>> server = unixserver('.hg/server.sock', '.hg/server.log')
+  >>> def earlycrash(conn):
+  ...     while True:
+  ...         try:
+  ...             ch, data = readchannel(conn)
+  ...             if not data.startswith('  '):
+  ...                 print '%c, %r' % (ch, data)
+  ...         except EOFError:
+  ...             break
+  >>> check(earlycrash, server.connect)
+  e, 'Traceback (most recent call last):\n'
+  e, "IOError: *" (glob)
+  >>> server.shutdown()
+
+  $ cat .hg/server.log | grep -v '^  '
+  listening at .hg/server.sock
+  Traceback (most recent call last):
+  IOError: * (glob)
+  killed!
 #endif
 #if no-unix-socket
 

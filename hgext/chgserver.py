@@ -525,9 +525,10 @@ class _requesthandler(SocketServer.StreamRequestHandler):
         os.setpgid(0, 0)
         ui = self.server.ui
         repo = self.server.repo
-        sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
-                          self.server.hashstate, self.server.baseaddress)
+        sv = None
         try:
+            sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
+                              self.server.hashstate, self.server.baseaddress)
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -544,7 +545,11 @@ class _requesthandler(SocketServer.StreamRequestHandler):
         except: # re-raises
             # also write traceback to error channel. otherwise client cannot
             # see it because it is written to server's stderr by default.
-            traceback.print_exc(file=sv.cerr)
+            if sv:
+                cerr = sv.cerr
+            else:
+                cerr = commandserver.channeledoutput(self.wfile, 'e')
+            traceback.print_exc(file=cerr)
             raise
 
 def _tempaddress(address):
