@@ -10,7 +10,10 @@
 from __future__ import absolute_import, print_function
 
 import ast
+import imp
+import os
 import sys
+import traceback
 
 def check_compat_py2(f):
     """Check Python 3 compatibility for a file with Python 2"""
@@ -46,6 +49,27 @@ def check_compat_py3(f):
     except SyntaxError as e:
         print('%s: invalid syntax: %s' % (f, e))
         return
+
+    # Try to import the module.
+    # For now we only support mercurial.* and hgext.* modules because figuring
+    # out module paths for things not in a package can be confusing.
+    if f.startswith(('hgext/', 'mercurial/')) and not f.endswith('__init__.py'):
+        assert f.endswith('.py')
+        name = f.replace('/', '.')[:-3]
+        with open(f, 'r') as fh:
+            try:
+                imp.load_module(name, fh, '', ('py', 'r', imp.PY_SOURCE))
+            except Exception as e:
+                exc_type, exc_value, tb = sys.exc_info()
+                frame = traceback.extract_tb(tb)[-1]
+
+                if frame.filename:
+                    filename = os.path.basename(frame.filename)
+                    print('%s: error importing: <%s> %s (error at %s:%d)' % (
+                          f, type(e).__name__, e, filename, frame.lineno))
+                else:
+                    print('%s: error importing module: <%s> %s (line %d)' % (
+                          f, type(e).__name__, e, frame.lineno))
 
 if __name__ == '__main__':
     if sys.version_info[0] == 2:
