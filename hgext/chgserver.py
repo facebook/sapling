@@ -451,7 +451,10 @@ class chgcmdserver(commandserver.server):
         if newhash.mtimehash != self.hashstate.mtimehash:
             addr = _hashaddress(self.baseaddress, self.hashstate.confighash)
             insts.append('unlink %s' % addr)
-            insts.append('reconnect')
+            # mtimehash is empty if one or more extensions fail to load.
+            # to be compatible with hg, still serve the client this time.
+            if self.hashstate.mtimehash:
+                insts.append('reconnect')
         if newhash.confighash != self.hashstate.confighash:
             addr = _hashaddress(self.baseaddress, newhash.confighash)
             insts.append('redirect %s' % addr)
@@ -636,6 +639,7 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
 class chgunixservice(commandserver.unixservice):
     def init(self):
         self._inithashstate()
+        self._checkextensions()
         class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
                   SocketServer.UnixStreamServer):
             ui = self.ui
@@ -655,6 +659,15 @@ class chgunixservice(commandserver.unixservice):
             return
         self.hashstate = hashstate.fromui(self.ui)
         self.address = _hashaddress(self.address, self.hashstate.confighash)
+
+    def _checkextensions(self):
+        if not self.hashstate:
+            return
+        if extensions.notloaded():
+            # one or more extensions failed to load. mtimehash becomes
+            # meaningless because we do not know the paths of those extensions.
+            # set mtimehash to an illegal hash value to invalidate the server.
+            self.hashstate.mtimehash = ''
 
     def _createsymlink(self):
         if self.baseaddress == self.address:
