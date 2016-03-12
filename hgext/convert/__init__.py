@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 from mercurial import (
     cmdutil,
-    templatekw,
+    registrar,
 )
 from mercurial.i18n import _
 
@@ -437,22 +437,22 @@ def kwconverted(ctx, name):
             return subversion.revsplit(rev)[0]
     return rev
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword('svnrev')
 def kwsvnrev(repo, ctx, **args):
-    """:svnrev: String. Converted subversion revision number."""
+    """String. Converted subversion revision number."""
     return kwconverted(ctx, 'svnrev')
 
+@templatekeyword('svnpath')
 def kwsvnpath(repo, ctx, **args):
-    """:svnpath: String. Converted subversion revision project path."""
+    """String. Converted subversion revision project path."""
     return kwconverted(ctx, 'svnpath')
 
+@templatekeyword('svnuuid')
 def kwsvnuuid(repo, ctx, **args):
-    """:svnuuid: String. Converted subversion revision repository identifier."""
+    """String. Converted subversion revision repository identifier."""
     return kwconverted(ctx, 'svnuuid')
-
-def extsetup(ui):
-    templatekw.keywords['svnrev'] = kwsvnrev
-    templatekw.keywords['svnpath'] = kwsvnpath
-    templatekw.keywords['svnuuid'] = kwsvnuuid
 
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = [kwsvnrev, kwsvnpath, kwsvnuuid]

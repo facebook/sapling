@@ -32,7 +32,6 @@ from mercurial import (
     revlog,
     revset,
     scmutil,
-    templatekw,
     util,
 )
 
@@ -726,14 +725,16 @@ def revsettransplanted(repo, subset, x):
     return revset.baseset([r for r in s if
         repo[r].extra().get('transplant_source')])
 
+templatekeyword = registrar.templatekeyword()
+
+@templatekeyword('transplanted')
 def kwtransplanted(repo, ctx, **args):
-    """:transplanted: String. The node identifier of the transplanted
+    """String. The node identifier of the transplanted
     changeset if any."""
     n = ctx.extra().get('transplant_source')
     return n and nodemod.hex(n) or ''
 
 def extsetup(ui):
-    templatekw.keywords['transplanted'] = kwtransplanted
     cmdutil.unfinishedstates.append(
         ['transplant/journal', True, False, _('transplant in progress'),
          _("use 'hg transplant --continue' or 'hg update' to abort")])
