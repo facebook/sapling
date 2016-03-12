@@ -1318,3 +1318,62 @@ And if I shelve, commit, then unshelve, does it become modified?
   $ hg commit -qm "Remove unknown"
 
   $ cd ..
+
+We expects that non-bare shelve keeps newly created branch in
+working directory.
+
+  $ hg init shelve-preserve-new-branch
+  $ cd shelve-preserve-new-branch
+  $ echo "a" >> a
+  $ hg add a
+  $ echo "b" >> b
+  $ hg add b
+  $ hg commit -m "ab"
+  $ echo "aa" >> a
+  $ echo "bb" >> b
+  $ hg branch new-branch
+  marked working directory as branch new-branch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg status
+  M a
+  M b
+  $ hg branch
+  new-branch
+  $ hg shelve a
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  new-branch
+  $ hg status
+  M b
+  $ touch "c" >> c
+  $ hg add c
+  $ hg status
+  M b
+  A c
+  $ hg shelve --exclude c
+  shelved as default-01
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg branch
+  new-branch
+  $ hg status
+  A c
+  $ hg shelve --include c
+  shelved as default-02
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg branch
+  new-branch
+  $ hg status
+  $ echo "d" >> d
+  $ hg add d
+  $ hg status
+  A d
+
+We expect that bare-shelve will not keep branch in current working directory.
+
+  $ hg shelve
+  shelved as default-03
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg branch
+  default
+

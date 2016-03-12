@@ -272,6 +272,7 @@ def _docreatecmd(ui, repo, pats, opts):
     if len(parents) > 1:
         raise error.Abort(_('cannot shelve while merging'))
     parent = parents[0]
+    origbranch = wctx.branch()
 
     # we never need the user, so we use a generic user for all shelve operations
     user = 'shelve@localhost'
@@ -378,10 +379,18 @@ def _docreatecmd(ui, repo, pats, opts):
             desc = util.ellipsis(desc, ui.termwidth())
         ui.status(_('shelved as %s\n') % name)
         hg.update(repo, parent.node())
+        if origbranch != repo['.'].branch() and not _isbareshelve(pats, opts):
+            repo.dirstate.setbranch(origbranch)
 
         _aborttransaction(repo)
     finally:
         lockmod.release(tr, lock)
+
+def _isbareshelve(pats, opts):
+    return (not pats
+            and not opts.get('interactive', False)
+            and not opts.get('include', False)
+            and not opts.get('exclude', False))
 
 def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
