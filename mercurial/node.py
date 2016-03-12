@@ -14,13 +14,13 @@ hex = binascii.hexlify
 bin = binascii.unhexlify
 
 nullrev = -1
-nullid = "\0" * 20
+nullid = b"\0" * 20
 nullhex = hex(nullid)
 
 # pseudo identifiers for working directory
 # (they are experimental, so don't add too many dependencies on them)
 wdirrev = 0x7fffffff
-wdirid = "\xff" * 20
+wdirid = b"\xff" * 20
 
 def short(node):
     return hex(node[:6])
