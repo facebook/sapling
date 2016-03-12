@@ -35,6 +35,11 @@ except ImportError:
 if '__pypy__' in sys.builtin_module_names:
     modulepolicy = 'py'
 
+# Our C extensions aren't yet compatible with Python 3. So use pure Python
+# on Python 3 for now.
+if sys.version_info[0] >= 3:
+    modulepolicy = 'py'
+
 # Environment variable can always force settings.
 modulepolicy = os.environ.get('HGMODULEPOLICY', modulepolicy)
 
