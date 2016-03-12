@@ -311,9 +311,16 @@ static void readhello(hgclient_t *hgc)
 {
 	readchannel(hgc);
 	context_t *ctx = &hgc->ctx;
-	if (ctx->ch != 'o')
-		abortmsg("unexpected channel of hello message (ch = %c)",
-			 ctx->ch);
+	if (ctx->ch != 'o') {
+		char ch = ctx->ch;
+		if (ch == 'e') {
+			/* write early error and will exit */
+			fwrite(ctx->data, sizeof(ctx->data[0]), ctx->datasize,
+			       stderr);
+			handleresponse(hgc);
+		}
+		abortmsg("unexpected channel of hello message (ch = %c)", ch);
+	}
 	enlargecontext(ctx, ctx->datasize + 1);
 	ctx->data[ctx->datasize] = '\0';
 	debugmsg("hello received: %s (size = %zu)", ctx->data, ctx->datasize);
