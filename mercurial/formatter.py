@@ -91,10 +91,22 @@ class baseformatter(object):
     def plain(self, text, **opts):
         '''show raw text for non-templated mode'''
         pass
+    def nested(self, field):
+        '''sub formatter to store nested data in the specified field'''
+        self._item[field] = data = []
+        return _nestedformatter(self._ui, self._converter, data)
     def end(self):
         '''end output for the formatter'''
         if self._item is not None:
             self._showitem()
+
+class _nestedformatter(baseformatter):
+    '''build sub items and store them in the parent formatter'''
+    def __init__(self, ui, converter, data):
+        baseformatter.__init__(self, ui, topic='', opts={}, converter=converter)
+        self._data = data
+    def _showitem(self):
+        self._data.append(self._item)
 
 def _iteritems(data):
     '''iterate key-value pairs in stable order'''
@@ -139,6 +151,9 @@ class plainformatter(baseformatter):
             self._ui.write(deftext % fielddata, **opts)
     def plain(self, text, **opts):
         self._ui.write(text, **opts)
+    def nested(self, field):
+        # nested data will be directly written to ui
+        return self
     def end(self):
         pass
 
