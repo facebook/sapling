@@ -290,6 +290,21 @@ Fingerprints
   $ hg -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
   5fed3813f7f5
 
+- multiple fingerprints specified and first matches
+  $ hg --config 'hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  5fed3813f7f5
+
+- multiple fingerprints specified and last matches
+  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, 914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  5fed3813f7f5
+
+- multiple fingerprints specified and none match
+
+  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  (check hostfingerprint configuration)
+  [255]
+
 - fails when cert doesn't match hostname (port is ignored)
   $ hg -R copy-pull id https://localhost:$HGPORT1/
   abort: certificate for localhost has unexpected fingerprint 28:ff:71:bf:65:31:14:23:ad:62:92:b4:0e:31:99:18:fc:83:e3:9b

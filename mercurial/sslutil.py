@@ -162,7 +162,7 @@ class validator(object):
     def __call__(self, sock, strict=False):
         host = self.host
         cacerts = self.ui.config('web', 'cacerts')
-        hostfingerprint = self.ui.config('hostfingerprints', host)
+        hostfingerprints = self.ui.configlist('hostfingerprints', host)
 
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise error.Abort(_('%s ssl connection error') % host)
@@ -178,9 +178,14 @@ class validator(object):
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
             for x in xrange(0, len(peerfingerprint), 2)])
-        if hostfingerprint:
-            if peerfingerprint.lower() != \
-                    hostfingerprint.replace(':', '').lower():
+        if hostfingerprints:
+            fingerprintmatch = False
+            for hostfingerprint in hostfingerprints:
+                if peerfingerprint.lower() == \
+                        hostfingerprint.replace(':', '').lower():
+                    fingerprintmatch = True
+                    break
+            if not fingerprintmatch:
                 raise error.Abort(_('certificate for %s has unexpected '
                                    'fingerprint %s') % (host, nicefingerprint),
                                  hint=_('check hostfingerprint configuration'))

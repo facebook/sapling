@@ -974,6 +974,9 @@ only succeed if the servers certificate matches the fingerprint.
 This is very similar to how ssh known hosts works.
 
 The fingerprint is the SHA-1 hash value of the DER encoded certificate.
+Multiple values can be specified (separated by spaces or commas). This can
+be used to define both old and new fingerprints while a host transitions
+to a new certificate.
 
 The CA chain and web.cacerts is not used for servers with a fingerprint.
 
