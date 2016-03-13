@@ -52,7 +52,7 @@ Manifest file with invalid URL aborts
   $ echo 'http://does.not.exist/bundle.hg' > server/.hg/clonebundles.manifest
   $ hg clone http://localhost:$HGPORT 404-url
   applying clone bundle from http://does.not.exist/bundle.hg
-  error fetching bundle: (.* not known|getaddrinfo failed) (re)
+  error fetching bundle: (.* not known|getaddrinfo failed|No address associated with hostname) (re)
   abort: error applying bundle
   (if this error persists, consider contacting the server operator or disable clone bundles via "--config ui.clonebundles=false")
   [255]
