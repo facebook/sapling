@@ -461,6 +461,8 @@ class revbranchcache(object):
                         self._rbcnamescount = 0
                         self._rbcrevslen = 0
                 if self._rbcnamescount == 0:
+                    # before rewriting names, make sure references are removed
+                    repo.vfs.unlinkpath(_rbcrevs, ignoremissing=True)
                     f = repo.vfs.open(_rbcnames, 'wb')
                 f.write('\0'.join(encoding.fromlocal(b)
                                   for b in self._names[self._rbcnamescount:]))
