@@ -363,7 +363,7 @@ class revbranchcache(object):
             bndata = repo.vfs.read(_rbcnames)
             self._rbcsnameslen = len(bndata) # for verification before writing
             self._names = [encoding.tolocal(bn) for bn in bndata.split('\0')]
-        except (IOError, OSError) as inst:
+        except (IOError, OSError):
             if readonly:
                 # don't try to use cache - fall back to the slow path
                 self.branchinfo = self._branchinfo
