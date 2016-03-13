@@ -104,14 +104,14 @@ def lfconvert(ui, src, dest, *pats, **opts):
                     lfiles, normalfiles, matcher, size, lfiletohash)
             ui.progress(_('converting revisions'), None)
 
-            if os.path.exists(rdst.wjoin(lfutil.shortname)):
-                shutil.rmtree(rdst.wjoin(lfutil.shortname))
+            if rdst.wvfs.exists(lfutil.shortname):
+                rdst.wvfs.rmtree(lfutil.shortname)
 
             for f in lfiletohash.keys():
-                if os.path.isfile(rdst.wjoin(f)):
-                    os.unlink(rdst.wjoin(f))
+                if rdst.wvfs.isfile(f):
+                    rdst.wvfs.unlink(f)
                 try:
-                    os.removedirs(os.path.dirname(rdst.wjoin(f)))
+                    rdst.wvfs.removedirs(rdst.wvfs.dirname(f))
                 except OSError:
                     pass
 
@@ -436,20 +436,26 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
 
         update = {}
         updated, removed = 0, 0
+        wvfs = repo.wvfs
         for lfile in lfiles:
-            abslfile = repo.wjoin(lfile)
-            abslfileorig = scmutil.origpath(ui, repo, abslfile)
-            absstandin = repo.wjoin(lfutil.standin(lfile))
-            absstandinorig = scmutil.origpath(ui, repo, absstandin)
-            if os.path.exists(absstandin):
-                if (os.path.exists(absstandinorig) and
-                    os.path.exists(abslfile)):
-                    shutil.copyfile(abslfile, abslfileorig)
-                    util.unlinkpath(absstandinorig)
+            rellfile = lfile
+            rellfileorig = os.path.relpath(
+                scmutil.origpath(ui, repo, wvfs.join(rellfile)),
+                start=repo.root)
+            relstandin = lfutil.standin(lfile)
+            relstandinorig = os.path.relpath(
+                scmutil.origpath(ui, repo, wvfs.join(relstandin)),
+                start=repo.root)
+            if wvfs.exists(relstandin):
+                if (wvfs.exists(relstandinorig) and
+                    wvfs.exists(rellfile)):
+                    shutil.copyfile(wvfs.join(rellfile),
+                                    wvfs.join(rellfileorig))
+                    wvfs.unlinkpath(relstandinorig)
                 expecthash = lfutil.readstandin(repo, lfile)
                 if expecthash != '':
                     if lfile not in repo[None]: # not switched to normal file
-                        util.unlinkpath(abslfile, ignoremissing=True)
+                        wvfs.unlinkpath(rellfile, ignoremissing=True)
                     # use normallookup() to allocate an entry in largefiles
                     # dirstate to prevent lfilesrepo.status() from reporting
                     # missing files as removed.
@@ -460,9 +466,9 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
                 # lfile is added to the repository again. This happens when a
                 # largefile is converted back to a normal file: the standin
                 # disappears, but a new (normal) file appears as the lfile.
-                if (os.path.exists(abslfile) and
+                if (wvfs.exists(rellfile) and
                     repo.dirstate.normalize(lfile) not in repo[None]):
-                    util.unlinkpath(abslfile)
+                    wvfs.unlinkpath(rellfile)
                     removed += 1
 
         # largefile processing might be slow and be interrupted - be prepared
@@ -487,12 +493,12 @@ def updatelfiles(ui, repo, filelist=None, printmessage=None,
 
             # copy the state of largefile standin from the repository's
             # dirstate to its state in the lfdirstate.
-            abslfile = repo.wjoin(lfile)
-            absstandin = repo.wjoin(lfutil.standin(lfile))
-            if os.path.exists(absstandin):
-                mode = os.stat(absstandin).st_mode
-                if mode != os.stat(abslfile).st_mode:
-                    os.chmod(abslfile, mode)
+            rellfile = lfile
+            relstandin = lfutil.standin(lfile)
+            if wvfs.exists(relstandin):
+                mode = wvfs.stat(relstandin).st_mode
+                if mode != wvfs.stat(rellfile).st_mode:
+                    wvfs.chmod(rellfile, mode)
                     update1 = 1
 
             updated += update1
