@@ -1777,6 +1777,29 @@ issue3772: hg log -r :null showing revision 0 as well
   
 working-directory revision requires special treatment
 
+clean:
+
+  $ hg log -r 'wdir()' --debug
+  changeset:   2147483647:ffffffffffffffffffffffffffffffffffffffff
+  phase:       draft
+  parent:      0:65624cd9070a035fa7191a54f2b8af39f16b0c08
+  parent:      -1:0000000000000000000000000000000000000000
+  user:        test
+  date:        [A-Za-z0-9:+ ]+ (re)
+  extra:       branch=default
+  
+
+dirty:
+
+  $ echo 2 >> d1/f1
+  $ echo 2 > d1/f2
+  $ hg add d1/f2
+  $ hg remove .d6/f1
+  $ hg status
+  M d1/f1
+  A d1/f2
+  R .d6/f1
+
   $ hg log -r 'wdir()'
   changeset:   2147483647:ffffffffffff
   parent:      0:65624cd9070a
@@ -1793,6 +1816,9 @@ working-directory revision requires special treatment
   parent:      -1:0000000000000000000000000000000000000000
   user:        test
   date:        [A-Za-z0-9:+ ]+ (re)
+  files:       d1/f1
+  files+:      d1/f2
+  files-:      .d6/f1
   extra:       branch=default
   
   $ hg log -r 'wdir()' -Tjson
@@ -1834,11 +1860,13 @@ working-directory revision requires special treatment
     "parents": ["65624cd9070a035fa7191a54f2b8af39f16b0c08"],
     "manifest": null,
     "extra": {"branch": "default"},
-    "modified": [],
-    "added": [],
-    "removed": []
+    "modified": ["d1/f1"],
+    "added": ["d1/f2"],
+    "removed": [".d6/f1"]
    }
   ]
+
+  $ hg revert -aqC
 
 Check that adding an arbitrary name shows up in log automatically
 
