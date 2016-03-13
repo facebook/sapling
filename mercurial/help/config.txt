@@ -968,10 +968,13 @@ is treated as a failure.
 --------------------
 
 Fingerprints of the certificates of known HTTPS servers.
+
 A HTTPS connection to a server with a fingerprint configured here will
 only succeed if the servers certificate matches the fingerprint.
 This is very similar to how ssh known hosts works.
+
 The fingerprint is the SHA-1 hash value of the DER encoded certificate.
+
 The CA chain and web.cacerts is not used for servers with a fingerprint.
 
 For example::
