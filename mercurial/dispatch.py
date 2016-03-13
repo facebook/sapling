@@ -437,9 +437,6 @@ class cmdalias(object):
         self.args = []
         self.opts = []
         self.help = ''
-        self.norepo = True
-        self.optionalrepo = False
-        self.inferrepo = False
         self.badalias = None
         self.unknowncmd = False
 
@@ -501,12 +498,6 @@ class cmdalias(object):
                 self.fn, self.opts = tableentry
 
             self.args = aliasargs(self.fn, args)
-            if not self.fn.norepo:
-                self.norepo = False
-            if self.fn.optionalrepo:
-                self.optionalrepo = True
-            if self.fn.inferrepo:
-                self.inferrepo = True
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd):]
@@ -519,6 +510,14 @@ class cmdalias(object):
         except error.AmbiguousCommand:
             self.badalias = (_("alias '%s' resolves to ambiguous command '%s'")
                              % (self.name, cmd))
+
+    def __getattr__(self, name):
+        adefaults = {'norepo': True, 'optionalrepo': False, 'inferrepo': False}
+        if name not in adefaults:
+            raise AttributeError(name)
+        if self.badalias or util.safehasattr(self, 'shell'):
+            return adefaults[name]
+        return getattr(self.fn, name)
 
     def __call__(self, ui, *args, **opts):
         if self.badalias:
