@@ -629,4 +629,25 @@ situation where the cache is out of sync and the hash check detects it
   $ f --size .hg/cache/rbc-revs*
   .hg/cache/rbc-revs-v1: size=112
 
+cache is rebuilt when corruption is detected
+  $ echo > .hg/cache/rbc-names-v1
+  $ hg log -r '5:&branch(.)' -T '{rev} ' --debug
+  rebuilding corrupted revision branch cache
+  8 9 10 11 12 13 truncating cache/rbc-revs-v1 to 40
+  $ f --size --hexdump .hg/cache/rbc-*
+  .hg/cache/rbc-names-v1: size=79
+  0000: 62 00 61 00 63 00 61 20 62 72 61 6e 63 68 20 6e |b.a.c.a branch n|
+  0010: 61 6d 65 20 6d 75 63 68 20 6c 6f 6e 67 65 72 20 |ame much longer |
+  0020: 74 68 61 6e 20 74 68 65 20 64 65 66 61 75 6c 74 |than the default|
+  0030: 20 6a 75 73 74 69 66 69 63 61 74 69 6f 6e 20 75 | justification u|
+  0040: 73 65 64 20 62 79 20 62 72 61 6e 63 68 65 73    |sed by branches|
+  .hg/cache/rbc-revs-v1: size=112
+  0000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 |................|
+  0020: 00 00 00 00 00 00 00 00 d8 cb c6 1d 00 00 00 01 |................|
+  0030: 58 97 36 a2 00 00 00 02 10 ff 58 95 00 00 00 03 |X.6.......X.....|
+  0040: ee bb 94 44 00 00 00 00 5f 40 61 bb 00 00 00 00 |...D...._@a.....|
+  0050: bf be 84 1b 00 00 00 00 d3 f1 63 45 80 00 00 00 |..........cE....|
+  0060: e3 d4 9c 05 80 00 00 00 e2 3b 55 05 00 00 00 00 |.........;U.....|
+
   $ cd ..

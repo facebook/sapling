@@ -383,6 +383,15 @@ class revbranchcache(object):
         self._rbcnamescount = len(self._names) # number of good names on disk
         self._namesreverse = dict((b, r) for r, b in enumerate(self._names))
 
+    def _clear(self):
+        self._rbcsnameslen = 0
+        del self._names[:]
+        self._rbcnamescount = 0
+        self._namesreverse.clear()
+        self._rbcrevslen = len(self._repo.changelog)
+        self._rbcrevs = array('c')
+        self._rbcrevs.fromstring('\0' * (self._rbcrevslen * _rbcrecsize))
+
     def branchinfo(self, rev):
         """Return branch name and close flag for rev, using and updating
         persistent cache."""
@@ -408,7 +417,11 @@ class revbranchcache(object):
         if cachenode == '\0\0\0\0':
             pass
         elif cachenode == reponode:
-            return self._names[branchidx], close
+            if branchidx < self._rbcnamescount:
+                return self._names[branchidx], close
+            # referenced branch doesn't exist - rebuild is expensive but needed
+            self._repo.ui.debug("rebuilding corrupted revision branch cache\n")
+            self._clear()
         else:
             # rev/node map has changed, invalidate the cache from here up
             truncate = rbcrevidx + _rbcrecsize
