@@ -1788,6 +1788,14 @@ clean:
   date:        [A-Za-z0-9:+ ]+ (re)
   extra:       branch=default
   
+  $ hg log -r 'wdir()' -p --stat
+  changeset:   2147483647:ffffffffffff
+  parent:      0:65624cd9070a
+  user:        test
+  date:        [A-Za-z0-9:+ ]+ (re)
+  
+  
+  
 
 dirty:
 
@@ -1820,6 +1828,36 @@ dirty:
   files+:      d1/f2
   files-:      .d6/f1
   extra:       branch=default
+  
+  $ hg log -r 'wdir()' -p --stat --git
+  changeset:   2147483647:ffffffffffff
+  parent:      0:65624cd9070a
+  user:        test
+  date:        [A-Za-z0-9:+ ]+ (re)
+  
+   .d6/f1 |  1 -
+   d1/f1  |  1 +
+   d1/f2  |  1 +
+   3 files changed, 2 insertions(+), 1 deletions(-)
+  
+  diff --git a/.d6/f1 b/.d6/f1
+  deleted file mode 100644
+  --- a/.d6/f1
+  +++ /dev/null
+  @@ -1,1 +0,0 @@
+  -1
+  diff --git a/d1/f1 b/d1/f1
+  --- a/d1/f1
+  +++ b/d1/f1
+  @@ -1,1 +1,2 @@
+   1
+  +2
+  diff --git a/d1/f2 b/d1/f2
+  new file mode 100644
+  --- /dev/null
+  +++ b/d1/f2
+  @@ -0,0 +1,1 @@
+  +2
   
   $ hg log -r 'wdir()' -Tjson
   [
