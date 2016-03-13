@@ -482,6 +482,9 @@ class revbranchcache(object):
                 if f.tell() != start:
                     repo.ui.debug("truncating %s to %s\n" % (_rbcrevs, start))
                     f.seek(start)
+                    if f.tell() != start:
+                        start = 0
+                        f.seek(start)
                     f.truncate()
                 end = revs * _rbcrecsize
                 f.write(self._rbcrevs[start:end])
