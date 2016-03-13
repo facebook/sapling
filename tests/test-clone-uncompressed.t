@@ -88,10 +88,5 @@ actually serving file content
   $ echo >> repo/f2
   $ hg -R repo ci -m "1"
   $ wait
-  abort: unexpected response from remote server:
-  '*\n' (glob)
   $ hg -R clone id
-  abort: repository clone not found!
-  [255]
-
-the current clone error is a regression from 9fea6b38a8da.
+  000000000000
