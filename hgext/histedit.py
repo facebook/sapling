@@ -1379,6 +1379,10 @@ def verifyactions(actions, state, ctxs):
     missing = sorted(expected - seen)  # sort to stabilize output
 
     if state.repo.ui.configbool('histedit', 'dropmissing'):
+        if len(actions) == 0:
+            raise error.ParseError(_('no rules provided'),
+                    hint=_('use strip extension to remove commits'))
+
         drops = [drop(state, node.bin(n)) for n in missing]
         # put the in the beginning so they execute immediately and
         # don't show in the edit-plan in the future

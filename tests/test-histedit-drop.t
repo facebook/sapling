@@ -153,6 +153,10 @@ Drop the last changeset
   hg: parse error: missing rules for changeset a4f7421b80f7
   (use "drop a4f7421b80f7" to discard, see also: "hg help -e histedit.config")
   $ hg --config histedit.dropmissing=True histedit  cb9a9f314b8b --commands - 2>&1 << EOF | fixbundle
+  > EOF
+  hg: parse error: no rules provided
+  (use strip extension to remove commits)
+  $ hg --config histedit.dropmissing=True histedit  cb9a9f314b8b --commands - 2>&1 << EOF | fixbundle
   > pick cb9a9f314b8b a
   > pick ee283cb5f2d5 e
   > EOF
