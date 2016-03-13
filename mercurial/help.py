@@ -188,6 +188,8 @@ internalstable = sorted([
      loaddoc('bundles', subdir='internals')),
     (['changegroups'], _('representation of revlog data'),
      loaddoc('changegroups', subdir='internals')),
+    (['requirements'], _('repository requirements'),
+     loaddoc('requirements', subdir='internals')),
     (['revlogs'], _('revision storage mechanism'),
      loaddoc('revlogs', subdir='internals')),
 ])

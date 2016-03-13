@@ -875,6 +875,7 @@ internals topic renders index of available sub-topics
   
        bundles       container for exchange of repository data
        changegroups  representation of revlog data
+       requirements  repository requirements
        revlogs       revision storage mechanism
 
 sub-topics can be accessed
@@ -2725,6 +2726,13 @@ Sub-topic indexes rendered properly
   </a>
   </td><td>
   representation of revlog data
+  </td></tr>
+  <tr><td>
+  <a href="/help/internals.requirements">
+  requirements
+  </a>
+  </td><td>
+  repository requirements
   </td></tr>
   <tr><td>
   <a href="/help/internals.revlogs">
