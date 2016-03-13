@@ -66,6 +66,7 @@ from mercurial.i18n import _
 from mercurial.node import bin, hex, short, nullid, nullrev
 from mercurial.lock import release
 from mercurial import commands, cmdutil, hg, scmutil, util, revset
+from mercurial import dispatch
 from mercurial import extensions, error, phases
 from mercurial import patch as patchmod
 from mercurial import lock as lockmod
@@ -3566,7 +3567,7 @@ def extsetup(ui):
         for cmd, entry in cmdtable.iteritems():
             cmd = cmdutil.parsealiases(cmd)[0]
             func = entry[0]
-            if func.norepo:
+            if dispatch._cmdattr(ui, cmd, func, 'norepo'):
                 continue
             entry = extensions.wrapcommand(cmdtable, cmd, mqcommand)
             entry[1].extend(mqopt)
