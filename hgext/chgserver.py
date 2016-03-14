@@ -42,6 +42,7 @@ from __future__ import absolute_import
 
 import SocketServer
 import errno
+import gc
 import inspect
 import os
 import re
@@ -569,6 +570,9 @@ class _requesthandler(SocketServer.StreamRequestHandler):
                 cerr = commandserver.channeledoutput(self.wfile, 'e')
             traceback.print_exc(file=cerr)
             raise
+        finally:
+            # trigger __del__ since ForkingMixIn uses os._exit
+            gc.collect()
 
 def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
