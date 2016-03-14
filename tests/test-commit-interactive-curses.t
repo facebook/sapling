@@ -1,5 +1,6 @@
 Set up a repo
 
+  $ cp $HGRCPATH $HGRCPATH.pretest
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > interactive = true
@@ -223,3 +224,90 @@ of the edit.
   hello world
 
 
+Check ui.interface logic for the chunkselector
+
+The default interface is text
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ chunkselectorinterface() {
+  > python <<EOF
+  > from mercurial import hg, ui, parsers;\
+  > repo = hg.repository(ui.ui(), ".");\
+  > print repo.ui.interface("chunkselector")
+  > EOF
+  > }
+  $ chunkselectorinterface
+  text
+
+If only the default is set, we'll use that for the feature, too
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = curses
+  > EOF
+  $ chunkselectorinterface
+  curses
+
+It is possible to override the default interface with a feature specific
+interface
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = text
+  > interface.chunkselector = curses
+  > EOF
+
+  $ chunkselectorinterface
+  curses
+
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = curses
+  > interface.chunkselector = text
+  > EOF
+
+  $ chunkselectorinterface
+  text
+
+If a bad interface name is given, we use the default value (with a nice
+error message to suggest that the configuration needs to be fixed)
+
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = blah
+  > EOF
+  $ chunkselectorinterface
+  invalid value for ui.interface: blah (using text)
+  text
+
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = curses
+  > interface.chunkselector = blah
+  > EOF
+  $ chunkselectorinterface
+  invalid value for ui.interface.chunkselector: blah (using curses)
+  curses
+
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = blah
+  > interface.chunkselector = curses
+  > EOF
+  $ chunkselectorinterface
+  invalid value for ui.interface: blah
+  curses
+
+  $ cp $HGRCPATH.pretest $HGRCPATH
+  $ cat <<EOF >> $HGRCPATH
+  > [ui]
+  > interface = blah
+  > interface.chunkselector = blah
+  > EOF
+  $ chunkselectorinterface
+  invalid value for ui.interface: blah
+  invalid value for ui.interface.chunkselector: blah (using text)
+  text

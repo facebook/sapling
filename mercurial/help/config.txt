@@ -1613,6 +1613,15 @@ User interface controls.
 ``interactive``
     Allow to prompt the user. (default: True)
 
+``interface``
+    Select the default interface for interactive features (default: text).
+    Possible values are 'text' and 'curses'.
+
+``interface.chunkselector``
+    Select the interface for change recording (e.g. :hg:`commit` -i).
+    Possible values are 'text' and 'curses'.
+    This config overrides the interface specified by ui.interface.
+
 ``logtemplate``
     Template string for commands that print changesets.
 
