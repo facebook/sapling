@@ -120,20 +120,21 @@ def openlfdirstate(ui, repo, create=True):
     Return a dirstate object that tracks largefiles: i.e. its root is
     the repo root, but it is saved in .hg/largefiles/dirstate.
     '''
-    lfstoredir = repo.join(longname)
-    opener = scmutil.opener(lfstoredir)
+    vfs = repo.vfs
+    lfstoredir = longname
+    opener = scmutil.opener(vfs.join(lfstoredir))
     lfdirstate = largefilesdirstate(opener, ui, repo.root,
                                      repo.dirstate._validate)
 
     # If the largefiles dirstate does not exist, populate and create
     # it. This ensures that we create it on the first meaningful
     # largefiles operation in a new clone.
-    if create and not os.path.exists(os.path.join(lfstoredir, 'dirstate')):
+    if create and not vfs.exists(vfs.join(lfstoredir, 'dirstate')):
         matcher = getstandinmatcher(repo)
         standins = repo.dirstate.walk(matcher, [], False, False)
 
         if len(standins) > 0:
-            util.makedirs(lfstoredir)
+            vfs.makedirs(lfstoredir)
 
         for standin in standins:
             lfile = splitstandin(standin)
@@ -200,30 +201,30 @@ def copyfromcache(repo, hash, filename):
     file was not found in either cache (which should not happened:
     this is meant to be called only after ensuring that the needed
     largefile exists in the cache).'''
+    wvfs = repo.wvfs
     path = findfile(repo, hash)
     if path is None:
         return False
-    util.makedirs(os.path.dirname(repo.wjoin(filename)))
+    wvfs.makedirs(wvfs.dirname(wvfs.join(filename)))
     # The write may fail before the file is fully written, but we
     # don't use atomic writes in the working copy.
-    dest = repo.wjoin(filename)
     with open(path, 'rb') as srcfd:
-        with open(dest, 'wb') as destfd:
+        with wvfs(filename, 'wb') as destfd:
             gothash = copyandhash(srcfd, destfd)
     if gothash != hash:
         repo.ui.warn(_('%s: data corruption in %s with hash %s\n')
                      % (filename, path, gothash))
-        util.unlink(dest)
+        wvfs.unlink(filename)
         return False
     return True
 
 def copytostore(repo, rev, file, uploaded=False):
+    wvfs = repo.wvfs
     hash = readstandin(repo, file, rev)
     if instore(repo, hash):
         return
-    absfile = repo.wjoin(file)
-    if os.path.exists(absfile):
-        copytostoreabsolute(repo, absfile, hash)
+    if wvfs.exists(file):
+        copytostoreabsolute(repo, wvfs.join(file), hash)
     else:
         repo.ui.warn(_("%s: largefile %s not available from local store\n") %
                      (file, hash))
@@ -257,21 +258,22 @@ def linktousercache(repo, hash):
 
 def getstandinmatcher(repo, rmatcher=None):
     '''Return a match object that applies rmatcher to the standin directory'''
-    standindir = repo.wjoin(shortname)
+    wvfs = repo.wvfs
+    standindir = shortname
 
     # no warnings about missing files or directories
     badfn = lambda f, msg: None
 
     if rmatcher and not rmatcher.always():
-        pats = [os.path.join(standindir, pat) for pat in rmatcher.files()]
+        pats = [wvfs.join(standindir, pat) for pat in rmatcher.files()]
         if not pats:
-            pats = [standindir]
+            pats = [wvfs.join(standindir)]
         match = scmutil.match(repo[None], pats, badfn=badfn)
         # if pats is empty, it would incorrectly always match, so clear _always
         match._always = False
     else:
         # no patterns: relative to repo root
-        match = scmutil.match(repo[None], [standindir], badfn=badfn)
+        match = scmutil.match(repo[None], [wvfs.join(standindir)], badfn=badfn)
     return match
 
 def composestandinmatcher(repo, rmatcher):
@@ -315,7 +317,7 @@ def splitstandin(filename):
 
 def updatestandin(repo, standin):
     file = repo.wjoin(splitstandin(standin))
-    if os.path.exists(file):
+    if repo.wvfs.exists(splitstandin(standin)):
         hash = hashfile(file)
         executable = getexecutable(file)
         writestandin(repo, standin, hash, executable)
@@ -419,7 +421,7 @@ def synclfdirstate(repo, lfdirstate, lfile, normallookup):
         state, mtime = '?', -1
     if state == 'n':
         if (normallookup or mtime < 0 or
-            not os.path.exists(repo.wjoin(lfile))):
+            not repo.wvfs.exists(lfile)):
             # state 'n' doesn't ensure 'clean' in this case
             lfdirstate.normallookup(lfile)
         else:
@@ -525,12 +527,11 @@ def updatestandinsbymatch(repo, match):
         # removed/renamed)
         for lfile in lfiles:
             if lfile in modifiedfiles:
-                if os.path.exists(
-                        repo.wjoin(standin(lfile))):
+                if repo.wvfs.exists(standin(lfile)):
                     # this handles the case where a rebase is being
                     # performed and the working copy is not updated
                     # yet.
-                    if os.path.exists(repo.wjoin(lfile)):
+                    if repo.wvfs.exists(lfile):
                         updatestandin(repo,
                             standin(lfile))
 
