@@ -87,6 +87,7 @@ path_strip = 0   # Strip this many path elements off (when using url rewrite)
 path_prefix = 1  # This many path elements are prefixes (depends on the
                  # virtual path of the IIS application).
 
+from __future__ import absolute_import
 import sys
 
 # Adjust python path if this is not a system-wide install

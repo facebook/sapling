@@ -11,7 +11,6 @@
   contrib/revsetbenchmarks.py requires print_function
   contrib/showstack.py not using absolute_import
   contrib/synthrepo.py not using absolute_import
-  contrib/win32/hgwebdir_wsgi.py not using absolute_import
   doc/check-seclevel.py not using absolute_import
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
