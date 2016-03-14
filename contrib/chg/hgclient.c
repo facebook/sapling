@@ -478,8 +478,8 @@ pid_t hgc_peerpid(const hgclient_t *hgc)
  *
  * @return - NULL, the server believes it can handle our request, or does not
  *           support "validate" command.
- *         - a list of strings, the server cannot handle our request and it
- *           sent instructions telling us how to fix the issue. See
+ *         - a list of strings, the server probably cannot handle our request
+ *           and it sent instructions telling us what to do next. See
  *           chgserver.py for possible instruction formats.
  *           the list should be freed by the caller.
  *           the last string is guaranteed to be NULL.

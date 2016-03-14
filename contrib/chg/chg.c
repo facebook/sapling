@@ -444,9 +444,14 @@ error:
 	abortmsg("failed to prepare pager (errno = %d)", errno);
 }
 
-/* Run instructions sent from the server like unlink and set redirect path */
-static void runinstructions(struct cmdserveropts *opts, const char **insts)
+/* Run instructions sent from the server like unlink and set redirect path
+ * Return 1 if reconnect is needed, otherwise 0 */
+static int runinstructions(struct cmdserveropts *opts, const char **insts)
 {
+	int needreconnect = 0;
+	if (!insts)
+		return needreconnect;
+
 	assert(insts);
 	opts->redirectsockname[0] = '\0';
 	const char **pinst;
@@ -460,15 +465,19 @@ static void runinstructions(struct cmdserveropts *opts, const char **insts)
 					 "%s", *pinst + 9);
 			if (r < 0 || r >= (int)sizeof(opts->redirectsockname))
 				abortmsg("redirect path is too long (%d)", r);
+			needreconnect = 1;
 		} else if (strncmp(*pinst, "exit ", 5) == 0) {
 			int n = 0;
 			if (sscanf(*pinst + 5, "%d", &n) != 1)
 				abortmsg("cannot read the exit code");
 			exit(n);
+		} else if (strcmp(*pinst, "reconnect") == 0) {
+			needreconnect = 1;
 		} else {
 			abortmsg("unknown instruction: %s", *pinst);
 		}
 	}
+	return needreconnect;
 }
 
 /*
@@ -542,10 +551,10 @@ int main(int argc, const char *argv[], const char *envp[])
 			abortmsg("cannot open hg client");
 		hgc_setenv(hgc, envp);
 		const char **insts = hgc_validate(hgc, argv + 1, argc - 1);
-		if (insts == NULL)
-			break;
-		runinstructions(&opts, insts);
+		int needreconnect = runinstructions(&opts, insts);
 		free(insts);
+		if (!needreconnect)
+			break;
 		hgc_close(hgc);
 		if (++retry > 10)
 			abortmsg("too many redirections.\n"

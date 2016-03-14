@@ -427,10 +427,16 @@ class chgcmdserver(commandserver.server):
         An instruction string could be either:
             - "unlink $path", the client should unlink the path to stop the
               outdated server.
-            - "redirect $path", the client should try to connect to another
-              server instead.
+            - "redirect $path", the client should attempt to connect to $path
+              first. If it does not work, start a new server. It implies
+              "reconnect".
             - "exit $n", the client should exit directly with code n.
               This may happen if we cannot parse the config.
+            - "reconnect", the client should close the connection and
+              reconnect.
+        If neither "reconnect" nor "redirect" is included in the instruction
+        list, the client can continue with this server after completing all
+        the instructions.
         """
         args = self._readlist()
         try:
@@ -445,6 +451,7 @@ class chgcmdserver(commandserver.server):
         if newhash.mtimehash != self.hashstate.mtimehash:
             addr = _hashaddress(self.baseaddress, self.hashstate.confighash)
             insts.append('unlink %s' % addr)
+            insts.append('reconnect')
         if newhash.confighash != self.hashstate.confighash:
             addr = _hashaddress(self.baseaddress, newhash.confighash)
             insts.append('redirect %s' % addr)
