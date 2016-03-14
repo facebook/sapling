@@ -33,9 +33,6 @@ class httpsendfile(object):
     """
 
     def __init__(self, ui, *args, **kwargs):
-        # We can't just "self._data = open(*args, **kwargs)" here because there
-        # is an "open" function defined in this module that shadows the global
-        # one
         self.ui = ui
         self._data = open(*args, **kwargs)
         self.seek = self._data.seek
