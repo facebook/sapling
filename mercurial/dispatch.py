@@ -129,6 +129,7 @@ def dispatch(req):
         ret = -1
     finally:
         duration = time.time() - starttime
+        req.ui.flush()
         req.ui.log("commandfinish", "%s exited %s after %0.2f seconds\n",
                    msg, ret or 0, duration)
     return ret
