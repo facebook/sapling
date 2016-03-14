@@ -294,12 +294,6 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 	if (pid == 0) {
 		/* do not leak lockfd to hg */
 		close(opts->lockfd);
-		/* bypass uisetup() of pager extension */
-		int nullfd = open("/dev/null", O_WRONLY);
-		if (nullfd >= 0) {
-			dup2(nullfd, fileno(stdout));
-			close(nullfd);
-		}
 		execcmdserver(opts);
 	} else {
 		hgc = retryconnectcmdserver(opts, pid);
