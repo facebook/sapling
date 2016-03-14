@@ -106,8 +106,11 @@ static void readchannel(hgclient_t *hgc)
 	assert(hgc);
 
 	ssize_t rsize = recv(hgc->sockfd, &hgc->ctx.ch, sizeof(hgc->ctx.ch), 0);
-	if (rsize != sizeof(hgc->ctx.ch))
-		abortmsg("failed to read channel");
+	if (rsize != sizeof(hgc->ctx.ch)) {
+		/* server would have exception and traceback would be printed */
+		debugmsg("failed to read channel");
+		exit(255);
+	}
 
 	uint32_t datasize_n;
 	rsize = recv(hgc->sockfd, &datasize_n, sizeof(datasize_n), 0);
