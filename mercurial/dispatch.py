@@ -81,6 +81,8 @@ def _formatparse(write, inst):
     else:
         write(_("hg: parse error: %s\n") % inst.args[0])
         _reportsimilar(write, similar)
+    if inst.hint:
+        write(_("(%s)\n") % inst.hint)
 
 def dispatch(req):
     "run the command specified in req.args"
@@ -111,8 +113,6 @@ def dispatch(req):
         return -1
     except error.ParseError as inst:
         _formatparse(ferr.write, inst)
-        if inst.hint:
-            ferr.write(_("(%s)\n") % inst.hint)
         return -1
 
     msg = ' '.join(' ' in a and repr(a) or a for a in req.args)
@@ -208,8 +208,6 @@ def _runcatch(req):
                 (inst.args[0], " ".join(inst.args[1])))
     except error.ParseError as inst:
         _formatparse(ui.warn, inst)
-        if inst.hint:
-            ui.warn(_("(%s)\n") % inst.hint)
         return -1
     except error.LockHeld as inst:
         if inst.errno == errno.ETIMEDOUT:
