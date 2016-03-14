@@ -460,6 +460,11 @@ static void runinstructions(struct cmdserveropts *opts, const char **insts)
 					 "%s", *pinst + 9);
 			if (r < 0 || r >= (int)sizeof(opts->redirectsockname))
 				abortmsg("redirect path is too long (%d)", r);
+		} else if (strncmp(*pinst, "exit ", 5) == 0) {
+			int n = 0;
+			if (sscanf(*pinst + 5, "%d", &n) != 1)
+				abortmsg("cannot read the exit code");
+			exit(n);
 		} else {
 			abortmsg("unknown instruction: %s", *pinst);
 		}

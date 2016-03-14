@@ -429,9 +429,17 @@ class chgcmdserver(commandserver.server):
               outdated server.
             - "redirect $path", the client should try to connect to another
               server instead.
+            - "exit $n", the client should exit directly with code n.
+              This may happen if we cannot parse the config.
         """
         args = self._readlist()
-        self.ui = _renewui(self.ui, args)
+        try:
+            self.ui = _renewui(self.ui, args)
+        except error.ParseError as inst:
+            dispatch._formatparse(self.ui.warn, inst)
+            self.ui.flush()
+            self.cresult.write('exit 255')
+            return
         newhash = hashstate.fromui(self.ui, self.hashstate.mtimepaths)
         insts = []
         if newhash.mtimehash != self.hashstate.mtimehash:
