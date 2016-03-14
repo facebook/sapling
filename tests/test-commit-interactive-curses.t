@@ -4,8 +4,8 @@ Set up a repo
   $ cat <<EOF >> $HGRCPATH
   > [ui]
   > interactive = true
+  > interface = curses
   > [experimental]
-  > crecord = true
   > crecordtest = testModeCommands
   > EOF
 
