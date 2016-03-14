@@ -8,7 +8,7 @@
 #endif
 
   $ filter_svn_output () {
-  >     egrep -v 'Committing|Transmitting|Updating' || true
+  >     egrep -v 'Committing|Transmitting|Updating|(^$)' || true
   > }
 
 create subversion repo
@@ -97,10 +97,8 @@ change file in svn and hg, commit
   committing subrepository s
   Sending*s/alpha (glob)
   Committed revision 3.
-  
   Fetching external item into '*s/externals'* (glob)
   External at revision 1.
-  
   At revision 3.
   $ hg debugsub
   path s
