@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <Python.h>
 #ifdef _MSC_VER
 #define inline __inline
-#include <stdint.h>
+#include "msc_stdint.h"
 #endif
 
 /* Return the smallest size int that can store the value */
