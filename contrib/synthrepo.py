@@ -36,10 +36,30 @@ A few obvious properties that are not currently handled realistically:
 - Symlinks and binary files are ignored
 '''
 
-import bisect, collections, itertools, json, os, random, time, sys
-from mercurial import cmdutil, context, patch, scmutil, util, hg, error
+from __future__ import absolute_import
+import bisect
+import collections
+import itertools
+import json
+import os
+import random
+import sys
+import time
+from mercurial import (
+    cmdutil,
+    context,
+    error,
+    hg,
+    patch,
+    scmutil,
+    util,
+)
 from mercurial.i18n import _
-from mercurial.node import nullrev, nullid, short
+from mercurial.node import (
+    nullid,
+    nullrev,
+    short,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
