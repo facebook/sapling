@@ -998,6 +998,13 @@ def _getgoal(opts):
         return goaleditplan
     return goalnew
 
+def _readfile(path):
+    if path == '-':
+        return sys.stdin.read()
+    else:
+        with open(path, 'rb') as f:
+            return f.read()
+
 def _validateargs(ui, repo, state, freeargs, opts, goal, rules, revs):
     # TODO only abort if we try to histedit mq patches, not just
     # blanket if mq patches are applied somewhere
@@ -1190,12 +1197,7 @@ def _edithisteditplan(ui, repo, state, rules):
                                  node.short(state.topmost))
         rules = ruleeditor(repo, ui, state.actions, comment)
     else:
-        if rules == '-':
-            f = sys.stdin
-        else:
-            f = open(rules)
-        rules = f.read()
-        f.close()
+        rules = _readfile(rules)
     actions = parserules(rules, state)
     ctxs = [repo[act.nodetoverify()] \
             for act in state.actions if act.nodetoverify()]
@@ -1236,12 +1238,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
         actions = [pick(state, r) for r in revs]
         rules = ruleeditor(repo, ui, actions, comment)
     else:
-        if rules == '-':
-            f = sys.stdin
-        else:
-            f = open(rules)
-        rules = f.read()
-        f.close()
+        rules = _readfile(rules)
     actions = parserules(rules, state)
     warnverifyactions(ui, repo, actions, state, ctxs)
 
