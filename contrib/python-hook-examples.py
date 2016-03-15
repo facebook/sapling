@@ -1,7 +1,11 @@
 '''
 Examples of useful python hooks for Mercurial.
 '''
-from mercurial import patch, util
+from __future__ import absolute_import
+from mercurial import (
+    patch,
+    util,
+)
 
 def diffstat(ui, repo, **kwargs):
     '''Example usage:
