@@ -8,13 +8,22 @@
 #
 # call with --help for details
 
-import sys
+from __future__ import absolute_import, print_function
+import math
 import os
 import re
-import math
-from subprocess import check_call, Popen, CalledProcessError, STDOUT, PIPE
+import sys
+from subprocess import (
+    CalledProcessError,
+    check_call,
+    PIPE,
+    Popen,
+    STDOUT,
+)
 # cannot use argparse, python 2.7 only
-from optparse import OptionParser
+from optparse import (
+    OptionParser,
+)
 
 DEFAULTVARIANTS = ['plain', 'min', 'max', 'first', 'last',
                    'reverse', 'reverse+first', 'reverse+last',
@@ -36,7 +45,7 @@ def update(rev):
         check_output(['make', 'local'],
                      stderr=None)  # suppress output except for error/warning
     except CalledProcessError as exc:
-        print >> sys.stderr, 'update to revision %s failed, aborting' % rev
+        print('update to revision %s failed, aborting'%rev, file=sys.stderr)
         sys.exit(exc.returncode)
 
 
@@ -62,11 +71,11 @@ def perf(revset, target=None, contexts=False):
         output = hg(args, repo=target)
         return parseoutput(output)
     except CalledProcessError as exc:
-        print >> sys.stderr, 'abort: cannot run revset benchmark: %s' % exc.cmd
+        print('abort: cannot run revset benchmark: %s'%exc.cmd, file=sys.stderr)
         if getattr(exc, 'output', None) is None: # no output before 2.7
-            print >> sys.stderr, '(no output)'
+            print('(no output)', file=sys.stderr)
         else:
-            print >> sys.stderr, exc.output
+            print(exc.output, file=sys.stderr)
         return None
 
 outputre = re.compile(r'! wall (\d+.\d+) comb (\d+.\d+) user (\d+.\d+) '
@@ -80,8 +89,8 @@ def parseoutput(output):
     """
     match = outputre.search(output)
     if not match:
-        print >> sys.stderr, 'abort: invalid output:'
-        print >> sys.stderr, output
+        print('abort: invalid output:', file=sys.stderr)
+        print(output, file=sys.stderr)
         sys.exit(1)
     return {'comb': float(match.group(2)),
             'count': int(match.group(5)),
@@ -183,7 +192,7 @@ def printresult(variants, idx, data, maxidx, verbose=False, reference=_marker):
             out.append(formattiming(data[var]['user']))
             out.append(formattiming(data[var]['sys']))
             out.append('%6d'    % data[var]['count'])
-    print mask % (idx, ' '.join(out))
+    print(mask % (idx, ' '.join(out)))
 
 def printheader(variants, maxidx, verbose=False, relative=False):
     header = [' ' * (idxwidth(maxidx) + 1)]
@@ -200,14 +209,14 @@ def printheader(variants, maxidx, verbose=False, relative=False):
             header.append('%-8s' % 'user')
             header.append('%-8s' % 'sys')
             header.append('%6s' % 'count')
-    print ' '.join(header)
+    print(' '.join(header))
 
 def getrevs(spec):
     """get the list of rev matched by a revset"""
     try:
         out = check_output(['hg', 'log', '--template={rev}\n', '--rev', spec])
     except CalledProcessError as exc:
-        print >> sys.stderr, "abort, can't get revision from %s" % spec
+        print("abort, can't get revision from %s"%spec, file=sys.stderr)
         sys.exit(exc.returncode)
     return [r for r in out.split() if r]
 
@@ -261,14 +270,14 @@ if options.file:
 revsets = [l.strip() for l in revsetsfile if not l.startswith('#')]
 revsets = [l for l in revsets if l]
 
-print "Revsets to benchmark"
-print "----------------------------"
+print("Revsets to benchmark")
+print("----------------------------")
 
 for idx, rset in enumerate(revsets):
-    print "%i) %s" % (idx, rset)
+    print("%i) %s" % (idx, rset))
 
-print "----------------------------"
-print
+print("----------------------------")
+print()
 
 revs = []
 for a in args:
@@ -278,9 +287,9 @@ variants = options.variants.split(',')
 
 results = []
 for r in revs:
-    print "----------------------------"
+    print("----------------------------")
     printrevision(r)
-    print "----------------------------"
+    print("----------------------------")
     update(r)
     res = []
     results.append(res)
@@ -295,31 +304,31 @@ for r in revs:
         printresult(variants, idx, varres, len(revsets),
                     verbose=options.verbose)
         sys.stdout.flush()
-    print "----------------------------"
+    print("----------------------------")
 
 
-print """
+print("""
 
 Result by revset
 ================
-"""
+""")
 
-print 'Revision:'
+print('Revision:')
 for idx, rev in enumerate(revs):
     sys.stdout.write('%i) ' % idx)
     sys.stdout.flush()
     printrevision(rev)
 
-print
-print
+print()
+print()
 
 for ridx, rset in enumerate(revsets):
 
-    print "revset #%i: %s" % (ridx, rset)
+    print("revset #%i: %s" % (ridx, rset))
     printheader(variants, len(results), verbose=options.verbose, relative=True)
     ref = None
     for idx, data in enumerate(results):
         printresult(variants, idx, data[ridx], len(results),
                     verbose=options.verbose, reference=ref)
         ref = data[ridx]
-    print
+    print()

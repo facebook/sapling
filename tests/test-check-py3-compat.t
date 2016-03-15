@@ -5,8 +5,6 @@
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
   contrib/import-checker.py not using absolute_import
   contrib/import-checker.py requires print_function
-  contrib/revsetbenchmarks.py not using absolute_import
-  contrib/revsetbenchmarks.py requires print_function
   doc/check-seclevel.py not using absolute_import
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
