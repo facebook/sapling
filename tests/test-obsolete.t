@@ -935,7 +935,7 @@ Test heads computation on pending index changes with obsolescence markers
   >   opts['message'] = 'Test'
   >   opts['logfile'] = None
   >   cmdutil.amend(ui, repo, commitfunc, repo['.'], {}, pats, opts)
-  >   print repo.changelog.headrevs()
+  >   ui.write('%s\n' % repo.changelog.headrevs())
   > EOF
   $ cat >> $HGRCPATH << EOF
   > [extensions]

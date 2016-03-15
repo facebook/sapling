@@ -7,9 +7,11 @@ Test basic extension support
   > command = cmdutil.command(cmdtable)
   > def uisetup(ui):
   >     ui.write("uisetup called\\n")
+  >     ui.flush()
   > def reposetup(ui, repo):
   >     ui.write("reposetup called for %s\\n" % os.path.basename(repo.root))
   >     ui.write("ui %s= repo.ui\\n" % (ui == repo.ui and "=" or "!"))
+  >     ui.flush()
   > @command('foo', [], 'hg foo')
   > def foo(ui, *args, **kwargs):
   >     ui.write("Foo\\n")
@@ -183,6 +185,7 @@ Check absolute/relative import of extension specific modules
   > import foo
   > def extsetup(ui):
   >     ui.write('(extroot) ', foo.func(), '\n')
+  >     ui.flush()
   > EOF
 
   $ cat > $TESTTMP/extroot/foo.py <<EOF
@@ -1077,6 +1080,7 @@ Commands handling multiple repositories at a time should invoke only
   > from mercurial import extensions
   > def reposetup(ui, repo):
   >     ui.write('reposetup() for %s\n' % (repo.root))
+  >     ui.flush()
   > EOF
   $ hg init src
   $ echo a > src/a

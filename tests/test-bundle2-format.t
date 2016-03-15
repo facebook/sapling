@@ -166,6 +166,8 @@ Create an extension to test bundle2 API
   >             file.write(chunk)
   >     except RuntimeError, exc:
   >         raise error.Abort(exc)
+  >     finally:
+  >         file.flush()
   > 
   > @command('unbundle2', [], '')
   > def cmdunbundle2(ui, repo, replypath=None):
@@ -194,9 +196,9 @@ Create an extension to test bundle2 API
   >     for rec in op.records['changegroup']:
   >         ui.write('addchangegroup return: %i\n' % rec['return'])
   >     if op.reply is not None and replypath is not None:
-  >         file = open(replypath, 'wb')
-  >         for chunk in op.reply.getchunks():
-  >             file.write(chunk)
+  >         with open(replypath, 'wb') as file:
+  >             for chunk in op.reply.getchunks():
+  >                 file.write(chunk)
   > 
   > @command('statbundle2', [], '')
   > def cmdstatbundle2(ui, repo):
