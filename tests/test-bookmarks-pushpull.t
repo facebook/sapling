@@ -290,7 +290,7 @@ update a bookmark in the middle of a client pulling changes
 We want to use http because it is stateless and therefore more susceptible to
 race conditions
 
-  $ hg -R pull-race serve -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ hg serve -R pull-race -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
   $ cat pull-race.pid >> $DAEMON_PIDS
 
   $ hg clone -q http://localhost:$HGPORT/ pull-race2
@@ -308,7 +308,7 @@ race conditions
 
   $ cd ..
   $ killdaemons.py
-  $ hg -R pull-race serve -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
+  $ hg serve -R pull-race -p $HGPORT -d --pid-file=pull-race.pid -E main-error.log
   $ cat pull-race.pid >> $DAEMON_PIDS
   $ cd pull-race2
   $ hg -R $TESTTMP/pull-race book
@@ -345,7 +345,7 @@ Update a bookmark right after the initial lookup -B (issue4689)
 (new config need server restart)
 
   $ killdaemons.py
-  $ hg -R ../pull-race serve -p $HGPORT -d --pid-file=../pull-race.pid -E main-error.log
+  $ hg serve -R ../pull-race -p $HGPORT -d --pid-file=../pull-race.pid -E main-error.log
   $ cat ../pull-race.pid >> $DAEMON_PIDS
 
   $ hg -R $TESTTMP/pull-race book
@@ -404,7 +404,7 @@ diverging a remote bookmark fails
   > allow_push = *
   > EOF
 
-  $ hg -R ../a serve -p $HGPORT2 -d --pid-file=../hg2.pid
+  $ hg serve -R ../a -p $HGPORT2 -d --pid-file=../hg2.pid
   $ cat ../hg2.pid >> $DAEMON_PIDS
 
   $ hg push http://localhost:$HGPORT2/
@@ -787,7 +787,7 @@ Check hook preventing push (issue4455)
   > allow_push = *
   > EOF
   $ killdaemons.py
-  $ hg -R ../issue4455-dest serve -p $HGPORT -d --pid-file=../issue4455.pid -E ../issue4455-error.log
+  $ hg serve -R ../issue4455-dest -p $HGPORT -d --pid-file=../issue4455.pid -E ../issue4455-error.log
   $ cat ../issue4455.pid >> $DAEMON_PIDS
 
 Local push

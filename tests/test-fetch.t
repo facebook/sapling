@@ -64,7 +64,7 @@ should merge c into a
   a
   b
   c
-  $ hg --cwd a serve -a localhost -p $HGPORT -d --pid-file=hg.pid
+  $ hg serve --cwd a -a localhost -p $HGPORT -d --pid-file=hg.pid
   $ cat a/hg.pid >> "$DAEMON_PIDS"
 
 fetch over http, no auth

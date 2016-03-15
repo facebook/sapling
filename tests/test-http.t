@@ -13,7 +13,7 @@
   adding foo.d/baR.d.hg/bAR
   adding foo.d/foo
   $ hg serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log
-  $ hg --config server.uncompressed=False serve -p $HGPORT1 -d --pid-file=../hg2.pid
+  $ hg serve --config server.uncompressed=False -p $HGPORT1 -d --pid-file=../hg2.pid
 
 Test server address cannot be reused
 
@@ -154,7 +154,7 @@ test http authentication
   > def extsetup():
   >     common.permhooks.insert(0, perform_authentication)
   > EOT
-  $ hg --config extensions.x=userpass.py serve -p $HGPORT2 -d --pid-file=pid \
+  $ hg serve --config extensions.x=userpass.py -p $HGPORT2 -d --pid-file=pid \
   >    --config server.preferuncompressed=True \
   >    --config web.push_ssl=False --config web.allow_push=* -A ../access.log
   $ cat pid >> $DAEMON_PIDS

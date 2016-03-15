@@ -45,7 +45,7 @@ vanilla clients not locked out from largefiles servers on vanilla repos
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 largefiles clients still work with vanilla servers
-  $ hg --config extensions.largefiles=! serve -R r1 -d -p $HGPORT1 --pid-file hg.pid
+  $ hg serve --config extensions.largefiles=! -R r1 -d -p $HGPORT1 --pid-file hg.pid
   $ cat hg.pid >> $DAEMON_PIDS
   $ hg clone http://localhost:$HGPORT1 r3
   requesting all changes
@@ -149,7 +149,7 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ hg commit -m "m2"
   Invoking status precommit hook
   A f2
-  $ hg --config extensions.largefiles=! -R ../r6 serve -d -p $HGPORT --pid-file ../hg.pid
+  $ hg serve --config extensions.largefiles=! -R ../r6 -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ hg push http://localhost:$HGPORT
   pushing to http://localhost:$HGPORT/

@@ -301,7 +301,7 @@ pull over ssh
 
 pull over http
 
-  $ hg -R main serve -p $HGPORT -d --pid-file=main.pid -E main-error.log
+  $ hg serve -R main -p $HGPORT -d --pid-file=main.pid -E main-error.log
   $ cat main.pid >> $DAEMON_PIDS
 
   $ hg -R other pull http://localhost:$HGPORT/ -r 42ccdea3bb16 --bookmark book_42cc
@@ -372,7 +372,7 @@ push over ssh
 
 push over http
 
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main phase --public 32af7686d403
@@ -498,7 +498,7 @@ Setting up
   > EOF
 
   $ killdaemons.py
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
 Doing the actual push: Abort error
@@ -596,7 +596,7 @@ Doing the actual push: hook abort
   > EOF
 
   $ killdaemons.py
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
@@ -661,7 +661,7 @@ Check error from hook during the unbundling process itself
   > pretxnchangegroup = sh -c "echo 'Fail early!'; false"
   > EOF
   $ killdaemons.py # reload http config
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
@@ -785,7 +785,7 @@ Check abort from mandatory pushkey
   > mandatorypart=$TESTTMP/mandatorypart.py
   > EOF
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
 (Failure from a hook)
@@ -857,7 +857,7 @@ Check abort from mandatory pushkey
   > prepushkey.failpush =
   > EOF
   $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg -R other serve -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
+  $ hg serve -R other -p $HGPORT2 -d --pid-file=other.pid -E other-error.log
   $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6

@@ -112,7 +112,7 @@ We use http because http is better is our racy-est option.
   > [hooks]
   > outgoing.makecommit = hg ci -Am 'racy commit'; echo committed in pull-race
   > EOF
-  $ hg -R ../repo serve -p $HGPORT2 -d --pid-file=../repo.pid
+  $ hg serve -R ../repo -p $HGPORT2 -d --pid-file=../repo.pid
   $ cat ../repo.pid >> $DAEMON_PIDS
   $ hg pull --rev default --update http://localhost:$HGPORT2/
   pulling from http://localhost:$HGPORT2/

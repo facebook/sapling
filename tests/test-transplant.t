@@ -321,7 +321,7 @@ skip local changes transplanted to the source
 
 remote transplant with pull
 
-  $ hg -R ../t serve -p $HGPORT -d --pid-file=../t.pid
+  $ hg serve -R ../t -p $HGPORT -d --pid-file=../t.pid
   $ cat ../t.pid >> $DAEMON_PIDS
 
   $ hg clone -r 0 ../t ../rp

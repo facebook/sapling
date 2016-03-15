@@ -264,7 +264,7 @@ cacert mismatch
 
 Test server cert which isn't valid yet
 
-  $ hg -R test serve -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
+  $ hg serve -R test -p $HGPORT1 -d --pid-file=hg1.pid --certificate=server-not-yet.pem
   $ cat hg1.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-not-yet.pem https://localhost:$HGPORT1/
   pulling from https://localhost:$HGPORT1/
@@ -273,7 +273,7 @@ Test server cert which isn't valid yet
 
 Test server cert which no longer is valid
 
-  $ hg -R test serve -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
+  $ hg serve -R test -p $HGPORT2 -d --pid-file=hg2.pid --certificate=server-expired.pem
   $ cat hg2.pid >> $DAEMON_PIDS
   $ hg -R copy-pull pull --config web.cacerts=pub-expired.pem https://localhost:$HGPORT2/
   pulling from https://localhost:$HGPORT2/

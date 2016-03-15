@@ -700,7 +700,7 @@ errors
 Uncaught exceptions result in a logged error and canned HTTP response
 
   $ killdaemons.py
-  $ hg --config extensions.hgweberror=$TESTDIR/hgweberror.py serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
 
   $ get-with-headers.py localhost:$HGPORT 'raiseerror' transfer-encoding content-type
@@ -716,7 +716,7 @@ Uncaught exceptions result in a logged error and canned HTTP response
 
 Uncaught exception after partial content sent
 
-  $ hg --config extensions.hgweberror=$TESTDIR/hgweberror.py serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
+  $ hg serve --config extensions.hgweberror=$TESTDIR/hgweberror.py -p $HGPORT -d --pid-file=hg.pid -A access.log -E errors.log
   $ cat hg.pid >> $DAEMON_PIDS
   $ get-with-headers.py localhost:$HGPORT 'raiseerror?partialresponse=1' transfer-encoding content-type
   200 Script output follows

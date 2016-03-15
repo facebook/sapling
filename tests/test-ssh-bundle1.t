@@ -377,8 +377,8 @@ parameters:
   abort: no suitable response from remote hg!
   [255]
 
-  $ SSH_ORIGINAL_COMMAND="'hg' -R 'a'repo' serve --stdio" python "$TESTDIR/../contrib/hg-ssh"
-  Illegal command "'hg' -R 'a'repo' serve --stdio": No closing quotation
+  $ SSH_ORIGINAL_COMMAND="'hg' serve -R 'a'repo' --stdio" python "$TESTDIR/../contrib/hg-ssh"
+  Illegal command "'hg' serve -R 'a'repo' --stdio": No closing quotation
   [255]
 
 Test hg-ssh in read-only mode:
