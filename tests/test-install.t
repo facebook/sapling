@@ -25,7 +25,7 @@ hg debuginstall JSON
     "extensionserror": null,
     "hgmodules": "*mercurial", (glob)
     "problems": 0,
-    "pythonexe": "*python", (glob)
+    "pythonexe": "*", (glob)
     "pythonlib": "*python*", (glob)
     "pythonver": "*.*.*", (glob)
     "templatedirs": "*mercurial?templates", (glob)
