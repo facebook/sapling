@@ -80,10 +80,10 @@ def wrapui(ui):
             if src is None:
                 self._partialinit()
             else:
-                self._bbfp = src._bbfp
+                self._bbfp = getattr(src, '_bbfp', None)
                 self._bbinlog = False
-                self._bbrepo = src._bbrepo
-                self._bbvfs = src._bbvfs
+                self._bbrepo = getattr(src, '_bbrepo', None)
+                self._bbvfs = getattr(src, '_bbvfs', None)
 
         def _partialinit(self):
             if util.safehasattr(self, '_bbvfs'):
