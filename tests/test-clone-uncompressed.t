@@ -50,3 +50,43 @@ Clone with background file closing enabled
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 58 bytes
+
+
+Stream clone while repo is changing:
+
+  $ mkdir changing
+  $ cd changing
+
+extension for delaying the server process so we reliably can modify the repo
+while cloning
+
+  $ cat > delayer.py <<EOF
+  > import time
+  > from mercurial import extensions, scmutil
+  > def __call__(orig, self, path, *args, **kwargs):
+  >     if path == 'data/f1.i':
+  >         time.sleep(2)
+  >     return orig(self, path, *args, **kwargs)
+  > extensions.wrapfunction(scmutil.vfs, '__call__', __call__)
+  > EOF
+
+prepare repo with small and big file to cover both code paths in emitrevlogdata
+
+  $ hg init repo
+  $ touch repo/f1
+  $ $TESTDIR/seq.py 50000 > repo/f2
+  $ hg -R repo ci -Aqm "0"
+  $ hg -R repo serve -p $HGPORT1 -d --pid-file=hg.pid --config extensions.delayer=delayer.py
+  $ cat hg.pid >> $DAEMON_PIDS
+
+clone while modifying the repo between stating file with write lock and
+actually serving file content
+
+  $ hg clone -q --uncompressed -U http://localhost:$HGPORT1 clone &
+  $ sleep 1
+  $ echo >> repo/f1
+  $ echo >> repo/f2
+  $ hg -R repo ci -m "1"
+  $ wait
+  $ hg -R clone id
+  000000000000
