@@ -1,12 +1,26 @@
 # perf.py - performance test routines
 '''helper extension to measure performance'''
 
-from mercurial import cmdutil, scmutil, util, commands, obsolete
-from mercurial import repoview, branchmap, merge, copies, error, revlog
-from mercurial import mdiff
-import time, os, sys
-import random
+from __future__ import absolute_import
 import functools
+import os
+import random
+import sys
+import time
+from mercurial import (
+    branchmap,
+    cmdutil,
+    commands,
+    copies,
+    error,
+    mdiff,
+    merge,
+    obsolete,
+    repoview,
+    revlog,
+    scmutil,
+    util,
+)
 
 formatteropts = commands.formatteropts
 revlogopts = commands.debugrevlogopts
