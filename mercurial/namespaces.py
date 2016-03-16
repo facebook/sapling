@@ -30,7 +30,7 @@ class namespaces(object):
         # branches) to be initialized somewhere, so that place is here
         bmknames = lambda repo: repo._bookmarks.keys()
         bmknamemap = lambda repo, name: tolist(repo._bookmarks.get(name))
-        bmknodemap = lambda repo, name: repo.nodebookmarks(name)
+        bmknodemap = lambda repo, node: repo.nodebookmarks(node)
         n = namespace("bookmarks", templatename="bookmark",
                       # i18n: column positioning for "hg log"
                       logfmt=_("bookmark:    %s\n"),
@@ -40,7 +40,7 @@ class namespaces(object):
 
         tagnames = lambda repo: [t for t, n in repo.tagslist()]
         tagnamemap = lambda repo, name: tolist(repo._tagscache.tags.get(name))
-        tagnodemap = lambda repo, name: repo.nodetags(name)
+        tagnodemap = lambda repo, node: repo.nodetags(node)
         n = namespace("tags", templatename="tag",
                       # i18n: column positioning for "hg log"
                       logfmt=_("tag:         %s\n"),
@@ -149,8 +149,8 @@ class namespace(object):
         logfmt: the format to use for (i18n-ed) log output; if not specified
                 it is composed from logname
         listnames: function to list all names
-        namemap: function that inputs a node, output name(s)
-        nodemap: function that inputs a name, output node(s)
+        namemap: function that inputs a name, output node(s)
+        nodemap: function that inputs a node, output name(s)
         deprecated: set of names to be masked for ordinary use
 
         """
