@@ -12,7 +12,7 @@ hg debuginstall
   no problems detected
 
 hg debuginstall JSON
-  $ hg debuginstall -Tjson
+  $ hg debuginstall -Tjson | sed 's|\\\\|\\|g'
   [
    {
     "defaulttemplate": "*mercurial?templates?map-cmdline.default", (glob)
