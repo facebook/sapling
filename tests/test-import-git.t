@@ -838,7 +838,7 @@ Test email metadata
   > EOF
   applying patch from stdin
   $ hg --encoding utf-8 log -r .
-  changeset:   2:* (glob)
+  changeset:   *:* (glob)
   tag:         tip
   user:        Rapha\xc3\xabl Hertzog <hertzog@debian.org> (esc)
   date:        * (glob)
