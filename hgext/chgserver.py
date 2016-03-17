@@ -267,7 +267,7 @@ def _newchgui(srcui, csystem):
 
     return chgui(srcui)
 
-def _renewui(srcui, args=None):
+def _loadnewui(srcui, args=None):
     if not args:
         args = []
 
@@ -277,14 +277,7 @@ def _renewui(srcui, args=None):
     if util.safehasattr(srcui, '_csystem'):
         newui._csystem = srcui._csystem
 
-    # load wd and repo config, copied from dispatch.py
-    cwds = dispatch._earlygetopt(['--cwd'], args)
-    cwd = cwds and os.path.realpath(cwds[-1]) or None
-    rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
-    path, newui = dispatch._getlocal(newui, rpath, wd=cwd)
-
     # internal config: extensions.chgserver
-    # copy it. it can only be overrided from command line.
     newui.setconfig('extensions', 'chgserver',
                     srcui.config('extensions', 'chgserver'), '--config')
 
@@ -301,7 +294,15 @@ def _renewui(srcui, args=None):
             # ui.configsource returns 'none' by default
             source = ''
         newui.setconfig(section, name, value, source)
-    return newui
+
+    # load wd and repo config, copied from dispatch.py
+    args = args[:]
+    cwds = dispatch._earlygetopt(['--cwd'], args)
+    cwd = cwds and os.path.realpath(cwds[-1]) or None
+    rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
+    path, newlui = dispatch._getlocal(newui, rpath, wd=cwd)
+
+    return (newui, newlui)
 
 class channeledsystem(object):
     """Propagate ui.system() request in the following format:
@@ -450,13 +451,13 @@ class chgcmdserver(commandserver.server):
         """
         args = self._readlist()
         try:
-            self.ui = _renewui(self.ui, args)
+            self.ui, lui = _loadnewui(self.ui, args)
         except error.ParseError as inst:
             dispatch._formatparse(self.ui.warn, inst)
             self.ui.flush()
             self.cresult.write('exit 255')
             return
-        newhash = hashstate.fromui(self.ui, self.hashstate.mtimepaths)
+        newhash = hashstate.fromui(lui, self.hashstate.mtimepaths)
         insts = []
         if newhash.mtimehash != self.hashstate.mtimehash:
             addr = _hashaddress(self.baseaddress, self.hashstate.confighash)
@@ -533,7 +534,7 @@ class chgcmdserver(commandserver.server):
 
         if set(['HGPLAIN', 'HGPLAINEXCEPT']) & diffkeys:
             # reload config so that ui.plain() takes effect
-            self.ui = _renewui(self.ui)
+            self.ui, _lui = _loadnewui(self.ui)
 
         _clearenvaliases(commands.table)
 
