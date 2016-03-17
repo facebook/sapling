@@ -230,8 +230,8 @@ def _matcheol(file, origfile):
 
 @internaltool('prompt', nomerge)
 def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """Asks the user which of the local or the other version to keep as
-    the merged version."""
+    """Asks the user which of the local (p1) or the other (p2) version to keep
+    as the merged version."""
     ui = repo.ui
     fd = fcd.path()
 
@@ -268,12 +268,12 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf):
 
 @internaltool('local', nomerge)
 def _ilocal(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """Uses the local version of files as the merged version."""
+    """Uses the local (p1) version of files as the merged version."""
     return 0, fcd.isabsent()
 
 @internaltool('other', nomerge)
 def _iother(repo, mynode, orig, fcd, fco, fca, toolconf):
-    """Uses the other version of files as the merged version."""
+    """Uses the other (p2) version of files as the merged version."""
     if fco.isabsent():
         # local changed, remote deleted -- 'deleted' picked
         repo.wvfs.unlinkpath(fcd.path())
@@ -411,7 +411,7 @@ def _imergeauto(repo, mynode, orig, fcd, fco, fca, toolconf, files,
 def _imergelocal(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
-    of the local changes."""
+    of the local (p1) changes."""
     success, status = _imergeauto(localorother='local', *args, **kwargs)
     return success, status, False
 
@@ -419,7 +419,7 @@ def _imergelocal(*args, **kwargs):
 def _imergeother(*args, **kwargs):
     """
     Like :merge, but resolve all conflicts non-interactively in favor
-    of the other changes."""
+    of the other (p2) changes."""
     success, status = _imergeauto(localorother='other', *args, **kwargs)
     return success, status, False
 
