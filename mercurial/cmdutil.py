@@ -2404,13 +2404,19 @@ def files(ui, ctx, m, fm, fmt, subrepos):
 
     return ret
 
-def remove(ui, repo, m, prefix, after, force, subrepos):
+def remove(ui, repo, m, prefix, after, force, subrepos, warnings=None):
     join = lambda f: os.path.join(prefix, f)
     ret = 0
     s = repo.status(match=m, clean=True)
     modified, added, deleted, clean = s[0], s[1], s[3], s[6]
 
     wctx = repo[None]
+
+    if warnings is None:
+        warnings = []
+        warn = True
+    else:
+        warn = False
 
     for subpath in sorted(wctx.substate):
         def matchessubrepo(matcher, subpath):
@@ -2425,10 +2431,11 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
             sub = wctx.sub(subpath)
             try:
                 submatch = matchmod.subdirmatcher(subpath, m)
-                if sub.removefiles(submatch, prefix, after, force, subrepos):
+                if sub.removefiles(submatch, prefix, after, force, subrepos,
+                                   warnings):
                     ret = 1
             except error.LookupError:
-                ui.status(_("skipping missing subrepository: %s\n")
+                warnings.append(_("skipping missing subrepository: %s\n")
                                % join(subpath))
 
     # warn about failure to delete explicit files/dirs
@@ -2446,10 +2453,10 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
 
         if repo.wvfs.exists(f):
             if repo.wvfs.isdir(f):
-                ui.warn(_('not removing %s: no tracked files\n')
+                warnings.append(_('not removing %s: no tracked files\n')
                         % m.rel(f))
             else:
-                ui.warn(_('not removing %s: file is untracked\n')
+                warnings.append(_('not removing %s: file is untracked\n')
                         % m.rel(f))
         # missing files will generate a warning elsewhere
         ret = 1
@@ -2459,16 +2466,16 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
     elif after:
         list = deleted
         for f in modified + added + clean:
-            ui.warn(_('not removing %s: file still exists\n') % m.rel(f))
+            warnings.append(_('not removing %s: file still exists\n') % m.rel(f))
             ret = 1
     else:
         list = deleted + clean
         for f in modified:
-            ui.warn(_('not removing %s: file is modified (use -f'
+            warnings.append(_('not removing %s: file is modified (use -f'
                       ' to force removal)\n') % m.rel(f))
             ret = 1
         for f in added:
-            ui.warn(_('not removing %s: file has been marked for add'
+            warnings.append(_('not removing %s: file has been marked for add'
                       ' (use forget to undo)\n') % m.rel(f))
             ret = 1
 
@@ -2483,6 +2490,10 @@ def remove(ui, repo, m, prefix, after, force, subrepos):
                     continue # we never unlink added files on remove
                 util.unlinkpath(repo.wjoin(f), ignoremissing=True)
         repo[None].forget(list)
+
+    if warn:
+        for warning in warnings:
+            ui.warn(warning)
 
     return ret
 

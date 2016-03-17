@@ -277,8 +277,8 @@ dir, options -A
 
   $ rm test/bar
   $ remove -A test
-  not removing test/foo: file still exists (glob)
   removing test/bar (glob)
+  not removing test/foo: file still exists (glob)
   exit code: 1
   R test/bar
   ./foo
