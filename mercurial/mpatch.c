@@ -205,7 +205,7 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 	int pos = 0;
 
 	/* assume worst case size, we won't have many of these lists */
-	l = lalloc(len / 12);
+	l = lalloc(len / 12 + 1);
 	if (!l)
 		return NULL;
 
