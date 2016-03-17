@@ -332,12 +332,12 @@ insert unsupported mandatory merge record
   (see https://mercurial-scm.org/wiki/MergeStateRecords for more information)
   [255]
   $ hg summary
+  warning: merge state has unsupported record types: X
   parent: 2:57653b9f834a 
    append baz to files
   parent: 1:dc77451844e3 
    append bar to files
   branch: default
-  warning: merge state has unsupported record types: X
   commit: 2 modified, 2 unknown (merge)
   update: 2 new changesets (update)
   phases: 5 draft

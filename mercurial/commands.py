@@ -6583,6 +6583,17 @@ def summary(ui, repo, **opts):
     pnode = parents[0].node()
     marks = []
 
+    ms = None
+    try:
+        ms = mergemod.mergestate.read(repo)
+    except error.UnsupportedMergeRecords as e:
+        s = ' '.join(e.recordtypes)
+        ui.warn(
+            _('warning: merge state has unsupported record types: %s\n') % s)
+        unresolved = 0
+    else:
+        unresolved = [f for f in ms if ms[f] == 'u']
+
     for p in parents:
         # label with log.changeset (instead of log.parent) since this
         # shows a working directory parent *changeset*:
@@ -6637,16 +6648,6 @@ def summary(ui, repo, **opts):
             copied.append(d)
         if d in status.added:
             status.added.remove(d)
-
-    try:
-        ms = mergemod.mergestate.read(repo)
-    except error.UnsupportedMergeRecords as e:
-        s = ' '.join(e.recordtypes)
-        ui.warn(
-            _('warning: merge state has unsupported record types: %s\n') % s)
-        unresolved = 0
-    else:
-        unresolved = [f for f in ms if ms[f] == 'u']
 
     subs = [s for s in ctx.substate if ctx.sub(s).dirty()]
 
