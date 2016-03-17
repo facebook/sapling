@@ -204,6 +204,18 @@ Check that deep archiving works
 .. but first take a detour through some deep removal testing
 
   $ hg remove -S -I 're:.*.txt' .
+  \r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing sub1/sub2/folder/test.txt (glob)
   removing sub1/sub2/test.txt (glob)
   $ hg status -S
@@ -211,9 +223,37 @@ Check that deep archiving works
   R sub1/sub2/test.txt
   $ hg update -Cq
   $ hg remove -I 're:.*.txt' sub1
+  \r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   $ hg status -S
   $ hg remove sub1/sub2/folder/test.txt
+  \r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   $ hg remove sub1/.hgsubstate
+  \r (no-eol) (esc)
+  searching [==========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   $ mv sub1/.hgsub sub1/x.hgsub
   $ hg status -S
   warning: subrepo spec file 'sub1/.hgsub' not found
@@ -247,6 +287,9 @@ Test relative path printing + subrepos
 
 Archive wdir() with subrepos
   $ hg rm main
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   $ hg archive -S -r 'wdir()' ../wdir
   \r (no-eol) (esc)
   archiving [                                           ] 0/3\r (no-eol) (esc)
@@ -853,6 +896,10 @@ Test a directory commit with a changed largefile and a changed normal file
 Test .hgsubstate in the R state
 
   $ hg rm .hgsub .hgsubstate
+  \r (no-eol) (esc)
+  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
+  deleting [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   $ hg ci -m 'trash subrepo tracking'
 
   $ hg log -r "subrepo('re:sub\d+')" --style compact

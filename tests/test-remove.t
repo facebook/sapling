@@ -26,6 +26,9 @@
 file not managed
 
   $ remove foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing foo: file is untracked
   exit code: 1
   ? foo
@@ -41,6 +44,12 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove bar
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing bar: file has been marked for add (use forget to undo)
   exit code: 1
   A bar
@@ -54,6 +63,9 @@ the table cases
 01 state clean, options none
 
   $ remove foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   ? bar
@@ -67,6 +79,12 @@ the table cases
 
   $ echo b >> foo
   $ remove foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing foo: file is modified (use -f to force removal)
   exit code: 1
   M foo
@@ -82,6 +100,9 @@ the table cases
 
   $ rm foo
   $ remove foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   ? bar
@@ -96,6 +117,9 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -f bar
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   ? bar
   ./bar
@@ -106,6 +130,9 @@ the table cases
 11 state clean, options -f
 
   $ remove -f foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   \r (no-eol) (esc)
@@ -117,6 +144,9 @@ the table cases
 
   $ echo b >> foo
   $ remove -f foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   \r (no-eol) (esc)
@@ -128,6 +158,9 @@ the table cases
 
   $ rm foo
   $ remove -f foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   \r (no-eol) (esc)
@@ -140,6 +173,12 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -A bar
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing bar: file still exists
   exit code: 1
   A bar
@@ -153,6 +192,12 @@ the table cases
 21 state clean, options -A
 
   $ remove -A foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing foo: file still exists
   exit code: 1
   ? bar
@@ -164,6 +209,12 @@ the table cases
 
   $ echo b >> foo
   $ remove -A foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing foo: file still exists
   exit code: 1
   M foo
@@ -179,6 +230,9 @@ the table cases
 
   $ rm foo
   $ remove -A foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   ? bar
@@ -193,6 +247,9 @@ the table cases
   $ echo b > bar
   $ hg add bar
   $ remove -Af bar
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   ? bar
   ./bar
@@ -203,6 +260,9 @@ the table cases
 31 state clean, options -Af
 
   $ remove -Af foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   ./foo
@@ -215,6 +275,9 @@ the table cases
 
   $ echo b >> foo
   $ remove -Af foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   ./foo
@@ -227,6 +290,9 @@ the table cases
 
   $ rm foo
   $ remove -Af foo
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   exit code: 0
   R foo
   \r (no-eol) (esc)
@@ -247,6 +313,17 @@ dir, options none
 
   $ rm test/bar
   $ remove test
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing test/bar (glob)
   removing test/foo (glob)
   exit code: 0
@@ -262,6 +339,17 @@ dir, options -f
 
   $ rm test/bar
   $ remove -f test
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing test/bar (glob)
   removing test/foo (glob)
   exit code: 0
@@ -277,6 +365,17 @@ dir, options -A
 
   $ rm test/bar
   $ remove -A test
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  skipping [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing test/bar (glob)
   not removing test/foo: file still exists (glob)
   exit code: 1
@@ -292,6 +391,17 @@ dir, options -Af
 
   $ rm test/bar
   $ remove -Af test
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [=====================>                      ] 1/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing test/bar (glob)
   removing test/foo (glob)
   exit code: 0
@@ -313,6 +423,14 @@ test remove dropping empty trees (issue1861)
   adding issue1861/b/c/y
   adding issue1861/x
   $ hg rm issue1861/b
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing issue1861/b/c/y (glob)
   $ hg ci -m remove
   $ ls issue1861
@@ -333,11 +451,22 @@ handling of untracked directories and missing files
   $ mkdir d1
   $ echo a > d1/a
   $ hg rm --after d1
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   not removing d1: no tracked files
   [1]
   $ hg add d1/a
   $ rm d1/a
   $ hg rm --after d1
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
+  \r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   removing d1/a (glob)
 #if windows
   $ hg rm --after nosuch
@@ -346,5 +475,8 @@ handling of untracked directories and missing files
 #else
   $ hg rm --after nosuch
   nosuch: No such file or directory
+  \r (no-eol) (esc)
+  deleting [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   [1]
 #endif
