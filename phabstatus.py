@@ -63,9 +63,16 @@ def getdiffstatus(repo, *diffid):
     try:
         if not diffid:
             return []
-        proc = subprocess.Popen(['arc', 'call-conduit', 'differential.query'],
-                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                     preexec_fn=os.setsid)
+        timeout = repo.ui.configint('ssl', 'timeout', 5);
+        proc = subprocess.Popen(
+                    [
+                        'arc',
+                        'call-conduit',
+                        'differential.query',
+                        '--conduit-timeout', timeout,
+                    ],
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                    preexec_fn=os.setsid)
         input = json.dumps({'ids': diffid})
         repo.ui.debug("[diffrev] echo '%s' | "
                       "arc call-conduit differential.query\n" %
