@@ -1075,9 +1075,8 @@ class ui(object):
     def progress(self, topic, pos, item="", unit="", total=None):
         '''show a progress message
 
-        With stock hg, this is simply a debug message that is hidden
-        by default, but with extensions or GUI tools it may be
-        visible. 'topic' is the current operation, 'item' is a
+        By default a textual progress bar will be displayed if an operation
+        takes too long. 'topic' is the current operation, 'item' is a
         non-numeric marker of the current position (i.e. the currently
         in-process file), 'pos' is the current numeric position (i.e.
         revision, bytes, etc.), unit is a corresponding unit label,
