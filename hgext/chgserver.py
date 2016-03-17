@@ -235,6 +235,15 @@ def _newchgui(srcui, csystem):
 
         def system(self, cmd, environ=None, cwd=None, onerr=None,
                    errprefix=None):
+            # fallback to the original system method if the output needs to be
+            # captured (to self._buffers), or the output stream is not stdout
+            # (e.g. stderr, cStringIO), because the chg client is not aware of
+            # these situations and will behave differently (write to stdout).
+            if (any(s[1] for s in self._bufferstates)
+                or not util.safehasattr(self.fout, 'fileno')
+                or self.fout.fileno() != sys.stdout.fileno()):
+                return super(chgui, self).system(cmd, environ, cwd, onerr,
+                                                 errprefix)
             # copied from mercurial/util.py:system()
             self.flush()
             def py2shell(val):
