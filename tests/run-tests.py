@@ -1108,10 +1108,14 @@ class TTest(Test):
                     lout += b' (no-eol)\n'
 
                 # Find the expected output at the current position.
-                el = None
+                els = [None]
                 if expected.get(pos, None):
-                    el = expected[pos].pop(0)
-                if True:
+                    els = expected[pos]
+
+                i = 0
+                while i < len(els):
+                    el = els[i]
+
                     r = TTest.linematch(el, lout)
                     if isinstance(r, str):
                         if r == '+glob':
@@ -1122,11 +1126,19 @@ class TTest(Test):
                             r = '' # Warn only this line.
                         elif r == "retry":
                             postout.append(b'  ' + el)
-                            continue
+                            els.pop(i)
+                            break
                         else:
                             log('\ninfo, unknown linematch result: %r\n' % r)
                             r = False
+                    if r:
+                        els.pop(i)
+                        break
+                    i += 1
+
                 if r:
+                    if r == "retry":
+                        continue
                     postout.append(b'  ' + el)
                 else:
                     if self.NEEDESCAPE(lout):
