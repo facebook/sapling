@@ -1111,21 +1111,21 @@ class TTest(Test):
                 el = None
                 if expected.get(pos, None):
                     el = expected[pos].pop(0)
-
-                r = TTest.linematch(el, lout)
-                if isinstance(r, str):
-                    if r == '+glob':
-                        lout = el[:-1] + ' (glob)\n'
-                        r = '' # Warn only this line.
-                    elif r == '-glob':
-                        lout = ''.join(el.rsplit(' (glob)', 1))
-                        r = '' # Warn only this line.
-                    elif r == "retry":
-                        postout.append(b'  ' + el)
-                        continue
-                    else:
-                        log('\ninfo, unknown linematch result: %r\n' % r)
-                        r = False
+                if True:
+                    r = TTest.linematch(el, lout)
+                    if isinstance(r, str):
+                        if r == '+glob':
+                            lout = el[:-1] + ' (glob)\n'
+                            r = '' # Warn only this line.
+                        elif r == '-glob':
+                            lout = ''.join(el.rsplit(' (glob)', 1))
+                            r = '' # Warn only this line.
+                        elif r == "retry":
+                            postout.append(b'  ' + el)
+                            continue
+                        else:
+                            log('\ninfo, unknown linematch result: %r\n' % r)
+                            r = False
                 if r:
                     postout.append(b'  ' + el)
                 else:
