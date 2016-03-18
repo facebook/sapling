@@ -443,6 +443,10 @@ def has_absimport():
 def has_py3k():
     return 3 == sys.version_info[0]
 
+@check("py3exe", "a Python 3.x interpreter is available")
+def has_python3exe():
+    return 'PYTHON3' in os.environ
+
 @check("pure", "running with pure Python code")
 def has_pure():
     return any([

@@ -255,6 +255,11 @@ def getparser():
                       help="use specified chg wrapper in place of hg")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
+    # This option should be deleted once test-check-py3-compat.t and other
+    # Python 3 tests run with Python 3.
+    parser.add_option("--with-python3", metavar="PYTHON3",
+                      help="Python 3 interpreter (if running under Python 2)"
+                           " (TEMPORARY)")
     parser.add_option('--extra-config-opt', action="append",
                       help='set the given config opt in the test hgrc')
     parser.add_option('--random', action="store_true",
@@ -353,6 +358,27 @@ def parseargs(args, parser):
         if PYTHON3:
             parser.error(
                 '--py3k-warnings can only be used on Python 2.6 and 2.7')
+    if options.with_python3:
+        if PYTHON3:
+            parser.error('--with-python3 cannot be used when executing with '
+                         'Python 3')
+
+        # Verify Python3 executable is acceptable.
+        proc = subprocess.Popen([options.with_python3, b'--version'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        out, _err = proc.communicate()
+        ret = proc.wait()
+        if ret != 0:
+            parser.error('could not determine version of python 3')
+        if not out.startswith('Python '):
+            parser.error('unexpected output from python3 --version: %s' %
+                         out)
+        vers = version.LooseVersion(out[len('Python '):])
+        if vers < version.LooseVersion('3.5.0'):
+            parser.error('--with-python3 version must be 3.5.0 or greater; '
+                         'got %s' % out)
+
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, 'blacklist')
     if options.whitelist:
@@ -1986,6 +2012,9 @@ class TestRunner(object):
 
         osenvironb[b"BINDIR"] = self._bindir
         osenvironb[b"PYTHON"] = PYTHON
+
+        if self.options.with_python3:
+            osenvironb[b'PYTHON3'] = self.options.with_python3
 
         fileb = _bytespath(__file__)
         runtestdir = os.path.abspath(os.path.dirname(fileb))
