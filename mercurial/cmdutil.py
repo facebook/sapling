@@ -148,7 +148,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         originaldiff = patch.diff(repo, changes=status, opts=diffopts)
         originalchunks = patch.parsepatch(originaldiff)
 
-        # 1. filter patch, so we have intending-to apply subset of it
+        # 1. filter patch, since we are intending to apply subset of it
         try:
             chunks, newopts = filterfn(ui, originalchunks)
         except patch.PatchError as err:
