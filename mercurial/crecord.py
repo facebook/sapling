@@ -1466,7 +1466,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
     def toggleedit(self, item=None, test=False):
         """
-            edit the currently selected chunk
+        edit the currently selected chunk
         """
         def updateui(self):
             self.numpadlines = self.getnumlinesdisplayed(ignorefolding=True) + 1
