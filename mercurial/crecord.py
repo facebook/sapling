@@ -1580,6 +1580,11 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         return True
 
     def handlekeypressed(self, keypressed, test=False):
+        """
+        Perform actions based on pressed keys.
+
+        Return true to exit the main loop.
+        """
         if keypressed in ["k", "KEY_UP"]:
             self.uparrowevent()
         if keypressed in ["K", "KEY_PPAGE"]:
