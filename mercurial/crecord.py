@@ -77,7 +77,6 @@ class patchnode(object):
         Return the closest next item of the same type where there are no items
         of different types between the current item and this closest item.
         If no such item exists, return None.
-
         """
         raise NotImplementedError("method must be implemented by subclass")
 
@@ -86,7 +85,6 @@ class patchnode(object):
         Return the closest previous item of the same type where there are no
         items of different types between the current item and this closest item.
         If no such item exists, return None.
-
         """
         raise NotImplementedError("method must be implemented by subclass")
 
@@ -109,7 +107,6 @@ class patchnode(object):
         the next item.
 
         If it is not possible to get the next item, return None.
-
         """
         try:
             itemfolded = self.folded
@@ -163,7 +160,6 @@ class patchnode(object):
         next item.
 
         If it is not possible to get the previous item, return None.
-
         """
         if constrainlevel:
             return self.prevsibling()
@@ -190,7 +186,6 @@ class patchnode(object):
 class patch(patchnode, list): # todo: rename patchroot
     """
     list of header objects representing the patch.
-
     """
     def __init__(self, headerlist):
         self.extend(headerlist)
@@ -487,7 +482,6 @@ def gethw():
     this is a rip-off of a rip-off - taken from the bpython code.  it is
     useful / necessary because otherwise curses.initscr() must be called,
     which can leave the terminal in a nasty state after exiting.
-
     """
     h, w = struct.unpack(
         "hhhh", fcntl.ioctl(_origstdout, termios.TIOCGWINSZ, "\000"*8))[0:2]
@@ -497,7 +491,6 @@ def chunkselector(ui, headerlist):
     """
     curses interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
-
     """
     ui.write(_('starting interactive selection\n'))
     chunkselector = curseschunkselector(headerlist, ui)
@@ -518,7 +511,6 @@ def testchunkselector(testfn, ui, headerlist):
     """
     test interface to get selection of chunks, and mark the applied flags
     of the chosen chunks.
-
     """
     chunkselector = curseschunkselector(headerlist, ui)
     if testfn and os.path.exists(testfn):
@@ -595,7 +587,6 @@ class curseschunkselector(object):
 
         if the currently selected item is already at the top of the screen,
         scroll the screen down to show the new-selected item.
-
         """
         currentitem = self.currentselecteditem
 
@@ -616,7 +607,6 @@ class curseschunkselector(object):
 
         if the currently selected item is already at the top of the screen,
         scroll the screen down to show the new-selected item.
-
         """
         currentitem = self.currentselecteditem
         nextitem = currentitem.previtem()
@@ -640,7 +630,6 @@ class curseschunkselector(object):
 
         if the currently selected item is already at the bottom of the screen,
         scroll the screen up to show the new-selected item.
-
         """
         #self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
@@ -657,7 +646,6 @@ class curseschunkselector(object):
         if the cursor is already at the bottom chunk, scroll the screen up and
         move the cursor-position to the subsequent chunk.  otherwise, only move
         the cursor position down one chunk.
-
         """
         # todo: update docstring
 
@@ -680,7 +668,6 @@ class curseschunkselector(object):
     def rightarrowevent(self):
         """
         select (if possible) the first of this item's child-items.
-
         """
         currentitem = self.currentselecteditem
         nextitem = currentitem.firstchild()
@@ -700,7 +687,6 @@ class curseschunkselector(object):
         if the current item can be folded (i.e. it is an unfolded header or
         hunk), then fold it.  otherwise try select (if possible) the parent
         of this item.
-
         """
         currentitem = self.currentselecteditem
 
@@ -725,7 +711,6 @@ class curseschunkselector(object):
         """
         select the header of the current item (or fold current item if the
         current item is already a header).
-
         """
         currentitem = self.currentselecteditem
 
@@ -775,7 +760,6 @@ class curseschunkselector(object):
         """
         toggle the applied flag of the specified item.  if no item is specified,
         toggle the flag of the currently selected item.
-
         """
         if item is None:
             item = self.currentselecteditem
@@ -898,7 +882,6 @@ class curseschunkselector(object):
         the screen in the x direction.  the current cursor position is
         taken into account when making this calculation.  the string can span
         multiple lines.
-
         """
         y, xstart = window.getyx()
         width = self.xscreensize
@@ -927,7 +910,6 @@ class curseschunkselector(object):
         the string stretches to the right border of the window.
 
         if showwhtspc == True, trailing whitespace of a string is highlighted.
-
         """
         # preprocess the text, converting tabs to spaces
         text = text.expandtabs(4)
@@ -1042,8 +1024,8 @@ class curseschunkselector(object):
         """
         create a string to prefix a line with which indicates whether 'item'
         is applied and/or folded.
-
         """
+
         # create checkbox string
         if item.applied:
             if not isinstance(item, uihunkline) and item.partial:
@@ -1076,8 +1058,8 @@ class curseschunkselector(object):
         """
         print the header to the pad.  if countlines is True, don't print
         anything, but just count the number of lines which would be printed.
-
         """
+
         outstr = ""
         text = header.prettystr()
         chunkindex = self.chunklist.index(header)
@@ -1192,6 +1174,7 @@ class curseschunkselector(object):
         if item is not specified, then print the entire patch.
         (hiding folded elements, etc. -- see __printitem() docstring)
         """
+
         if item is None:
             item = self.headerlist
         if recursechildren:
@@ -1233,8 +1216,8 @@ class curseschunkselector(object):
 
         if recursechildren is False, then only print the item without its
         child items.
-
         """
+
         if towin and self.outofdisplayedarea():
             return
 
@@ -1281,8 +1264,8 @@ class curseschunkselector(object):
         if no item is given, assume the entire patch.
         if ignorefolding is True, folded items will be unfolded when counting
         the number of lines.
-
         """
+
         # temporarily disable printing to windows by printstring
         patchdisplaystring = self.printitem(item, ignorefolding,
                                             recursechildren, towin=False)
@@ -1316,8 +1299,8 @@ class curseschunkselector(object):
         attrlist is used to 'flavor' the returned color-pair.  this information
         is not stored in self.colorpairs.  it contains attribute values like
         curses.A_BOLD.
-
         """
+
         if (name is not None) and name in self.colorpairnames:
             # then get the associated color pair and return it
             colorpair = self.colorpairnames[name]
@@ -1448,8 +1431,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         When the amend flag is set, a commit will modify the most recently
         committed changeset, instead of creating a new changeset.  Otherwise, a
         new changeset will be created (the normal commit behavior).
-
         """
+
         try:
             ver = float(util.version()[:3])
         except ValueError:
@@ -1641,8 +1624,8 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
     def main(self, stdscr):
         """
         method to be wrapped by curses.wrapper() for selecting chunks.
-
         """
+
         signal.signal(signal.SIGWINCH, self.sigwinchhandler)
         self.stdscr = stdscr
         # error during initialization, cannot be printed in the curses
