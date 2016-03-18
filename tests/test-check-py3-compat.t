@@ -118,3 +118,46 @@
   tests/test-walkrepo.py requires print_function
   tests/test-wireproto.py requires print_function
   tests/tinyproxy.py requires print_function
+
+#if py3exe
+  $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
+  contrib/check-code.py: invalid syntax: (unicode error) 'unicodeescape' codec can't decode bytes in position 18-19: malformed \N character escape (<unknown>, line 106)
+  contrib/import-checker.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 569)
+  contrib/revsetbenchmarks.py: invalid syntax: invalid syntax (<unknown>, line 186)
+  doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line 286)
+  hgext/color.py: invalid syntax: invalid syntax (<unknown>, line 551)
+  mercurial/archival.py: invalid syntax: invalid syntax (<unknown>, line 234)
+  mercurial/bundle2.py: invalid syntax: invalid syntax (<unknown>, line 977)
+  mercurial/commands.py: invalid syntax: invalid syntax (<unknown>, line 3324)
+  tests/filterpyflakes.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 61)
+  tests/generate-working-copy-states.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 69)
+  tests/get-with-headers.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 44)
+  tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line 7)
+  tests/seq.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 23)
+  tests/silenttestrunner.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 11)
+  tests/test-ancestor.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 187)
+  tests/test-batching.py: invalid syntax: invalid syntax (<unknown>, line 34)
+  tests/test-bdiff.py: invalid syntax: invalid syntax (<unknown>, line 10)
+  tests/test-context.py: invalid syntax: invalid syntax (<unknown>, line 21)
+  tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line 26)
+  tests/test-duplicateoptions.py: invalid syntax: invalid syntax (<unknown>, line 34)
+  tests/test-filecache.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 23)
+  tests/test-filelog.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 33)
+  tests/test-hg-parseurl.py: invalid syntax: invalid syntax (<unknown>, line 4)
+  tests/test-hgweb-auth.py: invalid syntax: invalid syntax (<unknown>, line 24)
+  tests/test-hybridencode.py: invalid syntax: invalid syntax (<unknown>, line 5)
+  tests/test-lrucachedict.py: invalid syntax: invalid syntax (<unknown>, line 6)
+  tests/test-minirst.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 6)
+  tests/test-parseindex2.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 173)
+  tests/test-propertycache.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 50)
+  tests/test-revlog-ancestry.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 49)
+  tests/test-status-inprocess.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 8)
+  tests/test-trusted.py: invalid syntax: invalid syntax (<unknown>, line 60)
+  tests/test-ui-color.py: invalid syntax: invalid syntax (<unknown>, line 11)
+  tests/test-ui-config.py: invalid syntax: invalid syntax (<unknown>, line 32)
+  tests/test-ui-verbosity.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 9)
+  tests/test-walkrepo.py: invalid syntax: invalid syntax (<unknown>, line 37)
+  tests/test-wireproto.py: invalid syntax: invalid syntax (<unknown>, line 55)
+  tests/tinyproxy.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 53)
+
+#endif

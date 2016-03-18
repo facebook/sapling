@@ -12,8 +12,8 @@ from __future__ import absolute_import, print_function
 import ast
 import sys
 
-def check_compat(f):
-    """Check Python 3 compatibility for a file."""
+def check_compat_py2(f):
+    """Check Python 3 compatibility for a file with Python 2"""
     with open(f, 'rb') as fh:
         content = fh.read()
     root = ast.parse(content)
@@ -36,8 +36,24 @@ def check_compat(f):
     if haveprint and 'print_function' not in futures:
         print('%s requires print_function' % f)
 
+def check_compat_py3(f):
+    """Check Python 3 compatibility of a file with Python 3."""
+    with open(f, 'rb') as fh:
+        content = fh.read()
+
+    try:
+        ast.parse(content)
+    except SyntaxError as e:
+        print('%s: invalid syntax: %s' % (f, e))
+        return
+
 if __name__ == '__main__':
+    if sys.version_info[0] == 2:
+        fn = check_compat_py2
+    else:
+        fn = check_compat_py3
+
     for f in sys.argv[1:]:
-        check_compat(f)
+        fn(f)
 
     sys.exit(0)
