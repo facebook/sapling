@@ -135,6 +135,19 @@ typical client does not want echo-back messages, so test without it:
   summary:     1
   
 
+check that "histedit --commands=-" can read rules from the input channel:
+
+  >>> import cStringIO
+  >>> from hgclient import readchannel, runcommand, check
+  >>> @check
+  ... def serverinput(server):
+  ...     readchannel(server)
+  ...     rules = 'pick eff892de26ec\n'
+  ...     runcommand(server, ['histedit', '0', '--commands=-',
+  ...                         '--config', 'extensions.histedit='],
+  ...                input=cStringIO.StringIO(rules))
+  *** runcommand histedit 0 --commands=- --config extensions.histedit=
+
 check that --cwd doesn't persist between requests:
 
   $ mkdir foo
