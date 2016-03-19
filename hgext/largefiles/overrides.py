@@ -603,7 +603,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
 
     def makestandin(relpath):
         path = pathutil.canonpath(repo.root, repo.getcwd(), relpath)
-        return os.path.join(repo.wjoin(lfutil.standin(path)))
+        return repo.wvfs.join(lfutil.standin(path))
 
     fullpats = scmutil.expandpats(pats)
     dest = fullpats[-1]
@@ -673,7 +673,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
                 dest.startswith(repo.wjoin(lfutil.shortname))):
                 srclfile = src.replace(repo.wjoin(lfutil.standin('')), '')
                 destlfile = dest.replace(repo.wjoin(lfutil.standin('')), '')
-                destlfiledir = os.path.dirname(repo.wjoin(destlfile)) or '.'
+                destlfiledir = repo.wvfs.dirname(repo.wjoin(destlfile)) or '.'
                 if not os.path.isdir(destlfiledir):
                     os.makedirs(destlfiledir)
                 if rename:
@@ -723,8 +723,8 @@ def overriderevert(orig, ui, repo, ctx, parents, *pats, **opts):
         for lfile in s.modified:
             lfutil.updatestandin(repo, lfutil.standin(lfile))
         for lfile in s.deleted:
-            if (os.path.exists(repo.wjoin(lfutil.standin(lfile)))):
-                os.unlink(repo.wjoin(lfutil.standin(lfile)))
+            if (repo.wvfs.exists(lfutil.standin(lfile))):
+                repo.wvfs.unlink(lfutil.standin(lfile))
 
         oldstandins = lfutil.getstandinsstate(repo)
 
@@ -1366,7 +1366,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         pctx = repo['.']
         for lfile in unsure + s.modified:
             lfileabs = repo.wvfs.join(lfile)
-            if not os.path.exists(lfileabs):
+            if not repo.wvfs.exists(lfileabs):
                 continue
             lfhash = lfutil.hashrepofile(repo, lfile)
             standin = lfutil.standin(lfile)
