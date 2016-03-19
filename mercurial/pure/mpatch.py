@@ -42,6 +42,13 @@ def _move(m, dest, src, count):
     m.seek(dest)
     m.write(buf)
 
+def _collect(m, buf, list):
+    start = buf
+    for l, p in reversed(list):
+        _move(m, buf, p, l)
+        buf += l
+    return (buf - start, start)
+
 def patches(a, bins):
     if not bins:
         return a
@@ -66,18 +73,11 @@ def patches(a, bins):
     m.seek(pos)
     for p in bins: m.write(p)
 
-    def collect(buf, list):
-        start = buf
-        for l, p in reversed(list):
-            _move(m, buf, p, l)
-            buf += l
-        return (buf - start, start)
-
     for plen in plens:
         # if our list gets too long, execute it
         if len(frags) > 128:
             b2, b1 = b1, b2
-            frags = [collect(b1, frags)]
+            frags = [_collect(m, b1, frags)]
 
         new = []
         end = pos + plen
@@ -92,7 +92,7 @@ def patches(a, bins):
             last = p2
         frags.extend(reversed(new))     # what was left at the end
 
-    t = collect(b2, frags)
+    t = _collect(m, b2, frags)
 
     m.seek(t[1])
     return m.read(t[0])
