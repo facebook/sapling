@@ -55,10 +55,7 @@ def usercachepath(ui, hash):
     with the given hash.
     This cache is used for sharing of largefiles across repositories - both
     to preserve download bandwidth and storage space.'''
-    path = _usercachedir(ui)
-    if path:
-        return os.path.join(path, hash)
-    return None
+    return os.path.join(_usercachedir(ui), hash)
 
 def _usercachedir(ui):
     '''Return the location of the "global" largefiles cache.'''
@@ -82,11 +79,11 @@ def _usercachedir(ui):
             return os.path.join(home, '.cache', longname)
     else:
         raise error.Abort(_('unknown operating system: %s\n') % os.name)
-    return None
+    raise error.Abort(_('unknown %s usercache location\n') % longname)
 
 def inusercache(ui, hash):
     path = usercachepath(ui, hash)
-    return path and os.path.exists(path)
+    return os.path.exists(path)
 
 def findfile(repo, hash):
     path, exists = findstorepath(repo, hash)
@@ -261,8 +258,7 @@ def copytostoreabsolute(repo, file, hash):
 
 def linktousercache(repo, hash):
     path = usercachepath(repo.ui, hash)
-    if path:
-        link(storepath(repo, hash), path)
+    link(storepath(repo, hash), path)
 
 def getstandinmatcher(repo, rmatcher=None):
     '''Return a match object that applies rmatcher to the standin directory'''
