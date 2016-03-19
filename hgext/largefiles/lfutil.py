@@ -51,30 +51,38 @@ def link(src, dest):
         os.chmod(dest, os.stat(src).st_mode)
 
 def usercachepath(ui, hash):
+    '''Return the correct location in the "global" largefiles cache for a file
+    with the given hash.
+    This cache is used for sharing of largefiles across repositories - both
+    to preserve download bandwidth and storage space.'''
+    path = _usercachedir(ui)
+    if path:
+        return os.path.join(path, hash)
+    return None
+
+def _usercachedir(ui):
+    '''Return the location of the "global" largefiles cache.'''
     path = ui.configpath(longname, 'usercache', None)
     if path:
-        path = os.path.join(path, hash)
+        return path
+    if os.name == 'nt':
+        appdata = os.getenv('LOCALAPPDATA', os.getenv('APPDATA'))
+        if appdata:
+            return os.path.join(appdata, longname)
+    elif platform.system() == 'Darwin':
+        home = os.getenv('HOME')
+        if home:
+            return os.path.join(home, 'Library', 'Caches', longname)
+    elif os.name == 'posix':
+        path = os.getenv('XDG_CACHE_HOME')
+        if path:
+            return os.path.join(path, longname)
+        home = os.getenv('HOME')
+        if home:
+            return os.path.join(home, '.cache', longname)
     else:
-        if os.name == 'nt':
-            appdata = os.getenv('LOCALAPPDATA', os.getenv('APPDATA'))
-            if appdata:
-                path = os.path.join(appdata, longname, hash)
-        elif platform.system() == 'Darwin':
-            home = os.getenv('HOME')
-            if home:
-                path = os.path.join(home, 'Library', 'Caches',
-                                    longname, hash)
-        elif os.name == 'posix':
-            path = os.getenv('XDG_CACHE_HOME')
-            if path:
-                path = os.path.join(path, longname, hash)
-            else:
-                home = os.getenv('HOME')
-                if home:
-                    path = os.path.join(home, '.cache', longname, hash)
-        else:
-            raise error.Abort(_('unknown operating system: %s\n') % os.name)
-    return path
+        raise error.Abort(_('unknown operating system: %s\n') % os.name)
+    return None
 
 def inusercache(ui, hash):
     path = usercachepath(ui, hash)
