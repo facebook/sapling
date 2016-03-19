@@ -341,15 +341,11 @@ def has_outer_repo():
     return not matchoutput('hg root 2>&1',
                            r'abort: no repository found', True)
 
-@check("ssl", ("(python >= 2.6 ssl module and python OpenSSL) "
-               "OR python >= 2.7.9 ssl"))
+@check("ssl", "ssl module available")
 def has_ssl():
     try:
         import ssl
-        if getattr(ssl, 'create_default_context', False):
-            return True
-        import OpenSSL
-        OpenSSL.SSL.Context
+        ssl.CERT_NONE
         return True
     except ImportError:
         return False
