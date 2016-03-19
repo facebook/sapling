@@ -442,8 +442,14 @@ def wraprepo(repo):
                 elif namespace == "tip":
                     tip = int(value)
 
-            heads = set(self.heads())
+            # Since we don't have the lock right now, and since this is the
+            # first place we load the changelog and bookmarks off disk, it's
+            # important that we load bookmarks before the changelog here. This
+            # way we know that the bookmarks point to valid nodes. Otherwise,
+            # the bookmarks might change between us reading the changelog and
+            # the bookmark file.
             bookmarks = self._bookmarks
+            heads = set(self.heads())
 
             outofsync = heads != sqlheads or bookmarks != sqlbookmarks or tip != len(self) - 1
             return outofsync, sqlheads, sqlbookmarks, tip
@@ -595,6 +601,13 @@ def wraprepo(repo):
                     lock.release()
                 if wlock:
                     wlock.release()
+
+            # Since we just exited the lock, the changelog and bookmark
+            # in-memory structures will need to be reloaded. If we loaded
+            # changelog before bookmarks, we might accidentally load bookmarks
+            # that don't exist in the loaded changelog. So let's force loading
+            # bookmarks now.
+            bm = self._bookmarks
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):
             """Fetches every revision from fetchstart to fetchend (inclusive)
