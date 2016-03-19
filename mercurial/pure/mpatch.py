@@ -32,6 +32,16 @@ def _pull(dst, src, l): # pull l bytes from src
         dst.append(f)
         l -= f[0]
 
+def _move(m, dest, src, count):
+    """move count bytes from src to dest
+
+    The file pointer is left at the end of dest.
+    """
+    m.seek(src)
+    buf = m.read(count)
+    m.seek(dest)
+    m.write(buf)
+
 def patches(a, bins):
     if not bins:
         return a
@@ -46,15 +56,6 @@ def patches(a, bins):
         return a
 
     m = StringIO()
-    def move(dest, src, count):
-        """move count bytes from src to dest
-
-        The file pointer is left at the end of dest.
-        """
-        m.seek(src)
-        buf = m.read(count)
-        m.seek(dest)
-        m.write(buf)
 
     # load our original text
     m.write(a)
@@ -68,7 +69,7 @@ def patches(a, bins):
     def collect(buf, list):
         start = buf
         for l, p in reversed(list):
-            move(buf, p, l)
+            _move(m, buf, p, l)
             buf += l
         return (buf - start, start)
 
