@@ -270,6 +270,10 @@ def getparser():
                       help='allow extremely slow tests')
     parser.add_option('--showchannels', action='store_true',
                       help='show scheduling channels')
+    parser.add_option('--known-good-rev', type="string",
+                      metavar="known_good_rev",
+                      help=("Automatically bisect any failures using this "
+                            "revision as a known-good revision."))
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -1812,6 +1816,40 @@ class TextTestRunner(unittest.TextTestRunner):
             self._runner._checkhglib('Tested')
 
             savetimes(self._runner._testdir, result)
+
+            if failed and self._runner.options.known_good_rev:
+                def nooutput(args):
+                    p = subprocess.Popen(args, stderr=subprocess.STDOUT,
+                                         stdout=subprocess.PIPE)
+                    p.stdout.read()
+                    p.wait()
+                for test, msg in result.failures:
+                    nooutput(['hg', 'bisect', '--reset']),
+                    nooutput(['hg', 'bisect', '--bad', '.'])
+                    nooutput(['hg', 'bisect', '--good',
+                              self._runner.options.known_good_rev])
+                    # TODO: we probably need to forward some options
+                    # that alter hg's behavior inside the tests.
+                    rtc = '%s %s %s' % (sys.executable, sys.argv[0], test)
+                    sub = subprocess.Popen(['hg', 'bisect', '--command', rtc],
+                                           stderr=subprocess.STDOUT,
+                                           stdout=subprocess.PIPE)
+                    data = sub.stdout.read()
+                    sub.wait()
+                    m = re.search(
+                        (r'\nThe first (?P<goodbad>bad|good) revision '
+                         r'is:\nchangeset: +\d:(?P<node>[a-f0-9]+)\n.*\n'
+                         r'summary: +(?P<summary>[^\n]+)\n'),
+                        data, (re.MULTILINE | re.DOTALL))
+                    if m is None:
+                        self.stream.writeln(
+                            'Failed to identify failure point for %s' % test)
+                        continue
+                    dat = m.groupdict()
+                    verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
+                    self.stream.writeln(
+                        '%s %s by %s (%s)' % (
+                            test, verb, dat['node'], dat['summary']))
             self.stream.writeln(
                 '# Ran %d tests, %d skipped, %d warned, %d failed.'
                 % (result.testsRun,

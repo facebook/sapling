@@ -758,3 +758,36 @@ support for running a test outside the current directory
   $ rt nonlocal/test-is-not-here.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+
+support for bisecting failed tests automatically
+  $ hg init bisect
+  $ cd bisect
+  $ cat >> test-bisect.t <<EOF
+  >   $ echo pass
+  >   pass
+  > EOF
+  $ hg add test-bisect.t
+  $ hg ci -m 'good'
+  $ cat >> test-bisect.t <<EOF
+  >   $ echo pass
+  >   fail
+  > EOF
+  $ hg ci -m 'bad'
+  $ rt --known-good-rev=0 test-bisect.t
+  
+  --- $TESTTMP/anothertests/bisect/test-bisect.t
+  +++ $TESTTMP/anothertests/bisect/test-bisect.t.err
+  @@ -1,4 +1,4 @@
+     $ echo pass
+     pass
+     $ echo pass
+  -  fail
+  +  pass
+  
+  ERROR: test-bisect.t output changed
+  !
+  Failed test-bisect.t: output changed
+  test-bisect.t broken by 72cbf122d116 (bad)
+  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
