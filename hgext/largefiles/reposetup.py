@@ -8,7 +8,6 @@
 
 '''setup for largefiles repositories: reposetup'''
 import copy
-import os
 
 from mercurial import error, match as match_, error
 from mercurial.i18n import _
@@ -305,7 +304,7 @@ def reposetup(ui, repo):
                         _('file "%s" is a largefile standin') % f,
                         hint=('commit the largefile itself instead'))
                 # Scan directories
-                if os.path.isdir(self.wjoin(f)):
+                if self.wvfs.isdir(f):
                     dirs.append(f)
                 else:
                     regulars.append(f)
