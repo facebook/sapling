@@ -14,7 +14,10 @@ import ssl
 import sys
 
 from .i18n import _
-from . import error, util
+from . import (
+    error,
+    util,
+)
 
 hassni = getattr(ssl, 'HAS_SNI', False)
 
