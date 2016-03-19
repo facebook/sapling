@@ -31,6 +31,7 @@ CHANGESET = 'C'
 PARENT = 'P'
 GRANDPARENT = 'G'
 MISSINGPARENT = 'M'
+EDGES = {PARENT: '|', GRANDPARENT: '|', MISSINGPARENT: '|'}
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
     """Yield revisions from heads to roots one (topo) branch at a time.
@@ -390,11 +391,13 @@ def asciiedges(type, char, lines, state, rev, parents):
             knownparents.append(parent)
         else:
             newparents.append(parent)
+            state['edges'][parent] = state['styles'].get(ptype, '|')
 
     ncols = len(seen)
     nextseen = seen[:]
     nextseen[nodeidx:nodeidx + 1] = newparents
-    edges = [(nodeidx, nextseen.index(p)) for p in knownparents if p != nullrev]
+    edges = [(nodeidx, nextseen.index(p))
+             for p in knownparents if p != nullrev]
 
     while len(newparents) > 2:
         # ascii() only knows how to add or remove a single column between two
@@ -418,6 +421,8 @@ def asciiedges(type, char, lines, state, rev, parents):
         edges.append((nodeidx, nodeidx + 1))
     nmorecols = len(nextseen) - ncols
     seen[:] = nextseen
+    # remove current node from edge characters, no longer needed
+    state['edges'].pop(rev, None)
     yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
 
 def _fixlongrightedges(edges):
@@ -426,27 +431,28 @@ def _fixlongrightedges(edges):
             edges[i] = (start, end + 1)
 
 def _getnodelineedgestail(
-        node_index, p_node_index, n_columns, n_columns_diff, p_diff, fix_tail):
-    if fix_tail and n_columns_diff == p_diff and n_columns_diff != 0:
+        echars, idx, pidx, ncols, coldiff, pdiff, fix_tail):
+    if fix_tail and coldiff == pdiff and coldiff != 0:
         # Still going in the same non-vertical direction.
-        if n_columns_diff == -1:
-            start = max(node_index + 1, p_node_index)
-            tail = ["|", " "] * (start - node_index - 1)
-            tail.extend(["/", " "] * (n_columns - start))
+        if coldiff == -1:
+            start = max(idx + 1, pidx)
+            tail = echars[idx * 2:(start - 1) * 2]
+            tail.extend(["/", " "] * (ncols - start))
             return tail
         else:
-            return ["\\", " "] * (n_columns - node_index - 1)
+            return ["\\", " "] * (ncols - idx - 1)
     else:
-        return ["|", " "] * (n_columns - node_index - 1)
+        remainder = (ncols - idx - 1)
+        return echars[-(remainder * 2):] if remainder > 0 else []
 
-def _drawedges(edges, nodeline, interline):
+def _drawedges(echars, edges, nodeline, interline):
     for (start, end) in edges:
         if start == end + 1:
             interline[2 * end + 1] = "/"
         elif start == end - 1:
             interline[2 * start + 1] = "\\"
         elif start == end:
-            interline[2 * start] = "|"
+            interline[2 * start] = echars[2 * start]
         else:
             if 2 * end >= len(nodeline):
                 continue
@@ -457,26 +463,35 @@ def _drawedges(edges, nodeline, interline):
                 if nodeline[i] != "+":
                     nodeline[i] = "-"
 
-def _getpaddingline(ni, n_columns, edges):
-    line = []
-    line.extend(["|", " "] * ni)
-    if (ni, ni - 1) in edges or (ni, ni) in edges:
-        # (ni, ni - 1)      (ni, ni)
+def _getpaddingline(echars, idx, ncols, edges):
+    # all edges up to the current node
+    line = echars[:idx * 2]
+    # an edge for the current node, if there is one
+    if (idx, idx - 1) in edges or (idx, idx) in edges:
+        # (idx, idx - 1)      (idx, idx)
         # | | | |           | | | |
         # +---o |           | o---+
-        # | | c |           | c | |
+        # | | X |           | X | |
         # | |/ /            | |/ /
         # | | |             | | |
-        c = "|"
+        line.extend(echars[idx * 2:(idx + 1) * 2])
     else:
-        c = " "
-    line.extend([c, " "])
-    line.extend(["|", " "] * (n_columns - ni - 1))
+        line.extend('  ')
+    # all edges to the right of the current node
+    remainder = ncols - idx - 1
+    if remainder > 0:
+        line.extend(echars[-(remainder * 2):])
     return line
 
 def asciistate():
     """returns the initial value for the "state" argument to ascii()"""
-    return {'seen': [], 'lastcoldiff': 0, 'lastindex': 0}
+    return {
+        'seen': [],
+        'edges': {},
+        'lastcoldiff': 0,
+        'lastindex': 0,
+        'styles': EDGES.copy(),
+    }
 
 def ascii(ui, state, type, char, text, coldata):
     """prints an ASCII graph of the DAG
@@ -498,9 +513,15 @@ def ascii(ui, state, type, char, text, coldata):
         in the current revision. That is: -1 means one column removed;
         0 means no columns added or removed; 1 means one column added.
     """
-
     idx, edges, ncols, coldiff = coldata
     assert -2 < coldiff < 2
+
+    edgemap, seen = state['edges'], state['seen']
+    # Be tolerant of history issues; make sure we have at least ncols + coldiff
+    # elements to work with. See test-glog.t for broken history test cases.
+    echars = [c for p in seen for c in (edgemap.get(p, '|'), ' ')]
+    echars.extend(('|', ' ') * max(ncols + coldiff - len(seen), 0))
+
     if coldiff == -1:
         # Transform
         #
@@ -530,35 +551,33 @@ def ascii(ui, state, type, char, text, coldata):
     fix_nodeline_tail = len(text) <= 2 and not add_padding_line
 
     # nodeline is the line containing the node character (typically o)
-    nodeline = ["|", " "] * idx
+    nodeline = echars[:idx * 2]
     nodeline.extend([char, " "])
 
     nodeline.extend(
-        _getnodelineedgestail(idx, state['lastindex'], ncols, coldiff,
-                              state['lastcoldiff'], fix_nodeline_tail))
+        _getnodelineedgestail(
+            echars, idx, state['lastindex'], ncols, coldiff,
+            state['lastcoldiff'], fix_nodeline_tail))
 
     # shift_interline is the line containing the non-vertical
     # edges between this entry and the next
-    shift_interline = ["|", " "] * idx
+    shift_interline = echars[:idx * 2]
+    shift_interline.extend(' ' * (2 + coldiff))
+    count = ncols - idx - 1
     if coldiff == -1:
-        n_spaces = 1
-        edge_ch = "/"
+        shift_interline.extend('/ ' * count)
     elif coldiff == 0:
-        n_spaces = 2
-        edge_ch = "|"
+        shift_interline.extend(echars[(idx + 1) * 2:ncols * 2])
     else:
-        n_spaces = 3
-        edge_ch = "\\"
-    shift_interline.extend(n_spaces * [" "])
-    shift_interline.extend([edge_ch, " "] * (ncols - idx - 1))
+        shift_interline.extend(r'\ ' * count)
 
     # draw edges from the current node to its parents
-    _drawedges(edges, nodeline, shift_interline)
+    _drawedges(echars, edges, nodeline, shift_interline)
 
     # lines is the list of all graph lines to print
     lines = [nodeline]
     if add_padding_line:
-        lines.append(_getpaddingline(idx, ncols, edges))
+        lines.append(_getpaddingline(echars, idx, ncols, edges))
     lines.append(shift_interline)
 
     # make sure that there are as many graph lines as there are
@@ -566,7 +585,7 @@ def ascii(ui, state, type, char, text, coldata):
     while len(text) < len(lines):
         text.append("")
     if len(lines) < len(text):
-        extra_interline = ["|", " "] * (ncols + coldiff)
+        extra_interline = echars[:(ncols + coldiff) * 2]
         while len(lines) < len(text):
             lines.append(extra_interline)
 

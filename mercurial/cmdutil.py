@@ -2218,6 +2218,15 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                  filematcher=None):
     formatnode = _graphnodeformatter(ui, displayer)
     state = graphmod.asciistate()
+    styles = state['styles']
+    edgetypes = {
+        'parent': graphmod.PARENT,
+        'grandparent': graphmod.GRANDPARENT,
+        'missing': graphmod.MISSINGPARENT
+    }
+    for name, key in edgetypes.items():
+        # experimental config: ui.graphstyle.*
+        styles[key] = ui.config('ui', 'graphstyle.%s' % name, styles[key])
     for rev, type, ctx, parents in dag:
         char = formatnode(repo, ctx)
         copies = None
