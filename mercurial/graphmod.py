@@ -31,6 +31,8 @@ CHANGESET = 'C'
 PARENT = 'P'
 GRANDPARENT = 'G'
 MISSINGPARENT = 'M'
+# Style of line to draw. None signals a line that ends and is removed at this
+# point.
 EDGES = {PARENT: '|', GRANDPARENT: '|', MISSINGPARENT: '|'}
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
@@ -483,6 +485,56 @@ def _getpaddingline(echars, idx, ncols, edges):
         line.extend(echars[-(remainder * 2):])
     return line
 
+def _drawendinglines(lines, extra, edgemap, seen):
+    """Draw ending lines for missing parent edges
+
+    None indicates an edge that ends at between this node and the next
+    Replace with a short line ending in ~ and add / lines to any edges to
+    the right.
+
+    """
+    if None not in edgemap.values():
+        return
+
+    # Check for more edges to the right of our ending edges.
+    # We need enough space to draw adjustment lines for these.
+    edgechars = extra[::2]
+    while edgechars and edgechars[-1] is None:
+        edgechars.pop()
+    shift_size = max((edgechars.count(None) * 2) - 1, 0)
+    while len(lines) < 3 + shift_size:
+        lines.append(extra[:])
+
+    if shift_size:
+        empties = []
+        toshift = []
+        first_empty = extra.index(None)
+        for i, c in enumerate(extra[first_empty::2], first_empty // 2):
+            if c is None:
+                empties.append(i * 2)
+            else:
+                toshift.append(i * 2)
+        targets = list(range(first_empty, first_empty + len(toshift) * 2, 2))
+        positions = toshift[:]
+        for line in lines[-shift_size:]:
+            line[first_empty:] = [' '] * (len(line) - first_empty)
+            for i in range(len(positions)):
+                pos = positions[i] - 1
+                positions[i] = max(pos, targets[i])
+                line[pos] = '/' if pos > targets[i] else extra[toshift[i]]
+
+    map = {1: '|', 2: '~'}
+    for i, line in enumerate(lines):
+        if None not in line:
+            continue
+        line[:] = [c or map.get(i, ' ') for c in line]
+
+    # remove edges that ended
+    remove = [p for p, c in edgemap.items() if c is None]
+    for parent in remove:
+        del edgemap[parent]
+        seen.remove(parent)
+
 def asciistate():
     """returns the initial value for the "state" argument to ascii()"""
     return {
@@ -582,12 +634,15 @@ def ascii(ui, state, type, char, text, coldata):
 
     # make sure that there are as many graph lines as there are
     # log strings
+    extra_interline = echars[:(ncols + coldiff) * 2]
+    if len(lines) < len(text):
+        while len(lines) < len(text):
+            lines.append(extra_interline[:])
+
+    _drawendinglines(lines, extra_interline, edgemap, seen)
+
     while len(text) < len(lines):
         text.append("")
-    if len(lines) < len(text):
-        extra_interline = echars[:(ncols + coldiff) * 2]
-        while len(lines) < len(text):
-            lines.append(extra_interline)
 
     # print lines
     indentation_level = max(ncols, ncols + coldiff)
