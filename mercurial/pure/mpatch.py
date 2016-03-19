@@ -22,6 +22,16 @@ StringIO = cStringIO.StringIO
 # mmap and simply use memmove. This avoids creating a bunch of large
 # temporary string buffers.
 
+def _pull(dst, src, l): # pull l bytes from src
+    while l:
+        f = src.pop()
+        if f[0] > l: # do we need to split?
+            src.append((f[0] - l, f[1] + l))
+            dst.append((l, f[1]))
+            return
+        dst.append(f)
+        l -= f[0]
+
 def patches(a, bins):
     if not bins:
         return a
@@ -55,16 +65,6 @@ def patches(a, bins):
     m.seek(pos)
     for p in bins: m.write(p)
 
-    def pull(dst, src, l): # pull l bytes from src
-        while l:
-            f = src.pop()
-            if f[0] > l: # do we need to split?
-                src.append((f[0] - l, f[1] + l))
-                dst.append((l, f[1]))
-                return
-            dst.append(f)
-            l -= f[0]
-
     def collect(buf, list):
         start = buf
         for l, p in reversed(list):
@@ -84,8 +84,8 @@ def patches(a, bins):
         while pos < end:
             m.seek(pos)
             p1, p2, l = struct.unpack(">lll", m.read(12))
-            pull(new, frags, p1 - last) # what didn't change
-            pull([], frags, p2 - p1)    # what got deleted
+            _pull(new, frags, p1 - last) # what didn't change
+            _pull([], frags, p2 - p1)    # what got deleted
             new.append((l, pos + 12))   # what got added
             pos += l + 12
             last = p2
