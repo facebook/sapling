@@ -220,13 +220,14 @@ secondaryactions = set()
 tertiaryactions = set()
 internalactions = set()
 
-def geteditcomment(first, last):
+def geteditcomment(ui, first, last):
     """ construct the editor comment
     The comment includes::
      - an intro
      - sorted primary commands
      - sorted short commands
      - sorted long commands
+     - additional hints
 
     Commands are only included once.
     """
@@ -255,8 +256,14 @@ Commands:
         addverb(v)
     actions.append('')
 
-    return ''.join(['# %s\n' % l if l else '#\n'
-                    for l in ((intro % (first, last)).split('\n')) + actions])
+    hints = []
+    if ui.configbool('histedit', 'dropmissing'):
+        hints.append("Deleting a changeset from the list "
+                     "will DISCARD it from the edited history!")
+
+    lines = (intro % (first, last)).split('\n') + actions + hints
+
+    return ''.join(['# %s\n' % l if l else '#\n' for l in lines])
 
 class histeditstate(object):
     def __init__(self, repo, parentctxnode=None, actions=None, keep=None,
@@ -1193,7 +1200,8 @@ def _aborthistedit(ui, repo, state):
 def _edithisteditplan(ui, repo, state, rules):
     state.read()
     if not rules:
-        comment = geteditcomment(node.short(state.parentctxnode),
+        comment = geteditcomment(ui,
+                                 node.short(state.parentctxnode),
                                  node.short(state.topmost))
         rules = ruleeditor(repo, ui, state.actions, comment)
     else:
@@ -1234,7 +1242,7 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
 
     ctxs = [repo[r] for r in revs]
     if not rules:
-        comment = geteditcomment(node.short(root), node.short(topmost))
+        comment = geteditcomment(ui, node.short(root), node.short(topmost))
         actions = [pick(state, r) for r in revs]
         rules = ruleeditor(repo, ui, actions, comment)
     else:
