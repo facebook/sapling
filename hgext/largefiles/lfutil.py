@@ -39,6 +39,7 @@ def getminsize(ui, assumelfiles, opt, default=10):
     return lfsize
 
 def link(src, dest):
+    """Try to create hardlink - if that fails, efficiently make a copy."""
     util.makedirs(os.path.dirname(dest))
     try:
         util.oslink(src, dest)
@@ -86,6 +87,9 @@ def inusercache(ui, hash):
     return os.path.exists(path)
 
 def findfile(repo, hash):
+    '''Return store path of the largefile with the specified hash.
+    As a side effect, the file might be linked from user cache.
+    Return None if the file can't be found locally.'''
     path, exists = findstorepath(repo, hash)
     if exists:
         repo.ui.note(_('found %s in store\n') % hash)
@@ -176,9 +180,13 @@ def listlfiles(repo, rev=None, matcher=None):
             if rev is not None or repo.dirstate[f] != '?']
 
 def instore(repo, hash, forcelocal=False):
+    '''Return true if a largefile with the given hash exists in the user
+    cache.'''
     return os.path.exists(storepath(repo, hash, forcelocal))
 
 def storepath(repo, hash, forcelocal=False):
+    '''Return the correct location in the repository largefiles cache for a
+    file with the given hash.'''
     if not forcelocal and repo.shared():
         return repo.vfs.reljoin(repo.sharedpath, longname, hash)
     return repo.join(longname, hash)
@@ -257,6 +265,8 @@ def copytostoreabsolute(repo, file, hash):
         linktousercache(repo, hash)
 
 def linktousercache(repo, hash):
+    '''Link / copy the largefile with the specified hash from the store
+    to the cache.'''
     path = usercachepath(repo.ui, hash)
     link(storepath(repo, hash), path)
 
@@ -394,6 +404,7 @@ def unixpath(path):
     return util.pconvert(os.path.normpath(path))
 
 def islfilesrepo(repo):
+    '''Return true if the repo is a largefile repo.'''
     if ('largefiles' in repo.requirements and
             any(shortnameslash in f[0] for f in repo.store.datafiles())):
         return True
