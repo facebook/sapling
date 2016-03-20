@@ -12,6 +12,8 @@
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT_ __attribute__((format(printf, 1, 2)))
+#else
+#define PRINTF_FORMAT_
 #endif
 
 void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
