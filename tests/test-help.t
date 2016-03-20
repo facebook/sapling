@@ -241,6 +241,7 @@ Test extension help:
   
       enabled extensions:
   
+       chgserver     command server extension for cHg (EXPERIMENTAL) (?)
        children      command to display child changesets (DEPRECATED)
        rebase        command to move sets of revisions to a different ancestor
   
