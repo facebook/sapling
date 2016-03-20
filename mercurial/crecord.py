@@ -30,6 +30,19 @@ from . import (
 # locale encoding correctly.  --immerrr
 locale.setlocale(locale.LC_ALL, '')
 
+# patch comments based on the git one
+diffhelptext = _("""# To remove '-' lines, make them ' ' lines (context).
+# To remove '+' lines, delete them.
+# Lines starting with # will be removed from the patch.
+""")
+
+hunkhelptext = _("""#
+# If the patch applies cleanly, the edited hunk will immediately be
+# added to the record list. If it does not apply cleanly, a rejects file
+# will be generated. You can use that when you try again. If all lines
+# of the hunk are removed, then the edit is aborted and the hunk is left
+# unchanged.
+""")
 try:
     import curses
     import fcntl
@@ -1484,22 +1497,10 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 self.ui.write(_('cannot edit patch for binary file'))
                 self.ui.write("\n")
                 return None
-            # patch comment based on the git one (based on comment at end of
-            # https://mercurial-scm.org/wiki/recordextension)
-            phelp = '---' + _("""
-    to remove '-' lines, make them ' ' lines (context).
-    to remove '+' lines, delete them.
-    lines starting with # will be removed from the patch.
 
-    if the patch applies cleanly, the edited hunk will immediately be
-    added to the record list. if it does not apply cleanly, a rejects
-    file will be generated: you can use that when you try again. if
-    all lines of the hunk are removed, then the edit is aborted and
-    the hunk is left unchanged.
-    """)
             # write the initial patch
             patch = cStringIO.StringIO()
-            patch.write(''.join(['# %s\n' % i for i in phelp.splitlines()]))
+            patch.write(diffhelptext + hunkhelptext)
             chunk.header.write(patch)
             chunk.write(patch)
 
