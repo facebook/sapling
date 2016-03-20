@@ -124,6 +124,10 @@ def has_bzr_range(v):
     except ImportError:
         return False
 
+@check("chg", "running with chg")
+def has_chg():
+    return 'CHGHG' in os.environ
+
 @check("cvs", "cvs client/server")
 def has_cvs():
     re = r'Concurrent Versions System.*?server'

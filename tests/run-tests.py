@@ -2064,6 +2064,8 @@ class TestRunner(object):
         chgbindir = self._bindir
         if self.options.chg or self.options.with_chg:
             osenvironb[b'CHGHG'] = os.path.join(self._bindir, self._hgcommand)
+        else:
+            osenvironb.pop(b'CHGHG', None)  # drop flag for hghave
         if self.options.chg:
             self._hgcommand = b'chg'
         elif self.options.with_chg:
