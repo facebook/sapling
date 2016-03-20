@@ -69,6 +69,22 @@
    dict() is different in Py2 and 3 and is slower than {}
   [1]
 
+  $ cat > foo.c <<EOF
+  > void narf() {
+  > 	strcpy(foo, bar);
+  > 	// strcpy_s is okay, but this comment is not
+  > 	strcpy_s(foo, bar);
+  > }
+  > EOF
+  $ "$check_code" ./foo.c
+  ./foo.c:2:
+   > 	strcpy(foo, bar);
+   don't use strcpy, use strlcpy or memcpy
+  ./foo.c:3:
+   > 	// strcpy_s is okay, but this comment is not
+   don't use //-style comments
+  [1]
+
   $ cat > is-op.py <<EOF
   > # is-operator comparing number or string literal
   > x = None

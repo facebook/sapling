@@ -359,6 +359,7 @@ cpats = [
     (r'^#\s+\w', "use #foo, not # foo"),
     (r'[^\n]\Z', "no trailing newline"),
     (r'^\s*#import\b', "use only #include in standard C code"),
+    (r'strcpy\(', "don't use strcpy, use strlcpy or memcpy"),
   ],
   # warnings
   []
