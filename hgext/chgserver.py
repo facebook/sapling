@@ -267,10 +267,7 @@ def _newchgui(srcui, csystem):
 
     return chgui(srcui)
 
-def _loadnewui(srcui, args=None):
-    if not args:
-        args = []
-
+def _loadnewui(srcui, args):
     newui = srcui.__class__()
     for a in ['fin', 'fout', 'ferr', 'environ']:
         setattr(newui, a, getattr(srcui, a))
@@ -524,18 +521,9 @@ class chgcmdserver(commandserver.server):
             newenv = dict(s.split('=', 1) for s in l)
         except ValueError:
             raise ValueError('unexpected value in setenv request')
-
-        diffkeys = set(k for k in set(os.environ.keys() + newenv.keys())
-                       if os.environ.get(k) != newenv.get(k))
-        _log('change env: %r\n' % sorted(diffkeys))
-
+        _log('setenv: %r\n' % sorted(newenv.keys()))
         os.environ.clear()
         os.environ.update(newenv)
-
-        if set(['HGPLAIN', 'HGPLAINEXCEPT']) & diffkeys:
-            # reload config so that ui.plain() takes effect
-            self.ui, _lui = _loadnewui(self.ui)
-
         _clearenvaliases(commands.table)
 
     capabilities = commandserver.server.capabilities.copy()
