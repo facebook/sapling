@@ -360,6 +360,7 @@ cpats = [
     (r'[^\n]\Z', "no trailing newline"),
     (r'^\s*#import\b', "use only #include in standard C code"),
     (r'strcpy\(', "don't use strcpy, use strlcpy or memcpy"),
+    (r'strcat\(', "don't use strcat"),
   ],
   # warnings
   []
