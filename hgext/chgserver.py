@@ -640,7 +640,10 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
 
 class chgunixservice(commandserver.unixservice):
     def init(self):
-        self.repo = None
+        if self.repo:
+            # one chgserver can serve multiple repos. drop repo infomation
+            self.ui.setconfig('bundle', 'mainreporoot', '', 'repo')
+            self.repo = None
         self._inithashstate()
         self._checkextensions()
         class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
