@@ -269,8 +269,6 @@ enable progress extension:
 
   $ cp $HGRCPATH $HGRCPATH.no-progress
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > progress =
   > [progress]
   > assume-tty = 1
   > format = topic bar number

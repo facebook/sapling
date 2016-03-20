@@ -255,8 +255,6 @@ Enable progress extension for archive tests:
 
   $ cp $HGRCPATH $HGRCPATH.no-progress
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > progress =
   > [progress]
   > disable=False
   > assume-tty = 1

@@ -152,8 +152,6 @@ Try updating
 Test convert progress bar
 
   $ cat >> $HGRCPATH <<EOF
-  > [extensions]
-  > progress =
   > [progress]
   > assume-tty = 1
   > delay = 0
