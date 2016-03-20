@@ -203,14 +203,15 @@ static PyObject *_listdir(char *path, int plen, int wantstat, char *skip)
 		PyErr_NoMemory();
 		goto error_nomem;
 	}
-	strcpy(pattern, path);
+	memcpy(pattern, path, plen);
 
 	if (plen > 0) {
 		char c = path[plen-1];
 		if (c != ':' && c != '/' && c != '\\')
 			pattern[plen++] = '\\';
 	}
-	strcpy(pattern + plen, "*");
+	pattern[plen++] = '*';
+	pattern[plen] = '\0';
 
 	fh = FindFirstFileA(pattern, &fd);
 	if (fh == INVALID_HANDLE_VALUE) {
