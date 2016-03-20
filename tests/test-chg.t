@@ -1,13 +1,15 @@
+#require chg
+
 init repo
 
-  $ hg init foo
+  $ chg init foo
   $ cd foo
 
 ill-formed config
 
-  $ hg status
+  $ chg status
   $ echo '=brokenconfig' >> $HGRCPATH
-  $ hg status
+  $ chg status
   hg: parse error at * (glob)
   [255]
 
@@ -26,7 +28,7 @@ alias having an environment variable and set to use pager
   > printa = log -T "$A\n" -r 0
   > EOF
 
-  $ A=1 hg printa
+  $ A=1 chg printa
   P1
-  $ A=2 hg printa
+  $ A=2 chg printa
   P2
