@@ -7,6 +7,9 @@ OBJS = $(SRCS:.c=.o)
 CFLAGS ?= -O2 -Wall -Wextra -pedantic -g
 CPPFLAGS ?= -D_FORTIFY_SOURCE=2
 override CFLAGS += -std=gnu99
+ifdef HGPATH
+override CPPFLAGS += -DHGPATH=\"$(HGPATH)\"
+endif
 
 DESTDIR =
 PREFIX = /usr/local

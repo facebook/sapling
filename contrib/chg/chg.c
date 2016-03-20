@@ -194,7 +194,11 @@ static const char *gethgcmd(void)
 		if (!hgcmd || hgcmd[0] == '\0')
 			hgcmd = getenv("HG");
 		if (!hgcmd || hgcmd[0] == '\0')
+#ifdef HGPATH
+			hgcmd = (HGPATH);
+#else
 			hgcmd = "hg";
+#endif
 	}
 	return hgcmd;
 }
