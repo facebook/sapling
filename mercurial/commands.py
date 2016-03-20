@@ -2896,6 +2896,14 @@ def debugmergestate(ui, repo, *args):
 
                 ui.write(('file extras: %s (%s)\n')
                          % (filename, ', '.join(extrastrings)))
+            elif rtype == 'l':
+                labels = record.split('\0', 2)
+                labels = [l for l in labels if len(l) > 0]
+                ui.write(('labels:\n'))
+                ui.write(('  local: %s\n' % labels[0]))
+                ui.write(('  other: %s\n' % labels[1]))
+                if len(labels) > 2:
+                    ui.write(('  base:  %s\n' % labels[2]))
             else:
                 ui.write(('unrecognized entry: %s\t%s\n')
                          % (rtype, record.replace('\0', '\t')))
@@ -2908,7 +2916,7 @@ def debugmergestate(ui, repo, *args):
     # sort so that reasonable information is on top
     v1records = ms._readrecordsv1()
     v2records = ms._readrecordsv2()
-    order = 'LOm'
+    order = 'LOml'
     def key(r):
         idx = order.find(r[0])
         if idx == -1:

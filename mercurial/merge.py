@@ -68,6 +68,7 @@ class mergestate(object):
     f: a (filename, dictonary) tuple of optional values for a given file
     X: unsupported mandatory record type (used in tests)
     x: unsupported advisory record type (used in tests)
+    l: the labels for the parts of the merge.
 
     Merge driver run states (experimental):
     u: driver-resolved files unmarked -- needs to be run next time we're about
@@ -80,11 +81,11 @@ class mergestate(object):
     statepathv2 = 'merge/state2'
 
     @staticmethod
-    def clean(repo, node=None, other=None):
+    def clean(repo, node=None, other=None, labels=None):
         """Initialize a brand new merge state, removing any existing state on
         disk."""
         ms = mergestate(repo)
-        ms.reset(node, other)
+        ms.reset(node, other, labels)
         return ms
 
     @staticmethod
@@ -100,12 +101,14 @@ class mergestate(object):
         Do not use this directly! Instead call read() or clean()."""
         self._repo = repo
         self._dirty = False
+        self._labels = None
 
-    def reset(self, node=None, other=None):
+    def reset(self, node=None, other=None, labels=None):
         self._state = {}
         self._stateextras = {}
         self._local = None
         self._other = None
+        self._labels = labels
         for var in ('localctx', 'otherctx'):
             if var in vars(self):
                 delattr(self, var)
@@ -165,6 +168,9 @@ class mergestate(object):
                     i += 2
 
                 self._stateextras[filename] = extras
+            elif rtype == 'l':
+                labels = record.split('\0', 2)
+                self._labels = [l for l in labels if len(l) > 0]
             elif not rtype.islower():
                 unsupported.add(rtype)
         self._results = {}
@@ -353,6 +359,9 @@ class mergestate(object):
             rawextras = '\0'.join('%s\0%s' % (k, v) for k, v in
                                   extras.iteritems())
             records.append(('f', '%s\0%s' % (filename, rawextras)))
+        if self._labels is not None:
+            labels = '\0'.join(self._labels)
+            records.append(('l', labels))
         return records
 
     def _writerecords(self, records):
@@ -444,7 +453,7 @@ class mergestate(object):
     def extras(self, filename):
         return self._stateextras.setdefault(filename, {})
 
-    def _resolve(self, preresolve, dfile, wctx, labels=None):
+    def _resolve(self, preresolve, dfile, wctx):
         """rerun merge process for file path `dfile`"""
         if self[dfile] in 'rd':
             return True, 0
@@ -481,11 +490,11 @@ class mergestate(object):
                 self._repo.wvfs.unlinkpath(dfile, ignoremissing=True)
             complete, r, deleted = filemerge.premerge(self._repo, self._local,
                                                       lfile, fcd, fco, fca,
-                                                      labels=labels)
+                                                      labels=self._labels)
         else:
             complete, r, deleted = filemerge.filemerge(self._repo, self._local,
                                                        lfile, fcd, fco, fca,
-                                                       labels=labels)
+                                                       labels=self._labels)
         if r is None:
             # no real conflict
             del self._state[dfile]
@@ -523,17 +532,17 @@ class mergestate(object):
         else:
             return ctx[f]
 
-    def preresolve(self, dfile, wctx, labels=None):
+    def preresolve(self, dfile, wctx):
         """run premerge process for dfile
 
         Returns whether the merge is complete, and the exit code."""
-        return self._resolve(True, dfile, wctx, labels=labels)
+        return self._resolve(True, dfile, wctx)
 
-    def resolve(self, dfile, wctx, labels=None):
+    def resolve(self, dfile, wctx):
         """run merge process (assuming premerge was run) for dfile
 
         Returns the exit code of the merge."""
-        return self._resolve(False, dfile, wctx, labels=labels)[1]
+        return self._resolve(False, dfile, wctx)[1]
 
     def counts(self):
         """return counts for updated, merged and removed files in this
@@ -1094,7 +1103,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
     """
 
     updated, merged, removed = 0, 0, 0
-    ms = mergestate.clean(repo, wctx.p1().node(), mctx.node())
+    ms = mergestate.clean(repo, wctx.p1().node(), mctx.node(), labels)
     moves = []
     for m, l in actions.items():
         l.sort()
@@ -1247,7 +1256,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
                              overwrite)
             continue
         audit(f)
-        complete, r = ms.preresolve(f, wctx, labels=labels)
+        complete, r = ms.preresolve(f, wctx)
         if not complete:
             numupdates += 1
             tocomplete.append((f, args, msg))
@@ -1257,7 +1266,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None):
         repo.ui.debug(" %s: %s -> m (merge)\n" % (f, msg))
         z += 1
         progress(_updating, z, item=f, total=numupdates, unit=_files)
-        ms.resolve(f, wctx, labels=labels)
+        ms.resolve(f, wctx)
 
     ms.commit()
 

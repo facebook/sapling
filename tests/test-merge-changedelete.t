@@ -736,6 +736,9 @@ Non-interactive linear update
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -776,6 +779,9 @@ Choose local versions of files
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -814,6 +820,9 @@ Choose other versions of files
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "r", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -854,6 +863,9 @@ Fail
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -900,6 +912,9 @@ Force prompts with no input
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
@@ -947,6 +962,9 @@ Choose to merge all files
   * version 2 records
   local: ab57bf49aa276a22d35a473592d4c34b5abc3eff
   other: 10f9a0a634e82080907e62f075ab119cbc565ea6
+  labels:
+    local: working copy
+    other: destination
   file extras: file1 (ancestorlinknode = ab57bf49aa276a22d35a473592d4c34b5abc3eff)
   file: file1 (record type "C", state "u", hash 60b27f004e454aca81b0480209cce5081ec52390)
     local path: file1 (flags "")
