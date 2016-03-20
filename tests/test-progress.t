@@ -182,6 +182,8 @@ test immediate progress completion
 
 test delay time estimates
 
+#if no-chg
+
   $ cat > mocktime.py <<EOF
   > import os
   > import time
@@ -249,6 +251,8 @@ Time estimates should not fail when there's no end point:
   loop [ <=>                                              ] 2\r (no-eol) (esc)
   loop [  <=>                                             ] 3\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
+
+#endif
 
 test line trimming by '[progress] width', when progress topic contains
 multi-byte characters, of which length of byte sequence and columns in
