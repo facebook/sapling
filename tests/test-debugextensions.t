@@ -48,36 +48,39 @@
     "buglink": "",
     "name": "color",
     "source": "*/hgext/color.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": ["internal"]
    },
    {
     "buglink": "",
     "name": "ext1",
     "source": "*/extwithoutinfos.py*", (glob)
-    "testedwith": ""
+    "testedwith": []
    },
    {
     "buglink": "",
     "name": "histedit",
     "source": "*/hgext/histedit.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": ["internal"]
    },
    {
     "buglink": "",
     "name": "mq",
     "source": "*/hgext/mq.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": ["internal"]
    },
    {
     "buglink": "",
     "name": "patchbomb",
     "source": "*/hgext/patchbomb.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": ["internal"]
    },
    {
     "buglink": "",
     "name": "rebase",
     "source": "*/hgext/rebase.py*", (glob)
-    "testedwith": "internal"
+    "testedwith": ["internal"]
    }
   ]
+
+  $ hg debugextensions -T '{ifcontains("internal", testedwith, "", "{name}\n")}'
+  ext1

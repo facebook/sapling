@@ -2423,7 +2423,8 @@ def debugextensions(ui, **opts):
                  _('  location: %s\n'), extsource or "")
 
         fm.condwrite(ui.verbose and exttestedwith, 'testedwith',
-                 _('  tested with: %s\n'), ' '.join(exttestedwith))
+                     _('  tested with: %s\n'),
+                     fm.formatlist(exttestedwith, name='ver'))
 
         fm.condwrite(ui.verbose and extbuglink, 'buglink',
                  _('  bug reporting: %s\n'), extbuglink or "")
