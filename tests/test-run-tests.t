@@ -67,6 +67,30 @@ a succesful test
 failing test
 ==================
 
+test churn with globs
+  $ cat > test-failure.t <<EOF
+  >   $ echo "bar-baz"; echo "bar-bad"
+  >   bar*bad (glob)
+  >   bar*baz (glob)
+  > EOF
+  $ rt test-failure.t
+  
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,3 +1,3 @@
+     $ echo "bar-baz"; echo "bar-bad"
+  +  bar*baz (glob)
+     bar*bad (glob)
+  -  bar*baz (glob)
+  
+  ERROR: test-failure.t output changed
+  !
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 0 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
+basic failing test
   $ cat > test-failure.t << EOF
   >   $ echo babar
   >   rataxes
