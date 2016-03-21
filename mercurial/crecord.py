@@ -43,6 +43,13 @@ hunkhelptext = _("""#
 # of the hunk are removed, then the edit is aborted and the hunk is left
 # unchanged.
 """)
+
+patchhelptext = _("""#
+# If the patch applies cleanly, the edited patch will immediately
+# be finalised. If it does not apply cleanly, rejects files will be
+# generated. You can use those when you try again.
+""")
+
 try:
     import curses
     import fcntl
@@ -1595,10 +1602,14 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         elif keypressed in ["c"]:
             if self.confirmcommit():
                 return True
+        elif test and keypressed in ['X']:
+            return True
         elif keypressed in ["r"]:
             if self.confirmcommit(review=True):
+                self.opts['review'] = True
                 return True
-        elif test and keypressed in ['X']:
+        elif test and keypressed in ['R']:
+            self.opts['review'] = True
             return True
         elif keypressed in [' '] or (test and keypressed in ["TOGGLE"]):
             self.toggleapply()

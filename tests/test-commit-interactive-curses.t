@@ -223,7 +223,82 @@ of the edit.
   foo
   hello world
 
+Testing the review option. The entire final filtered patch should show
+up in the editor and be editable. We will unselect the second file and
+the first hunk of the third file. During review, we will decide that
+"lower" sounds better than "bottom", and the final commit should
+reflect this edition.
 
+  $ hg update -C .
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo "top" > c
+  $ cat x >> c
+  $ echo "bottom" >> c
+  $ mv c x
+  $ echo "third a" >> a
+  $ echo "we will unselect this" >> b
+
+  $ cat > editor.sh <<EOF
+  > cat "\$1"
+  > cat "\$1" | sed s/bottom/lower/ > tmp
+  > mv tmp "\$1"
+  > EOF
+  $ cat > testModeCommands <<EOF
+  > KEY_DOWN
+  > TOGGLE
+  > KEY_DOWN
+  > f
+  > KEY_DOWN
+  > TOGGLE
+  > R
+  > EOF
+
+  $ HGEDITOR="\"sh\" \"`pwd`/editor.sh\"" hg commit  -i -m "review hunks" -d "0 0"
+  # To remove '-' lines, make them ' ' lines (context).
+  # To remove '+' lines, delete them.
+  # Lines starting with # will be removed from the patch.
+  #
+  # If the patch applies cleanly, the edited patch will immediately
+  # be finalised. If it does not apply cleanly, rejects files will be
+  # generated. You can use those when you try again.
+  diff --git a/a b/a
+  --- a/a
+  +++ b/a
+  @@ -1,2 +1,3 @@
+   a
+   a
+  +third a
+  diff --git a/x b/x
+  --- a/x
+  +++ b/x
+  @@ -1,2 +1,3 @@
+   foo
+   hello world
+  +bottom
+
+  $ hg cat -r . a
+  a
+  a
+  third a
+
+  $ hg cat -r . b
+  x
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+  10
+  y
+
+  $ hg cat -r . x
+  foo
+  hello world
+  lower
 Check ui.interface logic for the chunkselector
 
 The default interface is text

@@ -207,6 +207,17 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
             dopatch = fp.tell()
             fp.seek(0)
 
+            # 2.5 optionally review / modify patch in text editor
+            if opts.get('review', False):
+                patchtext = (crecordmod.diffhelptext
+                             + crecordmod.patchhelptext
+                             + fp.read())
+                reviewedpatch = ui.edit(patchtext, "",
+                                        extra={"suffix": ".diff"})
+                fp.truncate(0)
+                fp.write(reviewedpatch)
+                fp.seek(0)
+
             [os.unlink(repo.wjoin(c)) for c in newlyaddedandmodifiedfiles]
             # 3a. apply filtered patch to clean repo  (clean)
             if backups:
