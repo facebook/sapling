@@ -17,7 +17,6 @@ import re
 import signal
 import struct
 import sys
-import tempfile
 
 from .i18n import _
 from . import (
@@ -1498,36 +1497,25 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
     all lines of the hunk are removed, then the edit is aborted and
     the hunk is left unchanged.
     """)
-            (patchfd, patchfn) = tempfile.mkstemp(prefix="hg-editor-",
-                    suffix=".diff", text=True)
-            ncpatchfp = None
+            # write the initial patch
+            patch = cStringIO.StringIO()
+            patch.write(''.join(['# %s\n' % i for i in phelp.splitlines()]))
+            chunk.header.write(patch)
+            chunk.write(patch)
+
+            # start the editor and wait for it to complete
             try:
-                # write the initial patch
-                f = os.fdopen(patchfd, "w")
-                chunk.header.write(f)
-                chunk.write(f)
-                f.write('\n'.join(['# ' + i for i in phelp.splitlines()]))
-                f.close()
-                # start the editor and wait for it to complete
-                editor = self.ui.geteditor()
-                ret = self.ui.system("%s \"%s\"" % (editor, patchfn),
-                          environ={'hguser': self.ui.username()})
-                if ret != 0:
-                    self.errorstr = "Editor exited with status %d" % ret
-                    return None
-                # remove comment lines
-                patchfp = open(patchfn)
-                ncpatchfp = cStringIO.StringIO()
-                for line in patchfp:
-                    if not line.startswith('#'):
-                        ncpatchfp.write(line)
-                patchfp.close()
-                ncpatchfp.seek(0)
-                newpatches = patchmod.parsepatch(ncpatchfp)
-            finally:
-                os.unlink(patchfn)
-                del ncpatchfp
-            return newpatches
+                patch = self.ui.edit(patch.getvalue(), "",
+                                     extra={"suffix": ".diff"})
+            except error.Abort as exc:
+                self.errorstr = str(exc)
+                return None
+
+            # remove comment lines
+            patch = [line + '\n' for line in patch.splitlines()
+                     if not line.startswith('#')]
+            return patchmod.parsepatch(patch)
+
         if item is None:
             item = self.currentselecteditem
         if isinstance(item, uiheader):
