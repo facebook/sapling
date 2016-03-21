@@ -7,6 +7,18 @@
   >     hg up -C
   > }
 
+  $ cat >> $HGRCPATH <<EOF
+  > [progress]
+  > disable=False
+  > assume-tty = 1
+  > delay = 0
+  > # set changedelay really large so we don't see nested topics
+  > changedelay = 30000
+  > format = topic bar number
+  > refresh = 0
+  > width = 60
+  > EOF
+
   $ hg init a
   $ cd a
   $ echo a > foo
@@ -34,6 +46,9 @@ the table cases
   A bar
   ./bar
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 01 state clean, options none
@@ -43,6 +58,9 @@ the table cases
   R foo
   ? bar
   ./bar
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 02 state modified, options none
@@ -55,6 +73,9 @@ the table cases
   ? bar
   ./bar
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 03 state missing, options none
@@ -65,6 +86,9 @@ the table cases
   R foo
   ? bar
   ./bar
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 10 state added, options -f
@@ -84,6 +108,9 @@ the table cases
   $ remove -f foo
   exit code: 0
   R foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 12 state modified, options -f
@@ -92,6 +119,9 @@ the table cases
   $ remove -f foo
   exit code: 0
   R foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 13 state missing, options -f
@@ -100,6 +130,9 @@ the table cases
   $ remove -f foo
   exit code: 0
   R foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 20 state added, options -A
@@ -112,6 +145,9 @@ the table cases
   A bar
   ./bar
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 21 state clean, options -A
@@ -134,6 +170,9 @@ the table cases
   ? bar
   ./bar
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 23 state missing, options -A
@@ -144,6 +183,9 @@ the table cases
   R foo
   ? bar
   ./bar
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 30 state added, options -Af
@@ -164,6 +206,9 @@ the table cases
   exit code: 0
   R foo
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 32 state modified, options -Af
@@ -173,6 +218,9 @@ the table cases
   exit code: 0
   R foo
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 33 state missing, options -Af
@@ -181,6 +229,9 @@ the table cases
   $ remove -Af foo
   exit code: 0
   R foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test some directory stuff
@@ -202,6 +253,9 @@ dir, options none
   R test/bar
   R test/foo
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -f
@@ -214,6 +268,9 @@ dir, options -f
   R test/bar
   R test/foo
   ./foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -A
@@ -226,6 +283,9 @@ dir, options -A
   R test/bar
   ./foo
   ./test/foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 1/1\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 dir, options -Af
@@ -239,6 +299,9 @@ dir, options -Af
   R test/foo
   ./foo
   ./test/foo
+  \r (no-eol) (esc)
+  updating [===========================================>] 2/2\r (no-eol) (esc)
+                                                              \r (no-eol) (esc)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test remove dropping empty trees (issue1861)
