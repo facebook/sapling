@@ -689,7 +689,7 @@ Mercurial source tree.
   >   $ echo foo
   >   foo
   > EOF
-  $ rt $HGTEST_RUN_TESTS_PURE test-hghave.t
+  $ rt test-hghave.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -712,7 +712,7 @@ running is placed.
   >   #
   >   # check-code - a style and portability checker for Mercurial
   > EOF
-  $ rt $HGTEST_RUN_TESTS_PURE test-runtestdir.t
+  $ rt test-runtestdir.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -729,7 +729,7 @@ test that TESTDIR is referred in PATH
   >   $ custom-command.sh
   >   hello world
   > EOF
-  $ rt $HGTEST_RUN_TESTS_PURE test-testdir-path.t
+  $ rt test-testdir-path.t
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
 
@@ -741,7 +741,7 @@ test support for --allow-slow-tests
   >   $ echo pass
   >   pass
   > EOF
-  $ rt $HGTEST_RUN_TESTS_PURE test-very-slow-test.t
+  $ rt test-very-slow-test.t
   s
   Skipped test-very-slow-test.t: missing feature: allow slow tests
   # Ran 0 tests, 1 skipped, 0 warned, 0 failed.
