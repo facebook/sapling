@@ -485,7 +485,7 @@ class Test(unittest.TestCase):
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
                  py3kwarnings=False, shell=None, hgcommand=None,
-                 slowtimeout=defaults['slowtimeout']):
+                 slowtimeout=defaults['slowtimeout'], usechg=False):
         """Create a test from parameters.
 
         path is the full path to the file defining the test.
@@ -532,6 +532,7 @@ class Test(unittest.TestCase):
         self._py3kwarnings = py3kwarnings
         self._shell = _bytespath(shell)
         self._hgcommand = hgcommand or b'hg'
+        self._usechg = usechg
 
         self._aborted = False
         self._daemonpids = []
@@ -540,6 +541,7 @@ class Test(unittest.TestCase):
         self._out = None
         self._skipped = None
         self._testtmp = None
+        self._chgsockdir = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -576,8 +578,8 @@ class Test(unittest.TestCase):
             if e.errno != errno.EEXIST:
                 raise
 
-        self._testtmp = os.path.join(self._threadtmp,
-                                     os.path.basename(self.path))
+        name = os.path.basename(self.path)
+        self._testtmp = os.path.join(self._threadtmp, name)
         os.mkdir(self._testtmp)
 
         # Remove any previous output files.
@@ -590,6 +592,11 @@ class Test(unittest.TestCase):
                 # file.
                 if e.errno != errno.ENOENT:
                     raise
+
+        if self._usechg:
+            self._chgsockdir = os.path.join(self._threadtmp,
+                                            b'%s.chgsock' % name)
+            os.mkdir(self._chgsockdir)
 
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
@@ -734,6 +741,11 @@ class Test(unittest.TestCase):
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
 
+        if self._usechg:
+            # chgservers will stop automatically after they find the socket
+            # files are deleted
+            shutil.rmtree(self._chgsockdir, True)
+
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._debug and self._out:
             f = open(self.errpath, 'wb')
@@ -822,6 +834,9 @@ class Test(unittest.TestCase):
         for k in env.keys():
             if k.startswith('HG_'):
                 del env[k]
+
+        if self._usechg:
+            env['CHGSOCKNAME'] = os.path.join(self._chgsockdir, b'server')
 
         return env
 
@@ -1910,7 +1925,6 @@ class TestRunner(object):
         self._createdfiles = []
         self._hgcommand = None
         self._hgpath = None
-        self._chgsockdir = None
         self._portoffset = 0
         self._ports = {}
 
@@ -2035,12 +2049,9 @@ class TestRunner(object):
             self._tmpbindir = self._bindir
             self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
-        # set up crafted chg environment, then replace "hg" command by "chg"
+        # set CHGHG, then replace "hg" command by "chg"
         chgbindir = self._bindir
         if self.options.chg or self.options.with_chg:
-            self._chgsockdir = d = os.path.join(self._hgtmp, b'chgsock')
-            os.mkdir(d)
-            osenvironb[b'CHGSOCKNAME'] = os.path.join(d, b"server")
             osenvironb[b'CHGHG'] = os.path.join(self._bindir, self._hgcommand)
         if self.options.chg:
             self._hgcommand = b'chg'
@@ -2234,15 +2245,13 @@ class TestRunner(object):
                     extraconfigopts=self.options.extra_config_opt,
                     py3kwarnings=self.options.py3k_warnings,
                     shell=self.options.shell,
-                    hgcommand=self._hgcommand)
+                    hgcommand=self._hgcommand,
+                    usechg=bool(self.options.with_chg or self.options.chg))
         t.should_reload = True
         return t
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
-        if self._chgsockdir:
-            self._killchgdaemons()
-
         if self.options.keep_tmpdir:
             return
 
@@ -2459,13 +2468,6 @@ class TestRunner(object):
             else:
                 sys.stdout.write(out)
             sys.exit(1)
-
-    def _killchgdaemons(self):
-        """Kill all background chg command servers spawned by tests"""
-        for f in os.listdir(self._chgsockdir):
-            if '.' in f:
-                continue
-            os.unlink(os.path.join(self._chgsockdir, f))
 
     def _outputcoverage(self):
         """Produce code coverage output."""
