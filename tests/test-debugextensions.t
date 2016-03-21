@@ -25,21 +25,21 @@
 
   $ hg debugextensions -v
   color
-    location: */hgext/color.pyc (glob)
+    location: */hgext/color.py* (glob)
     tested with: internal
   ext1
-    location: */extwithoutinfos.pyc (glob)
+    location: */extwithoutinfos.py* (glob)
   histedit
-    location: */hgext/histedit.pyc (glob)
+    location: */hgext/histedit.py* (glob)
     tested with: internal
   mq
-    location: */hgext/mq.pyc (glob)
+    location: */hgext/mq.py* (glob)
     tested with: internal
   patchbomb
-    location: */hgext/patchbomb.pyc (glob)
+    location: */hgext/patchbomb.py* (glob)
     tested with: internal
   rebase
-    location: */hgext/rebase.pyc (glob)
+    location: */hgext/rebase.py* (glob)
     tested with: internal
 
   $ hg debugextensions -Tjson | sed 's|\\\\|/|g'
@@ -47,37 +47,37 @@
    {
     "buglink": "",
     "name": "color",
-    "source": "*/hgext/color.pyc", (glob)
+    "source": "*/hgext/color.py*", (glob)
     "testedwith": "internal"
    },
    {
     "buglink": "",
     "name": "ext1",
-    "source": "*/extwithoutinfos.pyc", (glob)
+    "source": "*/extwithoutinfos.py*", (glob)
     "testedwith": ""
    },
    {
     "buglink": "",
     "name": "histedit",
-    "source": "*/hgext/histedit.pyc", (glob)
+    "source": "*/hgext/histedit.py*", (glob)
     "testedwith": "internal"
    },
    {
     "buglink": "",
     "name": "mq",
-    "source": "*/hgext/mq.pyc", (glob)
+    "source": "*/hgext/mq.py*", (glob)
     "testedwith": "internal"
    },
    {
     "buglink": "",
     "name": "patchbomb",
-    "source": "*/hgext/patchbomb.pyc", (glob)
+    "source": "*/hgext/patchbomb.py*", (glob)
     "testedwith": "internal"
    },
    {
     "buglink": "",
     "name": "rebase",
-    "source": "*/hgext/rebase.pyc", (glob)
+    "source": "*/hgext/rebase.py*", (glob)
     "testedwith": "internal"
    }
   ]
