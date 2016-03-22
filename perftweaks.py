@@ -10,6 +10,7 @@ from mercurial import branchmap, merge, revlog, scmutil, tags, util
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial.i18n import _
 from mercurial.node import nullid, nullrev
+import errno
 import os
 
 testedwith = 'internal'
@@ -130,34 +131,40 @@ def _preloadrevs(repo):
         revs = set()
         cachedir = repo.vfs.join('cache', 'noderevs')
         try:
-            if os.path.exists(cachedir):
-                for cachefile in os.listdir(cachedir):
-                    path = _cachepath(repo, cachefile)
-                    revs.update(int(r) for r in open(path).readlines())
+            for cachefile in os.listdir(cachedir):
+                path = _cachepath(repo, cachefile)
+                revs.update(int(r) for r in open(path).readlines())
 
-                getnode = repo.changelog.node
-                nodemap = repo.changelog.nodemap
-                for r in revs:
-                    try:
-                        node = getnode(r)
-                        nodemap[node] = r
-                    except IndexError:
-                        # Rev no longer exists
-                        pass
-        except IOError:
+            getnode = repo.changelog.node
+            nodemap = repo.changelog.nodemap
+            for r in revs:
+                try:
+                    node = getnode(r)
+                    nodemap[node] = r
+                except IndexError:
+                    # Rev no longer exists
+                    pass
+        except EnvironmentError:
             # No permission to read? No big deal
             pass
 
 def _savepreloadrevs(repo, name, revs):
     if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
+        cachedir = repo.vfs.join('cache', 'noderevs')
         try:
-            cachedir = repo.vfs.join('cache', 'noderevs')
-            if not os.path.exists(cachedir):
-                os.mkdir(cachedir)
+            os.mkdir(cachedir)
+        except OSError as ex:
+            # If we failed because the directory already exists,
+            # continue.  In all other cases (e.g., no permission to create the
+            # directory), just silently return without doing anything.
+            if ex.errno != errno.EEXIST:
+                return
+
+        try:
             path = _cachepath(repo, name)
             f = util.atomictempfile(path, 'w+')
             f.write('\n'.join(str(r) for r in revs))
             f.close()
-        except IOError:
+        except EnvironmentError:
             # No permission to write? No big deal
             pass
