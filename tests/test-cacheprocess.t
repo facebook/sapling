@@ -16,7 +16,9 @@
   > import sys, os, shutil
   > f = open('$TESTTMP/cachelog.log', 'w')
   > srccache = os.path.join('$TESTTMP', 'oldhgcache')
-  > log = f.write
+  > def log(message):
+  >     f.write(message)
+  >     f.flush()
   > destcache = sys.argv[-1]
   > try:
   >     while True:
@@ -78,13 +80,12 @@ Test cache hits.
   $ rm cachelog.log
   $ hgcloneshallow ssh://user@dummy/repo clone-cachehit -q
   3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over *s (glob)
-  $ cat cachelog.log
+  $ cat cachelog.log | grep -v exit
   got command 'get'
   client wants 3 blobs
   requested 'master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0'
   requested 'master/39/5df8f7c51f007019cb30201c49e884b46b92fa/69a1b67522704ec122181c0890bd16e9d3e7516a'
   requested 'master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca'
-  got command 'exit'
 
 
   $ cat >> $HGRCPATH <<EOF
@@ -111,10 +112,9 @@ Test cache hits with includepath.
   $ rm cachelog.log
   $ hgcloneshallow ssh://user@dummy/repo clone-withpath-cachehit -q
   3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over *s (glob)
-  $ cat cachelog.log
+  $ cat cachelog.log | grep -v exit
   got command 'get'
   client wants 3 blobs
   requested 'x\x00master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0'
   requested 'y\x00master/95/cb0bfd2977c761298d9624e4b4d4c72a39974a/076f5e2225b3ff0400b98c92aa6cdf403ee24cca'
   requested 'z\x00master/39/5df8f7c51f007019cb30201c49e884b46b92fa/69a1b67522704ec122181c0890bd16e9d3e7516a'
-  got command 'exit'
