@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='fbhgext',
-    version='0.1.0',
+    version='0.1.1',
     author='Durham Goode',
     maintainer='Durham Goode',
     maintainer_email='durham@fb.com',
@@ -15,6 +15,7 @@ setup(
     keywords='fb hg mercurial',
     license='',
     py_modules=[
+        'arcdiff',
         'automv',
         'backups',
         'bundle2hooks',
