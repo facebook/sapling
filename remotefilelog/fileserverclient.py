@@ -6,9 +6,10 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
-from mercurial import util, sshpeer, hg, error, util, wireproto, node
+from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
 import os, socket, lz4, time, grp, io
 import errno
+import itertools
 
 # Statistics for debugging
 fetchcost = 0
@@ -121,6 +122,28 @@ class cacheconnection(object):
 
 def _getfilesbatch(
         remote, receivemissing, progresstick, missed, idmap, batchsize):
+    # Over http(s), iterbatch is a streamy method and we can start
+    # looking at results early. This means we send one (potentially
+    # large) request, but then we show nice progress as we process
+    # file results, rather than showing chunks of $batchsize in
+    # progress.
+    #
+    # Over ssh, iterbatch isn't streamy because batch() wasn't
+    # explicitly designed as a streaming method. In the future we
+    # should probably introduce a streambatch() method upstream and
+    # use that for this.
+    if (getattr(remote, 'iterbatch', False) and remote.capable('httppostargs')
+        and isinstance(remote, httppeer.httppeer)):
+        b = remote.iterbatch()
+        for m in missed:
+            file_ = idmap[m]
+            node = m[-40:]
+            b.getfile(file_, node)
+        b.submit()
+        for m, r in itertools.izip(missed, b.results()):
+            receivemissing(io.BytesIO('%d\n%s' % (len(r), r)), m)
+            progresstick()
+        return
     while missed:
         chunk, missed = missed[:batchsize], missed[batchsize:]
         b = remote.batch()
