@@ -149,6 +149,11 @@ def _checkheads(orig, pushop):
     repo = pushop.repo
     onto = repo.ui.config(experimental, configonto)
     if onto: # This is a rebasing push
+        # If remotenames is enabled, we don't want to abort if the user uses
+        # --to, even if the server doesn't support pushrebase.
+        if checkremotenames():
+            return
+
         # The rest of the checks are performed during bundle2 part processing;
         # we need to bypass the regular push checks because it will look like
         # we're pushing a new head, which isn't normally allowed
@@ -218,6 +223,10 @@ def _phasemove(orig, pushop, nodes, phase=phases.public):
 
 @exchange.b2partsgenerator(commonheadsparttype)
 def commonheadspartgen(pushop, bundler):
+    if rebaseparttype not in bundle2.bundle2caps(pushop.remote):
+        # Server doesn't support pushrebase, so just fallback to normal push.
+        return
+
     bundler.newpart(commonheadsparttype,
                     data=''.join(pushop.outgoing.commonheads))
 
@@ -229,10 +238,23 @@ def commonheadshandler(op, inpart):
         nodeid = inpart.read(20)
     assert not nodeid # data should split evenly into blocks of 20 bytes
 
+def checkremotenames():
+    try:
+        extensions.find('remotenames')
+        return True
+    except KeyError:
+        return False
+
 @exchange.b2partsgenerator(rebaseparttype)
 def partgen(pushop, bundler):
     onto = pushop.ui.config(experimental, configonto)
     if 'changesets' in pushop.stepsdone or not onto:
+        return
+
+    if (rebaseparttype not in bundle2.bundle2caps(pushop.remote) and
+        checkremotenames()):
+        # Server doesn't support pushrebase, but --to is valid in remotenames as
+        # well, so just let it through.
         return
 
     pushop.stepsdone.add('changesets')

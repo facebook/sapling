@@ -346,3 +346,49 @@ Test 'hg push' with a tracking bookmark
   |/
   o  0 a
   
+  $ cd ..
+
+Test push --to to a repo without pushrebase on (i.e. the default remotenames behavior)
+  $ hg init oldserver
+  $ cd oldserver
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks =
+  > remotenames =
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
+  $ echo a > a && hg commit -Aqm a
+  $ hg book serverfeature
+  $ cd ..
+  $ hg clone --config 'extensions.remotenames=' -q ssh://user@dummy/oldserver newclient
+  $ cd newclient
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > bundle2hooks =
+  > pushrebase =
+  > remotenames =
+  > [experimental]
+  > bundle2-exp=True
+  > EOF
+  $ hg book clientfeature -t default/serverfeature
+  $ echo b > b && hg commit -Aqm b
+  $ hg push --to serverfeature
+  pushing rev d2ae7f538514 to destination ssh://user@dummy/oldserver bookmark serverfeature
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files
+  updating bookmark serverfeature
+  $ hg log -G -T '{shortest(node)} {bookmarks}'
+  @  d2ae clientfeature
+  |
+  o  cb9a
+  
+  $ cd ../oldserver
+  $ hg log -G -T '{shortest(node)} {bookmarks}'
+  o  d2ae serverfeature
+  |
+  @  cb9a
+  
