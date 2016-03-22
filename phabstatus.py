@@ -63,7 +63,7 @@ def getdiffstatus(repo, *diffid):
     try:
         if not diffid:
             return []
-        timeout = repo.ui.configint('ssl', 'timeout', 5);
+        timeout = repo.ui.configint('ssl', 'timeout', 5)
         proc = subprocess.Popen(
                     [
                         'arc',
