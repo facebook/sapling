@@ -16,7 +16,7 @@ import re
 from mercurial import commands
 from mercurial import obsolete
 from mercurial import phases
-from mercurial.extensions import wrapcommand
+from mercurial import extensions
 
 def getdiff(rev):
     m = re.findall("Differential Revision: https://phabricator.fb.com/D(.*)",
@@ -32,7 +32,7 @@ def getdiff(rev):
         return None
 
 def extsetup(ui):
-    wrapcommand(commands.table, 'pull', _pull)
+    extensions.wrapcommand(commands.table, 'pull', _pull)
 
 def _pull(orig, ui, repo, *args, **opts):
     if not obsolete.isenabled(repo, obsolete.createmarkersopt):
@@ -55,8 +55,9 @@ def _pull(orig, ui, repo, *args, **opts):
 
     # Try to find match with the drafts
     tocreate = []
-    for rev in repo.revs("draft()"):
-        n = repo[rev]
+    unfiltered = repo.unfiltered()
+    for rev in unfiltered.revs("draft() - hidden()"):
+        n = unfiltered[rev]
         diff = getdiff(n)
         if diff in landeddiffs:
             tocreate.append((n, (landeddiffs[diff],)))
@@ -64,8 +65,59 @@ def _pull(orig, ui, repo, *args, **opts):
     if not tocreate:
         return r
 
-    with repo.lock() as l:
-        with repo.transaction('pullcreatemarkers') as t:
-            obsolete.createmarkers(repo, tocreate)
+    inhibit, deinhibitnodes = _deinhibitancestors(unfiltered, tocreate)
+
+    with unfiltered.lock() as l:
+        with unfiltered.transaction('pullcreatemarkers') as t:
+            obsolete.createmarkers(unfiltered, tocreate)
+            if deinhibitnodes:
+                inhibit._deinhibitmarkers(unfiltered, deinhibitnodes)
 
     return r
+
+def _deinhibitancestors(repo, markers):
+    """Compute the set of commits that already have obsolescence markers
+    which were possibly inhibited, and should be deinhibited because of this
+    new pull operation.
+
+    Returns a tuple of (inhibit module, node set).
+    Returns (None, None) if the inhibit extension is not enabled."""
+    try:
+        inhibit = extensions.find('inhibit')
+    except KeyError:
+        return None, None
+
+    if not inhibit._inhibitenabled(repo):
+        return None, None
+
+    # Commits for which we should deinhibit obsolescence markers
+    deinhibitset = set()
+    # Commits whose parents we should process
+    toprocess = set([ctx for ctx, successor in markers])
+    # Commits that are already in toprocess or have already been processed
+    seen = toprocess.copy()
+    # Commits that we deinhibit obsolescence markers for
+    while toprocess:
+        ctx = toprocess.pop()
+        for p in ctx.parents():
+            if p in seen:
+                continue
+            seen.add(p)
+            if _isobsolete(p):
+                deinhibitset.add(p.node())
+                toprocess.add(p)
+
+    return inhibit, deinhibitset
+
+def _isobsolete(ctx):
+    # A commit is obsolete if it has at least one successor marker.
+    #
+    # successormarkers() returns a generator.  generators unfortunately
+    # evaluate to True even if they are "empty", so pull one element off and
+    # see if anything exists or not.
+    i = obsolete.successormarkers(ctx)
+    try:
+        next(i)
+    except StopIteration:
+        return False
+    return True

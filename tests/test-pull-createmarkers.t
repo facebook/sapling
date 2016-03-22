@@ -48,7 +48,7 @@ Set up clients repository
   $ hg clone ssh://user@dummy/server client -q
   $ hg clone ssh://user@dummy/server otherclient -q
 
-The first client works on a diff while the second client lands one of her diff
+The first client works on several diffs while the second client lands one of her diff
 
   $ cd otherclient
   $ mkcommit b
