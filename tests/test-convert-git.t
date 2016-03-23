@@ -729,3 +729,20 @@ damage git repository by renaming a tree object
   $ mv git-repo4/.git/objects/$TREE_OBJ git-repo4/.git/objects/$TREE_OBJ.tmp
   $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
   abort: cannot read changes in 1c0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
+
+test for escaping the repo name (CVE-2016-3069)
+
+  $ git init '`echo pwned >COMMAND-INJECTION`'
+  Initialized empty Git repository in $TESTTMP/`echo pwned >COMMAND-INJECTION`/.git/
+  $ cd '`echo pwned >COMMAND-INJECTION`'
+  $ git commit -q --allow-empty -m 'empty'
+  $ cd ..
+  $ hg convert '`echo pwned >COMMAND-INJECTION`' 'converted'
+  initializing destination converted repository
+  scanning source...
+  sorting...
+  converting...
+  0 empty
+  updating bookmarks
+  $ test -f COMMAND-INJECTION
+  [1]
