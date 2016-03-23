@@ -298,7 +298,7 @@ There should still be four entries in the log for d
   o  3: 'File c created as copy of b and modified'
   |
   o  2: 'File b created as copy of a and modified'
-  |
+  :
   o  0: 'File a created'
   
 Same steps as above, but with --collapse on rebase to make sure the
@@ -323,9 +323,9 @@ copy of 'a'.
 
   $ hg tglog --follow d
   @  3: 'Collapsed revision
-  |  * File b created as copy of a and modified
-  |  * File c created as copy of b and modified
-  |  * File d created as copy of c and modified'
+  :  * File b created as copy of a and modified
+  :  * File c created as copy of b and modified
+  :  * File d created as copy of c and modified'
   o  0: 'File a created'
   
 

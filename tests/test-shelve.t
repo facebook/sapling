@@ -725,6 +725,7 @@ unshelve and conflicts with tracked and untracked files
   $ hg log -G --template '{rev}  {desc|firstline}  {author}' -R bundle://.hg/shelved/default.hg -r 'bundle()'
   o  4  changes to: commit stuff  shelve@localhost
   |
+  ~
   $ hg log -G --template '{rev}  {desc|firstline}  {author}'
   @  3  commit stuff  test
   |

@@ -92,6 +92,7 @@ Invoke pull --rebase and nothing to rebase:
   $ hg tglog -l 1
   @  2: 'R1'
   |
+  ~
 
 pull --rebase --update should ignore --update:
 
@@ -112,6 +113,7 @@ pull --rebase doesn't update if nothing has been pulled:
   $ hg tglog -l 1
   o  2: 'R1'
   |
+  ~
 
   $ cd ..
 

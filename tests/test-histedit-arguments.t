@@ -126,6 +126,7 @@ temporarily.
   |
   o  2 eb57 three
   |
+  ~
   $ HGEDITOR=cat hg histedit -r 4 --commands - << EOF
   > edit 08d98a8350f3 4 five
   > EOF
@@ -154,6 +155,7 @@ temporarily.
   |/
   o  2 eb57 three
   |
+  ~
 
   $ hg unbundle -q $TESTTMP/foo/.hg/strip-backup/08d98a8350f3-02594089-backup.hg
   $ hg strip -q -r f5ed --config extensions.strip=

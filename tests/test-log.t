@@ -2036,10 +2036,10 @@ log -f on the file should list the graft result.
   |  summary:     content3
   |
   o  changeset:   3:15b2327059e5
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     content2
-  |
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     content2
+  :
   o  changeset:   0:ae0a3c9f9e95
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2051,16 +2051,16 @@ plain log lists the original version
 
   $ hg log -G a
   @  changeset:   4:50b9b36e9c5d
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     content3
-  |
-  | o  changeset:   1:2294ae80ad84
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     content2
-  |
+  :  tag:         tip
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     content3
+  :
+  : o  changeset:   1:2294ae80ad84
+  :/   user:        test
+  :    date:        Thu Jan 01 00:00:00 1970 +0000
+  :    summary:     content2
+  :
   o  changeset:   0:ae0a3c9f9e95
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2074,10 +2074,10 @@ hg log -f from the grafted changeset
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -Gf a
   @  changeset:   3:15b2327059e5
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     content2
-  |
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     content2
+  :
   o  changeset:   0:ae0a3c9f9e95
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2125,10 +2125,10 @@ Check that log on the file does not drop the file revision.
   |  summary:     content3
   |
   @  changeset:   3:15b2327059e5
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     content2
-  |
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     content2
+  :
   o  changeset:   0:ae0a3c9f9e95
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2142,11 +2142,11 @@ Even when a head revision is linkrev-shadowed.
   $ hg debugobsolete 50b9b36e9c5df2c6fc6dcefa8ad0da929e84aed2
   $ hg log -G a
   @  changeset:   3:15b2327059e5
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     content2
-  |
+  :  tag:         tip
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     content2
+  :
   o  changeset:   0:ae0a3c9f9e95
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2199,17 +2199,17 @@ Even when the file revision is missing from some head:
   $ hg log -f -G b
   @  changeset:   3:9bc8ce7f9356
   |  parent:      0:f7b1eb17ad24
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     1
-  |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1
+  
   $ hg log -G b
   @  changeset:   3:9bc8ce7f9356
   |  parent:      0:f7b1eb17ad24
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     1
-  |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     1
+  
   $ cd ..
 
 Check proper report when the manifest changes but not the file issue4499

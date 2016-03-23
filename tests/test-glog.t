@@ -940,193 +940,193 @@ File glog per revset (only merges):
   $ hg log -G -r 'file("a")' -m
   o    changeset:   32:d06dffa21a31
   |\   parent:      27:886ed638191b
-  | |  parent:      31:621d83e11f67
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:32 1970 +0000
-  | |  summary:     (32) expand
-  | |
-  o |  changeset:   31:621d83e11f67
-  |\|  parent:      21:d42a756af44d
-  | |  parent:      30:6e11cd4b648f
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:31 1970 +0000
-  | |  summary:     (31) expand
-  | |
-  o |    changeset:   30:6e11cd4b648f
+  | :  parent:      31:621d83e11f67
+  | :  user:        test
+  | :  date:        Thu Jan 01 00:00:32 1970 +0000
+  | :  summary:     (32) expand
+  | :
+  o :  changeset:   31:621d83e11f67
+  |\:  parent:      21:d42a756af44d
+  | :  parent:      30:6e11cd4b648f
+  | :  user:        test
+  | :  date:        Thu Jan 01 00:00:31 1970 +0000
+  | :  summary:     (31) expand
+  | :
+  o :    changeset:   30:6e11cd4b648f
   |\ \   parent:      28:44ecd0b9ae99
-  | | |  parent:      29:cd9bb2be7593
+  | ~ :  parent:      29:cd9bb2be7593
+  |   :  user:        test
+  |   :  date:        Thu Jan 01 00:00:30 1970 +0000
+  |   :  summary:     (30) expand
+  |  /
+  o :    changeset:   28:44ecd0b9ae99
+  |\ \   parent:      1:6db2ef61d156
+  | ~ :  parent:      26:7f25b6c2f0b9
+  |   :  user:        test
+  |   :  date:        Thu Jan 01 00:00:28 1970 +0000
+  |   :  summary:     (28) merge zero known
+  |  /
+  o :    changeset:   26:7f25b6c2f0b9
+  |\ \   parent:      18:1aa84d96232a
+  | | :  parent:      25:91da8ed57247
+  | | :  user:        test
+  | | :  date:        Thu Jan 01 00:00:26 1970 +0000
+  | | :  summary:     (26) merge one known; far right
+  | | :
+  | o :  changeset:   25:91da8ed57247
+  | |\:  parent:      21:d42a756af44d
+  | | :  parent:      24:a9c19a3d96b7
+  | | :  user:        test
+  | | :  date:        Thu Jan 01 00:00:25 1970 +0000
+  | | :  summary:     (25) merge one known; far left
+  | | :
+  | o :    changeset:   24:a9c19a3d96b7
+  | |\ \   parent:      0:e6eb3150255d
+  | | ~ :  parent:      23:a01cddf0766d
+  | |   :  user:        test
+  | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
+  | |   :  summary:     (24) merge one known; immediate right
+  | |  /
+  | o :    changeset:   23:a01cddf0766d
+  | |\ \   parent:      1:6db2ef61d156
+  | | ~ :  parent:      22:e0d9cccacb5d
+  | |   :  user:        test
+  | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
+  | |   :  summary:     (23) merge one known; immediate left
+  | |  /
+  | o :  changeset:   22:e0d9cccacb5d
+  |/:/   parent:      18:1aa84d96232a
+  | :    parent:      21:d42a756af44d
+  | :    user:        test
+  | :    date:        Thu Jan 01 00:00:22 1970 +0000
+  | :    summary:     (22) merge two known; one far left, one far right
+  | :
+  | o    changeset:   21:d42a756af44d
+  | |\   parent:      19:31ddc2c1573b
+  | | |  parent:      20:d30ed6450e32
   | | |  user:        test
-  | | |  date:        Thu Jan 01 00:00:30 1970 +0000
-  | | |  summary:     (30) expand
+  | | |  date:        Thu Jan 01 00:00:21 1970 +0000
+  | | |  summary:     (21) expand
   | | |
-  o | |    changeset:   28:44ecd0b9ae99
-  |\ \ \   parent:      1:6db2ef61d156
-  | | | |  parent:      26:7f25b6c2f0b9
-  | | | |  user:        test
-  | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
-  | | | |  summary:     (28) merge zero known
-  | | | |
-  o | | |    changeset:   26:7f25b6c2f0b9
-  |\ \ \ \   parent:      18:1aa84d96232a
-  | | | | |  parent:      25:91da8ed57247
-  | | | | |  user:        test
-  | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
-  | | | | |  summary:     (26) merge one known; far right
-  | | | | |
-  | o-----+  changeset:   25:91da8ed57247
-  | | | | |  parent:      21:d42a756af44d
-  | | | | |  parent:      24:a9c19a3d96b7
-  | | | | |  user:        test
-  | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
-  | | | | |  summary:     (25) merge one known; far left
-  | | | | |
-  | o | | |    changeset:   24:a9c19a3d96b7
-  | |\ \ \ \   parent:      0:e6eb3150255d
-  | | | | | |  parent:      23:a01cddf0766d
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
-  | | | | | |  summary:     (24) merge one known; immediate right
-  | | | | | |
-  | o---+ | |  changeset:   23:a01cddf0766d
-  | | | | | |  parent:      1:6db2ef61d156
-  | | | | | |  parent:      22:e0d9cccacb5d
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
-  | | | | | |  summary:     (23) merge one known; immediate left
-  | | | | | |
-  | o-------+  changeset:   22:e0d9cccacb5d
-  | | | | | |  parent:      18:1aa84d96232a
-  |/ / / / /   parent:      21:d42a756af44d
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
-  | | | | |    summary:     (22) merge two known; one far left, one far right
-  | | | | |
-  | | | | o    changeset:   21:d42a756af44d
-  | | | | |\   parent:      19:31ddc2c1573b
-  | | | | | |  parent:      20:d30ed6450e32
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
-  | | | | | |  summary:     (21) expand
-  | | | | | |
-  +-+-------o  changeset:   20:d30ed6450e32
-  | | | | |    parent:      0:e6eb3150255d
-  | | | | |    parent:      18:1aa84d96232a
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
-  | | | | |    summary:     (20) merge two known; two far right
-  | | | | |
-  | | | | o    changeset:   19:31ddc2c1573b
-  | | | | |\   parent:      15:1dda3f72782d
-  | | | | | |  parent:      17:44765d7c06e0
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
-  | | | | | |  summary:     (19) expand
-  | | | | | |
-  o---+---+ |  changeset:   18:1aa84d96232a
-    | | | | |  parent:      1:6db2ef61d156
-   / / / / /   parent:      15:1dda3f72782d
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
-  | | | | |    summary:     (18) merge two known; two far left
-  | | | | |
-  | | | | o    changeset:   17:44765d7c06e0
-  | | | | |\   parent:      12:86b91144a6e9
-  | | | | | |  parent:      16:3677d192927d
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
-  | | | | | |  summary:     (17) expand
-  | | | | | |
-  +-+-------o  changeset:   16:3677d192927d
-  | | | | |    parent:      0:e6eb3150255d
-  | | | | |    parent:      1:6db2ef61d156
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
-  | | | | |    summary:     (16) merge two known; one immediate right, one near right
-  | | | | |
-  | | | o |    changeset:   15:1dda3f72782d
-  | | | |\ \   parent:      13:22d8966a97e3
-  | | | | | |  parent:      14:8eac370358ef
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
-  | | | | | |  summary:     (15) expand
-  | | | | | |
-  +-------o |  changeset:   14:8eac370358ef
-  | | | | |/   parent:      0:e6eb3150255d
-  | | | | |    parent:      12:86b91144a6e9
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
-  | | | | |    summary:     (14) merge two known; one immediate right, one far right
-  | | | | |
-  | | | o |    changeset:   13:22d8966a97e3
-  | | | |\ \   parent:      9:7010c0af0a35
-  | | | | | |  parent:      11:832d76e6bdf2
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
-  | | | | | |  summary:     (13) expand
-  | | | | | |
-  | +---+---o  changeset:   12:86b91144a6e9
-  | | | | |    parent:      1:6db2ef61d156
-  | | | | |    parent:      9:7010c0af0a35
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
-  | | | | |    summary:     (12) merge two known; one immediate right, one far left
-  | | | | |
-  | | | | o    changeset:   11:832d76e6bdf2
-  | | | | |\   parent:      6:b105a072e251
-  | | | | | |  parent:      10:74c64d036d72
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
-  | | | | | |  summary:     (11) expand
-  | | | | | |
-  +---------o  changeset:   10:74c64d036d72
-  | | | | |/   parent:      0:e6eb3150255d
-  | | | | |    parent:      6:b105a072e251
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
-  | | | | |    summary:     (10) merge two known; one immediate left, one near right
-  | | | | |
-  | | | o |    changeset:   9:7010c0af0a35
-  | | | |\ \   parent:      7:b632bb1b1224
-  | | | | | |  parent:      8:7a0b11f71937
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
-  | | | | | |  summary:     (9) expand
-  | | | | | |
-  +-------o |  changeset:   8:7a0b11f71937
-  | | | |/ /   parent:      0:e6eb3150255d
-  | | | | |    parent:      7:b632bb1b1224
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
-  | | | | |    summary:     (8) merge two known; one immediate left, one far right
-  | | | | |
-  | | | o |    changeset:   7:b632bb1b1224
-  | | | |\ \   parent:      2:3d9a33b8d1e1
-  | | | | | |  parent:      5:4409d547b708
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
-  | | | | | |  summary:     (7) expand
-  | | | | | |
-  | | | +---o  changeset:   6:b105a072e251
-  | | | | |/   parent:      2:3d9a33b8d1e1
-  | | | | |    parent:      5:4409d547b708
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
-  | | | | |    summary:     (6) merge two known; one immediate left, one far left
-  | | | | |
-  | | | o |    changeset:   5:4409d547b708
-  | | | |\ \   parent:      3:27eef8ed80b4
-  | | | | | |  parent:      4:26a8bac39d9f
-  | | | | | |  user:        test
-  | | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
-  | | | | | |  summary:     (5) expand
-  | | | | | |
-  | +---o | |  changeset:   4:26a8bac39d9f
-  | | | |/ /   parent:      1:6db2ef61d156
-  | | | | |    parent:      3:27eef8ed80b4
-  | | | | |    user:        test
-  | | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
-  | | | | |    summary:     (4) merge two known; one immediate left, one immediate right
-  | | | | |
+  +---o  changeset:   20:d30ed6450e32
+  | | |  parent:      0:e6eb3150255d
+  | | ~  parent:      18:1aa84d96232a
+  | |    user:        test
+  | |    date:        Thu Jan 01 00:00:20 1970 +0000
+  | |    summary:     (20) merge two known; two far right
+  | |
+  | o    changeset:   19:31ddc2c1573b
+  | |\   parent:      15:1dda3f72782d
+  | | |  parent:      17:44765d7c06e0
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:19 1970 +0000
+  | | |  summary:     (19) expand
+  | | |
+  o | |  changeset:   18:1aa84d96232a
+  |\| |  parent:      1:6db2ef61d156
+  ~ | |  parent:      15:1dda3f72782d
+    | |  user:        test
+    | |  date:        Thu Jan 01 00:00:18 1970 +0000
+    | |  summary:     (18) merge two known; two far left
+   / /
+  | o    changeset:   17:44765d7c06e0
+  | |\   parent:      12:86b91144a6e9
+  | | |  parent:      16:3677d192927d
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:17 1970 +0000
+  | | |  summary:     (17) expand
+  | | |
+  | | o    changeset:   16:3677d192927d
+  | | |\   parent:      0:e6eb3150255d
+  | | ~ ~  parent:      1:6db2ef61d156
+  | |      user:        test
+  | |      date:        Thu Jan 01 00:00:16 1970 +0000
+  | |      summary:     (16) merge two known; one immediate right, one near right
+  | |
+  o |    changeset:   15:1dda3f72782d
+  |\ \   parent:      13:22d8966a97e3
+  | | |  parent:      14:8eac370358ef
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:15 1970 +0000
+  | | |  summary:     (15) expand
+  | | |
+  | o |  changeset:   14:8eac370358ef
+  | |\|  parent:      0:e6eb3150255d
+  | ~ |  parent:      12:86b91144a6e9
+  |   |  user:        test
+  |   |  date:        Thu Jan 01 00:00:14 1970 +0000
+  |   |  summary:     (14) merge two known; one immediate right, one far right
+  |  /
+  o |    changeset:   13:22d8966a97e3
+  |\ \   parent:      9:7010c0af0a35
+  | | |  parent:      11:832d76e6bdf2
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:13 1970 +0000
+  | | |  summary:     (13) expand
+  | | |
+  +---o  changeset:   12:86b91144a6e9
+  | | |  parent:      1:6db2ef61d156
+  | | ~  parent:      9:7010c0af0a35
+  | |    user:        test
+  | |    date:        Thu Jan 01 00:00:12 1970 +0000
+  | |    summary:     (12) merge two known; one immediate right, one far left
+  | |
+  | o    changeset:   11:832d76e6bdf2
+  | |\   parent:      6:b105a072e251
+  | | |  parent:      10:74c64d036d72
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:11 1970 +0000
+  | | |  summary:     (11) expand
+  | | |
+  | | o  changeset:   10:74c64d036d72
+  | |/|  parent:      0:e6eb3150255d
+  | | ~  parent:      6:b105a072e251
+  | |    user:        test
+  | |    date:        Thu Jan 01 00:00:10 1970 +0000
+  | |    summary:     (10) merge two known; one immediate left, one near right
+  | |
+  o |    changeset:   9:7010c0af0a35
+  |\ \   parent:      7:b632bb1b1224
+  | | |  parent:      8:7a0b11f71937
+  | | |  user:        test
+  | | |  date:        Thu Jan 01 00:00:09 1970 +0000
+  | | |  summary:     (9) expand
+  | | |
+  | o |  changeset:   8:7a0b11f71937
+  |/| |  parent:      0:e6eb3150255d
+  | ~ |  parent:      7:b632bb1b1224
+  |   |  user:        test
+  |   |  date:        Thu Jan 01 00:00:08 1970 +0000
+  |   |  summary:     (8) merge two known; one immediate left, one far right
+  |  /
+  o |    changeset:   7:b632bb1b1224
+  |\ \   parent:      2:3d9a33b8d1e1
+  | ~ |  parent:      5:4409d547b708
+  |   |  user:        test
+  |   |  date:        Thu Jan 01 00:00:07 1970 +0000
+  |   |  summary:     (7) expand
+  |  /
+  | o  changeset:   6:b105a072e251
+  |/|  parent:      2:3d9a33b8d1e1
+  | ~  parent:      5:4409d547b708
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:06 1970 +0000
+  |    summary:     (6) merge two known; one immediate left, one far left
+  |
+  o    changeset:   5:4409d547b708
+  |\   parent:      3:27eef8ed80b4
+  | ~  parent:      4:26a8bac39d9f
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:05 1970 +0000
+  |    summary:     (5) expand
+  |
+  o    changeset:   4:26a8bac39d9f
+  |\   parent:      1:6db2ef61d156
+  ~ ~  parent:      3:27eef8ed80b4
+       user:        test
+       date:        Thu Jan 01 00:00:04 1970 +0000
+       summary:     (4) merge two known; one immediate left, one immediate right
+  
 
 
 Empty revision range - display nothing:
@@ -1140,19 +1140,19 @@ From outer space:
   $ hg log -G -l1 repo
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
-  |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
+  ~  parent:      32:d06dffa21a31
+     user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
   $ hg log -G -l1 repo/a
   @  changeset:   34:fea3ac5810e0
   |  tag:         tip
-  |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
+  ~  parent:      32:d06dffa21a31
+     user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
   $ hg log -G -l1 repo/missing
 
 #endif
@@ -1177,9 +1177,9 @@ File log with revs != cset revs:
   |
   o  changeset:   1:5ac72c0599bf
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     two
-  |
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     two
+  
 
 Issue1896: File log with explicit style
   $ hg log -G --style=default one
@@ -1278,16 +1278,16 @@ File + limit with revs != cset revs:
   $ hg log -G -l2 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
-  | o  changeset:   33:68608f5145f9
-  | |  parent:      18:1aa84d96232a
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:33 1970 +0000
-  | |  summary:     (33) head
-  | |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
+  o  changeset:   33:68608f5145f9
+  |  parent:      18:1aa84d96232a
+  ~  user:        test
+     date:        Thu Jan 01 00:00:33 1970 +0000
+     summary:     (33) head
+  
 
 File + limit + -ra:b, (b - a) < limit:
   $ hg log -G -l3000 -r32:tip a
@@ -1299,66 +1299,66 @@ File + limit + -ra:b, (b - a) < limit:
   |
   | o  changeset:   33:68608f5145f9
   | |  parent:      18:1aa84d96232a
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:33 1970 +0000
-  | |  summary:     (33) head
-  | |
-  o |    changeset:   32:d06dffa21a31
-  |\ \   parent:      27:886ed638191b
-  | | |  parent:      31:621d83e11f67
-  | | |  user:        test
-  | | |  date:        Thu Jan 01 00:00:32 1970 +0000
-  | | |  summary:     (32) expand
-  | | |
+  | ~  user:        test
+  |    date:        Thu Jan 01 00:00:33 1970 +0000
+  |    summary:     (33) head
+  |
+  o    changeset:   32:d06dffa21a31
+  |\   parent:      27:886ed638191b
+  ~ ~  parent:      31:621d83e11f67
+       user:        test
+       date:        Thu Jan 01 00:00:32 1970 +0000
+       summary:     (32) expand
+  
 
 Point out a common and an uncommon unshown parent
 
   $ hg log -G -r 'rev(8) or rev(9)'
   o    changeset:   9:7010c0af0a35
   |\   parent:      7:b632bb1b1224
-  | |  parent:      8:7a0b11f71937
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:09 1970 +0000
-  | |  summary:     (9) expand
-  | |
-  o |  changeset:   8:7a0b11f71937
-  |\|  parent:      0:e6eb3150255d
-  | |  parent:      7:b632bb1b1224
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:08 1970 +0000
-  | |  summary:     (8) merge two known; one immediate left, one far right
-  | |
+  | ~  parent:      8:7a0b11f71937
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:09 1970 +0000
+  |    summary:     (9) expand
+  |
+  o    changeset:   8:7a0b11f71937
+  |\   parent:      0:e6eb3150255d
+  ~ ~  parent:      7:b632bb1b1224
+       user:        test
+       date:        Thu Jan 01 00:00:08 1970 +0000
+       summary:     (8) merge two known; one immediate left, one far right
+  
 
 File + limit + -ra:b, b < tip:
 
   $ hg log -G -l1 -r32:34 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
 
 file(File) + limit + -ra:b, b < tip:
 
   $ hg log -G -l1 -r32:34 -r 'file("a")'
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
 
 limit(file(File) and a::b), b < tip:
 
   $ hg log -G -r 'limit(file("a") and 32::34, 1)'
   o    changeset:   32:d06dffa21a31
   |\   parent:      27:886ed638191b
-  | |  parent:      31:621d83e11f67
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:32 1970 +0000
-  | |  summary:     (32) expand
-  | |
+  ~ ~  parent:      31:621d83e11f67
+       user:        test
+       date:        Thu Jan 01 00:00:32 1970 +0000
+       summary:     (32) expand
+  
 
 File + limit + -ra:b, b < tip:
 
@@ -1369,16 +1369,16 @@ File + limit + -ra:b, b < tip, (b - a) < limit:
   $ hg log -G -l10 -r33:34 a
   o  changeset:   34:fea3ac5810e0
   |  parent:      32:d06dffa21a31
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:34 1970 +0000
-  |  summary:     (34) head
-  |
-  | o  changeset:   33:68608f5145f9
-  | |  parent:      18:1aa84d96232a
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:33 1970 +0000
-  | |  summary:     (33) head
-  | |
+  ~  user:        test
+     date:        Thu Jan 01 00:00:34 1970 +0000
+     summary:     (34) head
+  
+  o  changeset:   33:68608f5145f9
+  |  parent:      18:1aa84d96232a
+  ~  user:        test
+     date:        Thu Jan 01 00:00:33 1970 +0000
+     summary:     (33) head
+  
 
 Do not crash or produce strange graphs if history is buggy
 
@@ -1409,17 +1409,17 @@ Do not crash or produce strange graphs if history is buggy
   |
   | o  changeset:   33:68608f5145f9
   | |  parent:      18:1aa84d96232a
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:33 1970 +0000
-  | |  summary:     (33) head
-  | |
-  o |    changeset:   32:d06dffa21a31
-  |\ \   parent:      27:886ed638191b
-  | | |  parent:      31:621d83e11f67
-  | | |  user:        test
-  | | |  date:        Thu Jan 01 00:00:32 1970 +0000
-  | | |  summary:     (32) expand
-  | | |
+  | ~  user:        test
+  |    date:        Thu Jan 01 00:00:33 1970 +0000
+  |    summary:     (33) head
+  |
+  o    changeset:   32:d06dffa21a31
+  |\   parent:      27:886ed638191b
+  ~ ~  parent:      31:621d83e11f67
+       user:        test
+       date:        Thu Jan 01 00:00:32 1970 +0000
+       summary:     (32) expand
+  
 
 Test log -G options
 
@@ -1796,8 +1796,10 @@ Cannot compare with log --follow-first FILE as it never worked
   $ hg log -G --follow-first e --template '{rev} {desc|firstline}\n'
   @    6 merge 5 and 4
   |\
-  o |  5 add another e
-  | |
+  | ~
+  o  5 add another e
+  |
+  ~
 
 Test --copies
 
@@ -1876,23 +1878,23 @@ Test --patch and --stat with --follow and --follow-first
   $ hg log -G --git --patch b
   o  changeset:   1:216d4c92cf98
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     copy a b
-  |
-  |  diff --git a/a b/b
-  |  copy from a
-  |  copy to b
-  |
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     copy a b
+  
+     diff --git a/a b/b
+     copy from a
+     copy to b
+  
 
   $ hg log -G --git --stat b
   o  changeset:   1:216d4c92cf98
   |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     copy a b
-  |
-  |   b |  0
-  |   1 files changed, 0 insertions(+), 0 deletions(-)
-  |
+  ~  date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     copy a b
+  
+      b |  0
+      1 files changed, 0 insertions(+), 0 deletions(-)
+  
 
   $ hg log -G --git --patch --follow b
   o  changeset:   1:216d4c92cf98
@@ -1939,32 +1941,32 @@ Test --patch and --stat with --follow and --follow-first
   $ hg log -G --git --patch --follow-first e
   @    changeset:   6:fc281d8ff18d
   |\   tag:         tip
-  | |  parent:      5:99b31f1c2782
-  | |  parent:      4:17d952250a9d
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge 5 and 4
-  | |
-  | |  diff --git a/e b/e
-  | |  --- a/e
-  | |  +++ b/e
-  | |  @@ -1,1 +1,1 @@
-  | |  -ee
-  | |  +merge
-  | |
-  o |  changeset:   5:99b31f1c2782
-  | |  parent:      3:5918b8d165d1
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add another e
-  | |
-  | |  diff --git a/e b/e
-  | |  new file mode 100644
-  | |  --- /dev/null
-  | |  +++ b/e
-  | |  @@ -0,0 +1,1 @@
-  | |  +ee
-  | |
+  | ~  parent:      5:99b31f1c2782
+  |    parent:      4:17d952250a9d
+  |    user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     merge 5 and 4
+  |
+  |    diff --git a/e b/e
+  |    --- a/e
+  |    +++ b/e
+  |    @@ -1,1 +1,1 @@
+  |    -ee
+  |    +merge
+  |
+  o  changeset:   5:99b31f1c2782
+  |  parent:      3:5918b8d165d1
+  ~  user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add another e
+  
+     diff --git a/e b/e
+     new file mode 100644
+     --- /dev/null
+     +++ b/e
+     @@ -0,0 +1,1 @@
+     +ee
+  
 
 Test old-style --rev
 
@@ -2385,6 +2387,7 @@ working-directory revision
   |
   @  3:5918b8d165d1
   |
+  ~
 
 node template with changeset_printer:
 
@@ -2393,8 +2396,10 @@ node template with changeset_printer:
   |
   6    6:fc281d8ff18d
   |\
-  5 |  5:99b31f1c2782
-  | |
+  | ~
+  5  5:99b31f1c2782
+  |
+  ~
 
 node template with changeset_templater (shared cache variable):
 
@@ -2404,8 +2409,10 @@ node template with changeset_templater (shared cache variable):
   |
   #    6 foo-bar+0
   |\
-  o |  5 null+5
-  | |
+  | ~
+  o  5 null+5
+  |
+  ~
 
 label() should just work in node template:
 
@@ -2413,6 +2420,7 @@ label() should just work in node template:
   > --config ui.graphnodetemplate='{label("branch.{branch}", rev)}'
   [branch.default|7]  [log.node|7:02dbb8e276b8]
   |
+  ~
 
   $ cd ..
 

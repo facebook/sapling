@@ -156,11 +156,11 @@ Verify we duplicate existing copies, instead of detecting them
 
   $ hg log -G -f b
   @  changeset:   3:76024fb4b05b
-  |  tag:         tip
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     copy a->b (2)
-  |
+  :  tag:         tip
+  :  user:        test
+  :  date:        Thu Jan 01 00:00:00 1970 +0000
+  :  summary:     copy a->b (2)
+  :
   o  changeset:   0:ac82d8b1f7c4
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

@@ -33,7 +33,7 @@ GRANDPARENT = 'G'
 MISSINGPARENT = 'M'
 # Style of line to draw. None signals a line that ends and is removed at this
 # point.
-EDGES = {PARENT: '|', GRANDPARENT: '|', MISSINGPARENT: '|'}
+EDGES = {PARENT: '|', GRANDPARENT: ':', MISSINGPARENT: None}
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
     """Yield revisions from heads to roots one (topo) branch at a time.

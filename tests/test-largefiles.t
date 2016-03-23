@@ -931,6 +931,7 @@ log with both --follow and --patch
   $ hg log -Gqf sub2/large7
   @  7:daea875e9014
   |
+  ~
   $ cd ..
 
 Test log from outside repo
@@ -1285,13 +1286,14 @@ Log on largefiles
   4:74c02385b94c  move files
   $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub/large4
   o  8:a381d2c8c80e  modify normal file and largefile in repo b
-  |
+  :
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
   |
   o  4:74c02385b94c  move files
   |
+  ~
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' sub/large4
   8:a381d2c8c80e  modify normal file and largefile in repo b
   6:4355d653f84f  edit files yet again
@@ -1299,13 +1301,14 @@ Log on largefiles
   4:74c02385b94c  move files
   $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub/large4
   o  8:a381d2c8c80e  modify normal file and largefile in repo b
-  |
+  :
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
   |
   o  4:74c02385b94c  move files
   |
+  ~
 
 - .hglf only matches largefiles, without .hglf it matches 9 bco sub/normal
   $ hg log --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub
@@ -1317,13 +1320,13 @@ Log on largefiles
   0:30d30fe6a5be  add files
   $ hg log -G --template '{rev}:{node|short}  {desc|firstline}\n' .hglf/sub
   o  8:a381d2c8c80e  modify normal file and largefile in repo b
-  |
+  :
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
   |
   o  4:74c02385b94c  move files
-  |
+  :
   o  1:ce8896473775  edit files
   |
   o  0:30d30fe6a5be  add files
@@ -1340,13 +1343,13 @@ Log on largefiles
   @  9:598410d3eb9a  modify normal file largefile in repo d
   |
   o  8:a381d2c8c80e  modify normal file and largefile in repo b
-  |
+  :
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
   |
   o  4:74c02385b94c  move files
-  |
+  :
   o  1:ce8896473775  edit files
   |
   o  0:30d30fe6a5be  add files
@@ -1364,13 +1367,13 @@ Log on largefiles
   @  9:598410d3eb9a  modify normal file largefile in repo d
   |
   o  8:a381d2c8c80e  modify normal file and largefile in repo b
-  |
+  :
   o  6:4355d653f84f  edit files yet again
   |
   o  5:9d5af5072dbd  edit files again
   |
   o  4:74c02385b94c  move files
-  |
+  :
   o  1:ce8896473775  edit files
   |
   o  0:30d30fe6a5be  add files

@@ -371,6 +371,7 @@ More source changes
   |/
   o  6 0613c8e59a3d (public) "6: change a" files: a
   |
+  ~
   $ cd ..
 
   $ hg convert --filemap filemap source dest --config convert.hg.revs=3:

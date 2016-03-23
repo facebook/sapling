@@ -540,10 +540,10 @@ Amend with no files changes
   |
   | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
   | |    fork
-  | |
-  o |  11   3334b7925910   1970-01-01 00:00 +0000   test
-  | |    a''
-  | |
+  | ~
+  o  11   3334b7925910   1970-01-01 00:00 +0000   test
+  |    a''
+  ~
   $ hg log -Gl 4 --hidden --style=compact
   @  14[tip]:11   b650e6ee8614   1970-01-01 00:00 +0000   test
   |    babar
@@ -553,10 +553,10 @@ Amend with no files changes
   |
   | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
   | |    fork
-  | |
-  o |  11   3334b7925910   1970-01-01 00:00 +0000   test
-  | |    a''
-  | |
+  | ~
+  o  11   3334b7925910   1970-01-01 00:00 +0000   test
+  |    a''
+  ~
 
 Amend with files changes
 
@@ -580,10 +580,10 @@ ride of)
   |
   | o  12:0   2647734878ef   1970-01-01 00:00 +0000   test
   | |    fork
-  | |
-  o |  11   3334b7925910   1970-01-01 00:00 +0000   test
-  | |    a''
-  | |
+  | ~
+  o  11   3334b7925910   1970-01-01 00:00 +0000   test
+  |    a''
+  ~
 
 
 Test that amend does not make it easy to create obsolescence cycle
