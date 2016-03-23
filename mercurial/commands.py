@@ -3029,6 +3029,7 @@ def debuglocks(ui, repo, **opts):
          ('', 'record-parents', False,
           _('record parent information for the precursor')),
          ('r', 'rev', [], _('display markers relevant to REV')),
+         ('', 'index', False, _('display index of the marker')),
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT ...]]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
@@ -3091,8 +3092,9 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         else:
             markers = obsolete.getmarkers(repo)
 
-        for m in markers:
-            cmdutil.showmarker(ui, m)
+        for i, m in enumerate(markers):
+            ind = i if opts.get('index') else None
+            cmdutil.showmarker(ui, m, index=ind)
 
 @command('debugpathcomplete',
          [('f', 'full', None, _('complete an entire path')),

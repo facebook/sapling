@@ -1597,10 +1597,12 @@ def show_changeset(ui, repo, opts, buffered=False):
         raise error.Abort(inst.args[0])
     return t
 
-def showmarker(ui, marker):
+def showmarker(ui, marker, index=None):
     """utility function to display obsolescence marker in a readable way
 
     To be used by debug function."""
+    if index is not None:
+        ui.write("%i " % index)
     ui.write(hex(marker.precnode()))
     for repl in marker.succnodes():
         ui.write(' ')
