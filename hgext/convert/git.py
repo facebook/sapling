@@ -30,23 +30,6 @@ class convert_git(converter_source, commandline):
     # cannot remove environment variable. Just assume none have
     # both issues.
     if util.safehasattr(os, 'unsetenv'):
-        def gitopen(self, s, err=None):
-            prevgitdir = os.environ.get('GIT_DIR')
-            os.environ['GIT_DIR'] = self.path
-            try:
-                if err == subprocess.PIPE:
-                    (stdin, stdout, stderr) = util.popen3(s)
-                    return stdout
-                elif err == subprocess.STDOUT:
-                    return self.popen_with_stderr(s)
-                else:
-                    return util.popen(s, 'rb')
-            finally:
-                if prevgitdir is None:
-                    del os.environ['GIT_DIR']
-                else:
-                    os.environ['GIT_DIR'] = prevgitdir
-
         def gitpipe(self, s):
             prevgitdir = os.environ.get('GIT_DIR')
             os.environ['GIT_DIR'] = self.path
@@ -59,15 +42,6 @@ class convert_git(converter_source, commandline):
                     os.environ['GIT_DIR'] = prevgitdir
 
     else:
-        def gitopen(self, s, err=None):
-            if err == subprocess.PIPE:
-                (sin, so, se) = util.popen3('GIT_DIR=%s %s' % (self.path, s))
-                return so
-            elif err == subprocess.STDOUT:
-                    return self.popen_with_stderr(s)
-            else:
-                return util.popen('GIT_DIR=%s %s' % (self.path, s), 'rb')
-
         def gitpipe(self, s):
             return util.popen3('GIT_DIR=%s %s' % (self.path, s))
 
@@ -85,16 +59,6 @@ class convert_git(converter_source, commandline):
 
     def gitrunlines(self, *args, **kwargs):
         return self._gitcmd(self.runlines, *args, **kwargs)
-
-    def popen_with_stderr(self, s):
-        p = subprocess.Popen(s, shell=True, bufsize=-1,
-                             close_fds=util.closefds,
-                             stdin=subprocess.PIPE,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             universal_newlines=False,
-                             env=None)
-        return p.stdout
 
     def gitread(self, s):
         fh = self.gitopen(s)
