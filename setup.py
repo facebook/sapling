@@ -32,6 +32,7 @@ setup(
         'gitlookup',
         'gitrevset',
         'inhibitwarn',
+        'logtoprocess',
         'manifestdiskcache',
         'mergedriver',
         'morestatus',
