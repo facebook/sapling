@@ -733,3 +733,77 @@ bundle single branch
   $ hg bundle -r 'public()' no-output.hg
   abort: no commits to bundle
   [255]
+
+  $ cd ..
+
+When user merges to the revision existing only in the bundle,
+it should show warning that second parent of the working
+directory does not exist
+
+  $ hg init update2bundled
+  $ cd update2bundled
+  $ cat <<EOF >> .hg/hgrc
+  > [extensions]
+  > strip =
+  > EOF
+  $ echo "aaa" >> a
+  $ hg commit -A -m 0
+  adding a
+  $ echo "bbb" >> b
+  $ hg commit -A -m 1
+  adding b
+  $ echo "ccc" >> c
+  $ hg commit -A -m 2
+  adding c
+  $ hg update -r 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo "ddd" >> d
+  $ hg commit -A -m 3
+  adding d
+  created new head
+  $ hg update -r 2
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G
+  o  changeset:   3:8bd3e1f196af
+  |  tag:         tip
+  |  parent:      1:a01eca7af26d
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     3
+  |
+  | @  changeset:   2:4652c276ac4f
+  |/   user:        test
+  |    date:        Thu Jan 01 00:00:00 1970 +0000
+  |    summary:     2
+  |
+  o  changeset:   1:a01eca7af26d
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     1
+  |
+  o  changeset:   0:4fe08cd4693e
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+  $ hg bundle --base 1 -r 3 ../update2bundled.hg
+  1 changesets found
+  $ hg strip -r 3
+  saved backup bundle to $TESTTMP/update2bundled/.hg/strip-backup/8bd3e1f196af-017e56d8-backup.hg (glob)
+  $ hg merge -R ../update2bundled.hg -r 3
+  setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+
+When user updates to the revision existing only in the bundle,
+it should show warning
+
+  $ hg update -R ../update2bundled.hg --clean -r 3
+  setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
+When user updates to the revision existing in the local repository
+the warning shouldn't be emitted
+
+  $ hg update -R ../update2bundled.hg -r 0
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved

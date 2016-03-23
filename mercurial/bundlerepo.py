@@ -32,6 +32,7 @@ from . import (
     localrepo,
     manifest,
     mdiff,
+    node as nodemod,
     pathutil,
     phases,
     revlog,
@@ -385,6 +386,16 @@ class bundlerepository(localrepo.localrepository):
     def getcwd(self):
         return os.getcwd() # always outside the repo
 
+    # Check if parents exist in localrepo before setting
+    def setparents(self, p1, p2=nullid):
+        p1rev = self.changelog.rev(p1)
+        p2rev = self.changelog.rev(p2)
+        msg = _("setting parent to node %s that only exists in the bundle\n")
+        if self.changelog.repotiprev < p1rev:
+            self.ui.warn(msg % nodemod.hex(p1))
+        if self.changelog.repotiprev < p2rev:
+            self.ui.warn(msg % nodemod.hex(p2))
+        return super(bundlerepository, self).setparents(p1, p2)
 
 def instance(ui, path, create):
     if create:
