@@ -115,13 +115,13 @@ class convert_git(converter_source, commandline):
         if similarity < 0 or similarity > 100:
             raise error.Abort(_('similarity must be between 0 and 100'))
         if similarity > 0:
-            self.simopt = '-C%d%%' % similarity
+            self.simopt = ['-C%d%%' % similarity]
             findcopiesharder = ui.configbool('convert', 'git.findcopiesharder',
                                              False)
             if findcopiesharder:
-                self.simopt += ' --find-copies-harder'
+                self.simopt.append('--find-copies-harder')
         else:
-            self.simopt = ''
+            self.simopt = []
 
         checktool('git', 'git')
 
@@ -136,14 +136,14 @@ class convert_git(converter_source, commandline):
 
     def getheads(self):
         if not self.revs:
-            heads, ret = self.gitread('git rev-parse --branches --remotes')
-            heads = heads.splitlines()
-            if ret:
+            output, status = self.gitrun('rev-parse', '--branches', '--remotes')
+            heads = output.splitlines()
+            if status:
                 raise error.Abort(_('cannot retrieve git heads'))
         else:
             heads = []
             for rev in self.revs:
-                rawhead, ret = self.gitread("git rev-parse --verify %s" % rev)
+                rawhead, ret = self.gitrun('rev-parse', '--verify', rev)
                 heads.append(rawhead[:-1])
                 if ret:
                     raise error.Abort(_('cannot retrieve git head "%s"') % rev)
@@ -203,7 +203,7 @@ class convert_git(converter_source, commandline):
                 self.submodules.append(submodule(s['path'], '', s['url']))
 
     def retrievegitmodules(self, version):
-        modules, ret = self.gitread("git show %s:%s" % (version, '.gitmodules'))
+        modules, ret = self.gitrun('show', '%s:%s' % (version, '.gitmodules'))
         if ret:
             # This can happen if a file is in the repo that has permissions
             # 160000, but there is no .gitmodules file.
@@ -219,7 +219,7 @@ class convert_git(converter_source, commandline):
             return
 
         for m in self.submodules:
-            node, ret = self.gitread("git rev-parse %s:%s" % (version, m.path))
+            node, ret = self.gitrun('rev-parse', '%s:%s' % (version, m.path))
             if ret:
                 continue
             m.node = node.strip()
@@ -228,15 +228,17 @@ class convert_git(converter_source, commandline):
         if full:
             raise error.Abort(_("convert from git does not support --full"))
         self.modecache = {}
-        fh = self.gitopen("git diff-tree -z --root -m -r %s %s" % (
-            self.simopt, version))
+        cmd = ['diff-tree','-z', '--root', '-m', '-r'] + self.simopt + [version]
+        output, status = self.gitrun(*cmd)
+        if status:
+            raise error.Abort(_('cannot read changes in %s') % version)
         changes = []
         copies = {}
         seen = set()
         entry = None
         subexists = [False]
         subdeleted = [False]
-        difftree = fh.read().split('\x00')
+        difftree = output.split('\x00')
         lcount = len(difftree)
         i = 0
 
@@ -298,8 +300,6 @@ class convert_git(converter_source, commandline):
                     if f != '.gitmodules' and fdest != '.gitmodules':
                         copies[fdest] = f
             entry = None
-        if fh.close():
-            raise error.Abort(_('cannot read changes in %s') % version)
 
         if subexists[0]:
             if subdeleted[0]:
@@ -345,17 +345,23 @@ class convert_git(converter_source, commandline):
         return c
 
     def numcommits(self):
-        return len([None for _ in self.gitopen('git rev-list --all')])
+        output, ret = self.gitrunlines('rev-list', '--all')
+        if ret:
+            raise error.Abort(_('cannot retrieve number of commits in %s') \
+                              % self.path)
+        return len(output)
 
     def gettags(self):
         tags = {}
         alltags = {}
-        fh = self.gitopen('git ls-remote --tags "%s"' % self.path,
-                          err=subprocess.STDOUT)
+        output, status = self.gitrunlines('ls-remote', '--tags', self.path)
+
+        if status:
+            raise error.Abort(_('cannot read tags from %s') % self.path)
         prefix = 'refs/tags/'
 
         # Build complete list of tags, both annotated and bare ones
-        for line in fh:
+        for line in output:
             line = line.strip()
             if line.startswith("error:") or line.startswith("fatal:"):
                 raise error.Abort(_('cannot read tags from %s') % self.path)
@@ -363,8 +369,6 @@ class convert_git(converter_source, commandline):
             if not tag.startswith(prefix):
                 continue
             alltags[tag[len(prefix):]] = node
-        if fh.close():
-            raise error.Abort(_('cannot read tags from %s') % self.path)
 
         # Filter out tag objects for annotated tag refs
         for tag in alltags:
@@ -381,18 +385,20 @@ class convert_git(converter_source, commandline):
     def getchangedfiles(self, version, i):
         changes = []
         if i is None:
-            fh = self.gitopen("git diff-tree --root -m -r %s" % version)
-            for l in fh:
+            output, status = self.gitrunlines('diff-tree', '--root', '-m',
+                                              '-r', version)
+            if status:
+                raise error.Abort(_('cannot read changes in %s') % version)
+            for l in output:
                 if "\t" not in l:
                     continue
                 m, f = l[:-1].split("\t")
                 changes.append(f)
         else:
-            fh = self.gitopen('git diff-tree --name-only --root -r %s '
-                              '"%s^%s" --' % (version, version, i + 1))
-            changes = [f.rstrip('\n') for f in fh]
-        if fh.close():
-            raise error.Abort(_('cannot read changes in %s') % version)
+            output, status = self.gitrunlines('diff-tree', '--name-only',
+                                              '--root', '-r', version,
+                                              '%s^%s' % (version, i + 1), '--')
+            changes = [f.rstrip('\n') for f in output]
 
         return changes
 
@@ -412,8 +418,8 @@ class convert_git(converter_source, commandline):
         ])
 
         try:
-            fh = self.gitopen('git show-ref', err=subprocess.PIPE)
-            for line in fh:
+            output, status = self.gitrunlines('show-ref')
+            for line in output:
                 line = line.strip()
                 rev, name = line.split(None, 1)
                 # Process each type of branch
