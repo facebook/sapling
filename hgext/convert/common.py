@@ -341,6 +341,9 @@ class commandline(object):
     def _run2(self, cmd, *args, **kwargs):
         return self._dorun(util.popen2, cmd, *args, **kwargs)
 
+    def _run3(self, cmd, *args, **kwargs):
+        return self._dorun(util.popen3, cmd, *args, **kwargs)
+
     def _dorun(self, openfunc, cmd,  *args, **kwargs):
         cmdline = self._cmdline(cmd, *args, **kwargs)
         self.ui.debug('running: %s\n' % (cmdline,))

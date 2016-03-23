@@ -29,21 +29,6 @@ class convert_git(converter_source, commandline):
     # Windows does not support GIT_DIR= construct while other systems
     # cannot remove environment variable. Just assume none have
     # both issues.
-    if util.safehasattr(os, 'unsetenv'):
-        def gitpipe(self, s):
-            prevgitdir = os.environ.get('GIT_DIR')
-            os.environ['GIT_DIR'] = self.path
-            try:
-                return util.popen3(s)
-            finally:
-                if prevgitdir is None:
-                    del os.environ['GIT_DIR']
-                else:
-                    os.environ['GIT_DIR'] = prevgitdir
-
-    else:
-        def gitpipe(self, s):
-            return util.popen3('GIT_DIR=%s %s' % (self.path, s))
 
     def _gitcmd(self, cmd, *args, **kwargs):
         return cmd('--git-dir=%s' % self.path, *args, **kwargs)
@@ -59,6 +44,9 @@ class convert_git(converter_source, commandline):
 
     def gitrunlines(self, *args, **kwargs):
         return self._gitcmd(self.runlines, *args, **kwargs)
+
+    def gitpipe(self, *args, **kwargs):
+        return self._gitcmd(self._run3, *args, **kwargs)
 
     def gitread(self, s):
         fh = self.gitopen(s)
@@ -92,7 +80,7 @@ class convert_git(converter_source, commandline):
         self.path = path
         self.submodules = []
 
-        self.catfilepipe = self.gitpipe('git cat-file --batch')
+        self.catfilepipe = self.gitpipe('cat-file', '--batch')
 
     def after(self):
         for f in self.catfilepipe:
