@@ -11,7 +11,7 @@ from mercurial import util, config, error
 from mercurial.node import hex, nullid
 from mercurial.i18n import _
 
-from common import NoRepo, commit, converter_source, checktool
+from common import NoRepo, commit, converter_source, checktool, commandline
 
 class submodule(object):
     def __init__(self, path, node, url):
@@ -25,7 +25,7 @@ class submodule(object):
     def hgsubstate(self):
         return "%s %s" % (self.node, self.path)
 
-class convert_git(converter_source):
+class convert_git(converter_source, commandline):
     # Windows does not support GIT_DIR= construct while other systems
     # cannot remove environment variable. Just assume none have
     # both issues.
@@ -71,6 +71,21 @@ class convert_git(converter_source):
         def gitpipe(self, s):
             return util.popen3('GIT_DIR=%s %s' % (self.path, s))
 
+    def _gitcmd(self, cmd, *args, **kwargs):
+        return cmd('--git-dir=%s' % self.path, *args, **kwargs)
+
+    def gitrun0(self, *args, **kwargs):
+        return self._gitcmd(self.run0, *args, **kwargs)
+
+    def gitrun(self, *args, **kwargs):
+        return self._gitcmd(self.run, *args, **kwargs)
+
+    def gitrunlines0(self, *args, **kwargs):
+        return self._gitcmd(self.runlines0, *args, **kwargs)
+
+    def gitrunlines(self, *args, **kwargs):
+        return self._gitcmd(self.runlines, *args, **kwargs)
+
     def popen_with_stderr(self, s):
         p = subprocess.Popen(s, shell=True, bufsize=-1,
                              close_fds=util.closefds,
@@ -88,6 +103,7 @@ class convert_git(converter_source):
 
     def __init__(self, ui, path, revs=None):
         super(convert_git, self).__init__(ui, path, revs=revs)
+        commandline.__init__(self, ui, 'git')
 
         if os.path.isdir(path + "/.git"):
             path += "/.git"
