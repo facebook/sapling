@@ -221,3 +221,25 @@ Convert from specified revs
   |/
   o  0 "0: add a b f" files: a b f
   
+Convert in multiple steps that doesn't overlap - the link to the parent is
+currently missing
+
+  $ hg convert --config convert.hg.revs=::1 source multistep
+  initializing destination multistep repository
+  scanning source...
+  sorting...
+  converting...
+  1 0: add a b f
+  0 1: add c, move f to d
+  $ hg convert --config convert.hg.revs=2 source multistep
+  scanning source...
+  sorting...
+  converting...
+  0 2: copy e from a, change b
+  $ glog multistep
+  o  2 "2: copy e from a, change b" files: a b c d e
+  
+  o  1 "1: add c, move f to d" files: c d f
+  |
+  o  0 "0: add a b f" files: a b f
+  
