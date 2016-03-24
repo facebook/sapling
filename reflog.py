@@ -200,7 +200,10 @@ class reflog(object):
         self.repo = repo
         self.command = command
         self.user = getpass.getuser()
-        self.path = repo.join('reflog')
+        if repo.shared():
+            self.path = repo.sharedpath + "/reflog"
+        else:
+            self.path = repo.join('reflog')
 
     def __iter__(self):
         return self._read()

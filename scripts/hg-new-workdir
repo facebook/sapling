@@ -58,4 +58,3 @@ echo "Updating new repository..."
 hg --cwd "$dst" update $(hg --cwd "$src" log -r . -T '{node}')
 
 echo "Set up new Mercurial Working Directory in '$dst' based on '$src'..."
-
