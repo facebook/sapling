@@ -8,18 +8,13 @@ changeset_debug = '{fullcset}{branches}{bookmarks}{tags}{lphase}{parents}{manife
 # Override the file templates
 lfiles = '{if(files,
               label('ui.note log.files',
-                    'files:\n'))}{lfile_mods}{lfile_adds}{lfile_copies_switch}{lfile_dels}'
+                    'files:\n'))}{lfile_mods}{lfile_adds}{lfile_dels}'
 
-# Exclude copied files, will display those in lfile_copies_switch
-lfile_adds  = '{file_adds % "{ifcontains(file, file_copies_switch,
-                                         '',
-                                         '{lfile_add}')}"}'
+lfile_adds = '{file_adds % "{lfile_add}{lfile_src}"}'
+lfile_mods = '{file_mods % "{lfile_mod}{lfile_src}"}'
 lfile_add = '{label("status.added", "A {file}\n")}'
-
-lfile_copies_switch = '{file_copies_switch % "{lfile_copy_orig}{lfile_copy_dest}"}'
-lfile_copy_orig = '{label("status.added", "A {name}\n")}'
-lfile_copy_dest = '{label("status.copied", "  {source}\n")}'
-
-lfile_mods = '{file_mods % "{label('status.modified', 'M {file}\n')}"}'
+lfile_mod = '{label("status.modified", "M {file}\n")}'
+lfile_src = '{ifcontains(file, file_copies_switch,
+              label("status.copied", "  {get(file_copies_switch, file)}\n"))}'
 
 lfile_dels = '{file_dels % "{label('status.removed', 'R {file}\n')}"}'

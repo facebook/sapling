@@ -513,6 +513,18 @@ using ui.statuscopies setting
   M a
   R b
 
+using log status template (issue5155)
+  $ hg log -Tstatus -r 'wdir()' -C
+  changeset:   2147483647:ffffffffffff
+  parent:      0:8c55c58b4c0e
+  user:        test
+  date:        * (glob)
+  files:
+  M a
+    b
+  R b
+  
+
 Other "bug" highlight, the revision status does not report the copy information.
 This is buggy behavior.
 
@@ -520,5 +532,18 @@ This is buggy behavior.
   $ hg st --copies --change .
   M a
   R b
+
+using log status template, the copy information is displayed correctly.
+  $ hg log -Tstatus -r. -C
+  changeset:   1:6685fde43d21
+  tag:         tip
+  user:        test
+  date:        * (glob)
+  summary:     blah
+  files:
+  M a
+    b
+  R b
+  
 
   $ cd ..
