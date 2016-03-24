@@ -7,7 +7,7 @@ hg debuginstall
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
-  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
   checking username (test)
   no problems detected
 
@@ -18,7 +18,7 @@ hg debuginstall JSON
     "defaulttemplate": "*mercurial?templates?map-cmdline.default", (glob)
     "defaulttemplateerror": null,
     "defaulttemplatenotfound": "default",
-    "editor": "*python* -c \"import sys; sys.exit(0)\"", (glob)
+    "editor": "* -c \"import sys; sys.exit(0)\"", (glob)
     "editornotfound": false,
     "encoding": "ascii",
     "encodingerror": null,
@@ -26,7 +26,7 @@ hg debuginstall JSON
     "hgmodules": "*mercurial", (glob)
     "problems": 0,
     "pythonexe": "*", (glob)
-    "pythonlib": "*python*", (glob)
+    "pythonlib": "*", (glob)
     "pythonver": "*.*.*", (glob)
     "templatedirs": "*mercurial?templates", (glob)
     "username": "test",
@@ -44,7 +44,7 @@ hg debuginstall with no username
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
-  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
   checking username...
    no username supplied
    (specify a username in your configuration file)
@@ -65,7 +65,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   checking installed modules (*mercurial)... (glob)
   checking templates (*mercurial?templates)... (glob)
   checking default template (*mercurial?templates?map-cmdline.default) (glob)
-  checking commit editor... (*python* -c "import sys; sys.exit(0)") (glob)
+  checking commit editor... (* -c "import sys; sys.exit(0)") (glob)
   checking username (test)
   no problems detected
 
