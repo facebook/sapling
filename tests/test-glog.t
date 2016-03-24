@@ -2420,7 +2420,7 @@ change graph edge styling
 
   $ cd repo
   $ cat << EOF >> $HGRCPATH
-  > [ui]
+  > [experimental]
   > graphstyle.parent = |
   > graphstyle.grandparent = :
   > graphstyle.missing =

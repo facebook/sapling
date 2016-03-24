@@ -2227,8 +2227,9 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
         'missing': graphmod.MISSINGPARENT
     }
     for name, key in edgetypes.items():
-        # experimental config: ui.graphstyle.*
-        styles[key] = ui.config('ui', 'graphstyle.%s' % name, styles[key])
+        # experimental config: experimental.graphstyle.*
+        styles[key] = ui.config('experimental', 'graphstyle.%s' % name,
+                                styles[key])
         if not styles[key]:
             styles[key] = None
     for rev, type, ctx, parents in dag:
