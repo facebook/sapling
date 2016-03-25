@@ -1559,23 +1559,22 @@ def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
     cg = None
     if kwargs.get('cg', True):
         # build changegroup bundle here.
-        version = None
+        version = '01'
         cgversions = b2caps.get('changegroup')
-        getcgkwargs = {}
         if cgversions:  # 3.1 and 3.2 ship with an empty value
             cgversions = [v for v in cgversions
                           if v in changegroup.supportedoutgoingversions(repo)]
             if not cgversions:
                 raise ValueError(_('no common changegroup version'))
-            version = getcgkwargs['version'] = max(cgversions)
+            version = max(cgversions)
         outgoing = changegroup.computeoutgoing(repo, heads, common)
         cg = changegroup.getlocalchangegroupraw(repo, source, outgoing,
                                                 bundlecaps=bundlecaps,
-                                                **getcgkwargs)
+                                                version=version)
 
     if cg:
         part = bundler.newpart('changegroup', data=cg)
-        if version is not None:
+        if cgversions:
             part.addparam('version', version)
         part.addparam('nbchanges', str(len(outgoing.missing)), mandatory=False)
         if 'treemanifest' in repo.requirements:
