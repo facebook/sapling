@@ -662,7 +662,7 @@ class ui(object):
         "cmdname.type" is recommended. For example, status issues
         a label of "status.modified" for modified files.
         '''
-        if self._buffers:
+        if self._buffers and not opts.get('prompt', False):
             self._buffers[-1].extend(a for a in args)
         else:
             self._progclear()
@@ -842,7 +842,7 @@ class ui(object):
 
         # call write() so output goes through subclassed implementation
         # e.g. color extension on Windows
-        self.write(prompt)
+        self.write(prompt, prompt=True)
 
         # instead of trying to emulate raw_input, swap (self.fin,
         # self.fout) with (sys.stdin, sys.stdout)

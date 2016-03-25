@@ -424,7 +424,7 @@ class colorui(uimod.ui):
             return super(colorui, self).write(*args, **opts)
 
         label = opts.get('label', '')
-        if self._buffers:
+        if self._buffers and not opts.get('prompt', False):
             if self._bufferapplylabels:
                 self._buffers[-1].extend(self.label(a, label) for a in args)
             else:
