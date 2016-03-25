@@ -701,23 +701,20 @@ def _pushb2ctx(pushop, bundler):
     _pushb2ctxcheckheads(pushop, bundler)
 
     b2caps = bundle2.bundle2caps(pushop.remote)
-    version = None
+    version = '01'
     cgversions = b2caps.get('changegroup')
-    if not cgversions:  # 3.1 and 3.2 ship with an empty value
-        cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
-                                                pushop.outgoing)
-    else:
+    if cgversions:  # 3.1 and 3.2 ship with an empty value
         cgversions = [v for v in cgversions
                       if v in changegroup.supportedoutgoingversions(
                           pushop.repo)]
         if not cgversions:
             raise ValueError(_('no common changegroup version'))
         version = max(cgversions)
-        cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
-                                                pushop.outgoing,
-                                                version=version)
+    cg = changegroup.getlocalchangegroupraw(pushop.repo, 'push',
+                                            pushop.outgoing,
+                                            version=version)
     cgpart = bundler.newpart('changegroup', data=cg)
-    if version is not None:
+    if cgversions:
         cgpart.addparam('version', version)
     if 'treemanifest' in pushop.repo.requirements:
         cgpart.addparam('treemanifest', '1')
