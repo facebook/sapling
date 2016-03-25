@@ -774,11 +774,11 @@ Clone from repo with content should result in shared store being created
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 The shared repo should have been created
 
@@ -804,8 +804,6 @@ Clone with existing share dir should result in pull + share
 
   $ hg --config share.pool=share clone source1b share-dest1b
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   adding changesets
   adding manifests
@@ -813,6 +811,8 @@ Clone with existing share dir should result in pull + share
   added 4 changesets with 4 changes to 1 files (+4 heads)
   adding remote bookmark head1
   adding remote bookmark head2
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls share
   b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1
@@ -831,6 +831,17 @@ Default path should be source, not share.
   $ hg -R share-dest1b config paths.default
   $TESTTMP/source1a (glob)
 
+Checked out revision should be head of default branch
+
+  $ hg -R share-dest1b log -r .
+  changeset:   4:99f71071f117
+  bookmark:    head2
+  parent:      0:b5f04eac9d8f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     head2
+  
+
 Clone from unrelated repo should result in new share
 
   $ hg --config share.pool=share clone source2 share-dest2
@@ -840,10 +851,10 @@ Clone from unrelated repo should result in new share
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls share
   22aeff664783fd44c6d9b435618173c118c3448e
@@ -858,11 +869,11 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls shareremote
   195bb1fcdb595c14a6c13e0269129ed78f6debde
@@ -874,12 +885,12 @@ remote naming mode works as advertised
   adding manifests
   adding file changes
   added 6 changesets with 6 changes to 1 files (+4 heads)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
   adding remote bookmark head1
   adding remote bookmark head2
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ ls shareremote
   195bb1fcdb595c14a6c13e0269129ed78f6debde
@@ -893,10 +904,10 @@ request to clone a single revision is respected in sharing mode
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   no changes found
   adding remote bookmark head1
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R share-1arev log -G
   @  changeset:   1:4a8dc1ab4c13
@@ -916,8 +927,6 @@ making another clone should only pull down requested rev
 
   $ hg --config share.pool=sharerevs clone -r 99f71071f117 source1b share-1brev
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   adding changesets
   adding manifests
@@ -925,9 +934,11 @@ making another clone should only pull down requested rev
   added 1 changesets with 1 changes to 1 files (+1 heads)
   adding remote bookmark head1
   adding remote bookmark head2
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R share-1brev log -G
-  o  changeset:   2:99f71071f117
+  @  changeset:   2:99f71071f117
   |  bookmark:    head2
   |  tag:         tip
   |  parent:      0:b5f04eac9d8f
@@ -935,7 +946,7 @@ making another clone should only pull down requested rev
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     head2
   |
-  | @  changeset:   1:4a8dc1ab4c13
+  | o  changeset:   1:4a8dc1ab4c13
   |/   bookmark:    head1
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
@@ -955,9 +966,9 @@ Request to clone a single branch is respected in sharing mode
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
+  no changes found
   updating working directory
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  no changes found
 
   $ hg -R share-1bbranch1 log -G
   o  changeset:   1:5f92a6c1a1b1
@@ -975,13 +986,13 @@ Request to clone a single branch is respected in sharing mode
 
   $ hg --config share.pool=sharebranch clone -b branch2 source1b share-1bbranch2
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files (+1 heads)
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg -R share-1bbranch2 log -G
   o  changeset:   2:6bacf4683960
@@ -1056,18 +1067,18 @@ Cloning into pooled storage doesn't race (issue5104)
   adding manifests
   adding file changes
   added 3 changesets with 3 changes to 1 files
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cat race2.log
   (sharing from existing pooled repository b5f04eac9d8f7a6a9fcb070243cccea7dc5ea0c1)
-  updating working directory
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   waiting for lock on repository share-destrace2 held by * (glob)
   got lock after \d+ seconds (re)
   searching for changes
   no changes found
   adding remote bookmark bookA
+  updating working directory
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
