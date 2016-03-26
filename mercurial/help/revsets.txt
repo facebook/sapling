@@ -66,7 +66,7 @@ existing predicates or other aliases. An alias definition looks like::
   <alias> = <definition>
 
 in the ``revsetalias`` section of a Mercurial configuration file. Arguments
-of the form `$1`, `$2`, etc. are substituted from the alias into the
+of the form `a1`, `a2`, etc. are substituted from the alias into the
 definition.
 
 For example,
@@ -75,8 +75,8 @@ For example,
 
   [revsetalias]
   h = heads()
-  d($1) = sort($1, date)
-  rs($1, $2) = reverse(sort($1, $2))
+  d(s) = sort(s, date)
+  rs(s, k) = reverse(sort(s, k))
 
 defines three aliases, ``h``, ``d``, and ``rs``. ``rs(0:tip, author)`` is
 exactly equivalent to ``reverse(sort(0:tip, author))``.
@@ -85,14 +85,14 @@ An infix operator ``##`` can concatenate strings and identifiers into
 one string. For example::
 
   [revsetalias]
-  issue($1) = grep(r'\bissue[ :]?' ## $1 ## r'\b|\bbug\(' ## $1 ## r'\)')
+  issue(a1) = grep(r'\bissue[ :]?' ## a1 ## r'\b|\bbug\(' ## a1 ## r'\)')
 
 ``issue(1234)`` is equivalent to ``grep(r'\bissue[ :]?1234\b|\bbug\(1234\)')``
 in this case. This matches against all of "issue 1234", "issue:1234",
 "issue1234" and "bug(1234)".
 
 All other prefix, infix and postfix operators have lower priority than
-``##``. For example, ``$1 ## $2~2`` is equivalent to ``($1 ## $2)~2``.
+``##``. For example, ``a1 ## a2~2`` is equivalent to ``(a1 ## a2)~2``.
 
 Command line equivalents for :hg:`log`::
 
