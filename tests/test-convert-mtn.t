@@ -260,6 +260,9 @@ convert incrementally
   $ cd repo.mtn-hg
   $ hg up -C
   12 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  updated to a closed branch head, because all descendant heads are closed.
+  beware of re-opening closed head by subsequent commit here.
+  all heads for branch "com.selenic.test" are closed.
   $ glog
   @  14 "largefile" files: large-file
   |
