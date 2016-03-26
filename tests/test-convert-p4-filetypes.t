@@ -317,7 +317,7 @@ convert
   1 initial
   0 keywords
   $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=1 desc="keywords" tags="tip" files="crazy_symlink+k file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtext target_symlink target_symlink+k"
+  rev=1 desc="keywords" tags="tip" files="crazy_symlink+k file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_tempobj file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtempobj file_xtext target_symlink target_symlink+k"
   rev=0 desc="initial" tags="" files="file_binary file_binary+k file_binary+kx file_binary+x file_ctext file_cxtext file_ktext file_kxtext file_ltext file_symlink file_symlink+k file_text file_text+c file_text+d file_text+f file_text+k file_text+ko file_text+kx file_text+l file_text+m file_text+s2 file_text+w file_text+x file_ubinary file_uxbinary file_xbinary file_xltext file_xtext target_symlink target_symlink+k"
 
 revision 0
@@ -406,7 +406,7 @@ revision 0
 
 revision 1
   $ hg -R dst update 1
-  30 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  32 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ head dst/file_* | cat -v
   ==> dst/file_binary <==
   this is binary$Id$
@@ -516,6 +516,17 @@ revision 1
   
   ==> dst/file_symlink+k <==
   this is target symlink+k
+  $Id$
+  $Header$
+  $Date$
+  $DateTime$
+  $Change$
+  $File$
+  $Revision$
+  $Header$$Header$Header$
+  
+  ==> dst/file_tempobj <==
+  this is tempobj
   $Id$
   $Header$
   $Date$
@@ -703,6 +714,17 @@ revision 1
   
   ==> dst/file_xltext <==
   this is xltext
+  $Id$
+  $Header$
+  $Date$
+  $DateTime$
+  $Change$
+  $File$
+  $Revision$
+  $Header$$Header$Header$
+  
+  ==> dst/file_xtempobj <==
+  this is xtempobj
   $Id$
   $Header$
   $Date$
