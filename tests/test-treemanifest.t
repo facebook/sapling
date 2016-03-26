@@ -736,3 +736,9 @@ Packed bundle
   bundle requirements: generaldelta, revlogv1, treemanifest
   $ hg debugbundle --spec repo-packed.hg
   none-packed1;requirements%3Dgeneraldelta%2Crevlogv1%2Ctreemanifest
+
+Bundle with changegroup2 is not supported
+
+  $ hg -R deeprepo bundle --all -t v2 deeprepo.bundle
+  abort: repository does not support bundle version 02
+  [255]

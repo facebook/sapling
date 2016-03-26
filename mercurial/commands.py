@@ -1399,6 +1399,10 @@ def bundle(ui, repo, fname, dest=None, **opts):
         base = scmutil.revrange(repo, opts.get('base'))
     # TODO: get desired bundlecaps from command line.
     bundlecaps = None
+    if cgversion not in changegroup.supportedoutgoingversions(repo):
+        raise error.Abort(_("repository does not support bundle version %s") %
+                          cgversion)
+
     if base:
         if dest:
             raise error.Abort(_("--base is incompatible with specifying "
