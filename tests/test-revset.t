@@ -1590,6 +1590,7 @@ aliases:
 
   $ try m
   ('symbol', 'm')
+  * expanded:
   (func
     ('symbol', 'merge')
     None)
@@ -1610,6 +1611,7 @@ aliases:
   $ export HGPLAINEXCEPT
   $ try m
   ('symbol', 'm')
+  * expanded:
   (func
     ('symbol', 'merge')
     None)
@@ -1626,6 +1628,7 @@ aliases:
   (func
     ('symbol', 'p2')
     ('symbol', '.'))
+  * expanded:
   (func
     ('symbol', 'p1')
     ('symbol', '.'))
@@ -1648,6 +1651,7 @@ aliases:
   (func
     ('symbol', 'p2')
     ('symbol', '.'))
+  * expanded:
   (func
     ('symbol', 'p1')
     ('symbol', '.'))
@@ -1662,6 +1666,7 @@ test alias recursion
 
   $ try sincem
   ('symbol', 'sincem')
+  * expanded:
   (func
     ('symbol', 'descendants')
     (func
@@ -1697,6 +1702,7 @@ test infinite recursion
           ('symbol', '1')
           ('symbol', '2')))
       ('symbol', '3')))
+  * expanded:
   (or
     ('symbol', '3')
     (or
@@ -1721,6 +1727,7 @@ test nesting and variable passing
     (range
       ('symbol', '2')
       ('symbol', '5')))
+  * expanded:
   (func
     ('symbol', 'max')
     (range
@@ -1749,6 +1756,7 @@ test chained `or` operations are flattened at parsing phase
       (range
         ('symbol', '2')
         ('symbol', '3'))))
+  * expanded:
   (or
     (range
       ('symbol', '0')
@@ -1782,6 +1790,7 @@ far away.
     (range
       ('symbol', '2')
       ('symbol', '5')))
+  * expanded:
   (func
     ('symbol', 'descendants')
     (func
@@ -1829,6 +1838,7 @@ far away.
     (list
       ('string', 'foo')
       ('symbol', 'tip')))
+  * expanded:
   (or
     ('symbol', 'tip')
     (func
@@ -1848,6 +1858,7 @@ far away.
     (range
       ('symbol', '2')
       ('symbol', '5')))
+  * expanded:
   (func
     ('symbol', 'reverse')
     (func
@@ -1871,6 +1882,7 @@ far away.
         ('symbol', '2')
         ('symbol', '3'))
       ('symbol', 'date')))
+  * expanded:
   (func
     ('symbol', 'reverse')
     (func
@@ -1915,6 +1927,7 @@ far away.
       ('symbol', 'x')
       ('symbol', 'x')
       ('symbol', 'date')))
+  * expanded:
   (func
     ('symbol', 'reverse')
     (func
@@ -2134,6 +2147,7 @@ tests for concatenation of strings/symbols by "##"
         ('string', '5f5'))
       ('symbol', '1ee'))
     ('string', 'ce5'))
+  * concatenated:
   ('string', '2785f51eece5')
   * set:
   <baseset [0]>
@@ -2148,6 +2162,7 @@ tests for concatenation of strings/symbols by "##"
       ('string', '5f5')
       ('symbol', '1ee')
       ('string', 'ce5')))
+  * expanded:
   (_concat
     (_concat
       (_concat
@@ -2155,6 +2170,7 @@ tests for concatenation of strings/symbols by "##"
         ('string', '5f5'))
       ('symbol', '1ee'))
     ('string', 'ce5'))
+  * concatenated:
   ('string', '2785f51eece5')
   * set:
   <baseset [0]>
