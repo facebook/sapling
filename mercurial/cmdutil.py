@@ -1532,8 +1532,6 @@ class changeset_templater(changeset_printer):
         except KeyError as inst:
             msg = _("%s: no key named '%s'")
             raise error.Abort(msg % (self.t.mapfile, inst.args[0]))
-        except SyntaxError as inst:
-            raise error.Abort('%s: %s' % (self.t.mapfile, inst.args[0]))
 
 def gettemplate(ui, tmpl, style):
     """
@@ -1590,12 +1588,7 @@ def show_changeset(ui, repo, opts, buffered=False):
     if not tmpl and not mapfile:
         return changeset_printer(ui, repo, matchfn, opts, buffered)
 
-    try:
-        t = changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile,
-                                buffered)
-    except SyntaxError as inst:
-        raise error.Abort(inst.args[0])
-    return t
+    return changeset_templater(ui, repo, matchfn, opts, tmpl, mapfile, buffered)
 
 def showmarker(ui, marker, index=None):
     """utility function to display obsolescence marker in a readable way
@@ -2843,10 +2836,7 @@ def buildcommittemplate(repo, ctx, subs, extramsg, tmpl):
     ui = repo.ui
     tmpl, mapfile = gettemplate(ui, tmpl, None)
 
-    try:
-        t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
-    except SyntaxError as inst:
-        raise error.Abort(inst.args[0])
+    t = changeset_templater(ui, repo, None, {}, tmpl, mapfile, False)
 
     for k, v in repo.ui.configitems('committemplate'):
         if k != 'changeset':

@@ -1008,7 +1008,7 @@ Error if style missing value:
 
   $ echo 'changeset =' > t
   $ hg log --style t
-  abort: t:1: missing value
+  hg: parse error at t:1: missing value
   [255]
 
 Error if include fails:
@@ -2508,7 +2508,7 @@ Error on syntax:
 
   $ echo 'x = "f' >> t
   $ hg log
-  abort: t:3: unmatched quotes
+  hg: parse error at t:3: unmatched quotes
   [255]
 
   $ hg log -T '{date'

@@ -19,7 +19,6 @@ from mercurial import (
     cmdutil,
     commands,
     encoding,
-    error,
     patch,
     scmutil,
     util,
@@ -34,12 +33,7 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 def maketemplater(ui, repo, tmpl):
-    try:
-        t = cmdutil.changeset_templater(ui, repo, False, None, tmpl,
-                                        None, False)
-    except SyntaxError as inst:
-        raise error.Abort(inst.args[0])
-    return t
+    return cmdutil.changeset_templater(ui, repo, False, None, tmpl, None, False)
 
 def changedlines(ui, repo, ctx1, ctx2, fns):
     added, removed = 0, 0

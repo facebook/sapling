@@ -978,13 +978,12 @@ class templater(object):
 
         for key, val in conf[''].items():
             if not val:
-                raise SyntaxError(_('%s: missing value') % conf.source('', key))
+                raise error.ParseError(_('missing value'), conf.source('', key))
             if val[0] in "'\"":
                 try:
                     self.cache[key] = unquotestring(val)
                 except SyntaxError as inst:
-                    raise SyntaxError('%s: %s' %
-                                      (conf.source('', key), inst.args[0]))
+                    raise error.ParseError(inst.args[0], conf.source('', key))
             else:
                 val = 'default', val
                 if ':' in val[1]:
