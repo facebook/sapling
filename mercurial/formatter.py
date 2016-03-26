@@ -171,11 +171,7 @@ def lookuptemplate(ui, topic, tmpl):
     # perhaps it's a reference to [templates]
     t = ui.config('templates', tmpl)
     if t:
-        try:
-            tmpl = templater.unquotestring(t)
-        except SyntaxError:
-            tmpl = t
-        return tmpl, None
+        return templater.unquotestring(t), None
 
     if tmpl == 'list':
         ui.write(_("available styles: %s\n") % templater.stylelist())

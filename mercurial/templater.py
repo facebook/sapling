@@ -867,9 +867,9 @@ def _flatten(thing):
                     yield j
 
 def unquotestring(s):
-    '''unwrap quotes'''
+    '''unwrap quotes if any; otherwise returns unmodified string'''
     if len(s) < 2 or s[0] != s[-1]:
-        raise SyntaxError(_('unmatched quotes'))
+        return s
     return s[1:-1]
 
 class engine(object):
@@ -980,10 +980,10 @@ class templater(object):
             if not val:
                 raise error.ParseError(_('missing value'), conf.source('', key))
             if val[0] in "'\"":
-                try:
-                    self.cache[key] = unquotestring(val)
-                except SyntaxError as inst:
-                    raise error.ParseError(inst.args[0], conf.source('', key))
+                if val[0] != val[-1]:
+                    raise error.ParseError(_('unmatched quotes'),
+                                           conf.source('', key))
+                self.cache[key] = unquotestring(val)
             else:
                 val = 'default', val
                 if ':' in val[1]:

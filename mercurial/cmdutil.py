@@ -1542,11 +1542,7 @@ def gettemplate(ui, tmpl, style):
     if not tmpl and not style: # template are stronger than style
         tmpl = ui.config('ui', 'logtemplate')
         if tmpl:
-            try:
-                tmpl = templater.unquotestring(tmpl)
-            except SyntaxError:
-                pass
-            return tmpl, None
+            return templater.unquotestring(tmpl), None
         else:
             style = util.expandpath(ui.config('ui', 'style', ''))
 
