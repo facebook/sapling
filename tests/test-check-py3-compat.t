@@ -117,7 +117,6 @@
   tests/test-url.py requires print_function
   tests/test-walkrepo.py requires print_function
   tests/test-wireproto.py requires print_function
-  tests/tinyproxy.py requires print_function
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
@@ -303,6 +302,5 @@
   tests/test-ui-verbosity.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-walkrepo.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-wireproto.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/tinyproxy.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
 
 #endif
