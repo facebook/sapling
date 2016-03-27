@@ -40,7 +40,9 @@ elements = {
     "end": (0, None, None, None, None),
 }
 
-def tokenize(program, start, end):
+def tokenize(program, start, end, term=None):
+    """Parse a template expression into a stream of tokens, which must end
+    with term if specified"""
     pos = start
     while pos < end:
         c = program[pos]
@@ -127,13 +129,15 @@ def tokenize(program, start, end):
             sym = program[s:pos]
             yield ('symbol', sym, s)
             pos -= 1
-        elif c == '}':
+        elif c == term:
             yield ('end', None, pos + 1)
             return
         else:
             raise error.ParseError(_("syntax error"), pos)
         pos += 1
-    raise error.ParseError(_("unterminated template expansion"), start)
+    if term:
+        raise error.ParseError(_("unterminated template expansion"), start)
+    yield ('end', None, pos)
 
 def _parsetemplate(tmpl, start, stop, quote=''):
     r"""
@@ -171,7 +175,7 @@ def _parsetemplate(tmpl, start, stop, quote=''):
         if c == quote:
             return parsed, n + 1
 
-        parseres, pos = p.parse(tokenize(tmpl, n + 1, stop))
+        parseres, pos = p.parse(tokenize(tmpl, n + 1, stop, '}'))
         parsed.append(parseres)
 
     if quote:
@@ -217,6 +221,28 @@ def parse(tmpl):
     parsed, pos = _parsetemplate(tmpl, 0, len(tmpl))
     assert pos == len(tmpl), 'unquoted template should be consumed'
     return _unnesttemplatelist(('template', parsed))
+
+def _parseexpr(expr):
+    """Parse a template expression into tree
+
+    >>> _parseexpr('"foo"')
+    ('string', 'foo')
+    >>> _parseexpr('foo(bar)')
+    ('func', ('symbol', 'foo'), ('symbol', 'bar'))
+    >>> _parseexpr('foo(')
+    Traceback (most recent call last):
+      ...
+    ParseError: ('not a prefix: end', 4)
+    >>> _parseexpr('"foo" "bar"')
+    Traceback (most recent call last):
+      ...
+    ParseError: ('invalid token', 7)
+    """
+    p = parser.parser(elements)
+    tree, pos = p.parse(tokenize(expr, 0, len(expr)))
+    if pos != len(expr):
+        raise error.ParseError(_('invalid token'), pos)
+    return _unnesttemplatelist(tree)
 
 def prettyformat(tree):
     return parser.prettyformat(tree, ('integer', 'string', 'symbol'))
