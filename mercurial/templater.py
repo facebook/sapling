@@ -868,7 +868,7 @@ def _flatten(thing):
 
 def unquotestring(s):
     '''unwrap quotes if any; otherwise returns unmodified string'''
-    if len(s) < 2 or s[0] != s[-1]:
+    if len(s) < 2 or s[0] not in "'\"" or s[0] != s[-1]:
         return s
     return s[1:-1]
 

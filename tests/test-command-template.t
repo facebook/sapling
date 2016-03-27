@@ -71,6 +71,8 @@ Quoting for ui.logtemplate
   8
   $ hg tip --config 'ui.logtemplate="{rev}\n"'
   8
+  $ hg tip --config 'ui.logtemplate=n{rev}\n'
+  n8
 
 Make sure user/global hgrc does not affect tests
 
