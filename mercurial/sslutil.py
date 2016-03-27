@@ -36,6 +36,74 @@ except AttributeError:
     OP_NO_SSLv2 = 0x1000000
     OP_NO_SSLv3 = 0x2000000
 
+try:
+    # ssl.SSLContext was added in 2.7.9 and presence indicates modern
+    # SSL/TLS features are available.
+    SSLContext = ssl.SSLContext
+    modernssl = True
+except AttributeError:
+    modernssl = False
+
+    # We implement SSLContext using the interface from the standard library.
+    class SSLContext(object):
+        # ssl.wrap_socket gained the "ciphers" named argument in 2.7.
+        _supportsciphers = sys.version_info >= (2, 7)
+
+        def __init__(self, protocol):
+            # From the public interface of SSLContext
+            self.protocol = protocol
+            self.check_hostname = False
+            self.options = 0
+            self.verify_mode = ssl.CERT_NONE
+
+            # Used by our implementation.
+            self._certfile = None
+            self._keyfile = None
+            self._certpassword = None
+            self._cacerts = None
+            self._ciphers = None
+
+        def load_cert_chain(self, certfile, keyfile=None, password=None):
+            self._certfile = certfile
+            self._keyfile = keyfile
+            self._certpassword = password
+
+        def load_default_certs(self, purpose=None):
+            pass
+
+        def load_verify_locations(self, cafile=None, capath=None, cadata=None):
+            if capath:
+                raise error.Abort('capath not supported')
+            if cadata:
+                raise error.Abort('cadata not supported')
+
+            self._cacerts = cafile
+
+        def set_ciphers(self, ciphers):
+            if not self._supportsciphers:
+                raise error.Abort('setting ciphers not supported')
+
+            self._ciphers = ciphers
+
+        def wrap_socket(self, socket, server_hostname=None, server_side=False):
+            # server_hostname is unique to SSLContext.wrap_socket and is used
+            # for SNI in that context. So there's nothing for us to do with it
+            # in this legacy code since we don't support SNI.
+
+            args = {
+                'keyfile': self._keyfile,
+                'certfile': self._certfile,
+                'server_side': server_side,
+                'cert_reqs': self.verify_mode,
+                'ssl_version': self.protocol,
+                'ca_certs': self._cacerts,
+            }
+
+            if self._supportsciphers:
+                args['ciphers'] = self._ciphers
+
+            return ssl.wrap_socket(socket, **args)
+
 _canloaddefaultcerts = False
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
