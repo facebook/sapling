@@ -41,8 +41,10 @@ try:
     # SSL/TLS features are available.
     SSLContext = ssl.SSLContext
     modernssl = True
+    _canloaddefaultcerts = util.safehasattr(SSLContext, 'load_default_certs')
 except AttributeError:
     modernssl = False
+    _canloaddefaultcerts = False
 
     # We implement SSLContext using the interface from the standard library.
     class SSLContext(object):
@@ -104,12 +106,10 @@ except AttributeError:
 
             return ssl.wrap_socket(socket, **args)
 
-_canloaddefaultcerts = False
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
     # SSL/TLS features are available.
     ssl_context = ssl.SSLContext
-    _canloaddefaultcerts = util.safehasattr(ssl_context, 'load_default_certs')
 
     def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
                    ca_certs=None, serverhostname=None):
