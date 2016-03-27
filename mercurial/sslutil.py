@@ -108,6 +108,18 @@ except AttributeError:
 
 def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
                ca_certs=None, serverhostname=None):
+    """Add SSL/TLS to a socket.
+
+    This is a glorified wrapper for ``ssl.wrap_socket()``. It makes sane
+    choices based on what security options are available.
+
+    In addition to the arguments supported by ``ssl.wrap_socket``, we allow
+    the following additional arguments:
+
+    * serverhostname - The expected hostname of the remote server. If the
+      server (and client) support SNI, this tells the server which certificate
+      to use.
+    """
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
     # the highest it likely goes in TLS 1.0. On modern stacks, it can
