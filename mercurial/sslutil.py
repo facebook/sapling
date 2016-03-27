@@ -29,6 +29,13 @@ from . import (
 
 hassni = getattr(ssl, 'HAS_SNI', False)
 
+try:
+    OP_NO_SSLv2 = ssl.OP_NO_SSLv2
+    OP_NO_SSLv3 = ssl.OP_NO_SSLv3
+except AttributeError:
+    OP_NO_SSLv2 = 0x1000000
+    OP_NO_SSLv3 = 0x2000000
+
 _canloaddefaultcerts = False
 try:
     # ssl.SSLContext was added in 2.7.9 and presence indicates modern
@@ -48,7 +55,7 @@ try:
         # maintainers for us, but that breaks too many things to
         # do it in a hurry.
         sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-        sslcontext.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3
+        sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
         if certfile is not None:
             def password():
                 f = keyfile or certfile
