@@ -4,7 +4,7 @@
   > from mercurial import templater
   > 
   > class mytemplater(object):
-  >     def __init__(self, loader, filters, defaults):
+  >     def __init__(self, loader, filters, defaults, aliases):
   >         self.loader = loader
   > 
   >     def process(self, t, map):

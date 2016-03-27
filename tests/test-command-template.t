@@ -3693,8 +3693,7 @@ Templater supports aliases of symbol and func() styles:
           ('string', 'UTC')))
       ('symbol', 'isodate'))
     ('string', '\n'))
-  hg: parse error: unknown function 'utcdate'
-  [255]
+  0:1e4e1b8f71e0 1970-01-12 13:46 +0000
 
   $ hg debugtemplate -vr0 '{status("A", file_adds)}'
   (template
@@ -3712,8 +3711,7 @@ Templater supports aliases of symbol and func() styles:
         ('string', ' ')
         ('symbol', 'file')
         ('string', '\n'))))
-  hg: parse error: unknown function 'status'
-  [255]
+  A a
 
 A unary function alias can be called as a filter:
 
@@ -3735,14 +3733,37 @@ A unary function alias can be called as a filter:
           ('string', 'UTC')))
       ('symbol', 'isodate'))
     ('string', '\n'))
-  hg: parse error: unknown function 'utcdate'
-  [255]
+  1970-01-12 13:46 +0000
+
+Aliases should be applied only to command arguments and templates in hgrc.
+Otherwise, our stock styles and web templates could be corrupted:
+
+  $ hg log -r0 -T '{rn} {utcdate(date)|isodate}\n'
+  0:1e4e1b8f71e0 1970-01-12 13:46 +0000
+
+  $ hg log -r0 --config ui.logtemplate='"{rn} {utcdate(date)|isodate}\n"'
+  0:1e4e1b8f71e0 1970-01-12 13:46 +0000
+
+  $ cat <<EOF > tmpl
+  > changeset = 'nothing expanded:{rn}\n'
+  > EOF
+  $ hg log -r0 --style ./tmpl
+  nothing expanded:
+
+Aliases in formatter:
+
+  $ hg branches -T '{pad(branch, 7)} {rn}\n'
+  default 6:d41e714fe50d
+  foo     4:bbe44766e73d
 
 Unparsable alias:
 
   $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
   (template
     ('symbol', 'bad'))
+  abort: failed to parse the definition of template alias "bad": at 2: not a prefix: end
+  [255]
+  $ hg log --config templatealias.bad='x(' -T '{bad}'
   abort: failed to parse the definition of template alias "bad": at 2: not a prefix: end
   [255]
 

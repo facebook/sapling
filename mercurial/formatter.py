@@ -197,7 +197,8 @@ def gettemplater(ui, topic, spec):
 
 def maketemplater(ui, topic, tmpl, filters=None, cache=None):
     """Create a templater from a string template 'tmpl'"""
-    t = templater.templater(filters=filters, cache=cache)
+    aliases = ui.configitems('templatealias')
+    t = templater.templater(filters=filters, cache=cache, aliases=aliases)
     if tmpl:
         t.cache[topic] = tmpl
     return t

@@ -936,7 +936,7 @@ class engine(object):
     filter uses function to transform value. syntax is
     {key|filter1|filter2|...}.'''
 
-    def __init__(self, loader, filters=None, defaults=None):
+    def __init__(self, loader, filters=None, defaults=None, aliases=()):
         self._loader = loader
         if filters is None:
             filters = {}
@@ -944,6 +944,7 @@ class engine(object):
         if defaults is None:
             defaults = {}
         self._defaults = defaults
+        self._aliasmap = _aliasrules.buildmap(aliases)
         self._cache = {}  # key: (func, data)
 
     def _load(self, t):
@@ -953,6 +954,8 @@ class engine(object):
             self._cache[t] = (_runrecursivesymbol, t)
             try:
                 x = parse(self._loader(t))
+                if self._aliasmap:
+                    x = _aliasrules.expand(self._aliasmap, x)
                 self._cache[t] = compileexp(x, self, methods)
             except: # re-raises
                 del self._cache[t]
@@ -1014,11 +1017,13 @@ class TemplateNotFound(error.Abort):
 
 class templater(object):
 
-    def __init__(self, filters=None, defaults=None, cache=None,
+    def __init__(self, filters=None, defaults=None, cache=None, aliases=(),
                  minchunk=1024, maxchunk=65536):
         '''set up template engine.
         filters is dict of functions. each transforms a value into another.
-        defaults is dict of default map definitions.'''
+        defaults is dict of default map definitions.
+        aliases is list of alias (name, replacement) pairs.
+        '''
         if filters is None:
             filters = {}
         if defaults is None:
@@ -1030,6 +1035,7 @@ class templater(object):
         self.filters = templatefilters.filters.copy()
         self.filters.update(filters)
         self.defaults = defaults
+        self._aliases = aliases
         self.minchunk, self.maxchunk = minchunk, maxchunk
         self.ecache = {}
 
@@ -1037,7 +1043,7 @@ class templater(object):
     def frommapfile(cls, mapfile, filters=None, defaults=None, cache=None,
                     minchunk=1024, maxchunk=65536):
         """Create templater from the specified map file"""
-        t = cls(filters, defaults, cache, minchunk, maxchunk)
+        t = cls(filters, defaults, cache, [], minchunk, maxchunk)
         cache, tmap = _readmapfile(mapfile)
         t.cache.update(cache)
         t.map = tmap
@@ -1066,7 +1072,8 @@ class templater(object):
                 ecls = engines[ttype]
             except KeyError:
                 raise error.Abort(_('invalid template engine: %s') % ttype)
-            self.ecache[ttype] = ecls(self.load, self.filters, self.defaults)
+            self.ecache[ttype] = ecls(self.load, self.filters, self.defaults,
+                                      self._aliases)
         proc = self.ecache[ttype]
 
         stream = proc.process(t, mapping)
