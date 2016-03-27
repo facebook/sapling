@@ -69,6 +69,8 @@ HGPLAINEXCEPT
         Preserve internationalization.
     ``revsetalias``
         Don't remove revset aliases.
+    ``templatealias``
+        Don't remove template aliases.
     ``progress``
         Don't hide progress output.
 

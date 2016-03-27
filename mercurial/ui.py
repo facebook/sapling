@@ -192,6 +192,9 @@ class ui(object):
         if self.plain('revsetalias'):
             for k, v in cfg.items('revsetalias'):
                 del cfg['revsetalias'][k]
+        if self.plain('templatealias'):
+            for k, v in cfg.items('templatealias'):
+                del cfg['templatealias'][k]
 
         if trusted:
             self._tcfg.update(cfg)

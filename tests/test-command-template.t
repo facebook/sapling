@@ -3756,6 +3756,13 @@ Aliases in formatter:
   default 6:d41e714fe50d
   foo     4:bbe44766e73d
 
+Aliases should honor HGPLAIN:
+
+  $ HGPLAIN= hg log -r0 -T 'nothing expanded:{rn}\n'
+  nothing expanded:
+  $ HGPLAINEXCEPT=templatealias hg log -r0 -T '{rn}\n'
+  0:1e4e1b8f71e0
+
 Unparsable alias:
 
   $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
