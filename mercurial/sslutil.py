@@ -19,10 +19,20 @@ from . import (
     util,
 )
 
+# Python 2.7.9+ overhauled the built-in SSL/TLS features of Python. It added
+# support for TLS 1.1, TLS 1.2, SNI, system CA stores, etc. These features are
+# all exposed via the "ssl" module.
+#
+# Depending on the version of Python being used, SSL/TLS support is either
+# modern/secure or legacy/insecure. Many operations in this module have
+# separate code paths depending on support in Python.
+
 hassni = getattr(ssl, 'HAS_SNI', False)
 
 _canloaddefaultcerts = False
 try:
+    # ssl.SSLContext was added in 2.7.9 and presence indicates modern
+    # SSL/TLS features are available.
     ssl_context = ssl.SSLContext
     _canloaddefaultcerts = util.safehasattr(ssl_context, 'load_default_certs')
 
@@ -58,6 +68,8 @@ try:
             raise error.Abort(_('ssl connection failed'))
         return sslsocket
 except AttributeError:
+    # We don't have a modern version of the "ssl" module and are running
+    # Python <2.7.9.
     def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
                    ca_certs=None, serverhostname=None):
         sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
