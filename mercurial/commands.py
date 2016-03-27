@@ -3671,8 +3671,12 @@ def debugtemplate(ui, repo, tmpl, **opts):
             raise error.Abort(_('malformed keyword definition: %s') % d)
 
     if ui.verbose:
+        aliases = ui.configitems('templatealias')
         tree = templater.parse(tmpl)
         ui.note(templater.prettyformat(tree), '\n')
+        newtree = templater.expandaliases(tree, aliases)
+        if newtree != tree:
+            ui.note("* expanded:\n", templater.prettyformat(newtree), '\n')
 
     mapfile = None
     if revs is None:

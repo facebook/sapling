@@ -3654,6 +3654,100 @@ json filter should escape HTML tags so that the output can be embedded in hgweb:
   $ hg log -T "{'<foo@example.org>'|json}\n" -R a -l1
   "\u003cfoo@example.org\u003e"
 
+Templater supports aliases of symbol and func() styles:
+
+  $ hg clone -q a aliases
+  $ cd aliases
+  $ cat <<EOF >> .hg/hgrc
+  > [templatealias]
+  > r = rev
+  > rn = "{r}:{node|short}"
+  > status(c, files) = files % "{c} {file}\n"
+  > utcdate(d) = localdate(d, "UTC")
+  > EOF
+
+  $ hg debugtemplate -vr0 '{rn} {utcdate(date)|isodate}\n'
+  (template
+    ('symbol', 'rn')
+    ('string', ' ')
+    (|
+      (func
+        ('symbol', 'utcdate')
+        ('symbol', 'date'))
+      ('symbol', 'isodate'))
+    ('string', '\n'))
+  * expanded:
+  (template
+    (template
+      ('symbol', 'rev')
+      ('string', ':')
+      (|
+        ('symbol', 'node')
+        ('symbol', 'short')))
+    ('string', ' ')
+    (|
+      (func
+        ('symbol', 'localdate')
+        (list
+          ('symbol', 'date')
+          ('string', 'UTC')))
+      ('symbol', 'isodate'))
+    ('string', '\n'))
+  hg: parse error: unknown function 'utcdate'
+  [255]
+
+  $ hg debugtemplate -vr0 '{status("A", file_adds)}'
+  (template
+    (func
+      ('symbol', 'status')
+      (list
+        ('string', 'A')
+        ('symbol', 'file_adds'))))
+  * expanded:
+  (template
+    (%
+      ('symbol', 'file_adds')
+      (template
+        ('string', 'A')
+        ('string', ' ')
+        ('symbol', 'file')
+        ('string', '\n'))))
+  hg: parse error: unknown function 'status'
+  [255]
+
+A unary function alias can be called as a filter:
+
+  $ hg debugtemplate -vr0 '{date|utcdate|isodate}\n'
+  (template
+    (|
+      (|
+        ('symbol', 'date')
+        ('symbol', 'utcdate'))
+      ('symbol', 'isodate'))
+    ('string', '\n'))
+  * expanded:
+  (template
+    (|
+      (func
+        ('symbol', 'localdate')
+        (list
+          ('symbol', 'date')
+          ('string', 'UTC')))
+      ('symbol', 'isodate'))
+    ('string', '\n'))
+  hg: parse error: unknown function 'utcdate'
+  [255]
+
+Unparsable alias:
+
+  $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
+  (template
+    ('symbol', 'bad'))
+  abort: failed to parse the definition of template alias "bad": at 2: not a prefix: end
+  [255]
+
+  $ cd ..
+
 Set up repository for non-ascii encoding tests:
 
   $ hg init nonascii

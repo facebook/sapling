@@ -872,6 +872,25 @@ exprmethods = {
 methods = exprmethods.copy()
 methods["integer"] = exprmethods["symbol"]  # '{1}' as variable
 
+class _aliasrules(parser.basealiasrules):
+    """Parsing and expansion rule set of template aliases"""
+    _section = _('template alias')
+    _parse = staticmethod(_parseexpr)
+
+    @staticmethod
+    def _trygetfunc(tree):
+        """Return (name, args) if tree is func(...) or ...|filter; otherwise
+        None"""
+        if tree[0] == 'func' and tree[1][0] == 'symbol':
+            return tree[1][1], getlist(tree[2])
+        if tree[0] == '|' and tree[2][0] == 'symbol':
+            return tree[2][1], [tree[1]]
+
+def expandaliases(tree, aliases):
+    """Return new tree of aliases are expanded"""
+    aliasmap = _aliasrules.buildmap(aliases)
+    return _aliasrules.expand(aliasmap, tree)
+
 # template engine
 
 stringify = templatefilters.stringify
