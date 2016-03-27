@@ -107,23 +107,32 @@ except AttributeError:
             return ssl.wrap_socket(socket, **args)
 
 try:
-    # ssl.SSLContext was added in 2.7.9 and presence indicates modern
-    # SSL/TLS features are available.
-    ssl_context = ssl.SSLContext
-
     def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
                    ca_certs=None, serverhostname=None):
-        # Allow any version of SSL starting with TLSv1 and
-        # up. Note that specifying TLSv1 here prohibits use of
-        # newer standards (like TLSv1_2), so this is the right way
-        # to do this. Note that in the future it'd be better to
-        # support using ssl.create_default_context(), which sets
-        # up a bunch of things in smart ways (strong ciphers,
-        # protocol versions, etc) and is upgraded by Python
-        # maintainers for us, but that breaks too many things to
-        # do it in a hurry.
-        sslcontext = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
+        # that both ends support, including TLS protocols. On legacy stacks,
+        # the highest it likely goes in TLS 1.0. On modern stacks, it can
+        # support TLS 1.2.
+        #
+        # The PROTOCOL_TLSv* constants select a specific TLS version
+        # only (as opposed to multiple versions). So the method for
+        # supporting multiple TLS versions is to use PROTOCOL_SSLv23 and
+        # disable protocols via SSLContext.options and OP_NO_* constants.
+        # However, SSLContext.options doesn't work unless we have the
+        # full/real SSLContext available to us.
+        #
+        # SSLv2 and SSLv3 are broken. We ban them outright.
+        if modernssl:
+            protocol = ssl.PROTOCOL_SSLv23
+        else:
+            protocol = ssl.PROTOCOL_TLSv1
+
+        # TODO use ssl.create_default_context() on modernssl.
+        sslcontext = SSLContext(protocol)
+
+        # This is a no-op on old Python.
         sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
+
         if certfile is not None:
             def password():
                 f = keyfile or certfile
@@ -132,7 +141,8 @@ try:
         sslcontext.verify_mode = cert_reqs
         if ca_certs is not None:
             sslcontext.load_verify_locations(cafile=ca_certs)
-        elif _canloaddefaultcerts:
+        else:
+            # This is a no-op on old Python.
             sslcontext.load_default_certs()
 
         sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
@@ -143,19 +153,7 @@ try:
             raise error.Abort(_('ssl connection failed'))
         return sslsocket
 except AttributeError:
-    # We don't have a modern version of the "ssl" module and are running
-    # Python <2.7.9.
-    def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
-                   ca_certs=None, serverhostname=None):
-        sslsocket = ssl.wrap_socket(sock, keyfile, certfile,
-                                    cert_reqs=cert_reqs, ca_certs=ca_certs,
-                                    ssl_version=ssl.PROTOCOL_TLSv1)
-        # check if wrap_socket failed silently because socket had been
-        # closed
-        # - see http://bugs.python.org/issue13721
-        if not sslsocket.cipher():
-            raise error.Abort(_('ssl connection failed'))
-        return sslsocket
+    raise util.Abort('this should not happen')
 
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
