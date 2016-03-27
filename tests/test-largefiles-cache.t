@@ -235,4 +235,20 @@ Test coverage of 'missing from store':
   abort: largefile e2fb5f2139d086ded2cb600d5a91a196e76bf020 missing from store (needs to be uploaded)
   [255]
 
+Verify that --lfrev controls which revisions are checked for largefiles to push
+
+  $ hg push http://localhost:$HGPORT2 -f --config largefiles.usercache=nocache --lfrev tip
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  abort: largefile e2fb5f2139d086ded2cb600d5a91a196e76bf020 missing from store (needs to be uploaded)
+  [255]
+
+  $ hg push http://localhost:$HGPORT2 -f --config largefiles.usercache=nocache --lfrev null
+  pushing to http://localhost:$HGPORT2/
+  searching for changes
+  remote: adding changesets
+  remote: adding manifests
+  remote: adding file changes
+  remote: added 1 changesets with 1 changes to 1 files (+1 heads)
+
 #endif

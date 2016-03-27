@@ -801,6 +801,21 @@ def overridepull(orig, ui, repo, source=None, **opts):
         ui.status(_("%d largefiles cached\n") % numcached)
     return result
 
+def overridepush(orig, ui, repo, *args, **kwargs):
+    """Override push command and store --lfrev parameters in opargs"""
+    lfrevs = kwargs.pop('lfrev', None)
+    if lfrevs:
+        opargs = kwargs.setdefault('opargs', {})
+        opargs['lfrevs'] = scmutil.revrange(repo, lfrevs)
+    return orig(ui, repo, *args, **kwargs)
+
+def exchangepushoperation(orig, *args, **kwargs):
+    """Override pushoperation constructor and store lfrevs parameter"""
+    lfrevs = kwargs.pop('lfrevs', None)
+    pushop = orig(*args, **kwargs)
+    pushop.lfrevs = lfrevs
+    return pushop
+
 revsetpredicate = registrar.revsetpredicate()
 
 @revsetpredicate('pulled()')

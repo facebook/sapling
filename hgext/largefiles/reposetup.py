@@ -353,10 +353,14 @@ def reposetup(ui, repo):
     repo._lfstatuswriters = [ui.status]
 
     def prepushoutgoinghook(pushop):
-        if pushop.outgoing.missing:
+        """Push largefiles for pushop before pushing revisions."""
+        lfrevs = pushop.lfrevs
+        if lfrevs is None:
+            lfrevs = pushop.outgoing.missing
+        if lfrevs:
             toupload = set()
             addfunc = lambda fn, lfhash: toupload.add(lfhash)
-            lfutil.getlfilestoupload(pushop.repo, pushop.outgoing.missing,
+            lfutil.getlfilestoupload(pushop.repo, lfrevs,
                                      addfunc)
             lfcommands.uploadlfiles(ui, pushop.repo, pushop.remote, toupload)
     repo.prepushoutgoinghooks.add("largefiles", prepushoutgoinghook)
