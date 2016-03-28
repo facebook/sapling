@@ -151,6 +151,9 @@ defaults = {
     'shell': ('HGTEST_SHELL', 'sh'),
 }
 
+def canonpath(path):
+    return os.path.realpath(os.path.expanduser(path))
+
 def parselistfiles(files, listtype, warn=True):
     entries = dict()
     for filename in files:
@@ -290,15 +293,14 @@ def parseargs(args, parser):
         options.pure = True
 
     if options.with_hg:
-        options.with_hg = os.path.realpath(
-            os.path.expanduser(_bytespath(options.with_hg)))
+        options.with_hg = canonpath(_bytespath(options.with_hg))
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
         if not os.path.basename(options.with_hg) == b'hg':
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
-        testdir = os.path.dirname(_bytespath(os.path.realpath(sys.argv[0])))
+        testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
         hgbin = os.path.join(os.path.dirname(testdir), b'hg')
         if os.name != 'nt' and not os.access(hgbin, os.X_OK):
             parser.error('--local specified, but %r not found or not executable'
@@ -309,8 +311,7 @@ def parseargs(args, parser):
         parser.error('chg does not work on %s' % os.name)
     if options.with_chg:
         options.chg = False  # no installation to temporary location
-        options.with_chg = os.path.realpath(
-            os.path.expanduser(_bytespath(options.with_chg)))
+        options.with_chg = canonpath(_bytespath(options.with_chg))
         if not (os.path.isfile(options.with_chg) and
                 os.access(options.with_chg, os.X_OK)):
             parser.error('--with-chg must specify a chg executable')
@@ -343,7 +344,7 @@ def parseargs(args, parser):
         verbose = ''
 
     if options.tmpdir:
-        options.tmpdir = os.path.expanduser(options.tmpdir)
+        options.tmpdir = canonpath(options.tmpdir)
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
