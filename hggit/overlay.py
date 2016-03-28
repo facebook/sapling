@@ -6,6 +6,7 @@
 
 from mercurial import (
     ancestor,
+    changelog,
     manifest,
     context,
 )
@@ -323,6 +324,9 @@ class overlaychangelog(overlayrevlog):
             return self.base.read(sha)
         except LookupError:
             return overlaychangectx(self.repo, sha).totuple()
+
+    def changelogrevision(self, noderev):
+        return changelog._changelogrevision(*self.read(noderev))
 
 class overlayrepo(object):
     def __init__(self, handler, commits, refs):
