@@ -123,7 +123,6 @@
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
   contrib/check-code.py: invalid syntax: (unicode error) 'unicodeescape' codec can't decode bytes in position 18-19: malformed \N character escape (<unknown>, line 106)
   contrib/import-checker.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line 569)
-  contrib/revsetbenchmarks.py: invalid syntax: invalid syntax (<unknown>, line 186)
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line 286)
   hgext/acl.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:10)
   hgext/automv.py: error importing module: <SyntaxError> invalid syntax (commands.py, line 3324) (line 29)
