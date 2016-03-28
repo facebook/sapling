@@ -46,7 +46,7 @@ def _bundle(repo, bases, heads, node, suffix, compress=True):
         bundletype = "HG10BZ"
     else:
         bundletype = "HG10UN"
-    return changegroup.writebundle(repo.ui, cg, name, bundletype, vfs,
+    return bundle2.writebundle(repo.ui, cg, name, bundletype, vfs,
                                    compression=comp)
 
 def _collectfiles(repo, striprev):

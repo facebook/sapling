@@ -141,7 +141,7 @@ class shelvedfile(object):
 
         cg = changegroup.changegroupsubset(self.repo, bases, [node], 'shelve',
                                            version=cgversion)
-        changegroup.writebundle(self.ui, cg, self.fname, btype, self.vfs,
+        bundle2.writebundle(self.ui, cg, self.fname, btype, self.vfs,
                                 compression=compression)
 
 class shelvedstate(object):

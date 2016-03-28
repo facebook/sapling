@@ -1434,8 +1434,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
         assert cgversion == '02'
         bversion = 'HG20'
 
-
-    changegroup.writebundle(ui, cg, fname, bversion, compression=bcompression)
+    bundle2.writebundle(ui, cg, fname, bversion, compression=bcompression)
 
 @command('cat',
     [('o', 'output', '',
@@ -2482,9 +2481,9 @@ def debuggetbundle(ui, repopath, bundlepath, head=None, common=None, **opts):
               'gzip': 'HG10GZ',
               'bundle2': 'HG20'}
     bundletype = btypes.get(bundletype)
-    if bundletype not in changegroup.bundletypes:
+    if bundletype not in bundle2.bundletypes:
         raise error.Abort(_('unknown bundle type specified with --type'))
-    changegroup.writebundle(ui, bundle, bundlepath, bundletype)
+    bundle2.writebundle(ui, bundle, bundlepath, bundletype)
 
 @command('debugignore', [], '[FILE]')
 def debugignore(ui, repo, *files, **opts):

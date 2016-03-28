@@ -20,7 +20,7 @@ import zlib
 from .i18n import _
 from .node import nullid
 from . import (
-    changegroup,
+    bundle2,
     error,
     httpconnection,
     statichttprepo,
@@ -222,11 +222,11 @@ class httppeer(wireproto.wirepeer):
             # bundles.
             types = [""]
         for x in types:
-            if x in changegroup.bundletypes:
+            if x in bundle2.bundletypes:
                 type = x
                 break
 
-        tempname = changegroup.writebundle(self.ui, cg, None, type)
+        tempname = bundle2.writebundle(self.ui, cg, None, type)
         fp = httpconnection.httpsendfile(self.ui, tempname, "rb")
         headers = {'Content-Type': 'application/mercurial-0.1'}
 

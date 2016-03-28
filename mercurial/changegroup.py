@@ -80,19 +80,6 @@ def combineresults(results):
         result = -1 + changedheads
     return result
 
-bundletypes = {
-    "": ("", None),       # only when using unbundle on ssh and old http servers
-                          # since the unification ssh accepts a header but there
-                          # is no capability signaling it.
-    "HG20": (), # special-cased below
-    "HG10UN": ("HG10UN", None),
-    "HG10BZ": ("HG10", 'BZ'),
-    "HG10GZ": ("HG10GZ", 'GZ'),
-}
-
-# hgweb uses this list to communicate its preferred type
-bundlepriority = ['HG10GZ', 'HG10BZ', 'HG10UN']
-
 def writechunks(ui, chunks, filename, vfs=None):
     """Write chunks to a file and return its filename.
 
@@ -124,49 +111,6 @@ def writechunks(ui, chunks, filename, vfs=None):
                 vfs.unlink(cleanup)
             else:
                 os.unlink(cleanup)
-
-def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
-    """Write a bundle file and return its filename.
-
-    Existing files will not be overwritten.
-    If no filename is specified, a temporary file is created.
-    bz2 compression can be turned off.
-    The bundle file will be deleted in case of errors.
-    """
-
-    if bundletype == "HG20":
-        from . import bundle2
-        bundle = bundle2.bundle20(ui)
-        bundle.setcompression(compression)
-        part = bundle.newpart('changegroup', data=cg.getchunks())
-        part.addparam('version', cg.version)
-        chunkiter = bundle.getchunks()
-    else:
-        # compression argument is only for the bundle2 case
-        assert compression is None
-        if cg.version != '01':
-            raise error.Abort(_('old bundle types only supports v1 '
-                                'changegroups'))
-        header, comp = bundletypes[bundletype]
-        if comp not in util.compressors:
-            raise error.Abort(_('unknown stream compression type: %s')
-                              % comp)
-        z = util.compressors[comp]()
-        subchunkiter = cg.getchunks()
-        def chunkiter():
-            yield header
-            for chunk in subchunkiter:
-                yield z.compress(chunk)
-            yield z.flush()
-        chunkiter = chunkiter()
-
-    # parse the changegroup data, otherwise we will block
-    # in case of sshrepo because we don't know the end of the stream
-
-    # an empty chunkgroup is the end of the changegroup
-    # a changegroup has at least 2 chunkgroups (changelog and manifest).
-    # after that, an empty chunkgroup is the end of the changegroup
-    return writechunks(ui, chunkiter, filename, vfs=vfs)
 
 class cg1unpacker(object):
     """Unpacker for cg1 changegroup streams.

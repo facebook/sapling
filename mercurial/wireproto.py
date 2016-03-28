@@ -685,7 +685,7 @@ def _capabilities(repo, proto):
     if repo.ui.configbool('experimental', 'bundle2-advertise', True):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
         caps.append('bundle2=' + urllib.quote(capsblob))
-    caps.append('unbundle=%s' % ','.join(changegroupmod.bundlepriority))
+    caps.append('unbundle=%s' % ','.join(bundle2.bundlepriority))
     caps.append(
         'httpheader=%d' % repo.ui.configint('server', 'maxhttpheaderlen', 1024))
     if repo.ui.configbool('experimental', 'httppostargs', False):
