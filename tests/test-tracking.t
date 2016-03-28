@@ -305,7 +305,6 @@ Test bookmarks with difficult characters
      with	tab too              5:8d13dc14fef1
   $ hg update bookmark/with/slashes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark bookmark/with/slashes)
   $ hg book -v
      bookmark with spaces      5:8d13dc14fef1
    * bookmark/with/slashes     5:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
