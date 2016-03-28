@@ -368,6 +368,7 @@ def parseargs(args, parser):
             parser.error('--with-python3 cannot be used when executing with '
                          'Python 3')
 
+        options.with_python3 = canonpath(options.with_python3)
         # Verify Python3 executable is acceptable.
         proc = subprocess.Popen([options.with_python3, b'--version'],
                                 stdout=subprocess.PIPE,
