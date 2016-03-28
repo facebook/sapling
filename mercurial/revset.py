@@ -2234,35 +2234,27 @@ def _tokenizealias(program, lookup=None):
     return tokenize(program, lookup=lookup,
                     syminitletters=_aliassyminitletters)
 
-def _parsealiasdecl(decl):
-    """Parse alias declaration ``decl``
+def _parsealias(spec):
+    """Parse alias declaration/definition ``spec``
 
-    >>> _parsealiasdecl('foo($1)')
+    >>> _parsealias('foo($1)')
     ('func', ('symbol', 'foo'), ('symbol', '$1'))
-    >>> _parsealiasdecl('foo bar')
+    >>> _parsealias('foo bar')
     Traceback (most recent call last):
       ...
     ParseError: ('invalid token', 4)
     """
     p = parser.parser(elements)
-    tree, pos = p.parse(_tokenizealias(decl))
-    if pos != len(decl):
-        raise error.ParseError(_('invalid token'), pos)
-    return parser.simplifyinfixops(tree, ('list',))
-
-def _parsealiasdefn(defn):
-    """Parse alias definition ``defn``"""
-    p = parser.parser(elements)
-    tree, pos = p.parse(_tokenizealias(defn))
-    if pos != len(defn):
+    tree, pos = p.parse(_tokenizealias(spec))
+    if pos != len(spec):
         raise error.ParseError(_('invalid token'), pos)
     return parser.simplifyinfixops(tree, ('list', 'or'))
 
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
-    _parsedecl = staticmethod(_parsealiasdecl)
-    _parsedefn = staticmethod(_parsealiasdefn)
+    _parsedecl = staticmethod(_parsealias)
+    _parsedefn = staticmethod(_parsealias)
     _getlist = staticmethod(getlist)
 
 class revsetalias(object):
