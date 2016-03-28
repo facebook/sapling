@@ -251,13 +251,8 @@ class basealiasrules(object):
         raise TypeError("'%s' is not instantiatable" % cls.__name__)
 
     @staticmethod
-    def _parsedecl(spec):
-        """Parse an alias name and arguments"""
-        raise NotImplementedError
-
-    @staticmethod
-    def _parsedefn(spec):
-        """Parse an alias definition"""
+    def _parse(spec):
+        """Parse an alias name, arguments and definition"""
         raise NotImplementedError
 
     @staticmethod
@@ -270,7 +265,7 @@ class basealiasrules(object):
         """Parse an alias declaration into ``(name, tree, args, errorstr)``
 
         This function analyzes the parsed tree. The parsing rule is provided
-        by ``_parsedecl()``.
+        by ``_parse()``.
 
         - ``name``: of declared alias (may be ``decl`` itself at error)
         - ``tree``: parse result (or ``None`` at error)
@@ -311,7 +306,7 @@ class basealiasrules(object):
         ...         return list(tree[1:])
         ...     return [tree]
         >>> class aliasrules(basealiasrules):
-        ...     _parsedecl = staticmethod(parse)
+        ...     _parse = staticmethod(parse)
         ...     _getlist = staticmethod(getlist)
         >>> builddecl = aliasrules._builddecl
         >>> builddecl('foo')
@@ -342,7 +337,7 @@ class basealiasrules(object):
         ('foo', None, None, 'argument names collide with each other')
         """
         try:
-            tree = cls._parsedecl(decl)
+            tree = cls._parse(decl)
         except error.ParseError as inst:
             return (decl, None, None, parseerrordetail(inst))
 
@@ -392,7 +387,7 @@ class basealiasrules(object):
         """Parse an alias definition into a tree and marks substitutions
 
         This function marks alias argument references as ``_aliasarg``. The
-        parsing rule is provided by ``_parsedefn()``.
+        parsing rule is provided by ``_parse()``.
 
         ``args`` is a list of alias argument names, or None if the alias
         is declared as a symbol.
@@ -404,7 +399,7 @@ class basealiasrules(object):
         ...     '"$1" or "foo"': ('or', ('string', '$1'), ('string', 'foo')),
         ... }
         >>> class aliasrules(basealiasrules):
-        ...     _parsedefn = staticmethod(parsemap.__getitem__)
+        ...     _parse = staticmethod(parsemap.__getitem__)
         ...     _getlist = staticmethod(lambda x: [])
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
@@ -429,7 +424,7 @@ class basealiasrules(object):
           ('string', '$1')
           ('string', 'foo'))
         """
-        tree = cls._parsedefn(defn)
+        tree = cls._parse(defn)
         if args:
             args = set(args)
         else:

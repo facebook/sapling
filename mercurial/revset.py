@@ -2253,8 +2253,7 @@ def _parsealias(spec):
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
-    _parsedecl = staticmethod(_parsealias)
-    _parsedefn = staticmethod(_parsealias)
+    _parse = staticmethod(_parsealias)
     _getlist = staticmethod(getlist)
 
 class revsetalias(object):
