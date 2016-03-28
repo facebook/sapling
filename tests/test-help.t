@@ -272,8 +272,6 @@ Test extension help:
        patchbomb     command to send changesets as (a series of) patch emails
        purge         command to delete untracked files from the working
                      directory
-       record        commands to interactively select changes for
-                     commit/qrefresh
        relink        recreates hardlinks between repository clones
        schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories

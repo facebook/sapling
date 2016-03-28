@@ -5,7 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-'''commands to interactively select changes for commit/qrefresh'''
+'''commands to interactively select changes for commit/qrefresh (DEPRECATED)
+
+The feature provided by this extension has been moved into core Mercurial as
+:hg:`commit --interactive`.'''
+
 from __future__ import absolute_import
 
 from mercurial import (

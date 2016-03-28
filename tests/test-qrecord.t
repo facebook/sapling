@@ -7,7 +7,7 @@ help record (no record)
 
   $ hg help record
   record extension - commands to interactively select changes for
-  commit/qrefresh
+  commit/qrefresh (DEPRECATED)
   
   (use "hg help extensions" for information on enabling extensions)
 
@@ -17,6 +17,7 @@ help qrecord (no record)
   'qrecord' is provided by the following extension:
   
       record        commands to interactively select changes for commit/qrefresh
+                    (DEPRECATED)
   
   (use "hg help extensions" for information on enabling extensions)
 
@@ -53,6 +54,8 @@ help record (record)
         ? - display help
   
       This command is not available when committing a merge.
+  
+  (use "hg help -e record" to show help for the record extension)
   
   options ([+] can be repeated):
   
