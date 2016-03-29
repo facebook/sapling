@@ -7,12 +7,10 @@
 from __future__ import absolute_import
 
 import os
-import subprocess
 from mercurial import (
     config,
     error,
     node as nodemod,
-    util,
 )
 from mercurial.i18n import _
 
