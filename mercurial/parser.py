@@ -473,8 +473,8 @@ class basealiasrules(object):
 
     @classmethod
     def _getalias(cls, aliases, tree):
-        """If tree looks like an unexpanded alias, return it. Return None
-        otherwise.
+        """If tree looks like an unexpanded alias, return (alias, pattern-args)
+        pair. Return None otherwise.
         """
         if not isinstance(tree, tuple):
             return None
@@ -482,12 +482,12 @@ class basealiasrules(object):
             name = tree[1]
             a = aliases.get(name)
             if a and a.args is None:
-                return a
+                return a, None
         if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
             name = tree[1][1]
             a = aliases.get(name)
             if a and a.args is not None:
-                return a
+                return a, cls._getlist(tree[2])
         return None
 
     @classmethod
@@ -506,10 +506,11 @@ class basealiasrules(object):
     def _expand(cls, aliases, tree, expanding, cache):
         if not isinstance(tree, tuple):
             return tree
-        a = cls._getalias(aliases, tree)
-        if a is None:
+        r = cls._getalias(aliases, tree)
+        if r is None:
             return tuple(cls._expand(aliases, t, expanding, cache)
                          for t in tree)
+        a, l = r
         if a.error:
             raise error.Abort(a.error)
         if a in expanding:
@@ -526,7 +527,6 @@ class basealiasrules(object):
         if a.args is None:
             return result
         # substitute function arguments in replacement tree
-        l = cls._getlist(tree[2])
         if len(l) != len(a.args):
             raise error.ParseError(_('invalid number of arguments: %d')
                                    % len(l))
