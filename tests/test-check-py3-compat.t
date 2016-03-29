@@ -115,7 +115,6 @@
   tests/test-ui-verbosity.py requires print_function
   tests/test-url.py not using absolute_import
   tests/test-url.py requires print_function
-  tests/test-walkrepo.py requires print_function
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
@@ -299,6 +298,5 @@
   tests/test-ui-color.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-ui-config.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-ui-verbosity.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
-  tests/test-walkrepo.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif
