@@ -282,6 +282,19 @@ def rebase(ui, repo, **opts):
             if abortf:
                 return abort(repo, originalwd, target, state,
                              activebookmark=activebookmark)
+
+            obsoletenotrebased = {}
+            if ui.configbool('experimental', 'rebaseskipobsolete',
+                             default=True):
+                rebaseobsrevs = set([r for r, status in state.items()
+                                     if status == revprecursor])
+                rebasesetrevs = set(state.keys())
+                obsoletenotrebased = _computeobsoletenotrebased(repo,
+                                                                rebaseobsrevs,
+                                                                target)
+                rebaseobsskipped = set(obsoletenotrebased)
+                _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs,
+                                rebaseobsskipped)
         else:
             dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf)
             if dest is None:
