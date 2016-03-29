@@ -5,7 +5,7 @@ except ImportError:
 
 setup(
     name='fbhgext',
-    version='0.1.1',
+    version='0.1.2',
     author='Durham Goode',
     maintainer='Durham Goode',
     maintainer_email='durham@fb.com',
@@ -25,6 +25,7 @@ setup(
         'dirsync',
         'errorredirect',
         'extutil',
+        'fastmanifest',
         'fbamend',
         'fbconduit',
         'fbhistedit',
