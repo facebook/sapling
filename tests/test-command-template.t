@@ -3693,3 +3693,26 @@ utf8 filter:
   [255]
 
   $ cd ..
+
+Test that template function in extension is registered as expected
+
+  $ cd a
+
+  $ cat <<EOF > $TESTTMP/customfunc.py
+  > from mercurial import registrar
+  > 
+  > templatefunc = registrar.templatefunc()
+  > 
+  > @templatefunc('custom()')
+  > def custom(context, mapping, args):
+  >     return 'custom'
+  > EOF
+  $ cat <<EOF > .hg/hgrc
+  > [extensions]
+  > customfunc = $TESTTMP/customfunc.py
+  > EOF
+
+  $ hg log -r . -T "{custom()}\n" --config customfunc.enabled=true
+  custom
+
+  $ cd ..

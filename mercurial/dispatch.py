@@ -37,6 +37,7 @@ from . import (
     revset,
     templatefilters,
     templatekw,
+    templater,
     ui as uimod,
     util,
 )
@@ -768,6 +769,7 @@ extraloaders = [
     ('filesetpredicate', fileset, 'loadpredicate'),
     ('revsetpredicate', revset, 'loadpredicate'),
     ('templatefilter', templatefilters, 'loadfilter'),
+    ('templatefunc', templater, 'loadfunction'),
     ('templatekeyword', templatekw, 'loadkeyword'),
 ]
 

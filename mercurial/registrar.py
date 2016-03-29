@@ -216,3 +216,29 @@ class templatefilter(_templateregistrarbase):
 
     Otherwise, explicit 'templatefilters.loadkeyword()' is needed.
     """
+
+class templatefunc(_templateregistrarbase):
+    """Decorator to register template function
+
+    Usage::
+
+        templatefunc = registrar.templatefunc()
+
+        @templatefunc('myfunc(arg1, arg2[, arg3])')
+        def myfuncfunc(context, mapping, args):
+            '''Explanation of this template function ....
+            '''
+            pass
+
+    The first string argument is used also in online help.
+
+    'templatefunc' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'templatefunc' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'templater.loadfunction()' is needed.
+    """
+    _getname = _funcregistrarbase._parsefuncdecl

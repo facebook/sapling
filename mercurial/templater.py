@@ -1069,5 +1069,11 @@ def stylemap(styles, paths=None):
 
     raise RuntimeError("No hgweb templates found in %r" % paths)
 
+def loadfunction(ui, extname, registrarobj):
+    """Load template function from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        funcs[name] = func
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = funcs.values()
