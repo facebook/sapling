@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from mercurial import (
     dispatch,
     error,
@@ -34,70 +34,70 @@ parsed = dispatch._parseconfig(testui, [
     'lists.list18=\n \n\nding\ndong',
     ])
 
-print repr(testui.configitems('values'))
-print repr(testui.configitems('lists'))
-print "---"
-print repr(testui.config('values', 'string'))
-print repr(testui.config('values', 'bool1'))
-print repr(testui.config('values', 'bool2'))
-print repr(testui.config('values', 'unknown'))
-print "---"
+print(repr(testui.configitems('values')))
+print(repr(testui.configitems('lists')))
+print("---")
+print(repr(testui.config('values', 'string')))
+print(repr(testui.config('values', 'bool1')))
+print(repr(testui.config('values', 'bool2')))
+print(repr(testui.config('values', 'unknown')))
+print("---")
 try:
-    print repr(testui.configbool('values', 'string'))
+    print(repr(testui.configbool('values', 'string')))
 except error.ConfigError as inst:
-    print inst
-print repr(testui.configbool('values', 'bool1'))
-print repr(testui.configbool('values', 'bool2'))
-print repr(testui.configbool('values', 'bool2', True))
-print repr(testui.configbool('values', 'unknown'))
-print repr(testui.configbool('values', 'unknown', True))
-print "---"
-print repr(testui.configint('values', 'int1'))
-print repr(testui.configint('values', 'int2'))
-print "---"
-print repr(testui.configlist('lists', 'list1'))
-print repr(testui.configlist('lists', 'list2'))
-print repr(testui.configlist('lists', 'list3'))
-print repr(testui.configlist('lists', 'list4'))
-print repr(testui.configlist('lists', 'list4', ['foo']))
-print repr(testui.configlist('lists', 'list5'))
-print repr(testui.configlist('lists', 'list6'))
-print repr(testui.configlist('lists', 'list7'))
-print repr(testui.configlist('lists', 'list8'))
-print repr(testui.configlist('lists', 'list9'))
-print repr(testui.configlist('lists', 'list10'))
-print repr(testui.configlist('lists', 'list11'))
-print repr(testui.configlist('lists', 'list12'))
-print repr(testui.configlist('lists', 'list13'))
-print repr(testui.configlist('lists', 'list14'))
-print repr(testui.configlist('lists', 'list15'))
-print repr(testui.configlist('lists', 'list16'))
-print repr(testui.configlist('lists', 'list17'))
-print repr(testui.configlist('lists', 'list18'))
-print repr(testui.configlist('lists', 'unknown'))
-print repr(testui.configlist('lists', 'unknown', ''))
-print repr(testui.configlist('lists', 'unknown', 'foo'))
-print repr(testui.configlist('lists', 'unknown', ['foo']))
-print repr(testui.configlist('lists', 'unknown', 'foo bar'))
-print repr(testui.configlist('lists', 'unknown', 'foo, bar'))
-print repr(testui.configlist('lists', 'unknown', ['foo bar']))
-print repr(testui.configlist('lists', 'unknown', ['foo', 'bar']))
+    print(inst)
+print(repr(testui.configbool('values', 'bool1')))
+print(repr(testui.configbool('values', 'bool2')))
+print(repr(testui.configbool('values', 'bool2', True)))
+print(repr(testui.configbool('values', 'unknown')))
+print(repr(testui.configbool('values', 'unknown', True)))
+print("---")
+print(repr(testui.configint('values', 'int1')))
+print(repr(testui.configint('values', 'int2')))
+print("---")
+print(repr(testui.configlist('lists', 'list1')))
+print(repr(testui.configlist('lists', 'list2')))
+print(repr(testui.configlist('lists', 'list3')))
+print(repr(testui.configlist('lists', 'list4')))
+print(repr(testui.configlist('lists', 'list4', ['foo'])))
+print(repr(testui.configlist('lists', 'list5')))
+print(repr(testui.configlist('lists', 'list6')))
+print(repr(testui.configlist('lists', 'list7')))
+print(repr(testui.configlist('lists', 'list8')))
+print(repr(testui.configlist('lists', 'list9')))
+print(repr(testui.configlist('lists', 'list10')))
+print(repr(testui.configlist('lists', 'list11')))
+print(repr(testui.configlist('lists', 'list12')))
+print(repr(testui.configlist('lists', 'list13')))
+print(repr(testui.configlist('lists', 'list14')))
+print(repr(testui.configlist('lists', 'list15')))
+print(repr(testui.configlist('lists', 'list16')))
+print(repr(testui.configlist('lists', 'list17')))
+print(repr(testui.configlist('lists', 'list18')))
+print(repr(testui.configlist('lists', 'unknown')))
+print(repr(testui.configlist('lists', 'unknown', '')))
+print(repr(testui.configlist('lists', 'unknown', 'foo')))
+print(repr(testui.configlist('lists', 'unknown', ['foo'])))
+print(repr(testui.configlist('lists', 'unknown', 'foo bar')))
+print(repr(testui.configlist('lists', 'unknown', 'foo, bar')))
+print(repr(testui.configlist('lists', 'unknown', ['foo bar'])))
+print(repr(testui.configlist('lists', 'unknown', ['foo', 'bar'])))
 
-print repr(testui.config('values', 'String'))
+print(repr(testui.config('values', 'String')))
 
 def function():
     pass
 
 # values that aren't strings should work
 testui.setconfig('hook', 'commit', function)
-print function == testui.config('hook', 'commit')
+print(function == testui.config('hook', 'commit'))
 
 # invalid values
 try:
     testui.configbool('values', 'boolinvalid')
 except error.ConfigError:
-    print 'boolinvalid'
+    print('boolinvalid')
 try:
     testui.configint('values', 'intinvalid')
 except error.ConfigError:
-    print 'intinvalid'
+    print('intinvalid')
