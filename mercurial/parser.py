@@ -232,9 +232,8 @@ def parseerrordetail(inst):
 class alias(object):
     """Parsed result of alias"""
 
-    def __init__(self, name, tree, args, err, replacement):
+    def __init__(self, name, args, err, replacement):
         self.name = name
-        self.tree = tree
         self.args = args
         self.error = err
         self.replacement = replacement
@@ -276,13 +275,12 @@ class basealiasrules(object):
 
     @classmethod
     def _builddecl(cls, decl):
-        """Parse an alias declaration into ``(name, tree, args, errorstr)``
+        """Parse an alias declaration into ``(name, args, errorstr)``
 
         This function analyzes the parsed tree. The parsing rule is provided
         by ``_parse()``.
 
         - ``name``: of declared alias (may be ``decl`` itself at error)
-        - ``tree``: parse result (or ``None`` at error)
         - ``args``: list of argument names (or None for symbol declaration)
         - ``errorstr``: detail about detected error (or None)
 
@@ -324,60 +322,59 @@ class basealiasrules(object):
         ...     _getlist = staticmethod(getlist)
         >>> builddecl = aliasrules._builddecl
         >>> builddecl('foo')
-        ('foo', ('symbol', 'foo'), None, None)
+        ('foo', None, None)
         >>> builddecl('$foo')
-        ('$foo', None, None, "'$' not for alias arguments")
+        ('$foo', None, "'$' not for alias arguments")
         >>> builddecl('foo::bar')
-        ('foo::bar', None, None, 'invalid format')
+        ('foo::bar', None, 'invalid format')
         >>> builddecl('foo()')
-        ('foo', ('func', ('symbol', 'foo')), [], None)
+        ('foo', [], None)
         >>> builddecl('$foo()')
-        ('$foo()', None, None, "'$' not for alias arguments")
+        ('$foo()', None, "'$' not for alias arguments")
         >>> builddecl('foo($1, $2)')
-        ('foo', ('func', ('symbol', 'foo')), ['$1', '$2'], None)
+        ('foo', ['$1', '$2'], None)
         >>> builddecl('foo(bar_bar, baz.baz)')
-        ('foo', ('func', ('symbol', 'foo')), ['bar_bar', 'baz.baz'], None)
+        ('foo', ['bar_bar', 'baz.baz'], None)
         >>> builddecl('foo($1, $2, nested($1, $2))')
-        ('foo($1, $2, nested($1, $2))', None, None, 'invalid argument list')
+        ('foo($1, $2, nested($1, $2))', None, 'invalid argument list')
         >>> builddecl('foo(bar($1, $2))')
-        ('foo(bar($1, $2))', None, None, 'invalid argument list')
+        ('foo(bar($1, $2))', None, 'invalid argument list')
         >>> builddecl('foo("bar")')
-        ('foo("bar")', None, None, 'invalid argument list')
+        ('foo("bar")', None, 'invalid argument list')
         >>> builddecl('foo($1, $2')
-        ('foo($1, $2', None, None, 'at 10: unexpected token: end')
+        ('foo($1, $2', None, 'at 10: unexpected token: end')
         >>> builddecl('foo("bar')
-        ('foo("bar', None, None, 'at 5: unterminated string')
+        ('foo("bar', None, 'at 5: unterminated string')
         >>> builddecl('foo($1, $2, $1)')
-        ('foo', None, None, 'argument names collide with each other')
+        ('foo', None, 'argument names collide with each other')
         """
         try:
             tree = cls._parse(decl)
         except error.ParseError as inst:
-            return (decl, None, None, parseerrordetail(inst))
+            return (decl, None, parseerrordetail(inst))
 
         if tree[0] == cls._symbolnode:
             # "name = ...." style
             name = tree[1]
             if name.startswith('$'):
-                return (decl, None, None, _("'$' not for alias arguments"))
-            return (name, tree, None, None)
+                return (decl, None, _("'$' not for alias arguments"))
+            return (name, None, None)
 
         if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
             # "name(arg, ....) = ...." style
             name = tree[1][1]
             if name.startswith('$'):
-                return (decl, None, None, _("'$' not for alias arguments"))
+                return (decl, None, _("'$' not for alias arguments"))
             args = []
             for arg in cls._getlist(tree[2]):
                 if arg[0] != cls._symbolnode:
-                    return (decl, None, None, _("invalid argument list"))
+                    return (decl, None, _("invalid argument list"))
                 args.append(arg[1])
             if len(args) != len(set(args)):
-                return (name, None, None,
-                        _("argument names collide with each other"))
-            return (name, tree[:2], args, None)
+                return (name, None, _("argument names collide with each other"))
+            return (name, args, None)
 
-        return (decl, None, None, _("invalid format"))
+        return (decl, None, _("invalid format"))
 
     @classmethod
     def _relabelargs(cls, tree, args):
@@ -449,7 +446,7 @@ class basealiasrules(object):
     def build(cls, decl, defn):
         """Parse an alias declaration and definition into an alias object"""
         repl = efmt = None
-        name, tree, args, err = cls._builddecl(decl)
+        name, args, err = cls._builddecl(decl)
         if err:
             efmt = _('failed to parse the declaration of %(section)s '
                      '"%(name)s": %(error)s')
@@ -462,7 +459,7 @@ class basealiasrules(object):
                          '"%(name)s": %(error)s')
         if err:
             err = efmt % {'section': cls._section, 'name': name, 'error': err}
-        return alias(name, tree, args, err, repl)
+        return alias(name, args, err, repl)
 
     @classmethod
     def buildmap(cls, items):
@@ -484,12 +481,12 @@ class basealiasrules(object):
         if tree[0] == cls._symbolnode:
             name = tree[1]
             a = aliases.get(name)
-            if a and a.args is None and a.tree == tree:
+            if a and a.args is None:
                 return a
         if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
             name = tree[1][1]
             a = aliases.get(name)
-            if a and a.args is not None and a.tree == tree[:2]:
+            if a and a.args is not None:
                 return a
         return None
 
