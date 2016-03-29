@@ -20,6 +20,10 @@ if getattr(sys, 'frozen', None) is not None:
 else:
     module = __file__
 
+try:
+    unicode
+except NameError:
+    unicode = str
 
 _languages = None
 if (os.name == 'nt'
@@ -45,7 +49,10 @@ def setdatapath(datapath):
     localedir = os.path.join(datapath, 'locale')
     t = gettextmod.translation('hg', localedir, _languages, fallback=True)
     global _ugettext
-    _ugettext = t.ugettext
+    try:
+        _ugettext = t.ugettext
+    except AttributeError:
+        _ugettext = t.gettext
 
 _msgcache = {}
 
