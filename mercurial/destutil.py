@@ -397,16 +397,16 @@ def _statusotherbranchheads(ui, repo):
         #  ========= ==========
         otherheads = repo.revs('%ln - parents()', heads)
         if repo['.'].closesbranch():
-            ui.status(_('updated to a closed branch head, '
-                        'because all descendant heads are closed.\n'
-                        'beware of re-opening closed head '
-                        'by subsequent commit here.\n'))
+            ui.status(_('no open descendant heads on branch "%s", '
+                        'updating to a closed head\n') %
+                      (currentbranch))
             if otherheads:
-                ui.status(_('%i other heads for branch "%s"\n') %
-                          (len(otherheads), currentbranch))
+                ui.status(_('(committing will reopen the head, '
+                            'use `hg heads .` to see %i other heads)\n') %
+                          (len(otherheads)))
             else:
-                ui.status(_('all heads for branch "%s" are closed.\n') %
-                          currentbranch)
+                ui.status(_('(committing will reopen branch "%s")\n') %
+                          (currentbranch))
         elif otherheads:
             ui.status(_('%i other heads for branch "%s"\n') %
                       (len(otherheads), currentbranch))

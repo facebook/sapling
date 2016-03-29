@@ -194,9 +194,8 @@ if on the closed branch head:
   $ hg commit --close-branch -m 6
   $ norevtest "on closed branch head" clean 6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to a closed branch head, because all descendant heads are closed.
-  beware of re-opening closed head by subsequent commit here.
-  1 other heads for branch "default"
+  no open descendant heads on branch "default", updating to a closed head
+  (committing will reopen the head, use `hg heads .` to see 1 other heads)
   parent=6
 
 if descendant non-closed branch head exists, and it is only one branch head:
@@ -214,9 +213,8 @@ if all descendant branch heads are closed, but there is another branch head:
 
   $ norevtest "all descendant branch heads are closed" clean 3
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to a closed branch head, because all descendant heads are closed.
-  beware of re-opening closed head by subsequent commit here.
-  1 other heads for branch "default"
+  no open descendant heads on branch "default", updating to a closed head
+  (committing will reopen the head, use `hg heads .` to see 1 other heads)
   parent=6
 
 Test updating if all branch heads are closed
@@ -230,9 +228,8 @@ if on the closed branch head:
   $ hg commit --close-branch -m 7
   $ norevtest "all heads of branch default are closed" clean 6
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to a closed branch head, because all descendant heads are closed.
-  beware of re-opening closed head by subsequent commit here.
-  all heads for branch "default" are closed.
+  no open descendant heads on branch "default", updating to a closed head
+  (committing will reopen branch "default")
   parent=6
 
 if not on the closed branch head:
@@ -242,9 +239,8 @@ if not on the closed branch head:
 
   $ norevtest "all heads of branch default are closed" clean 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to a closed branch head, because all descendant heads are closed.
-  beware of re-opening closed head by subsequent commit here.
-  all heads for branch "default" are closed.
+  no open descendant heads on branch "default", updating to a closed head
+  (committing will reopen branch "default")
   parent=7
 
   $ cd ..
@@ -286,9 +282,8 @@ if all branch heads are closed
 
   $ norevtest "all branches are closed" clean null
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  updated to a closed branch head, because all descendant heads are closed.
-  beware of re-opening closed head by subsequent commit here.
-  all heads for branch "foobar" are closed.
+  no open descendant heads on branch "foobar", updating to a closed head
+  (committing will reopen branch "foobar")
   parent=4
 
   $ cd ../b1
