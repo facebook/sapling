@@ -253,7 +253,7 @@
   mercurial/subrepo.py: error importing: <ImportError> No module named 'cStringIO' (error at cmdutil.py:*) (glob)
   mercurial/tagmerge.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)
   mercurial/tags.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)
-  mercurial/templatefilters.py: error importing: <ImportError> No module named 'cStringIO' (error at patch.py:*) (glob)
+  mercurial/templatefilters.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)
   mercurial/templatekw.py: error importing: <ImportError> No module named 'cStringIO' (error at patch.py:*) (glob)
   mercurial/templater.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)
   mercurial/transaction.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)

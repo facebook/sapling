@@ -17,12 +17,22 @@ from . import (
     encoding,
     hbisect,
     node,
+    registrar,
     templatekw,
     util,
 )
 
+# filters are callables like:
+#   fn(obj)
+# with:
+#   obj - object to be filtered (text, date, list and so on)
+filters = {}
+
+templatefilter = registrar.templatefilter(filters)
+
+@templatefilter('addbreaks')
 def addbreaks(text):
-    """:addbreaks: Any text. Add an XHTML "<br />" tag before the end of
+    """Any text. Add an XHTML "<br />" tag before the end of
     every line except the last.
     """
     return text.replace('\n', '<br/>\n')
@@ -35,8 +45,9 @@ agescales = [("year", 3600 * 24 * 365, 'Y'),
              ("minute", 60, 'm'),
              ("second", 1, 's')]
 
+@templatefilter('age')
 def age(date, abbrev=False):
-    """:age: Date. Returns a human-readable date/time difference between the
+    """Date. Returns a human-readable date/time difference between the
     given date/time and the current date/time.
     """
 
@@ -69,20 +80,23 @@ def age(date, abbrev=False):
                 return '%s from now' % fmt(t, n, a)
             return '%s ago' % fmt(t, n, a)
 
+@templatefilter('basename')
 def basename(path):
-    """:basename: Any text. Treats the text as a path, and returns the last
+    """Any text. Treats the text as a path, and returns the last
     component of the path after splitting by the path separator
     (ignoring trailing separators). For example, "foo/bar/baz" becomes
     "baz" and "foo/bar//" becomes "bar".
     """
     return os.path.basename(path)
 
+@templatefilter('count')
 def count(i):
-    """:count: List or text. Returns the length as an integer."""
+    """List or text. Returns the length as an integer."""
     return len(i)
 
+@templatefilter('domain')
 def domain(author):
-    """:domain: Any text. Finds the first string that looks like an email
+    """Any text. Finds the first string that looks like an email
     address, and extracts just the domain component. Example: ``User
     <user@example.com>`` becomes ``example.com``.
     """
@@ -95,15 +109,17 @@ def domain(author):
         author = author[:f]
     return author
 
+@templatefilter('email')
 def email(text):
-    """:email: Any text. Extracts the first string that looks like an email
+    """Any text. Extracts the first string that looks like an email
     address. Example: ``User <user@example.com>`` becomes
     ``user@example.com``.
     """
     return util.email(text)
 
+@templatefilter('escape')
 def escape(text):
-    """:escape: Any text. Replaces the special XML/XHTML characters "&", "<"
+    """Any text. Replaces the special XML/XHTML characters "&", "<"
     and ">" with XML entities, and filters out NUL characters.
     """
     return cgi.escape(text.replace('\0', ''), True)
@@ -137,41 +153,48 @@ def fill(text, width, initindent='', hangindent=''):
                               width, initindent, hangindent) + rest
                     for para, rest in findparas()])
 
+@templatefilter('fill68')
 def fill68(text):
-    """:fill68: Any text. Wraps the text to fit in 68 columns."""
+    """Any text. Wraps the text to fit in 68 columns."""
     return fill(text, 68)
 
+@templatefilter('fill76')
 def fill76(text):
-    """:fill76: Any text. Wraps the text to fit in 76 columns."""
+    """Any text. Wraps the text to fit in 76 columns."""
     return fill(text, 76)
 
+@templatefilter('firstline')
 def firstline(text):
-    """:firstline: Any text. Returns the first line of text."""
+    """Any text. Returns the first line of text."""
     try:
         return text.splitlines(True)[0].rstrip('\r\n')
     except IndexError:
         return ''
 
+@templatefilter('hex')
 def hexfilter(text):
-    """:hex: Any text. Convert a binary Mercurial node identifier into
+    """Any text. Convert a binary Mercurial node identifier into
     its long hexadecimal representation.
     """
     return node.hex(text)
 
+@templatefilter('hgdate')
 def hgdate(text):
-    """:hgdate: Date. Returns the date as a pair of numbers: "1157407993
+    """Date. Returns the date as a pair of numbers: "1157407993
     25200" (Unix timestamp, timezone offset).
     """
     return "%d %d" % text
 
+@templatefilter('isodate')
 def isodate(text):
-    """:isodate: Date. Returns the date in ISO 8601 format: "2009-08-18 13:00
+    """Date. Returns the date in ISO 8601 format: "2009-08-18 13:00
     +0200".
     """
     return util.datestr(text, '%Y-%m-%d %H:%M %1%2')
 
+@templatefilter('isodatesec')
 def isodatesec(text):
-    """:isodatesec: Date. Returns the date in ISO 8601 format, including
+    """Date. Returns the date in ISO 8601 format, including
     seconds: "2009-08-18 13:00:13 +0200". See also the rfc3339date
     filter.
     """
@@ -192,6 +215,7 @@ def indent(text, prefix):
                 yield '\n'
     return "".join(indenter())
 
+@templatefilter('json')
 def json(obj):
     if obj is None or obj is False or obj is True:
         return {None: 'null', False: 'false', True: 'true'}[obj]
@@ -215,21 +239,25 @@ def json(obj):
     else:
         raise TypeError('cannot encode type %s' % obj.__class__.__name__)
 
+@templatefilter('lower')
 def lower(text):
-    """:lower: Any text. Converts the text to lowercase."""
+    """Any text. Converts the text to lowercase."""
     return encoding.lower(text)
 
+@templatefilter('nonempty')
 def nonempty(str):
-    """:nonempty: Any text. Returns '(none)' if the string is empty."""
+    """Any text. Returns '(none)' if the string is empty."""
     return str or "(none)"
 
+@templatefilter('obfuscate')
 def obfuscate(text):
-    """:obfuscate: Any text. Returns the input text rendered as a sequence of
+    """Any text. Returns the input text rendered as a sequence of
     XML entities.
     """
     text = unicode(text, encoding.encoding, 'replace')
     return ''.join(['&#%d;' % ord(c) for c in text])
 
+@templatefilter('permissions')
 def permissions(flags):
     if "l" in flags:
         return "lrwxrwxrwx"
@@ -237,8 +265,9 @@ def permissions(flags):
         return "-rwxr-xr-x"
     return "-rw-r--r--"
 
+@templatefilter('person')
 def person(author):
-    """:person: Any text. Returns the name before an email address,
+    """Any text. Returns the name before an email address,
     interpreting it as per RFC 5322.
 
     >>> person('foo@bar')
@@ -264,52 +293,61 @@ def person(author):
     f = author.find('@')
     return author[:f].replace('.', ' ')
 
+@templatefilter('revescape')
 def revescape(text):
-    """:revescape: Any text. Escapes all "special" characters, except @.
+    """Any text. Escapes all "special" characters, except @.
     Forward slashes are escaped twice to prevent web servers from prematurely
     unescaping them. For example, "@foo bar/baz" becomes "@foo%20bar%252Fbaz".
     """
     return urllib.quote(text, safe='/@').replace('/', '%252F')
 
+@templatefilter('rfc3339date')
 def rfc3339date(text):
-    """:rfc3339date: Date. Returns a date using the Internet date format
+    """Date. Returns a date using the Internet date format
     specified in RFC 3339: "2009-08-18T13:00:13+02:00".
     """
     return util.datestr(text, "%Y-%m-%dT%H:%M:%S%1:%2")
 
+@templatefilter('rfc822date')
 def rfc822date(text):
-    """:rfc822date: Date. Returns a date using the same format used in email
+    """Date. Returns a date using the same format used in email
     headers: "Tue, 18 Aug 2009 13:00:13 +0200".
     """
     return util.datestr(text, "%a, %d %b %Y %H:%M:%S %1%2")
 
+@templatefilter('short')
 def short(text):
-    """:short: Changeset hash. Returns the short form of a changeset hash,
+    """Changeset hash. Returns the short form of a changeset hash,
     i.e. a 12 hexadecimal digit string.
     """
     return text[:12]
 
+@templatefilter('shortbisect')
 def shortbisect(text):
-    """:shortbisect: Any text. Treats `text` as a bisection status, and
+    """Any text. Treats `text` as a bisection status, and
     returns a single-character representing the status (G: good, B: bad,
     S: skipped, U: untested, I: ignored). Returns single space if `text`
     is not a valid bisection status.
     """
     return hbisect.shortlabel(text) or ' '
 
+@templatefilter('shortdate')
 def shortdate(text):
-    """:shortdate: Date. Returns a date like "2006-09-18"."""
+    """Date. Returns a date like "2006-09-18"."""
     return util.shortdate(text)
 
+@templatefilter('splitlines')
 def splitlines(text):
-    """:splitlines: Any text. Split text into a list of lines."""
+    """Any text. Split text into a list of lines."""
     return templatekw.showlist('line', text.splitlines(), 'lines')
 
+@templatefilter('stringescape')
 def stringescape(text):
     return text.encode('string_escape')
 
+@templatefilter('stringify')
 def stringify(thing):
-    """:stringify: Any type. Turns the value into text by converting values into
+    """Any type. Turns the value into text by converting values into
     text and concatenating them.
     """
     if util.safehasattr(thing, '__iter__') and not isinstance(thing, str):
@@ -318,8 +356,9 @@ def stringify(thing):
         return ""
     return str(thing)
 
+@templatefilter('stripdir')
 def stripdir(text):
-    """:stripdir: Treat the text as path and strip a directory level, if
+    """Treat the text as path and strip a directory level, if
     possible. For example, "foo" and "foo/bar" becomes "foo".
     """
     dir = os.path.dirname(text)
@@ -328,35 +367,42 @@ def stripdir(text):
     else:
         return dir
 
+@templatefilter('tabindent')
 def tabindent(text):
-    """:tabindent: Any text. Returns the text, with every non-empty line
+    """Any text. Returns the text, with every non-empty line
     except the first starting with a tab character.
     """
     return indent(text, '\t')
 
+@templatefilter('upper')
 def upper(text):
-    """:upper: Any text. Converts the text to uppercase."""
+    """Any text. Converts the text to uppercase."""
     return encoding.upper(text)
 
+@templatefilter('urlescape')
 def urlescape(text):
-    """:urlescape: Any text. Escapes all "special" characters. For example,
+    """Any text. Escapes all "special" characters. For example,
     "foo bar" becomes "foo%20bar".
     """
     return urllib.quote(text)
 
+@templatefilter('user')
 def userfilter(text):
-    """:user: Any text. Returns a short representation of a user name or email
+    """Any text. Returns a short representation of a user name or email
     address."""
     return util.shortuser(text)
 
+@templatefilter('emailuser')
 def emailuser(text):
-    """:emailuser: Any text. Returns the user portion of an email address."""
+    """Any text. Returns the user portion of an email address."""
     return util.emailuser(text)
 
+@templatefilter('utf8')
 def utf8(text):
-    """:utf8: Any text. Converts from the local character encoding to UTF-8."""
+    """Any text. Converts from the local character encoding to UTF-8."""
     return encoding.fromlocal(text)
 
+@templatefilter('xmlescape')
 def xmlescape(text):
     text = (text
             .replace('&', '&amp;')
@@ -365,46 +411,6 @@ def xmlescape(text):
             .replace('"', '&quot;')
             .replace("'", '&#39;')) # &apos; invalid in HTML
     return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
-
-filters = {
-    "addbreaks": addbreaks,
-    "age": age,
-    "basename": basename,
-    "count": count,
-    "domain": domain,
-    "email": email,
-    "escape": escape,
-    "fill68": fill68,
-    "fill76": fill76,
-    "firstline": firstline,
-    "hex": hexfilter,
-    "hgdate": hgdate,
-    "isodate": isodate,
-    "isodatesec": isodatesec,
-    "json": json,
-    "lower": lower,
-    "nonempty": nonempty,
-    "obfuscate": obfuscate,
-    "permissions": permissions,
-    "person": person,
-    "revescape": revescape,
-    "rfc3339date": rfc3339date,
-    "rfc822date": rfc822date,
-    "short": short,
-    "shortbisect": shortbisect,
-    "shortdate": shortdate,
-    "splitlines": splitlines,
-    "stringescape": stringescape,
-    "stringify": stringify,
-    "stripdir": stripdir,
-    "tabindent": tabindent,
-    "upper": upper,
-    "urlescape": urlescape,
-    "user": userfilter,
-    "emailuser": emailuser,
-    "utf8": utf8,
-    "xmlescape": xmlescape,
-}
 
 def websub(text, websubtable):
     """:websub: Any text. Only applies to hgweb. Applies the regular
