@@ -1385,6 +1385,11 @@ class gitsubrepo(abstractsubrepo):
         are not supported and very probably fail.
         """
         self.ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
+        if env is None:
+            env = os.environ.copy()
+        # fix for Git CVE-2015-7545
+        if 'GIT_ALLOW_PROTOCOL' not in env:
+            env['GIT_ALLOW_PROTOCOL'] = 'file:git:http:https:ssh'
         # unless ui.quiet is set, print git's stderr,
         # which is mostly progress and useful info
         errpipe = None

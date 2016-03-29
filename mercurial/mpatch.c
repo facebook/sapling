@@ -205,7 +205,7 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 	int pos = 0;
 
 	/* assume worst case size, we won't have many of these lists */
-	l = lalloc(len / 12);
+	l = lalloc(len / 12 + 1);
 	if (!l)
 		return NULL;
 
@@ -215,10 +215,10 @@ static struct flist *decode(const char *bin, Py_ssize_t len)
 		lt->start = getbe32(bin + pos);
 		lt->end = getbe32(bin + pos + 4);
 		lt->len = getbe32(bin + pos + 8);
-		if (lt->start > lt->end)
-			break; /* sanity check */
 		lt->data = bin + pos + 12;
 		pos += 12 + lt->len;
+		if (lt->start > lt->end || lt->len < 0)
+			break; /* sanity check */
 		lt++;
 	}
 
