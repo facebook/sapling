@@ -191,3 +191,28 @@ class templatekeyword(_templateregistrarbase):
 
     Otherwise, explicit 'templatekw.loadkeyword()' is needed.
     """
+
+class templatefilter(_templateregistrarbase):
+    """Decorator to register template filer
+
+    Usage::
+
+        templatefilter = registrar.templatefilter()
+
+        @templatefilter('myfilter')
+        def myfilterfunc(text):
+            '''Explanation of this template filter ....
+            '''
+            pass
+
+    The first string argument is used also in online help.
+
+    'templatefilter' instance in example above can be used to
+    decorate multiple functions.
+
+    Decorated functions are registered automatically at loading
+    extension, if an instance named as 'templatefilter' is used for
+    decorating in extension.
+
+    Otherwise, explicit 'templatefilters.loadkeyword()' is needed.
+    """

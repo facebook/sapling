@@ -415,5 +415,11 @@ def websub(text, websubtable):
             text = regexp.sub(format, text)
     return text
 
+def loadfilter(ui, extname, registrarobj):
+    """Load template filter from specified registrarobj
+    """
+    for name, func in registrarobj._table.iteritems():
+        filters[name] = func
+
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = filters.values()

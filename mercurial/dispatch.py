@@ -35,6 +35,7 @@ from . import (
     hg,
     hook,
     revset,
+    templatefilters,
     templatekw,
     ui as uimod,
     util,
@@ -766,6 +767,7 @@ extraloaders = [
     ('cmdtable', commands, 'loadcmdtable'),
     ('filesetpredicate', fileset, 'loadpredicate'),
     ('revsetpredicate', revset, 'loadpredicate'),
+    ('templatefilter', templatefilters, 'loadfilter'),
     ('templatekeyword', templatekw, 'loadkeyword'),
 ]
 
