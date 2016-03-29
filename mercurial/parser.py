@@ -518,6 +518,7 @@ class basealiasrules(object):
             raise error.ParseError(_('infinite expansion of %(section)s '
                                      '"%(name)s" detected')
                                    % {'section': cls._section, 'name': a.name})
+        # get cacheable replacement tree by expanding aliases recursively
         expanding.append(a)
         if a.name not in cache:
             cache[a.name] = cls._expand(aliases, a.replacement, expanding,
@@ -526,6 +527,7 @@ class basealiasrules(object):
         expanding.pop()
         if a.args is None:
             return result
+        # substitute function arguments in replacement tree
         l = cls._getlist(tree[2])
         if len(l) != len(a.args):
             raise error.ParseError(_('invalid number of arguments: %d')
