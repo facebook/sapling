@@ -114,7 +114,6 @@
   tests/test-ui-verbosity.py not using absolute_import
   tests/test-ui-verbosity.py requires print_function
   tests/test-url.py not using absolute_import
-  tests/test-url.py requires print_function
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py

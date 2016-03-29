@@ -1,8 +1,9 @@
+from __future__ import print_function
 import os
 
 def check(a, b):
     if a != b:
-        print (a, b)
+        print((a, b))
 
 def cert(cn):
     return {'subject': ((('commonName', cn),),)}
