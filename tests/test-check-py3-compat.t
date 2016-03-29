@@ -108,7 +108,6 @@
   tests/test-trusted.py not using absolute_import
   tests/test-trusted.py requires print_function
   tests/test-ui-color.py not using absolute_import
-  tests/test-ui-color.py requires print_function
   tests/test-url.py not using absolute_import
 
 #if py3exe
@@ -290,6 +289,5 @@
   tests/test-revlog-ancestry.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-status-inprocess.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-trusted.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-ui-color.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif

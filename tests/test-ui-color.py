@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from hgext import color
 from mercurial import dispatch, ui
@@ -8,7 +9,7 @@ testui.pushbuffer()
 testui.write(('buffered\n'))
 testui.warn(('warning\n'))
 testui.write_err('error\n')
-print repr(testui.popbuffer())
+print(repr(testui.popbuffer()))
 
 # test dispatch.dispatch with the same ui object
 hgrc = open(os.environ["HGRCPATH"], 'w')
@@ -28,6 +29,6 @@ def runcmd():
     dispatch.dispatch(dispatch.request(['version', '-q'], ui_))
 
 runcmd()
-print "colored? " + str(issubclass(ui_.__class__, color.colorui))
+print("colored? " + str(issubclass(ui_.__class__, color.colorui)))
 runcmd()
-print "colored? " + str(issubclass(ui_.__class__, color.colorui))
+print("colored? " + str(issubclass(ui_.__class__, color.colorui)))
