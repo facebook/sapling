@@ -1314,10 +1314,6 @@ def writebundle(ui, cg, filename, bundletype, vfs=None, compression=None):
 
     # parse the changegroup data, otherwise we will block
     # in case of sshrepo because we don't know the end of the stream
-
-    # an empty chunkgroup is the end of the changegroup
-    # a changegroup has at least 2 chunkgroups (changelog and manifest).
-    # after that, an empty chunkgroup is the end of the changegroup
     return changegroup.writechunks(ui, chunkiter, filename, vfs=vfs)
 
 @parthandler('changegroup', ('version', 'nbchanges', 'treemanifest'))
