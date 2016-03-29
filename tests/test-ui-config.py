@@ -1,4 +1,9 @@
-from mercurial import ui, dispatch, error
+from __future__ import absolute_import
+from mercurial import (
+    dispatch,
+    error,
+    ui,
+)
 
 testui = ui.ui()
 parsed = dispatch._parseconfig(testui, [

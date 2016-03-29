@@ -109,7 +109,6 @@
   tests/test-trusted.py requires print_function
   tests/test-ui-color.py not using absolute_import
   tests/test-ui-color.py requires print_function
-  tests/test-ui-config.py not using absolute_import
   tests/test-ui-config.py requires print_function
   tests/test-url.py not using absolute_import
 
