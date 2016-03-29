@@ -112,7 +112,6 @@
   tests/test-ui-config.py not using absolute_import
   tests/test-ui-config.py requires print_function
   tests/test-ui-verbosity.py not using absolute_import
-  tests/test-ui-verbosity.py requires print_function
   tests/test-url.py not using absolute_import
 
 #if py3exe
@@ -296,6 +295,5 @@
   tests/test-trusted.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-ui-color.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-ui-config.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-ui-verbosity.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
 
 #endif
