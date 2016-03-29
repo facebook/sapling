@@ -305,31 +305,9 @@ def rebase(ui, repo, **opts):
                                                                 rebaseobsrevs,
                                                                 dest)
                 rebaseobsskipped = set(obsoletenotrebased)
-
-                # Obsolete node with successors not in dest leads to divergence
-                divergenceok = ui.configbool('experimental',
-                                             'allowdivergence')
-                divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
-
-                if divergencebasecandidates and not divergenceok:
-                    divhashes = (str(repo[r])
-                                 for r in divergencebasecandidates)
-                    msg = _("this rebase will cause "
-                            "divergences from: %s")
-                    h = _("to force the rebase please set "
-                          "experimental.allowdivergence=True")
-                    raise error.Abort(msg % (",".join(divhashes),), hint=h)
-
-                # - plain prune (no successor) changesets are rebased
-                # - split changesets are not rebased if at least one of the
-                # changeset resulting from the split is an ancestor of dest
-                rebaseset = rebasesetrevs - rebaseobsskipped
-                if rebasesetrevs and not rebaseset:
-                    msg = _('all requested changesets have equivalents '
-                            'or were marked as obsolete')
-                    hint = _('to force the rebase, set the config '
-                             'experimental.rebaseskipobsolete to False')
-                    raise error.Abort(msg, hint=hint)
+                _checkobsrebase(repo, ui, rebaseobsrevs,
+                                              rebasesetrevs,
+                                              rebaseobsskipped)
 
             result = buildstate(repo, dest, rebaseset, collapsef,
                                 obsoletenotrebased)
@@ -708,6 +686,43 @@ def nearestrebased(repo, rev, state):
         return state[candidates.first()]
     else:
         return None
+
+def _checkobsrebase(repo, ui,
+                                  rebaseobsrevs,
+                                  rebasesetrevs,
+                                  rebaseobsskipped):
+    """
+    Abort if rebase will create divergence or rebase is noop because of markers
+
+    `rebaseobsrevs`: set of obsolete revision in source
+    `rebasesetrevs`: set of revisions to be rebased from source
+    `rebaseobsskipped`: set of revisions from source skipped because they have
+    successors in destination
+    """
+    # Obsolete node with successors not in dest leads to divergence
+    divergenceok = ui.configbool('experimental',
+                                 'allowdivergence')
+    divergencebasecandidates = rebaseobsrevs - rebaseobsskipped
+
+    if divergencebasecandidates and not divergenceok:
+        divhashes = (str(repo[r])
+                     for r in divergencebasecandidates)
+        msg = _("this rebase will cause "
+                "divergences from: %s")
+        h = _("to force the rebase please set "
+              "experimental.allowdivergence=True")
+        raise error.Abort(msg % (",".join(divhashes),), hint=h)
+
+    # - plain prune (no successor) changesets are rebased
+    # - split changesets are not rebased if at least one of the
+    # changeset resulting from the split is an ancestor of dest
+    rebaseset = rebasesetrevs - rebaseobsskipped
+    if rebasesetrevs and not rebaseset:
+        msg = _('all requested changesets have equivalents '
+                'or were marked as obsolete')
+        hint = _('to force the rebase, set the config '
+                 'experimental.rebaseskipobsolete to False')
+        raise error.Abort(msg, hint=hint)
 
 def defineparents(repo, rev, target, state, targetancestors):
     'Return the new parent relationship of the revision that will be rebased'
