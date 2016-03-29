@@ -17,6 +17,7 @@ from . import (
     error,
     minirst,
     parser,
+    registrar,
     revset as revsetmod,
     templatefilters,
     templatekw,
@@ -393,8 +394,14 @@ def buildfunc(exp, context):
         return (runfilter, (args[0], f))
     raise error.ParseError(_("unknown function '%s'") % n)
 
+# dict of template built-in functions
+funcs = {}
+
+templatefunc = registrar.templatefunc(funcs)
+
+@templatefunc('date(date[, fmt])')
 def date(context, mapping, args):
-    """:date(date[, fmt]): Format a date. See :hg:`help dates` for formatting
+    """Format a date. See :hg:`help dates` for formatting
     strings. The default is a Unix date format, including the timezone:
     "Mon Sep 04 15:13:13 2006 0700"."""
     if not (1 <= len(args) <= 2):
@@ -414,8 +421,9 @@ def date(context, mapping, args):
         # i18n: "date" is a keyword
         raise error.ParseError(_("date expects a date information"))
 
+@templatefunc('diff([includepattern [, excludepattern]])')
 def diff(context, mapping, args):
-    """:diff([includepattern [, excludepattern]]): Show a diff, optionally
+    """Show a diff, optionally
     specifying files to include or exclude."""
     if len(args) > 2:
         # i18n: "diff" is a keyword
@@ -433,8 +441,9 @@ def diff(context, mapping, args):
 
     return ''.join(chunks)
 
+@templatefunc('fill(text[, width[, initialident[, hangindent]]])')
 def fill(context, mapping, args):
-    """:fill(text[, width[, initialident[, hangindent]]]): Fill many
+    """Fill many
     paragraphs with optional indentation. See the "fill" filter."""
     if not (1 <= len(args) <= 4):
         # i18n: "fill" is a keyword
@@ -456,8 +465,9 @@ def fill(context, mapping, args):
 
     return templatefilters.fill(text, width, initindent, hangindent)
 
+@templatefunc('pad(text, width[, fillchar=\' \'[, right=False]])')
 def pad(context, mapping, args):
-    """:pad(text, width[, fillchar=' '[, right=False]]): Pad text with a
+    """Pad text with a
     fill character."""
     if not (2 <= len(args) <= 4):
         # i18n: "pad" is a keyword
@@ -481,8 +491,9 @@ def pad(context, mapping, args):
     else:
         return text.ljust(width, fillchar)
 
+@templatefunc('indent(text, indentchars[, firstline])')
 def indent(context, mapping, args):
-    """:indent(text, indentchars[, firstline]): Indents all non-empty lines
+    """Indents all non-empty lines
     with the characters given in the indentchars string. An optional
     third parameter will override the indent for the first line only
     if present."""
@@ -501,8 +512,9 @@ def indent(context, mapping, args):
     # the indent function doesn't indent the first line, so we do it here
     return templatefilters.indent(firstline + text, indent)
 
+@templatefunc('get(dict, key)')
 def get(context, mapping, args):
-    """:get(dict, key): Get an attribute/key from an object. Some keywords
+    """Get an attribute/key from an object. Some keywords
     are complex types. This function allows you to obtain the value of an
     attribute on these types."""
     if len(args) != 2:
@@ -517,8 +529,9 @@ def get(context, mapping, args):
     key = evalfuncarg(context, mapping, args[1])
     return dictarg.get(key)
 
+@templatefunc('if(expr, then[, else])')
 def if_(context, mapping, args):
-    """:if(expr, then[, else]): Conditionally execute based on the result of
+    """Conditionally execute based on the result of
     an expression."""
     if not (2 <= len(args) <= 3):
         # i18n: "if" is a keyword
@@ -530,8 +543,9 @@ def if_(context, mapping, args):
     elif len(args) == 3:
         yield args[2][0](context, mapping, args[2][1])
 
+@templatefunc('ifcontains(search, thing, then[, else])')
 def ifcontains(context, mapping, args):
-    """:ifcontains(search, thing, then[, else]): Conditionally execute based
+    """Conditionally execute based
     on whether the item "search" is in "thing"."""
     if not (3 <= len(args) <= 4):
         # i18n: "ifcontains" is a keyword
@@ -545,8 +559,9 @@ def ifcontains(context, mapping, args):
     elif len(args) == 4:
         yield args[3][0](context, mapping, args[3][1])
 
+@templatefunc('ifeq(expr1, expr2, then[, else])')
 def ifeq(context, mapping, args):
-    """:ifeq(expr1, expr2, then[, else]): Conditionally execute based on
+    """Conditionally execute based on
     whether 2 items are equivalent."""
     if not (3 <= len(args) <= 4):
         # i18n: "ifeq" is a keyword
@@ -559,8 +574,9 @@ def ifeq(context, mapping, args):
     elif len(args) == 4:
         yield args[3][0](context, mapping, args[3][1])
 
+@templatefunc('join(list, sep)')
 def join(context, mapping, args):
-    """:join(list, sep): Join items in a list with a delimiter."""
+    """Join items in a list with a delimiter."""
     if not (1 <= len(args) <= 2):
         # i18n: "join" is a keyword
         raise error.ParseError(_("join expects one or two arguments"))
@@ -582,8 +598,9 @@ def join(context, mapping, args):
             yield joiner
         yield x
 
+@templatefunc('label(label, expr)')
 def label(context, mapping, args):
-    """:label(label, expr): Apply a label to generated content. Content with
+    """Apply a label to generated content. Content with
     a label applied can result in additional post-processing, such as
     automatic colorization."""
     if len(args) != 2:
@@ -598,8 +615,9 @@ def label(context, mapping, args):
 
     return ui.label(thing, label)
 
+@templatefunc('latesttag([pattern])')
 def latesttag(context, mapping, args):
-    """:latesttag([pattern]): The global tags matching the given pattern on the
+    """The global tags matching the given pattern on the
     most recent globally tagged ancestor of this changeset."""
     if len(args) > 1:
         # i18n: "latesttag" is a keyword
@@ -611,8 +629,9 @@ def latesttag(context, mapping, args):
 
     return templatekw.showlatesttags(pattern, **mapping)
 
+@templatefunc('localdate(date[, tz])')
 def localdate(context, mapping, args):
-    """:localdate(date[, tz]): Converts a date to the specified timezone.
+    """Converts a date to the specified timezone.
     The default is local date."""
     if not (1 <= len(args) <= 2):
         # i18n: "localdate" is a keyword
@@ -639,8 +658,9 @@ def localdate(context, mapping, args):
         tzoffset = util.makedate()[1]
     return (date[0], tzoffset)
 
+@templatefunc('revset(query[, formatargs...])')
 def revset(context, mapping, args):
-    """:revset(query[, formatargs...]): Execute a revision set query. See
+    """Execute a revision set query. See
     :hg:`help revset`."""
     if not len(args) > 0:
         # i18n: "revset" is a keyword
@@ -669,8 +689,9 @@ def revset(context, mapping, args):
 
     return templatekw.showrevslist("revision", revs, **mapping)
 
+@templatefunc('rstdoc(text, style)')
 def rstdoc(context, mapping, args):
-    """:rstdoc(text, style): Format ReStructuredText."""
+    """Format ReStructuredText."""
     if len(args) != 2:
         # i18n: "rstdoc" is a keyword
         raise error.ParseError(_("rstdoc expects two arguments"))
@@ -680,8 +701,9 @@ def rstdoc(context, mapping, args):
 
     return minirst.format(text, style=style, keep=['verbose'])
 
+@templatefunc('shortest(node, minlength=4)')
 def shortest(context, mapping, args):
-    """:shortest(node, minlength=4): Obtain the shortest representation of
+    """Obtain the shortest representation of
     a node."""
     if not (1 <= len(args) <= 2):
         # i18n: "shortest" is a keyword
@@ -734,8 +756,9 @@ def shortest(context, mapping, args):
             if len(shortest) <= length:
                 return shortest
 
+@templatefunc('strip(text[, chars])')
 def strip(context, mapping, args):
-    """:strip(text[, chars]): Strip characters from a string. By default,
+    """Strip characters from a string. By default,
     strips all leading and trailing whitespace."""
     if not (1 <= len(args) <= 2):
         # i18n: "strip" is a keyword
@@ -747,8 +770,9 @@ def strip(context, mapping, args):
         return text.strip(chars)
     return text.strip()
 
+@templatefunc('sub(pattern, replacement, expression)')
 def sub(context, mapping, args):
-    """:sub(pattern, replacement, expression): Perform text substitution
+    """Perform text substitution
     using regular expressions."""
     if len(args) != 3:
         # i18n: "sub" is a keyword
@@ -768,8 +792,9 @@ def sub(context, mapping, args):
         # i18n: "sub" is a keyword
         raise error.ParseError(_("sub got an invalid replacement: %s") % rpl)
 
+@templatefunc('startswith(pattern, text)')
 def startswith(context, mapping, args):
-    """:startswith(pattern, text): Returns the value from the "text" argument
+    """Returns the value from the "text" argument
     if it begins with the content from the "pattern" argument."""
     if len(args) != 2:
         # i18n: "startswith" is a keyword
@@ -781,9 +806,9 @@ def startswith(context, mapping, args):
         return text
     return ''
 
-
+@templatefunc('word(number, text[, separator])')
 def word(context, mapping, args):
-    """:word(number, text[, separator]): Return the nth word from a string."""
+    """Return the nth word from a string."""
     if not (2 <= len(args) <= 3):
         # i18n: "word" is a keyword
         raise error.ParseError(_("word expects two or three arguments, got %d")
@@ -820,29 +845,6 @@ exprmethods = {
 # methods to interpret top-level template (e.g. {x}, {x|_}, {x % "y"})
 methods = exprmethods.copy()
 methods["integer"] = exprmethods["symbol"]  # '{1}' as variable
-
-funcs = {
-    "date": date,
-    "diff": diff,
-    "fill": fill,
-    "get": get,
-    "if": if_,
-    "ifcontains": ifcontains,
-    "ifeq": ifeq,
-    "indent": indent,
-    "join": join,
-    "label": label,
-    "latesttag": latesttag,
-    "localdate": localdate,
-    "pad": pad,
-    "revset": revset,
-    "rstdoc": rstdoc,
-    "shortest": shortest,
-    "startswith": startswith,
-    "strip": strip,
-    "sub": sub,
-    "word": word,
-}
 
 # template engine
 
