@@ -256,9 +256,8 @@ class basealiasrules(object):
     """
     # typically a config section, which will be included in error messages
     _section = None
-    # tags of symbol and function nodes
+    # tag of symbol node
     _symbolnode = 'symbol'
-    _funcnode = 'func'
 
     def __new__(cls):
         raise TypeError("'%s' is not instantiatable" % cls.__name__)
@@ -269,8 +268,8 @@ class basealiasrules(object):
         raise NotImplementedError
 
     @staticmethod
-    def _getlist(tree):
-        """Extract a list of arguments from parsed tree"""
+    def _trygetfunc(tree):
+        """Return (name, args) if tree is a function; otherwise None"""
         raise NotImplementedError
 
     @classmethod
@@ -311,15 +310,17 @@ class basealiasrules(object):
         ...     if isinstance(x, Exception):
         ...         raise x
         ...     return x
-        >>> def getlist(tree):
-        ...     if not tree:
-        ...         return []
-        ...     if tree[0] == 'list':
-        ...         return list(tree[1:])
-        ...     return [tree]
+        >>> def trygetfunc(tree):
+        ...     if not tree or tree[0] != 'func' or tree[1][0] != 'symbol':
+        ...         return None
+        ...     if not tree[2]:
+        ...         return tree[1][1], []
+        ...     if tree[2][0] == 'list':
+        ...         return tree[1][1], list(tree[2][1:])
+        ...     return tree[1][1], [tree[2]]
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parse)
-        ...     _getlist = staticmethod(getlist)
+        ...     _trygetfunc = staticmethod(trygetfunc)
         >>> builddecl = aliasrules._builddecl
         >>> builddecl('foo')
         ('foo', None, None)
@@ -360,19 +361,17 @@ class basealiasrules(object):
                 return (decl, None, _("'$' not for alias arguments"))
             return (name, None, None)
 
-        if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
+        func = cls._trygetfunc(tree)
+        if func:
             # "name(arg, ....) = ...." style
-            name = tree[1][1]
+            name, args = func
             if name.startswith('$'):
                 return (decl, None, _("'$' not for alias arguments"))
-            args = []
-            for arg in cls._getlist(tree[2]):
-                if arg[0] != cls._symbolnode:
-                    return (decl, None, _("invalid argument list"))
-                args.append(arg[1])
+            if any(t[0] != cls._symbolnode for t in args):
+                return (decl, None, _("invalid argument list"))
             if len(args) != len(set(args)):
                 return (name, None, _("argument names collide with each other"))
-            return (name, args, None)
+            return (name, [t[1] for t in args], None)
 
         return (decl, None, _("invalid format"))
 
@@ -411,7 +410,7 @@ class basealiasrules(object):
         ... }
         >>> class aliasrules(basealiasrules):
         ...     _parse = staticmethod(parsemap.__getitem__)
-        ...     _getlist = staticmethod(lambda x: [])
+        ...     _trygetfunc = staticmethod(lambda x: None)
         >>> builddefn = aliasrules._builddefn
         >>> def pprint(tree):
         ...     print prettyformat(tree, ('_aliasarg', 'string', 'symbol'))
@@ -483,11 +482,12 @@ class basealiasrules(object):
             a = aliases.get(name)
             if a and a.args is None:
                 return a, None
-        if tree[0] == cls._funcnode and tree[1][0] == cls._symbolnode:
-            name = tree[1][1]
+        func = cls._trygetfunc(tree)
+        if func:
+            name, args = func
             a = aliases.get(name)
             if a and a.args is not None:
-                return a, cls._getlist(tree[2])
+                return a, args
         return None
 
     @classmethod

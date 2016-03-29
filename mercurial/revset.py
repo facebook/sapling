@@ -2254,7 +2254,11 @@ class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
     _parse = staticmethod(_parsealias)
-    _getlist = staticmethod(getlist)
+
+    @staticmethod
+    def _trygetfunc(tree):
+        if tree[0] == 'func' and tree[1][0] == 'symbol':
+            return tree[1][1], getlist(tree[2])
 
 def expandaliases(ui, tree, showwarning=None):
     aliases = _aliasrules.buildmap(ui.configitems('revsetalias'))
