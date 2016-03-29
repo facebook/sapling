@@ -111,7 +111,6 @@
   tests/test-ui-color.py requires print_function
   tests/test-ui-config.py not using absolute_import
   tests/test-ui-config.py requires print_function
-  tests/test-ui-verbosity.py not using absolute_import
   tests/test-url.py not using absolute_import
 
 #if py3exe
