@@ -450,7 +450,7 @@ extendeddateformats = defaultdateformats + (
 def cachefunc(func):
     '''cache the result of function calls'''
     # XXX doesn't handle keywords args
-    if func.func_code.co_argcount == 0:
+    if func.__code__.co_argcount == 0:
         cache = []
         def f():
             if len(cache) == 0:
@@ -458,7 +458,7 @@ def cachefunc(func):
             return cache[0]
         return f
     cache = {}
-    if func.func_code.co_argcount == 1:
+    if func.__code__.co_argcount == 1:
         # we gain a small amount of time because
         # we don't need to pack/unpack the list
         def f(arg):
@@ -700,7 +700,7 @@ def lrucachefunc(func):
     '''cache most recent results of function calls'''
     cache = {}
     order = collections.deque()
-    if func.func_code.co_argcount == 1:
+    if func.__code__.co_argcount == 1:
         def f(arg):
             if arg not in cache:
                 if len(cache) > 20:
