@@ -104,6 +104,7 @@ from mercurial import (
     match,
     patch,
     pathutil,
+    registrar,
     scmutil,
     templatefilters,
     util,
@@ -137,27 +138,28 @@ colortable = {
     'kwfiles.ignoredunknown': 'none'
 }
 
+templatefilter = registrar.templatefilter()
+
 # date like in cvs' $Date
+@templatefilter('utcdate')
 def utcdate(text):
-    ''':utcdate: Date. Returns a UTC-date in this format: "2009/08/18 11:00:13".
+    '''Date. Returns a UTC-date in this format: "2009/08/18 11:00:13".
     '''
     return util.datestr((util.parsedate(text)[0], 0), '%Y/%m/%d %H:%M:%S')
 # date like in svn's $Date
+@templatefilter('svnisodate')
 def svnisodate(text):
-    ''':svnisodate: Date. Returns a date in this format: "2009-08-18 13:00:13
+    '''Date. Returns a date in this format: "2009-08-18 13:00:13
     +0200 (Tue, 18 Aug 2009)".
     '''
     return util.datestr(text, '%Y-%m-%d %H:%M:%S %1%2 (%a, %d %b %Y)')
 # date like in svn's $Id
+@templatefilter('svnutcdate')
 def svnutcdate(text):
-    ''':svnutcdate: Date. Returns a UTC-date in this format: "2009-08-18
+    '''Date. Returns a UTC-date in this format: "2009-08-18
     11:00:13Z".
     '''
     return util.datestr((util.parsedate(text)[0], 0), '%Y-%m-%d %H:%M:%SZ')
-
-templatefilters.filters.update({'utcdate': utcdate,
-                                'svnisodate': svnisodate,
-                                'svnutcdate': svnutcdate})
 
 # make keyword tools accessible
 kwtools = {'templater': None, 'hgcmd': ''}
