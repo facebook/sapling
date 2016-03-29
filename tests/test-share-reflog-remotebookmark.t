@@ -41,7 +41,7 @@
   adding file1
   $ cd ../cloned1
   $ hg pull
-  pulling from $TESTTMP/repo
+  pulling from $TESTTMP/repo (glob)
   searching for changes
   adding changesets
   adding manifests
