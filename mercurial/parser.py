@@ -509,31 +509,29 @@ class basealiasrules(object):
         if not isinstance(tree, tuple):
             return tree
         a = cls._getalias(aliases, tree)
-        if a is not None:
-            if a.error:
-                raise error.Abort(a.error)
-            if a in expanding:
-                raise error.ParseError(_('infinite expansion of %(section)s '
-                                         '"%(name)s" detected')
-                                       % {'section': cls._section,
-                                          'name': a.name})
-            expanding.append(a)
-            if a.name not in cache:
-                cache[a.name] = cls._expand(aliases, a.replacement, expanding,
-                                            cache)
-            result = cache[a.name]
-            expanding.pop()
-            if a.args is not None:
-                l = cls._getlist(tree[2])
-                if len(l) != len(a.args):
-                    raise error.ParseError(_('invalid number of arguments: %d')
-                                           % len(l))
-                l = [cls._expand(aliases, t, [], cache) for t in l]
-                result = cls._expandargs(result, dict(zip(a.args, l)))
-        else:
-            result = tuple(cls._expand(aliases, t, expanding, cache)
-                           for t in tree)
-        return result
+        if a is None:
+            return tuple(cls._expand(aliases, t, expanding, cache)
+                         for t in tree)
+        if a.error:
+            raise error.Abort(a.error)
+        if a in expanding:
+            raise error.ParseError(_('infinite expansion of %(section)s '
+                                     '"%(name)s" detected')
+                                   % {'section': cls._section, 'name': a.name})
+        expanding.append(a)
+        if a.name not in cache:
+            cache[a.name] = cls._expand(aliases, a.replacement, expanding,
+                                        cache)
+        result = cache[a.name]
+        expanding.pop()
+        if a.args is None:
+            return result
+        l = cls._getlist(tree[2])
+        if len(l) != len(a.args):
+            raise error.ParseError(_('invalid number of arguments: %d')
+                                   % len(l))
+        l = [cls._expand(aliases, t, [], cache) for t in l]
+        return cls._expandargs(result, dict(zip(a.args, l)))
 
     @classmethod
     def expand(cls, aliases, tree):
