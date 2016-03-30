@@ -3,7 +3,6 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
-  contrib/import-checker.py requires print_function
   doc/check-seclevel.py not using absolute_import
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
@@ -112,7 +111,6 @@
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
   contrib/check-code.py: invalid syntax: (unicode error) 'unicodeescape' codec can't decode bytes in position *-*: malformed \N character escape (<unknown>, line *) (glob)
-  contrib/import-checker.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   hgext/acl.py: error importing: <ImportError> No module named 'cStringIO' (error at parsers.py:*) (glob)
   hgext/automv.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)

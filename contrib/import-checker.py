@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import ast
 import collections
@@ -544,11 +544,12 @@ def find_cycles(imports):
 
     All module names recorded in `imports` should be absolute one.
 
+    >>> from __future__ import print_function
     >>> imports = {'top.foo': ['top.bar', 'os.path', 'top.qux'],
     ...            'top.bar': ['top.baz', 'sys'],
     ...            'top.baz': ['top.foo'],
     ...            'top.qux': ['top.foo']}
-    >>> print '\\n'.join(sorted(find_cycles(imports)))
+    >>> print('\\n'.join(sorted(find_cycles(imports))))
     top.bar -> top.baz -> top.foo -> top.bar
     top.foo -> top.qux -> top.foo
     """
@@ -566,7 +567,7 @@ def _cycle_sortkey(c):
 
 def main(argv):
     if len(argv) < 2 or (argv[1] == '-' and len(argv) > 2):
-        print 'Usage: %s {-|file [file] [file] ...}'
+        print('Usage: %s {-|file [file] [file] ...}')
         return 1
     if argv[1] == '-':
         argv = argv[:1]
@@ -584,7 +585,7 @@ def main(argv):
             imported_modules(src, modname, localmods, ignore_nested=True))
         for error, lineno in verify_import_convention(modname, src, localmods):
             any_errors = True
-            print '%s:%d: %s' % (source_path, lineno, error)
+            print('%s:%d: %s' % (source_path, lineno, error))
         f.close()
     cycles = find_cycles(used_imports)
     if cycles:
@@ -596,7 +597,7 @@ def main(argv):
             # of cycles that are effectively duplicates.
             if first in firstmods:
                 continue
-            print 'Import cycle:', c
+            print('Import cycle:', c)
             firstmods.add(first)
         any_errors = True
     return any_errors != 0
