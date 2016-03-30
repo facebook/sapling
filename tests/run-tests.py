@@ -1010,7 +1010,7 @@ class TTest(Test):
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
-            print(stdout)
+            print(stdout.decode('utf-8'))
             sys.exit(1)
 
         if ret != 0:
