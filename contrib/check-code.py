@@ -14,7 +14,7 @@ when a rule triggers wrong, do one of the following (prefer one from top):
  * doublecheck that it is a false match
  * improve the rule pattern
  * add an ignore pattern to the rule (3rd arg) which matches your good line
-   (you can append a short comment and match this, like: #re-raises, # no-py24)
+   (you can append a short comment and match this, like: #re-raises)
  * change the pattern to a warning and list the exception in test-check-code-hg
  * ONLY use no--check-code for skipping entire files from external sources
 """
