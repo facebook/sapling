@@ -60,7 +60,6 @@
   $ cd ../client
   $ hg up mybook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark mybook)
   $ echo z > z
   $ hg commit -qAm z
   $ cd ../master
