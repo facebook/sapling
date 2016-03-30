@@ -238,11 +238,12 @@ def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None,
     finally:
         repo.shallowmatch = original
 
-def addchangegroupfiles(orig, repo, source, revmap, trp, pr, *args):
+def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     if not requirement in repo.requirements:
         return orig(repo, source, revmap, trp, pr, *args)
 
     files = 0
+    newfiles = 0
     visited = set()
     revisiondatas = {}
     queue = []
@@ -258,9 +259,10 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, pr, *args):
         chunkdata = source.filelogheader()
         if not chunkdata:
             break
+        files += 1
         f = chunkdata["filename"]
         repo.ui.debug("adding %s revisions\n" % f)
-        pr()
+        repo.ui.progress(_('files'), files, total=expectedfiles)
 
         if not repo.shallowmatch(f):
             fl = repo.file(f)
@@ -279,7 +281,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, pr, *args):
             queue.append((f, chain))
 
             if f not in visited:
-                files += 1
+                newfiles +=1
                 visited.add(f)
 
         if chain == None:
@@ -362,4 +364,4 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, pr, *args):
 
     repo.ui.progress(_('files'), None)
 
-    return len(revisiondatas), files
+    return len(revisiondatas), newfiles
