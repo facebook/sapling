@@ -4,6 +4,7 @@
 
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
+  > bundle2hooks=
   > pushrebase=
   > [experimental]
   > bundle2lazylocking=True
