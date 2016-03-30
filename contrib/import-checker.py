@@ -184,6 +184,8 @@ def list_stdlib_modules():
     yield 'builtins' # python3 only
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
+    for m in 'cPickle', 'datetime': # in Python (not C) on PyPy
+        yield m
     stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
     # We need to supplement the list of prefixes for the search to work
     # when run from within a virtualenv.
