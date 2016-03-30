@@ -1160,6 +1160,7 @@ class TTest(Test):
                     els = expected[pos]
 
                 i = 0
+                optional = []
                 while i < len(els):
                     el = els[i]
 
@@ -1181,11 +1182,18 @@ class TTest(Test):
                     if r:
                         els.pop(i)
                         break
+                    if el and el.endswith(b" (?)\n"):
+                        optional.append(i)
                     i += 1
 
                 if r:
                     if r == "retry":
                         continue
+                    # clean up any optional leftovers
+                    for i in optional:
+                        postout.append(b'  ' + els[i])
+                    for i in reversed(optional):
+                        del els[i]
                     postout.append(b'  ' + el)
                 else:
                     if self.NEEDESCAPE(lout):

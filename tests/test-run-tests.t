@@ -49,7 +49,7 @@ a succesful test
   >   $ echo babar
   >   babar
   >   $ echo xyzzy
-  >   never happens (?)
+  >   never*happens (glob) (?)
   >   xyzzy
   >   nor this (?)
   >   $ printf 'abc\ndef\nxyz\n'
