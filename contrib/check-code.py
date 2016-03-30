@@ -132,6 +132,7 @@ testpats = [
     (r'\butil\.Abort\b', "directly use error.Abort"),
     (r'\|&', "don't use |&, use 2>&1"),
     (r'\w =  +\w', "only one space after = allowed"),
+    (r'\bsed\b.*[^\\]\\n', "don't use 'sed ... \\n', use a \\ and a newline"),
   ],
   # warnings
   [
