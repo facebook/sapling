@@ -2518,7 +2518,8 @@ class TestRunner(object):
             if found:
                 vlog("# Found prerequisite", p, "at", found)
             else:
-                print("WARNING: Did not find prerequisite tool: %s " % p)
+                print("WARNING: Did not find prerequisite tool: %s " %
+                      p.decode("utf-8"))
 
 if __name__ == '__main__':
     runner = TestRunner()
