@@ -1353,12 +1353,10 @@ def pushkey(orig, repo, proto, namespace, key, old, new):
         return orig(repo, proto, namespace, key, old, new)
 
 # recover must be a norepo command because loading the repo fails
-commands.norepo += " sqlrecover sqlstrip"
-
 @command('^sqlrecover', [
     ('f', 'force', '', _('strips as far back as necessary'), ''),
     ('', 'no-backup', '', _('does not produce backup bundles for strips'), ''),
-    ], _('hg sqlrecover'))
+    ], _('hg sqlrecover'), norepo=True)
 def sqlrecover(ui, *args, **opts):
     """
     Strips commits from the local repo until it is back in sync with the SQL
@@ -1411,7 +1409,7 @@ def sqlrecover(ui, *args, **opts):
 @command('^sqlstrip', [
     ('', 'i-know-what-i-am-doing', None, _('only run sqlstrip if you know ' +
         'exactly what you\'re doing')),
-    ], _('hg sqlstrip [OPTIONS] REV'))
+    ], _('hg sqlstrip [OPTIONS] REV'), norepo=True)
 def sqlstrip(ui, rev, *args, **opts):
     """strips all revisions greater than or equal to the given revision from the sql database
 
