@@ -554,7 +554,7 @@ def find_cycles(imports):
     top.foo -> top.qux -> top.foo
     """
     cycles = set()
-    for mod in sorted(imports.iterkeys()):
+    for mod in sorted(imports.keys()):
         try:
             checkmod(mod, imports)
         except CircularImport as e:
@@ -578,7 +578,7 @@ def main(argv):
     for source_path in argv[1:]:
         modname = dotted_name_of_path(source_path, trimpure=True)
         localmods[modname] = source_path
-    for modname, source_path in sorted(localmods.iteritems()):
+    for modname, source_path in sorted(localmods.items()):
         f = open(source_path)
         src = f.read()
         used_imports[modname] = sorted(
