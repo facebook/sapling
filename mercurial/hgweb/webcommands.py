@@ -606,7 +606,8 @@ def bookmarks(web, req, tmpl):
     The ``bookmarks`` template is rendered.
     """
     i = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
-    i = sorted(i)
+    sortkey = lambda b: (web.repo[b[1]].rev(), b[0])
+    i = sorted(i, key=sortkey, reverse=True)
     parity = paritygen(web.stripecount)
 
     def entries(latestonly, **map):
@@ -678,7 +679,9 @@ def summary(web, req, tmpl):
     def bookmarks(**map):
         parity = paritygen(web.stripecount)
         marks = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
-        for k, n in sorted(marks)[:10]:  # limit to 10 bookmarks
+        sortkey = lambda b: (web.repo[b[1]].rev(), b[0])
+        marks = sorted(marks, key=sortkey, reverse=True)
+        for k, n in marks[:10]:  # limit to 10 bookmarks
             yield {'parity': parity.next(),
                    'bookmark': k,
                    'date': web.repo[n].date(),

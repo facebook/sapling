@@ -680,20 +680,20 @@ bookmarks/ shows bookmarks info
   {
     "bookmarks": [
       {
-        "bookmark": "bookmark1",
-        "date": [
-          0.0,
-          0
-        ],
-        "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5"
-      },
-      {
         "bookmark": "bookmark2",
         "date": [
           0.0,
           0
         ],
         "node": "ceed296fe500c3fac9541e31dad860cb49c89e45"
+      },
+      {
+        "bookmark": "bookmark1",
+        "date": [
+          0.0,
+          0
+        ],
+        "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5"
       }
     ],
     "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7"

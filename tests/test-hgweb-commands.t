@@ -1496,8 +1496,8 @@ Overviews
   $ get-with-headers.py 127.0.0.1:$HGPORT 'raw-bookmarks'
   200 Script output follows
   
-  anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   something	cad8025a2e87f88c06259790adfa15acb4080123
+  anotherthing	2ef0ac749a14e4f57a5a822464a0902c6f7f448f
   $ get-with-headers.py 127.0.0.1:$HGPORT 'summary/?style=gitweb'
   200 Script output follows
   
@@ -1631,20 +1631,20 @@ Overviews
   
   <tr class="parity0">
   <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
-  <td><a class="list" href="/rev/anotherthing?style=gitweb"><b>anotherthing</b></a></td>
-  <td class="link">
-  <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
-  <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> |
-  <a href="/file/2ef0ac749a14?style=gitweb">files</a>
-  </td>
-  </tr>
-  <tr class="parity1">
-  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
   <td><a class="list" href="/rev/something?style=gitweb"><b>something</b></a></td>
   <td class="link">
   <a href="/rev/cad8025a2e87?style=gitweb">changeset</a> |
   <a href="/log/cad8025a2e87?style=gitweb">changelog</a> |
   <a href="/file/cad8025a2e87?style=gitweb">files</a>
+  </td>
+  </tr>
+  <tr class="parity1">
+  <td class="age"><i class="age">Thu, 01 Jan 1970 00:00:00 +0000</i></td>
+  <td><a class="list" href="/rev/anotherthing?style=gitweb"><b>anotherthing</b></a></td>
+  <td class="link">
+  <a href="/rev/2ef0ac749a14?style=gitweb">changeset</a> |
+  <a href="/log/2ef0ac749a14?style=gitweb">changelog</a> |
+  <a href="/file/2ef0ac749a14?style=gitweb">files</a>
   </td>
   </tr>
   <tr class="light"><td colspan="3"><a class="list" href="/bookmarks?style=gitweb">...</a></td></tr>
