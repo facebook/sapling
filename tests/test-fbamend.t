@@ -385,8 +385,8 @@ Test that fbamend works with interactive commits (crecord)
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > interactive = true
+  > interface = curses
   > [experimental]
-  > crecord = True
   > crecordtest = testModeCommands
   > EOF
   $ hg up 18b434184b29 -q
