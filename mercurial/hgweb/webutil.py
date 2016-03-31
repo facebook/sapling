@@ -341,6 +341,7 @@ def changelistentry(web, ctx, tmpl):
 
     entry = commonentry(repo, ctx)
     entry.update(
+        allparents=lambda **x: parents(ctx),
         parent=lambda **x: parents(ctx, rev - 1),
         child=lambda **x: children(ctx, rev + 1),
         changelogtag=showtags,

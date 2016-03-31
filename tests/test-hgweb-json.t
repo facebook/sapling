@@ -175,6 +175,10 @@ changelog/ shows information about several changesets
         ],
         "desc": "merge test-branch into default",
         "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "parents": [
+          "ceed296fe500c3fac9541e31dad860cb49c89e45",
+          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+        ],
         "tags": [
           "tip"
         ],
@@ -188,6 +192,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "another commit in test-branch",
         "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "parents": [
+          "6ab967a8ab3489227a83f80e920faa039a71819f"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -199,6 +206,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "create test branch",
         "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -212,6 +222,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "create tag2",
         "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "parents": [
+          "f2890a05fea49bfaf9fb27ed5490894eba32da78"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -223,6 +236,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "another commit to da/foo",
         "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "parents": [
+          "93a8ce14f89156426b7fa981af8042da53f03aa0"
+        ],
         "tags": [
           "tag2"
         ],
@@ -236,6 +252,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "create tag",
         "node": "93a8ce14f89156426b7fa981af8042da53f03aa0",
+        "parents": [
+          "78896eb0e102174ce9278438a95e12543e4367a7"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -247,6 +266,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "move foo",
         "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "parents": [
+          "8d7c456572acf3557e8ed8a07286b10c408bcec5"
+        ],
         "tags": [
           "tag1"
         ],
@@ -262,6 +284,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "modify da/foo",
         "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+        "parents": [
+          "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -273,6 +298,9 @@ changelog/ shows information about several changesets
         ],
         "desc": "modify foo",
         "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -284,6 +312,7 @@ changelog/ shows information about several changesets
         ],
         "desc": "initial",
         "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "parents": [],
         "tags": [],
         "user": "test"
       }
@@ -307,6 +336,9 @@ changelog/{revision} shows information starting at a specific changeset
         ],
         "desc": "modify foo",
         "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -318,6 +350,7 @@ changelog/{revision} shows information starting at a specific changeset
         ],
         "desc": "initial",
         "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "parents": [],
         "tags": [],
         "user": "test"
       }
@@ -341,6 +374,10 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "merge test-branch into default",
         "node": "cc725e08502a79dd1eda913760fbe06ed7a9abc7",
+        "parents": [
+          "ceed296fe500c3fac9541e31dad860cb49c89e45",
+          "ed66c30e87eb65337c05a4229efaa5f1d5285a90"
+        ],
         "tags": [
           "tip"
         ],
@@ -354,6 +391,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "another commit in test-branch",
         "node": "ed66c30e87eb65337c05a4229efaa5f1d5285a90",
+        "parents": [
+          "6ab967a8ab3489227a83f80e920faa039a71819f"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -365,6 +405,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "create test branch",
         "node": "6ab967a8ab3489227a83f80e920faa039a71819f",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -378,6 +421,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "create tag2",
         "node": "ceed296fe500c3fac9541e31dad860cb49c89e45",
+        "parents": [
+          "f2890a05fea49bfaf9fb27ed5490894eba32da78"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -389,6 +435,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "another commit to da/foo",
         "node": "f2890a05fea49bfaf9fb27ed5490894eba32da78",
+        "parents": [
+          "93a8ce14f89156426b7fa981af8042da53f03aa0"
+        ],
         "tags": [
           "tag2"
         ],
@@ -402,6 +451,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "create tag",
         "node": "93a8ce14f89156426b7fa981af8042da53f03aa0",
+        "parents": [
+          "78896eb0e102174ce9278438a95e12543e4367a7"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -413,6 +465,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "move foo",
         "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+        "parents": [
+          "8d7c456572acf3557e8ed8a07286b10c408bcec5"
+        ],
         "tags": [
           "tag1"
         ],
@@ -428,6 +483,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "modify da/foo",
         "node": "8d7c456572acf3557e8ed8a07286b10c408bcec5",
+        "parents": [
+          "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -439,6 +497,9 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "modify foo",
         "node": "f8bbb9024b10f93cdbb8d940337398291d40dea8",
+        "parents": [
+          "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e"
+        ],
         "tags": [],
         "user": "test"
       },
@@ -450,6 +511,7 @@ shortlog/ shows information about a set of changesets
         ],
         "desc": "initial",
         "node": "06e557f3edf66faa1ccaba5dd8c203c21cc79f1e",
+        "parents": [],
         "tags": [],
         "user": "test"
       }

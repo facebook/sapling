@@ -11,7 +11,8 @@ changelistentry = '\{
   "desc": {desc|utf8|json},
   "bookmarks": [{join(bookmarks%changelistentryname, ", ")}],
   "tags": [{join(tags%changelistentryname, ", ")}],
-  "user": {author|utf8|json}
+  "user": {author|utf8|json},
+  "parents": [{join(allparents%changesetparent, ", ")}]
   }'
 changelistentryname = '{name|utf8|json}'
 changeset = '\{
