@@ -327,26 +327,26 @@ Test with two unrelated histories
   |    u2
   |
   o  7:-1   8749dc393678   1970-01-01 00:00 +0000   test
-  |    u1
-  |
-  | o    6[feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
-  | |\     create branch foo
-  | | |
-  | | .
-  | | .
-  | | |
-  | | o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
-  | |/     c2
-  | |
-  | | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
-  | |/     b
-  | |
-  | .
-  |
-  |
-  o  -1   000000000000   1970-01-01 00:00 +0000
+       u1
   
-  
+  o  6[feature2]   26d4a421c339   1970-01-01 00:00 +0000   test
+  |    create branch foo
+  |
+  .
+  .
+  |
+  o  4[master]   38d85b506754   1970-01-01 00:00 +0000   test
+  |    c2
+  |
+  .
+  .
+  |
+  | o  2[feature1,foo-bar]   49cdb4091aca   1970-01-01 00:00 +0000   test
+  |/     b
+  |
+  o  1   b68836a6e2ca   1970-01-01 00:00 +0000   test
+  |    a2
+  |
   note: hiding 1 old heads without bookmarks
   (use --all to see them)
 

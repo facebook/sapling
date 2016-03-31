@@ -222,9 +222,7 @@ def getdag(ui, repo, revs, master):
             queue.extend(lookup.get(m, []))
 
     # Topologically sort the noderev numbers
-    # the -1 is there to prevent crashing in case we have two roots in the
-    # repo and we are trying to show the rev no -1
-    order = [-1] + sortnodes([r[0] for r in results], parentfunc, masters)
+    order = sortnodes([r[0] for r in results], parentfunc, masters)
     order = dict((e[1], e[0]) for e in enumerate(order))
 
     # Sort the actual results based on their position in the 'order'
@@ -464,15 +462,23 @@ Excludes:
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
 
-    # get common ancestor
-    anc = None
+    # Find lowest common ancestors of revs. If we have multiple roots in the repo
+    # the following will find one ancestor per group of revs with same root.
+    ancestors = set()
     for r in revs:
-        if anc is None:
-            anc = r
-        else:
-            anc = rev(ancestor(node(anc), node(r)))
-    if anc:
-        revs.add(anc)
+        added = False
+        for anc in list(ancestors):
+            lca = rev(ancestor(node(anc), node(r)))
+            if lca != -1:
+                if anc != lca:
+                    ancestors.discard(anc)
+                    ancestors.add(lca)
+                added = True
+
+        if not added:
+            ancestors.add(r)
+
+    revs |= ancestors
 
     revs = sorted(list(revs), reverse=True)
 
