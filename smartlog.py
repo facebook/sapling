@@ -462,8 +462,9 @@ Excludes:
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
 
-    # Find lowest common ancestors of revs. If we have multiple roots in the repo
-    # the following will find one ancestor per group of revs with same root.
+    # Find lowest common ancestors of revs. If we have multiple roots in the
+    # repo the following will find one ancestor per group of revs with the
+    # same root.
     ancestors = set()
     for r in revs:
         added = False
