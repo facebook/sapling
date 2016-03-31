@@ -230,7 +230,7 @@ def _rebase(orig, ui, repo, **opts):
 # "hg histedit --continue" and "--abort"
 #
 """
-    editcomment += histedit.geteditcomment(node.short(src),
+    editcomment += histedit.geteditcomment(ui, node.short(src),
                                            node.short(topmost))
     histedit.ruleeditor(repo, ui, rules, editcomment=editcomment)
 
