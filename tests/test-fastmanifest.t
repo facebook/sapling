@@ -14,10 +14,14 @@ Check diagnosis, debugging information
   > }
 
 
-  $ printandclearlog() {
+  $ printaccessedrevs() {
   >     [ ! -f "$TESTTMP/logfile" ] && echo "no access" && return
   >     cat "$TESTTMP/logfile" | sort | uniq
   >     rm "$TESTTMP/logfile"
+  > }
+
+  $ printcachedrevs() {
+  > hg log -r "fastmanifesttocache()" -T "{rev}\n"
   > }
 
   $ mkdir diagnosis
@@ -33,53 +37,83 @@ Check diagnosis, debugging information
 
 1) Commit
 
+  $ printcachedrevs
   $ mkcommit a
-  $ printandclearlog
+  $ printaccessedrevs
   -1
 
+  $ printcachedrevs
+  0
   $ mkcommit b
-  $ printandclearlog
+  $ printaccessedrevs
   -1
   0
 
   $ echo "c" > a
+  $ printcachedrevs
+  0
+  1
   $ hg commit -m "new a"
-  $ printandclearlog
+  $ printaccessedrevs
   -1
   1
 
 2) Diff
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg diff -c . > /dev/null
-  $ printandclearlog
+  $ printaccessedrevs
   1
   2
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg diff -c ".^" > /dev/null
-  $ printandclearlog
+  $ printaccessedrevs
   0
   1
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg diff -r ".^" > /dev/null
-  $ printandclearlog
+  $ printaccessedrevs
   1
   2
 
 3) Log
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg log a > /dev/null
-  $ printandclearlog
+  $ printaccessedrevs
   no access
 
 4) Update
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg update ".^^" -q
-  $ printandclearlog
+  $ printaccessedrevs
   0
   2
 
+  $ printcachedrevs
+  0
+  1
+  2
   $ hg update tip -q
-  $ printandclearlog
+  $ printaccessedrevs
   0
   2
 
@@ -106,7 +140,7 @@ Check diagnosis, debugging information
   o  0 1f0dee641bb7258c56bd60e93edfa2405381c41e add a
   
 
-  $ printandclearlog
+  $ printaccessedrevs
   -1
   2
   3
@@ -116,7 +150,7 @@ Check diagnosis, debugging information
   rebasing 5:5234b99c4f1d "add e"
   rebasing 6:dd82c74514cb "add f" (tip)
   saved backup bundle to $TESTTMP/diagnosis/.hg/strip-backup/5234b99c4f1d-c2e049ad-backup.hg (glob)
-  $ printandclearlog
+  $ printaccessedrevs
   -1
   2
   4

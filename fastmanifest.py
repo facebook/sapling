@@ -17,6 +17,7 @@ logfile = "" # Filename, is not empty will log access to any manifest
 """
 from mercurial import extensions
 from mercurial import manifest
+from mercurial import revset
 
 
 class manifestaccesslogger(object):
@@ -32,8 +33,18 @@ class manifestaccesslogger(object):
             pass
         return r
 
+def fastmanifesttocache(repo, subset, x):
+    """``fastmanifesttocache(])``
+    Revisions whose fastmanifest should be cached
+
+    For the moment just drafts
+    """
+    return repo.revs("not public()")
+
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
     if logfile:
         logger = manifestaccesslogger(logfile)
         extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
+    revset.symbols['fastmanifesttocache'] = fastmanifesttocache
+    revset.safesymbols.add('fastmanifesttocache')
