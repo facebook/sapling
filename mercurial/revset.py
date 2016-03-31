@@ -3060,7 +3060,8 @@ class addset(abstractsmartset):
 
     iterate unsorted:
     >>> rs = addset(xs, ys)
-    >>> [x for x in rs]  # without _genlist
+    >>> # (use generator because pypy could call len())
+    >>> list(x for x in rs)  # without _genlist
     [0, 3, 2, 5, 4]
     >>> assert not rs._genlist
     >>> len(rs)
@@ -3071,7 +3072,8 @@ class addset(abstractsmartset):
 
     iterate ascending:
     >>> rs = addset(xs, ys, ascending=True)
-    >>> [x for x in rs], [x for x in rs.fastasc()]  # without _asclist
+    >>> # (use generator because pypy could call len())
+    >>> list(x for x in rs), list(x for x in rs.fastasc())  # without _asclist
     ([0, 2, 3, 4, 5], [0, 2, 3, 4, 5])
     >>> assert not rs._asclist
     >>> len(rs)
@@ -3082,7 +3084,8 @@ class addset(abstractsmartset):
 
     iterate descending:
     >>> rs = addset(xs, ys, ascending=False)
-    >>> [x for x in rs], [x for x in rs.fastdesc()]  # without _asclist
+    >>> # (use generator because pypy could call len())
+    >>> list(x for x in rs), list(x for x in rs.fastdesc())  # without _asclist
     ([5, 4, 3, 2, 0], [5, 4, 3, 2, 0])
     >>> assert not rs._asclist
     >>> len(rs)
