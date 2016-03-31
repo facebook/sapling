@@ -461,4 +461,20 @@ Some tests for hgweb in an empty repository
   </html>
   
 
+  $ (get-with-headers.py localhost:$HGPORT 'atom-bookmarks')
+  200 Script output follows
+  
+  <?xml version="1.0" encoding="ascii"?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+   <id>http://*:$HGPORT/</id> (glob)
+   <link rel="self" href="http://*:$HGPORT/atom-bookmarks"/> (glob)
+   <link rel="alternate" href="http://*:$HGPORT/bookmarks"/> (glob)
+   <title>test: bookmarks</title>
+   <summary>test bookmark history</summary>
+   <author><name>Mercurial SCM</name></author>
+   
+  
+  
+  </feed>
+
   $ cd ..

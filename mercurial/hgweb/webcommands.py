@@ -606,13 +606,13 @@ def bookmarks(web, req, tmpl):
     The ``bookmarks`` template is rendered.
     """
     i = [b for b in web.repo._bookmarks.items() if b[1] in web.repo]
+    i = sorted(i)
     parity = paritygen(web.stripecount)
 
     def entries(latestonly, **map):
+        t = i
         if latestonly:
-            t = [min(i)]
-        else:
-            t = sorted(i)
+            t = i[:1]
         for k, n in t:
             yield {"parity": parity.next(),
                    "bookmark": k,
