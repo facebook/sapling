@@ -61,8 +61,8 @@ def uisetup(ui):
         return orig(ui, state, type, char, text, coldata)
     wrapfunction(graphmod, 'ascii', ascii)
 
-    def drawedges(orig, edges, nodeline, interline):
-        orig(edges, nodeline, interline)
+    def drawedges(orig, echars, edges, nodeline, interline):
+        orig(echars, edges, nodeline, interline)
         if enabled:
             for (start, end) in edges:
                 if start == end:
@@ -159,6 +159,15 @@ def getdag(ui, repo, revs, master):
     gpcache = {}
     results = []
 
+    # we store parents together with the parent type information
+    # but sometimes we need just a list of parents
+    # [(a,b), (c,d), (e,f)] => [b, d, f]
+    def unzip(parents):
+        if parents:
+            return list(zip(*parents)[1])
+        else:
+            return list()
+
     # For each rev we need to show, compute it's parents in the dag.
     # If we have to reach for a grandparent, insert a fake node so we
     # can show '...' in the graph.
@@ -167,11 +176,11 @@ def getdag(ui, repo, revs, master):
     for rev in reversed(revs):
         ctx = repo[rev]
         # Parents in the dag
-        parents = sorted(set([p.rev() for p in ctx.parents()
+        parents = sorted(set([(graphmod.PARENT, p.rev()) for p in ctx.parents()
                               if p.rev() in knownrevs]))
         # Parents not in the dag
         mpars = [p.rev() for p in ctx.parents() if
-                 p.rev() != nullrev and p.rev() not in parents]
+                 p.rev() != nullrev and p.rev() not in unzip(parents)]
 
         for mpar in mpars:
             gp = gpcache.get(mpar)
@@ -180,24 +189,26 @@ def getdag(ui, repo, revs, master):
                                                            revset.baseset(revs),
                                                            [mpar])
             if not gp:
-                parents.append(mpar)
+                parents.append((graphmod.MISSINGPARENT, mpar))
             else:
-                gp = [g for g in gp if g not in parents]
+                gp = [g for g in gp if g not in unzip(parents)]
                 for g in gp:
                     # Insert fake nodes in between children and grandparents.
                     # Reuse them across multiple chidlren when the grandparent
                     # is the same.
                     if not g in fakes:
-                        fakes[g] = (mpar, 'F', fakectx(mpar), [g])
+                        fakes[g] = (mpar, 'F', fakectx(mpar),
+                                    [(graphmod.GRANDPARENT, g)])
                         results.append(fakes[g])
-                    parents.append(fakes[g][0])
+                    parents.append((graphmod.PARENT, fakes[g][0]))
 
         results.append((ctx.rev(), 'C', ctx, parents))
 
     # Compute parent rev->parents mapping
     lookup = {}
     for r in results:
-        lookup[r[0]] = r[3]
+        lookup[r[0]] = unzip(r[3])
+
     def parentfunc(node):
         return lookup.get(node, [])
 
