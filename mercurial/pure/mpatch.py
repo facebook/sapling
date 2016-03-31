@@ -12,6 +12,10 @@ import struct
 
 StringIO = cStringIO.StringIO
 
+class mpatchError(Exception):
+    """error raised when a delta cannot be decoded
+    """
+
 # This attempts to apply a series of patches in time proportional to
 # the total size of the patches, rather than patches * len(text). This
 # means rather than shuffling strings around, we shuffle around
@@ -84,7 +88,10 @@ def patches(a, bins):
         last = 0
         while pos < end:
             m.seek(pos)
-            p1, p2, l = struct.unpack(">lll", m.read(12))
+            try:
+                p1, p2, l = struct.unpack(">lll", m.read(12))
+            except struct.error:
+                raise mpatchError("patch cannot be decoded")
             _pull(new, frags, p1 - last) # what didn't change
             _pull([], frags, p2 - p1)    # what got deleted
             new.append((l, pos + 12))   # what got added
@@ -114,7 +121,7 @@ def patchedsize(orig, delta):
         outlen += length
 
     if bin != binend:
-        raise ValueError("patch cannot be decoded")
+        raise mpatchError("patch cannot be decoded")
 
     outlen += orig - last
     return outlen
