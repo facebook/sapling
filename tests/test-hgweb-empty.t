@@ -472,7 +472,7 @@ Some tests for hgweb in an empty repository
    <title>test: bookmarks</title>
    <summary>test bookmark history</summary>
    <author><name>Mercurial SCM</name></author>
-   
+   <updated>1970-01-01T00:00:00+00:00</updated>
   
   
   </feed>

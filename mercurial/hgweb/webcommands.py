@@ -620,8 +620,14 @@ def bookmarks(web, req, tmpl):
                    "date": web.repo[n].date(),
                    "node": hex(n)}
 
+    if i:
+        latestrev = i[0][1]
+    else:
+        latestrev = -1
+
     return tmpl("bookmarks",
                 node=hex(web.repo.changelog.tip()),
+                lastchange=[{"date": web.repo[latestrev].date()}],
                 entries=lambda **x: entries(latestonly=False, **x),
                 latestentry=lambda **x: entries(latestonly=True, **x))
 
