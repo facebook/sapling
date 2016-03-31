@@ -42,7 +42,7 @@ ui.log('commandfinish') call. The foo command also uses ui.log:
   
   spam
   logtoprocess commandfinish output:
-  foo exited 0 after 0.02 seconds
+  foo exited 0 after * seconds (glob)
   
   foo
   0
