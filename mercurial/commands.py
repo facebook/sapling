@@ -3095,6 +3095,9 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         finally:
             l.release()
     else:
+        if opts.get('rev') and opts.get('index'):
+            hint = _("call 'hg debugobsolete --index' without other arguments")
+            raise error.Abort(_("cannot use --index with --rev"), hint=hint)
         if opts['rev']:
             revs = scmutil.revrange(repo, opts['rev'])
             nodes = [repo[r].node() for r in revs]
