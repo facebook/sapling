@@ -111,7 +111,7 @@ def has_cvs():
     re = r'Concurrent Versions System.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
-@check("cvs112", "cvs client/server >= 1.12")
+@check("cvs112", "cvs client/server 1.12.* (not cvsnt)")
 def has_cvs112():
     re = r'Concurrent Versions System \(CVS\) 1.12.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
