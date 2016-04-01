@@ -114,8 +114,8 @@ def _isgooddelta(orig, self, d, textlen):
 
     return True
 
-def _cachepath(repo, name):
-    return repo.vfs.join('cache', 'noderevs', name)
+def _cachefilename(name):
+    return 'cache/noderevs/%s' % name
 
 def _preloadrevs(repo):
     # Preloading the node-rev map for likely to be used revs saves 100ms on
@@ -132,8 +132,8 @@ def _preloadrevs(repo):
         cachedir = repo.vfs.join('cache', 'noderevs')
         try:
             for cachefile in os.listdir(cachedir):
-                path = _cachepath(repo, cachefile)
-                revs.update(int(r) for r in open(path).readlines())
+                filename = _cachefilename(cachefile)
+                revs.update(int(r) for r in repo.vfs.open(filename).readlines())
 
             getnode = repo.changelog.node
             nodemap = repo.changelog.nodemap
@@ -152,7 +152,7 @@ def _savepreloadrevs(repo, name, revs):
     if repo.ui.configbool('perftweaks', 'cachenoderevs', True):
         cachedir = repo.vfs.join('cache', 'noderevs')
         try:
-            os.mkdir(cachedir)
+            repo.vfs.mkdir(cachedir)
         except OSError as ex:
             # If we failed because the directory already exists,
             # continue.  In all other cases (e.g., no permission to create the
@@ -161,8 +161,8 @@ def _savepreloadrevs(repo, name, revs):
                 return
 
         try:
-            path = _cachepath(repo, name)
-            f = util.atomictempfile(path, 'w+')
+            filename = _cachefilename(name)
+            f = repo.vfs.open(filename, mode='w+', atomictemp=True)
             f.write('\n'.join(str(r) for r in revs))
             f.close()
         except EnvironmentError:

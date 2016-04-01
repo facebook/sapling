@@ -101,3 +101,19 @@ Test changing the delta heuristic
   adding file changes
   added 2 changesets with 2 changes to 2 files
   (run 'hg update' to get a working copy)
+
+Test file permissions
+  $ umask 002
+  $ cd ..
+  $ mkdir permcheck
+  $ chmod g+ws permcheck
+  $ cd permcheck
+  $ hg init repo
+  $ cd repo
+  $ touch a
+  $ hg commit -qAm a
+  $ ls -la .hg/cache/noderevs/
+  total 12
+  drwxrwsr-x. 2 * . (glob)
+  drwxrwsr-x. 3 * .. (glob)
+  -rw-rw-r--. 1 * branchheads-served (glob)
