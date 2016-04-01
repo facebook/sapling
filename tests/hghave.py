@@ -248,13 +248,10 @@ def getsvnversion():
         return (0, 0)
     return (int(m.group(1)), int(m.group(2)))
 
-@check("svn15", "subversion client and admin tools >= 1.5")
-def has_svn15():
-    return getsvnversion() >= (1, 5)
-
-@check("svn13", "subversion client and admin tools >= 1.3")
-def has_svn13():
-    return getsvnversion() >= (1, 3)
+@checkvers("svn", "subversion client and admin tools >= %s", (1.3, 1.5))
+def has_svn_range(v):
+    major, minor = v.split('.')[0:2]
+    return getsvnversion() >= (int(major), int(minor))
 
 @check("svn", "subversion client and admin tools")
 def has_svn():
