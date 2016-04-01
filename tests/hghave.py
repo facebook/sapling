@@ -114,12 +114,13 @@ def has_bzr():
     except ImportError:
         return False
 
-@check("bzr114", "Canonical's Bazaar client >= 1.14")
-def has_bzr114():
+@checkvers("bzr", "Canonical's Bazaar client >= %s", (1.14,))
+def has_bzr_range(v):
+    major, minor = v.split('.')[0:2]
     try:
         import bzrlib
         return (bzrlib.__doc__ is not None
-                and bzrlib.version_info[:2] >= (1, 14))
+                and bzrlib.version_info[:2] >= (int(major), int(minor)))
     except ImportError:
         return False
 
