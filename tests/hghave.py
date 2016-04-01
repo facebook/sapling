@@ -23,6 +23,22 @@ def check(name, desc):
         return func
     return decorator
 
+def checkvers(name, desc, vers):
+    """Registers a check function for each of a series of versions.
+
+    vers can be a list or an iterator"""
+    def decorator(func):
+        def funcv(v):
+            def f():
+                return func(v)
+            return f
+        for v in vers:
+            v = str(v)
+            f = funcv(v)
+            checks['%s%s' % (name, v.replace('.', ''))] = (f, desc % v)
+        return func
+    return decorator
+
 def checkfeatures(features):
     result = {
         'error': [],
