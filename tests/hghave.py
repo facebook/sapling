@@ -226,6 +226,36 @@ def has_lsprof():
     except ImportError:
         return False
 
+def gethgversion():
+    m = matchoutput('hg --version --quiet 2>&1', r'(\d+)\.(\d+)')
+    if not m:
+        return (0, 0)
+    return (int(m.group(1)), int(m.group(2)))
+
+@checkvers("hg", "Mercurial >= %s",
+            list([(1.0 * x) / 10 for x in range(9, 40)]))
+def has_hg_range(v):
+    major, minor = v.split('.')[0:2]
+    return gethgversion() >= (int(major), int(minor))
+
+@check("hg08", "Mercurial >= 0.8")
+def has_hg08():
+    if checks["hg09"][0]():
+        return True
+    return matchoutput('hg help annotate 2>&1', '--date')
+
+@check("hg07", "Mercurial >= 0.7")
+def has_hg07():
+    if checks["hg08"][0]():
+        return True
+    return matchoutput('hg --version --quiet 2>&1', 'Mercurial Distributed SCM')
+
+@check("hg06", "Mercurial >= 0.6")
+def has_hg06():
+    if checks["hg07"][0]():
+        return True
+    return matchoutput('hg --version --quiet 2>&1', 'Mercurial version')
+
 @check("gettext", "GNU Gettext (msgfmt)")
 def has_gettext():
     return matchoutput('msgfmt --version', 'GNU gettext-tools')
