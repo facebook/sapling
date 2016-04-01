@@ -6,3 +6,4 @@
 ^dist/
 tests/getdb\.sh
 tests/.testtimes*
+subinclude:fastmanifest/.hgignore
