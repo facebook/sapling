@@ -3041,6 +3041,7 @@ def debuglocks(ui, repo, **opts):
           _('record parent information for the precursor')),
          ('r', 'rev', [], _('display markers relevant to REV')),
          ('', 'index', False, _('display index of the marker')),
+         ('', 'delete', [], _('delete markers specified by indices')),
         ] + commitopts2,
          _('[OBSOLETED [REPLACEMENT ...]]'))
 def debugobsolete(ui, repo, precursor=None, *successors, **opts):
@@ -3060,6 +3061,32 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         except TypeError:
             raise error.Abort('changeset references must be full hexadecimal '
                              'node identifiers')
+
+    if opts.get('delete'):
+        try:
+            indices = [int(v) for v in opts.get('delete')]
+        except ValueError:
+            raise error.Abort(_('invalid index value'),
+                              hint=_('use integers fro indices'))
+
+        if repo.currenttransaction():
+            raise error.Abort(_('Cannot delete obsmarkers in the middle '
+                                'of transaction.'))
+
+        w = repo.wlock()
+        l = repo.lock()
+        try:
+            tr = repo.transaction('debugobsolete')
+            try:
+                n = repo.obsstore.delete(indices)
+                ui.write(_('Deleted %i obsolescense markers\n') % n)
+                tr.close()
+            finally:
+                tr.release()
+        finally:
+            l.release()
+            w.release()
+        return
 
     if precursor is not None:
         if opts['rev']:

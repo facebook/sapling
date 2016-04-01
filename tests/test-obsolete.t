@@ -1083,4 +1083,17 @@ Test ability to pull changeset with locally applying obsolescence markers
   |
   @  0:a78f55e5508c (draft) [ ] 0
   
+  $ cd ..
 
+Test the --delete option of debugobsolete command
+  $ hg init dorepo
+  $ cd dorepo
+  $ echo a > a && hg ci -Am a
+  adding a
+  $ hg ci --amend -m aa
+  $ hg debugobsolete
+  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b f9bd49731b0b175e42992a3c8fa6c678b2bc11f1 0 (.*) {'user': 'test'} (re)
+  $ hg debugobsolete --delete 0
+  Deleted 1 obsolescense markers
+  $ hg debugobsolete
+  $ cd ..

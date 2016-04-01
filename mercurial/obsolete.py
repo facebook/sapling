@@ -628,6 +628,30 @@ class obsstore(object):
         transaction.hookargs['new_obsmarkers'] = str(previous + len(new))
         return len(new)
 
+    def delete(self, indices):
+        """Delete some obsmarkers from store and return the number of them
+
+        Indices is a list of ints which are the indices
+        of the markers to be deleted."""
+        if not indices:
+            # we don't want to rewrite the obsstore with the same content
+            return
+
+        left = []
+        current = self._all
+        n = 0
+        for i, m in enumerate(current):
+            if i in indices:
+                n += 1
+                continue
+            left.append(m)
+
+        newobsstore = self.svfs('obsstore', 'w', atomictemp=True)
+        for bytes in encodemarkers(left, True, self._version):
+            newobsstore.write(bytes)
+        newobsstore.close()
+        return n
+
     def mergemarkers(self, transaction, data):
         """merge a binary stream of markers inside the obsstore
 

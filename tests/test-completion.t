@@ -261,7 +261,7 @@ Show all commands + options
   debuglocks: force-lock, force-wlock
   debugmergestate: 
   debugnamecomplete: 
-  debugobsolete: flags, record-parents, rev, index, date, user
+  debugobsolete: flags, record-parents, rev, index, delete, date, user
   debugpathcomplete: full, normal, added, removed
   debugpushkey: 
   debugpvec: 
