@@ -3,6 +3,8 @@
 // tree.h: publicly accessible functions for tree manipulation and
 //         conversions.  this should be the only header file directly exposed
 //         to users.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_TREE_H__
 #define __FASTMANIFEST_TREE_H__

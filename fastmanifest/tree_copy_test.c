@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // tree_copy_test.c: tests to verify methods to make a copy of a tree.
+//
+// no-check-code
 
 #include "node.h"
 #include "tests.h"

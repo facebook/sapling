@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // bsearch_test.c: tests for binary search with a context-aware callback.
+//
+// no-check-code
 
 #include "bsearch.h"
 #include "tests.h"

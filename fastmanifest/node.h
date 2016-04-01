@@ -2,6 +2,8 @@
 //
 // node.h: declarations for representing a node in a tree.  for internal use
 //         only.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_NODE_H__
 #define __FASTMANIFEST_NODE_H__

@@ -2,6 +2,8 @@
 //
 // tree_convert_test.c: tests for methods to convert flat manifests to and
 //                      from a tree.
+//
+// no-check-code
 
 #include "node.h"
 #include "tree.h"

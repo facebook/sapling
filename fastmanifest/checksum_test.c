@@ -2,6 +2,8 @@
 //
 // checksum_test.c: tests for recalculating the checksums for intermediate
 //                  nodes in a tree.
+//
+// no-check-code
 
 #include "checksum.h"
 

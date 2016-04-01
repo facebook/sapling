@@ -2,6 +2,8 @@
 //
 // checksum.c: implementation for recalculating the checksums for
 //             intermediate nodes in a tree.
+//
+// no-check-code
 
 #include <openssl/sha.h>
 

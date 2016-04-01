@@ -2,6 +2,8 @@
 //
 // bsearch.h: binary search declarations with context-aware callback.  this
 //            is a standalone library.
+//
+// no-check-code
 
 #ifndef __BSEARCH_BSEARCH_H__
 #define __BSEARCH_BSEARCH_H__

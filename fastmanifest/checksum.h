@@ -2,6 +2,8 @@
 //
 // checksum.h: declarations for recalculating the checksums for intermediate
 //             nodes in a tree.  this is for internal use only.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_CHECKSUM_H__
 #define __FASTMANIFEST_CHECKSUM_H__

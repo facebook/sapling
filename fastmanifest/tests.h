@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // tests.h: convenience macros for unit tests.
+//
+// no-check-code
 
 #ifndef __TESTLIB_TESTS_H__
 #define __TESTLIB_TESTS_H__

@@ -2,6 +2,8 @@
 //
 // buffer.c: implementation for a generic mechanism to expand a heap-allocated
 //           buffer.
+//
+// no-check-code
 
 #include <stdlib.h>
 #include <string.h>

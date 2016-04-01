@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // iterator.c: implementation for traversing all the nodes of a tree in-order.
+//
+// no-check-code
 
 typedef struct _path_record_t {
   node_t* next_node;

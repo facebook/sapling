@@ -4,6 +4,8 @@
 //                    and back.  the output can be diff'ed against the input as
 //                    for more sophisticated testing than the unit tests
 //                    provide.
+//
+// no-check-code
 
 #include <stdio.h>
 #include <stdlib.h>

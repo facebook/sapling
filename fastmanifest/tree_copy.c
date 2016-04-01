@@ -2,6 +2,8 @@
 //
 // tree_copy.c: methods to make a copy of a tree.  the new instance is compacted
 //              into an arena.
+//
+// no-check-code
 
 #include "internal_result.h"
 #include "node.h"

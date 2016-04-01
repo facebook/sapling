@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // node_test.c: unit tests for the node.c
+//
+// no-check-code
 
 #include "node.h"
 #include "tests.h"

@@ -2,6 +2,8 @@
 //
 // internal_result.h: result codes for internal APIs.  obviously, this is for
 // internal use only.
+//
+// no-check-code
 
 #ifndef FASTMANIFEST_INTERNAL_RESULT_H
 #define FASTMANIFEST_INTERNAL_RESULT_H

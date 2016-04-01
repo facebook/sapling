@@ -2,6 +2,8 @@
 //
 // tree_arena.c: methods to create a tree with a fixed memory arena and to
 //               allocate nodes from the fixed memory arena.
+//
+// no-check-code
 
 #include <stdlib.h>
 

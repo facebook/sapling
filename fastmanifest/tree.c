@@ -4,6 +4,8 @@
 //         a reasonable length, some of the more complicated methods have
 //         been split off into their own .c files (tree_arena.c, tree_convert.c,
 //         tree_copy.c, checksum.c).
+//
+// no-check-code
 
 #include <stdlib.h>
 

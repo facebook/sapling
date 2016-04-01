@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // bsearch.c: binary search implementation with context-aware callback.
+//
+// no-check-code
 
 #include <stdio.h>
 #include <stddef.h>

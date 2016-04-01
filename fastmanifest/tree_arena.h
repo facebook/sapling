@@ -3,6 +3,8 @@
 // tree_arena.h: declarations for methods to create a tree with a fixed
 //               memory arena and to allocate nodes from the fixed memory
 //               arena.  for internal use only.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_TREE_ARENA_H__
 #define __FASTMANIFEST_TREE_ARENA_H__

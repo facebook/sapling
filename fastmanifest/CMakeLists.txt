@@ -1,6 +1,8 @@
 # Copyright 2016-present Facebook. All Rights Reserved.
 #
 # Build file.
+#
+# no-check-code
 
 cmake_minimum_required(VERSION 3.4)
 project(fastmanifest)

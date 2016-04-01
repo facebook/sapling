@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // tree_test.c: tests for core methods for tree creation and manipulation.
+//
+// no-check-code
 
 #include "node.h"
 #include "tree.h"

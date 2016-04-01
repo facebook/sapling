@@ -2,6 +2,8 @@
 //
 // buffer.c: declarations for a generic mechanism to expand a heap-allocated
 //           buffer.  this is for internal use only.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_BUFFER_H__
 #define __FASTMANIFEST_BUFFER_H__

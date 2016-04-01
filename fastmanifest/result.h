@@ -2,6 +2,8 @@
 //
 // result.h: return types for publicly accessible methods.  this is
 //           indirectly exposed through tree.h.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_RESULT_H__
 #define __FASTMANIFEST_RESULT_H__

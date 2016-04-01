@@ -1,6 +1,8 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
 // tree_convert.c: methods to convert flat manifests to and from a tree.
+//
+// no-check-code
 
 #include <stdlib.h>
 

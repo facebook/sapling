@@ -2,6 +2,8 @@
 //
 // iterator.h: declarations for traversing all the nodes of a tree in-order.
 //             for internal use only.
+//
+// no-check-code
 
 #ifndef __FASTMANIFEST_ITERATOR_H__
 #define __FASTMANIFEST_ITERATOR_H__
