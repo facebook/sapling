@@ -19,13 +19,13 @@ This extension changes defaults to be more user friendly.
 """
 
 from mercurial import util, cmdutil, commands, extensions, hg, scmutil
-from mercurial import bookmarks
+from mercurial import bookmarks, templater
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial import extensions
 from mercurial import error
 from mercurial.i18n import _
 from hgext import rebase
-import errno, os, stat, subprocess, time
+import errno, os, re, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -45,11 +45,14 @@ def extsetup(ui):
     options.insert(3, ('n', 'nocheck', None,
         _('update even with outstanding changes')))
 
+    entry = wrapcommand(commands.table, 'annotate', blame)
+    options = entry[1]
+    options.append(('p', 'phabdiff', None, _('list phabricator diff')))
+
     entry = wrapcommand(commands.table, 'commit', commitcmd)
     options = entry[1]
     options.insert(9, ('M', 'reuse-message', '',
         _('reuse commit message from REV'), _('REV')))
-
     wrapcommand(rebase.cmdtable, 'rebase', _rebase)
     entry = wrapcommand(commands.table, 'pull', pull)
     options = entry[1]
@@ -263,6 +266,58 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
         del kwargs['nocheck']
 
     return orig(ui, repo, node=node, rev=rev, **kwargs)
+
+def blame(orig, ui, repo, *pats, **opts):
+    def phabdiff(context, mapping, args):
+        """Fetch the Phab Diff Id from the node in mapping"""
+        res = ' ' * 8
+        try:
+            d = repo[mapping['node']].description()
+            pat = 'https://.*/(D\d+)'
+            m = re.search(pat, d)
+            res = m.group(1) if m else ''
+        except Exception:
+            pass
+        return res
+
+    if ui.plain():
+        return orig(ui, repo, *pats, **opts)
+
+    # We want to register template `blame_phabdiffid` function
+    # just for this call so that we don't pollute the function
+    # namespaces for other commandss. The reason is mainly
+    # because `blame_phabdiffid` relies on 'node' value being
+    # present in the `mapping` argument passed to it (which
+    # would not necessarily be the case for other non-log-like
+    # commands.
+    # tl/dr: this is a dirty hack and we want to have is as
+    # restricted as possible
+    templater.funcs['blame_phabdiffid'] = phabdiff
+    tmpl = "{short(node)}:"
+    if opts.get('number'):
+        # user expressed explicit desire to see revisions
+        # padding is really big here, but hopefully people
+        # don't want to see revisions too much
+        tmpl = "{pad(rev, 9)}:"
+    if opts.get('phabdiff'):
+        del opts['phabdiff']
+        tmpl += "{pad(blame_phabdiffid(), 8)}:"
+    if opts.get('user'):
+        tmpl += "{pad(user|emailuser, 13, ' ', True)}:"
+    if opts.get('date'):
+        tmpl += "{pad(date|rfc822date, 12)}:"
+    if opts.get('file'):
+        tmpl += "{file}:"
+    if opts.get('line_number'):
+        tmpl += "{pad(line_number, 5, ' ', True)}:"
+    if not opts.get('template'):
+        opts['template'] = tmpl + "{line}"
+        # this forces original blame to provide necessary node hash
+        # that we can reuse to parse Phabricator Diff id
+        opts['changeset'] = True
+    result = orig(ui, repo, *pats, **opts)
+    del templater.funcs['blame_phabdiffid']
+    return result
 
 @command('histgrep', commands.table['grep'][1], commands.table['grep'][2])
 def histgrep(ui, repo, pattern, *pats, **opts):
