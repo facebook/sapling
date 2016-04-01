@@ -2956,7 +2956,10 @@ class filteredset(abstractsmartset):
 
     def __len__(self):
         # Basic implementation to be changed in future patches.
-        l = baseset([r for r in self])
+        # until this gets improved, we use generator expression
+        # here, since list compr is free to call __len__ again
+        # causing infinite recursion
+        l = baseset(r for r in self)
         return len(l)
 
     def sort(self, reverse=False):
