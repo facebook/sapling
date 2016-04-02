@@ -49,7 +49,6 @@
   tests/readlink.py requires print_function
   tests/revlog-formatv0.py not using absolute_import
   tests/run-tests.py not using absolute_import
-  tests/silenttestrunner.py not using absolute_import
   tests/silenttestrunner.py requires print_function
   tests/sitecustomize.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import

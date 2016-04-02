@@ -1,4 +1,7 @@
-import unittest, sys, os
+from __future__ import absolute_import
+import unittest
+import sys
+import os
 
 def main(modulename):
     '''run the tests found in module, printing nothing when all tests pass'''
