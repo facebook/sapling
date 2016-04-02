@@ -7,7 +7,7 @@
 #   seq START STOP        [START, STOP] stepping by 1
 #   seq START STEP STOP   [START, STOP] stepping by STEP
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import sys
 
 start = 1
@@ -21,4 +21,4 @@ if len(sys.argv) > 3:
 stop = int(sys.argv[-1]) + 1
 
 for i in xrange(start, stop, step):
-    print i
+    print(i)

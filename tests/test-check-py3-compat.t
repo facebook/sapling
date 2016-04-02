@@ -54,7 +54,6 @@
   tests/readlink.py requires print_function
   tests/revlog-formatv0.py not using absolute_import
   tests/run-tests.py not using absolute_import
-  tests/seq.py requires print_function
   tests/silenttestrunner.py not using absolute_import
   tests/silenttestrunner.py requires print_function
   tests/sitecustomize.py not using absolute_import
@@ -265,7 +264,6 @@
   tests/generate-working-copy-states.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/get-with-headers.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/seq.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/silenttestrunner.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-ancestor.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-batching.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
