@@ -29,7 +29,7 @@
 # $ hg forget *_*_*-untracked
 # $ rm *_*_missing-*
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import os
 import sys
@@ -66,7 +66,7 @@ combinations = sorted(generatestates(maxchangesets, []))
 content = []
 for filename, states in combinations:
     if target == 'filelist':
-        print filename
+        print(filename)
     elif target == 'state':
         if depth == 'wc':
             # Make sure there is content so the file gets written and can be
@@ -75,7 +75,7 @@ for filename, states in combinations:
         else:
             content.append((filename, states[int(depth) - 1]))
     else:
-        print >> sys.stderr, "unknown target:", target
+        print("unknown target:", target, file=sys.stderr)
         sys.exit(1)
 
 # write actual content
