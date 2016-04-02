@@ -4,6 +4,7 @@
 #
 # For details see http://hypothesis.readthedocs.org
 
+from __future__ import absolute_import
 import os
 import sys
 import traceback
