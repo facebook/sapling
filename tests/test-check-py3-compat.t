@@ -49,7 +49,6 @@
   tests/readlink.py requires print_function
   tests/revlog-formatv0.py not using absolute_import
   tests/run-tests.py not using absolute_import
-  tests/silenttestrunner.py requires print_function
   tests/sitecustomize.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import
   tests/svnxml.py not using absolute_import
@@ -254,7 +253,6 @@
   mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/silenttestrunner.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-batching.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-bdiff.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-context.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
