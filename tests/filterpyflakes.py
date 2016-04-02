@@ -2,7 +2,7 @@
 
 # Filter output by pyflakes to control which warnings we check
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import re
 import sys
@@ -54,8 +54,8 @@ for line in sys.stdin:
 
 for msgtype, line in sorted(lines, key=makekey):
     sys.stdout.write(line)
-print
+print()
 
 # self test of "undefined name" detection for other than 'memoryview'
 if False:
-    print undefinedname
+    print(undefinedname)

@@ -40,7 +40,6 @@
   i18n/check-translation.py not using absolute_import
   i18n/polib.py not using absolute_import
   setup.py not using absolute_import
-  tests/filterpyflakes.py requires print_function
   tests/generate-working-copy-states.py requires print_function
   tests/get-with-headers.py requires print_function
   tests/heredoctest.py requires print_function
@@ -259,7 +258,6 @@
   mercurial/win*.py: error importing module: <ImportError> No module named 'msvcrt' (line *) (glob)
   mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
-  tests/filterpyflakes.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/generate-working-copy-states.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/get-with-headers.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
