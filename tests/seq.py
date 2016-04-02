@@ -7,6 +7,7 @@
 #   seq START STOP        [START, STOP] stepping by 1
 #   seq START STEP STOP   [START, STOP] stepping by STEP
 
+from __future__ import absolute_import
 import sys
 
 start = 1

@@ -54,7 +54,6 @@
   tests/readlink.py requires print_function
   tests/revlog-formatv0.py not using absolute_import
   tests/run-tests.py not using absolute_import
-  tests/seq.py not using absolute_import
   tests/seq.py requires print_function
   tests/silenttestrunner.py not using absolute_import
   tests/silenttestrunner.py requires print_function
