@@ -41,7 +41,6 @@
   i18n/polib.py not using absolute_import
   setup.py not using absolute_import
   tests/heredoctest.py requires print_function
-  tests/hypothesishelpers.py requires print_function
   tests/killdaemons.py not using absolute_import
   tests/md5sum.py not using absolute_import
   tests/mockblackbox.py not using absolute_import
