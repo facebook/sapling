@@ -59,7 +59,6 @@
   tests/sitecustomize.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import
   tests/svnxml.py not using absolute_import
-  tests/test-ancestor.py requires print_function
   tests/test-atomictempfile.py not using absolute_import
   tests/test-batching.py not using absolute_import
   tests/test-batching.py requires print_function
@@ -265,7 +264,6 @@
   tests/get-with-headers.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/silenttestrunner.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
-  tests/test-ancestor.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-batching.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-bdiff.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-context.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)

@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import binascii
 import getopt
@@ -94,13 +94,13 @@ def test_missingancestors(seed, rng):
 
     def err(seed, graph, bases, seq, output, expected):
         if nerrs[0] == 0:
-            print >> sys.stderr, 'seed:', hex(seed)[:-1]
+            print('seed:', hex(seed)[:-1], file=sys.stderr)
         if gerrs[0] == 0:
-            print >> sys.stderr, 'graph:', graph
-        print >> sys.stderr, '* bases:', bases
-        print >> sys.stderr, '* seq: ', seq
-        print >> sys.stderr, '*  output:  ', output
-        print >> sys.stderr, '*  expected:', expected
+            print('graph:', graph, file=sys.stderr)
+        print('* bases:', bases, file=sys.stderr)
+        print('* seq: ', seq, file=sys.stderr)
+        print('*  output:  ', output, file=sys.stderr)
+        print('*  expected:', expected, file=sys.stderr)
         nerrs[0] += 1
         gerrs[0] += 1
 
@@ -178,14 +178,14 @@ graph = {0: [-1], 1: [0], 2: [1], 3: [1], 4: [2], 5: [4], 6: [4],
          13: [8]}
 
 def genlazyancestors(revs, stoprev=0, inclusive=False):
-    print ("%% lazy ancestor set for %s, stoprev = %s, inclusive = %s" %
-           (revs, stoprev, inclusive))
+    print(("%% lazy ancestor set for %s, stoprev = %s, inclusive = %s" %
+           (revs, stoprev, inclusive)))
     return ancestor.lazyancestors(graph.get, revs, stoprev=stoprev,
                                   inclusive=inclusive)
 
 def printlazyancestors(s, l):
-    print 'membership: %r' % [n for n in l if n in s]
-    print 'iteration:  %r' % list(s)
+    print('membership: %r' % [n for n in l if n in s])
+    print('iteration:  %r' % list(s))
 
 def test_lazyancestors():
     # Empty revs
@@ -235,9 +235,10 @@ def test_gca():
                 cgcas = sorted(cl.index.ancestors(a, b))
                 pygcas = sorted(ancestor.ancestors(cl.parentrevs, a, b))
                 if cgcas != pygcas:
-                    print "test_gca: for dag %s, gcas for %d, %d:" % (dag, a, b)
-                    print "  C returned:      %s" % cgcas
-                    print "  Python returned: %s" % pygcas
+                    print("test_gca: for dag %s, gcas for %d, %d:"
+                          % (dag, a, b))
+                    print("  C returned:      %s" % cgcas)
+                    print("  Python returned: %s" % pygcas)
 
 def main():
     seed = None
