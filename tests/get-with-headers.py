@@ -3,7 +3,7 @@
 """This does HTTP GET requests given a host:port and path and returns
 a subset of the headers plus the body of the result."""
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import httplib
 import json
@@ -41,15 +41,15 @@ def request(host, path, show):
     conn = httplib.HTTPConnection(host)
     conn.request("GET", '/' + path, None, headers)
     response = conn.getresponse()
-    print response.status, response.reason
+    print(response.status, response.reason)
     if show[:1] == ['-']:
         show = sorted(h for h, v in response.getheaders()
                       if h.lower() not in show)
     for h in [h.lower() for h in show]:
         if response.getheader(h, None) is not None:
-            print "%s: %s" % (h, response.getheader(h))
+            print("%s: %s" % (h, response.getheader(h)))
     if not headeronly:
-        print
+        print()
         data = response.read()
 
         # Pretty print JSON. This also has the beneficial side-effect
@@ -60,7 +60,7 @@ def request(host, path, show):
             data = json.loads(data)
             lines = json.dumps(data, sort_keys=True, indent=2).splitlines()
             for line in lines:
-                print line.rstrip()
+                print(line.rstrip())
         else:
             sys.stdout.write(data)
 
