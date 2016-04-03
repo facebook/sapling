@@ -193,6 +193,10 @@ test --xunit support
   ]]>  </testcase>
   </testsuite>
 
+  $ cat .testtimes
+  test-failure-unicode.t * (glob)
+  test-failure.t * (glob)
+  test-success.t * (glob)
   $ rm test-failure-unicode.t
 
 test for --retest
