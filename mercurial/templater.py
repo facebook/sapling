@@ -984,6 +984,33 @@ def stylelist():
             stylelist.append(split[1])
     return ", ".join(sorted(stylelist))
 
+def _readmapfile(mapfile):
+    """Load template elements from the given map file"""
+    if not os.path.exists(mapfile):
+        raise error.Abort(_("style '%s' not found") % mapfile,
+                          hint=_("available styles: %s") % stylelist())
+
+    base = os.path.dirname(mapfile)
+    conf = config.config(includepaths=templatepaths())
+    conf.read(mapfile)
+
+    cache = {}
+    tmap = {}
+    for key, val in conf[''].items():
+        if not val:
+            raise error.ParseError(_('missing value'), conf.source('', key))
+        if val[0] in "'\"":
+            if val[0] != val[-1]:
+                raise error.ParseError(_('unmatched quotes'),
+                                       conf.source('', key))
+            cache[key] = unquotestring(val)
+        else:
+            val = 'default', val
+            if ':' in val[1]:
+                val = val[1].split(':', 1)
+            tmap[key] = val[0], os.path.join(base, val[1])
+    return cache, tmap
+
 class TemplateNotFound(error.Abort):
     pass
 
@@ -1011,27 +1038,9 @@ class templater(object):
 
         if not mapfile:
             return
-        if not os.path.exists(mapfile):
-            raise error.Abort(_("style '%s' not found") % mapfile,
-                             hint=_("available styles: %s") % stylelist())
-
-        base = os.path.dirname(mapfile)
-        conf = config.config(includepaths=templatepaths())
-        conf.read(mapfile)
-
-        for key, val in conf[''].items():
-            if not val:
-                raise error.ParseError(_('missing value'), conf.source('', key))
-            if val[0] in "'\"":
-                if val[0] != val[-1]:
-                    raise error.ParseError(_('unmatched quotes'),
-                                           conf.source('', key))
-                self.cache[key] = unquotestring(val)
-            else:
-                val = 'default', val
-                if ':' in val[1]:
-                    val = val[1].split(':', 1)
-                self.map[key] = val[0], os.path.join(base, val[1])
+        cache, tmap = _readmapfile(mapfile)
+        self.cache.update(cache)
+        self.map = tmap
 
     def __contains__(self, key):
         return key in self.cache or key in self.map
