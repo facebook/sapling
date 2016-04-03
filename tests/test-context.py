@@ -1,10 +1,10 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 from mercurial import (
-    hg,
-    ui,
     context,
     encoding,
+    hg,
+    ui,
 )
 
 u = ui.ui()
@@ -24,9 +24,9 @@ repo.commit(text='commit1', date="0 0")
 
 if os.name == 'nt':
     d = repo[None]['foo'].date()
-    print "workingfilectx.date = (%d, %d)" % (d[0], d[1])
+    print("workingfilectx.date = (%d, %d)" % (d[0], d[1]))
 else:
-    print "workingfilectx.date =", repo[None]['foo'].date()
+    print("workingfilectx.date =", repo[None]['foo'].date())
 
 # test memctx with non-ASCII commit message
 
@@ -39,7 +39,7 @@ ctx = context.memctx(repo, ['tip', None],
 ctx.commit()
 for enc in "ASCII", "Latin-1", "UTF-8":
     encoding.encoding = enc
-    print "%-8s: %s" % (enc, repo["tip"].description())
+    print("%-8s: %s" % (enc, repo["tip"].description()))
 
 # test performing a status
 
@@ -54,15 +54,15 @@ ctxa = repo.changectx(0)
 ctxb = context.memctx(repo, [ctxa.node(), None], "test diff", ["foo"],
                       getfilectx, ctxa.user(), ctxa.date())
 
-print ctxb.status(ctxa)
+print(ctxb.status(ctxa))
 
 # test performing a diff on a memctx
 
 for d in ctxb.diff(ctxa, git=True):
-    print d
+    print(d)
 
 # test safeness and correctness of "ctx.status()"
-print '= checking context.status():'
+print('= checking context.status():')
 
 # ancestor "wcctx ~ 2"
 actx2 = repo['.']
@@ -88,26 +88,26 @@ repo[None].forget(['bar-r'])
 
 from mercurial import scmutil
 
-print '== checking workingctx.status:'
+print('== checking workingctx.status:')
 
 wctx = repo[None]
-print 'wctx._status=%s' % (str(wctx._status))
+print('wctx._status=%s' % (str(wctx._status)))
 
-print '=== with "pattern match":'
-print actx1.status(other=wctx,
-                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
-print 'wctx._status=%s' % (str(wctx._status))
-print actx2.status(other=wctx,
-                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
-print 'wctx._status=%s' % (str(wctx._status))
+print('=== with "pattern match":')
+print(actx1.status(other=wctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo'])))
+print('wctx._status=%s' % (str(wctx._status)))
+print(actx2.status(other=wctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo'])))
+print('wctx._status=%s' % (str(wctx._status)))
 
-print '=== with "always match" and "listclean=True":'
-print actx1.status(other=wctx, listclean=True)
-print 'wctx._status=%s' % (str(wctx._status))
-print actx2.status(other=wctx, listclean=True)
-print 'wctx._status=%s' % (str(wctx._status))
+print('=== with "always match" and "listclean=True":')
+print(actx1.status(other=wctx, listclean=True))
+print('wctx._status=%s' % (str(wctx._status)))
+print(actx2.status(other=wctx, listclean=True))
+print('wctx._status=%s' % (str(wctx._status)))
 
-print "== checking workingcommitctx.status:"
+print("== checking workingcommitctx.status:")
 
 wcctx = context.workingcommitctx(repo,
                                  scmutil.status(['bar-m'],
@@ -115,34 +115,34 @@ wcctx = context.workingcommitctx(repo,
                                                 [],
                                                 [], [], [], []),
                                  text='', date='0 0')
-print 'wcctx._status=%s' % (str(wcctx._status))
+print('wcctx._status=%s' % (str(wcctx._status)))
 
-print '=== with "always match":'
-print actx1.status(other=wcctx)
-print 'wcctx._status=%s' % (str(wcctx._status))
-print actx2.status(other=wcctx)
-print 'wcctx._status=%s' % (str(wcctx._status))
+print('=== with "always match":')
+print(actx1.status(other=wcctx))
+print('wcctx._status=%s' % (str(wcctx._status)))
+print(actx2.status(other=wcctx))
+print('wcctx._status=%s' % (str(wcctx._status)))
 
-print '=== with "always match" and "listclean=True":'
-print actx1.status(other=wcctx, listclean=True)
-print 'wcctx._status=%s' % (str(wcctx._status))
-print actx2.status(other=wcctx, listclean=True)
-print 'wcctx._status=%s' % (str(wcctx._status))
+print('=== with "always match" and "listclean=True":')
+print(actx1.status(other=wcctx, listclean=True))
+print('wcctx._status=%s' % (str(wcctx._status)))
+print(actx2.status(other=wcctx, listclean=True))
+print('wcctx._status=%s' % (str(wcctx._status)))
 
-print '=== with "pattern match":'
-print actx1.status(other=wcctx,
-                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
-print 'wcctx._status=%s' % (str(wcctx._status))
-print actx2.status(other=wcctx,
-                   match=scmutil.matchfiles(repo, ['bar-m', 'foo']))
-print 'wcctx._status=%s' % (str(wcctx._status))
+print('=== with "pattern match":')
+print(actx1.status(other=wcctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo'])))
+print('wcctx._status=%s' % (str(wcctx._status)))
+print(actx2.status(other=wcctx,
+                   match=scmutil.matchfiles(repo, ['bar-m', 'foo'])))
+print('wcctx._status=%s' % (str(wcctx._status)))
 
-print '=== with "pattern match" and "listclean=True":'
-print actx1.status(other=wcctx,
+print('=== with "pattern match" and "listclean=True":')
+print(actx1.status(other=wcctx,
                    match=scmutil.matchfiles(repo, ['bar-r', 'foo']),
-                   listclean=True)
-print 'wcctx._status=%s' % (str(wcctx._status))
-print actx2.status(other=wcctx,
+                   listclean=True))
+print('wcctx._status=%s' % (str(wcctx._status)))
+print(actx2.status(other=wcctx,
                    match=scmutil.matchfiles(repo, ['bar-r', 'foo']),
-                   listclean=True)
-print 'wcctx._status=%s' % (str(wcctx._status))
+                   listclean=True))
+print('wcctx._status=%s' % (str(wcctx._status)))
