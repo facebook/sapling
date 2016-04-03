@@ -6,10 +6,10 @@ from __future__ import absolute_import
 Small and dumb HTTP server for use in tests.
 """
 
-import optparse
 import BaseHTTPServer
-import signal
 import SimpleHTTPServer
+import optparse
+import signal
 import sys
 
 from mercurial import (
