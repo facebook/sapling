@@ -956,7 +956,6 @@ class templater(object):
             defaults = {}
         if cache is None:
             cache = {}
-        self.mapfile = mapfile or 'template'
         self.cache = cache.copy()
         self.map = {}
         if mapfile:

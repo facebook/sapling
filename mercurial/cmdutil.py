@@ -1532,29 +1532,25 @@ class changeset_templater(changeset_printer):
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
 
-        try:
-            # write header
-            if self._parts['header']:
-                h = templater.stringify(self.t(self._parts['header'], **props))
-                if self.buffered:
-                    self.header[ctx.rev()] = h
-                else:
-                    if self.lastheader != h:
-                        self.lastheader = h
-                        self.ui.write(h)
+        # write header
+        if self._parts['header']:
+            h = templater.stringify(self.t(self._parts['header'], **props))
+            if self.buffered:
+                self.header[ctx.rev()] = h
+            else:
+                if self.lastheader != h:
+                    self.lastheader = h
+                    self.ui.write(h)
 
-            # write changeset metadata, then patch if requested
-            key = self._parts['changeset']
-            self.ui.write(templater.stringify(self.t(key, **props)))
-            self.showpatch(ctx, matchfn)
+        # write changeset metadata, then patch if requested
+        key = self._parts['changeset']
+        self.ui.write(templater.stringify(self.t(key, **props)))
+        self.showpatch(ctx, matchfn)
 
-            if self._parts['footer']:
-                if not self.footer:
-                    self.footer = templater.stringify(
-                        self.t(self._parts['footer'], **props))
-        except KeyError as inst:
-            msg = _("%s: no key named '%s'")
-            raise error.Abort(msg % (self.t.mapfile, inst.args[0]))
+        if self._parts['footer']:
+            if not self.footer:
+                self.footer = templater.stringify(
+                    self.t(self._parts['footer'], **props))
 
 def gettemplate(ui, tmpl, style):
     """
