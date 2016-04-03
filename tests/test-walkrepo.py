@@ -5,7 +5,7 @@ import os
 from mercurial import (
     hg,
     scmutil,
-    ui,
+    ui as uimod,
     util,
 )
 
@@ -16,7 +16,7 @@ pjoin = os.path.join
 walkrepos = scmutil.walkrepos
 checklink = util.checklink
 
-u = ui.ui()
+u = uimod.ui()
 sym = checklink('.')
 
 hg.repository(u, 'top1', create=1)
