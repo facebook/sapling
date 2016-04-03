@@ -56,7 +56,6 @@
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
-  tests/test-filecache.py requires print_function
   tests/test-filelog.py not using absolute_import
   tests/test-filelog.py requires print_function
   tests/test-hg-parseurl.py not using absolute_import
@@ -245,7 +244,6 @@
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-filecache.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-filelog.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-hg-parseurl.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-hgweb-auth.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)

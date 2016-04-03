@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import subprocess
 import sys
@@ -23,7 +23,7 @@ class fakerepo(object):
 
     @filecache('x', 'y')
     def cached(self):
-        print 'creating'
+        print('creating')
         return 'string from function'
 
     def invalidate(self):
@@ -34,12 +34,12 @@ class fakerepo(object):
                 pass
 
 def basic(repo):
-    print "* neither file exists"
+    print("* neither file exists")
     # calls function
     repo.cached
 
     repo.invalidate()
-    print "* neither file still exists"
+    print("* neither file still exists")
     # uses cache
     repo.cached
 
@@ -47,7 +47,7 @@ def basic(repo):
     f = open('x', 'w')
     f.close()
     repo.invalidate()
-    print "* empty file x created"
+    print("* empty file x created")
     # should recreate the object
     repo.cached
 
@@ -55,12 +55,12 @@ def basic(repo):
     f.write('a')
     f.close()
     repo.invalidate()
-    print "* file x changed size"
+    print("* file x changed size")
     # should recreate the object
     repo.cached
 
     repo.invalidate()
-    print "* nothing changed with either file"
+    print("* nothing changed with either file")
     # stats file again, reuses object
     repo.cached
 
@@ -72,14 +72,14 @@ def basic(repo):
     f.close()
 
     repo.invalidate()
-    print "* file x changed inode"
+    print("* file x changed inode")
     repo.cached
 
     # create empty file y
     f = open('y', 'w')
     f.close()
     repo.invalidate()
-    print "* empty file y created"
+    print("* empty file y created")
     # should recreate the object
     repo.cached
 
@@ -87,7 +87,7 @@ def basic(repo):
     f.write('A')
     f.close()
     repo.invalidate()
-    print "* file y changed size"
+    print("* file y changed size")
     # should recreate the object
     repo.cached
 
@@ -96,7 +96,7 @@ def basic(repo):
     f.close()
 
     repo.invalidate()
-    print "* file y changed inode"
+    print("* file y changed inode")
     repo.cached
 
     f = scmutil.opener('.')('x', 'w', atomictemp=True)
@@ -107,7 +107,7 @@ def basic(repo):
     f.close()
 
     repo.invalidate()
-    print "* both files changed inode"
+    print("* both files changed inode")
     repo.cached
 
 def fakeuncacheable():
@@ -152,36 +152,36 @@ def setbeforeget(repo):
     os.remove('y')
     repo.cached = 'string set externally'
     repo.invalidate()
-    print "* neither file exists"
-    print repo.cached
+    print("* neither file exists")
+    print(repo.cached)
     repo.invalidate()
     f = open('x', 'w')
     f.write('a')
     f.close()
-    print "* file x created"
-    print repo.cached
+    print("* file x created")
+    print(repo.cached)
 
     repo.cached = 'string 2 set externally'
     repo.invalidate()
-    print "* string set externally again"
-    print repo.cached
+    print("* string set externally again")
+    print(repo.cached)
 
     repo.invalidate()
     f = open('y', 'w')
     f.write('b')
     f.close()
-    print "* file y created"
-    print repo.cached
+    print("* file y created")
+    print(repo.cached)
 
-print 'basic:'
-print
+print('basic:')
+print()
 basic(fakerepo())
-print
-print 'fakeuncacheable:'
-print
+print()
+print('fakeuncacheable:')
+print()
 fakeuncacheable()
 test_filecache_synced()
-print
-print 'setbeforeget:'
-print
+print()
+print('setbeforeget:')
+print()
 setbeforeget(fakerepo())
