@@ -13,7 +13,7 @@ from mercurial import (
     ancestor,
     commands,
     hg,
-    ui,
+    ui as uimod,
     util,
 )
 
@@ -218,7 +218,7 @@ dagtests = [
     '+3*3/*2*2/*4*4/*4/2*4/2*2',
 ]
 def test_gca():
-    u = ui.ui()
+    u = uimod.ui()
     for i, dag in enumerate(dagtests):
         repo = hg.repository(u, 'gca%d' % i, create=1)
         cl = repo.changelog
