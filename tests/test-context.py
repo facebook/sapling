@@ -4,10 +4,10 @@ from mercurial import (
     context,
     encoding,
     hg,
-    ui,
+    ui as uimod,
 )
 
-u = ui.ui()
+u = uimod.ui()
 
 repo = hg.repository(u, 'test1', create=1)
 os.chdir('test1')
