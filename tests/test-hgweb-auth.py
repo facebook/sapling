@@ -1,8 +1,15 @@
+from __future__ import absolute_import
+
 from mercurial import demandimport; demandimport.enable()
 import urllib2
-from mercurial import ui, util
-from mercurial import url
-from mercurial.error import Abort
+from mercurial import (
+    ui,
+    url,
+    util,
+)
+from mercurial.error import (
+    Abort,
+)
 
 class myui(ui.ui):
     def interactive(self):
