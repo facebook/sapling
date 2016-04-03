@@ -56,7 +56,6 @@
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
-  tests/test-hg-parseurl.py requires print_function
   tests/test-hgweb-auth.py not using absolute_import
   tests/test-hgweb-auth.py requires print_function
   tests/test-hgwebdir-paths.py not using absolute_import
@@ -241,7 +240,6 @@
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-hg-parseurl.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-hgweb-auth.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-hybridencode.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-lrucachedict.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
