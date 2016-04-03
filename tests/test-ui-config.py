@@ -2,10 +2,10 @@ from __future__ import absolute_import, print_function
 from mercurial import (
     dispatch,
     error,
-    ui,
+    ui as uimod,
 )
 
-testui = ui.ui()
+testui = uimod.ui()
 parsed = dispatch._parseconfig(testui, [
     'values.string=string value',
     'values.bool1=true',
