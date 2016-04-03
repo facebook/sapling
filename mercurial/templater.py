@@ -1011,8 +1011,11 @@ class templater(object):
     def __call__(self, t, **mapping):
         ttype = t in self.map and self.map[t][0] or 'default'
         if ttype not in self.ecache:
-            self.ecache[ttype] = engines[ttype](self.load,
-                                                 self.filters, self.defaults)
+            try:
+                ecls = engines[ttype]
+            except KeyError:
+                raise error.Abort(_('invalid template engine: %s') % ttype)
+            self.ecache[ttype] = ecls(self.load, self.filters, self.defaults)
         proc = self.ecache[ttype]
 
         stream = proc.process(t, mapping)

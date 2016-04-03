@@ -44,4 +44,11 @@
   0 97e5f848f0936960273bbf75be6388cd0350a32b -1 0000000000000000000000000000000000000000
   -1 0000000000000000000000000000000000000000 -1 0000000000000000000000000000000000000000
 
+invalid engine type:
+
+  $ echo 'changeset = unknown:changeset.txt' > unknownenginemap
+  $ hg log --style=./unknownenginemap
+  abort: invalid template engine: unknown
+  [255]
+
   $ cd ..
