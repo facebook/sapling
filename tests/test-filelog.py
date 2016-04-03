@@ -2,8 +2,15 @@
 """
 Tests the behavior of filelog w.r.t. data starting with '\1\n'
 """
-from mercurial import ui, hg
-from mercurial.node import nullid, hex
+from __future__ import absolute_import
+from mercurial import (
+    hg,
+    ui,
+)
+from mercurial.node import (
+    hex,
+    nullid,
+)
 
 myui = ui.ui()
 repo = hg.repository(myui, path='.', create=True)
