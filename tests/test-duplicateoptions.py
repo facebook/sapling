@@ -1,5 +1,10 @@
+from __future__ import absolute_import
 import os
-from mercurial import ui, commands, extensions
+from mercurial import (
+    commands,
+    extensions,
+    ui,
+)
 
 ignore = set(['highlight', 'win32text', 'factotum'])
 
