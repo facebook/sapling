@@ -267,8 +267,8 @@ def has_git():
 @check("docutils", "Docutils text processing library")
 def has_docutils():
     try:
-        from docutils.core import publish_cmdline
-        publish_cmdline # silence unused import
+        import docutils.core
+        docutils.core.publish_cmdline # silence unused import
         return True
     except ImportError:
         return False
