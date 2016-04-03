@@ -1,4 +1,7 @@
-import sys, os, subprocess
+from __future__ import absolute_import
+import os
+import subprocess
+import sys
 
 if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
                     'cacheable']):

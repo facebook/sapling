@@ -56,7 +56,6 @@
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
-  tests/test-filecache.py not using absolute_import
   tests/test-filecache.py requires print_function
   tests/test-filelog.py not using absolute_import
   tests/test-filelog.py requires print_function
