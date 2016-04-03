@@ -1,5 +1,9 @@
+from __future__ import absolute_import
 import struct
-from mercurial import bdiff, mpatch
+from mercurial import (
+    bdiff,
+    mpatch,
+)
 
 def test1(a, b):
     d = bdiff.bdiff(a, b)
