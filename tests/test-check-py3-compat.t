@@ -53,7 +53,6 @@
   tests/svn-safe-append.py not using absolute_import
   tests/svnxml.py not using absolute_import
   tests/test-atomictempfile.py not using absolute_import
-  tests/test-context.py not using absolute_import
   tests/test-context.py requires print_function
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
