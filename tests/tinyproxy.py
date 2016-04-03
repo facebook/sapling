@@ -19,6 +19,7 @@ import SocketServer
 import os
 import select
 import socket
+import sys
 import urlparse
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
@@ -140,7 +141,7 @@ class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
         a.close()
 
 if __name__ == '__main__':
-    from sys import argv
+    argv = sys.argv
     if argv[1:] and argv[1] in ('-h', '--help'):
         print(argv[0], "[port [allowed_client_name ...]]")
     else:
