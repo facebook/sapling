@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from mercurial.peer import (
     localbatch,
     batchable,
@@ -38,11 +38,11 @@ class localthing(thing):
 def use(it):
 
     # Direct call to base method shared between client and server.
-    print it.hello()
+    print(it.hello())
 
     # Direct calls to proxied methods. They cause individual roundtrips.
-    print it.foo("Un", two="Deux")
-    print it.bar("Eins", "Zwei")
+    print(it.foo("Un", two="Deux"))
+    print(it.bar("Eins", "Zwei"))
 
     # Batched call to a couple of (possibly proxied) methods.
     batch = it.batch()
@@ -60,17 +60,17 @@ def use(it):
     # as possible.
     batch.submit()
     # After the call to submit, the futures actually contain values.
-    print foo.value
-    print foo2.value
-    print bar.value
-    print greet.value
-    print hello.value
-    print bar2.value
+    print(foo.value)
+    print(foo2.value)
+    print(bar.value)
+    print(greet.value)
+    print(hello.value)
+    print(bar2.value)
 
 # local usage
 mylocal = localthing()
-print
-print "== Local"
+print()
+print("== Local")
 use(mylocal)
 
 # demo remoting; mimicks what wireproto and HTTP/SSH do
@@ -100,12 +100,12 @@ class server(object):
         args = dict(arg.split('=', 1) for arg in args)
         return getattr(self, name)(**args)
     def perform(self, req):
-        print "REQ:", req
+        print("REQ:", req)
         name, args = req.split('?', 1)
         args = args.split('&')
         vals = dict(arg.split('=', 1) for arg in args)
         res = getattr(self, name)(**vals)
-        print "  ->", res
+        print("  ->", res)
         return res
     def batch(self, cmds):
         res = []
@@ -178,6 +178,6 @@ class remotething(thing):
 # demo remote usage
 
 myproxy = remotething(myserver)
-print
-print "== Remote"
+print()
+print("== Remote")
 use(myproxy)
