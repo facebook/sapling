@@ -2770,7 +2770,7 @@ def debuginstall(ui, **opts):
             # template found, check if it is working
             err = None
             try:
-                templater.templater(m)
+                templater.templater.frommapfile(m)
             except Exception as inst:
                 err = inst
                 p = None
@@ -3681,7 +3681,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     mapfile = None
     if revs is None:
         k = 'debugtemplate'
-        t = templater.templater(mapfile)
+        t = templater.templater()
         t.cache[k] = tmpl
         ui.write(templater.stringify(t(k, **props)))
     else:

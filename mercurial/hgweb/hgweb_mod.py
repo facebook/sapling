@@ -188,20 +188,22 @@ class requestcontext(object):
 
         # create the templater
 
-        tmpl = templater.templater(mapfile,
-                                   filters={'websub': websubfilter},
-                                   defaults={'url': req.url,
-                                             'logourl': logourl,
-                                             'logoimg': logoimg,
-                                             'staticurl': staticurl,
-                                             'urlbase': urlbase,
-                                             'repo': self.reponame,
-                                             'encoding': encoding.encoding,
-                                             'motd': motd,
-                                             'sessionvars': sessionvars,
-                                             'pathdef': makebreadcrumb(req.url),
-                                             'style': style,
-                                            })
+        defaults = {
+            'url': req.url,
+            'logourl': logourl,
+            'logoimg': logoimg,
+            'staticurl': staticurl,
+            'urlbase': urlbase,
+            'repo': self.reponame,
+            'encoding': encoding.encoding,
+            'motd': motd,
+            'sessionvars': sessionvars,
+            'pathdef': makebreadcrumb(req.url),
+            'style': style,
+        }
+        tmpl = templater.templater.frommapfile(mapfile,
+                                               filters={'websub': websubfilter},
+                                               defaults=defaults)
         return tmpl
 
 

@@ -1016,10 +1016,9 @@ class TemplateNotFound(error.Abort):
 
 class templater(object):
 
-    def __init__(self, mapfile, filters=None, defaults=None, cache=None,
+    def __init__(self, filters=None, defaults=None, cache=None,
                  minchunk=1024, maxchunk=65536):
         '''set up template engine.
-        mapfile is name of file to read map definitions from.
         filters is dict of functions. each transforms a value into another.
         defaults is dict of default map definitions.'''
         if filters is None:
@@ -1036,11 +1035,15 @@ class templater(object):
         self.minchunk, self.maxchunk = minchunk, maxchunk
         self.ecache = {}
 
-        if not mapfile:
-            return
+    @classmethod
+    def frommapfile(cls, mapfile, filters=None, defaults=None, cache=None,
+                    minchunk=1024, maxchunk=65536):
+        """Create templater from the specified map file"""
+        t = cls(filters, defaults, cache, minchunk, maxchunk)
         cache, tmap = _readmapfile(mapfile)
-        self.cache.update(cache)
-        self.map = tmap
+        t.cache.update(cache)
+        t.map = tmap
+        return t
 
     def __contains__(self, key):
         return key in self.cache or key in self.map

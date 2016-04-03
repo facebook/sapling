@@ -526,7 +526,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
 
     ui = repo.ui
     template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
-    tmpl = templater.templater(None, cache={'conflictmarker': template})
+    tmpl = templater.templater(cache={'conflictmarker': template})
 
     pad = max(len(l) for l in labels)
 

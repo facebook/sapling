@@ -491,16 +491,17 @@ class hgwebdir(object):
         if not staticurl.endswith('/'):
             staticurl += '/'
 
-        tmpl = templater.templater(mapfile,
-                                   defaults={"encoding": encoding.encoding,
-                                             "motd": motd,
-                                             "url": url,
-                                             "logourl": logourl,
-                                             "logoimg": logoimg,
-                                             "staticurl": staticurl,
-                                             "sessionvars": sessionvars,
-                                             "style": style,
-                                             })
+        defaults = {
+            "encoding": encoding.encoding,
+            "motd": motd,
+            "url": url,
+            "logourl": logourl,
+            "logoimg": logoimg,
+            "staticurl": staticurl,
+            "sessionvars": sessionvars,
+            "style": style,
+        }
+        tmpl = templater.templater.frommapfile(mapfile, defaults=defaults)
         return tmpl
 
     def updatereqenv(self, env):

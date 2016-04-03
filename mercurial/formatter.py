@@ -190,7 +190,10 @@ def lookuptemplate(ui, topic, tmpl):
 
 def gettemplater(ui, topic, spec):
     tmpl, mapfile = lookuptemplate(ui, topic, spec)
-    t = templater.templater(mapfile, {})
+    assert not (tmpl and mapfile)
+    if mapfile:
+        return templater.templater.frommapfile(mapfile)
+    t = templater.templater()
     if tmpl:
         t.cache[topic] = tmpl
     return t
