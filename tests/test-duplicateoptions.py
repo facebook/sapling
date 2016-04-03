@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 from mercurial import (
     commands,
@@ -36,6 +36,6 @@ for cmd, entry in commands.table.iteritems():
     for option in entry[1]:
         if (option[0] and option[0] in seenshort) or \
            (option[1] and option[1] in seenlong):
-            print "command '" + cmd + "' has duplicate option " + str(option)
+            print("command '" + cmd + "' has duplicate option " + str(option))
         seenshort.add(option[0])
         seenlong.add(option[1])
