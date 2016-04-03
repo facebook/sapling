@@ -15,10 +15,10 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 __version__ = "0.2.1"
 
 import BaseHTTPServer
+import SocketServer
 import os
 import select
 import socket
-import SocketServer
 import urlparse
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
