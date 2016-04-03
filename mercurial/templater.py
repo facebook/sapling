@@ -247,11 +247,8 @@ def _parseexpr(expr):
 def prettyformat(tree):
     return parser.prettyformat(tree, ('integer', 'string', 'symbol'))
 
-def compiletemplate(tmpl, context):
-    """Parse and compile template string to (func, data) pair"""
-    return compileexp(parse(tmpl), context, methods)
-
 def compileexp(exp, context, curmethods):
+    """Compile parsed template tree to (func, data) pair"""
     t = exp[0]
     if t in curmethods:
         return curmethods[t](exp, context)
@@ -955,7 +952,8 @@ class engine(object):
             # put poison to cut recursion while compiling 't'
             self._cache[t] = (_runrecursivesymbol, t)
             try:
-                self._cache[t] = compiletemplate(self._loader(t), self)
+                x = parse(self._loader(t))
+                self._cache[t] = compileexp(x, self, methods)
             except: # re-raises
                 del self._cache[t]
                 raise
