@@ -1003,10 +1003,6 @@ class templater(object):
             cache = {}
         self.cache = cache.copy()
         self.map = {}
-        if mapfile:
-            self.base = os.path.dirname(mapfile)
-        else:
-            self.base = ''
         self.filters = templatefilters.filters.copy()
         self.filters.update(filters)
         self.defaults = defaults
@@ -1019,6 +1015,7 @@ class templater(object):
             raise error.Abort(_("style '%s' not found") % mapfile,
                              hint=_("available styles: %s") % stylelist())
 
+        base = os.path.dirname(mapfile)
         conf = config.config(includepaths=templatepaths())
         conf.read(mapfile)
 
@@ -1034,7 +1031,7 @@ class templater(object):
                 val = 'default', val
                 if ':' in val[1]:
                     val = val[1].split(':', 1)
-                self.map[key] = val[0], os.path.join(self.base, val[1])
+                self.map[key] = val[0], os.path.join(base, val[1])
 
     def __contains__(self, key):
         return key in self.cache or key in self.map
