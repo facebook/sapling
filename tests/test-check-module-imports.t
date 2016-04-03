@@ -141,6 +141,15 @@ here that we should still endeavor to fix, and some cycles will be
 hidden by deduplication algorithm in the cycle detector, so fixing
 these may expose other cycles.
 
-  $ hg locate 'mercurial/**.py' 'hgext/**.py' | sed 's-\\-/-g' | python "$import_checker" -
+Known-bad files are excluded by -X as some of them would produce unstable
+outputs, which should be fixed later.
+
+  $ hg locate 'mercurial/**.py' 'hgext/**.py' 'tests/**.py' \
+  > -X tests/test-hgweb-auth.py \
+  > -X tests/hypothesishelpers.py \
+  > -X tests/test-ctxmanager.py \
+  > -X tests/test-lock.py \
+  > -X tests/test-verify-repo-operations.py \
+  > | sed 's-\\-/-g' | python "$import_checker" -
   Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
   [1]
