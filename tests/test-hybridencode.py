@@ -1,4 +1,7 @@
-from mercurial import store
+from __future__ import absolute_import
+from mercurial import (
+    store,
+)
 
 def show(s):
     # show test input

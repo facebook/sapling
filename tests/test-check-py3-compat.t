@@ -57,7 +57,6 @@
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
   tests/test-hgwebdir-paths.py not using absolute_import
-  tests/test-hybridencode.py not using absolute_import
   tests/test-hybridencode.py requires print_function
   tests/test-lrucachedict.py not using absolute_import
   tests/test-lrucachedict.py requires print_function
