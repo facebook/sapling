@@ -537,7 +537,7 @@ different between Python 2.6 and Python 2.7.
   searching for changes
   exception from first failed import attempt:
   Traceback (most recent call last):
-  SyntaxError: invalid syntax
+  SyntaxError: * (glob)
   exception from second failed import attempt:
   Traceback (most recent call last):
   ImportError: No module named hgext_syntaxerror
