@@ -2366,6 +2366,11 @@ def _parsealiasdefn(defn, args):
     tree = parser.simplifyinfixops(tree, ('list', 'or'))
     return _relabelaliasargs(tree, args)
 
+class _aliasrules(parser.basealiasrules):
+    """Parsing and expansion rule set of revset aliases"""
+    _section = _('revset alias')
+    _getlist = staticmethod(getlist)
+
 class revsetalias(object):
     # whether own `error` information is already shown or not.
     # this avoids showing same warning multiple times at each `findaliases`.

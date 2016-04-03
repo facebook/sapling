@@ -228,3 +228,39 @@ def parseerrordetail(inst):
         return _('at %s: %s') % (inst.args[1], inst.args[0])
     else:
         return inst.args[0]
+
+class basealiasrules(object):
+    """Parsing and expansion rule set of aliases
+
+    This is a helper for fileset/revset/template aliases. A concrete rule set
+    should be made by sub-classing this and implementing class/static methods.
+
+    It supports alias expansion of symbol and funciton-call styles::
+
+        # decl = defn
+        h = heads(default)
+        b($1) = ancestors($1) - ancestors(default)
+    """
+    # typically a config section, which will be included in error messages
+    _section = None
+    # tags of symbol and function nodes
+    _symbolnode = 'symbol'
+    _funcnode = 'func'
+
+    def __new__(cls):
+        raise TypeError("'%s' is not instantiatable" % cls.__name__)
+
+    @staticmethod
+    def _parsedecl(spec):
+        """Parse an alias name and arguments"""
+        raise NotImplementedError
+
+    @staticmethod
+    def _parsedefn(spec):
+        """Parse an alias definition"""
+        raise NotImplementedError
+
+    @staticmethod
+    def _getlist(tree):
+        """Extract a list of arguments from parsed tree"""
+        raise NotImplementedError
