@@ -1,38 +1,38 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from mercurial import (
     store,
 )
 
 def show(s):
     # show test input
-    print "A = '%s'" % s.encode("string_escape")
+    print("A = '%s'" % s.encode("string_escape"))
 
     # show the result of the C implementation, if available
     h = store._pathencode(s)
-    print "B = '%s'" % h.encode("string_escape")
+    print("B = '%s'" % h.encode("string_escape"))
 
     # compare it with reference implementation in Python
     r = store._hybridencode(s, True)
     if h != r:
-        print "R = '%s'" % r.encode("string_escape")
-    print
+        print("R = '%s'" % r.encode("string_escape"))
+    print()
 
 show("data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;=[]^`{}")
 
-print "uppercase char X is encoded as _x"
+print("uppercase char X is encoded as _x")
 show("data/ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-print "underbar is doubled"
+print("underbar is doubled")
 show("data/_")
 
-print "tilde is character-encoded"
+print("tilde is character-encoded")
 show("data/~")
 
-print "characters in ASCII code range 1..31"
+print("characters in ASCII code range 1..31")
 show('data/\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
           '\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f')
 
-print "characters in ASCII code range 126..255"
+print("characters in ASCII code range 126..255")
 show('data/\x7e\x7f'
           '\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f'
           '\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f')
@@ -43,18 +43,18 @@ show('data/\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf'
 show('data/\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef'
           '\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff')
 
-print "Windows reserved characters"
+print("Windows reserved characters")
 show('data/less <, greater >, colon :, double-quote ", backslash \\'
            ', pipe |, question-mark ?, asterisk *')
 
-print "encoding directories ending in .hg, .i or .d with '.hg' suffix"
+print("encoding directories ending in .hg, .i or .d with '.hg' suffix")
 show('data/x.h.i/x.hg/x.i/x.d/foo')
 show('data/a.hg/a.i/a.d/foo')
 show('data/au.hg/au.i/au.d/foo')
 show('data/aux.hg/aux.i/aux.d/foo')
 show('data/auxy.hg/auxy.i/auxy.d/foo')
 
-print "but these are not encoded on *filenames*"
+print("but these are not encoded on *filenames*")
 show('data/foo/x.hg')
 show('data/foo/x.i')
 show('data/foo/x.d')
@@ -71,7 +71,7 @@ show('data/foo/auxy.hg')
 show('data/foo/auxy.i')
 show('data/foo/auxy.d')
 
-print "plain .hg, .i and .d directories have the leading dot encoded"
+print("plain .hg, .i and .d directories have the leading dot encoded")
 show('data/.hg/.i/.d/foo')
 
 show('data/aux.bla/bla.aux/prn/PRN/lpt/com3/nul/coma/foo.NUL/normal.c.i')
@@ -129,22 +129,22 @@ show('data/com9./com9y./com9.')
 
 show('data/a /au /aux /auxy /aux ')
 
-print "largest unhashed path"
+print("largest unhashed path")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'unhashed--xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "shortest hashed path"
+print("shortest hashed path")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "changing one char in part that's hashed away produces a different hash"
+print("changing one char in part that's hashed away produces a different hash")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxy-'
           '123456789-123456')
 
-print "uppercase hitting length limit due to encoding"
+print("uppercase hitting length limit due to encoding")
 show('data/A23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
@@ -152,7 +152,7 @@ show('data/Z23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "compare with lowercase not hitting limit"
+print("compare with lowercase not hitting limit")
 show('data/a23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
@@ -160,22 +160,22 @@ show('data/z23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "not hitting limit with any of these"
+print("not hitting limit with any of these")
 show("data/abcdefghijklmnopqrstuvwxyz0123456789 !#%&'()+,-.;="
           "[]^`{}xxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-"
           "123456789-12345")
 
-print "underbar hitting length limit due to encoding"
+print("underbar hitting length limit due to encoding")
 show('data/_23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "tilde hitting length limit due to encoding"
+print("tilde hitting length limit due to encoding")
 show('data/~23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "Windows reserved characters hitting length limit"
+print("Windows reserved characters hitting length limit")
 show('data/<23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
@@ -201,47 +201,47 @@ show('data/*23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "initial space hitting length limit"
+print("initial space hitting length limit")
 show('data/ 23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "initial dot hitting length limit"
+print("initial dot hitting length limit")
 show('data/.23456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "trailing space in filename hitting length limit"
+print("trailing space in filename hitting length limit")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-1234 ')
 
-print "trailing dot in filename hitting length limit"
+print("trailing dot in filename hitting length limit")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-1234.')
 
-print "initial space in directory hitting length limit"
+print("initial space in directory hitting length limit")
 show('data/ x/456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "initial dot in directory hitting length limit"
+print("initial dot in directory hitting length limit")
 show('data/.x/456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "trailing space in directory hitting length limit"
+print("trailing space in directory hitting length limit")
 show('data/x /456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "trailing dot in directory hitting length limit"
+print("trailing dot in directory hitting length limit")
 show('data/x./456789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "with directories that need direncoding, hitting length limit"
+print("with directories that need direncoding, hitting length limit")
 show('data/x.i/56789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
@@ -252,7 +252,7 @@ show('data/x.hg/5789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "Windows reserved filenames, hitting length limit"
+print("Windows reserved filenames, hitting length limit")
 show('data/con/56789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
@@ -278,100 +278,100 @@ show('data/lpt9/6789-123456789-123456789-123456789-123456789-'
           'xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "non-reserved names, just not hitting limit"
+print("non-reserved names, just not hitting limit")
 show('data/123456789-123456789-123456789-123456789-123456789-'
           '/com/com0/lpt/lpt0/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12345')
 
-print "hashed path with largest untruncated 1st dir"
+print("hashed path with largest untruncated 1st dir")
 show('data/12345678/-123456789-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated 1st dir"
+print("hashed path with smallest truncated 1st dir")
 show('data/123456789/123456789-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated two dirs"
+print("hashed path with largest untruncated two dirs")
 show('data/12345678/12345678/9-123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated two dirs"
+print("hashed path with smallest truncated two dirs")
 show('data/123456789/123456789/123456789-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated three dirs"
+print("hashed path with largest untruncated three dirs")
 show('data/12345678/12345678/12345678/89-123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated three dirs"
+print("hashed path with smallest truncated three dirs")
 show('data/123456789/123456789/123456789/123456789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated four dirs"
+print("hashed path with largest untruncated four dirs")
 show('data/12345678/12345678/12345678/12345678/789-123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated four dirs"
+print("hashed path with smallest truncated four dirs")
 show('data/123456789/123456789/123456789/123456789/123456789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated five dirs"
+print("hashed path with largest untruncated five dirs")
 show('data/12345678/12345678/12345678/12345678/12345678/6789-'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated five dirs"
+print("hashed path with smallest truncated five dirs")
 show('data/123456789/123456789/123456789/123456789/123456789/'
           'hashed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated six dirs"
+print("hashed path with largest untruncated six dirs")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/ed----xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated six dirs"
+print("hashed path with smallest truncated six dirs")
 show('data/123456789/123456789/123456789/123456789/123456789/'
           '123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated seven dirs"
+print("hashed path with largest untruncated seven dirs")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/xxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated seven dirs"
+print("hashed path with smallest truncated seven dirs")
 show('data/123456789/123456789/123456789/123456789/123456789/'
           '123456789/123456789/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest untruncated eight dirs"
-print "(directory 8 is dropped because it hits _maxshortdirslen)"
+print("hashed path with largest untruncated eight dirs")
+print("(directory 8 is dropped because it hits _maxshortdirslen)")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345678/xxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with smallest truncated eight dirs"
-print "(directory 8 is dropped because it hits _maxshortdirslen)"
+print("hashed path with smallest truncated eight dirs")
+print("(directory 8 is dropped because it hits _maxshortdirslen)")
 show('data/123456789/123456789/123456789/123456789/123456789/'
           '123456789/123456789/123456789/xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with largest non-dropped directory 8"
-print "(just not hitting the _maxshortdirslen boundary)"
+print("hashed path with largest non-dropped directory 8")
+print("(just not hitting the _maxshortdirslen boundary)")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "...adding one truncated char to dir 1..7 won't drop dir 8"
+print("...adding one truncated char to dir 1..7 won't drop dir 8")
 show('data/12345678x/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
@@ -394,14 +394,14 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678x/12345/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path with shortest dropped directory 8"
-print "(just hitting the _maxshortdirslen boundary)"
+print("hashed path with shortest dropped directory 8")
+print("(just hitting the _maxshortdirslen boundary)")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/123456/xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "hashed path that drops dir 8 due to dot or space at end is"
-print "encoded, and thus causing to hit _maxshortdirslen"
+print("hashed path that drops dir 8 due to dot or space at end is")
+print("encoded, and thus causing to hit _maxshortdirslen")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/1234./-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
@@ -409,7 +409,7 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/1234 /-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print "... with dir 8 short enough for encoding"
+print("... with dir 8 short enough for encoding")
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12./xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
@@ -417,9 +417,9 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12 /xx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-123456')
 
-print '''Extensions are replicated on hashed paths. Note that
+print('''Extensions are replicated on hashed paths. Note that
 we only get to encode files that end in .i or .d inside the
-store. Encoded filenames are thus bound in length.'''
+store. Encoded filenames are thus bound in length.''')
 show('data/12345678/12345678/12345678/12345678/12345678/12345'
           '678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-'
           '123456789-12.345.i')
@@ -464,7 +464,7 @@ show('data/12345678/12345678/12345678/12345678/12345678/12345'
           'xxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwww'
           'wwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i')
 
-print "paths outside data/ can be encoded"
+print("paths outside data/ can be encoded")
 show('metadata/dir/00manifest.i')
 show('metadata/12345678/12345678/12345678/12345678/12345678/'
           '12345678/12345678/12345678/12345678/12345678/12345678/'
