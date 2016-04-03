@@ -1,4 +1,7 @@
-from mercurial.hg import parseurl
+from __future__ import absolute_import
+from mercurial.hg import (
+    parseurl,
+)
 
 def testparse(url, branch=[]):
     print '%s, branches: %r' % parseurl(url, branch)

@@ -56,7 +56,6 @@
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
-  tests/test-hg-parseurl.py not using absolute_import
   tests/test-hg-parseurl.py requires print_function
   tests/test-hgweb-auth.py not using absolute_import
   tests/test-hgweb-auth.py requires print_function
