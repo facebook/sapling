@@ -611,11 +611,22 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
         # use a unique temp address so we can stat the file and do ownership
         # check later
         tempaddress = _tempaddress(self.server_address)
-        self.socket.bind(tempaddress)
-        self._socketstat = os.stat(tempaddress)
+        # use relative path instead of full path at bind() if possible, since
+        # AF_UNIX path has very small length limit (107 chars) on common
+        # platforms (see sys/un.h)
+        dirname, basename = os.path.split(tempaddress)
+        bakwdfd = None
+        if dirname:
+            bakwdfd = os.open('.', os.O_DIRECTORY)
+            os.chdir(dirname)
+        self.socket.bind(basename)
+        self._socketstat = os.stat(basename)
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
-        util.rename(tempaddress, self.server_address)
+        util.rename(basename, self.server_address)
+        if bakwdfd:
+            os.fchdir(bakwdfd)
+            os.close(bakwdfd)
 
     def issocketowner(self):
         try:
