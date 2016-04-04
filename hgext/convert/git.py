@@ -53,11 +53,6 @@ class convert_git(common.converter_source, common.commandline):
     def gitpipe(self, *args, **kwargs):
         return self._gitcmd(self._run3, *args, **kwargs)
 
-    def gitread(self, s):
-        fh = self.gitopen(s)
-        data = fh.read()
-        return data, fh.close()
-
     def __init__(self, ui, path, revs=None):
         super(convert_git, self).__init__(ui, path, revs=revs)
         common.commandline.__init__(self, ui, 'git')
