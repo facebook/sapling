@@ -11,8 +11,9 @@ sending all remaining arguments to as environment variables to that command.
 
 Each positional argument to the method results in a `MSG[N]` key in the
 environment, starting at 1 (so `MSG1`, `MSG2`, etc.). Each keyword argument
-is set as a `OPT_UPPERCASE_KEY` argument (so the key is uppercased, and
-prefixed with `OPT_`).
+is set as a `OPT_UPPERCASE_KEY` variable (so the key is uppercased, and
+prefixed with `OPT_`). The original event name is passed in the `EVENT`
+environment variable, and the process ID of mercurial is given in `HGPID`.
 
 So given a call `ui.log('foo', 'bar', 'baz', spam='eggs'), a script configured
 for the `foo` event can expect an environment with `MSG1=bar`, `MSG2=baz`, and
@@ -26,17 +27,55 @@ For example::
 
 would log the warning message and traceback of any failed command dispatch.
 
-Scripts are run sychronously; they should exit ASAP. Preferably the command
-should fork and disown to avoid slowing mercurial down.
+Scripts are run asychronously as detached daemon processes; mercurial will
+not ensure that they exit cleanly.
 
 """
 
 import os
+import platform
 import subprocess
+import sys
 
 from itertools import chain
 
 def uisetup(ui):
+    if platform.system() == 'Windows':
+        # no fork on Windows, but we can create a detached process
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863(v=vs.85).aspx
+        # No stdlib constant exists for this value
+        DETACHED_PROCESS = 0x00000008
+        _creationflags = DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+
+        def runshellcommand(script, env):
+            # we can't use close_fds *and* redirect stdin. I'm not sure that we
+            # need to because the detached process has no console connection.
+            subprocess.Popen(
+                script, shell=True, env=env, close_fds=True,
+                creationflags=_creationflags)
+    else:
+        def runshellcommand(script, env):
+            # double-fork to completely detach from the parent process
+            # based on http://code.activestate.com/recipes/278731
+            pid = os.fork()
+            if pid:
+                # parent
+                return
+            # subprocess.Popen() forks again, all we need to add is
+            # flag the new process as a new session.
+            if sys.version_info < (3, 2):
+                newsession = {'preexec_fn': os.setsid}
+            else:
+                newsession = {'start_new_session': True}
+            # connect stdin to devnull to make sure the subprocess can't
+            # muck up that stream for mercurial.
+            subprocess.Popen(
+                script, shell=True, stdin=open(os.devnull, 'r'), env=env,
+                close_fds=True, **newsession)
+            # mission accomplished, this child needs to exit and not
+            # continue the hg process here.
+            os._exit(0)
+
     class logtoprocessui(ui.__class__):
         def log(self, event, *msg, **opts):
             """Map log events to external commands
@@ -69,8 +108,11 @@ def uisetup(ui):
                 optpairs = (
                     ('OPT_{0}'.format(key.upper()), str(value))
                     for key, value in opts.iteritems())
-                env = dict(chain(os.environ.items(), msgpairs, optpairs))
-                subprocess.call(script, shell=True, env=env)
+                env = dict(chain(os.environ.items(), msgpairs, optpairs),
+                           EVENT=event, HGPID=str(os.getpid()))
+                # Connect stdin to /dev/null to prevent child processes messing
+                # with mercurial's stdin.
+                runshellcommand(script, env)
             return super(logtoprocessui, self).log(event, *msg, **opts)
 
     # Replace the class for this instance and all clones created from it:
