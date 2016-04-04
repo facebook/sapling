@@ -12,7 +12,6 @@ class basestore(object):
         self._reponame = reponame
         self._shared = shared
         self._uid = os.getuid()
-        self._fetches = []
 
         self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
         self._validatecache = self.ui.config("remotefilelog", "validatecache",
@@ -36,13 +35,6 @@ class basestore(object):
                             os.chmod(cachepath, 0o2775)
                 finally:
                     os.umask(oldumask)
-
-    def addfetcher(self, fetchfunc):
-        self._fetches.append(fetchfunc)
-
-    def triggerfetches(self, keys):
-        for fetcher in self._fetches:
-            fetcher(keys)
 
     def contains(self, keys):
         missing = []

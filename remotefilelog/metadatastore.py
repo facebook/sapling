@@ -4,9 +4,10 @@ from mercurial import util
 from mercurial.node import hex
 
 class unionmetadatastore(object):
-    def __init__(self, local, shared):
+    def __init__(self, local, shared, remote):
         self._local = local
         self._shared = shared
+        self._remote = remote
 
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""
@@ -31,9 +32,8 @@ class unionmetadatastore(object):
         except KeyError:
             pass
 
-        self._shared.triggerfetches([(name, node)])
         try:
-            return self._shared.getancestors(name, node)
+            return self._remote.getancestors(name, node)
         except KeyError:
             pass
 
@@ -52,12 +52,6 @@ class unionmetadatastore(object):
         if missing:
             missing = self._shared.contains(missing)
         return missing
-
-    def addfetcher(self, fetchfunc):
-        self._shared.addfetcher(fetchfunc)
-
-    def triggerfetches(self, keys):
-        self._shared.triggerfetches(keys)
 
 class remotefilelogmetadatastore(basestore.basestore):
     def getparents(self, name, node):
@@ -84,3 +78,24 @@ class remotefilelogmetadatastore(basestore.basestore):
     def add(self, name, node, parents, linknode):
         raise Exception("cannot add metadata only to remotefilelog "
                         "metadatastore")
+
+class remotemetadatastore(object):
+    def __init__(self, ui, fileservice, shared):
+        self._fileservice = fileservice
+        self._shared = shared
+
+    def getancestors(self, name, node):
+        self._fileservice.prefetch([(name, hex(node))])
+        return self._shared.getancestors(name, node)
+
+    def add(self, name, node, data):
+        raise Exception("cannot add to a remote store")
+
+    def contains(self, keys):
+        raise NotImplemented()
+
+    def getparents(self, name, node):
+        raise NotImplemented()
+
+    def getlinknode(self, name, node):
+        raise NotImplemented()

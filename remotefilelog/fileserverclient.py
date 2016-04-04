@@ -187,7 +187,7 @@ def _getfiles(
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
-    def __init__(self, repo, stores):
+    def __init__(self, repo):
         ui = repo.ui
         self.repo = repo
         self.ui = ui
@@ -203,16 +203,15 @@ class fileserverclient(object):
 
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
-        def hexprefetch(keys):
-            return self.prefetch((filename, hex(node)) for filename, node
-                                 in keys)
-        for store in stores:
-            store.addfetcher(hexprefetch)
-        self.contentstore = stores[0]
-        self.sharedcache = stores[0]._shared
+        self.contentstore = None
+        self.sharedcache = None
 
         self.remotecache = cacheconnection()
         self.remoteserver = None
+
+    def setstore(self, store):
+        self.contentstore = store
+        self.sharedcache = store._shared
 
     def _connect(self):
         fallbackpath = self.repo.fallbackpath

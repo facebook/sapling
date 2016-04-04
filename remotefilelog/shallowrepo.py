@@ -10,8 +10,8 @@ from mercurial.i18n import _
 from mercurial import localrepo, context, util, match, scmutil
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
-from contentstore import remotefilelogcontentstore, unioncontentstore
-from metadatastore import remotefilelogmetadatastore, unionmetadatastore
+from contentstore import remotefilelogcontentstore, unioncontentstore, remotecontentstore
+from metadatastore import remotefilelogmetadatastore, unionmetadatastore, remotemetadatastore
 
 requirement = "remotefilelog"
 
@@ -145,11 +145,14 @@ def wraprepo(repo):
     localpath = os.path.join(repo.svfs.vfs.base, 'data')
     if not os.path.exists(localpath):
         os.makedirs(localpath)
+
+    # Instantiate local data stores
     localcontent = remotefilelogcontentstore(repo.ui, localpath, repo.name,
                                              shared=False)
     localmetadata = remotefilelogmetadatastore(repo.ui, localpath, repo.name,
                                                shared=False)
 
+    # Instantiate shared cache stores
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     if not cachepath:
         raise util.Abort(_("could not find config option remotefilelog.cachepath"))
@@ -158,11 +161,15 @@ def wraprepo(repo):
     cachemetadata = remotefilelogmetadatastore(repo.ui, cachepath, repo.name,
                                                shared=True)
 
-    repo.contentstore = unioncontentstore(localcontent, cachecontent)
-    repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata)
+    # Instantiate remote stores
+    repo.fileservice = fileserverclient.fileserverclient(repo)
+    remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
+    remotemetadata = remotemetadatastore(repo.ui, repo.fileservice, cachemetadata)
 
-    repo.fileservice = fileserverclient.fileserverclient(repo, [
-        repo.contentstore, repo.metadatastore])
+    # Instantiate union stores
+    repo.contentstore = unioncontentstore(localcontent, cachecontent, remotecontent)
+    repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata, remotemetadata)
+    repo.fileservice.setstore(repo.contentstore)
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)

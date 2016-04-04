@@ -4,9 +4,10 @@ from mercurial import util
 from mercurial.node import hex
 
 class unioncontentstore(object):
-    def __init__(self, local, shared):
+    def __init__(self, local, shared, remote):
         self._local = local
         self._shared = shared
+        self._remote = remote
 
     def get(self, name, node):
         try:
@@ -19,9 +20,8 @@ class unioncontentstore(object):
         except KeyError:
             pass
 
-        self._shared.triggerfetches([(name, node)])
         try:
-            return self._shared.get(name, node)
+            return self._remote.get(name, node)
         except KeyError:
             pass
 
@@ -39,12 +39,6 @@ class unioncontentstore(object):
 
     def addremotefilelog(self, name, node, data):
         self._local.addremotefilelog(name, node, data)
-
-    def addfetcher(self, fetchfunc):
-        self._shared.addfetcher(fetchfunc)
-
-    def triggerfetches(self, keys):
-        self._shared.triggerfetches(keys)
 
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
@@ -65,3 +59,18 @@ class remotefilelogcontentstore(basestore.basestore):
     def add(self, name, node, data):
         raise Exception("cannot add content only to remotefilelog "
                         "contentstore")
+
+class remotecontentstore(object):
+    def __init__(self, ui, fileservice, shared):
+        self._fileservice = fileservice
+        self._shared = shared
+
+    def get(self, name, node):
+        self._fileservice.prefetch([(name, hex(node))])
+        return self._shared.get(name, node)
+
+    def add(self, name, node, data):
+        raise Exception("cannot add to a remote store")
+
+    def contains(self, keys):
+        raise NotImplemented()
