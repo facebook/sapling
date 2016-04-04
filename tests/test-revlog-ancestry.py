@@ -1,5 +1,10 @@
+from __future__ import absolute_import
 import os
-from mercurial import hg, ui, merge
+from mercurial import (
+    hg,
+    merge,
+    ui,
+)
 
 u = ui.ui()
 

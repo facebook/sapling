@@ -62,7 +62,6 @@
   tests/test-manifest.py not using absolute_import
   tests/test-pathencode.py not using absolute_import
   tests/test-pathencode.py requires print_function
-  tests/test-revlog-ancestry.py not using absolute_import
   tests/test-revlog-ancestry.py requires print_function
   tests/test-run-tests.py not using absolute_import
   tests/test-simplemerge.py not using absolute_import
