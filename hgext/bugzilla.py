@@ -886,8 +886,10 @@ class bugzilla(object):
                 count -= 1
             return root
 
-        mapfile = self.ui.config('bugzilla', 'style')
+        mapfile = None
         tmpl = self.ui.config('bugzilla', 'template')
+        if not tmpl:
+            mapfile = self.ui.config('bugzilla', 'style')
         if not mapfile and not tmpl:
             tmpl = _('changeset {node|short} in repo {root} refers '
                      'to bug {bug}.\ndetails:\n\t{desc|tabindent}')
