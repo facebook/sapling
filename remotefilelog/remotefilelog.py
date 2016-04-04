@@ -201,63 +201,7 @@ class remotefilelog(object):
         raise error.LookupError(id, self.filename, _('no node'))
 
     def ancestormap(self, node):
-        hexnode = hex(node)
-
-        localcache = self.repo.fileservice.localcache
-        reponame = self.repo.name
-
-        # Check the local cache of remote data
-        cachekey = fileserverclient.getcachekey(reponame, self.filename, hexnode)
-        try:
-            raw = localcache.read(cachekey)
-            mapping = self._ancestormap(node, raw)
-            if mapping:
-                return mapping
-        except KeyError:
-            pass
-
-        # Check our local commit data
-        localkey = fileserverclient.getlocalkey(self.filename, hexnode)
-        localpath = os.path.join(self.localpath, localkey)
-        try:
-            raw = ioutil.readfile(localpath)
-            mapping = self._ancestormap(node, raw)
-            if mapping:
-                return mapping
-        except IOError:
-            pass
-
-        # Fallback to the server cache
-        self.repo.fileservice.prefetch([(self.filename, hexnode)],
-            force=True)
-        try:
-            raw = localcache.read(cachekey)
-            mapping = self._ancestormap(node, raw)
-            if mapping:
-                return mapping
-        except KeyError:
-            pass
-
-        raise error.LookupError(node, self.filename, _('no valid file history'))
-
-    def _ancestormap(self, node, raw):
-        index, size = ioutil.parsesize(raw)
-        start = index + 1 + size
-
-        mapping = {}
-        while start < len(raw):
-            divider = raw.index('\0', start + 80)
-
-            currentnode = raw[start:(start + 20)]
-            p1 = raw[(start + 20):(start + 40)]
-            p2 = raw[(start + 40):(start + 60)]
-            linknode = raw[(start + 60):(start + 80)]
-            copyfrom = raw[(start + 80):divider]
-
-            mapping[currentnode] = (p1, p2, linknode, copyfrom)
-            start = divider + 1
-
-        return mapping
+        return self.repo.metadatastore.getancestors(self.filename, node)
 
     def ancestor(self, a, b):
         if a == nullid or b == nullid:
