@@ -196,9 +196,11 @@ class notifier(object):
         self.subs = self.subscribers()
         self.merge = self.ui.configbool('notify', 'merge', True)
 
-        mapfile = self.ui.config('notify', 'style')
+        mapfile = None
         template = (self.ui.config('notify', hooktype) or
                     self.ui.config('notify', 'template'))
+        if not template:
+            mapfile = self.ui.config('notify', 'style')
         if not mapfile and not template:
             template = deftemplates.get(hooktype) or single_template
         self.t = cmdutil.changeset_templater(self.ui, self.repo, False, None,

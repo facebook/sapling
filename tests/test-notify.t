@@ -553,3 +553,76 @@ from different branch
   description: test
   (run 'hg heads' to see heads)
 
+default template:
+
+  $ grep -v '^template =' $HGRCPATH > "$HGRCPATH.new"
+  $ mv "$HGRCPATH.new" $HGRCPATH
+  $ echo a >> a/a
+  $ hg --cwd a commit -m 'default template'
+  $ hg --cwd b pull ../a -q | \
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Date: * (glob)
+  Subject: changeset in b: default template
+  From: test@test.com
+  X-Hg-Notification: changeset 3548c9e294b6
+  Message-Id: <hg.3548c9e294b6.*.*@*> (glob)
+  To: baz@test.com, foo@bar
+  
+  changeset 3548c9e294b6 in $TESTTMP/b
+  details: http://test/b?cmd=changeset;node=3548c9e294b6
+  description: default template
+
+with style:
+
+  $ cat <<EOF > notifystyle.map
+  > changeset = "Subject: {desc|firstline|strip}
+  >              From: {author}
+  >              {""}
+  >              changeset {node|short}"
+  > EOF
+  $ cat <<EOF >> $HGRCPATH
+  > [notify]
+  > style = $TESTTMP/notifystyle.map
+  > EOF
+  $ echo a >> a/a
+  $ hg --cwd a commit -m 'with style'
+  $ hg --cwd b pull ../a -q | \
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Date: * (glob)
+  Subject: with style
+  From: test@test.com
+  X-Hg-Notification: changeset e917dbd961d3
+  Message-Id: <hg.e917dbd961d3.*.*@*> (glob)
+  To: baz@test.com, foo@bar
+  
+  changeset e917dbd961d3
+
+with template (overrides style):
+
+  $ cat <<EOF >> $HGRCPATH
+  > template = Subject: {node|short}: {desc|firstline|strip}
+  >            From: {author}
+  >            {""}
+  >            {desc}
+  > EOF
+  $ echo a >> a/a
+  $ hg --cwd a commit -m 'with template'
+  $ hg --cwd b pull ../a -q | \
+  >   $PYTHON -c 'import sys,re; print re.sub("\n\t", " ", sys.stdin.read()),'
+  Content-Type: text/plain; charset="us-ascii"
+  MIME-Version: 1.0
+  Content-Transfer-Encoding: 7bit
+  Date: * (glob)
+  Subject: a09743fd3edd: with template
+  From: test@test.com
+  X-Hg-Notification: changeset a09743fd3edd
+  Message-Id: <hg.a09743fd3edd.*.*@*> (glob)
+  To: baz@test.com, foo@bar
+  
+  with template
