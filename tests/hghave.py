@@ -134,6 +134,11 @@ def has_cvs112():
     re = r'Concurrent Versions System \(CVS\) 1.12.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
+@check("cvsnt", "cvsnt client/server")
+def has_cvsnt():
+    re = r'Concurrent Versions System \(CVSNT\) (\d+).(\d+).*\(client/server\)'
+    return matchoutput('cvsnt --version 2>&1', re)
+
 @check("darcs", "darcs client")
 def has_darcs():
     return matchoutput('darcs --version', r'2\.[2-9]', True)
