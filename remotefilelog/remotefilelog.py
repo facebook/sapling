@@ -21,18 +21,11 @@ class remotefilelog(object):
         self.version = 1
 
     def read(self, node):
-        """returns the file contents at this node"""
-
-        if node == nullid:
-            return ""
-
-        # the file blobs are formated as such:
-        # blob => size of content + \0 + content + list(ancestors)
-        # ancestor => node + p1 + p2 + linknode + copypath + \0
-
-        raw = self._read(hex(node))
-        index, size = ioutil.parsesize(raw)
-        return raw[(index + 1):(index + 1 + size)]
+        t = self.revision(node)
+        if not t.startswith('\1\n'):
+            return t
+        s = t.index('\1\n', 2)
+        return t[s + 2:]
 
     def add(self, text, meta, transaction, linknode, p1=None, p2=None):
         hashtext = text
