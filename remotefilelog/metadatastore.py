@@ -10,7 +10,8 @@ class unionmetadatastore(object):
 
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""
-        pass
+        ancestors = self.getancestors(name, node)
+        return ancestors[node][:2]
 
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
@@ -61,7 +62,8 @@ class unionmetadatastore(object):
 class remotefilelogmetadatastore(basestore.basestore):
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""
-        pass
+        ancestors = self.getancestors(name, node)
+        return ancestors[node][:2]
 
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
@@ -71,10 +73,13 @@ class remotefilelogmetadatastore(basestore.basestore):
            ...
         }
         """
-        pass
+        data = self._getdata(name, node)
+        ancestors = ioutil.ancestormap(data)
+        return ancestors
 
     def getlinknode(self, name, node):
-        pass
+        ancestors = self.getancestors(name, node)
+        return ancestors[node][3]
 
     def add(self, name, node, parents, linknode):
         raise Exception("cannot add metadata only to remotefilelog "
