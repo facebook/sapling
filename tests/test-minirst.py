@@ -1,5 +1,10 @@
-from pprint import pprint
-from mercurial import minirst
+from __future__ import absolute_import
+from pprint import (
+    pprint,
+)
+from mercurial import (
+    minirst,
+)
 
 def debugformat(text, form, **kwargs):
     if form == 'html':
