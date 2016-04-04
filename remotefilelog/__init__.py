@@ -621,6 +621,9 @@ def gcclient(ui, cachepath):
 
 
 def log(orig, ui, repo, *pats, **opts):
+    if shallowrepo.requirement not in repo.requirements:
+        return orig(ui, repo, *pats, **opts)
+
     follow = opts.get('follow')
     revs = opts.get('rev')
     if pats:
