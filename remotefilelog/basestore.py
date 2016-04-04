@@ -14,6 +14,14 @@ class basestore(object):
         self._uid = os.getuid()
         self._fetches = []
 
+        self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
+        self._validatecache = self.ui.config("remotefilelog", "validatecache",
+                                             'on')
+        if self._validatecache not in ('on', 'strict', 'off'):
+            self._validatecache = 'on'
+        if self._validatecache == 'off':
+            self._validatecache = False
+
         if shared:
             if not os.path.exists(path):
                 oldumask = os.umask(0o002)
@@ -41,6 +49,9 @@ class basestore(object):
         for name, node in keys:
             filepath = self._getfilepath(name, node)
             exists = os.path.exists(filepath)
+            if (exists and self._validatecache == 'strict' and
+                not self._validatekey(filepath, 'contains')):
+                exists = False
             if not exists:
                 missing.append((name, node))
 
@@ -61,8 +72,50 @@ class basestore(object):
         filepath = self._getfilepath(name, node)
         try:
             data = ioutil.readfile(filepath)
+            if self._validatecache and not self._validatedata(data, filepath):
+                if self._validatecachelog:
+                    with open(self._validatecachelog, 'a+') as f:
+                        f.write("corrupt %s during read\n" % filepath)
+                os.rename(filepath, filepath + ".corrupt")
+                raise KeyError("corrupt local cache file %s" % filepath)
         except IOError:
             raise KeyError("no file found at %s for %s:%s" % (filepath, name, hex(node)))
 
         return data
+
+    def _validatekey(self, path, action):
+        with open(path, 'r') as f:
+            data = f.read()
+
+        if self._validatedata(data, path):
+            return True
+
+        if self._validatecachelog:
+            with open(self._validatecachelog, 'a+') as f:
+                f.write("corrupt %s during %s\n" % (path, action))
+
+        os.rename(path, path + ".corrupt")
+        return False
+
+    def _validatedata(self, data, path):
+        try:
+            if len(data) > 0:
+                size, remainder = data.split('\0', 1)
+                size = int(size)
+                if len(data) <= size:
+                    # it is truncated
+                    return False
+
+                # extract the node from the metadata
+                datanode = remainder[size:size+20]
+
+                # and compare against the path
+                if os.path.basename(path) == hex(datanode):
+                    # Content matches the intended path
+                    return True
+                return False
+        except ValueError:
+            pass
+
+        return False
 
