@@ -31,14 +31,14 @@ class unioncontentstore(object):
         raise Exception("cannot add content only to remotefilelog "
                         "contentstore")
 
-    def contains(self, keys):
-        missing = self._local.contains(keys)
+    def getmissing(self, keys):
+        missing = self._local.getmissing(keys)
         if missing:
-            missing = self._shared.contains(missing)
+            missing = self._shared.getmissing(missing)
         return missing
 
-    def addremotefilelog(self, name, node, data):
-        self._local.addremotefilelog(name, node, data)
+    def addremotefilelognode(self, name, node, data):
+        self._local.addremotefilelognode(name, node, data)
 
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):

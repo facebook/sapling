@@ -47,10 +47,10 @@ class unionmetadatastore(object):
         raise Exception("cannot add content only to remotefilelog "
                         "contentstore")
 
-    def contains(self, keys):
-        missing = self._local.contains(keys)
+    def getmissing(self, keys):
+        missing = self._local.getmissing(keys)
         if missing:
-            missing = self._shared.contains(missing)
+            missing = self._shared.getmissing(missing)
         return missing
 
 class remotefilelogmetadatastore(basestore.basestore):

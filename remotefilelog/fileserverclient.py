@@ -346,7 +346,7 @@ class fileserverclient(object):
         size = int(line)
         data = pipe.read(size)
 
-        self.sharedcache.addremotefilelog(filename, bin(node), lz4.decompress(data))
+        self.sharedcache.addremotefilelognode(filename, bin(node), lz4.decompress(data))
 
     def connect(self):
         if self.cacheprocess:
@@ -416,7 +416,7 @@ class fileserverclient(object):
         store = self.contentstore
         if force:
             store = self.contentstore._shared
-        missingids = store.contains(idstocheck)
+        missingids = store.getmissing(idstocheck)
 
         if missingids:
             global fetches, fetched, fetchcost

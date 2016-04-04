@@ -20,6 +20,7 @@ class remotefilelog(object):
         self.version = 1
 
     def read(self, node):
+        """returns the file contents at this node"""
         t = self.revision(node)
         if not t.startswith('\1\n'):
             return t
@@ -79,7 +80,7 @@ class remotefilelog(object):
             return data
 
         data = _createfileblob()
-        self.repo.contentstore.addremotefilelog(self.filename, node, data)
+        self.repo.contentstore.addremotefilelognode(self.filename, node, data)
 
         return node
 

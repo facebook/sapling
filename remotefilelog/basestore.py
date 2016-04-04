@@ -6,6 +6,15 @@ from mercurial.node import hex
 
 class basestore(object):
     def __init__(self, ui, path, reponame, shared=False):
+        """Creates a remotefilelog store object for the given repo name.
+
+        `path` - The file path where this store keeps its data
+        `reponame` - The name of the repo. This is used to partition data from
+        many repos.
+        `shared` - True if this store is a shared cache of data from the central
+        server, for many repos on this machine. False means this store is for
+        the local data for one repo.
+        """
         path = util.expandpath(path)
         self.ui = ui
         self._path = path
@@ -36,7 +45,7 @@ class basestore(object):
                 finally:
                     os.umask(oldumask)
 
-    def contains(self, keys):
+    def getmissing(self, keys):
         missing = []
         for name, node in keys:
             filepath = self._getfilepath(name, node)
@@ -75,7 +84,7 @@ class basestore(object):
 
         return data
 
-    def addremotefilelog(self, name, node, data):
+    def addremotefilelognode(self, name, node, data):
         filepath = self._getfilepath(name, node)
 
         oldumask = os.umask(0o002)
@@ -103,6 +112,11 @@ class basestore(object):
             os.umask(oldumask)
 
     def markrepo(self, path):
+        """Call this to add the given repo path to the store's list of
+        repositories that are using it. This is useful later when doing garbage
+        collection, since it allows us to insecpt the repos to see what nodes
+        they want to be kept alive in the store.
+        """
         repospath = os.path.join(self._path, "repos")
         with open(repospath, 'a') as reposfile:
             reposfile.write(os.path.dirname(path) + "\n")
