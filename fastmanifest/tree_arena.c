@@ -136,7 +136,7 @@ tree_t* alloc_tree_with_arena(size_t arena_sz) {
     return NULL;
   }
   node_t* shadow_root = alloc_result.node;
-  shadow_root->type = TYPE_IMPLICIT;
+  shadow_root->type = TYPE_ROOT;
 
   tree->shadow_root = shadow_root;
 

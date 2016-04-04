@@ -297,10 +297,10 @@ static find_path_result_t find_path(
 tree_t* alloc_tree() {
   // set up the shadow root and the real root.
   node_t* shadow_root = alloc_node("/", 1, 1);
-  shadow_root->type = TYPE_IMPLICIT;
+  shadow_root->type = TYPE_ROOT;
 
   node_t* real_root = alloc_node("/", 1, 0);
-  real_root->type = TYPE_IMPLICIT;
+  real_root->type = TYPE_ROOT;
 
   add_child(shadow_root, real_root);
 

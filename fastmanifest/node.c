@@ -119,7 +119,8 @@ static CONTEXTUAL_COMPARATOR_BUILDER(name_node_cmp, NAME_NODE_COMPARE);
 
 node_add_child_result_t add_child(node_t* node, const node_t* child) {
   // verify parent node.
-  if (!node->in_use || !(node->type == TYPE_IMPLICIT)) {
+  if (!node->in_use ||
+      !(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT)) {
     return ADD_CHILD_ILLEGAL_PARENT;
   }
 
@@ -172,7 +173,8 @@ node_add_child_result_t add_child(node_t* node, const node_t* child) {
 
 node_remove_child_result_t remove_child(node_t* node, uint32_t child_num) {
   // verify parent node.
-  if (!node->in_use || !(node->type == TYPE_IMPLICIT)) {
+  if (!node->in_use ||
+      !(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT)) {
     return REMOVE_CHILD_ILLEGAL_PARENT;
   }
 

@@ -28,6 +28,7 @@
 #define TYPE_UNDEFINED  0
 #define TYPE_IMPLICIT   1
 #define TYPE_LEAF       2
+#define TYPE_ROOT       3
 
 // the start of each of these nodes must be 32-bit aligned.
 typedef struct _node_t {
@@ -113,7 +114,7 @@ static inline node_t* get_child_by_index(
     const node_t* node,
     uint32_t child_num) {
   assert(node->in_use);
-  assert(node->type == TYPE_IMPLICIT);
+  assert(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT);
   assert(child_num < node->num_children);
 
   intptr_t address = (intptr_t) get_child_ptr_base_const(node);
@@ -127,7 +128,7 @@ static inline node_t* get_child_by_index(
 
 static inline node_t* get_child_from_diff(const node_t* node, ptrdiff_t diff) {
   assert(node->in_use);
-  assert(node->type == TYPE_IMPLICIT);
+  assert(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT);
 
   intptr_t base = (intptr_t) node;
   base += diff;
@@ -139,7 +140,7 @@ static inline void set_child_by_index(
     size_t child_num,
     const node_t *child) {
   assert(node->in_use);
-  assert(node->type == TYPE_IMPLICIT);
+  assert(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT);
   assert(child_num < node->num_children);
   assert(child->in_use);
 

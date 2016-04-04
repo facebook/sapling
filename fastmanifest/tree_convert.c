@@ -182,7 +182,7 @@ static from_flat_state_t* init_from_state(size_t flat_sz) {
     return NULL;
   }
   node_t* shadow_root = alloc_result.node;
-  shadow_root->type = TYPE_IMPLICIT;
+  shadow_root->type = TYPE_ROOT;
 
   state->tree->shadow_root = shadow_root;
   state->tree->consumed_memory += shadow_root->block_sz;
