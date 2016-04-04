@@ -60,7 +60,6 @@
   tests/test-lrucachedict.py not using absolute_import
   tests/test-lrucachedict.py requires print_function
   tests/test-manifest.py not using absolute_import
-  tests/test-parseindex2.py requires print_function
   tests/test-pathencode.py not using absolute_import
   tests/test-pathencode.py requires print_function
   tests/test-propertycache.py not using absolute_import
@@ -234,7 +233,6 @@
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-lrucachedict.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-parseindex*.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-propertycache.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-revlog-ancestry.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-status-inprocess.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)

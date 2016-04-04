@@ -3,7 +3,7 @@
 It also checks certain aspects of the parsers module as a whole.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from mercurial import (
     parsers,
 )
@@ -128,10 +128,10 @@ def printhexfail(testnumber, hexversion, stdout, expected):
         hexstring = hex(hexversion)
     except TypeError:
         hexstring = None
-    print ("FAILED: version test #%s with Python %s and patched "
-           "sys.hexversion %r (%r):\n Expected %s but got:\n-->'%s'\n" %
-           (testnumber, sys.version_info, hexversion, hexstring, expected,
-            stdout))
+    print("FAILED: version test #%s with Python %s and patched "
+          "sys.hexversion %r (%r):\n Expected %s but got:\n-->'%s'\n" %
+          (testnumber, sys.version_info, hexversion, hexstring, expected,
+           stdout))
 
 def testversionokay(testnumber, hexversion):
     stdout, stderr = importparsers(hexversion)
@@ -176,7 +176,7 @@ def runtest() :
     except TypeError:
         pass
     else:
-        print "Expected to get TypeError."
+        print("Expected to get TypeError.")
 
    # Check parsers.parse_index2() on an index file against the original
    # Python implementation of parseindex, both with and without inlined data.
@@ -188,10 +188,10 @@ def runtest() :
     c_res_2 = parse_index2(data_non_inlined, False)
 
     if py_res_1 != c_res_1:
-        print "Parse index result (with inlined data) differs!"
+        print("Parse index result (with inlined data) differs!")
 
     if py_res_2 != c_res_2:
-        print "Parse index result (no inlined data) differs!"
+        print("Parse index result (no inlined data) differs!")
 
     ix = parsers.parse_index2(data_inlined, True)[0]
     for i, r in enumerate(ix):
@@ -199,11 +199,12 @@ def runtest() :
             i = -1
         try:
             if ix[r[7]] != i:
-                print 'Reverse lookup inconsistent for %r' % r[7].encode('hex')
+                print('Reverse lookup inconsistent for %r'
+                    % r[7].encode('hex'))
         except TypeError:
             # pure version doesn't support this
             break
 
-    print "done"
+    print("done")
 
 runtest()
