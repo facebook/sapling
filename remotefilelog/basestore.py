@@ -57,3 +57,12 @@ class basestore(object):
 
         return os.path.join(self._path, key)
 
+    def _getdata(self, name, node):
+        filepath = self._getfilepath(name, node)
+        try:
+            data = ioutil.readfile(filepath)
+        except IOError:
+            raise KeyError("no file found at %s for %s:%s" % (filepath, name, hex(node)))
+
+        return data
+

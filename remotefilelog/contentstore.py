@@ -45,7 +45,19 @@ class unioncontentstore(object):
 
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
-        pass
+        data = self._getdata(name, node)
+
+        index, size = ioutil.parsesize(data)
+        content = data[(index + 1):(index + 1 + size)]
+
+        ancestormap = ioutil.ancestormap(data)
+        p1, p2, linknode, copyfrom = ancestormap[node]
+        copyrev = None
+        if copyfrom:
+            copyrev = hex(p1)
+
+        revision = ioutil.createrevlogtext(content, copyfrom, copyrev)
+        return revision
 
     def add(self, name, node, data):
         raise Exception("cannot add content only to remotefilelog "
