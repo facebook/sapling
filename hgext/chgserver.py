@@ -279,6 +279,7 @@ def _loadnewui(srcui, args):
                     srcui.config('extensions', 'chgserver'), '--config')
 
     # command line args
+    args = args[:]
     dispatch._parseconfig(newui, dispatch._earlygetopt(['--config'], args))
 
     # stolen from tortoisehg.util.copydynamicconfig()
@@ -293,7 +294,6 @@ def _loadnewui(srcui, args):
         newui.setconfig(section, name, value, source)
 
     # load wd and repo config, copied from dispatch.py
-    args = args[:]
     cwds = dispatch._earlygetopt(['--cwd'], args)
     cwd = cwds and os.path.realpath(cwds[-1]) or None
     rpath = dispatch._earlygetopt(["-R", "--repository", "--repo"], args)
