@@ -37,5 +37,23 @@ class basestore(object):
             fetcher(keys)
 
     def contains(self, keys):
-        pass
+        missing = []
+        for name, node in keys:
+            filepath = self._getfilepath(name, node)
+            exists = os.path.exists(filepath)
+            if not exists:
+                missing.append((name, node))
+
+        return missing
+
+    # BELOW THIS ARE NON-STANDARD APIS
+
+    def _getfilepath(self, name, node):
+        node = hex(node)
+        if self._shared:
+            key = ioutil.getcachekey(self._reponame, name, node)
+        else:
+            key = ioutil.getlocalkey(name, node)
+
+        return os.path.join(self._path, key)
 
