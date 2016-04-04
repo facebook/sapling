@@ -45,6 +45,7 @@ import errno
 import gc
 import inspect
 import os
+import random
 import re
 import struct
 import sys
@@ -540,6 +541,9 @@ class _requesthandler(SocketServer.StreamRequestHandler):
         # process pass kernel "is_current_pgrp_orphaned" check so signals like
         # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
         os.setpgid(0, 0)
+        # change random state otherwise forked request handlers would have a
+        # same state inherited from parent.
+        random.seed()
         ui = self.server.ui
         repo = self.server.repo
         sv = None
