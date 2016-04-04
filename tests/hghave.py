@@ -17,6 +17,7 @@ checks = {
 }
 
 def check(name, desc):
+    """Registers a check function for a feature."""
     def decorator(func):
         checks[name] = (func, desc)
         return func
