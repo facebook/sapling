@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 from mercurial import (
     hg,
@@ -51,39 +51,38 @@ if __name__ == '__main__':
     addcommit("I", 8)
 
     # Ancestors
-    print 'Ancestors of 5'
+    print('Ancestors of 5')
     for r in repo.changelog.ancestors([5]):
-        print r,
+        print(r, end=' ')
 
-    print '\nAncestors of 6 and 5'
+    print('\nAncestors of 6 and 5')
     for r in repo.changelog.ancestors([6, 5]):
-        print r,
+        print(r, end=' ')
 
-    print '\nAncestors of 5 and 4'
+    print('\nAncestors of 5 and 4')
     for r in repo.changelog.ancestors([5, 4]):
-        print r,
+        print(r, end=' ')
 
-    print '\nAncestors of 7, stop at 6'
+    print('\nAncestors of 7, stop at 6')
     for r in repo.changelog.ancestors([7], 6):
-        print r,
+        print(r, end=' ')
 
-    print '\nAncestors of 7, including revs'
+    print('\nAncestors of 7, including revs')
     for r in repo.changelog.ancestors([7], inclusive=True):
-        print r,
+        print(r, end=' ')
 
-    print '\nAncestors of 7, 5 and 3, including revs'
+    print('\nAncestors of 7, 5 and 3, including revs')
     for r in repo.changelog.ancestors([7, 5, 3], inclusive=True):
-        print r,
+        print(r, end=' ')
 
     # Descendants
-    print '\n\nDescendants of 5'
+    print('\n\nDescendants of 5')
     for r in repo.changelog.descendants([5]):
-        print r,
+        print(r, end=' ')
 
-    print '\nDescendants of 5 and 3'
+    print('\nDescendants of 5 and 3')
     for r in repo.changelog.descendants([5, 3]):
-        print r,
+        print(r, end=' ')
 
-    print '\nDescendants of 5 and 4'
-    for r in repo.changelog.descendants([5, 4]):
-        print r,
+    print('\nDescendants of 5 and 4')
+    print(*repo.changelog.descendants([5, 4]), sep=' ')
