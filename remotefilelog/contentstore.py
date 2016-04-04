@@ -37,6 +37,9 @@ class unioncontentstore(object):
             missing = self._shared.contains(missing)
         return missing
 
+    def addremotefilelog(self, name, node, data):
+        self._local.addremotefilelog(name, node, data)
+
     def addfetcher(self, fetchfunc):
         self._shared.addfetcher(fetchfunc)
 

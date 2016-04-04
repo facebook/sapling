@@ -79,28 +79,8 @@ class remotefilelog(object):
 
             return data
 
-        key = fileserverclient.getlocalkey(self.filename, hex(node))
-        path = os.path.join(self.localpath, key)
-
-        oldumask = os.umask(0o002)
-        try:
-            # if this node already exists, save the old version for
-            # recovery/debugging purposes.
-            if os.path.exists(path):
-                newfilename = path + '_old'
-                # newfilename can be read-only and shutil.copy will fail.
-                # Delete newfilename to avoid it
-                if os.path.exists(newfilename):
-                    os.unlink(newfilename)
-                shutil.copy(path, newfilename)
-                # _writefile creates atomictempfile, which copies
-                # access permission from file 'path', if it exists.
-                # It's better to delete it
-                os.unlink(path)
-
-            ioutil.writefile(path, _createfileblob(), readonly=True)
-        finally:
-            os.umask(oldumask)
+        data = _createfileblob()
+        self.repo.contentstore.addremotefilelog(self.filename, node, data)
 
         return node
 
