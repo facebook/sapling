@@ -429,7 +429,6 @@ hgclient_t *hgc_open(const char *sockname)
 	strncpy(addr.sun_path, sockname, sizeof(addr.sun_path));
 	addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
 
-	debugmsg("connect to %s", addr.sun_path);
 	int r = connect(fd, (struct sockaddr *)&addr, sizeof(addr));
 	if (r < 0) {
 		close(fd);
@@ -438,6 +437,7 @@ hgclient_t *hgc_open(const char *sockname)
 		abortmsg("cannot connect to %s (errno = %d)",
 			 addr.sun_path, errno);
 	}
+	debugmsg("connected to %s", addr.sun_path);
 
 	hgclient_t *hgc = mallocx(sizeof(hgclient_t));
 	memset(hgc, 0, sizeof(*hgc));

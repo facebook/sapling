@@ -236,6 +236,7 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 	static const struct timespec sleepreq = {0, 10 * 1000000};
 	int pst = 0;
 
+	debugmsg("try connect to %s repeatedly", opts->sockname);
 	for (unsigned int i = 0; i < 10 * 100; i++) {
 		hgclient_t *hgc = hgc_open(opts->sockname);
 		if (hgc)
@@ -271,6 +272,7 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 {
 	const char *sockname = opts->redirectsockname[0] ?
 		opts->redirectsockname : opts->sockname;
+	debugmsg("try connect to %s", sockname);
 	hgclient_t *hgc = hgc_open(sockname);
 	if (hgc)
 		return hgc;
