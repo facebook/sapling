@@ -142,10 +142,9 @@ class remotefilelog(object):
         return p1, p2
 
     def linknode(self, node):
-        raw = self._read(hex(node))
-        index, size = ioutil.parsesize(raw)
-        offset = index + 1 + size + 60
-        return raw[offset:(offset + 20)]
+        ancestormap = self.repo.metadatastore.getancestors(self.filename, node)
+        p1, p2, linknode, copyfrom = ancestormap[node]
+        return linknode
 
     def revdiff(self, node1, node2):
         return mdiff.textdiff(self.revision(node1),
