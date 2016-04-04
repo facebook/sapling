@@ -156,7 +156,9 @@ def _getfilesbatch(
         b.submit()
         for m in chunk:
             v = futures[m].value
-            receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), m)
+            file_ = idmap[m]
+            node = m[-40:]
+            receivemissing(io.BytesIO('%d\n%s' % (len(v), v)), file_, node)
             progresstick()
 
 def _getfiles(
@@ -176,8 +178,10 @@ def _getfiles(
         remote.pipeo.flush()
 
         # receive batch results
-        for j in range(start, end):
-            receivemissing(remote.pipei, missed[j])
+        for missingid in missed[start:end]:
+            versionid = missingid[-40:]
+            file = idmap[missingid]
+            receivemissing(remote.pipei, file, versionid)
             progresstick()
 
 class fileserverclient(object):
@@ -336,7 +340,7 @@ class fileserverclient(object):
 
         return missing
 
-    def receivemissing(self, pipe, missingid):
+    def receivemissing(self, pipe, filename, node):
         line = pipe.readline()[:-1]
         if not line:
             raise error.ResponseError(_("error downloading file " +
@@ -344,7 +348,7 @@ class fileserverclient(object):
         size = int(line)
         data = pipe.read(size)
 
-        self.localcache.write(missingid, lz4.decompress(data))
+        self.sharedcache.addremotefilelog(filename, bin(node), lz4.decompress(data))
 
     def connect(self):
         if self.cacheprocess:
@@ -398,10 +402,9 @@ class fileserverclient(object):
         """downloads the given file versions to the cache
         """
         repo = self.repo
-        localcache = self.localcache
         storepath = repo.svfs.vfs.base
         reponame = repo.name
-        missingids = []
+        idstocheck = []
         for file, id in fileids:
             # hack
             # - we don't use .hgtags
@@ -410,15 +413,12 @@ class fileserverclient(object):
             if file == '.hgtags' or len(id) == 42 or not repo.shallowmatch(file):
                 continue
 
-            cachekey = getcachekey(reponame, file, id)
-            localkey = getlocalkey(file, id)
-            idlocalpath = os.path.join(storepath, 'data', localkey)
-            if cachekey in localcache:
-                continue
-            if not force and os.path.exists(idlocalpath):
-                continue
+            idstocheck.append((file, bin(id)))
 
-            missingids.append((file, id))
+        store = self.contentstore
+        if force:
+            store = self.contentstore._shared
+        missingids = store.contains(idstocheck)
 
         if missingids:
             global fetches, fetched, fetchcost
@@ -433,6 +433,7 @@ class fileserverclient(object):
                     if fetchwarning:
                         self.ui.warn(fetchwarning + '\n')
                 self.logstacktrace()
+            missingids = [(file, hex(id)) for file, id in missingids]
             fetched += len(missingids)
             start = time.time()
             missingids = self.request(missingids)
