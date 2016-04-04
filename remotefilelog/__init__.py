@@ -8,7 +8,8 @@
 testedwith = 'internal'
 
 import fileserverclient, remotefilelog, remotefilectx, shallowstore, shallowrepo
-import shallowbundle, debugcommands, remotefilelogserver, shallowverifier, ioutil
+import shallowbundle, debugcommands, remotefilelogserver, shallowverifier
+import shallowutil
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
@@ -345,7 +346,7 @@ def onetimeclientsetup(ui):
         if isinstance(link, int):
             pendingfilecommits.append((self, text, meta, transaction, link, p1, p2))
 
-            hashtext = ioutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+            hashtext = shallowutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
             node = revlog.hash(hashtext, p1, p2)
             return node
         else:

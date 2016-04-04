@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient, ioutil
+import fileserverclient, shallowutil
 import collections, errno, os, shutil
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import revlog, mdiff, filelog, ancestor, error, util
@@ -30,7 +30,7 @@ class remotefilelog(object):
         hashtext = text
 
         # hash with the metadata, like in vanilla filelogs
-        hashtext = ioutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+        hashtext = shallowutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
         node = revlog.hash(hashtext, p1, p2)
 
         def _createfileblob():
@@ -187,7 +187,7 @@ class remotefilelog(object):
         localkey = fileserverclient.getlocalkey(self.filename, id)
         localpath = os.path.join(self.localpath, localkey)
         try:
-            return ioutil.readfile(localpath)
+            return shallowutil.readfile(localpath)
         except IOError:
             pass
 

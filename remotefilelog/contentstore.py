@@ -1,5 +1,5 @@
 import os, shutil
-import basestore, ioutil
+import basestore, shallowutil
 from mercurial import util
 from mercurial.node import hex
 
@@ -50,16 +50,16 @@ class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
         data = self._getdata(name, node)
 
-        index, size = ioutil.parsesize(data)
+        index, size = shallowutil.parsesize(data)
         content = data[(index + 1):(index + 1 + size)]
 
-        ancestormap = ioutil.ancestormap(data)
+        ancestormap = shallowutil.ancestormap(data)
         p1, p2, linknode, copyfrom = ancestormap[node]
         copyrev = None
         if copyfrom:
             copyrev = hex(p1)
 
-        revision = ioutil.createrevlogtext(content, copyfrom, copyrev)
+        revision = shallowutil.createrevlogtext(content, copyfrom, copyrev)
         return revision
 
     def add(self, name, node, data):

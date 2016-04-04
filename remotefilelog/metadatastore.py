@@ -1,5 +1,5 @@
 import os
-import basestore, ioutil
+import basestore, shallowutil
 from mercurial import util
 from mercurial.node import hex
 
@@ -74,7 +74,7 @@ class remotefilelogmetadatastore(basestore.basestore):
         }
         """
         data = self._getdata(name, node)
-        ancestors = ioutil.ancestormap(data)
+        ancestors = shallowutil.ancestormap(data)
         return ancestors
 
     def getlinknode(self, name, node):

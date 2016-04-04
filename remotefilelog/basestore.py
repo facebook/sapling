@@ -1,5 +1,5 @@
 import os, shutil, time
-import ioutil
+import shallowutil
 from mercurial import util
 from mercurial.i18n import _
 from mercurial.node import hex
@@ -62,16 +62,16 @@ class basestore(object):
     def _getfilepath(self, name, node):
         node = hex(node)
         if self._shared:
-            key = ioutil.getcachekey(self._reponame, name, node)
+            key = shallowutil.getcachekey(self._reponame, name, node)
         else:
-            key = ioutil.getlocalkey(name, node)
+            key = shallowutil.getlocalkey(name, node)
 
         return os.path.join(self._path, key)
 
     def _getdata(self, name, node):
         filepath = self._getfilepath(name, node)
         try:
-            data = ioutil.readfile(filepath)
+            data = shallowutil.readfile(filepath)
             if self._validatecache and not self._validatedata(data, filepath):
                 if self._validatecachelog:
                     with open(self._validatecachelog, 'a+') as f:
@@ -102,7 +102,7 @@ class basestore(object):
                 # It's better to delete it
                 os.unlink(filepath)
 
-            ioutil.writefile(filepath, data, readonly=True)
+            shallowutil.writefile(filepath, data, readonly=True)
 
             if self._validatecache:
                 if not self._validatekey(filepath, 'write'):
