@@ -3,8 +3,14 @@
 It also checks certain aspects of the parsers module as a whole.
 """
 
-from mercurial import parsers
-from mercurial.node import nullid, nullrev
+from __future__ import absolute_import
+from mercurial import (
+    parsers,
+)
+from mercurial.node import (
+    nullid,
+    nullrev,
+)
 import struct
 import subprocess
 import sys
