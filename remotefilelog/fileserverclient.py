@@ -238,7 +238,7 @@ class fileserverclient(object):
         if not self.remotecache.connected:
             self.connect()
         cache = self.remotecache
-        localcache = self.localcache
+        sharedcache = self.sharedcache
 
         repo = self.repo
         count = len(fileids)
@@ -334,7 +334,7 @@ class fileserverclient(object):
             self.ui.progress(_downloading, None)
 
             # mark ourselves as a user of this cache
-            localcache.markrepo()
+            sharedcache.markrepo(self.repo.path)
         finally:
             os.umask(oldumask)
 

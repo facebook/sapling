@@ -110,6 +110,15 @@ class basestore(object):
         finally:
             os.umask(oldumask)
 
+    def markrepo(self, path):
+        repospath = os.path.join(self._path, "repos")
+        with open(repospath, 'a') as reposfile:
+            reposfile.write(os.path.dirname(path) + "\n")
+
+        stat = os.stat(repospath)
+        if stat.st_uid == self._uid:
+            os.chmod(repospath, 0o0664)
+
     def _validatekey(self, path, action):
         with open(path, 'r') as f:
             data = f.read()
