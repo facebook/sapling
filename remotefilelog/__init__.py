@@ -316,7 +316,10 @@ def onetimeclientsetup(ui):
         try:
             return orig(lui, repo, *args, **kwargs)
         finally:
-            if shallowrepo.requirement in repo.requirements:
+            # repo can be None when running in chg:
+            # - at startup, reposetup was called because serve is not norepo
+            # - a norepo command like "help" is called
+            if repo and shallowrepo.requirement in repo.requirements:
                 repo.fileservice.close()
     wrapfunction(dispatch, 'runcommand', runcommand)
 
