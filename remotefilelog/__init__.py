@@ -570,7 +570,7 @@ def gcclient(ui, cachepath):
 
     _analyzing = _("analyzing repositories")
 
-    localcache = None
+    sharedcache = None
 
     count = 0
     for path in repos:
@@ -590,8 +590,8 @@ def gcclient(ui, cachepath):
         validrepos.append(path)
 
         reponame = peer._repo.name
-        if not localcache:
-            localcache = peer._repo.fileservice.localcache
+        if not sharedcache:
+            sharedcache = peer._repo.contentstore._shared
 
         # We want to keep:
         # 1. All parents of draft commits
@@ -617,8 +617,8 @@ def gcclient(ui, cachepath):
         os.umask(oldumask)
 
     # prune cache
-    if localcache is not None:
-        localcache.gc(keepkeys)
+    if sharedcache is not None:
+        sharedcache.gc(keepkeys)
     else:
         ui.warn(_("warning: no valid repos in repofile\n"))
 

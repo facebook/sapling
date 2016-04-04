@@ -16,7 +16,6 @@ class remotefilelog(object):
         self.opener = opener
         self.filename = path
         self.repo = repo
-        self.localpath = os.path.join(opener.vfs.base, 'data')
 
         self.version = 1
 
@@ -134,7 +133,7 @@ class remotefilelog(object):
         if node == nullid:
             return nullid, nullid
 
-        ancestormap = self.ancestormap(node)
+        ancestormap = self.repo.metadatastore.getancestors(self.filename, node)
         p1, p2, linknode, copyfrom = ancestormap[node]
         if copyfrom:
             p1 = nullid

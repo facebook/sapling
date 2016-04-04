@@ -155,3 +155,79 @@ class basestore(object):
 
         return False
 
+    def gc(self, keepkeys):
+        ui = self.ui
+        cachepath = self._path
+        _removing = _("removing unnecessary files")
+        _truncating = _("enforcing cache limit")
+
+        # prune cache
+        import Queue
+        queue = Queue.PriorityQueue()
+        originalsize = 0
+        size = 0
+        count = 0
+        removed = 0
+
+        # keep files newer than a day even if they aren't needed
+        limit = time.time() - (60 * 60 * 24)
+
+        ui.progress(_removing, count, unit="files")
+        for root, dirs, files in os.walk(cachepath):
+            for file in files:
+                if file == 'repos':
+                    continue
+
+                ui.progress(_removing, count, unit="files")
+                path = os.path.join(root, file)
+                key = os.path.relpath(path, cachepath)
+                count += 1
+                try:
+                    stat = os.stat(path)
+                except OSError as e:
+                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        raise
+                    msg = _("warning: file %s was removed by another process\n")
+                    ui.warn(msg % path)
+                    continue
+
+                originalsize += stat.st_size
+
+                if key in keepkeys or stat.st_atime > limit:
+                    queue.put((stat.st_atime, path, stat))
+                    size += stat.st_size
+                else:
+                    try:
+                        os.remove(path)
+                    except OSError as e:
+                        if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                            raise
+                        msg = _("warning: file %s was removed by another process\n")
+                        ui.warn(msg % path)
+                        continue
+                    removed += 1
+        ui.progress(_removing, None)
+
+        # remove oldest files until under limit
+        limit = ui.configbytes("remotefilelog", "cachelimit", "1000 GB")
+        if size > limit:
+            excess = size - limit
+            removedexcess = 0
+            while queue and size > limit and size > 0:
+                ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
+                atime, oldpath, stat = queue.get()
+                try:
+                    os.remove(oldpath)
+                except OSError as e:
+                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        raise
+                    msg = _("warning: file %s was removed by another process\n")
+                    ui.warn(msg % oldpath)
+                size -= stat.st_size
+                removed += 1
+                removedexcess += stat.st_size
+        ui.progress(_truncating, None)
+
+        ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
+                  (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
+                  float(size) / 1024.0 / 1024.0 / 1024.0))
