@@ -4,7 +4,9 @@ The repoview overlay is quite complex. We test the behavior of
 property cache of both localrepo and repoview to prevent
 regression."""
 
-import os, subprocess
+from __future__ import absolute_import
+import os
+import subprocess
 import mercurial.localrepo
 import mercurial.repoview
 import mercurial.util
