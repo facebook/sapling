@@ -333,61 +333,9 @@ def _runcatch(req):
         return inst.code
     except socket.error as inst:
         ui.warn(_("abort: %s\n") % inst.args[-1])
-    except: # re-raises
-        # For compatibility checking, we discard the portion of the hg
-        # version after the + on the assumption that if a "normal
-        # user" is running a build with a + in it the packager
-        # probably built from fairly close to a tag and anyone with a
-        # 'make local' copy of hg (where the version number can be out
-        # of date) will be clueful enough to notice the implausible
-        # version number and try updating.
-        ct = util.versiontuple(n=2)
-        worst = None, ct, ''
-        if ui.config('ui', 'supportcontact', None) is None:
-            for name, mod in extensions.extensions():
-                testedwith = getattr(mod, 'testedwith', '')
-                report = getattr(mod, 'buglink', _('the extension author.'))
-                if not testedwith.strip():
-                    # We found an untested extension. It's likely the culprit.
-                    worst = name, 'unknown', report
-                    break
-
-                # Never blame on extensions bundled with Mercurial.
-                if testedwith == 'internal':
-                    continue
-
-                tested = [util.versiontuple(t, 2) for t in testedwith.split()]
-                if ct in tested:
-                    continue
-
-                lower = [t for t in tested if t < ct]
-                nearest = max(lower or tested)
-                if worst[0] is None or nearest < worst[1]:
-                    worst = name, nearest, report
-        if worst[0] is not None:
-            name, testedwith, report = worst
-            if not isinstance(testedwith, str):
-                testedwith = '.'.join([str(c) for c in testedwith])
-            warning = (_('** Unknown exception encountered with '
-                         'possibly-broken third-party extension %s\n'
-                         '** which supports versions %s of Mercurial.\n'
-                         '** Please disable %s and try your action again.\n'
-                         '** If that fixes the bug please report it to %s\n')
-                       % (name, testedwith, name, report))
-        else:
-            bugtracker = ui.config('ui', 'supportcontact', None)
-            if bugtracker is None:
-                bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
-            warning = (_("** unknown exception encountered, "
-                         "please report by visiting\n** ") + bugtracker + '\n')
-        warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
-                    (_("** Mercurial Distributed SCM (version %s)\n") %
-                     util.version()) +
-                    (_("** Extensions loaded: %s\n") %
-                     ", ".join([x[0] for x in extensions.extensions()])))
-        ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
-        ui.warn(warning)
-        raise
+    except:  # perhaps re-raises
+        if not handlecommandexception(ui):
+            raise
 
     return -1
 
@@ -1066,3 +1014,64 @@ def _runcommand(ui, options, cmd, cmdfunc):
                 fp.close()
     else:
         return checkargs()
+
+def handlecommandexception(ui):
+    """Produce a warning message for broken commands
+
+    Called when handling an exception; the exception is reraised if
+    this function returns False, ignored otherwise.
+    """
+    # For compatibility checking, we discard the portion of the hg
+    # version after the + on the assumption that if a "normal
+    # user" is running a build with a + in it the packager
+    # probably built from fairly close to a tag and anyone with a
+    # 'make local' copy of hg (where the version number can be out
+    # of date) will be clueful enough to notice the implausible
+    # version number and try updating.
+    ct = util.versiontuple(n=2)
+    worst = None, ct, ''
+    if ui.config('ui', 'supportcontact', None) is None:
+        for name, mod in extensions.extensions():
+            testedwith = getattr(mod, 'testedwith', '')
+            report = getattr(mod, 'buglink', _('the extension author.'))
+            if not testedwith.strip():
+                # We found an untested extension. It's likely the culprit.
+                worst = name, 'unknown', report
+                break
+
+            # Never blame on extensions bundled with Mercurial.
+            if testedwith == 'internal':
+                continue
+
+            tested = [util.versiontuple(t, 2) for t in testedwith.split()]
+            if ct in tested:
+                continue
+
+            lower = [t for t in tested if t < ct]
+            nearest = max(lower or tested)
+            if worst[0] is None or nearest < worst[1]:
+                worst = name, nearest, report
+    if worst[0] is not None:
+        name, testedwith, report = worst
+        if not isinstance(testedwith, str):
+            testedwith = '.'.join([str(c) for c in testedwith])
+        warning = (_('** Unknown exception encountered with '
+                     'possibly-broken third-party extension %s\n'
+                     '** which supports versions %s of Mercurial.\n'
+                     '** Please disable %s and try your action again.\n'
+                     '** If that fixes the bug please report it to %s\n')
+                   % (name, testedwith, name, report))
+    else:
+        bugtracker = ui.config('ui', 'supportcontact', None)
+        if bugtracker is None:
+            bugtracker = _("https://mercurial-scm.org/wiki/BugTracker")
+        warning = (_("** unknown exception encountered, "
+                     "please report by visiting\n** ") + bugtracker + '\n')
+    warning += ((_("** Python %s\n") % sys.version.replace('\n', '')) +
+                (_("** Mercurial Distributed SCM (version %s)\n") %
+                 util.version()) +
+                (_("** Extensions loaded: %s\n") %
+                 ", ".join([x[0] for x in extensions.extensions()])))
+    ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
+    ui.warn(warning)
+    return False  # re-raise the exception
