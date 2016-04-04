@@ -85,15 +85,8 @@ class remotefilelog(object):
         return node
 
     def renamed(self, node):
-        raw = self._read(hex(node))
-        index, size = ioutil.parsesize(raw)
-
-        offset = index + 1 + size
-        p1 = raw[(offset + 20):(offset + 40)]
-        copyoffset = offset + 80
-        copyfromend = raw.index('\0', copyoffset)
-        copyfrom = raw[copyoffset:copyfromend]
-
+        ancestors = self.repo.metadatastore.getancestors(self.filename, node)
+        p1, p2, linknode, copyfrom = ancestors[node]
         if copyfrom:
             return (copyfrom, p1)
 
