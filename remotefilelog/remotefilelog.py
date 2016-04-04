@@ -121,10 +121,8 @@ class remotefilelog(object):
 
     def size(self, node):
         """return the size of a given revision"""
-
-        raw = self._read(hex(node))
-        index, size = ioutil.parsesize(raw)
-        return size
+        content = self.repo.contentstore.get(self.filename, node)
+        return len(content)
 
     rawsize = size
 
