@@ -210,18 +210,7 @@ class remotefilelog(object):
         if len(node) != 20:
             raise error.LookupError(node, self.filename, _('invalid revision input'))
 
-        raw = self._read(hex(node))
-
-        index, size = ioutil.parsesize(raw)
-        data = raw[(index + 1):(index + 1 + size)]
-
-        mapping = self.ancestormap(node)
-        p1, p2, linknode, copyfrom = mapping[node]
-        copyrev = None
-        if copyfrom:
-            copyrev = hex(p1)
-
-        return ioutil.createrevlogtext(data, copyfrom, copyrev)
+        return self.repo.contentstore.get(self.filename, node)
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
