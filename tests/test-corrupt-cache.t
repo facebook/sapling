@@ -20,6 +20,7 @@
 Verify corrupt cache handling repairs by default
 
   $ hg up -q null
+  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ echo x > $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -32,10 +33,11 @@ Verify corrupt cache error message
   > [remotefilelog]
   > validatecache=off
   > EOF
+  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ echo x > $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
-  $ hg up tip 2>&1 | grep "corrupt cache data for"
-      raise Exception("corrupt cache data for '%s'" % (self.filename))
-  Exception: corrupt cache data for 'x'
+  $ hg up tip 2>&1 | grep "corrupt cache data"
+      raise Exception("corrupt cache data")
+  Exception: corrupt cache data
 
 Verify detection and remediation when remotefilelog.validatecachelog is set
 
@@ -44,6 +46,7 @@ Verify detection and remediation when remotefilelog.validatecachelog is set
   > validatecachelog=$PWD/.hg/remotefilelog_cache.log
   > validatecache=strict
   > EOF
+  $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ echo x > $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

@@ -5,65 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import fileserverclient
+import fileserverclient, ioutil
 import collections, errno, os, shutil
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import revlog, mdiff, filelog, ancestor, error, util
 from mercurial.i18n import _
-
-def _readfile(path):
-    f = open(path, "r")
-    try:
-        result = f.read()
-
-        # we should never have empty files
-        if not result:
-            os.remove(path)
-            raise IOError("empty file: %s" % path)
-
-        return result
-    finally:
-        f.close()
-
-def _writefile(path, content, readonly=False):
-    dirname = os.path.dirname(path)
-    if not os.path.exists(dirname):
-        try:
-            os.makedirs(dirname)
-        except OSError, ex:
-            if ex.errno != errno.EEXIST:
-                raise
-
-    # atomictempfile doesn't pick up the fact that we changed the umask, so we
-    # need to set it manually.
-    f = util.atomictempfile(path, 'w', createmode=~os.umask(0))
-    try:
-        f.write(content)
-    finally:
-        f.close()
-
-    if readonly:
-        os.chmod(path, 0o444)
-
-def _createrevlogtext(text, copyfrom=None, copyrev=None):
-    """returns a string that matches the revlog contents in a
-    traditional revlog
-    """
-    meta = {}
-    if copyfrom or text.startswith('\1\n'):
-        if copyfrom:
-            meta['copy'] = copyfrom
-            meta['copyrev'] = copyrev
-        text = filelog.packmeta(meta, text)
-
-    return text
-
-def _parsemeta(text):
-    meta, size = filelog.parsemeta(text)
-    if text.startswith('\1\n'):
-        s = text.index('\1\n', 2)
-        text = text[s + 2:]
-    return meta or {}, text
 
 class remotefilelog(object):
     def __init__(self, opener, path, repo):
@@ -85,22 +31,14 @@ class remotefilelog(object):
         # ancestor => node + p1 + p2 + linknode + copypath + \0
 
         raw = self._read(hex(node))
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
         return raw[(index + 1):(index + 1 + size)]
-
-    def _parsesize(self, raw):
-        try:
-            index = raw.index('\0')
-            size = int(raw[:index])
-        except ValueError:
-            raise Exception("corrupt cache data for '%s'" % (self.filename))
-        return index, size
 
     def add(self, text, meta, transaction, linknode, p1=None, p2=None):
         hashtext = text
 
         # hash with the metadata, like in vanilla filelogs
-        hashtext = _createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+        hashtext = ioutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
         node = revlog.hash(hashtext, p1, p2)
 
         def _createfileblob():
@@ -167,7 +105,7 @@ class remotefilelog(object):
                 # It's better to delete it
                 os.unlink(path)
 
-            _writefile(path, _createfileblob(), readonly=True)
+            ioutil.writefile(path, _createfileblob(), readonly=True)
         finally:
             os.umask(oldumask)
 
@@ -175,7 +113,7 @@ class remotefilelog(object):
 
     def renamed(self, node):
         raw = self._read(hex(node))
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
 
         offset = index + 1 + size
         p1 = raw[(offset + 20):(offset + 40)]
@@ -192,7 +130,7 @@ class remotefilelog(object):
         """return the size of a given revision"""
 
         raw = self._read(hex(node))
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
         return size
 
     rawsize = size
@@ -241,7 +179,7 @@ class remotefilelog(object):
 
     def linknode(self, node):
         raw = self._read(hex(node))
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
         offset = index + 1 + size + 60
         return raw[offset:(offset + 20)]
 
@@ -274,7 +212,7 @@ class remotefilelog(object):
 
         raw = self._read(hex(node))
 
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
         data = raw[(index + 1):(index + 1 + size)]
 
         mapping = self.ancestormap(node)
@@ -283,7 +221,7 @@ class remotefilelog(object):
         if copyfrom:
             copyrev = hex(p1)
 
-        return _createrevlogtext(data, copyfrom, copyrev)
+        return ioutil.createrevlogtext(data, copyfrom, copyrev)
 
     def _read(self, id):
         """reads the raw file blob from disk, cache, or server"""
@@ -298,7 +236,7 @@ class remotefilelog(object):
         localkey = fileserverclient.getlocalkey(self.filename, id)
         localpath = os.path.join(self.localpath, localkey)
         try:
-            return _readfile(localpath)
+            return ioutil.readfile(localpath)
         except IOError:
             pass
 
@@ -330,7 +268,7 @@ class remotefilelog(object):
         localkey = fileserverclient.getlocalkey(self.filename, hexnode)
         localpath = os.path.join(self.localpath, localkey)
         try:
-            raw = _readfile(localpath)
+            raw = ioutil.readfile(localpath)
             mapping = self._ancestormap(node, raw)
             if mapping:
                 return mapping
@@ -351,7 +289,7 @@ class remotefilelog(object):
         raise error.LookupError(node, self.filename, _('no valid file history'))
 
     def _ancestormap(self, node, raw):
-        index, size = self._parsesize(raw)
+        index, size = ioutil.parsesize(raw)
         start = index + 1 + size
 
         mapping = {}
