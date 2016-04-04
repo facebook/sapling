@@ -1083,6 +1083,30 @@ Test ability to pull changeset with locally applying obsolescence markers
   |
   @  0:a78f55e5508c (draft) [ ] 0
   
+Test that 'hg debugobsolete --index --rev' can show indices of obsmarkers when
+only a subset of those are displayed (because of --rev option)
+  $ hg init doindexrev
+  $ cd doindexrev
+  $ echo a > a
+  $ hg ci -Am a
+  adding a
+  $ hg ci --amend -m aa
+  $ echo b > b
+  $ hg ci -Am b
+  adding b
+  $ hg ci --amend -m bb
+  $ echo c > c
+  $ hg ci -Am c
+  adding c
+  $ hg ci --amend -m cc
+  $ echo d > d
+  $ hg ci -Am d
+  adding d
+  $ hg ci --amend -m dd
+  $ hg debugobsolete --index --rev "3+7"
+  1 6fdef60fcbabbd3d50e9b9cbc2a240724b91a5e1 d27fb9b066076fd921277a4b9e8b9cb48c95bc6a 0 \(.*\) {'user': 'test'} (re)
+  3 4715cf767440ed891755448016c2b8cf70760c30 7ae79c5d60f049c7b0dd02f5f25b9d60aaf7b36d 0 \(.*\) {'user': 'test'} (re)
+  $ cd ..
   $ cd ..
 
 Test the --delete option of debugobsolete command

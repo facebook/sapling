@@ -3122,9 +3122,6 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         finally:
             l.release()
     else:
-        if opts.get('rev') and opts.get('index'):
-            hint = _("call 'hg debugobsolete --index' without other arguments")
-            raise error.Abort(_("cannot use --index with --rev"), hint=hint)
         if opts['rev']:
             revs = scmutil.revrange(repo, opts['rev'])
             nodes = [repo[r].node() for r in revs]
@@ -3133,7 +3130,23 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
         else:
             markers = obsolete.getmarkers(repo)
 
-        for i, m in enumerate(markers):
+        markerstoiter = markers
+        isrelevant = lambda m: True
+        if opts.get('rev') and opts.get('index'):
+            markerstoiter = obsolete.getmarkers(repo)
+            markerset = set(markers)
+            isrelevant = lambda m: m in markerset
+
+        for i, m in enumerate(markerstoiter):
+            if not isrelevant(m):
+                # marker can be irrelevant when we're iterating over a set
+                # of markers (markerstoiter) which is bigger than the set
+                # of markers we want to display (markers)
+                # this can happen if both --index and --rev options are
+                # provided and thus we need to iterate over all of the markers
+                # to get the correct indices, but only display the ones that
+                # are relevant to --rev value
+                continue
             ind = i if opts.get('index') else None
             cmdutil.showmarker(ui, m, index=ind)
 
