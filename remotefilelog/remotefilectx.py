@@ -181,9 +181,6 @@ class remotefilectx(context.filectx):
         ancestormap = self.ancestormap()
         p1, p2, linknode, copyfrom = ancestormap[fnode]
 
-        # hack to reuse ancestor computation when searching for renames
-        memberanc = getattr(self, '_ancestrycontext', None)
-        iteranc = None
         if srcrev is None:
             # wctx case, used by workingfilectx during mergecopy
             revs = [p.rev() for p in self._repo[None].parents()]
@@ -202,9 +199,6 @@ class remotefilectx(context.filectx):
             # existing in the changelog.
             pass
 
-        if memberanc is None:
-            memberanc = cl.ancestors(revs, inclusive=inclusive)
-
         # Build a list of linknodes that are known to be ancestors of fnode
         knownancestors = set()
         queue = collections.deque(p for p in (p1, p2) if p != nullid)
@@ -213,15 +207,6 @@ class remotefilectx(context.filectx):
             p1, p2, anclinknode, copyfrom = ancestormap[current]
             queue.extend(p for p in (p1, p2) if p != nullid)
             knownancestors.add(anclinknode)
-
-        # Check if this linknode is an ancestor of srcrev
-        for anc in memberanc:
-            ancnode = cl.node(anc)
-            if ancnode == linknode:
-                return linknode
-            # Stop if we reach a node in history that is past the desired fnode.
-            elif ancnode in knownancestors:
-                break
 
         iteranc = cl.ancestors(revs, inclusive=inclusive)
         for a in iteranc:
