@@ -1,7 +1,16 @@
 #!/usr/bin/python
-from mercurial.ui import ui
-from mercurial.localrepo import localrepository
-from mercurial.commands import add, commit, status
+from __future__ import absolute_import
+from mercurial.ui import (
+    ui,
+)
+from mercurial.localrepo import (
+    localrepository,
+)
+from mercurial.commands import (
+    add,
+    commit,
+    status,
+)
 
 u = ui()
 
