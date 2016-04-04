@@ -357,6 +357,8 @@ class convert_git(common.converter_source, common.commandline):
             output, status = self.gitrunlines('diff-tree', '--name-only',
                                               '--root', '-r', version,
                                               '%s^%s' % (version, i + 1), '--')
+            if status:
+                raise error.Abort(_('cannot read changes in %s') % version)
             changes = [f.rstrip('\n') for f in output]
 
         return changes
