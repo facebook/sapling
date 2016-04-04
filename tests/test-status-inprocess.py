@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 from mercurial.ui import (
     ui,
 )
@@ -14,7 +14,7 @@ from mercurial.commands import (
 
 u = ui()
 
-print '% creating repo'
+print('% creating repo')
 repo = localrepository(u, '.', create=True)
 
 f = open('test.py', 'w')
@@ -23,13 +23,13 @@ try:
 finally:
     f.close
 
-print '% add and commit'
+print('% add and commit')
 add(u, repo, 'test.py')
 commit(u, repo, message='*')
 status(u, repo, clean=True)
 
 
-print '% change'
+print('% change')
 f = open('test.py', 'w')
 try:
     f.write('bar\n')

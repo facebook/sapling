@@ -64,7 +64,6 @@
   tests/test-pathencode.py requires print_function
   tests/test-run-tests.py not using absolute_import
   tests/test-simplemerge.py not using absolute_import
-  tests/test-status-inprocess.py requires print_function
   tests/test-symlink-os-yes-fs-no.py not using absolute_import
   tests/test-trusted.py not using absolute_import
   tests/test-trusted.py requires print_function
@@ -228,7 +227,6 @@
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-lrucachedict.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-status-inprocess.py: invalid syntax: Missing parentheses in call to 'print' (<unknown>, line *) (glob)
   tests/test-trusted.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif
