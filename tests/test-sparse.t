@@ -114,7 +114,7 @@ Verify deleting sparseness with --force brings back files
   M show
   ? hide3
 
-Verify editting sparseness fails if pending changes
+Verify editing sparseness fails if pending changes
 
   $ hg sparse --include 'show*'
   pending changes to 'hide'

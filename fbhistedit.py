@@ -87,7 +87,7 @@ def defineactions():
             repo, ctxnode = state.repo, state.parentctxnode
             hg.update(repo, ctxnode)
 
-            # release locks so the programm can call hg and then relock.
+            # release locks so the program can call hg and then relock.
             lock.release(state.lock, state.wlock)
 
             try:

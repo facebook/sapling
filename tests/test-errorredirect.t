@@ -20,6 +20,6 @@ Test errorredirect will respect original behavior by default
   Unknown exception encountered
 
 Test the errorredirect script will override stack trace output
-  $ hg crash --config errorredirect.script='echo overrided-message'
-  overrided-message
+  $ hg crash --config errorredirect.script='echo overridden-message'
+  overridden-message
   [1]

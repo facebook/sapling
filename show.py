@@ -56,7 +56,7 @@ def show(ui, repo, *args, **opts):
 
     This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
-    :hg`log` for more powerful operations than supported by hg show
+    :hg:`log` for more powerful operations than supported by hg show
 
     See :hg:`help templates` for more about pre-packaged styles and
     specifying custom templates.

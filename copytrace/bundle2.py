@@ -18,7 +18,7 @@ def pullmoves(repo, nodelist, source="default"):
     """
     fetches move data from the server
     """
-    # Manually creates a pull bundle so as to request mising move data from the
+    # Manually creates a pull bundle so as to request missing move data from the
     # server while not pulling possibly present new commits
 
     source, branches = hg.parseurl(repo.ui.expandpath(source))

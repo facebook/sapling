@@ -73,7 +73,7 @@ def getdiff(repo, diffid):
 def finddiff(repo, diffid, proc=None):
     """Scans the changelog for commit lines mentioning the Differential ID
 
-    If the optional proc paramater is provided, it must be a subprocess.Popen
+    If the optional proc parameter is provided, it must be a subprocess.Popen
     instance. It will be polled during the iteration and if it indicates that
     the process has returned, the function will raise StopIteration"""
 
@@ -182,7 +182,7 @@ def revsetdiff(repo, subset, diffid):
     resp = jsresp.get('response')
     if not resp:
         e = jsresp.get('errorMessage', 'unknown error')
-        raise error.Abort('Counduit error: %s' % e)
+        raise error.Abort('Conduit error: %s' % e)
 
     vcs = resp.get('sourceControlSystem')
 

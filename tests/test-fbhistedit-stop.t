@@ -63,7 +63,7 @@ log before edit
      summary:     a
   
 
-stop & continue cannot preserve hashes without obsolence
+stop & continue cannot preserve hashes without obsolescence
 
   $ hg histedit 177f92b77385 --commands - 2>&1 << EOF| fixbundle
   > pick 177f92b77385 c

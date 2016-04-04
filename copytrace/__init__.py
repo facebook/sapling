@@ -53,7 +53,7 @@ def extsetup(ui):
     if ui.configbool("copytrace", "enablebundle2", False):
         wrapfunction(exchange, '_pullbundle2extraprepare',
                     bundle2._pullbundle2extraprepare)
-        # Adding the 'movedatareq' arguement to the ones accepted by bundle2
+        # Adding the 'movedatareq' argument to the ones accepted by bundle2
         wireproto.gboptsmap['movedatareq'] = 'nodes'
 
         # Generating this part last so as to handle after 'pushrebase' if that

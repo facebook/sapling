@@ -103,7 +103,7 @@ def tweakorder():
     Tweakdefaults generally should load first; other extensions may modify
     behavior such that tweakdefaults will be happy, so we should not prevent
     that from happening too early in the process. Note that by loading first,
-    we ensure that tweakdefault's function wrappers run *last*.
+    we ensure that tweakdefaults's function wrappers run *last*.
 
     As of this writing, the extensions that we should load before are
     remotenames and directaccess (NB: directaccess messes with order as well).

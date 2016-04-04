@@ -77,7 +77,7 @@ def _forwardrenamesandpaths(repo, ctxstack, m):
             else:
                 paths[dst] = [src]
 
-        # we only consider moves so the src disappered
+        # we only consider moves so the src disappeared
         for src in delsrc:
             del paths[src]
 

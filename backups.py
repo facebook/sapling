@@ -21,7 +21,7 @@ cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 msgwithcreatermarkers = """Marker creation is enabled so no commit should be
-stripped unless you explicitely called hg strip. hg backups will show you the
+stripped unless you explicitly called hg strip. hg backups will show you the
 stripped commits.  If you are trying to recover a commit hidden from a previous
 command, use hg reflog to get its sha1 and you will be able to access it
 directly without recovering a backup."""

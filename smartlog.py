@@ -194,7 +194,7 @@ def getdag(ui, repo, revs, master):
                 gp = [g for g in gp if g not in unzip(parents)]
                 for g in gp:
                     # Insert fake nodes in between children and grandparents.
-                    # Reuse them across multiple chidlren when the grandparent
+                    # Reuse them across multiple children when the grandparent
                     # is the same.
                     if not g in fakes:
                         fakes[g] = (mpar, 'F', fakectx(mpar),

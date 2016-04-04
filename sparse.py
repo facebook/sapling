@@ -656,7 +656,7 @@ def sparse(ui, repo, *pats, **opts):
     commit is checked out. Changes to .hgsparse are not applied until they
     have been committed.
 
-    Returns 0 if editting the sparse checkout succeeds.
+    Returns 0 if editing the sparse checkout succeeds.
     """
     include = opts.get('include')
     exclude = opts.get('exclude')

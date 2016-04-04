@@ -24,6 +24,6 @@ Running against various Mercurial versions
 ------------------------------------------
 
 By default, the test runners will run against the version of Mercurial in the
-repository it lives in. you can run againts other version of Mercurial using
+repository it lives in. you can run against other version of Mercurial using
 the --with-hg=PATH flag. For example to run against the installed version of
 Mercurial you can use --with-hg=`which hg`

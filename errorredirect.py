@@ -7,7 +7,7 @@
 """redirect error message
 
 Redirect error message, the stack trace, of an uncaught exception to
-a custom shell script. This is useful for futher handling the error,
+a custom shell script. This is useful for further handling the error,
 for example posting it to a support group and logging it somewhere.
 
 The config option errorredirect.script is the shell script to execute.

@@ -18,8 +18,8 @@ can cycle through available commands with left/h or right/l.
 The diff for the current commit can be viewed by pressing v. To apply
 the commands press C, which will call histedit.
 
-The current conflict deteciton mechanism is based on a per-file
-comparision. Reordered changesets that touch the sames files are
+The current conflict detection mechanism is based on a per-file
+comparison. Reordered changesets that touch the sames files are
 considered a "potential conflict".  Please note that Mercurial's merge
 algorithm might still be able to merge these files without conflict.
 """
@@ -168,7 +168,7 @@ def cycleaction(state, pos, next=False):
 def event(state, ch):
     """Change state based on the current character input
 
-    This takes the current state and based on the current charcter input from
+    This takes the current state and based on the current character input from
     the user we change the state.
     """
     selected = state['selected']

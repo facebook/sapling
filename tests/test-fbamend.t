@@ -437,7 +437,7 @@ preamend bookmark has been removed
   [1]
   $ rm testModeCommands
 
-Test fbamend fails with both --iteractive and --rebase
+Test fbamend fails with both --interactive and --rebase
   $ hg commit --amend --rebase -i
   abort: --interactive and --rebase are mutually exclusive
   [255]
@@ -445,7 +445,7 @@ Test fbamend fails with both --iteractive and --rebase
   abort: --interactive and --rebase are mutually exclusive
   [255]
 
-Test fbamend fails with both --iteractive and --fixup
+Test fbamend fails with both --interactive and --fixup
   $ hg commit --amend --fixup -i
   abort: --interactive and --fixup are mutually exclusive
   [255]

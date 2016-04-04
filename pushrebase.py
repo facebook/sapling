@@ -503,7 +503,7 @@ def bundle2rebase(op, part):
         tr = op.gettransaction()
         hookargs = dict(tr.hookargs)
 
-        # Recreate the bundle repo, since taking the lock in gettranscation()
+        # Recreate the bundle repo, since taking the lock in gettransaction()
         # may have caused it to become out of date.
         # (but grab a copy of the cache first)
         bundle = repository(op.repo.ui, bundlepath)
