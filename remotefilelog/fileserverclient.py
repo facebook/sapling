@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial.i18n import _
+from mercurial.node import hex, bin
 from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
 import os, socket, lz4, time, grp, io
 import errno
@@ -182,7 +183,7 @@ def _getfiles(
 class fileserverclient(object):
     """A client for requesting files from the remote file server.
     """
-    def __init__(self, repo):
+    def __init__(self, repo, stores):
         ui = repo.ui
         self.repo = repo
         self.ui = ui
@@ -199,6 +200,14 @@ class fileserverclient(object):
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.localcache = localcache(repo)
+        def hexprefetch(keys):
+            return self.prefetch((filename, hex(node)) for filename, node
+                                 in keys)
+        for store in stores:
+            store.addfetcher(hexprefetch)
+        self.contentstore = stores[0]
+        self.sharedcache = stores[0]._shared
+
         self.remotecache = cacheconnection()
         self.remoteserver = None
 
@@ -339,7 +348,7 @@ class fileserverclient(object):
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, self.localcache.cachepath)
+            cmd = "%s %s" % (self.cacheprocess, self.sharedcache._path)
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always

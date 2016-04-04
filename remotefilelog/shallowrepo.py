@@ -10,6 +10,8 @@ from mercurial.i18n import _
 from mercurial import localrepo, context, util, match, scmutil
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
+from contentstore import remotefilelogcontentstore, unioncontentstore
+from metadatastore import remotefilelogmetadatastore, unionmetadatastore
 
 requirement = "remotefilelog"
 
@@ -139,7 +141,28 @@ def wraprepo(repo):
     repo.__class__ = shallowrepository
 
     repo.shallowmatch = match.always(repo.root, '')
-    repo.fileservice = fileserverclient.fileserverclient(repo)
+
+    localpath = os.path.join(repo.svfs.vfs.base, 'data')
+    if not os.path.exists(localpath):
+        os.makedirs(localpath)
+    localcontent = remotefilelogcontentstore(repo.ui, localpath, repo.name,
+                                             shared=False)
+    localmetadata = remotefilelogmetadatastore(repo.ui, localpath, repo.name,
+                                               shared=False)
+
+    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    if not cachepath:
+        raise util.Abort(_("could not find config option remotefilelog.cachepath"))
+    cachecontent = remotefilelogcontentstore(repo.ui, cachepath, repo.name,
+                                             shared=True)
+    cachemetadata = remotefilelogmetadatastore(repo.ui, cachepath, repo.name,
+                                               shared=True)
+
+    repo.contentstore = unioncontentstore(localcontent, cachecontent)
+    repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata)
+
+    repo.fileservice = fileserverclient.fileserverclient(repo, [
+        repo.contentstore, repo.metadatastore])
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
     repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
