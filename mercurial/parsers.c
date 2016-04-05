@@ -1029,12 +1029,14 @@ static PyObject *index_stats(indexObject *self)
 		return NULL;
 
 #define istat(__n, __d) \
-	t = PyInt_FromSsize_t(self->__n); \
-	if (!t) \
-		goto bail; \
-	if (PyDict_SetItemString(obj, __d, t) == -1) \
-		goto bail; \
-	Py_DECREF(t);
+	do { \
+		t = PyInt_FromSsize_t(self->__n); \
+		if (!t) \
+			goto bail; \
+		if (PyDict_SetItemString(obj, __d, t) == -1) \
+			goto bail; \
+		Py_DECREF(t); \
+	} while (0)
 
 	if (self->added) {
 		Py_ssize_t len = PyList_GET_SIZE(self->added);
