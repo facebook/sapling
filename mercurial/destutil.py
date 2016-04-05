@@ -102,11 +102,7 @@ def _destupdatebranch(repo, clean, check):
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
     else:
-        if currentbranch == 'default': # no default branch!
-            # update to the tipmost non-closed branch head
-            node = repo.revs('max(head() and not closed())').first()
-        else:
-            raise error.Abort(_("branch %s not found") % currentbranch)
+        node = repo['.'].node()
     return node, movemark, None
 
 def _destupdatebranchfallback(repo, clean, check):

@@ -211,8 +211,7 @@ Update with no arguments: tipmost revision of the current branch:
   marked working directory as branch foobar
 
   $ hg up
-  abort: branch foobar not found
-  [255]
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Fast-forward merge:
 
@@ -345,3 +344,50 @@ Implicit merge with default branch as parent:
   (branch merge, don't forget to commit)
 
   $ cd ..
+
+We expect that bare update on new branch, updates to parent
+
+  $ hg init bareupdateonnewbranch
+  $ cd bareupdateonnewbranch
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ touch a
+  $ hg commit -A -m "a"
+  adding a
+  $ touch b
+  $ hg commit -A -m "b"
+  adding b
+  $ touch c
+  $ hg commit -A -m "c"
+  adding c
+  $ hg update -r 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg log -G
+  o  changeset:   2:991a3460af53
+  |  tag:         tip
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     c
+  |
+  @  changeset:   1:0e067c57feba
+  |  user:        test
+  |  date:        Thu Jan 01 00:00:00 1970 +0000
+  |  summary:     b
+  |
+  o  changeset:   0:3903775176ed
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     a
+  
+  $ hg branch dev
+  marked working directory as branch dev
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg summary
+  parent: 1:0e067c57feba 
+   b
+  branch: dev
+  commit: (new branch)
+  update: (current)
+  phases: 3 draft
