@@ -11,6 +11,8 @@
   > @command('buggylocking', [], '')
   > def buggylocking(ui, repo):
   >     tr = repo.transaction('buggy')
+  >     # make sure we rollback the transaction as we don't want to rely on the__del__
+  >     tr.release()
   >     lo = repo.lock()
   >     wl = repo.wlock()
   >     wl.release()
