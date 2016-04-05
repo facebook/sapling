@@ -1,7 +1,5 @@
 from __future__ import absolute_import, print_function
-from pprint import (
-    pprint,
-)
+import pprint
 from mercurial import (
     minirst,
 )
@@ -18,7 +16,7 @@ def debugformat(text, form, **kwargs):
     if type(out) == tuple:
         print(out[0][:-1])
         print("-" * 70)
-        pprint(out[1])
+        pprint.pprint(out[1])
     else:
         print(out[:-1])
     print("-" * 70)
