@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import silenttestrunner
 import unittest
 
-from mercurial.util import ctxmanager
+from mercurial import util
 
 class contextmanager(object):
     def __init__(self, name, trace):
@@ -44,7 +44,7 @@ class test_ctxmanager(unittest.TestCase):
     def test_basics(self):
         trace = []
         addtrace = trace.append
-        with ctxmanager(ctxmgr('a', addtrace), ctxmgr('b', addtrace)) as c:
+        with util.ctxmanager(ctxmgr('a', addtrace), ctxmgr('b', addtrace)) as c:
             a, b = c.enter()
             c.atexit(addtrace, ('atexit', 'x'))
             c.atexit(addtrace, ('atexit', 'y'))
@@ -56,8 +56,8 @@ class test_ctxmanager(unittest.TestCase):
         trace = []
         addtrace = trace.append
         def go():
-            with ctxmanager(ctxmgr('a', addtrace),
-                           lambda: raise_on_enter('b', addtrace)) as c:
+            with util.ctxmanager(ctxmgr('a', addtrace),
+                                 lambda: raise_on_enter('b', addtrace)) as c:
                 c.enter()
                 addtrace('unreachable')
         self.assertRaises(ctxerror, go)
@@ -67,8 +67,8 @@ class test_ctxmanager(unittest.TestCase):
         trace = []
         addtrace = trace.append
         def go():
-            with ctxmanager(ctxmgr('a', addtrace),
-                           lambda: raise_on_exit('b', addtrace)) as c:
+            with util.ctxmanager(ctxmgr('a', addtrace),
+                                 lambda: raise_on_exit('b', addtrace)) as c:
                 c.enter()
                 addtrace('running')
         self.assertRaises(ctxerror, go)
