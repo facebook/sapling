@@ -1,21 +1,16 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, print_function
-from mercurial.ui import (
-    ui,
-)
-from mercurial.localrepo import (
-    localrepository,
-)
-from mercurial.commands import (
-    add,
-    commit,
-    status,
+
+from mercurial import (
+    commands,
+    localrepo,
+    ui as uimod,
 )
 
-u = ui()
+u = uimod.ui()
 
 print('% creating repo')
-repo = localrepository(u, '.', create=True)
+repo = localrepo.localrepository(u, '.', create=True)
 
 f = open('test.py', 'w')
 try:
@@ -24,9 +19,9 @@ finally:
     f.close
 
 print('% add and commit')
-add(u, repo, 'test.py')
-commit(u, repo, message='*')
-status(u, repo, clean=True)
+commands.add(u, repo, 'test.py')
+commands.commit(u, repo, message='*')
+commands.status(u, repo, clean=True)
 
 
 print('% change')
@@ -37,4 +32,4 @@ finally:
     f.close()
 
 # this would return clean instead of changed before the fix
-status(u, repo, clean=True, modified=True)
+commands.status(u, repo, clean=True, modified=True)
