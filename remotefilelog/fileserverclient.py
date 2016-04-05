@@ -345,6 +345,9 @@ class fileserverclient(object):
                 "contents: connection closed early\n"), '')
         size = int(line)
         data = pipe.read(size)
+        if len(data) != size:
+            raise error.ResponseError(_("error downloading file contents: "
+                "only received %s of %s bytes" % (len(data), size)))
 
         self.sharedcache.addremotefilelognode(filename, bin(node), lz4.decompress(data))
 
