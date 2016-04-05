@@ -6,13 +6,10 @@
 # GNU General Public License version 2 or any later version.
 
 from __future__ import absolute_import, print_function
-from mercurial.peer import (
-    localbatch,
-    batchable,
-    future,
-)
-from mercurial.wireproto import (
-    remotebatch,
+
+from mercurial import (
+    peer,
+    wireproto,
 )
 
 # equivalent of repo.repository
@@ -32,7 +29,7 @@ class localthing(thing):
         return "Hello, %s" % name
     def batch(self):
         '''Support for local batching.'''
-        return localbatch(self)
+        return peer.localbatch(self)
 
 # usage of "thing" interface
 def use(it):
@@ -152,20 +149,20 @@ class remotething(thing):
         return res.split(';')
 
     def batch(self):
-        return remotebatch(self)
+        return wireproto.remotebatch(self)
 
-    @batchable
+    @peer.batchable
     def foo(self, one, two=None):
         if not one:
             yield "Nope", None
         encargs = [('one', mangle(one),), ('two', mangle(two),)]
-        encresref = future()
+        encresref = peer.future()
         yield encargs, encresref
         yield unmangle(encresref.value)
 
-    @batchable
+    @peer.batchable
     def bar(self, b, a):
-        encresref = future()
+        encresref = peer.future()
         yield [('b', mangle(b),), ('a', mangle(a),)], encresref
         yield unmangle(encresref.value)
 
