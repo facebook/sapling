@@ -18,6 +18,7 @@
 
 void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
 
+void enablecolor(void);
 void enabledebugmsg(void);
 void debugmsg(const char *fmt, ...) PRINTF_FORMAT_;
 

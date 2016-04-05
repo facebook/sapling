@@ -522,6 +522,9 @@ int main(int argc, const char *argv[], const char *envp[])
 	if (getenv("CHGDEBUG"))
 		enabledebugmsg();
 
+	if (!getenv("HGPLAIN") && isatty(fileno(stderr)))
+		enablecolor();
+
 	if (getenv("CHGINTERNALMARK"))
 		abortmsg("chg started by chg detected.\n"
 			 "Please make sure ${HG:-hg} is not a symlink or "

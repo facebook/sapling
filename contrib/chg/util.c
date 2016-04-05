@@ -18,19 +18,35 @@
 
 #include "util.h"
 
+static int colorenabled = 0;
+
+static inline void fsetcolor(FILE *fp, const char *code)
+{
+	if (!colorenabled)
+		return;
+	fprintf(fp, "\033[%sm", code);
+}
+
 void abortmsg(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fputs("\033[1;31mchg: abort: ", stderr);
+	fsetcolor(stderr, "1;31");
+	fputs("chg: abort: ", stderr);
 	vfprintf(stderr, fmt, args);
-	fputs("\033[m\n", stderr);
+	fsetcolor(stderr, "");
+	fputc('\n', stderr);
 	va_end(args);
 
 	exit(255);
 }
 
 static int debugmsgenabled = 0;
+
+void enablecolor(void)
+{
+	colorenabled = 1;
+}
 
 void enabledebugmsg(void)
 {
@@ -44,9 +60,11 @@ void debugmsg(const char *fmt, ...)
 
 	va_list args;
 	va_start(args, fmt);
-	fputs("\033[1;30mchg: debug: ", stderr);
+	fsetcolor(stderr, "1;30");
+	fputs("chg: debug: ", stderr);
 	vfprintf(stderr, fmt, args);
-	fputs("\033[m\n", stderr);
+	fsetcolor(stderr, "");
+	fputc('\n', stderr);
 	va_end(args);
 }
 
