@@ -114,13 +114,12 @@ static void preparesockdir(const char *sockdir)
 	int r;
 	r = mkdir(sockdir, 0700);
 	if (r < 0 && errno != EEXIST)
-		abortmsg("cannot create sockdir %s (errno = %d)",
-			 sockdir, errno);
+		abortmsgerrno("cannot create sockdir %s", sockdir);
 
 	struct stat st;
 	r = lstat(sockdir, &st);
 	if (r < 0)
-		abortmsg("cannot stat %s (errno = %d)", sockdir, errno);
+		abortmsgerrno("cannot stat %s", sockdir);
 	if (!S_ISDIR(st.st_mode))
 		abortmsg("cannot create sockdir %s (file exists)", sockdir);
 	if (st.st_uid != geteuid() || st.st_mode & 0077)
@@ -166,11 +165,12 @@ static void lockcmdserver(struct cmdserveropts *opts)
 	if (opts->lockfd == -1) {
 		opts->lockfd = open(opts->lockfile, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
 		if (opts->lockfd == -1)
-			abortmsg("cannot create lock file %s", opts->lockfile);
+			abortmsgerrno("cannot create lock file %s",
+				      opts->lockfile);
 	}
 	int r = flock(opts->lockfd, LOCK_EX);
 	if (r == -1)
-		abortmsg("cannot acquire lock");
+		abortmsgerrno("cannot acquire lock");
 }
 
 /*
@@ -224,9 +224,9 @@ static void execcmdserver(const struct cmdserveropts *opts)
 	argv[argsize - 1] = NULL;
 
 	if (putenv("CHGINTERNALMARK=") != 0)
-		abortmsg("failed to putenv (errno = %d)", errno);
+		abortmsgerrno("failed to putenv");
 	if (execvp(hgcmd, (char **)argv) < 0)
-		abortmsg("failed to exec cmdserver (errno = %d)", errno);
+		abortmsgerrno("failed to exec cmdserver");
 	free(argv);
 }
 
@@ -325,7 +325,7 @@ static void forwardsignal(int sig)
 {
 	assert(peerpid > 0);
 	if (kill(peerpid, sig) < 0)
-		abortmsg("cannot kill %d (errno = %d)", peerpid, errno);
+		abortmsgerrno("cannot kill %d", peerpid);
 	debugmsg("forward signal %d", sig);
 }
 
@@ -358,7 +358,7 @@ static void handlestopsignal(int sig)
 	return;
 
 error:
-	abortmsg("failed to handle stop signal (errno = %d)", errno);
+	abortmsgerrno("failed to handle stop signal");
 }
 
 static void setupsignalhandler(pid_t pid)
@@ -397,7 +397,7 @@ static void setupsignalhandler(pid_t pid)
 	return;
 
 error:
-	abortmsg("failed to set up signal handlers (errno = %d)", errno);
+	abortmsgerrno("failed to set up signal handlers");
 }
 
 /* This implementation is based on hgext/pager.py (pre 369741ef7253) */
@@ -432,8 +432,7 @@ static void setuppager(hgclient_t *hgc, const char *const args[],
 
 		int r = execlp("/bin/sh", "/bin/sh", "-c", pagercmd, NULL);
 		if (r < 0) {
-			abortmsg("cannot start pager '%s' (errno = %d)",
-				 pagercmd, errno);
+			abortmsgerrno("cannot start pager '%s'", pagercmd);
 		}
 		return;
 	}
@@ -441,7 +440,7 @@ static void setuppager(hgclient_t *hgc, const char *const args[],
 error:
 	close(pipefds[0]);
 	close(pipefds[1]);
-	abortmsg("failed to prepare pager (errno = %d)", errno);
+	abortmsgerrno("failed to prepare pager");
 }
 
 /* Run instructions sent from the server like unlink and set redirect path
@@ -514,7 +513,7 @@ static void execoriginalhg(const char *argv[])
 {
 	debugmsg("execute original hg");
 	if (execvp(gethgcmd(), (char **)argv) < 0)
-		abortmsg("failed to exec original hg (errno = %d)", errno);
+		abortmsgerrno("failed to exec original hg");
 }
 
 int main(int argc, const char *argv[], const char *envp[])

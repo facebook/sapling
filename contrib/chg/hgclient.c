@@ -141,7 +141,7 @@ static void sendall(int sockfd, const void *data, size_t datasize)
 	while (p < endp) {
 		ssize_t r = send(sockfd, p, endp - p, 0);
 		if (r < 0)
-			abortmsg("cannot communicate (errno = %d)", errno);
+			abortmsgerrno("cannot communicate");
 		p += r;
 	}
 }
@@ -374,7 +374,7 @@ static void attachio(hgclient_t *hgc)
 	msgh.msg_controllen = cmsg->cmsg_len;
 	ssize_t r = sendmsg(hgc->sockfd, &msgh, 0);
 	if (r < 0)
-		abortmsg("sendmsg failed (errno = %d)", errno);
+		abortmsgerrno("sendmsg failed");
 
 	handleresponse(hgc);
 	int32_t n;
@@ -389,7 +389,7 @@ static void attachio(hgclient_t *hgc)
 static void chdirtocwd(hgclient_t *hgc)
 {
 	if (!getcwd(hgc->ctx.data, hgc->ctx.maxdatasize))
-		abortmsg("failed to getcwd (errno = %d)", errno);
+		abortmsgerrno("failed to getcwd");
 	hgc->ctx.datasize = strlen(hgc->ctx.data);
 	writeblockrequest(hgc, "chdir");
 }
@@ -414,15 +414,15 @@ hgclient_t *hgc_open(const char *sockname)
 {
 	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd < 0)
-		abortmsg("cannot create socket (errno = %d)", errno);
+		abortmsgerrno("cannot create socket");
 
 	/* don't keep fd on fork(), so that it can be closed when the parent
 	 * process get terminated. */
 	int flags = fcntl(fd, F_GETFD);
 	if (flags < 0)
-		abortmsg("cannot get flags of socket (errno = %d)", errno);
+		abortmsgerrno("cannot get flags of socket");
 	if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
-		abortmsg("cannot set flags of socket (errno = %d)", errno);
+		abortmsgerrno("cannot set flags of socket");
 
 	struct sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
@@ -434,8 +434,7 @@ hgclient_t *hgc_open(const char *sockname)
 		close(fd);
 		if (errno == ENOENT || errno == ECONNREFUSED)
 			return NULL;
-		abortmsg("cannot connect to %s (errno = %d)",
-			 addr.sun_path, errno);
+		abortmsgerrno("cannot connect to %s", addr.sun_path);
 	}
 	debugmsg("connected to %s", addr.sun_path);
 
