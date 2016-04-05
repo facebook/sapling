@@ -1015,12 +1015,9 @@ def _runcommand(ui, options, cmd, cmdfunc):
     else:
         return checkargs()
 
-def handlecommandexception(ui):
-    """Produce a warning message for broken commands
+def _exceptionwarning(ui):
+    """Produce a warning message for the current active exception"""
 
-    Called when handling an exception; the exception is reraised if
-    this function returns False, ignored otherwise.
-    """
     # For compatibility checking, we discard the portion of the hg
     # version after the + on the assumption that if a "normal
     # user" is running a build with a + in it the packager
@@ -1072,6 +1069,15 @@ def handlecommandexception(ui):
                  util.version()) +
                 (_("** Extensions loaded: %s\n") %
                  ", ".join([x[0] for x in extensions.extensions()])))
+    return warning
+
+def handlecommandexception(ui):
+    """Produce a warning message for broken commands
+
+    Called when handling an exception; the exception is reraised if
+    this function returns False, ignored otherwise.
+    """
+    warning = _exceptionwarning(ui)
     ui.log("commandexception", "%s\n%s\n", warning, traceback.format_exc())
     ui.warn(warning)
     return False  # re-raise the exception
