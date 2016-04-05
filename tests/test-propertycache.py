@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function
 import os
 import subprocess
 import mercurial.localrepo
-import mercurial.repoview
 import mercurial.util
 import mercurial.hg
 import mercurial.ui as uimod
