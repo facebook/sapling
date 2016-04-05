@@ -7,7 +7,13 @@ if subprocess.call(['python', '%s/hghave' % os.environ['TESTDIR'],
                     'cacheable']):
     sys.exit(80)
 
-from mercurial import util, scmutil, extensions, hg, ui
+from mercurial import (
+    extensions,
+    hg,
+    scmutil,
+    ui,
+    util,
+)
 
 filecache = scmutil.filecache
 
