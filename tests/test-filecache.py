@@ -11,7 +11,7 @@ from mercurial import (
     extensions,
     hg,
     scmutil,
-    ui,
+    ui as uimod,
     util,
 )
 
@@ -141,7 +141,7 @@ def fakeuncacheable():
 def test_filecache_synced():
     # test old behavior that caused filecached properties to go out of sync
     os.system('hg init && echo a >> a && hg ci -qAm.')
-    repo = hg.repository(ui.ui())
+    repo = hg.repository(uimod.ui())
     # first rollback clears the filecache, but changelog to stays in __dict__
     repo.rollback()
     repo.commit('.')
