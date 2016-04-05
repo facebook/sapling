@@ -3,7 +3,7 @@ import os
 from mercurial import (
     commands,
     extensions,
-    ui,
+    ui as uimod,
 )
 
 ignore = set(['highlight', 'win32text', 'factotum'])
@@ -21,7 +21,7 @@ for ext in disabled:
 
 hgrc.close()
 
-u = ui.ui()
+u = uimod.ui()
 extensions.loadall(u)
 
 globalshort = set()
