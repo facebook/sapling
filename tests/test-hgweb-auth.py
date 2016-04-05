@@ -3,12 +3,10 @@ from __future__ import absolute_import, print_function
 from mercurial import demandimport; demandimport.enable()
 import urllib2
 from mercurial import (
+    error,
     ui as uimod,
     url,
     util,
-)
-from mercurial.error import (
-    Abort,
 )
 
 class myui(uimod.ui):
@@ -48,7 +46,7 @@ def test(auth, urls=None):
             if authinfo is not None:
                 pm.add_password(*authinfo)
             print('    ', pm.find_user_password('test', u))
-        except Abort:
+        except error.Abort:
             print('    ','abort')
 
     if not urls:
