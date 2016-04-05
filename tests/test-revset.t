@@ -725,7 +725,7 @@ Test opreand of '%' is optimized recursively (issue4670)
       ('symbol', '9')
       ('symbol', '5')))
   * set:
-  <baseset+ [8, 9, 2, 4]>
+  <baseset+ [2, 4, 8, 9]>
   2
   4
   8

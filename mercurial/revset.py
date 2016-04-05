@@ -2889,7 +2889,13 @@ class baseset(abstractsmartset):
         d = {None: '', False: '-', True: '+'}[self._ascending]
         s = _formatsetrepr(self._datarepr)
         if not s:
-            s = repr(self._list)
+            l = self._list
+            # if _list has been built from a set, it might have a different
+            # order from one python implementation to another.
+            # We fallback to the sorted version for a stable output.
+            if self._ascending is not None:
+                l = self._asclist
+            s = repr(l)
         return '<%s%s %s>' % (type(self).__name__, d, s)
 
 class filteredset(abstractsmartset):
