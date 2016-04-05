@@ -7,16 +7,18 @@ regression."""
 from __future__ import absolute_import, print_function
 import os
 import subprocess
-import mercurial.localrepo
-import mercurial.util
-import mercurial.hg
-import mercurial.ui as uimod
 
+from mercurial import (
+    hg,
+    localrepo,
+    ui as uimod,
+    util,
+)
 
 # create some special property cache that trace they call
 
 calllog = []
-@mercurial.util.propertycache
+@util.propertycache
 def testcachedfoobar(repo):
     name = repo.filtername
     if name is None:
@@ -26,7 +28,7 @@ def testcachedfoobar(repo):
     return val
 
 unficalllog = []
-@mercurial.localrepo.unfilteredpropertycache
+@localrepo.unfilteredpropertycache
 def testcachedunfifoobar(repo):
     name = repo.filtername
     if name is None:
@@ -36,8 +38,8 @@ def testcachedunfifoobar(repo):
     return val
 
 #plug them on repo
-mercurial.localrepo.localrepository.testcachedfoobar = testcachedfoobar
-mercurial.localrepo.localrepository.testcachedunfifoobar = testcachedunfifoobar
+localrepo.localrepository.testcachedfoobar = testcachedfoobar
+localrepo.localrepository.testcachedunfifoobar = testcachedunfifoobar
 
 
 # Create an empty repo and instantiate it. It is important to run
@@ -45,7 +47,7 @@ mercurial.localrepo.localrepository.testcachedunfifoobar = testcachedunfifoobar
 repopath = os.path.join(os.environ['TESTTMP'], 'repo')
 assert subprocess.call(['hg', 'init', repopath]) == 0
 ui = uimod.ui()
-repo = mercurial.hg.repository(ui, path=repopath).unfiltered()
+repo = hg.repository(ui, path=repopath).unfiltered()
 
 
 print('')
