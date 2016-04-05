@@ -11,9 +11,11 @@ import os
 import sys
 
 if os.environ.get('HGUNICODEPEDANTRY', False):
-    reload(sys)
-    sys.setdefaultencoding("undefined")
-
+    try:
+        reload(sys)
+        sys.setdefaultencoding("undefined")
+    except NameError:
+        pass
 
 libdir = '@LIBDIR@'
 
