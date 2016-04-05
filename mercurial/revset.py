@@ -2798,13 +2798,15 @@ class baseset(abstractsmartset):
         datarepr: a tuple of (format, obj, ...), a function or an object that
                   provides a printable representation of the given data.
         """
+        self._ascending = None
         if not isinstance(data, list):
             if isinstance(data, set):
                 self._set = data
+                # set has no order we pick one for stability purpose
+                self._ascending = True
             data = list(data)
         self._list = data
         self._datarepr = datarepr
-        self._ascending = None
 
     @util.propertycache
     def _set(self):
