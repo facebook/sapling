@@ -7,6 +7,7 @@
  * GNU General Public License version 2 or any later version.
  */
 
+#include <errno.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -27,18 +28,33 @@ static inline void fsetcolor(FILE *fp, const char *code)
 	fprintf(fp, "\033[%sm", code);
 }
 
+static void vabortmsgerrno(int no, const char *fmt, va_list args)
+{
+	fsetcolor(stderr, "1;31");
+	fputs("chg: abort: ", stderr);
+	vfprintf(stderr, fmt, args);
+	if (no != 0)
+		fprintf(stderr, " (errno = %d, %s)", no, strerror(no));
+	fsetcolor(stderr, "");
+	fputc('\n', stderr);
+	exit(255);
+}
+
 void abortmsg(const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	fsetcolor(stderr, "1;31");
-	fputs("chg: abort: ", stderr);
-	vfprintf(stderr, fmt, args);
-	fsetcolor(stderr, "");
-	fputc('\n', stderr);
+	vabortmsgerrno(0, fmt, args);
 	va_end(args);
+}
 
-	exit(255);
+void abortmsgerrno(const char *fmt, ...)
+{
+	int no = errno;
+	va_list args;
+	va_start(args, fmt);
+	vabortmsgerrno(no, fmt, args);
+	va_end(args);
 }
 
 static int debugmsgenabled = 0;

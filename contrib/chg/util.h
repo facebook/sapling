@@ -17,6 +17,7 @@
 #endif
 
 void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;
+void abortmsgerrno(const char *fmt, ...) PRINTF_FORMAT_;
 
 void enablecolor(void);
 void enabledebugmsg(void);
