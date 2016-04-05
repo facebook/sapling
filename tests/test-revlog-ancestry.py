@@ -3,10 +3,10 @@ import os
 from mercurial import (
     hg,
     merge,
-    ui,
+    ui as uimod,
 )
 
-u = ui.ui()
+u = uimod.ui()
 
 repo = hg.repository(u, 'test1', create=1)
 os.chdir('test1')
