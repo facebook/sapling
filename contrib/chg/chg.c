@@ -72,11 +72,14 @@ static size_t testsensitiveflag(const char *arg)
 		size_t len = strlen(flags[i].name);
 		size_t narg = flags[i].narg;
 		if (memcmp(arg, flags[i].name, len) == 0) {
-			if (arg[len] == '\0') {  /* --flag (value) */
+			if (arg[len] == '\0') {
+				/* --flag (value) */
 				return narg + 1;
-			} else if (arg[len] == '=' && narg > 0) {  /* --flag=value */
+			} else if (arg[len] == '=' && narg > 0) {
+				/* --flag=value */
 				return 1;
-			} else if (flags[i].name[1] != '-') {  /* short flag */
+			} else if (flags[i].name[1] != '-') {
+				/* short flag */
 				return 1;
 			}
 		}
@@ -163,7 +166,8 @@ static void setcmdserveropts(struct cmdserveropts *opts)
 static void lockcmdserver(struct cmdserveropts *opts)
 {
 	if (opts->lockfd == -1) {
-		opts->lockfd = open(opts->lockfile, O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
+		opts->lockfd = open(opts->lockfile,
+				    O_RDWR | O_CREAT | O_NOFOLLOW, 0600);
 		if (opts->lockfd == -1)
 			abortmsgerrno("cannot create lock file %s",
 				      opts->lockfile);
