@@ -463,3 +463,72 @@ We need special handling for repositories with no "default" branch because
   -1 new
 
   $ cd ..
+
+We expect that update --clean discard changes in working directory,
+and updates to the head of parent branch.
+
+  $ hg init updatebareclean
+  $ cd updatebareclean
+  $ hg update --clean
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ touch a
+  $ hg commit -A -m "a"
+  adding a
+  $ touch b
+  $ hg commit -A -m "b"
+  adding b
+  $ touch c
+  $ hg commit -A -m "c"
+  adding c
+  $ hg log
+  changeset:   2:991a3460af53
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+  changeset:   1:0e067c57feba
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     b
+  
+  changeset:   0:3903775176ed
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+  $ hg update -r 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ hg branch new-branch
+  marked working directory as branch new-branch
+  (branches are permanent and global, did you want a bookmark?)
+  $ echo "aa" >> a
+  $ hg update --clean
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status
+  $ hg branch
+  default
+  $ hg parent
+  changeset:   2:991a3460af53
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     c
+  
+We expect that update --clean on non existing parent discards a new branch
+and updates to the tipmost non-closed branch head
+
+  $ hg update null
+  0 files updated, 0 files merged, 3 files removed, 0 files unresolved
+  $ hg branch newbranch
+  marked working directory as branch newbranch
+  (branches are permanent and global, did you want a bookmark?)
+  $ hg update -C
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg summary
+  parent: 2:991a3460af53 tip
+   c
+  branch: default
+  commit: (clean)
+  update: (current)
+  phases: 3 draft

@@ -95,6 +95,10 @@ def _destupdatebranch(repo, clean, check):
     wc = repo[None]
     movemark = node = None
     currentbranch = wc.branch()
+
+    if clean:
+        currentbranch = repo['.'].branch()
+
     if currentbranch in repo.branchmap():
         heads = repo.branchheads(currentbranch)
         if heads:
