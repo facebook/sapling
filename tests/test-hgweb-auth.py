@@ -3,7 +3,7 @@ from __future__ import absolute_import, print_function
 from mercurial import demandimport; demandimport.enable()
 import urllib2
 from mercurial import (
-    ui,
+    ui as uimod,
     url,
     util,
 )
@@ -11,7 +11,7 @@ from mercurial.error import (
     Abort,
 )
 
-class myui(ui.ui):
+class myui(uimod.ui):
     def interactive(self):
         return False
 
