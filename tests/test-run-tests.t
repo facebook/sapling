@@ -42,6 +42,15 @@ error paths
   $ rm hg
 #endif
 
+an empty test
+=======================
+
+  $ touch test-empty.t
+  $ rt
+  .
+  # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
+  $ rm test-empty.t
+
 a succesful test
 =======================
 
