@@ -4,6 +4,11 @@ It also checks certain aspects of the parsers module as a whole.
 """
 
 from __future__ import absolute_import, print_function
+
+import struct
+import subprocess
+import sys
+
 from mercurial import (
     parsers,
 )
@@ -11,9 +16,6 @@ from mercurial.node import (
     nullid,
     nullrev,
 )
-import struct
-import subprocess
-import sys
 
 # original python implementation
 def gettype(q):
