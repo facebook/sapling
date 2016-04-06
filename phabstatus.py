@@ -69,7 +69,7 @@ def getdiffstatus(repo, *diffid):
                         'arc',
                         'call-conduit',
                         'differential.query',
-                        '--conduit-timeout', timeout,
+                        '--conduit-timeout', str(timeout),
                     ],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                     preexec_fn=os.setsid)
