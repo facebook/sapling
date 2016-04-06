@@ -102,8 +102,7 @@ typical client does not want echo-back messages, so test without it:
   ...     print 'server exit code =', server.wait()
   server exit code = 1
 
-  >>> import cStringIO
-  >>> from hgclient import readchannel, runcommand, check
+  >>> from hgclient import readchannel, runcommand, check, stringio
   >>> @check
   ... def serverinput(server):
   ...     readchannel(server)
@@ -123,7 +122,7 @@ typical client does not want echo-back messages, so test without it:
   ... +1
   ... """
   ... 
-  ...     runcommand(server, ['import', '-'], input=cStringIO.StringIO(patch))
+  ...     runcommand(server, ['import', '-'], input=stringio(patch))
   ...     runcommand(server, ['log'])
   *** runcommand import -
   applying patch from stdin
@@ -211,15 +210,14 @@ check that local configs for the cached repo aren't inherited when -R is used:
   >     print 'now try to read something: %r' % sys.stdin.read()
   > EOF
 
-  >>> import cStringIO
-  >>> from hgclient import readchannel, runcommand, check
+  >>> from hgclient import readchannel, runcommand, check, stringio
   >>> @check
   ... def hookoutput(server):
   ...     readchannel(server)
   ...     runcommand(server, ['--config',
   ...                         'hooks.pre-identify=python:hook.hook',
   ...                         'id'],
-  ...                input=cStringIO.StringIO('some input'))
+  ...                input=stringio('some input'))
   *** runcommand --config hooks.pre-identify=python:hook.hook id
   hook talking
   now try to read something: 'some input'
@@ -587,17 +585,16 @@ changelog and manifest would have invalid node:
   > dbgui = dbgui.py
   > EOF
 
-  >>> import cStringIO
-  >>> from hgclient import readchannel, runcommand, check
+  >>> from hgclient import readchannel, runcommand, check, stringio
   >>> @check
   ... def getpass(server):
   ...     readchannel(server)
   ...     runcommand(server, ['debuggetpass', '--config',
   ...                         'ui.interactive=True'],
-  ...                input=cStringIO.StringIO('1234\n'))
+  ...                input=stringio('1234\n'))
   ...     runcommand(server, ['debugprompt', '--config',
   ...                         'ui.interactive=True'],
-  ...                input=cStringIO.StringIO('5678\n'))
+  ...                input=stringio('5678\n'))
   ...     runcommand(server, ['debugreadstdin'])
   ...     runcommand(server, ['debugwritestdout'])
   *** runcommand debuggetpass --config ui.interactive=True
@@ -611,14 +608,13 @@ changelog and manifest would have invalid node:
 
 run commandserver in commandserver, which is silly but should work:
 
-  >>> import cStringIO
-  >>> from hgclient import readchannel, runcommand, check
+  >>> from hgclient import readchannel, runcommand, check, stringio
   >>> @check
   ... def nested(server):
   ...     print '%c, %r' % readchannel(server)
   ...     class nestedserver(object):
-  ...         stdin = cStringIO.StringIO('getencoding\n')
-  ...         stdout = cStringIO.StringIO()
+  ...         stdin = stringio('getencoding\n')
+  ...         stdout = stringio()
   ...     runcommand(server, ['serve', '--cmdserver', 'pipe'],
   ...                output=nestedserver.stdout, input=nestedserver.stdin)
   ...     nestedserver.stdout.seek(0)
@@ -674,8 +670,7 @@ unix domain socket:
 
 #if unix-socket unix-permissions
 
-  >>> import cStringIO
-  >>> from hgclient import unixserver, readchannel, runcommand, check
+  >>> from hgclient import unixserver, readchannel, runcommand, check, stringio
   >>> server = unixserver('.hg/server.sock', '.hg/server.log')
   >>> def hellomessage(conn):
   ...     ch, data = readchannel(conn)
@@ -704,7 +699,7 @@ unix domain socket:
   ...  1
   ... +2
   ... """
-  ...     runcommand(conn, ['import', '-'], input=cStringIO.StringIO(patch))
+  ...     runcommand(conn, ['import', '-'], input=stringio(patch))
   ...     runcommand(conn, ['log', '-rtip', '-q'])
   >>> check(serverinput, server.connect)
   *** runcommand import -

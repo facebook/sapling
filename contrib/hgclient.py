@@ -1,7 +1,6 @@
 # A minimal client for Mercurial's command server
 
 from __future__ import absolute_import, print_function
-import cStringIO
 import os
 import signal
 import socket
@@ -9,6 +8,13 @@ import struct
 import subprocess
 import sys
 import time
+
+try:
+    import cStringIO as io
+    stringio = io.StringIO
+except ImportError:
+    import io
+    stringio = io.StringIO
 
 def connectpipe(path=None):
     cmdline = ['hg', 'serve', '--cmdserver', 'pipe']
@@ -83,7 +89,7 @@ def runcommand(server, args, output=sys.stdout, error=sys.stderr, input=None,
     writeblock(server, '\0'.join(args))
 
     if not input:
-        input = cStringIO.StringIO()
+        input = stringio()
 
     while True:
         ch, data = readchannel(server)
