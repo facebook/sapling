@@ -17,3 +17,9 @@ except ImportError:
     import queue as _queue
 empty = _queue.Empty
 queue = _queue.Queue
+
+try:
+    xrange
+except NameError:
+    import builtins
+    builtins.xrange = range
