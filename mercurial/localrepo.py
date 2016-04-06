@@ -1477,6 +1477,28 @@ class localrepository(object):
 
         return fparent1
 
+    def checkcommitpatterns(self, wctx, vdirs, match, status, fail):
+        """check for commit arguments that aren't commitable"""
+        force = False
+        if not force and (match.isexact() or match.prefix()):
+            matched = set(status.modified + status.added + status.removed)
+
+            for f in match.files():
+                f = self.dirstate.normalize(f)
+                if f == '.' or f in matched or f in wctx.substate:
+                    continue
+                if f in status.deleted:
+                    fail(f, _('file not found!'))
+                if f in vdirs: # visited directory
+                    d = f + '/'
+                    for mf in matched:
+                        if mf.startswith(d):
+                            break
+                    else:
+                        fail(f, _("no match under directory!"))
+                elif f not in self.dirstate:
+                    fail(f, _("file not tracked!"))
+
     @unfilteredmethod
     def commit(self, text="", user=None, date=None, match=None, force=False,
                editor=False, extra=None):
@@ -1571,24 +1593,8 @@ class localrepository(object):
                     status.removed.insert(0, '.hgsubstate')
 
             # make sure all explicit patterns are matched
-            if not force and (match.isexact() or match.prefix()):
-                matched = set(status.modified + status.added + status.removed)
-
-                for f in match.files():
-                    f = self.dirstate.normalize(f)
-                    if f == '.' or f in matched or f in wctx.substate:
-                        continue
-                    if f in status.deleted:
-                        fail(f, _('file not found!'))
-                    if f in vdirs: # visited directory
-                        d = f + '/'
-                        for mf in matched:
-                            if mf.startswith(d):
-                                break
-                        else:
-                            fail(f, _("no match under directory!"))
-                    elif f not in self.dirstate:
-                        fail(f, _("file not tracked!"))
+            if not force:
+                self.checkcommitpatterns(wctx, vdirs, match, status, fail)
 
             cctx = context.workingcommitctx(self, status,
                                             text, user, date, extra)
