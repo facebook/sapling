@@ -315,6 +315,7 @@ pypats = [
     # XXX only catch mutable arguments on the first line of the definition
     (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
+    (r'^import Queue', "don't use Queue, use util.queue + util.empty"),
   ],
   # warnings
   [
