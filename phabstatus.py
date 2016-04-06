@@ -54,16 +54,22 @@ def memoize(f):
         return repo._phabstatuscache[args]
     return helper
 
+def _fail(repo, diffids, *msgs):
+    for msg in msgs:
+        repo.ui.warn(msg)
+    return ["Error"] * len(diffids)
+
+
 @memoize
 def getdiffstatus(repo, *diffid):
     """Perform a Conduit API call by shelling out to `arc`
 
     Returns status of the diff"""
 
+    if not diffid:
+        return []
+    timeout = repo.ui.configint('ssl', 'timeout', 5)
     try:
-        if not diffid:
-            return []
-        timeout = repo.ui.configint('ssl', 'timeout', 5)
         proc = subprocess.Popen(
                     [
                         'arc',
@@ -73,41 +79,52 @@ def getdiffstatus(repo, *diffid):
                     ],
                     stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                     preexec_fn=os.setsid)
-        input = json.dumps({'ids': diffid})
-        repo.ui.debug("[diffrev] echo '%s' | "
-                      "arc call-conduit differential.query\n" %
-                      input)
-        proc.stdin.write(input)
-        proc.stdin.close()
-        resp = proc.stdout.read()
-        jsresp = json.loads(resp)
-        if not jsresp:
-            return 'Could not decode Conduit response'
+    except Exception as ex:
+        msg = _('Unable to run arc. No diff information can be provided\n')
+        hint = _("Error info: ") + str(ex) + "\n"
+        return _fail(repo, diffid, msg, hint)
 
-        resp = jsresp.get('response')
-        if not resp:
-            error = jsresp.get('errorMessage', 'unknown error')
-            repo.ui.warn("%s\n" % error)
-            return ["Error"] * len(diffid)
-
-        # This makes the code more robust in case conduit does not return
-        # what we need
-        result = []
-        for diff in diffid:
-            matchingresponse = [r for r in resp
-                                  if r.get("id", None) == int(diff)]
-            if not matchingresponse:
-                result.append("Error")
-            else:
-                result.append(matchingresponse[0].get('statusName'))
-        return result
-    except Exception as e:
-        msg = _('Could not call "arc call-conduit". No diff information can be '
+    input = json.dumps({'ids': diffid})
+    repo.ui.debug("[diffrev] echo '%s' | "
+                  "arc call-conduit differential.query\n" %
+                  input)
+    proc.stdin.write(input)
+    resp, err = proc.communicate()
+    if proc.returncode != 0:
+        msg = _('Error talking to phabricator. No diff information can be '
                 'provided.\n')
-        hint = _("(Possibly disconnected operations or phabricator problems)\n")
-        repo.ui.warn(msg)
-        repo.ui.warn(hint)
-        return ["Error"] * len(diffid)
+        if err:
+            hint = _("Error info: ") + err
+        elif resp:
+            # Ugh.  Unfortunately arc prints error message on
+            # stdout rather than stderr.
+            hint = _("Error info: ") + resp
+        else:
+            hint = _("(Possibly disconnected operations or "
+                     "phabricator problems)\n")
+        return _fail(repo, diffid, msg, hint)
+
+    jsresp = json.loads(resp)
+    if not jsresp:
+        msg = _('Could not decode Conduit response')
+        return _fail(repo, diffid, msg)
+
+    resp = jsresp.get('response')
+    if not resp:
+        error = jsresp.get('errorMessage', 'unknown error')
+        return _fail(repo, diffid, "%s\n" % error)
+
+    # This makes the code more robust in case conduit does not return
+    # what we need
+    result = []
+    for diff in diffid:
+        matchingresponse = [r for r in resp
+                              if r.get("id", None) == int(diff)]
+        if not matchingresponse:
+            result.append("Error")
+        else:
+            result.append(matchingresponse[0].get('statusName'))
+    return result
 
 def showphabstatus(repo, ctx, templ, **args):
     """:phabstatus: String. Return the diff approval status for a given hg rev
