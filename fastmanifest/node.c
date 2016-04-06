@@ -247,7 +247,7 @@ node_search_children_result_t search_children(
       node);
 
   if (offset >= node->num_children) {
-    return (node_search_children_result_t) { NULL, 0 };
+    return (node_search_children_result_t) { NULL, UINT32_MAX };
   }
 
   // ensure the spot we found is an exact match.
@@ -258,7 +258,7 @@ node_search_children_result_t search_children(
     return (node_search_children_result_t) { child, offset };
   }
 
-  return (node_search_children_result_t) { NULL, 0 };
+  return (node_search_children_result_t) { NULL, UINT32_MAX };
 }
 
 uint32_t get_child_index(
