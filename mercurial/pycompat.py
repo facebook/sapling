@@ -11,6 +11,13 @@ This contains aliases to hide python version-specific details from the core.
 from __future__ import absolute_import
 
 try:
+    import cStringIO as io
+    stringio = io.StringIO
+except ImportError:
+    import io
+    stringio = io.StringIO
+
+try:
     import Queue as _queue
     _queue.Queue
 except ImportError:

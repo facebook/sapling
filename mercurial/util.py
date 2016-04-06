@@ -49,6 +49,7 @@ from . import (
 for attr in (
     'empty',
     'queue',
+    'stringio',
 ):
     globals()[attr] = getattr(pycompat, attr)
 
