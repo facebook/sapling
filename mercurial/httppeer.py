@@ -13,8 +13,6 @@ import httplib
 import os
 import socket
 import tempfile
-import urllib
-import urllib2
 import zlib
 
 from .i18n import _
@@ -28,6 +26,9 @@ from . import (
     util,
     wireproto,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 def zgenerator(f):
     zd = zlib.decompressobj()
@@ -59,7 +60,7 @@ class httppeer(wireproto.wirepeer):
         self.ui.debug('using %s\n' % self._url)
 
         self.urlopener = url.opener(ui, authinfo)
-        self.requestbuilder = urllib2.Request
+        self.requestbuilder = urlreq.request
 
     def __del__(self):
         if self.urlopener:
@@ -105,7 +106,7 @@ class httppeer(wireproto.wirepeer):
         # object rather than a basestring
         canmungedata = not data or isinstance(data, basestring)
         if postargsok and canmungedata:
-            strargs = urllib.urlencode(sorted(args.items()))
+            strargs = urlreq.urlencode(sorted(args.items()))
             if strargs:
                 if not data:
                     data = strargs
@@ -119,7 +120,7 @@ class httppeer(wireproto.wirepeer):
                     headersize = int(httpheader.split(',', 1)[0])
             if headersize > 0:
                 # The headers can typically carry more data than the URL.
-                encargs = urllib.urlencode(sorted(args.items()))
+                encargs = urlreq.urlencode(sorted(args.items()))
                 headerfmt = 'X-HgArg-%s'
                 contentlen = headersize - len(headerfmt % '000' + ': \r\n')
                 headernum = 0
@@ -132,7 +133,7 @@ class httppeer(wireproto.wirepeer):
                 headers['Vary'] = ','.join(varyheaders)
             else:
                 q += sorted(args.items())
-        qs = '?%s' % urllib.urlencode(q)
+        qs = '?%s' % urlreq.urlencode(q)
         cu = "%s%s" % (self._url, qs)
         size = 0
         if util.safehasattr(data, 'length'):
@@ -150,7 +151,7 @@ class httppeer(wireproto.wirepeer):
             req.add_unredirected_header('Content-Length', '%d' % size)
         try:
             resp = self.urlopener.open(req)
-        except urllib2.HTTPError as inst:
+        except urlerr.httperror as inst:
             if inst.code == 401:
                 raise error.Abort(_('authorization failed'))
             raise

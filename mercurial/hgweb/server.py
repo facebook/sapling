@@ -15,7 +15,6 @@ import os
 import socket
 import sys
 import traceback
-import urllib
 
 from ..i18n import _
 
@@ -23,6 +22,9 @@ from .. import (
     error,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 from . import (
     common,
@@ -38,7 +40,7 @@ def _splitURI(uri):
         path, query = uri.split('?', 1)
     else:
         path, query = uri, ''
-    return urllib.unquote(path), query
+    return urlreq.unquote(path), query
 
 class _error_logger(object):
     def __init__(self, handler):

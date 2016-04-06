@@ -4,11 +4,13 @@
 # GNU General Public License version 2 or any later version.
 
 import os
-import urllib2
 import re
 
 from mercurial import error, httppeer, util, wireproto
 from mercurial.i18n import _
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 import lfutil
 
@@ -140,7 +142,7 @@ def wirereposetup(ui, repo):
             yield result, f
             try:
                 yield int(f.value)
-            except (ValueError, urllib2.HTTPError):
+            except (ValueError, urlerr.httperror):
                 # If the server returns anything but an integer followed by a
                 # newline, newline, it's not speaking our language; if we get
                 # an HTTP error, we can't be sure the largefile is present;

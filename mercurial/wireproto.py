@@ -11,7 +11,6 @@ import itertools
 import os
 import sys
 import tempfile
-import urllib
 
 from .i18n import _
 from .node import (
@@ -30,6 +29,9 @@ from . import (
     streamclone,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 bundle2required = _(
     'incompatible Mercurial client; bundle2 required\n'
@@ -287,7 +289,7 @@ class wirepeer(peer.peerrepository):
             branchmap = {}
             for branchpart in d.splitlines():
                 branchname, branchheads = branchpart.split(' ', 1)
-                branchname = encoding.tolocal(urllib.unquote(branchname))
+                branchname = encoding.tolocal(urlreq.unquote(branchname))
                 branchheads = decodelist(branchheads)
                 branchmap[branchname] = branchheads
             yield branchmap
@@ -632,7 +634,7 @@ def branchmap(repo, proto):
     branchmap = repo.branchmap()
     heads = []
     for branch, nodes in branchmap.iteritems():
-        branchname = urllib.quote(encoding.fromlocal(branch))
+        branchname = urlreq.quote(encoding.fromlocal(branch))
         branchnodes = encodelist(nodes)
         heads.append('%s %s' % (branchname, branchnodes))
     return '\n'.join(heads)
@@ -684,7 +686,7 @@ def _capabilities(repo, proto):
             caps.append('streamreqs=%s' % ','.join(sorted(requiredformats)))
     if repo.ui.configbool('experimental', 'bundle2-advertise', True):
         capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-        caps.append('bundle2=' + urllib.quote(capsblob))
+        caps.append('bundle2=' + urlreq.quote(capsblob))
     caps.append('unbundle=%s' % ','.join(bundle2.bundlepriority))
     caps.append(
         'httpheader=%d' % repo.ui.configint('server', 'maxhttpheaderlen', 1024))

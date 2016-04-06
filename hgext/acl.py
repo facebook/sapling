@@ -194,7 +194,6 @@ In the examples below, we will:
 from __future__ import absolute_import
 
 import getpass
-import urllib
 
 from mercurial.i18n import _
 from mercurial import (
@@ -202,6 +201,8 @@ from mercurial import (
     match,
     util,
 )
+
+urlreq = util.urlreq
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -287,7 +288,7 @@ def hook(ui, repo, hooktype, node=None, source=None, **kwargs):
     if source == 'serve' and 'url' in kwargs:
         url = kwargs['url'].split(':')
         if url[0] == 'remote' and url[1].startswith('http'):
-            user = urllib.unquote(url[3])
+            user = urlreq.unquote(url[3])
 
     if user is None:
         user = getpass.getuser()

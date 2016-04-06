@@ -8,8 +8,6 @@
 from __future__ import absolute_import
 
 import errno
-import urllib
-import urllib2
 
 from .i18n import _
 from .node import (
@@ -34,6 +32,9 @@ from . import (
     url as urlmod,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 # Maps bundle compression human names to internal representation.
 _bundlespeccompressions = {'none': None,
@@ -97,8 +98,8 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
                       'missing "=" in parameter: %s') % p)
 
             key, value = p.split('=', 1)
-            key = urllib.unquote(key)
-            value = urllib.unquote(value)
+            key = urlreq.unquote(key)
+            value = urlreq.unquote(value)
             params[key] = value
 
         return version, params
@@ -236,7 +237,7 @@ def getbundlespec(ui, fh):
     elif isinstance(b, streamclone.streamcloneapplier):
         requirements = streamclone.readbundle1header(fh)[2]
         params = 'requirements=%s' % ','.join(sorted(requirements))
-        return 'none-packed1;%s' % urllib.quote(params)
+        return 'none-packed1;%s' % urlreq.quote(params)
     else:
         raise error.Abort(_('unknown bundle type: %s') % b)
 
@@ -1465,7 +1466,7 @@ def caps20to10(repo):
     """return a set with appropriate options to use bundle20 during getbundle"""
     caps = set(['HG20'])
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo))
-    caps.add('bundle2=' + urllib.quote(capsblob))
+    caps.add('bundle2=' + urlreq.quote(capsblob))
     return caps
 
 # List of names of steps to perform for a bundle2 for getbundle, order matters.
@@ -1531,7 +1532,7 @@ def getbundle(repo, source, heads=None, common=None, bundlecaps=None,
     b2caps = {}
     for bcaps in bundlecaps:
         if bcaps.startswith('bundle2='):
-            blob = urllib.unquote(bcaps[len('bundle2='):])
+            blob = urlreq.unquote(bcaps[len('bundle2='):])
             b2caps.update(bundle2.decodecaps(blob))
     bundler = bundle2.bundle20(repo.ui, b2caps)
 
@@ -1800,8 +1801,8 @@ def parseclonebundlesmanifest(repo, s):
         attrs = {'URL': fields[0]}
         for rawattr in fields[1:]:
             key, value = rawattr.split('=', 1)
-            key = urllib.unquote(key)
-            value = urllib.unquote(value)
+            key = urlreq.unquote(key)
+            value = urlreq.unquote(value)
             attrs[key] = value
 
             # Parse BUNDLESPEC into components. This makes client-side
@@ -1917,9 +1918,9 @@ def trypullbundlefromurl(ui, repo, url):
                     cg.apply(repo, 'clonebundles', url)
                 tr.close()
                 return True
-            except urllib2.HTTPError as e:
+            except urlerr.httperror as e:
                 ui.warn(_('HTTP error fetching bundle: %s\n') % str(e))
-            except urllib2.URLError as e:
+            except urlerr.urlerror as e:
                 ui.warn(_('error fetching bundle: %s\n') % e.reason[1])
 
             return False

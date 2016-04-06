@@ -13,8 +13,6 @@ from __future__ import absolute_import
 import logging
 import os
 import socket
-import urllib
-import urllib2
 
 from .i18n import _
 from . import (
@@ -22,6 +20,9 @@ from . import (
     sslutil,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 # moved here from url.py to avoid a cycle
 class httpsendfile(object):
@@ -123,10 +124,10 @@ LOGFMT = '%(levelname)s:%(name)s:%(lineno)d:%(message)s'
 # Subclass BOTH of these because otherwise urllib2 "helpfully"
 # reinserts them since it notices we don't include any subclasses of
 # them.
-class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
+class http2handler(urlreq.httphandler, urlreq.httpshandler):
     def __init__(self, ui, pwmgr):
         global _configuredlogging
-        urllib2.AbstractHTTPHandler.__init__(self)
+        urlreq.abstracthttphandler.__init__(self)
         self.ui = ui
         self.pwmgr = pwmgr
         self._connections = {}
@@ -187,7 +188,7 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
             proxy = None
 
         if not host:
-            raise urllib2.URLError('no host given')
+            raise urlerr.urlerror('no host given')
 
         connkey = use_ssl, host, proxy
         allconns = self._connections.get(connkey, [])
@@ -217,13 +218,13 @@ class http2handler(urllib2.HTTPHandler, urllib2.HTTPSHandler):
             h.request(req.get_method(), path, req.data, headers)
             r = h.getresponse()
         except socket.error as err: # XXX what error?
-            raise urllib2.URLError(err)
+            raise urlerr.urlerror(err)
 
         # Pick apart the HTTPResponse object to get the addinfourl
         # object initialized properly.
         r.recv = r.read
 
-        resp = urllib.addinfourl(r, r.headers, req.get_full_url())
+        resp = urlreq.addinfourl(r, r.headers, req.get_full_url())
         resp.code = r.status
         resp.msg = r.reason
         return resp

@@ -152,7 +152,6 @@ import re
 import string
 import struct
 import sys
-import urllib
 
 from .i18n import _
 from . import (
@@ -164,6 +163,9 @@ from . import (
     url,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -457,8 +459,8 @@ def decodecaps(blob):
         else:
             key, vals = line.split('=', 1)
             vals = vals.split(',')
-        key = urllib.unquote(key)
-        vals = [urllib.unquote(v) for v in vals]
+        key = urlreq.unquote(key)
+        vals = [urlreq.unquote(v) for v in vals]
         caps[key] = vals
     return caps
 
@@ -467,8 +469,8 @@ def encodecaps(caps):
     chunks = []
     for ca in sorted(caps):
         vals = caps[ca]
-        ca = urllib.quote(ca)
-        vals = [urllib.quote(v) for v in vals]
+        ca = urlreq.quote(ca)
+        vals = [urlreq.quote(v) for v in vals]
         if vals:
             ca = "%s=%s" % (ca, ','.join(vals))
         chunks.append(ca)
@@ -570,9 +572,9 @@ class bundle20(object):
         """return a encoded version of all stream parameters"""
         blocks = []
         for par, value in self._params:
-            par = urllib.quote(par)
+            par = urlreq.quote(par)
             if value is not None:
-                value = urllib.quote(value)
+                value = urlreq.quote(value)
                 par = '%s=%s' % (par, value)
             blocks.append(par)
         return ' '.join(blocks)
@@ -691,7 +693,7 @@ class unbundle20(unpackermixin):
         params = {}
         for p in paramsblock.split(' '):
             p = p.split('=', 1)
-            p = [urllib.unquote(i) for i in p]
+            p = [urlreq.unquote(i) for i in p]
             if len(p) < 2:
                 p.append(None)
             self._processparam(*p)
@@ -1269,7 +1271,7 @@ def bundle2caps(remote):
     raw = remote.capable('bundle2')
     if not raw and raw != '':
         return {}
-    capsblob = urllib.unquote(remote.capable('bundle2'))
+    capsblob = urlreq.unquote(remote.capable('bundle2'))
     return decodecaps(capsblob)
 
 def obsmarkersversion(caps):

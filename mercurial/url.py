@@ -13,8 +13,6 @@ import base64
 import httplib
 import os
 import socket
-import urllib
-import urllib2
 
 from .i18n import _
 from . import (
@@ -26,13 +24,16 @@ from . import (
 )
 stringio = util.stringio
 
-class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
+urlerr = util.urlerr
+urlreq = util.urlreq
+
+class passwordmgr(urlreq.httppasswordmgrwithdefaultrealm):
     def __init__(self, ui):
-        urllib2.HTTPPasswordMgrWithDefaultRealm.__init__(self)
+        urlreq.httppasswordmgrwithdefaultrealm.__init__(self)
         self.ui = ui
 
     def find_user_password(self, realm, authuri):
-        authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
+        authinfo = urlreq.httppasswordmgrwithdefaultrealm.find_user_password(
             self, realm, authuri)
         user, passwd = authinfo
         if user and passwd:
@@ -72,10 +73,10 @@ class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
         self.ui.debug(msg % (user, passwd and '*' * len(passwd) or 'not set'))
 
     def find_stored_password(self, authuri):
-        return urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
+        return urlreq.httppasswordmgrwithdefaultrealm.find_user_password(
             self, None, authuri)
 
-class proxyhandler(urllib2.ProxyHandler):
+class proxyhandler(urlreq.proxyhandler):
     def __init__(self, ui):
         proxyurl = ui.config("http_proxy", "host") or os.getenv('http_proxy')
         # XXX proxyauthinfo = None
@@ -121,7 +122,7 @@ class proxyhandler(urllib2.ProxyHandler):
                 except OSError:
                     pass
 
-        urllib2.ProxyHandler.__init__(self, proxies)
+        urlreq.proxyhandler.__init__(self, proxies)
         self.ui = ui
 
     def proxy_open(self, req, proxy, type_):
@@ -134,7 +135,7 @@ class proxyhandler(urllib2.ProxyHandler):
             if e.startswith('.') and host.endswith(e[1:]):
                 return None
 
-        return urllib2.ProxyHandler.proxy_open(self, req, proxy, type_)
+        return urlreq.proxyhandler.proxy_open(self, req, proxy, type_)
 
 def _gen_sendfile(orgsend):
     def _sendfile(self, data):
@@ -148,7 +149,7 @@ def _gen_sendfile(orgsend):
             orgsend(self, data)
     return _sendfile
 
-has_https = util.safehasattr(urllib2, 'HTTPSHandler')
+has_https = util.safehasattr(urlreq, 'httpshandler')
 if has_https:
     try:
         _create_connection = socket.create_connection
@@ -357,10 +358,10 @@ if has_https:
                 **sslutil.sslkwargs(self.ui, host))
             sslutil.validator(self.ui, host)(self.sock)
 
-    class httpshandler(keepalive.KeepAliveHandler, urllib2.HTTPSHandler):
+    class httpshandler(keepalive.KeepAliveHandler, urlreq.httpshandler):
         def __init__(self, ui):
             keepalive.KeepAliveHandler.__init__(self)
-            urllib2.HTTPSHandler.__init__(self)
+            urlreq.httpshandler.__init__(self)
             self.ui = ui
             self.pwmgr = passwordmgr(self.ui)
 
@@ -403,9 +404,9 @@ if has_https:
             conn.ui = self.ui
             return conn
 
-class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
+class httpdigestauthhandler(urlreq.httpdigestauthhandler):
     def __init__(self, *args, **kwargs):
-        urllib2.HTTPDigestAuthHandler.__init__(self, *args, **kwargs)
+        urlreq.httpdigestauthhandler.__init__(self, *args, **kwargs)
         self.retried_req = None
 
     def reset_retry_count(self):
@@ -419,13 +420,13 @@ class httpdigestauthhandler(urllib2.HTTPDigestAuthHandler):
         if req is not self.retried_req:
             self.retried_req = req
             self.retried = 0
-        return urllib2.HTTPDigestAuthHandler.http_error_auth_reqed(
+        return urlreq.httpdigestauthhandler.http_error_auth_reqed(
                     self, auth_header, host, req, headers)
 
-class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
+class httpbasicauthhandler(urlreq.httpbasicauthhandler):
     def __init__(self, *args, **kwargs):
         self.auth = None
-        urllib2.HTTPBasicAuthHandler.__init__(self, *args, **kwargs)
+        urlreq.httpbasicauthhandler.__init__(self, *args, **kwargs)
         self.retried_req = None
 
     def http_request(self, request):
@@ -451,7 +452,7 @@ class httpbasicauthhandler(urllib2.HTTPBasicAuthHandler):
         if req is not self.retried_req:
             self.retried_req = req
             self.retried = 0
-        return urllib2.HTTPBasicAuthHandler.http_error_auth_reqed(
+        return urlreq.httpbasicauthhandler.http_error_auth_reqed(
                         self, auth_header, host, req, headers)
 
     def retry_http_basic_auth(self, host, req, realm):
@@ -494,7 +495,7 @@ def opener(ui, authinfo=None):
     handlers.extend((httpbasicauthhandler(passmgr),
                      httpdigestauthhandler(passmgr)))
     handlers.extend([h(ui, passmgr) for h in handlerfuncs])
-    opener = urllib2.build_opener(*handlers)
+    opener = urlreq.buildopener(*handlers)
 
     # 1.0 here is the _protocol_ version
     opener.addheaders = [('User-agent', 'mercurial/proto-1.0')]
@@ -508,6 +509,6 @@ def open(ui, url_, data=None):
         url_, authinfo = u.authinfo()
     else:
         path = util.normpath(os.path.abspath(url_))
-        url_ = 'file://' + urllib.pathname2url(path)
+        url_ = 'file://' + urlreq.pathname2url(path)
         authinfo = None
     return opener(ui, authinfo).open(url_, data)

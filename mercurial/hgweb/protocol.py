@@ -8,7 +8,6 @@
 from __future__ import absolute_import
 
 import cgi
-import urllib
 import zlib
 
 from .common import (
@@ -20,6 +19,9 @@ from .. import (
     wireproto,
 )
 stringio = util.stringio
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 HGTYPE = 'application/mercurial-0.1'
 HGERRTYPE = 'application/hg-error'
@@ -82,8 +84,8 @@ class webproto(wireproto.abstractserverproto):
     def _client(self):
         return 'remote:%s:%s:%s' % (
             self.req.env.get('wsgi.url_scheme') or 'http',
-            urllib.quote(self.req.env.get('REMOTE_HOST', '')),
-            urllib.quote(self.req.env.get('REMOTE_USER', '')))
+            urlreq.quote(self.req.env.get('REMOTE_HOST', '')),
+            urlreq.quote(self.req.env.get('REMOTE_USER', '')))
 
 def iscmd(cmd):
     return cmd in wireproto.commands

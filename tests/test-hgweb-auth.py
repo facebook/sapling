@@ -1,13 +1,15 @@
 from __future__ import absolute_import, print_function
 
 from mercurial import demandimport; demandimport.enable()
-import urllib2
 from mercurial import (
     error,
     ui as uimod,
     url,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 class myui(uimod.ui):
     def interactive(self):
@@ -104,7 +106,7 @@ test({'x.prefix': 'http://example.org/foo/bar',
 
 def testauthinfo(fullurl, authurl):
     print('URIs:', fullurl, authurl)
-    pm = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    pm = urlreq.httppasswordmgrwithdefaultrealm()
     pm.add_password(*util.url(fullurl).authinfo()[1])
     print(pm.find_user_password('test', authurl))
 

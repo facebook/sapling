@@ -26,22 +26,27 @@ import os
 import re
 import socket
 import stat
-import urllib
-import urllib2
 
-addclosehook = urllib.addclosehook
-addinfourl = urllib.addinfourl
-splitattr = urllib.splitattr
-splitpasswd = urllib.splitpasswd
-splitport = urllib.splitport
-splituser = urllib.splituser
-unquote = urllib.unquote
+from . import (
+    util,
+)
+
+urlerr = util.urlerr
+urlreq = util.urlreq
+
+addclosehook = urlreq.addclosehook
+addinfourl = urlreq.addinfourl
+splitattr = urlreq.splitattr
+splitpasswd = urlreq.splitpasswd
+splitport = urlreq.splitport
+splituser = urlreq.splituser
+unquote = urlreq.unquote
 
 class RangeError(IOError):
     """Error raised when an unsatisfiable range is requested."""
     pass
 
-class HTTPRangeHandler(urllib2.BaseHandler):
+class HTTPRangeHandler(urlreq.basehandler):
     """Handler that enables HTTP Range headers.
 
     This was extremely simple. The Range header is a HTTP feature to
@@ -54,20 +59,20 @@ class HTTPRangeHandler(urllib2.BaseHandler):
         import byterange
 
         range_handler = range.HTTPRangeHandler()
-        opener = urllib2.build_opener(range_handler)
+        opener = urlreq.buildopener(range_handler)
 
         # install it
-        urllib2.install_opener(opener)
+        urlreq.installopener(opener)
 
         # create Request and set Range header
-        req = urllib2.Request('http://www.python.org/')
+        req = urlreq.request('http://www.python.org/')
         req.header['Range'] = 'bytes=30-50'
-        f = urllib2.urlopen(req)
+        f = urlreq.urlopen(req)
     """
 
     def http_error_206(self, req, fp, code, msg, hdrs):
         # 206 Partial Content Response
-        r = urllib.addinfourl(fp, hdrs, req.get_full_url())
+        r = urlreq.addinfourl(fp, hdrs, req.get_full_url())
         r.code = code
         r.msg = msg
         return r
@@ -204,7 +209,7 @@ class RangeableFileObject(object):
                 raise RangeError('Requested Range Not Satisfiable')
             pos += bufsize
 
-class FileRangeHandler(urllib2.FileHandler):
+class FileRangeHandler(urlreq.filehandler):
     """FileHandler subclass that adds Range support.
     This class handles Range headers exactly like an HTTP
     server would.
@@ -212,15 +217,15 @@ class FileRangeHandler(urllib2.FileHandler):
     def open_local_file(self, req):
         host = req.get_host()
         file = req.get_selector()
-        localfile = urllib.url2pathname(file)
+        localfile = urlreq.url2pathname(file)
         stats = os.stat(localfile)
         size = stats[stat.ST_SIZE]
         modified = email.Utils.formatdate(stats[stat.ST_MTIME])
         mtype = mimetypes.guess_type(file)[0]
         if host:
-            host, port = urllib.splitport(host)
+            host, port = urlreq.splitport(host)
             if port or socket.gethostbyname(host) not in self.get_names():
-                raise urllib2.URLError('file not on local host')
+                raise urlerr.urlerror('file not on local host')
         fo = open(localfile,'rb')
         brange = req.headers.get('Range', None)
         brange = range_header_to_tuple(brange)
@@ -236,7 +241,7 @@ class FileRangeHandler(urllib2.FileHandler):
         headers = email.message_from_string(
             'Content-Type: %s\nContent-Length: %d\nLast-Modified: %s\n' %
             (mtype or 'text/plain', size, modified))
-        return urllib.addinfourl(fo, headers, 'file:'+file)
+        return urlreq.addinfourl(fo, headers, 'file:'+file)
 
 
 # FTP Range Support
@@ -246,7 +251,7 @@ class FileRangeHandler(urllib2.FileHandler):
 # follows:
 # -- range support modifications start/end here
 
-class FTPRangeHandler(urllib2.FTPHandler):
+class FTPRangeHandler(urlreq.ftphandler):
     def ftp_open(self, req):
         host = req.get_host()
         if not host:
@@ -270,7 +275,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
         try:
             host = socket.gethostbyname(host)
         except socket.error as msg:
-            raise urllib2.URLError(msg)
+            raise urlerr.urlerror(msg)
         path, attrs = splitattr(req.get_selector())
         dirs = path.split('/')
         dirs = map(unquote, dirs)
@@ -334,7 +339,7 @@ class FTPRangeHandler(urllib2.FTPHandler):
         fw = ftpwrapper(user, passwd, host, port, dirs)
         return fw
 
-class ftpwrapper(urllib.ftpwrapper):
+class ftpwrapper(urlreq.ftpwrapper):
     # range support note:
     # this ftpwrapper code is copied directly from
     # urllib. The only enhancement is to add the rest

@@ -11,7 +11,6 @@ import cgi
 import os
 import re
 import time
-import urllib
 
 from . import (
     encoding,
@@ -21,6 +20,9 @@ from . import (
     templatekw,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 # filters are callables like:
 #   fn(obj)
@@ -299,7 +301,7 @@ def revescape(text):
     Forward slashes are escaped twice to prevent web servers from prematurely
     unescaping them. For example, "@foo bar/baz" becomes "@foo%20bar%252Fbaz".
     """
-    return urllib.quote(text, safe='/@').replace('/', '%252F')
+    return urlreq.quote(text, safe='/@').replace('/', '%252F')
 
 @templatefilter('rfc3339date')
 def rfc3339date(text):
@@ -384,7 +386,7 @@ def urlescape(text):
     """Any text. Escapes all "special" characters. For example,
     "foo bar" becomes "foo%20bar".
     """
-    return urllib.quote(text)
+    return urlreq.quote(text)
 
 @templatefilter('user')
 def userfilter(text):

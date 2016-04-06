@@ -6,10 +6,11 @@
 
 '''remote largefile store; the base class for wirestore'''
 
-import urllib2
-
 from mercurial import util, wireproto, error
 from mercurial.i18n import _
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 import lfutil
 import basestore
@@ -49,11 +50,11 @@ class remotestore(basestore.basestore):
     def _getfile(self, tmpfile, filename, hash):
         try:
             chunks = self._get(hash)
-        except urllib2.HTTPError as e:
+        except urlerr.httperror as e:
             # 401s get converted to error.Aborts; everything else is fine being
             # turned into a StoreError
             raise basestore.StoreError(filename, hash, self.url, str(e))
-        except urllib2.URLError as e:
+        except urlerr.urlerror as e:
             # This usually indicates a connection problem, so don't
             # keep trying with the other files... they will probably
             # all fail too.

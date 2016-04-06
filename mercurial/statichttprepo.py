@@ -11,8 +11,6 @@ from __future__ import absolute_import
 
 import errno
 import os
-import urllib
-import urllib2
 
 from .i18n import _
 from . import (
@@ -27,6 +25,9 @@ from . import (
     url,
     util,
 )
+
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 class httprangereader(object):
     def __init__(self, url, opener):
@@ -45,7 +46,7 @@ class httprangereader(object):
     def seek(self, pos):
         self.pos = pos
     def read(self, bytes=None):
-        req = urllib2.Request(self.url)
+        req = urlreq.request(self.url)
         end = ''
         if bytes:
             end = self.pos + bytes - 1
@@ -56,10 +57,10 @@ class httprangereader(object):
             f = self.opener.open(req)
             data = f.read()
             code = f.code
-        except urllib2.HTTPError as inst:
+        except urlerr.httperror as inst:
             num = inst.code == 404 and errno.ENOENT or None
             raise IOError(num, inst)
-        except urllib2.URLError as inst:
+        except urlerr.urlerror as inst:
             raise IOError(None, inst.reason[1])
 
         if code == 200:
@@ -92,7 +93,7 @@ def build_opener(ui, authinfo):
         def __call__(self, path, mode='r', *args, **kw):
             if mode not in ('r', 'rb'):
                 raise IOError('Permission denied')
-            f = "/".join((self.base, urllib.quote(path)))
+            f = "/".join((self.base, urlreq.quote(path)))
             return httprangereader(f, urlopener)
 
         def join(self, path):

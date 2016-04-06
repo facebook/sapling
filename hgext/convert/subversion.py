@@ -8,8 +8,6 @@ import os
 import re
 import sys
 import tempfile
-import urllib
-import urllib2
 import xml.dom.minidom
 
 from mercurial import (
@@ -25,6 +23,8 @@ from . import common
 
 stringio = util.stringio
 propertycache = util.propertycache
+urlerr = util.urlerr
+urlreq = util.urlreq
 
 commandline = common.commandline
 commit = common.commit
@@ -94,7 +94,7 @@ def quote(s):
     # so we can extend it safely with new components. The "safe"
     # characters were taken from the "svn_uri__char_validity" table in
     # libsvn_subr/path.c.
-    return urllib.quote(s, "!$&'()*+,-./:=@_~")
+    return urlreq.quote(s, "!$&'()*+,-./:=@_~")
 
 def geturl(path):
     try:
@@ -233,10 +233,10 @@ def filecheck(ui, path, proto):
 # for the svn-specific "not found" XML.
 def httpcheck(ui, path, proto):
     try:
-        opener = urllib2.build_opener()
+        opener = urlreq.buildopener()
         rsp = opener.open('%s://%s/!svn/ver/0/.svn' % (proto, path))
         data = rsp.read()
-    except urllib2.HTTPError as inst:
+    except urlerr.httperror as inst:
         if inst.code != 404:
             # Except for 404 we cannot know for sure this is not an svn repo
             ui.warn(_('svn: cannot probe remote repository, assume it could '
@@ -245,7 +245,7 @@ def httpcheck(ui, path, proto):
             return True
         data = inst.fp.read()
     except Exception:
-        # Could be urllib2.URLError if the URL is invalid or anything else.
+        # Could be urlerr.urlerror if the URL is invalid or anything else.
         return False
     return '<m:human-readable errcode="160013">' in data
 
@@ -260,7 +260,7 @@ def issvnurl(ui, url):
             if (os.name == 'nt' and path[:1] == '/' and path[1:2].isalpha()
                 and path[2:6].lower() == '%3a/'):
                 path = path[:2] + ':/' + path[6:]
-            path = urllib.url2pathname(path)
+            path = urlreq.url2pathname(path)
     except ValueError:
         proto = 'file'
         path = os.path.abspath(url)
@@ -330,7 +330,7 @@ class svn_source(converter_source):
             self.baseurl = svn.ra.get_repos_root(self.ra)
             # Module is either empty or a repository path starting with
             # a slash and not ending with a slash.
-            self.module = urllib.unquote(self.url[len(self.baseurl):])
+            self.module = urlreq.unquote(self.url[len(self.baseurl):])
             self.prevmodule = None
             self.rootmodule = self.module
             self.commits = {}

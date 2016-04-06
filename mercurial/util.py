@@ -34,7 +34,6 @@ import tempfile
 import textwrap
 import time
 import traceback
-import urllib
 import zlib
 
 from . import (
@@ -50,10 +49,14 @@ for attr in (
     'empty',
     'queue',
     'urlerr',
-    'urlreq',
+    # we do import urlreq, but we do it outside the loop
+    #'urlreq',
     'stringio',
 ):
     globals()[attr] = getattr(pycompat, attr)
+
+# This line is to make pyflakes happy:
+urlreq = pycompat.urlreq
 
 if os.name == 'nt':
     from . import windows as platform
@@ -2388,30 +2391,30 @@ class url(object):
             if hasdriveletter(self.path):
                 s += '/'
         if self.user:
-            s += urllib.quote(self.user, safe=self._safechars)
+            s += urlreq.quote(self.user, safe=self._safechars)
         if self.passwd:
-            s += ':' + urllib.quote(self.passwd, safe=self._safechars)
+            s += ':' + urlreq.quote(self.passwd, safe=self._safechars)
         if self.user or self.passwd:
             s += '@'
         if self.host:
             if not (self.host.startswith('[') and self.host.endswith(']')):
-                s += urllib.quote(self.host)
+                s += urlreq.quote(self.host)
             else:
                 s += self.host
         if self.port:
-            s += ':' + urllib.quote(self.port)
+            s += ':' + urlreq.quote(self.port)
         if self.host:
             s += '/'
         if self.path:
             # TODO: similar to the query string, we should not unescape the
             # path when we store it, the path might contain '%2f' = '/',
             # which we should *not* escape.
-            s += urllib.quote(self.path, safe=self._safepchars)
+            s += urlreq.quote(self.path, safe=self._safepchars)
         if self.query:
             # we store the query in escaped form.
             s += '?' + self.query
         if self.fragment is not None:
-            s += '#' + urllib.quote(self.fragment, safe=self._safepchars)
+            s += '#' + urlreq.quote(self.fragment, safe=self._safepchars)
         return s
 
     def authinfo(self):

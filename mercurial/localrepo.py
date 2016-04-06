@@ -12,7 +12,6 @@ import inspect
 import os
 import random
 import time
-import urllib
 import weakref
 
 from .i18n import _
@@ -59,6 +58,8 @@ from . import (
 
 release = lockmod.release
 propertycache = util.propertycache
+urlerr = util.urlerr
+urlreq = util.urlreq
 filecache = scmutil.filecache
 
 class repofilecache(filecache):
@@ -366,7 +367,7 @@ class localrepository(object):
         if self.ui.configbool('experimental', 'bundle2-advertise', True):
             caps = set(caps)
             capsblob = bundle2.encodecaps(bundle2.getrepocaps(self))
-            caps.add('bundle2=' + urllib.quote(capsblob))
+            caps.add('bundle2=' + urlreq.quote(capsblob))
         return caps
 
     def _applyopenerreqs(self):
