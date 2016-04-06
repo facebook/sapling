@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 from __future__ import absolute_import, print_function
 from mercurial.ui import (
     ui,
