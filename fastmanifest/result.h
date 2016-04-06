@@ -19,23 +19,23 @@ typedef struct _get_path_result_t {
   struct _node_t* node;
 } get_path_result_t;
 
-typedef enum _add_update_path_result_t {
+typedef enum {
   ADD_UPDATE_PATH_OK,
   ADD_UPDATE_PATH_OOM,
   ADD_UPDATE_PATH_CONFLICT,
   ADD_UPDATE_PATH_WTF,
 } add_update_path_result_t;
 
-typedef enum _set_metadata_result_t {
+typedef enum {
   SET_METADATA_OK,
 } set_metadata_result_t;
 
-typedef enum _remove_path_result_t {
+typedef enum {
   REMOVE_PATH_OK,
 
 } remove_path_result_t;
 
-typedef enum _write_to_file_result_t {
+typedef enum {
   WRITE_TO_FILE_OK,
 
 } write_to_file_result_t;

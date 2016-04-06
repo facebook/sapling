@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-typedef enum _node_add_child_result_t {
+typedef enum {
   ADD_CHILD_OK,
   ADD_CHILD_ILLEGAL_PARENT,
   ADD_CHILD_ILLEGAL_CHILD,
@@ -18,7 +18,7 @@ typedef enum _node_add_child_result_t {
   NEEDS_LARGER_NODE,
 } node_add_child_result_t;
 
-typedef enum _node_remove_child_result_t {
+typedef enum {
   REMOVE_CHILD_OK,
   REMOVE_CHILD_ILLEGAL_PARENT,
   REMOVE_CHILD_ILLEGAL_INDEX,

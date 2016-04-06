@@ -12,7 +12,7 @@
 #include "node.h"
 #include "tree.h"
 
-typedef enum _arena_policy_t {
+typedef enum {
   ARENA_POLICY_FAIL,                    // fail immediately when there is
                                         // insufficient space
   ARENA_POLICY_REALLOC,                 // attempt to realloc until realloc

@@ -189,7 +189,7 @@ typedef enum {
   // that do not should be removed.
   REMOVE_EMPTY_IMPLICIT_NODES,
 } find_path_operation_type;
-typedef enum _find_path_result_t {
+typedef enum {
   FIND_PATH_OK,
   FIND_PATH_NOT_FOUND,
   FIND_PATH_OOM,

@@ -16,7 +16,7 @@
 #include "result.h"
 
 #if 0 // FIXME: (ttung) probably remove this
-typedef enum _allocation_mode_t {
+typedef enum {
   ARENA_MODE,                           /* all allocations should come from the
                                          * arena.  this is to produce a
                                          * compact and relocatable tree. */
