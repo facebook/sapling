@@ -43,7 +43,14 @@ from . import (
     i18n,
     osutil,
     parsers,
+    pycompat,
 )
+
+for attr in (
+    'empty',
+    'queue',
+):
+    globals()[attr] = getattr(pycompat, attr)
 
 if os.name == 'nt':
     from . import windows as platform
