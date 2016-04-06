@@ -294,20 +294,26 @@ static find_path_result_t find_path(
   return result;
 }
 
-tree_t* alloc_tree() {
-  // set up the shadow root and the real root.
-  node_t* shadow_root = alloc_node("/", 1, 1);
-  shadow_root->type = TYPE_ROOT;
+tree_t *alloc_tree() {
+  // do all the memory allocations.
+  node_t *shadow_root = alloc_node("/", 1, 1);
+  node_t *real_root = alloc_node("/", 1, 0);
+  tree_t *tree = (tree_t *) calloc(1, sizeof(tree_t));
 
-  node_t* real_root = alloc_node("/", 1, 0);
+  if (shadow_root == NULL ||
+      real_root == NULL ||
+      tree == NULL) {
+    goto fail;
+  }
+
+  shadow_root->type = TYPE_ROOT;
   real_root->type = TYPE_ROOT;
 
-  add_child(shadow_root, real_root);
+  node_add_child_result_t add_result = add_child(shadow_root, real_root);
+  if (add_result != ADD_CHILD_OK) {
+    goto fail;
+  }
 
-  tree_t* tree = (tree_t*) calloc(1, sizeof(tree_t));
-#if 0 // FIXME: (ttung) probably remove this
-  tree->mode = STANDARD_MODE;
-#endif /* #if 0 */
   tree->shadow_root = shadow_root;
   tree->consumed_memory = 0;
   tree->consumed_memory += shadow_root->block_sz;
@@ -318,6 +324,19 @@ tree_t* alloc_tree() {
   tree->compacted = false;
 
   return tree;
+
+fail:
+  if (shadow_root != NULL) {
+    free(shadow_root);
+  }
+  if (real_root != NULL) {
+    free(real_root);
+  }
+  if (tree != NULL) {
+    free(tree);
+  }
+
+  return NULL;
 }
 
 static void destroy_tree_helper(tree_t* tree, node_t* node) {
