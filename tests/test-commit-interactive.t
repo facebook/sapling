@@ -59,6 +59,14 @@ Select files but no hunks
   
   
 
+Abort for untracked
+
+  $ touch untracked
+  $ hg commit -i -m should-fail empty-rw untracked
+  abort: untracked: file not tracked!
+  [255]
+  $ rm untracked
+
 Record empty file
 
   $ hg commit -i -d '0 0' -m empty empty-rw<<EOF

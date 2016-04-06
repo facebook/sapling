@@ -135,12 +135,24 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
         """
 
         checkunfinished(repo, commit=True)
-        merge = len(repo[None].parents()) > 1
+        wctx = repo[None]
+        merge = len(wctx.parents()) > 1
         if merge:
             raise error.Abort(_('cannot partially commit a merge '
                                '(use "hg commit" instead)'))
 
+        def fail(f, msg):
+            raise error.Abort('%s: %s' % (f, msg))
+
+        force = opts.get('force')
+        if not force:
+            vdirs = []
+            match.explicitdir = vdirs.append
+            match.bad = fail
+
         status = repo.status(match=match)
+        if not force:
+            repo.checkcommitpatterns(wctx, vdirs, match, status, fail)
         diffopts = patch.difffeatureopts(ui, opts=opts, whitespace=True)
         diffopts.nodates = True
         diffopts.git = True
