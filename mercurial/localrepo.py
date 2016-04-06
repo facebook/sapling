@@ -1479,8 +1479,7 @@ class localrepository(object):
 
     def checkcommitpatterns(self, wctx, vdirs, match, status, fail):
         """check for commit arguments that aren't commitable"""
-        force = False
-        if not force and (match.isexact() or match.prefix()):
+        if match.isexact() or match.prefix():
             matched = set(status.modified + status.added + status.removed)
 
             for f in match.files():
