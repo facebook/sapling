@@ -846,3 +846,52 @@ updates the working directory and current active bookmark)
   6:81dcce76aa0b
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
    * Y                         6:81dcce76aa0b
+
+  $ cd ..
+
+ensure changelog is written before bookmarks
+  $ hg init orderrepo
+  $ cd orderrepo
+  $ touch a
+  $ hg commit -Aqm one
+  $ hg book mybook
+  $ echo a > a
+
+  $ cat > $TESTTMP/pausefinalize.py <<EOF
+  > from mercurial import extensions, localrepo
+  > import os, time
+  > def transaction(orig, self, desc, report=None):
+  >    tr = orig(self, desc, report)
+  >    def sleep(*args, **kwargs):
+  >        retry = 20
+  >        while retry > 0 and not os.path.exists("$TESTTMP/unpause"):
+  >            retry -= 1
+  >            time.sleep(0.5)
+  >        if os.path.exists("$TESTTMP/unpause"):
+  >            os.remove("$TESTTMP/unpause")
+  >    # It is important that this finalizer start with 'a', so it runs before
+  >    # the changelog finalizer appends to the changelog.
+  >    tr.addfinalize('a-sleep', sleep)
+  >    return tr
+  > 
+  > def extsetup(ui):
+  >    # This extension inserts an artifical pause during the transaction
+  >    # finalizer, so we can run commands mid-transaction-close.
+  >    extensions.wrapfunction(localrepo.localrepository, 'transaction',
+  >                            transaction)
+  > EOF
+  $ hg commit -qm two --config extensions.pausefinalize=$TESTTMP/pausefinalize.py &
+  $ sleep 2
+  $ hg log -r .
+  changeset:   0:867bc5792c8c
+  bookmark:    mybook
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     one
+  
+  $ hg bookmarks
+   * mybook                    0:867bc5792c8c
+  $ touch $TESTTMP/unpause
+
+  $ cd ..
