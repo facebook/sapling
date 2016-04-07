@@ -49,6 +49,8 @@ from . import (
 for attr in (
     'empty',
     'queue',
+    'urlerr',
+    'urlreq',
     'stringio',
 ):
     globals()[attr] = getattr(pycompat, attr)
