@@ -316,6 +316,8 @@ pypats = [
     (r'def.*[( ]\w+=\{\}', "don't use mutable default arguments"),
     (r'\butil\.Abort\b', "directly use error.Abort"),
     (r'^import Queue', "don't use Queue, use util.queue + util.empty"),
+    (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
+    (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
   ],
   # warnings
   [
