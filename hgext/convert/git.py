@@ -57,6 +57,10 @@ class convert_git(common.converter_source, common.commandline):
         super(convert_git, self).__init__(ui, path, revs=revs)
         common.commandline.__init__(self, ui, 'git')
 
+        # Pass an absolute path to git to prevent from ever being interpreted
+        # as a URL
+        path = os.path.abspath(path)
+
         if os.path.isdir(path + "/.git"):
             path += "/.git"
         if not os.path.exists(path + "/objects"):

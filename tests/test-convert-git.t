@@ -714,7 +714,7 @@ damage git repository by renaming a commit object
   $ COMMIT_OBJ=1c/0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
   $ mv git-repo4/.git/objects/$COMMIT_OBJ git-repo4/.git/objects/$COMMIT_OBJ.tmp
   $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
-  abort: cannot retrieve number of commits in git-repo4/.git
+  abort: cannot retrieve number of commits in $TESTTMP/git-repo4/.git
   $ mv git-repo4/.git/objects/$COMMIT_OBJ.tmp git-repo4/.git/objects/$COMMIT_OBJ
 damage git repository by renaming a blob object
 
@@ -747,6 +747,23 @@ test for escaping the repo name (CVE-2016-3069)
   0 empty
   updating bookmarks
   $ test -f COMMAND-INJECTION
+  [1]
+
+test for safely passing paths to git (CVE-2016-3105)
+
+  $ git init 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #'
+  Initialized empty Git repository in $TESTTMP/ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #/.git/
+  $ cd 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #'
+  $ git commit -q --allow-empty -m 'empty'
+  $ cd ..
+  $ hg convert 'ext::sh -c echo% pwned% >GIT-EXT-COMMAND-INJECTION% #' 'converted-git-ext'
+  initializing destination converted-git-ext repository
+  scanning source...
+  sorting...
+  converting...
+  0 empty
+  updating bookmarks
+  $ test -f GIT-EXT-COMMAND-INJECTION
   [1]
 
 #endif
