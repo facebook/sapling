@@ -1,3 +1,6 @@
+  $ $PYTHON -c 'import remotenames' || exit 80
+  $ hash hg-new-workdir 2>/dev/null || exit 80
+
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/reflog.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
