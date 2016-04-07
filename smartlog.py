@@ -46,9 +46,13 @@ def uisetup(ui):
     wrapfunction(cmdutil.changeset_templater, '_show', show)
 
     def ascii(orig, ui, state, type, char, text, coldata):
-        # Show . for fake nodes
+        # Show : for fake nodes
         if type == 'F':
-            char = "."
+            char = ui.config('experimental', 'graphstyle.grandparent', ':')
+            # fallback to the old "." so the test will pass with
+            # --extra-config-opt=experimental.graphstyle.grandparent="|"
+            if char == '|':
+                char = '.'
         # Color the current commits. @ is too subtle
         if enabled and getattr(ui, '_colormode', '') == 'ansi':
             color = None
