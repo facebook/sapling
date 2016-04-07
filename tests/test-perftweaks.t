@@ -113,7 +113,7 @@ Test file permissions
   $ touch a
   $ hg commit -qAm a
   $ ls -la .hg/cache/noderevs/
-  total 12
-  drwxrwsr-x. 2 * . (glob)
-  drwxrwsr-x. 3 * .. (glob)
-  -rw-rw-r--. 1 * branchheads-served (glob)
+  total * (glob)
+  drwxrwsr-x.? 2 .* \. (re)
+  drwxrwsr-x.? 3 .* \.\. (re)
+  -rw-rw-r--.? 1 .* branchheads-served (re)
