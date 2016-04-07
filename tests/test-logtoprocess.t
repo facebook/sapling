@@ -35,7 +35,7 @@ Test if logtoprocess correctly captures command-related log calls.
 Running a command triggers both a ui.log('command') and a
 ui.log('commandfinish') call. The foo command also uses ui.log.
 
-Use head to ensure we wait for all lines to be produced, and sort to avoid 
+Use head to ensure we wait for all lines to be produced, and sort to avoid
 ordering issues between the various processes we spawn:
   $ hg foo | head -n 17 | sort
   

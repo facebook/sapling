@@ -38,7 +38,7 @@ Test wrapped blame to be able to handle the usual command line attributes
   37b9ff139054:         test:Thu, 01 Jan 1970 00:00:00 +0000:    1:line one
   37b9ff139054:         test:Thu, 01 Jan 1970 00:00:00 +0000:    2:line two
   05d474df3f59:         test:Thu, 01 Jan 1970 00:00:00 +0000:    3:line three
-  $ hg blame -p a 
+  $ hg blame -p a
   37b9ff139054:D111111 :line one
   37b9ff139054:D111111 :line two
   05d474df3f59:D222222 :line three

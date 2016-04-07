@@ -42,7 +42,8 @@ from itertools import chain
 def uisetup(ui):
     if platform.system() == 'Windows':
         # no fork on Windows, but we can create a detached process
-        # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863(v=vs.85).aspx
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/
+        # ms684863(v=vs.85).aspx
         # No stdlib constant exists for this value
         DETACHED_PROCESS = 0x00000008
         _creationflags = DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
