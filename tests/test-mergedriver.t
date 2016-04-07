@@ -62,10 +62,10 @@ merge driver that always takes other versions
   >     backup = ui.backupconfig('ui', 'forcemerge')
   >     try:
   >         ui.setconfig('ui', 'forcemerge', ':other', 'mergedriver')
-  >         mergestate.preresolve('foo.txt', wctx, labels=labels)
-  >         mergestate.resolve('foo.txt', wctx, labels=labels)
-  >         mergestate.preresolve('bar.txt', wctx, labels=labels)
-  >         mergestate.resolve('bar.txt', wctx, labels=labels)
+  >         mergestate.preresolve('foo.txt', wctx)
+  >         mergestate.resolve('foo.txt', wctx)
+  >         mergestate.preresolve('bar.txt', wctx)
+  >         mergestate.resolve('bar.txt', wctx)
   >         mergestate.commit()
   >     finally:
   >         ui.restoreconfig(backup)
@@ -273,10 +273,10 @@ indicate merge driver is necessary at commit
   >     backup = ui.backupconfig('ui', 'forcemerge')
   >     try:
   >         ui.setconfig('ui', 'forcemerge', ':other', 'mergedriver')
-  >         mergestate.preresolve('foo.txt', wctx, labels=labels)
-  >         mergestate.resolve('foo.txt', wctx, labels=labels)
-  >         mergestate.preresolve('bar.txt', wctx, labels=labels)
-  >         mergestate.resolve('bar.txt', wctx, labels=labels)
+  >         mergestate.preresolve('foo.txt', wctx)
+  >         mergestate.resolve('foo.txt', wctx)
+  >         mergestate.preresolve('bar.txt', wctx)
+  >         mergestate.resolve('bar.txt', wctx)
   >         mergestate.commit()
   >     finally:
   >         ui.restoreconfig(backup)
@@ -607,6 +607,9 @@ this should invoke the merge driver
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92
   merge driver: python:$TESTTMP/mergedriver-raise.py (state "u")
+  labels:
+    local: working copy
+    other: destination
   file extras: foo.txt (ancestorlinknode = ede3d67b8d0fb0052854c85fb16823c825d21060)
   file: foo.txt (record type "F", state "u", hash 9206ac42b532ef8e983470c251f4e1a365fd636c)
     local path: foo.txt (flags "")
@@ -644,6 +647,9 @@ test merge with automatic commit afterwards -- e.g. graft
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
   merge driver: python:$TESTTMP/mergedriver-other.py (state "s")
+  labels:
+    local: local
+    other: graft
   file extras: bar.txt (ancestorlinknode = b9c4506f0639a99fcbfb8ce4764aa2aa4d2f6f92)
   file: bar.txt (record type "F", state "r", hash 9d6caa30f54d05af0edb194bfa26137b109f2112)
     local path: bar.txt (flags "")
