@@ -1864,7 +1864,7 @@ class TextTestRunner(unittest.TextTestRunner):
                     sub.wait()
                     m = re.search(
                         (r'\nThe first (?P<goodbad>bad|good) revision '
-                         r'is:\nchangeset: +\d:(?P<node>[a-f0-9]+)\n.*\n'
+                         r'is:\nchangeset: +\d+:(?P<node>[a-f0-9]+)\n.*\n'
                          r'summary: +(?P<summary>[^\n]+)\n'),
                         data, (re.MULTILINE | re.DOTALL))
                     if m is None:
