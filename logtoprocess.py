@@ -68,14 +68,16 @@ def uisetup(ui):
                 newsession = {'preexec_fn': os.setsid}
             else:
                 newsession = {'start_new_session': True}
-            # connect stdin to devnull to make sure the subprocess can't
-            # muck up that stream for mercurial.
-            subprocess.Popen(
-                script, shell=True, stdin=open(os.devnull, 'r'), env=env,
-                close_fds=True, **newsession)
-            # mission accomplished, this child needs to exit and not
-            # continue the hg process here.
-            os._exit(0)
+            try:
+                # connect stdin to devnull to make sure the subprocess can't
+                # muck up that stream for mercurial.
+                subprocess.Popen(
+                    script, shell=True, stdin=open(os.devnull, 'r'), env=env,
+                    close_fds=True, **newsession)
+            finally:
+                # mission accomplished, this child needs to exit and not
+                # continue the hg process here.
+                os._exit(0)
 
     class logtoprocessui(ui.__class__):
         def log(self, event, *msg, **opts):
