@@ -16,13 +16,30 @@ Check diagnosis, debugging information
 
   $ printaccessedrevs() {
   >     [ ! -f "$TESTTMP/logfile" ] && echo "no access" && return
-  >     cat "$TESTTMP/logfile" | sort | uniq
+  >     python "$TESTTMP/summary.py" "$TESTTMP/cachedrevs" "$TESTTMP/logfile"
   >     rm "$TESTTMP/logfile"
   > }
 
-  $ printcachedrevs() {
-  > hg log -r "fastmanifesttocache()" -T "{rev}\n"
+  $ savecachedrevs() {
+  >      (printf "%d " "-1"
+  >       hg log -r "fastmanifesttocache()" -T "{rev} "
+  >       echo "") > $TESTTMP/cachedrevs
   > }
+
+
+  $ cat > $TESTTMP/summary.py << EOM
+  > import sys
+  > def summary(cached,accessed):
+  >     accessed = open(accessed).readlines()[0]
+  >     cached = open(cached).readlines()[0]
+  >     accessedset = set(accessed.strip().split(' '))
+  >     cachedset = set(cached.strip().split(' '))
+  >     print '================================================='
+  >     print 'CACHE MISS %s' % sorted(accessedset - cachedset)
+  >     print 'CACHE HIT %s' % sorted(accessedset & cachedset)
+  >     print '================================================='
+  > summary(sys.argv[1], sys.argv[2])
+  > EOM
 
   $ mkdir diagnosis
   $ cd diagnosis
@@ -34,88 +51,78 @@ Check diagnosis, debugging information
   > logfile=$TESTTMP/logfile
   > EOF
 
-
 1) Commit
 
-  $ printcachedrevs
+  $ savecachedrevs
   $ mkcommit a
-  $ printaccessedrevs
-  -1
 
-  $ printcachedrevs
-  0
+  $ savecachedrevs
   $ mkcommit b
   $ printaccessedrevs
-  -1
-  0
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['-1']
+  =================================================
 
   $ echo "c" > a
-  $ printcachedrevs
-  0
-  1
+  $ savecachedrevs
   $ hg commit -m "new a"
   $ printaccessedrevs
-  -1
-  1
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['1']
+  =================================================
 
 2) Diff
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg diff -c . > /dev/null
   $ printaccessedrevs
-  1
-  2
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['1']
+  =================================================
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg diff -c ".^" > /dev/null
   $ printaccessedrevs
-  0
-  1
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['0']
+  =================================================
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg diff -r ".^" > /dev/null
   $ printaccessedrevs
-  1
-  2
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['2']
+  =================================================
 
 3) Log
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg log a > /dev/null
   $ printaccessedrevs
   no access
 
 4) Update
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg update ".^^" -q
   $ printaccessedrevs
-  0
-  2
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['0']
+  =================================================
 
-  $ printcachedrevs
-  0
-  1
-  2
+  $ savecachedrevs
   $ hg update tip -q
   $ printaccessedrevs
-  0
-  2
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['0']
+  =================================================
 
 5) Rebase
   $ mkcommit c
@@ -141,21 +148,16 @@ Check diagnosis, debugging information
   
 
   $ printaccessedrevs
-  -1
-  2
-  3
-  4
-  5
+  =================================================
+  CACHE MISS []
+  CACHE HIT ['2']
+  =================================================
   $ hg rebase -r 5:: -d 4 --config extensions.rebase=
   rebasing 5:5234b99c4f1d "add e"
   rebasing 6:dd82c74514cb "add f" (tip)
   saved backup bundle to $TESTTMP/diagnosis/.hg/strip-backup/5234b99c4f1d-c2e049ad-backup.hg (glob)
   $ printaccessedrevs
-  -1
-  2
-  4
-  5
-  6
-  7
-  8
-
+  =================================================
+  CACHE MISS ['6']
+  CACHE HIT []
+  =================================================
