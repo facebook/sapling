@@ -56,9 +56,6 @@ setup(
         'tweakdefaults',
         'upgradegeneraldelta',
     ],
-    packages=[
-        'copytrace',
-    ],
     ext_modules = [
         Extension('fastmanifest_wrapper',
                   sources=['fastmanifest_wrapper.c']),
