@@ -41,6 +41,10 @@ Check diagnosis, debugging information
   > summary(sys.argv[1], sys.argv[2])
   > EOM
 
+  $ clearlogs() {
+  >   rm "$TESTTMP/logfile"
+  > }
+
   $ mkdir diagnosis
   $ cd diagnosis
   $ hg init
@@ -93,18 +97,9 @@ Check diagnosis, debugging information
 
   $ savecachedrevs
   $ hg diff -r ".^" > /dev/null
-  $ printaccessedrevs
-  =================================================
-  CACHE MISS []
-  CACHE HIT ['1']
-  =================================================
+  $ clearlogs
 
-3) Log
-
-  $ savecachedrevs
-  $ hg log a > /dev/null
-  $ printaccessedrevs
-  no access
+3) Log (TODO)
 
 4) Update
 

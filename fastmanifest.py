@@ -109,7 +109,7 @@ class hybridmanifest(object):
         return self._flatmanifest.__len__()
 
     def copy(self):
-        return hybridmanifest(loadflat= lambda: self._flatmanifest.copy())
+        return hybridmanifest(loadflat=lambda: self._flatmanifest.copy())
 
     def diff(self, m2, *args, **kwargs):
         # Find _m1 and _m2 of the same type, to provide the fastest computation
