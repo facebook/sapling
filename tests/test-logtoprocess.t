@@ -37,10 +37,7 @@ ui.log('commandfinish') call. The foo command also uses ui.log.
 
 Use head to ensure we wait for all lines to be produced, and sort to avoid
 ordering issues between the various processes we spawn:
-  $ hg foo | head -n 17 | sort
-  
-  
-  
+  $ hg foo | head -n 17 | grep '\S' | sort
   0
   a message: spam
   command
