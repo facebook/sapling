@@ -96,7 +96,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['2']
+  CACHE HIT ['1']
   =================================================
 
 3) Log
