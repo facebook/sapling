@@ -1,12 +1,30 @@
-changeset = '{rev}{tags}{bookmarks}{parents}   {node|short}   {date|isodate}   {author|user}\n  {desc|firstline|strip}\n\n'
-changeset_quiet = '{rev}:{node|short}\n'
-changeset_verbose = '{rev}{tags}{parents}   {node|short}   {date|isodate}   {author}\n  {desc|strip}\n\n'
+ldate = '{label("log.date",
+                "{date|isodate}")}'
+
+ldesc = '{label('ui.note log.description',
+                      '{desc|strip}')}'
+ldescfirst = '{label('ui.note log.description',
+                     '{desc|firstline|strip}')}'
+
+changeset = '{lrev}{tags}{bookmarks}{parents}   {lnode}   {ldate}   {luser}\n  {ldescfirst}\n\n'
+changeset_quiet = '{lrev}:{lnode}\n'
+changeset_verbose = '{lrev}{tags}{parents}   {lnode}   {ldate}   {lauthor}\n  {ldesc}\n\n'
+lrev = '{label("log.changeset changeset.{phase}",
+              "{rev}")}'
+lnode = '{label("log.node",
+                "{node|short}")}'
+lauthor = '{label("log.user",
+                  "{author}")}'
+luser = '{label("log.user",
+                "{author|user}")}'
 start_tags = '['
-tag = '{tag},'
+tag = '{label("log.tag",
+              "{tag},")}'
 last_tag = '{tag}]'
 start_parents = ':'
-parent = '{rev},'
-last_parent = '{rev}'
+parent = '{lrev},'
+last_parent = '{lrev}'
 start_bookmarks = '['
-bookmark = '{bookmark},'
+bookmark = '{label("log.bookmark",
+                   "{bookmark},")}'
 last_bookmark = '{bookmark}]'
