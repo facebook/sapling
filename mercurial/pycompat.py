@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 try:
     import Queue as _queue
+    _queue.Queue
 except ImportError:
     import queue as _queue
 empty = _queue.Empty
