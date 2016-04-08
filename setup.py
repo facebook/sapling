@@ -1,7 +1,7 @@
 try:
-    from setuptools import setup
+    from setuptools import setup, Extensions
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup, Extension
 
 setup(
     name='fbhgext',
@@ -58,5 +58,9 @@ setup(
     ],
     packages=[
         'copytrace',
-    ]
+    ],
+    ext_modules = [
+        Extension('fastmanifest_wrapper',
+                  sources=['fastmanifest_wrapper.c']),
+    ],
 )
