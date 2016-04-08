@@ -2634,3 +2634,105 @@ change graph edge styling
   
 
   $ cd ..
+
+Change graph shorten, test better with graphstyle.missing not none
+
+  $ cd repo
+  $ cat << EOF >> $HGRCPATH
+  > [experimental]
+  > graphstyle.parent = |
+  > graphstyle.grandparent = :
+  > graphstyle.missing = '
+  > graphshorten = true
+  > EOF
+  $ hg log -G -r 'file("a")' -m -T '{rev} {desc}'
+  @  36 (36) buggy merge: identical parents
+  o    32 (32) expand
+  |\
+  o :  31 (31) expand
+  |\:
+  o :    30 (30) expand
+  |\ \
+  o \ \    28 (28) merge zero known
+  |\ \ \
+  o \ \ \    26 (26) merge one known; far right
+  |\ \ \ \
+  | o-----+  25 (25) merge one known; far left
+  | o ' ' :    24 (24) merge one known; immediate right
+  | |\ \ \ \
+  | o---+ ' :  23 (23) merge one known; immediate left
+  | o-------+  22 (22) merge two known; one far left, one far right
+  |/ / / / /
+  | ' ' ' o    21 (21) expand
+  | ' ' ' |\
+  +-+-------o  20 (20) merge two known; two far right
+  | ' ' ' o    19 (19) expand
+  | ' ' ' |\
+  o---+---+ |  18 (18) merge two known; two far left
+   / / / / /
+  ' ' ' | o    17 (17) expand
+  ' ' ' | |\
+  +-+-------o  16 (16) merge two known; one immediate right, one near right
+  ' ' ' o |    15 (15) expand
+  ' ' ' |\ \
+  +-------o |  14 (14) merge two known; one immediate right, one far right
+  ' ' ' | |/
+  ' ' ' o |    13 (13) expand
+  ' ' ' |\ \
+  ' +---+---o  12 (12) merge two known; one immediate right, one far left
+  ' ' ' | o    11 (11) expand
+  ' ' ' | |\
+  +---------o  10 (10) merge two known; one immediate left, one near right
+  ' ' ' | |/
+  ' ' ' o |    9 (9) expand
+  ' ' ' |\ \
+  +-------o |  8 (8) merge two known; one immediate left, one far right
+  ' ' ' |/ /
+  ' ' ' o |    7 (7) expand
+  ' ' ' |\ \
+  ' ' ' +---o  6 (6) merge two known; one immediate left, one far left
+  ' ' ' | '/
+  ' ' ' o '    5 (5) expand
+  ' ' ' |\ \
+  ' +---o ' '  4 (4) merge two known; one immediate left, one immediate right
+  ' ' ' '/ /
+
+behavior with newlines
+
+  $ hg log -G -r ::2 -T '{rev} {desc}'
+  o  2 (2) collapse
+  o  1 (1) collapse
+  o  0 (0) root
+
+  $ hg log -G -r ::2 -T '{rev} {desc}\n'
+  o  2 (2) collapse
+  o  1 (1) collapse
+  o  0 (0) root
+
+  $ hg log -G -r ::2 -T '{rev} {desc}\n\n'
+  o  2 (2) collapse
+  |
+  o  1 (1) collapse
+  |
+  o  0 (0) root
+  
+
+  $ hg log -G -r ::2 -T '\n{rev} {desc}'
+  o
+  |  2 (2) collapse
+  o
+  |  1 (1) collapse
+  o
+     0 (0) root
+
+  $ hg log -G -r ::2 -T '{rev} {desc}\n\n\n'
+  o  2 (2) collapse
+  |
+  |
+  o  1 (1) collapse
+  |
+  |
+  o  0 (0) root
+  
+  
+  $ cd ..

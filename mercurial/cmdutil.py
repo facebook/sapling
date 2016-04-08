@@ -2240,6 +2240,10 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
                                 styles[key])
         if not styles[key]:
             styles[key] = None
+
+    # experimental config: experimental.graphshorten
+    state['graphshorten'] = ui.configbool('experimental', 'graphshorten')
+
     for rev, type, ctx, parents in dag:
         char = formatnode(repo, ctx)
         copies = None

@@ -543,6 +543,7 @@ def asciistate():
         'lastcoldiff': 0,
         'lastindex': 0,
         'styles': EDGES.copy(),
+        'graphshorten': False,
     }
 
 def ascii(ui, state, type, char, text, coldata):
@@ -630,7 +631,15 @@ def ascii(ui, state, type, char, text, coldata):
     lines = [nodeline]
     if add_padding_line:
         lines.append(_getpaddingline(echars, idx, ncols, edges))
-    lines.append(shift_interline)
+
+    # If 'graphshorten' config, only draw shift_interline
+    # when there is any non vertical flow in graph.
+    if state['graphshorten']:
+        if any(c in '\/' for c in shift_interline if c):
+            lines.append(shift_interline)
+    # Else, no 'graphshorten' config so draw shift_interline.
+    else:
+        lines.append(shift_interline)
 
     # make sure that there are as many graph lines as there are
     # log strings
