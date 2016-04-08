@@ -1585,9 +1585,6 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     number of seconds away from UTC. if timezone is false, do not
     append time zone to string."""
     t, tz = date or makedate()
-    if t < 0:
-        t = 0   # time.gmtime(lt) fails on Windows for lt < -43200
-        tz = 0
     if "%1" in format or "%2" in format or "%z" in format:
         sign = (tz > 0) and "-" or "+"
         minutes = abs(tz) // 60
@@ -1595,12 +1592,16 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
         format = format.replace("%z", "%1%2")
         format = format.replace("%1", "%c%02d" % (sign, q))
         format = format.replace("%2", "%02d" % r)
-    try:
-        t = time.gmtime(float(t) - tz)
-    except ValueError:
-        # time was out of range
-        t = time.gmtime(sys.maxint)
-    s = time.strftime(format, t)
+    d = t - tz
+    if d > 0x7fffffff:
+        d = 0x7fffffff
+    elif d < -0x7fffffff:
+        d = -0x7fffffff
+    # Never use time.gmtime() and datetime.datetime.fromtimestamp()
+    # because they use the gmtime() system call which is buggy on Windows
+    # for negative values.
+    t = datetime.datetime(1970, 1, 1) + datetime.timedelta(seconds=d)
+    s = t.strftime(format)
     return s
 
 def shortdate(date=None):
@@ -1721,8 +1722,6 @@ def parsedate(date, formats=None, bias=None):
     # to UTC+14
     if abs(when) > 0x7fffffff:
         raise Abort(_('date exceeds 32 bits: %d') % when)
-    if when < 0:
-        raise Abort(_('negative date value: %d') % when)
     if offset < -50400 or offset > 43200:
         raise Abort(_('impossible time zone offset: %d') % offset)
     return when, offset

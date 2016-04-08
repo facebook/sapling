@@ -27,8 +27,21 @@ commit date test
   $ hg commit -d '111111111111 0' -m commit-7
   abort: date exceeds 32 bits: 111111111111
   [255]
-  $ hg commit -d '-7654321 3600' -m commit-7
-  abort: negative date value: -7654321
+  $ hg commit -d '-111111111111 0' -m commit-7
+  abort: date exceeds 32 bits: -111111111111
+  [255]
+  $ echo foo >> foo
+  $ hg commit -d '1901-12-13 20:45:53 +0000' -m commit-7-2
+  $ echo foo >> foo
+  $ hg commit -d '-2147483647 0' -m commit-7-3
+  $ hg log -T '{rev} {date|isodatesec}\n' -l2
+  3 1901-12-13 20:45:53 +0000
+  2 1901-12-13 20:45:53 +0000
+  $ hg commit -d '1901-12-13 20:45:52 +0000' -m commit-7
+  abort: date exceeds 32 bits: -2147483648
+  [255]
+  $ hg commit -d '-2147483648 0' -m commit-7
+  abort: date exceeds 32 bits: -2147483648
   [255]
 
 commit added file that has been deleted
@@ -54,7 +67,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 2:d2a76177cb42
+  committed changeset 4:76aab26859d7
 
   $ echo > dir.file
   $ hg add
@@ -78,7 +91,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 3:1cd62a2d8db5
+  committed changeset 5:9a50557f1baf
   $ cd ..
 
   $ hg commit -m commit-14 does-not-exist
@@ -102,7 +115,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 4:49176991390e
+  committed changeset 6:4b4c75bf422d
 
 An empty date was interpreted as epoch origin
 
