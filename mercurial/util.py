@@ -1582,8 +1582,7 @@ def makedate(timestamp=None):
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
-    number of seconds away from UTC. if timezone is false, do not
-    append time zone to string."""
+    number of seconds away from UTC."""
     t, tz = date or makedate()
     if "%1" in format or "%2" in format or "%z" in format:
         sign = (tz > 0) and "-" or "+"
