@@ -673,9 +673,49 @@ this is a section and erroring out weirdly.
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 
+  > def uisetup(ui):
+  >     ui.setconfig('alias', 'shellalias', '!echo hi', 'helpext')
+  >     ui.setconfig('alias', 'hgalias', 'summary', 'helpext')
+  > 
   > EOF
   $ echo '[extensions]' >> $HGRCPATH
   $ echo "helpext = `pwd`/helpext.py" >> $HGRCPATH
+
+Test for aliases
+
+  $ hg help hgalias
+  hg hgalias [--remote]
+  
+  alias for: hg summary
+  
+  summarize working directory state
+  
+      This generates a brief summary of the working directory state, including
+      parents, branch, commit status, phase and available updates.
+  
+      With the --remote option, this will check the default paths for incoming
+      and outgoing changes. This can be time-consuming.
+  
+      Returns 0 on success.
+  
+  defined by: helpext
+  
+  options:
+  
+    --remote check for push and pull
+  
+  (some details hidden, use --verbose to show complete help)
+
+  $ hg help shellalias
+  hg shellalias
+  
+  shell alias for:
+  
+    echo hi
+  
+  defined by: helpext
+  
+  (some details hidden, use --verbose to show complete help)
 
 Test command with no help text
 
@@ -2064,6 +2104,13 @@ Dish up an empty repo; serve it cold.
   show help for a given topic or a help overview
   </td></tr>
   <tr><td>
+  <a href="/help/hgalias">
+  hgalias
+  </a>
+  </td><td>
+  summarize working directory state
+  </td></tr>
+  <tr><td>
   <a href="/help/identify">
   identify
   </a>
@@ -2153,6 +2200,13 @@ Dish up an empty repo; serve it cold.
   </a>
   </td><td>
   print the root (top) of the current working directory
+  </td></tr>
+  <tr><td>
+  <a href="/help/shellalias">
+  shellalias
+  </a>
+  </td><td>
+  (no help text available)
   </td></tr>
   <tr><td>
   <a href="/help/tag">

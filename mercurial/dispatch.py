@@ -379,7 +379,7 @@ def aliasinterpolate(name, args, cmd):
     return r.sub(lambda x: replacemap[x.group()], cmd)
 
 class cmdalias(object):
-    def __init__(self, name, definition, cmdtable):
+    def __init__(self, name, definition, cmdtable, source):
         self.name = self.cmd = name
         self.cmdname = ''
         self.definition = definition
@@ -389,6 +389,7 @@ class cmdalias(object):
         self.help = ''
         self.badalias = None
         self.unknowncmd = False
+        self.source = source
 
         try:
             aliases, entry = cmdutil.findcmd(self.name, cmdtable)
@@ -499,7 +500,8 @@ def addaliases(ui, cmdtable):
     # may use extension commands. Aliases can also use other alias definitions,
     # but only if they have been defined prior to the current definition.
     for alias, definition in ui.configitems('alias'):
-        aliasdef = cmdalias(alias, definition, cmdtable)
+        source = ui.configsource('alias', alias)
+        aliasdef = cmdalias(alias, definition, cmdtable, source)
 
         try:
             olddef = cmdtable[aliasdef.cmd][0]

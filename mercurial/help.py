@@ -336,10 +336,13 @@ def help_(ui, name, unknowncmd=False, full=True, subtopic=None, **opts):
         if not doc:
             doc = _("(no help text available)")
         if util.safehasattr(entry[0], 'definition'):  # aliased command
+            source = entry[0].source
             if entry[0].definition.startswith('!'):  # shell alias
-                doc = _('shell alias for::\n\n    %s') % entry[0].definition[1:]
+                doc = (_('shell alias for::\n\n    %s\n\ndefined by: %s\n') %
+                       (entry[0].definition[1:], source))
             else:
-                doc = _('alias for: hg %s\n\n%s') % (entry[0].definition, doc)
+                doc = (_('alias for: hg %s\n\n%s\n\ndefined by: %s\n') %
+                       (entry[0].definition, doc, source))
         doc = doc.splitlines(True)
         if ui.quiet or not full:
             rst.append(doc[0])
