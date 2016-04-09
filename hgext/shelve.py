@@ -60,6 +60,7 @@ command = cmdutil.command(cmdtable)
 testedwith = 'internal'
 
 backupdir = 'shelve-backup'
+shelvedir = 'shelved'
 
 class shelvedfile(object):
     """Helper for the file storing a single shelve
@@ -69,7 +70,7 @@ class shelvedfile(object):
     def __init__(self, repo, name, filetype=None):
         self.repo = repo
         self.name = name
-        self.vfs = scmutil.vfs(repo.join('shelved'))
+        self.vfs = scmutil.vfs(repo.join(shelvedir))
         self.backupvfs = scmutil.vfs(repo.join(backupdir))
         self.ui = self.repo.ui
         if filetype:
@@ -408,7 +409,7 @@ def cleanupcmd(ui, repo):
     """subcommand that deletes all shelves"""
 
     with repo.wlock():
-        for (name, _type) in repo.vfs.readdir('shelved'):
+        for (name, _type) in repo.vfs.readdir(shelvedir):
             suffix = name.rsplit('.', 1)[-1]
             if suffix in ('hg', 'patch'):
                 shelvedfile(repo, name).movetobackup()
@@ -432,7 +433,7 @@ def deletecmd(ui, repo, pats):
 def listshelves(repo):
     """return all shelves in repo as list of (time, filename)"""
     try:
-        names = repo.vfs.readdir('shelved')
+        names = repo.vfs.readdir(shelvedir)
     except OSError as err:
         if err.errno != errno.ENOENT:
             raise
