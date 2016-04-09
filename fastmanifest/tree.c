@@ -12,13 +12,13 @@
 #include "tree.h"
 #include "tree_arena.h"
 
-bool valid_path(const char* path, const size_t path_sz) {
+bool valid_path(const char *path, const size_t path_sz) {
   if (path_sz > 0 && (path[0] == '/' || path[path_sz] == '/')) {
     return false;
   }
 
   size_t last_slash = (size_t) -1;
-  for (size_t off = 0; off < path_sz; off ++) {
+  for (size_t off = 0; off < path_sz; off++) {
     if (path[off] == '/') {
       if (last_slash == off - 1) {
         return false;
@@ -39,8 +39,8 @@ bool valid_path(const char* path, const size_t path_sz) {
  * first_component('abc/def') => 'abc'
  * first_component('abc') => ''
  */
-static size_t first_component(const char* path, size_t path_sz) {
-  for (size_t off = 0; off < path_sz; off ++) {
+static size_t first_component(const char *path, size_t path_sz) {
+  for (size_t off = 0; off < path_sz; off++) {
     if (path[off] == '/') {
       return off;
     }
@@ -80,9 +80,10 @@ typedef enum {
 } tree_add_child_code_t;
 typedef struct _tree_add_child_result_t {
   tree_add_child_code_t code;
-  node_t* newroot;
-  node_t* newchild;
+  node_t *newroot;
+  node_t *newchild;
 } tree_add_child_result_t;
+
 /**
  * Adds a child to `root`.  Because `root` may need to be resized to accomodate
  * the new child, we need the *parent* of `root`.  On success (`result.code` ==
@@ -94,11 +95,11 @@ typedef struct _tree_add_child_result_t {
  * accounting structure.
  */
 static tree_add_child_result_t tree_add_child(
-    tree_t* tree,
-    node_t* const root_parent,
-    node_t* root,
-    const char* name, const size_t name_sz,
-    tree_state_changes_t* changes) {
+    tree_t *tree,
+    node_t *const root_parent,
+    node_t *root,
+    const char *name, const size_t name_sz,
+    tree_state_changes_t *changes) {
   tree_add_child_result_t result;
 
   // create a new child node, and record the deltas in the change
@@ -109,10 +110,10 @@ static tree_add_child_result_t tree_add_child(
   // this is a potential optimization opportunity.  we could theoretically try
   // to allocate the new node in the arena and maintain compacted state of the
   // tree.
-  node_t* node = alloc_node(name, name_sz, 0);
+  node_t *node = alloc_node(name, name_sz, 0);
   if (node == NULL) {
     return (tree_add_child_result_t) {
-        TREE_ADD_CHILD_OOM, NULL, NULL };
+        TREE_ADD_CHILD_OOM, NULL, NULL};
   }
 
   // accounting changes.
@@ -133,17 +134,17 @@ static tree_add_child_result_t tree_add_child(
     uint32_t index = get_child_index(root_parent, root);
     if (index == UINT32_MAX) {
       return (tree_add_child_result_t) {
-        TREE_ADD_CHILD_WTF, NULL, NULL };
+          TREE_ADD_CHILD_WTF, NULL, NULL};
     }
     node_enlarge_child_capacity_result_t enlarge_result =
         enlarge_child_capacity(root_parent, index);
 
     if (enlarge_result.code == ENLARGE_OOM) {
       return (tree_add_child_result_t) {
-        TREE_ADD_CHILD_OOM, NULL, NULL };
+          TREE_ADD_CHILD_OOM, NULL, NULL};
     } else if (enlarge_result.code != ENLARGE_OK) {
       return (tree_add_child_result_t) {
-        TREE_ADD_CHILD_WTF, NULL, NULL };
+          TREE_ADD_CHILD_WTF, NULL, NULL};
     }
 
     // update accounting.
@@ -161,11 +162,11 @@ static tree_add_child_result_t tree_add_child(
     add_child_result = add_child(root, node);
     if (add_child_result != ADD_CHILD_OK) {
       return (tree_add_child_result_t) {
-        TREE_ADD_CHILD_WTF, NULL, NULL };
+          TREE_ADD_CHILD_WTF, NULL, NULL};
     }
   } else if (add_child_result != ADD_CHILD_OK) {
     return (tree_add_child_result_t) {
-      TREE_ADD_CHILD_WTF, NULL, NULL };
+        TREE_ADD_CHILD_WTF, NULL, NULL};
   }
 
   result.code = TREE_ADD_CHILD_OK;
@@ -176,18 +177,18 @@ static tree_add_child_result_t tree_add_child(
 typedef enum {
   // walks the tree.  if the path cannot be found, exit with
   // `FIND_PATH_NOT_FOUND`.
-  BASIC_WALK,
+      BASIC_WALK,
 
   // walks the tree.  if the intermediate paths cannot be found, create them.
   // if a leaf node exists where an intermediate path node needs to be
   // created, then return `FIND_PATH_CONFLICT`.
-  CREATE_IF_MISSING,
+      CREATE_IF_MISSING,
 
   // walks the tree.  if the path cannot be found, exit with
   // `FIND_PATH_NOT_FOUND`.  if the operation is successful, then check
   // intermediate nodes to ensure that they still have children.  any nodes
   // that do not should be removed.
-  REMOVE_EMPTY_IMPLICIT_NODES,
+      REMOVE_EMPTY_IMPLICIT_NODES,
 } find_path_operation_type;
 typedef enum {
   FIND_PATH_OK,
@@ -198,8 +199,9 @@ typedef enum {
 } find_path_result_t;
 typedef struct _find_path_callback_result_t {
   find_path_result_t code;
-  node_t* newroot;
+  node_t *newroot;
 } find_path_callback_result_t;
+
 /**
  * Find the directory node enclosing `path`.  If `create_if_not_found` is true,
  * then any intermediate directories that do not exist will be created.  Once
@@ -242,7 +244,7 @@ static find_path_result_t find_path(
     root = callback_result.newroot;
   } else {
     // resolve the first component.
-    node_t* child = get_child_by_name(root, path, first_component_sz);
+    node_t *child = get_child_by_name(root, path, first_component_sz);
     if (child == NULL) {
       if (operation_type == CREATE_IF_MISSING) {
         // create the new child.
@@ -357,8 +359,8 @@ fail:
   return NULL;
 }
 
-static void destroy_tree_helper(tree_t* tree, node_t* node) {
-  for (int ix = 0; ix < node->num_children; ix ++) {
+static void destroy_tree_helper(tree_t *tree, node_t *node) {
+  for (int ix = 0; ix < node->num_children; ix++) {
     destroy_tree_helper(tree, get_child_by_index(node, ix));
   }
 
@@ -367,7 +369,7 @@ static void destroy_tree_helper(tree_t* tree, node_t* node) {
   }
 }
 
-void destroy_tree(tree_t* tree) {
+void destroy_tree(tree_t *tree) {
   if (tree->compacted == false) {
     destroy_tree_helper(tree, tree->shadow_root);
   }
@@ -379,15 +381,16 @@ void destroy_tree(tree_t* tree) {
 }
 
 typedef struct _get_path_metadata_t {
-  node_t* node;
+  node_t *node;
 } get_path_metadata_t;
+
 find_path_callback_result_t get_path_callback(
-    tree_t* tree,
-    node_t* const root_parent,
-    node_t* root,
-    const char* name, const size_t name_sz,
-    tree_state_changes_t* changes,
-    void* context) {
+    tree_t *tree,
+    node_t *const root_parent,
+    node_t *root,
+    const char *name, const size_t name_sz,
+    tree_state_changes_t *changes,
+    void *context) {
   get_path_metadata_t *metadata =
       (get_path_metadata_t *) context;
 
@@ -400,21 +403,21 @@ find_path_callback_result_t get_path_callback(
 
   metadata->node = child;
 
-  return (find_path_callback_result_t) { FIND_PATH_OK, root };
+  return (find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
 get_path_result_t get_path(
-    tree_t* tree,
-    const char* path,
+    tree_t *tree,
+    const char *path,
     const size_t path_sz) {
-  tree_state_changes_t changes = { 0 };
+  tree_state_changes_t changes = {0};
   get_path_metadata_t metadata;
 
-  node_t* shadow_root = tree->shadow_root;
-  node_t* real_root = get_child_by_index(shadow_root, 0);
+  node_t *shadow_root = tree->shadow_root;
+  node_t *real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
-    return (get_path_result_t) { GET_PATH_WTF, NULL };
+    return (get_path_result_t) {GET_PATH_WTF, NULL};
   }
 
   find_path_result_t result =
@@ -434,34 +437,35 @@ get_path_result_t get_path(
 
   switch (result) {
     case FIND_PATH_OK:
-      return (get_path_result_t) { GET_PATH_OK, metadata.node };
+      return (get_path_result_t) {GET_PATH_OK, metadata.node};
     case FIND_PATH_NOT_FOUND:
     case FIND_PATH_CONFLICT:
       // `FIND_PATH_CONFLICT` is returned if there is a leaf node where we
       // expect a directory node.  this is treated the same as a NOT_FOUND.
-      return (get_path_result_t) { GET_PATH_NOT_FOUND, NULL };
+      return (get_path_result_t) {GET_PATH_NOT_FOUND, NULL};
     default:
-      return (get_path_result_t) { GET_PATH_WTF, NULL };
+      return (get_path_result_t) {GET_PATH_WTF, NULL};
   }
 }
 
 typedef struct _add_or_update_path_metadata_t {
-  const uint8_t* checksum;
+  const uint8_t *checksum;
   const uint8_t checksum_sz;
   const uint8_t flags;
 } add_or_update_path_metadata_t;
+
 find_path_callback_result_t add_or_update_path_callback(
-    tree_t* tree,
-    node_t* const root_parent,
-    node_t* root,
-    const char* name, const size_t name_sz,
-    tree_state_changes_t* changes,
-    void* context) {
-  add_or_update_path_metadata_t* metadata =
-      (add_or_update_path_metadata_t*) context;
+    tree_t *tree,
+    node_t *const root_parent,
+    node_t *root,
+    const char *name, const size_t name_sz,
+    tree_state_changes_t *changes,
+    void *context) {
+  add_or_update_path_metadata_t *metadata =
+      (add_or_update_path_metadata_t *) context;
 
   // does the path already exist?
-  node_t* child = get_child_by_name(root, name, name_sz);
+  node_t *child = get_child_by_name(root, name, name_sz);
   if (child == NULL) {
     tree_add_child_result_t tree_add_child_result =
         tree_add_child(
@@ -473,10 +477,10 @@ find_path_callback_result_t add_or_update_path_callback(
     switch (tree_add_child_result.code) {
       case TREE_ADD_CHILD_OOM:
         return (find_path_callback_result_t) {
-          FIND_PATH_OOM, NULL };
+            FIND_PATH_OOM, NULL};
       case TREE_ADD_CHILD_WTF:
         return (find_path_callback_result_t) {
-          FIND_PATH_WTF, NULL };
+            FIND_PATH_WTF, NULL};
       case TREE_ADD_CHILD_OK:
         break;
     }
@@ -487,19 +491,19 @@ find_path_callback_result_t add_or_update_path_callback(
     child->type = TYPE_LEAF;
 
     // update the accounting.
-    changes->num_leaf_node_change ++;
+    changes->num_leaf_node_change++;
   } else {
     if (child->type == TYPE_IMPLICIT) {
       // was previously a directory
       return (find_path_callback_result_t) {
-        FIND_PATH_CONFLICT, NULL };
+          FIND_PATH_CONFLICT, NULL};
     }
   }
 
   // update the node.
   if (metadata->checksum_sz > CHECKSUM_BYTES) {
     return (find_path_callback_result_t) {
-      FIND_PATH_WTF, NULL };
+        FIND_PATH_WTF, NULL};
   }
 
   memcpy(child->checksum, metadata->checksum, metadata->checksum_sz);
@@ -507,25 +511,25 @@ find_path_callback_result_t add_or_update_path_callback(
   child->checksum_valid = true;
   child->flags = metadata->flags;
 
-  return (find_path_callback_result_t) { FIND_PATH_OK, root };
+  return (find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
 add_update_path_result_t add_or_update_path(
-    tree_t* tree,
-    const char* path,
+    tree_t *tree,
+    const char *path,
     const size_t path_sz,
-    const uint8_t* checksum,
+    const uint8_t *checksum,
     const uint8_t checksum_sz,
     const uint8_t flags) {
-  tree_state_changes_t changes = { 0 };
+  tree_state_changes_t changes = {0};
   add_or_update_path_metadata_t metadata = {
-    checksum,
-    checksum_sz,
-    flags,
+      checksum,
+      checksum_sz,
+      flags,
   };
 
-  node_t* shadow_root = tree->shadow_root;
-  node_t* real_root = get_child_by_index(shadow_root, 0);
+  node_t *shadow_root = tree->shadow_root;
+  node_t *real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
     return ADD_UPDATE_PATH_WTF;
@@ -562,12 +566,12 @@ add_update_path_result_t add_or_update_path(
 }
 
 find_path_callback_result_t remove_path_callback(
-    tree_t* tree,
-    node_t* const root_parent,
-    node_t* root,
-    const char* name, const size_t name_sz,
-    tree_state_changes_t* changes,
-    void* context) {
+    tree_t *tree,
+    node_t *const root_parent,
+    node_t *root,
+    const char *name, const size_t name_sz,
+    tree_state_changes_t *changes,
+    void *context) {
   // does the path already exist?
   node_search_children_result_t search_result =
       search_children(root, name, name_sz);
@@ -579,7 +583,7 @@ find_path_callback_result_t remove_path_callback(
 
   // record the metadata changes.
   changes->checksum_dirty = true;
-  changes->num_leaf_node_change --;
+  changes->num_leaf_node_change--;
   changes->size_change -= search_result.child->block_sz;
 
   node_remove_child_result_t remove_result =
@@ -593,13 +597,13 @@ find_path_callback_result_t remove_path_callback(
 }
 
 remove_path_result_t remove_path(
-    tree_t* tree,
-    const char* path,
+    tree_t *tree,
+    const char *path,
     const size_t path_sz) {
-  tree_state_changes_t changes = { 0 };
+  tree_state_changes_t changes = {0};
 
-  node_t* shadow_root = tree->shadow_root;
-  node_t* real_root = get_child_by_index(shadow_root, 0);
+  node_t *shadow_root = tree->shadow_root;
+  node_t *real_root = get_child_by_index(shadow_root, 0);
 
   if (real_root == NULL) {
     return REMOVE_PATH_WTF;

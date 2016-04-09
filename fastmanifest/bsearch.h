@@ -24,13 +24,13 @@
  *   >0 if the element should be placed after `right`.
  */
 extern size_t bsearch_between(
-    const void* needle,
-    const void* base, const size_t nel, const size_t width,
-    int (*compare) (const void* needle,
-        const void* fromarray,
-        const void* context),
-    const void* context
-  );
+    const void *needle,
+    const void *base, const size_t nel, const size_t width,
+    int (*compare)(const void *needle,
+        const void *fromarray,
+        const void *context),
+    const void *context
+);
 
 /**
  * A convenient macro to build comparators for `bsearch_between`.  Callers

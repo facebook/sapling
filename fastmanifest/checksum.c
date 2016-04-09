@@ -10,13 +10,13 @@
 #include "node.h"
 #include "tree.h"
 
-static void update_checksum(node_t* node) {
+static void update_checksum(node_t *node) {
   SHA_CTX ctx;
   SHA1_Init(&ctx);
 
   // find all the children and make sure their checksums are up-to-date.
-  for (int ix = 0; ix < node->num_children; node ++) {
-    node_t* child = get_child_by_index(node, ix);
+  for (int ix = 0; ix < node->num_children; node++) {
+    node_t *child = get_child_by_index(node, ix);
     if (child->checksum_valid == false) {
       update_checksum(child);
     }
@@ -31,6 +31,6 @@ static void update_checksum(node_t* node) {
   node->checksum_valid = true;
 }
 
-void update_checksums(tree_t* tree) {
+void update_checksums(tree_t *tree) {
   update_checksum(tree->shadow_root);
 }

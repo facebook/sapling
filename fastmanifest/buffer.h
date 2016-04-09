@@ -31,7 +31,7 @@ static inline bool expand_to_fit(
       new_sz = input_sz + *buffer_sz;
     }
 
-    void* newbuffer = realloc(*buffer, new_sz);
+    void *newbuffer = realloc(*buffer, new_sz);
     if (newbuffer == NULL) {
       return false;
     }

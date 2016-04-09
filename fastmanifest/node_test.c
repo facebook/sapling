@@ -16,8 +16,8 @@
  * Add a child and ensure that it can be found.
  */
 void test_simple_parent_child() {
-  node_t* parent = ALLOC_NODE_STR("parent", 1);
-  node_t* child = ALLOC_NODE_STR("child", 0);
+  node_t *parent = ALLOC_NODE_STR("parent", 1);
+  node_t *child = ALLOC_NODE_STR("child", 0);
   parent->in_use = true;
   parent->type = TYPE_IMPLICIT;
   child->in_use = true;
@@ -26,7 +26,7 @@ void test_simple_parent_child() {
   node_add_child_result_t result = add_child(parent, child);
   ASSERT(result == ADD_CHILD_OK);
 
-  node_t* lookup_child = GET_CHILD_BY_NAME_STR(parent, "child");
+  node_t *lookup_child = GET_CHILD_BY_NAME_STR(parent, "child");
   ASSERT(lookup_child == child);
 }
 
@@ -35,9 +35,9 @@ void test_simple_parent_child() {
  * bunch of differently sized parents and adding a child.
  */
 void test_space() {
-  for (uint16_t name_sz = 1; name_sz <= 8; name_sz ++) {
-    node_t* parent = alloc_node("abcdefgh", name_sz, 1);
-    node_t* child = ALLOC_NODE_STR("child", 0);
+  for (uint16_t name_sz = 1; name_sz <= 8; name_sz++) {
+    node_t *parent = alloc_node("abcdefgh", name_sz, 1);
+    node_t *child = ALLOC_NODE_STR("child", 0);
     parent->in_use = true;
     parent->type = TYPE_IMPLICIT;
     child->in_use = true;
@@ -46,7 +46,7 @@ void test_space() {
     node_add_child_result_t result = add_child(parent, child);
     ASSERT(result == ADD_CHILD_OK);
 
-    node_t* lookup_child = GET_CHILD_BY_NAME_STR(parent, "child");
+    node_t *lookup_child = GET_CHILD_BY_NAME_STR(parent, "child");
     ASSERT(lookup_child == child);
   }
 }
@@ -55,9 +55,9 @@ void test_space() {
  * Try to add a child to a node that does not have enough space.
  */
 void test_insufficient_space() {
-  node_t* parent = ALLOC_NODE_STR("parent", 1);
-  node_t* child1 = ALLOC_NODE_STR("child1", 0);
-  node_t* child2 = ALLOC_NODE_STR("child2", 0);
+  node_t *parent = ALLOC_NODE_STR("parent", 1);
+  node_t *child1 = ALLOC_NODE_STR("child1", 0);
+  node_t *child2 = ALLOC_NODE_STR("child2", 0);
   parent->in_use = true;
   parent->type = TYPE_IMPLICIT;
   child1->in_use = true;
@@ -70,7 +70,7 @@ void test_insufficient_space() {
   result = add_child(parent, child2);
   ASSERT(result == NEEDS_LARGER_NODE);
 
-  node_t* lookup_child = GET_CHILD_BY_NAME_STR(parent, "child1");
+  node_t *lookup_child = GET_CHILD_BY_NAME_STR(parent, "child1");
   ASSERT(lookup_child == child1);
   lookup_child = GET_CHILD_BY_NAME_STR(parent, "child2");
   ASSERT(lookup_child == NULL);
@@ -87,29 +87,30 @@ typedef struct {
   int child_type;
   node_add_child_result_t expected_result;
 } parent_child_test_cases_t;
+
 void test_add_child_combinations() {
   parent_child_test_cases_t cases[] =
-    {
-      // parent or child not in use.
-      {false, TYPE_IMPLICIT, true, TYPE_LEAF, ADD_CHILD_ILLEGAL_PARENT},
-      {true, TYPE_IMPLICIT, false, TYPE_LEAF, ADD_CHILD_ILLEGAL_CHILD},
+      {
+          // parent or child not in use.
+          {false, TYPE_IMPLICIT, true,  TYPE_LEAF,      ADD_CHILD_ILLEGAL_PARENT},
+          {true,  TYPE_IMPLICIT, false, TYPE_LEAF,      ADD_CHILD_ILLEGAL_CHILD},
 
-      // parent type invalid.
-      {true, TYPE_LEAF, true, TYPE_LEAF, ADD_CHILD_ILLEGAL_PARENT},
+          // parent type invalid.
+          {true,  TYPE_LEAF,     true,  TYPE_LEAF,      ADD_CHILD_ILLEGAL_PARENT},
 
-      // child type invalid.
-      {true, TYPE_IMPLICIT, false, TYPE_UNDEFINED, ADD_CHILD_ILLEGAL_CHILD},
+          // child type invalid.
+          {true,  TYPE_IMPLICIT, false, TYPE_UNDEFINED, ADD_CHILD_ILLEGAL_CHILD},
 
-      // some good outcomes.
-      {true, TYPE_IMPLICIT, true, TYPE_LEAF, ADD_CHILD_OK},
-      {true, TYPE_IMPLICIT, true, TYPE_IMPLICIT, ADD_CHILD_OK},
-    };
+          // some good outcomes.
+          {true,  TYPE_IMPLICIT, true,  TYPE_LEAF,      ADD_CHILD_OK},
+          {true,  TYPE_IMPLICIT, true,  TYPE_IMPLICIT,  ADD_CHILD_OK},
+      };
 
   for (int ix = 0;
        ix < sizeof(cases) / sizeof(parent_child_test_cases_t);
-       ix ++) {
-    node_t* parent;
-    node_t* child;
+       ix++) {
+    node_t *parent;
+    node_t *child;
 
     parent = ALLOC_NODE_STR("parent", 1);
     child = ALLOC_NODE_STR("child", 0);
@@ -131,13 +132,14 @@ void test_add_child_combinations() {
  */
 #define TEST_MANY_CHILDREN_NAME_STR "abcdefgh"
 #define TEST_MANY_CHILDREN_COUNT 8
+
 void test_many_children() {
-  node_t* parent = ALLOC_NODE_STR("parent", TEST_MANY_CHILDREN_COUNT);
-  node_t* children[TEST_MANY_CHILDREN_COUNT]; // this should be ordered as we
+  node_t *parent = ALLOC_NODE_STR("parent", TEST_MANY_CHILDREN_COUNT);
+  node_t *children[TEST_MANY_CHILDREN_COUNT]; // this should be ordered as we
                                               // expect to find them in the
                                               // parent's list of children.
-  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz ++) {
-    node_t* child = alloc_node(
+  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz++) {
+    node_t *child = alloc_node(
         TEST_MANY_CHILDREN_NAME_STR,
         name_sz,
         0);
@@ -152,8 +154,8 @@ void test_many_children() {
     children[name_sz - 1] = child;
   }
 
-  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz ++) {
-    node_t* result = get_child_by_name(
+  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz++) {
+    node_t *result = get_child_by_name(
         parent,
         TEST_MANY_CHILDREN_NAME_STR,
         name_sz);
@@ -169,12 +171,12 @@ void test_many_children() {
  *              TEST_MANY_CHILDREN_CHILD_COUNT
  */
 void test_many_children_reverse() {
-  node_t* parent = ALLOC_NODE_STR("parent", TEST_MANY_CHILDREN_COUNT);
-  node_t* children[TEST_MANY_CHILDREN_COUNT]; // this should be ordered as we
+  node_t *parent = ALLOC_NODE_STR("parent", TEST_MANY_CHILDREN_COUNT);
+  node_t *children[TEST_MANY_CHILDREN_COUNT]; // this should be ordered as we
                                               // expect to find them in the
                                               // parent's list of children.
-  for (uint16_t name_sz = TEST_MANY_CHILDREN_COUNT; name_sz > 0; name_sz --) {
-    node_t* child = alloc_node(
+  for (uint16_t name_sz = TEST_MANY_CHILDREN_COUNT; name_sz > 0; name_sz--) {
+    node_t *child = alloc_node(
         TEST_MANY_CHILDREN_NAME_STR,
         name_sz,
         0);
@@ -189,8 +191,8 @@ void test_many_children_reverse() {
     children[name_sz - 1] = child;
   }
 
-  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz ++) {
-    node_t* result = get_child_by_name(
+  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz++) {
+    node_t *result = get_child_by_name(
         parent,
         TEST_MANY_CHILDREN_NAME_STR,
         name_sz);
@@ -207,13 +209,14 @@ void test_many_children_reverse() {
  */
 #define TEST_CLONE_NAME_STR "abcdefgh"
 #define TEST_CLONE_COUNT 8
+
 void test_clone() {
-  node_t* parent = ALLOC_NODE_STR("parent", TEST_CLONE_COUNT);
-  node_t* children[TEST_CLONE_COUNT];   // this should be ordered as we
+  node_t *parent = ALLOC_NODE_STR("parent", TEST_CLONE_COUNT);
+  node_t *children[TEST_CLONE_COUNT];   // this should be ordered as we
                                         // expect to find them in the
                                         // parent's list of children.
-  for (uint16_t name_sz = 1; name_sz <= TEST_CLONE_COUNT; name_sz ++) {
-    node_t* child = alloc_node(
+  for (uint16_t name_sz = 1; name_sz <= TEST_CLONE_COUNT; name_sz++) {
+    node_t *child = alloc_node(
         TEST_CLONE_NAME_STR,
         name_sz,
         0);
@@ -228,10 +231,10 @@ void test_clone() {
     children[name_sz - 1] = child;
   }
 
-  node_t* clone = clone_node(parent);
+  node_t *clone = clone_node(parent);
 
-  for (uint16_t name_sz = 1; name_sz <= TEST_CLONE_COUNT; name_sz ++) {
-    node_t* result = get_child_by_name(
+  for (uint16_t name_sz = 1; name_sz <= TEST_CLONE_COUNT; name_sz++) {
+    node_t *result = get_child_by_name(
         clone,
         TEST_CLONE_NAME_STR,
         name_sz);
@@ -250,14 +253,15 @@ void test_clone() {
  */
 #define TEST_REMOVE_CHILD_NAME_STR "1234ffgg"
 #define TEST_REMOVE_CHILD_COUNT 8
+
 void test_remove_child() {
-  node_t* parent = ALLOC_NODE_STR("parent", TEST_REMOVE_CHILD_COUNT);
-  node_t* children[TEST_REMOVE_CHILD_COUNT];   // this should be ordered as we
+  node_t *parent = ALLOC_NODE_STR("parent", TEST_REMOVE_CHILD_COUNT);
+  node_t *children[TEST_REMOVE_CHILD_COUNT];   // this should be ordered as we
                                                // expect to find them in the
                                                // parent's list of children.
   bool valid[TEST_REMOVE_CHILD_COUNT];
-  for (uint16_t name_sz = 1; name_sz <= TEST_REMOVE_CHILD_COUNT; name_sz ++) {
-    node_t* child = alloc_node(
+  for (uint16_t name_sz = 1; name_sz <= TEST_REMOVE_CHILD_COUNT; name_sz++) {
+    node_t *child = alloc_node(
         TEST_REMOVE_CHILD_NAME_STR,
         name_sz,
         0);
@@ -273,9 +277,9 @@ void test_remove_child() {
     valid[name_sz - 1] = true;
   }
 
-  for (uint16_t ix = 0; ix < TEST_REMOVE_CHILD_COUNT; ix ++) {
+  for (uint16_t ix = 0; ix < TEST_REMOVE_CHILD_COUNT; ix++) {
     uint16_t victim_index = 0;
-    for (uint16_t jx = 0; jx < TEST_REMOVE_CHILD_COUNT + 1; jx ++) {
+    for (uint16_t jx = 0; jx < TEST_REMOVE_CHILD_COUNT + 1; jx++) {
       do {
         victim_index = (victim_index + 1) % TEST_REMOVE_CHILD_COUNT;
       } while (valid[victim_index] == false);
@@ -291,12 +295,12 @@ void test_remove_child() {
     valid[victim_index] = false;
 
     ASSERT(remove_child(parent, search_result.child_num) ==
-        REMOVE_CHILD_OK);
+           REMOVE_CHILD_OK);
 
     // go through the items that should still be children, and make sure they're
     // still reachable.
-    for (uint16_t name_sz = 1; name_sz <= TEST_REMOVE_CHILD_COUNT; name_sz ++) {
-      node_t* child = get_child_by_name(
+    for (uint16_t name_sz = 1; name_sz <= TEST_REMOVE_CHILD_COUNT; name_sz++) {
+      node_t *child = get_child_by_name(
           parent,
           TEST_REMOVE_CHILD_NAME_STR,
           name_sz);
@@ -317,15 +321,16 @@ void test_remove_child() {
  */
 #define TEST_ENLARGE_CHILD_CAPACITY_NAME_STR "abcdefgh"
 #define TEST_ENLARGE_CHILD_CAPACITY_COUNT 8
+
 void test_enlarge_child_capacity() {
-  node_t* parent = ALLOC_NODE_STR(
+  node_t *parent = ALLOC_NODE_STR(
       "parent",
       TEST_MANY_CHILDREN_COUNT);
-  node_t* children[TEST_MANY_CHILDREN_COUNT];   // this should be ordered as we
+  node_t *children[TEST_MANY_CHILDREN_COUNT];   // this should be ordered as we
                                                 // expect to find them in the
                                                 // parent's list of children.
-  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz ++) {
-    node_t* child = alloc_node(
+  for (uint16_t name_sz = 1; name_sz <= TEST_MANY_CHILDREN_COUNT; name_sz++) {
+    node_t *child = alloc_node(
         TEST_ENLARGE_CHILD_CAPACITY_NAME_STR,
         name_sz,
         0);
@@ -344,15 +349,15 @@ void test_enlarge_child_capacity() {
       enlarge_child_capacity(parent, 0);
   ASSERT(enlarge_child_capacity_result.code == ENLARGE_OK);
   ASSERT(enlarge_child_capacity_result.old_child ==
-      children[0]);
+         children[0]);
 
-  node_t* enlarged = get_child_by_index(parent, 0);
+  node_t *enlarged = get_child_by_index(parent, 0);
   ASSERT(max_children(enlarged) > 0);
   ASSERT(name_compare(enlarged->name, enlarged->name_sz,
-          enlarge_child_capacity_result.old_child) == 0);
+      enlarge_child_capacity_result.old_child) == 0);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   test_simple_parent_child();
   test_space();
   test_insufficient_space();

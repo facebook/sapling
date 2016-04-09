@@ -37,28 +37,28 @@ void test_bsearch() {
       20,
       2,
       15, 18, 21,
-    );
+  );
 
   BSEARCH_TEST(
       20,
       2,
       15, 18, 20, 21,
-    );
+  );
 
   BSEARCH_TEST(
       10,
       0,
       15, 18, 20, 21,
-    );
+  );
 
   BSEARCH_TEST(
       30,
       4,
       15, 18, 20, 21,
-    );
+  );
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   test_bsearch();
 
   return 0;

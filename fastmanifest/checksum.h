@@ -10,6 +10,6 @@
 
 #include "tree.h"
 
-void update_checksums(tree_t* tree);
+void update_checksums(tree_t *tree);
 
 #endif /* #ifndef __FASTMANIFEST_CHECKSUM_H__ */

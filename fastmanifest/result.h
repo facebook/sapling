@@ -16,7 +16,7 @@ typedef enum {
 
 typedef struct _get_path_result_t {
   get_path_code_t code;
-  struct _node_t* node;
+  struct _node_t *node;
 } get_path_result_t;
 
 typedef enum {
@@ -48,7 +48,7 @@ typedef enum {
 } convert_from_flat_code_t;
 typedef struct _convert_from_flat_result_t {
   convert_from_flat_code_t code;
-  struct _tree_t* tree;
+  struct _tree_t *tree;
 } convert_from_flat_result_t;
 
 typedef enum {
@@ -58,7 +58,7 @@ typedef enum {
 } convert_to_flat_code_t;
 typedef struct _convert_to_flat_result_t {
   convert_to_flat_code_t code;
-  char* flat_manifest;
+  char *flat_manifest;
   size_t flat_manifest_sz;
 } convert_to_flat_result_t;
 

@@ -23,12 +23,12 @@ void test_simple_convert() {
 
   ASSERT(convert_result.code == CONVERT_FROM_FLAT_OK);
 
-  tree_t* tree = convert_result.tree;
+  tree_t *tree = convert_result.tree;
   ASSERT(tree->compacted == true);
   ASSERT(tree->num_leaf_nodes == 3);
 
   get_path_result_t get_result;
-  node_t* node;
+  node_t *node;
 
   get_result = get_path(tree, STRPLUSLEN("abc"));
   ASSERT(get_result.code == GET_PATH_OK);
@@ -37,7 +37,7 @@ void test_simple_convert() {
   ASSERT(node->checksum_sz == SHA1_BYTES);
   ASSERT(memcmp(node->checksum,
       "\xb8\x0d\xe5\xd1\x38\x75\x85\x41\xc5\xf0\x52\x65\xad\x14\x4a\xb9\xfa"
-      "\x86\xd1"
+          "\x86\xd1"
           "\xdb", SHA1_BYTES) == 0);
   ASSERT(node->flags == 0);
 
@@ -124,7 +124,7 @@ void test_convert_bidirectionally() {
       memcmp(input, to_result.flat_manifest, to_result.flat_manifest_sz) == 0);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   test_simple_convert();
   test_convert_tree();
   test_convert_bidirectionally();

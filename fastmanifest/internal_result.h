@@ -32,12 +32,12 @@ typedef enum {
 } node_enlarge_child_capacity_code_t;
 typedef struct _node_enlarge_child_capacity_result_t {
   node_enlarge_child_capacity_code_t code;
-  struct _node_t* old_child;
-  struct _node_t* new_child;
+  struct _node_t *old_child;
+  struct _node_t *new_child;
 } node_enlarge_child_capacity_result_t;
 
 typedef struct _node_search_children_result_t {
-  struct _node_t* child;
+  struct _node_t *child;
   uint32_t child_num;
 } node_search_children_result_t;
 

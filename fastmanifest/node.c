@@ -12,8 +12,8 @@
 static size_t calculate_required_size(
     uint16_t name_sz,
     uint32_t num_children) {
-  node_t* ptr = 0;
-  void* name_start = &ptr->name;
+  node_t *ptr = 0;
+  void *name_start = &ptr->name;
   intptr_t address = (intptr_t) name_start;
   address += name_sz;
   address += sizeof(ptrdiff_t) - 1;
@@ -22,8 +22,8 @@ static size_t calculate_required_size(
 }
 
 static void initialize_node(
-    node_t* node, size_t block_sz,
-    const char* name, uint16_t name_sz,
+    node_t *node, size_t block_sz,
+    const char *name, uint16_t name_sz,
     uint32_t num_children) {
   node->block_sz = block_sz;
   node->num_children = 0;
@@ -34,11 +34,11 @@ static void initialize_node(
   memcpy(&node->name, name, name_sz);
 }
 
-node_t* alloc_node(
-    const char* name, uint16_t name_sz,
+node_t *alloc_node(
+    const char *name, uint16_t name_sz,
     uint32_t max_children) {
   size_t size = calculate_required_size(name_sz, max_children);
-  node_t* result = (node_t*) malloc(size);
+  node_t *result = (node_t *) malloc(size);
   if (result == NULL) {
     return result;
   }
@@ -47,36 +47,36 @@ node_t* alloc_node(
   return result;
 }
 
-void* setup_node(
-    void* ptr, size_t ptr_size_limit,
-    const char* name, uint16_t name_sz,
+void *setup_node(
+    void *ptr, size_t ptr_size_limit,
+    const char *name, uint16_t name_sz,
     uint32_t max_children) {
   size_t size = calculate_required_size(name_sz, max_children);
   if (size > ptr_size_limit) {
     return NULL;
   }
 
-  node_t* node = (node_t*) ptr;
+  node_t *node = (node_t *) ptr;
   intptr_t next = (intptr_t) ptr;
   next += size;
 
   initialize_node(node, size, name, name_sz, max_children);
 
-  return (void*) next;
+  return (void *) next;
 }
 
-node_t* clone_node(const node_t* node) {
+node_t *clone_node(const node_t *node) {
   uint32_t old_capacity = max_children(node);
   uint32_t new_capacity = (((uint64_t) old_capacity) *
-      (100 + STORAGE_INCREMENT_PERCENTAGE)) /
-      100;
+                           (100 + STORAGE_INCREMENT_PERCENTAGE)) /
+                          100;
   if (new_capacity - old_capacity < MIN_STORAGE_INCREMENT) {
     new_capacity = old_capacity + MIN_STORAGE_INCREMENT;
   } else if (new_capacity - old_capacity > MAX_STORAGE_INCREMENT) {
     new_capacity = old_capacity + MAX_STORAGE_INCREMENT;
   }
 
-  node_t* clone = alloc_node(
+  node_t *clone = alloc_node(
       node->name, node->name_sz,
       new_capacity);
   if (clone == NULL) {
@@ -95,10 +95,10 @@ node_t* clone_node(const node_t* node) {
   ptrdiff_t delta = ((intptr_t) node) - ((intptr_t) clone);
 
   // get the child pointer base of each node.
-  const ptrdiff_t* node_base = get_child_ptr_base_const(node);
-  ptrdiff_t* clone_base = get_child_ptr_base(clone);
+  const ptrdiff_t *node_base = get_child_ptr_base_const(node);
+  ptrdiff_t *clone_base = get_child_ptr_base(clone);
 
-  for (int ix = 0; ix < node->num_children; ix ++) {
+  for (int ix = 0; ix < node->num_children; ix++) {
     clone_base[ix] = node_base[ix] + delta;
   }
 
@@ -106,7 +106,7 @@ node_t* clone_node(const node_t* node) {
 }
 
 typedef struct {
-  const char* name;
+  const char *name;
   uint16_t name_sz;
 } find_child_struct_t;
 
@@ -115,9 +115,10 @@ typedef struct {
       ((const find_child_struct_t*) nameobject)->name,                  \
       ((const find_child_struct_t*) nameobject)->name_sz,               \
       get_child_from_diff((node_t*) context, *((ptrdiff_t*) relptr))))
+
 static CONTEXTUAL_COMPARATOR_BUILDER(name_node_cmp, NAME_NODE_COMPARE);
 
-node_add_child_result_t add_child(node_t* node, const node_t* child) {
+node_add_child_result_t add_child(node_t *node, const node_t *child) {
   // verify parent node.
   if (!node->in_use ||
       !(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT)) {
@@ -134,8 +135,8 @@ node_add_child_result_t add_child(node_t* node, const node_t* child) {
     return ADD_CHILD_ILLEGAL_CHILD;
   }
 
-  ptrdiff_t* base = get_child_ptr_base(node);
-  find_child_struct_t needle = { child->name, child->name_sz };
+  ptrdiff_t *base = get_child_ptr_base(node);
+  find_child_struct_t needle = {child->name, child->name_sz};
   size_t offset = bsearch_between(
       &needle,
       get_child_ptr_base(node),
@@ -147,7 +148,7 @@ node_add_child_result_t add_child(node_t* node, const node_t* child) {
   if (offset < node->num_children) {
     // displacing something.  ensure we don't have a conflict.
     ptrdiff_t diff = base[offset];
-    node_t* old_child = get_child_from_diff(node, diff);
+    node_t *old_child = get_child_from_diff(node, diff);
 
     if (name_compare(child->name, child->name_sz, old_child) == 0) {
       return CONFLICTING_ENTRY_PRESENT;
@@ -163,7 +164,7 @@ node_add_child_result_t add_child(node_t* node, const node_t* child) {
   }
 
   // bump the number of children we have.
-  node->num_children ++;
+  node->num_children++;
 
   // write the entry
   set_child_by_index(node, offset, child);
@@ -171,7 +172,7 @@ node_add_child_result_t add_child(node_t* node, const node_t* child) {
   return ADD_CHILD_OK;
 }
 
-node_remove_child_result_t remove_child(node_t* node, uint32_t child_num) {
+node_remove_child_result_t remove_child(node_t *node, uint32_t child_num) {
   // verify parent node.
   if (!node->in_use ||
       !(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT)) {
@@ -185,20 +186,20 @@ node_remove_child_result_t remove_child(node_t* node, uint32_t child_num) {
 
   if (child_num < node->num_children - 1) {
     // we need to compact the existing entries.
-    ptrdiff_t* base = get_child_ptr_base(node);
+    ptrdiff_t *base = get_child_ptr_base(node);
 
     memmove(&base[child_num], &base[child_num + 1],
         sizeof(ptrdiff_t) * (node->num_children - 1 - child_num));
   }
 
   // decrement the number of children we have.
-  node->num_children --;
+  node->num_children--;
 
   return REMOVE_CHILD_OK;
 }
 
 node_enlarge_child_capacity_result_t enlarge_child_capacity(
-    node_t* node,
+    node_t *node,
     uint32_t child_num) {
   node_enlarge_child_capacity_result_t result;
 
@@ -214,8 +215,8 @@ node_enlarge_child_capacity_result_t enlarge_child_capacity(
     return result;
   }
 
-  node_t* old_child = get_child_by_index(node, child_num);
-  node_t* new_child = clone_node(old_child);
+  node_t *old_child = get_child_by_index(node, child_num);
+  node_t *new_child = clone_node(old_child);
 
   if (new_child == NULL) {
     result.code = ENLARGE_OOM;
@@ -233,11 +234,11 @@ node_enlarge_child_capacity_result_t enlarge_child_capacity(
 }
 
 node_search_children_result_t search_children(
-    const node_t* node,
-    const char* name,
+    const node_t *node,
+    const char *name,
     const uint16_t name_sz) {
-  const ptrdiff_t* base = get_child_ptr_base_const(node);
-  find_child_struct_t needle = { name, name_sz };
+  const ptrdiff_t *base = get_child_ptr_base_const(node);
+  find_child_struct_t needle = {name, name_sz};
   size_t offset = bsearch_between(
       &needle,
       get_child_ptr_base_const(node),
@@ -247,25 +248,25 @@ node_search_children_result_t search_children(
       node);
 
   if (offset >= node->num_children) {
-    return (node_search_children_result_t) { NULL, UINT32_MAX };
+    return (node_search_children_result_t) {NULL, UINT32_MAX};
   }
 
   // ensure the spot we found is an exact match.
   ptrdiff_t diff = base[offset];
-  node_t* child = get_child_from_diff(node, diff);
+  node_t *child = get_child_from_diff(node, diff);
   if (name_compare(name, name_sz, child) == 0) {
     // huzzah, we found it.
-    return (node_search_children_result_t) { child, offset };
+    return (node_search_children_result_t) {child, offset};
   }
 
-  return (node_search_children_result_t) { NULL, UINT32_MAX };
+  return (node_search_children_result_t) {NULL, UINT32_MAX};
 }
 
 uint32_t get_child_index(
-    const node_t* const parent,
-    const node_t* const child) {
-  const ptrdiff_t* base = get_child_ptr_base_const(parent);
-  for (uint32_t child_num = 0; child_num < parent->num_children; child_num ++) {
+    const node_t *const parent,
+    const node_t *const child) {
+  const ptrdiff_t *base = get_child_ptr_base_const(parent);
+  for (uint32_t child_num = 0; child_num < parent->num_children; child_num++) {
     if (((intptr_t) parent) + base[child_num] == (intptr_t) child) {
       return child_num;
     }

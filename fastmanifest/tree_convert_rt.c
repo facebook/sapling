@@ -13,7 +13,7 @@
 
 #include "tree.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   if (argc < 3) {
     fprintf(stderr, "Usage: %s <manifestfile> <outputfile>\n", argv[0]);
     exit(1);
@@ -79,9 +79,9 @@ int main(int argc, char* argv[]) {
   uint64_t usecs_after_from = after_from.tv_sec * 1000000 +
                               after_from.tv_usec;
   uint64_t usecs_before_to = before_to.tv_sec * 1000000 +
-                               before_to.tv_usec;
+                             before_to.tv_usec;
   uint64_t usecs_after_to = after_to.tv_sec * 1000000 +
-                              after_to.tv_usec;
+                            after_to.tv_usec;
 
   printf("flat -> tree: %lld us\n", (usecs_after_from - usecs_before_from));
   printf("tree -> flat: %lld us\n", (usecs_after_to - usecs_before_to));

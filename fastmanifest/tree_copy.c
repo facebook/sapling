@@ -23,9 +23,9 @@ typedef enum {
  * `child_num` must be <= `dst_parent->num_children`.
  */
 copy_helper_result_t copy_helper(
-    tree_t* dst_tree,
-    const node_t* src,
-    node_t* dst_parent,
+    tree_t *dst_tree,
+    const node_t *src,
+    node_t *dst_parent,
     size_t child_num) {
   arena_alloc_node_result_t alloc_result = arena_alloc_node_strict(
       dst_tree, src->name, src->name_sz, src->num_children);
@@ -39,7 +39,7 @@ copy_helper_result_t copy_helper(
   }
 
   // copy the attributes
-  node_t* dst = alloc_result.node;
+  node_t *dst = alloc_result.node;
   if (src->checksum_valid) {
     memcpy(dst->checksum, src->checksum, src->checksum_sz);
     dst->checksum_sz = src->checksum_sz;
@@ -53,9 +53,9 @@ copy_helper_result_t copy_helper(
   dst->num_children = src->num_children;
 
   if (dst->type == TYPE_LEAF) {
-    dst_tree->num_leaf_nodes ++;
+    dst_tree->num_leaf_nodes++;
   } else {
-    for (int ix = 0; ix < src->num_children; ix ++) {
+    for (int ix = 0; ix < src->num_children; ix++) {
       copy_helper_result_t copy_result =
           copy_helper(
               dst_tree,
@@ -74,8 +74,8 @@ copy_helper_result_t copy_helper(
   return COPY_OK;
 }
 
-tree_t* copy(const tree_t* src) {
-  tree_t* dst = alloc_tree_with_arena(src->consumed_memory);
+tree_t *copy(const tree_t *src) {
+  tree_t *dst = alloc_tree_with_arena(src->consumed_memory);
 
   // prerequisite for using copy_helper is that child_num must be <
   // dst_parent->num_children, so we artificially bump up the num_chlidren

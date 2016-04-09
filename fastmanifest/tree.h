@@ -40,9 +40,12 @@ typedef struct _tree_t {
   uint32_t num_leaf_nodes;
 
   // these fields are not preserved during serialization.
-  struct _node_t* shadow_root;          /* this is a literal pointer. */
-  void* arena;                          /* this is also a literal pointer. */
-  void* arena_free_start;               /* this is also a literal pointer. */
+  struct _node_t *shadow_root;
+  /* this is a literal pointer. */
+  void *arena;
+  /* this is also a literal pointer. */
+  void *arena_free_start;
+  /* this is also a literal pointer. */
   size_t arena_sz;
   bool compacted;
 
@@ -59,36 +62,44 @@ typedef struct _tree_t {
  * 2) The path must not start nor end with the path separator '/'.
  * 3) The path must not have consecutive path separators.
  */
-extern bool valid_path(const char* path, const size_t path_sz);
+extern bool valid_path(const char *path, const size_t path_sz);
 
-extern tree_t* alloc_tree();
-extern void destroy_tree(tree_t* tree);
+extern tree_t *alloc_tree();
 
-extern tree_t* copy(const tree_t* src);
+extern void destroy_tree(tree_t *tree);
+
+extern tree_t *copy(const tree_t *src);
+
 extern get_path_result_t get_path(
-    tree_t* const tree,
-    const char* path,
+    tree_t *const tree,
+    const char *path,
     const size_t path_sz);
+
 extern add_update_path_result_t add_or_update_path(
-    tree_t* const tree,
-    const char* path,
+    tree_t *const tree,
+    const char *path,
     const size_t path_sz,
-    const uint8_t* checksum,
+    const uint8_t *checksum,
     const uint8_t checksum_sz,
     const uint8_t flags);
+
 extern remove_path_result_t remove_path(
-    tree_t* const tree,
-    const char* path,
-    const size_t path_sz);
-extern bool contains_path(
-    const tree_t* tree,
-    const char* path,
+    tree_t *const tree,
+    const char *path,
     const size_t path_sz);
 
-extern tree_t* read_from_file(char* fname);
-extern write_to_file_result_t write_to_file(tree_t* tree, char* fname);
+extern bool contains_path(
+    const tree_t *tree,
+    const char *path,
+    const size_t path_sz);
+
+extern tree_t *read_from_file(char *fname);
+
+extern write_to_file_result_t write_to_file(tree_t *tree, char *fname);
+
 extern convert_from_flat_result_t convert_from_flat(
-    char* manifest, size_t manifest_sz);
-extern convert_to_flat_result_t convert_to_flat(tree_t* tree);
+    char *manifest, size_t manifest_sz);
+
+extern convert_to_flat_result_t convert_to_flat(tree_t *tree);
 
 #endif /* #ifndef __FASTMANIFEST_TREE_H__ */

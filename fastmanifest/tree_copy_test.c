@@ -9,8 +9,8 @@
 #include "tree.h"
 
 void test_copy_empty() {
-  tree_t* src = alloc_tree();
-  tree_t* dst = copy(src);
+  tree_t *src = alloc_tree();
+  tree_t *dst = copy(src);
 
   ASSERT(dst != NULL);
   ASSERT(dst->compacted == true);
@@ -22,19 +22,19 @@ void test_copy_empty() {
 }
 
 void test_copy_empty_chain() {
-  tree_t* original = alloc_tree();
+  tree_t *original = alloc_tree();
 
-  tree_t* src = original;
+  tree_t *src = original;
 
-  for (int ix = 0; ix < 10; ix ++) {
-    tree_t* dst = copy(src);
+  for (int ix = 0; ix < 10; ix++) {
+    tree_t *dst = copy(src);
 
     ASSERT(dst != NULL);
     ASSERT(dst->compacted == true);
     ASSERT(dst->num_leaf_nodes == 0);
     ASSERT(dst->consumed_memory == src->consumed_memory);
 
-    tree_t* old_src = src;
+    tree_t *old_src = src;
     src = dst;
 
     destroy_tree(old_src);
@@ -42,9 +42,9 @@ void test_copy_empty_chain() {
 }
 
 typedef struct {
-  char* path;
+  char *path;
   size_t path_sz;
-  uint8_t* checksum;
+  uint8_t *checksum;
   uint8_t flags;
 } copy_normal_tree_data_t;
 #define COPY_NORMAL_TREE_DATA(path, checksum, flags)                      \
@@ -55,6 +55,7 @@ typedef struct {
       (uint8_t*) checksum,                                                \
       flags,                                                              \
     }
+
 void test_copy_normal_tree() {
   copy_normal_tree_data_t input[] = {
       COPY_NORMAL_TREE_DATA("abc",
@@ -74,10 +75,10 @@ void test_copy_normal_tree() {
               "\x5b\xf4\xba\x7c",
           0x44),
   };
-  size_t input_sz = sizeof(input) / sizeof(copy_normal_tree_data_t) ;
-  tree_t* src = alloc_tree();
+  size_t input_sz = sizeof(input) / sizeof(copy_normal_tree_data_t);
+  tree_t *src = alloc_tree();
 
-  for (size_t ix = 0; ix < input_sz; ix ++) {
+  for (size_t ix = 0; ix < input_sz; ix++) {
     add_update_path_result_t result =
         add_or_update_path(
             src,
@@ -90,9 +91,9 @@ void test_copy_normal_tree() {
   ASSERT(src->compacted == false);
   ASSERT(src->num_leaf_nodes == input_sz);
 
-  tree_t* dst = copy(src);
+  tree_t *dst = copy(src);
 
-  for (size_t ix = 0; ix < input_sz; ix ++) {
+  for (size_t ix = 0; ix < input_sz; ix++) {
     get_path_result_t get_result =
         get_path(dst, input[ix].path, input[ix].path_sz);
 
@@ -105,7 +106,7 @@ void test_copy_normal_tree() {
   }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   test_copy_empty();
   test_copy_empty_chain();
   test_copy_normal_tree();
