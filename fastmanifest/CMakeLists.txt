@@ -32,9 +32,11 @@ add_library(fastmanifest
         tree_arena.c
         tree_arena.h
         tree_convert.c
-        buffer.h
         buffer.c
-        tree_copy.c)
+        buffer.h
+        tree_copy.c
+        tree_path.c
+        tree_path.h)
 find_library(OPENSSL
         NAME crypto
         PATHS /opt/local/lib)
