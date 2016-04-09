@@ -222,6 +222,31 @@ void tree_add_get_simple() {
 }
 
 /**
+ * Initializes a tree, adds a single path, and attempt to retrieve a
+ * valid directory node.
+ */
+#define ADD_GET_SIMPLE_FLAGS 0x2e
+void tree_add_get_implicit_node() {
+  tree_t* tree = alloc_tree();
+
+  uint8_t checksum[SHA1_BYTES];
+
+  for (int ix = 0; ix < SHA1_BYTES; ix ++) {
+    checksum[ix] = (uint8_t) ix;
+  }
+
+  add_update_path_result_t add_result =
+      add_or_update_path(tree, STRPLUSLEN("abc/def"),
+          checksum, SHA1_BYTES, ADD_GET_SIMPLE_FLAGS);
+  ASSERT(add_result == ADD_UPDATE_PATH_OK);
+  ASSERT(tree->compacted == false);
+  ASSERT(tree->num_leaf_nodes == 1);
+
+  get_path_result_t get_result = get_path(tree, STRPLUSLEN("abc"));
+  ASSERT(get_result.code == GET_PATH_NOT_FOUND);
+}
+
+/**
  * Removes a non-existent path.
  */
 void tree_remove_nonexistent() {
@@ -341,6 +366,7 @@ int main(int argc, char *argv[]) {
   tree_add_conflict();
   tree_get_empty();
   tree_add_get_simple();
+  tree_add_get_implicit_node();
 
   tree_remove_nonexistent();
   tree_add_remove();

@@ -396,7 +396,7 @@ find_path_callback_result_t get_path_callback(
 
   // does the path already exist?
   node_t *child = get_child_by_name(root, name, name_sz);
-  if (child == NULL) {
+  if (child == NULL || child->type != TYPE_LEAF) {
     return (find_path_callback_result_t) {
         FIND_PATH_NOT_FOUND, root};
   }
