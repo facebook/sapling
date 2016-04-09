@@ -32,7 +32,8 @@ typedef enum {
 
 typedef enum {
   REMOVE_PATH_OK,
-
+  REMOVE_PATH_WTF,
+  REMOVE_PATH_NOT_FOUND,
 } remove_path_result_t;
 
 typedef enum {

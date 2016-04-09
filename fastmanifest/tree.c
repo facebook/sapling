@@ -289,6 +289,24 @@ static find_path_result_t find_path(
     if (changes->checksum_dirty == true) {
       root->checksum_valid = false;
     }
+
+    if (operation_type == REMOVE_EMPTY_IMPLICIT_NODES &&
+        root->type == TYPE_IMPLICIT &&
+        root->num_children == 0) {
+      // update metadata before we free the node.
+      changes->size_change -= root->block_sz;
+
+      node_remove_child_result_t remove_result = remove_child(
+          root_parent, get_child_index(root_parent, root));
+
+      if (remove_result != REMOVE_CHILD_OK) {
+        result = FIND_PATH_WTF;
+      } else {
+        if (!in_arena(tree, root)) {
+          free(root);
+        }
+      }
+    }
   }
 
   return result;
@@ -540,5 +558,77 @@ add_update_path_result_t add_or_update_path(
       return ADD_UPDATE_PATH_CONFLICT;
     default:
       return ADD_UPDATE_PATH_WTF;
+  }
+}
+
+find_path_callback_result_t remove_path_callback(
+    tree_t* tree,
+    node_t* const root_parent,
+    node_t* root,
+    const char* name, const size_t name_sz,
+    tree_state_changes_t* changes,
+    void* context) {
+  // does the path already exist?
+  node_search_children_result_t search_result =
+      search_children(root, name, name_sz);
+
+  if (search_result.child == NULL) {
+    return (find_path_callback_result_t) {
+        FIND_PATH_NOT_FOUND, NULL};
+  }
+
+  // record the metadata changes.
+  changes->checksum_dirty = true;
+  changes->num_leaf_node_change --;
+  changes->size_change -= search_result.child->block_sz;
+
+  node_remove_child_result_t remove_result =
+      remove_child(root, search_result.child_num);
+
+  if (remove_result == REMOVE_CHILD_OK) {
+    return (find_path_callback_result_t) {FIND_PATH_OK, root};
+  } else {
+    return (find_path_callback_result_t) {FIND_PATH_WTF, root};
+  }
+}
+
+remove_path_result_t remove_path(
+    tree_t* tree,
+    const char* path,
+    const size_t path_sz) {
+  tree_state_changes_t changes = { 0 };
+
+  node_t* shadow_root = tree->shadow_root;
+  node_t* real_root = get_child_by_index(shadow_root, 0);
+
+  if (real_root == NULL) {
+    return REMOVE_PATH_WTF;
+  }
+
+  find_path_result_t result =
+      find_path(
+          tree,
+          shadow_root,
+          real_root,
+          path, path_sz,
+          REMOVE_EMPTY_IMPLICIT_NODES,
+          &changes,
+          remove_path_callback,
+          NULL);
+
+  // apply the changes back to the tree struct
+  tree->consumed_memory += changes.size_change;
+  tree->num_leaf_nodes += changes.num_leaf_node_change;
+  if (changes.non_arena_allocations) {
+    tree->compacted = false;
+  }
+
+  switch (result) {
+    case FIND_PATH_OK:
+      return REMOVE_PATH_OK;
+    case FIND_PATH_NOT_FOUND:
+      return REMOVE_PATH_NOT_FOUND;
+    default:
+      return REMOVE_PATH_WTF;
   }
 }
