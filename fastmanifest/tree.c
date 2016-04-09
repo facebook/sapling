@@ -381,7 +381,7 @@ void destroy_tree(tree_t *tree) {
 }
 
 typedef struct _get_path_metadata_t {
-  node_t *node;
+  const node_t *node;
 } get_path_metadata_t;
 
 find_path_callback_result_t get_path_callback(
@@ -437,7 +437,12 @@ get_path_result_t get_path(
 
   switch (result) {
     case FIND_PATH_OK:
-      return (get_path_result_t) {GET_PATH_OK, metadata.node};
+      return (get_path_result_t) {
+          GET_PATH_OK,
+          metadata.node->checksum,
+          metadata.node->checksum_sz,
+          metadata.node->flags
+      };
     case FIND_PATH_NOT_FOUND:
     case FIND_PATH_CONFLICT:
       // `FIND_PATH_CONFLICT` is returned if there is a leaf node where we

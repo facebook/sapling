@@ -98,11 +98,10 @@ void test_copy_normal_tree() {
         get_path(dst, input[ix].path, input[ix].path_sz);
 
     ASSERT(get_result.code == GET_PATH_OK);
-    ASSERT(get_result.node->checksum_valid == true);
-    ASSERT(get_result.node->checksum_sz == SHA1_BYTES);
+    ASSERT(get_result.checksum_sz == SHA1_BYTES);
     ASSERT(memcmp(
-        get_result.node->checksum, input[ix].checksum, SHA1_BYTES) == 0);
-    ASSERT(get_result.node->flags == input[ix].flags);
+        get_result.checksum, input[ix].checksum, SHA1_BYTES) == 0);
+    ASSERT(get_result.flags == input[ix].flags);
   }
 }
 

@@ -213,15 +213,12 @@ void tree_add_get_simple() {
 
   get_path_result_t get_result = get_path(tree, STRPLUSLEN("abc"));
   ASSERT(get_result.code == GET_PATH_OK);
-  ASSERT(get_result.node != NULL);
-  ASSERT(get_result.node->checksum_valid == true);
-  ASSERT(get_result.node->checksum_sz == SHA1_BYTES);
-  ASSERT(memcmp(checksum, get_result.node->checksum, SHA1_BYTES) == 0);
-  ASSERT(get_result.node->flags == ADD_GET_SIMPLE_FLAGS);
+  ASSERT(get_result.checksum_sz == SHA1_BYTES);
+  ASSERT(memcmp(checksum, get_result.checksum, SHA1_BYTES) == 0);
+  ASSERT(get_result.flags == ADD_GET_SIMPLE_FLAGS);
 
   get_result = get_path(tree, STRPLUSLEN("abc/def"));
   ASSERT(get_result.code == GET_PATH_NOT_FOUND);
-  ASSERT(get_result.node == NULL);
 }
 
 /**

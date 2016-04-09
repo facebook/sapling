@@ -16,7 +16,9 @@ typedef enum {
 
 typedef struct _get_path_result_t {
   get_path_code_t code;
-  struct _node_t *node;
+  const uint8_t *checksum;
+  const uint8_t checksum_sz;
+  const uint8_t flags;
 } get_path_result_t;
 
 typedef enum {

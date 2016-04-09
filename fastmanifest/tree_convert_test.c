@@ -28,38 +28,31 @@ void test_simple_convert() {
   ASSERT(tree->num_leaf_nodes == 3);
 
   get_path_result_t get_result;
-  node_t *node;
 
   get_result = get_path(tree, STRPLUSLEN("abc"));
   ASSERT(get_result.code == GET_PATH_OK);
-  node = get_result.node;
-  ASSERT(node->checksum_valid == true);
-  ASSERT(node->checksum_sz == SHA1_BYTES);
-  ASSERT(memcmp(node->checksum,
+  ASSERT(get_result.checksum_sz == SHA1_BYTES);
+  ASSERT(memcmp(get_result.checksum,
       "\xb8\x0d\xe5\xd1\x38\x75\x85\x41\xc5\xf0\x52\x65\xad\x14\x4a\xb9\xfa"
           "\x86\xd1"
           "\xdb", SHA1_BYTES) == 0);
-  ASSERT(node->flags == 0);
+  ASSERT(get_result.flags == 0);
 
   get_result = get_path(tree, STRPLUSLEN("def"));
   ASSERT(get_result.code == GET_PATH_OK);
-  node = get_result.node;
-  ASSERT(node->checksum_valid == true);
-  ASSERT(node->checksum_sz == SHA1_BYTES);
-  ASSERT(memcmp(node->checksum,
+  ASSERT(get_result.checksum_sz == SHA1_BYTES);
+  ASSERT(memcmp(get_result.checksum,
       "\xf6\xd8\x64\x03\x9d\x10\xa8\x93\x4d\x0d\x58\x1d\x34\x27\x80\x29\x8a"
           "\xa9\xfb\x28", SHA1_BYTES) == 0);
-  ASSERT(node->flags == 'l');
+  ASSERT(get_result.flags == 'l');
 
   get_result = get_path(tree, STRPLUSLEN("ghi"));
   ASSERT(get_result.code == GET_PATH_OK);
-  node = get_result.node;
-  ASSERT(node->checksum_valid == true);
-  ASSERT(node->checksum_sz == SHA1_BYTES);
-  ASSERT(memcmp(node->checksum,
+  ASSERT(get_result.checksum_sz == SHA1_BYTES);
+  ASSERT(memcmp(get_result.checksum,
       "\x0f\x42\x1b\x10\x2b\x0b\xaa\x76\x0a\x5d\x4c\x57\x59\xf3\x39\xcf\xc1"
           "\xf7\xd0\x1b", SHA1_BYTES) == 0);
-  ASSERT(node->flags == 0);
+  ASSERT(get_result.flags == 0);
 
   destroy_tree(convert_result.tree);
 }
