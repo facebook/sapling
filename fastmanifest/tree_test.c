@@ -29,7 +29,7 @@ void tree_init_test() {
 /**
  * Initializes a tree and adds a node.
  */
-void tree_add_child() {
+void tree_add_single_child() {
   tree_t *tree = alloc_tree();
   uint8_t checksum[SHA1_BYTES];
 
@@ -359,7 +359,7 @@ void tree_add_remove_multi() {
 int main(int argc, char *argv[]) {
   tree_init_test();
 
-  tree_add_child();
+  tree_add_single_child();
   tree_add_0_cousin_once_removed();
   tree_add_long_skinny_branch();
   tree_add_bushy_branch();
