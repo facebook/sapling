@@ -397,6 +397,10 @@ static void setupsignalhandler(pid_t pid)
 	if (sigaction(SIGTERM, &sa, NULL) < 0)
 		goto error;
 
+	/* notify the worker about window resize events */
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGWINCH, &sa, NULL) < 0)
+		goto error;
 	/* propagate job control requests to worker */
 	sa.sa_handler = forwardsignal;
 	sa.sa_flags = SA_RESTART;
