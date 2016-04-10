@@ -1492,9 +1492,9 @@ class changeset_templater(changeset_printer):
             self.t = templater.templater.frommapfile(mapfile, filters=filters,
                                                      cache=defaulttempl)
         else:
-            self.t = templater.templater(filters=filters, cache=defaulttempl)
-            if tmpl:
-                self.t.cache['changeset'] = tmpl
+            self.t = formatter.maketemplater(ui, 'changeset', tmpl,
+                                             filters=filters,
+                                             cache=defaulttempl)
 
         self.cache = {}
 

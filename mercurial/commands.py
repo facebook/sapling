@@ -46,6 +46,7 @@ from . import (
     exchange,
     extensions,
     fileset,
+    formatter,
     graphmod,
     hbisect,
     help,
@@ -3681,8 +3682,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
     mapfile = None
     if revs is None:
         k = 'debugtemplate'
-        t = templater.templater()
-        t.cache[k] = tmpl
+        t = formatter.maketemplater(ui, k, tmpl)
         ui.write(templater.stringify(t(k, **props)))
     else:
         displayer = cmdutil.changeset_templater(ui, repo, None, opts, tmpl,

@@ -17,6 +17,7 @@ from .node import nullid, short
 
 from . import (
     error,
+    formatter,
     match,
     scmutil,
     simplemerge,
@@ -526,7 +527,7 @@ def _formatlabels(repo, fcd, fco, fca, labels):
 
     ui = repo.ui
     template = ui.config('ui', 'mergemarkertemplate', _defaultconflictmarker)
-    tmpl = templater.templater(cache={'conflictmarker': template})
+    tmpl = formatter.maketemplater(ui, 'conflictmarker', template)
 
     pad = max(len(l) for l in labels)
 

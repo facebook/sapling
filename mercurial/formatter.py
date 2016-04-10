@@ -193,7 +193,11 @@ def gettemplater(ui, topic, spec):
     assert not (tmpl and mapfile)
     if mapfile:
         return templater.templater.frommapfile(mapfile)
-    t = templater.templater()
+    return maketemplater(ui, topic, tmpl)
+
+def maketemplater(ui, topic, tmpl, filters=None, cache=None):
+    """Create a templater from a string template 'tmpl'"""
+    t = templater.templater(filters=filters, cache=cache)
     if tmpl:
         t.cache[topic] = tmpl
     return t
