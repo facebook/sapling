@@ -269,6 +269,9 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 
 cleanup:
 	if (WIFEXITED(pst)) {
+		if (WEXITSTATUS(pst) == 0)
+			abortmsg("could not connect to cmdserver "
+				 "(exited with status 0)");
 		debugmsg("cmdserver exited with status %d", WEXITSTATUS(pst));
 		exit(WEXITSTATUS(pst));
 	} else if (WIFSIGNALED(pst)) {
