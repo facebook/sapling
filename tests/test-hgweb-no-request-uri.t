@@ -15,9 +15,14 @@ should be used from d74fc8dec2b4 onward to route the request.
   summary:     test
   
   $ cat > request.py <<EOF
-  > from mercurial.hgweb import hgweb, hgwebdir
+  > from __future__ import absolute_import
+  > import os
+  > import sys
   > from StringIO import StringIO
-  > import os, sys
+  > from mercurial.hgweb import (
+  >     hgweb,
+  >     hgwebdir,
+  > )
   > 
   > errors = StringIO()
   > input = StringIO()
