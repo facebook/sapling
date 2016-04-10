@@ -36,17 +36,23 @@ struct cmdserveropts {
 	size_t argsize;
 	const char **args;
 	int lockfd;
+	int sockdirfd;
 };
 
 static void initcmdserveropts(struct cmdserveropts *opts) {
 	memset(opts, 0, sizeof(struct cmdserveropts));
 	opts->lockfd = -1;
+	opts->sockdirfd = AT_FDCWD;
 }
 
 static void freecmdserveropts(struct cmdserveropts *opts) {
 	free(opts->args);
 	opts->args = NULL;
 	opts->argsize = 0;
+	if (opts->sockdirfd != AT_FDCWD) {
+		close(opts->sockdirfd);
+		opts->sockdirfd = AT_FDCWD;
+	}
 }
 
 /*
