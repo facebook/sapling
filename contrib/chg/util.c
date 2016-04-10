@@ -8,6 +8,7 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -89,6 +90,15 @@ void fchdirx(int dirfd)
 	int r = fchdir(dirfd);
 	if (r == -1)
 		abortmsgerrno("failed to fchdir");
+}
+
+void fsetcloexec(int fd)
+{
+	int flags = fcntl(fd, F_GETFD);
+	if (flags < 0)
+		abortmsgerrno("cannot get flags of fd %d", fd);
+	if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
+		abortmsgerrno("cannot set flags of fd %d", fd);
 }
 
 void *mallocx(size_t size)

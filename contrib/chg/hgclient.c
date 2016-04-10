@@ -418,11 +418,7 @@ hgclient_t *hgc_open(const char *sockname)
 
 	/* don't keep fd on fork(), so that it can be closed when the parent
 	 * process get terminated. */
-	int flags = fcntl(fd, F_GETFD);
-	if (flags < 0)
-		abortmsgerrno("cannot get flags of socket");
-	if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
-		abortmsgerrno("cannot set flags of socket");
+	fsetcloexec(fd);
 
 	struct sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
