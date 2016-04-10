@@ -264,8 +264,6 @@ class validator(object):
 
     def __call__(self, sock, strict=False):
         host = self.host
-        cacerts = self.ui.config('web', 'cacerts')
-        hostfingerprints = self.ui.configlist('hostfingerprints', host)
 
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise error.Abort(_('%s ssl connection error') % host)
@@ -278,6 +276,10 @@ class validator(object):
         if not peercert:
             raise error.Abort(_('%s certificate error: '
                                'no certificate received') % host)
+
+        # If a certificate fingerprint is pinned, use it and only it to
+        # validate the remote cert.
+        hostfingerprints = self.ui.configlist('hostfingerprints', host)
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
             for x in xrange(0, len(peerfingerprint), 2)])
@@ -294,7 +296,11 @@ class validator(object):
                                  hint=_('check hostfingerprint configuration'))
             self.ui.debug('%s certificate matched fingerprint %s\n' %
                           (host, nicefingerprint))
-        elif cacerts != '!':
+            return
+
+        # No pinned fingerprint. Establish trust by looking at the CAs.
+        cacerts = self.ui.config('web', 'cacerts')
+        if cacerts != '!':
             msg = _verifycert(peercert2, host)
             if msg:
                 raise error.Abort(_('%s certificate error: %s') % (host, msg),
