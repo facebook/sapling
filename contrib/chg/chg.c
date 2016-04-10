@@ -178,6 +178,7 @@ static void lockcmdserver(struct cmdserveropts *opts)
 		if (opts->lockfd == -1)
 			abortmsgerrno("cannot create lock file %s",
 				      opts->lockfile);
+		fsetcloexec(opts->lockfd);
 	}
 	int r = flock(opts->lockfd, LOCK_EX);
 	if (r == -1)
@@ -309,8 +310,6 @@ static hgclient_t *connectcmdserver(struct cmdserveropts *opts)
 	if (pid < 0)
 		abortmsg("failed to fork cmdserver process");
 	if (pid == 0) {
-		/* do not leak lockfd to hg */
-		close(opts->lockfd);
 		execcmdserver(opts);
 	} else {
 		hgc = retryconnectcmdserver(opts, pid);
