@@ -94,8 +94,7 @@ class remotefilelog(object):
 
     def size(self, node):
         """return the size of a given revision"""
-        content = self.repo.contentstore.get(self.filename, node)
-        return len(content)
+        return len(self.read(node))
 
     rawsize = size
 

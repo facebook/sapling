@@ -92,3 +92,16 @@ Log on a file via -fr
   $ cd ..
   $ hg log -fr tip dir/ --template '{rev}\n'
   1
+
+Trace renames
+  $ hg mv x z
+  $ hg commit -m move
+  $ hg log -f z -T '{desc}\n' -G
+  @  move
+  :
+  o  x
+  
+
+Verify remotefilelog handles rename metadata stripping when comparing file sizes
+  $ hg debugrebuilddirstate
+  $ hg status
