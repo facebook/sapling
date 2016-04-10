@@ -171,7 +171,7 @@ Apple's OpenSSL. This trick do not work with plain OpenSSL.
   abort: error: *certificate verify failed* (glob)
   [255]
 
-  $ DISABLEOSXDUMMYCERT="--config=web.cacerts=!"
+  $ DISABLEOSXDUMMYCERT="--insecure"
 #endif
 
 clone via pull
@@ -287,20 +287,20 @@ Fingerprints
   $ echo "127.0.0.1 = 914f1aff87249c09b6859b88b1906d30756491ca" >> copy-pull/.hg/hgrc
 
 - works without cacerts
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
 - multiple fingerprints specified and first matches
-  $ hg --config 'hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  $ hg --config 'hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
 - multiple fingerprints specified and last matches
-  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, 914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, 914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
 - multiple fingerprints specified and none match
 
-  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --config web.cacerts=!
+  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
   abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
   (check hostfingerprint configuration)
   [255]
