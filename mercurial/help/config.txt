@@ -986,9 +986,6 @@ For example::
     hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
     hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
 
-This feature is only supported when using Python 2.6 or later.
-
-
 ``http_proxy``
 --------------
 
@@ -1848,11 +1845,6 @@ The full set of options is:
     constructs are expanded in the filename. If specified on the
     client, then it will verify the identity of remote HTTPS servers
     with these certificates.
-
-    This feature is only supported when using Python 2.6 or later. If you wish
-    to use it with earlier versions of Python, install the backported
-    version of the ssl library that is available from
-    ``http://pypi.python.org``.
 
     To disable SSL verification temporarily, specify ``--insecure`` from
     command line.
