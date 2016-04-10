@@ -7,12 +7,19 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   $ hg add bar
   $ hg commit -m "test"
   $ cat > request.py <<EOF
-  > from mercurial import dispatch
-  > from mercurial.hgweb.hgweb_mod import hgweb
-  > from mercurial.ui import ui
-  > from mercurial import hg
+  > from __future__ import absolute_import
+  > import os
+  > import sys
   > from StringIO import StringIO
-  > import os, sys
+  > from mercurial import (
+  >     dispatch,
+  >     hg,
+  >     ui as uimod,
+  > )
+  > ui = uimod.ui
+  > from mercurial.hgweb.hgweb_mod import (
+  >     hgweb,
+  > )
   > 
   > class FileLike(object):
   >     def __init__(self, real):
