@@ -1,8 +1,9 @@
 from __future__ import absolute_import, print_function
 
 import StringIO
-
-from mercurial import wireproto
+from mercurial import (
+    wireproto,
+)
 
 class proto(object):
     def __init__(self, args):
