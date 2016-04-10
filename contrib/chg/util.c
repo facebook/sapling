@@ -84,6 +84,13 @@ void debugmsg(const char *fmt, ...)
 	va_end(args);
 }
 
+void fchdirx(int dirfd)
+{
+	int r = fchdir(dirfd);
+	if (r == -1)
+		abortmsgerrno("failed to fchdir");
+}
+
 void *mallocx(size_t size)
 {
 	void *result = malloc(size);

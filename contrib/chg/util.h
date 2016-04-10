@@ -23,6 +23,7 @@ void enablecolor(void);
 void enabledebugmsg(void);
 void debugmsg(const char *fmt, ...) PRINTF_FORMAT_;
 
+void fchdirx(int dirfd);
 void *mallocx(size_t size);
 void *reallocx(void *ptr, size_t size);
 
