@@ -120,6 +120,9 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
       server (and client) support SNI, this tells the server which certificate
       to use.
     """
+    if not serverhostname:
+        raise error.Abort('serverhostname argument required')
+
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
     # the highest it likely goes in TLS 1.0. On modern stacks, it can
