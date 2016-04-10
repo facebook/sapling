@@ -144,12 +144,15 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
     # This is a no-op on old Python.
     sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
 
+    # This still works on our fake SSLContext.
+    sslcontext.verify_mode = cert_reqs
+
     if certfile is not None:
         def password():
             f = keyfile or certfile
             return ui.getpass(_('passphrase for %s: ') % f, '')
         sslcontext.load_cert_chain(certfile, keyfile, password)
-    sslcontext.verify_mode = cert_reqs
+
     if ca_certs is not None:
         sslcontext.load_verify_locations(cafile=ca_certs)
     else:
