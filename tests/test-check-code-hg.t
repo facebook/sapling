@@ -35,6 +35,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping fastmanifest/tree_convert_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_copy.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_copy_test.c it has no-che?k-code (glob)
+  Skipping fastmanifest/tree_path.c it has no-che?k-code (glob)
+  Skipping fastmanifest/tree_path.h it has no-che?k-code (glob)
   Skipping fastmanifest/tree_test.c it has no-che?k-code (glob)
   Skipping fastmanifest_wrapper.c it has no-che?k-code (glob)
   Skipping statprof.py it has no-che?k-code (glob)
