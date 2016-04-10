@@ -266,7 +266,7 @@ cleanup:
 	} else if (WIFSIGNALED(pst)) {
 		abortmsg("cmdserver killed by signal %d", WTERMSIG(pst));
 	} else {
-		abortmsg("error white waiting cmdserver");
+		abortmsg("error while waiting for cmdserver");
 	}
 	return NULL;
 }
