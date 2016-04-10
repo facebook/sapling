@@ -49,6 +49,7 @@ static void freecmdserveropts(struct cmdserveropts *opts) {
 	free(opts->args);
 	opts->args = NULL;
 	opts->argsize = 0;
+	assert(opts->lockfd == -1 && "should be closed by unlockcmdserver()");
 	if (opts->sockdirfd != AT_FDCWD) {
 		close(opts->sockdirfd);
 		opts->sockdirfd = AT_FDCWD;
