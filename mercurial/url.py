@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 import base64
-import cStringIO
 import httplib
 import os
 import socket
@@ -25,6 +24,7 @@ from . import (
     sslutil,
     util,
 )
+stringio = util.stringio
 
 class passwordmgr(urllib2.HTTPPasswordMgrWithDefaultRealm):
     def __init__(self, ui):
@@ -273,7 +273,7 @@ def _generic_proxytunnel(self):
         res.length = None
         res.chunked = 0
         res.will_close = 1
-        res.msg = httplib.HTTPMessage(cStringIO.StringIO())
+        res.msg = httplib.HTTPMessage(stringio())
         return False
 
     res.msg = httplib.HTTPMessage(res.fp)

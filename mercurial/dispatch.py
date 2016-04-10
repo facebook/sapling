@@ -990,8 +990,7 @@ def _runcommand(ui, options, cmd, cmdfunc):
         output = ui.config('profiling', 'output')
 
         if output == 'blackbox':
-            import StringIO
-            fp = StringIO.StringIO()
+            fp = util.stringio()
         elif output:
             path = ui.expandpath(output)
             fp = open(path, 'wb')

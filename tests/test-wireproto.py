@@ -1,9 +1,10 @@
 from __future__ import absolute_import, print_function
 
-import StringIO
 from mercurial import (
+    util,
     wireproto,
 )
+stringio = util.stringio
 
 class proto(object):
     def __init__(self, args):
@@ -25,7 +26,7 @@ class clientpeer(wireproto.wirepeer):
         return wireproto.dispatch(self.serverrepo, proto(args), cmd)
 
     def _callstream(self, cmd, **args):
-        return StringIO.StringIO(self._call(cmd, **args))
+        return stringio(self._call(cmd, **args))
 
     @wireproto.batchable
     def greet(self, name):

@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 from __future__ import absolute_import
 
-import cStringIO
 import errno
 import os
 import re
@@ -24,7 +23,7 @@ from . import (
     cvsps,
 )
 
-StringIO = cStringIO.StringIO
+stringio = util.stringio
 checktool = common.checktool
 commit = common.commit
 converter_source = common.converter_source
@@ -228,7 +227,7 @@ class convert_cvs(converter_source):
             # file-objects returned by socket.makefile() do not handle
             # large read() requests very well.
             chunksize = 65536
-            output = StringIO()
+            output = stringio()
             while count > 0:
                 data = fp.read(min(count, chunksize))
                 if not data:

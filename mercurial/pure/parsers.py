@@ -7,11 +7,12 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import struct
 import zlib
 
 from .node import nullid
+from . import pycompat
+stringio = pycompat.stringio
 
 _pack = struct.pack
 _unpack = struct.unpack
@@ -90,7 +91,7 @@ def parse_dirstate(dmap, copymap, st):
 
 def pack_dirstate(dmap, copymap, pl, now):
     now = int(now)
-    cs = cStringIO.StringIO()
+    cs = stringio()
     write = cs.write
     write("".join(pl))
     for f, e in dmap.iteritems():

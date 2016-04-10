@@ -65,7 +65,6 @@ You can set patchbomb to always ask for confirmation by setting
 '''
 from __future__ import absolute_import
 
-import cStringIO
 import email as emailmod
 import errno
 import os
@@ -83,6 +82,7 @@ from mercurial import (
     scmutil,
     util,
 )
+stringio = util.stringio
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -228,7 +228,7 @@ def _getpatches(repo, revs, **opts):
         if r == prev and (repo[None].files() or repo[None].deleted()):
             ui.warn(_('warning: working directory has '
                       'uncommitted changes\n'))
-        output = cStringIO.StringIO()
+        output = stringio()
         cmdutil.export(repo, [r], fp=output,
                      opts=patch.difffeatureopts(ui, opts, git=True))
         yield output.getvalue().split('\n')
@@ -721,7 +721,7 @@ def email(ui, repo, *revs, **opts):
             if not mbox:
                 # Exim does not remove the Bcc field
                 del m['Bcc']
-            fp = cStringIO.StringIO()
+            fp = stringio()
             generator = emailmod.Generator.Generator(fp, mangle_from_=False)
             generator.flatten(m, 0)
             sendmail(sender_addr, to + bcc + cc, fp.getvalue())

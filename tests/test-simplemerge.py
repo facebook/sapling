@@ -36,8 +36,7 @@ class Merge3(simplemerge.Merge3Text):
 CantReprocessAndShowBase = simplemerge.CantReprocessAndShowBase
 
 def split_lines(t):
-    from cStringIO import StringIO
-    return StringIO(t).readlines()
+    return util.stringio(t).readlines()
 
 ############################################################
 # test case data from the gnu diffutils manual

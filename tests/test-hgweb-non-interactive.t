@@ -10,16 +10,17 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   > from __future__ import absolute_import
   > import os
   > import sys
-  > from StringIO import StringIO
   > from mercurial import (
   >     dispatch,
   >     hg,
   >     ui as uimod,
+  >     util,
   > )
   > ui = uimod.ui
   > from mercurial.hgweb.hgweb_mod import (
   >     hgweb,
   > )
+  > stringio = util.stringio
   > 
   > class FileLike(object):
   >     def __init__(self, real):
@@ -35,9 +36,9 @@ by the WSGI standard and strictly implemented by mod_wsgi.
   >         return self.real.readline()
   > 
   > sys.stdin = FileLike(sys.stdin)
-  > errors = StringIO()
-  > input = StringIO()
-  > output = StringIO()
+  > errors = stringio()
+  > input = stringio()
+  > output = stringio()
   > 
   > def startrsp(status, headers):
   >     print '---- STATUS'

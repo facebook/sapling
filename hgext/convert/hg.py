@@ -18,7 +18,6 @@
 #   source.
 from __future__ import absolute_import
 
-import cStringIO
 import os
 import re
 import time
@@ -36,6 +35,8 @@ from mercurial import (
     scmutil,
     util,
 )
+stringio = util.stringio
+
 from mercurial.i18n import _
 from . import common
 mapfile = common.mapfile
@@ -137,7 +138,7 @@ class mercurial_sink(common.converter_sink):
             self.before()
 
     def _rewritetags(self, source, revmap, data):
-        fp = cStringIO.StringIO()
+        fp = stringio()
         for line in data.splitlines():
             s = line.split(' ', 1)
             if len(s) != 2:
@@ -152,7 +153,7 @@ class mercurial_sink(common.converter_sink):
         return fp.getvalue()
 
     def _rewritesubstate(self, source, data):
-        fp = cStringIO.StringIO()
+        fp = stringio()
         for line in data.splitlines():
             s = line.split(' ', 1)
             if len(s) != 2:

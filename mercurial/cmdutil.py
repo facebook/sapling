@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import errno
 import os
 import re
@@ -46,6 +45,7 @@ from . import (
     templater,
     util,
 )
+stringio = util.stringio
 
 def ishunk(x):
     hunkclasses = (crecordmod.uihunk, patch.recordhunk)
@@ -211,7 +211,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall,
                 util.copyfile(repo.wjoin(f), tmpname, copystat=True)
                 backups[f] = tmpname
 
-            fp = cStringIO.StringIO()
+            fp = stringio()
             for c in chunks:
                 fname = c.filename()
                 if fname in backups:
@@ -3298,7 +3298,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
         # Apply changes
-        fp = cStringIO.StringIO()
+        fp = stringio()
         for c in chunks:
             c.write(fp)
         dopatch = fp.tell()

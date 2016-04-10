@@ -7,10 +7,10 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import struct
 
-StringIO = cStringIO.StringIO
+from . import pycompat
+stringio = pycompat.stringio
 
 class mpatchError(Exception):
     """error raised when a delta cannot be decoded
@@ -66,7 +66,7 @@ def patches(a, bins):
     if not tl:
         return a
 
-    m = StringIO()
+    m = stringio()
 
     # load our original text
     m.write(a)

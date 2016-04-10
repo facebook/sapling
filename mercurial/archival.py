@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import gzip
 import os
 import struct
@@ -26,6 +25,7 @@ from . import (
     scmutil,
     util,
 )
+stringio = util.stringio
 
 # from unzip source code:
 _UNX_IFREG = 0x8000
@@ -172,7 +172,7 @@ class tarit(object):
             i.size = 0
         else:
             i.mode = mode
-            data = cStringIO.StringIO(data)
+            data = stringio(data)
         self.z.addfile(i, data)
 
     def done(self):

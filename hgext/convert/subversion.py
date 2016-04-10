@@ -4,7 +4,6 @@
 from __future__ import absolute_import
 
 import cPickle as pickle
-import cStringIO
 import os
 import re
 import sys
@@ -24,7 +23,7 @@ from mercurial.i18n import _
 
 from . import common
 
-StringIO = cStringIO.StringIO
+stringio = util.stringio
 propertycache = util.propertycache
 
 commandline = common.commandline
@@ -986,7 +985,7 @@ class svn_source(converter_source):
             if self.module != new_module:
                 self.module = new_module
                 self.reparent(self.module)
-            io = StringIO()
+            io = stringio()
             info = svn.ra.get_file(self.ra, file, revnum, io)
             data = io.getvalue()
             # ra.get_file() seems to keep a reference on the input buffer

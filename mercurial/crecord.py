@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import locale
 import os
 import re
@@ -25,6 +24,7 @@ from . import (
     patch as patchmod,
     util,
 )
+stringio = util.stringio
 
 # This is required for ncurses to display non-ASCII characters in default user
 # locale encoding correctly.  --immerrr
@@ -238,7 +238,7 @@ class uiheader(patchnode):
 
 
     def prettystr(self):
-        x = cStringIO.StringIO()
+        x = stringio()
         self.pretty(x)
         return x.getvalue()
 
@@ -449,7 +449,7 @@ class uihunk(patchnode):
     pretty = write
 
     def prettystr(self):
-        x = cStringIO.StringIO()
+        x = stringio()
         self.pretty(x)
         return x.getvalue()
 
@@ -1506,7 +1506,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
                 return None
 
             # write the initial patch
-            patch = cStringIO.StringIO()
+            patch = stringio()
             patch.write(diffhelptext + hunkhelptext)
             chunk.header.write(patch)
             chunk.write(patch)

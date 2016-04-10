@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cStringIO
 import cgi
 import urllib
 import zlib
@@ -20,6 +19,7 @@ from .. import (
     util,
     wireproto,
 )
+stringio = util.stringio
 
 HGTYPE = 'application/mercurial-0.1'
 HGERRTYPE = 'application/hg-error'
@@ -66,7 +66,7 @@ class webproto(wireproto.abstractserverproto):
             fp.write(s)
     def redirect(self):
         self.oldio = self.ui.fout, self.ui.ferr
-        self.ui.ferr = self.ui.fout = cStringIO.StringIO()
+        self.ui.ferr = self.ui.fout = stringio()
     def restore(self):
         val = self.ui.fout.getvalue()
         self.ui.ferr, self.ui.fout = self.oldio
