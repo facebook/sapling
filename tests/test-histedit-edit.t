@@ -77,6 +77,12 @@ edit the history
   Editing (e860deea161a), you may commit or record as needed now.
   (hg histedit --continue to resume)
 
+try to update and get an error
+  $ hg update tip
+  abort: histedit in progress
+  (use 'hg histedit --continue' or 'hg histedit --abort')
+  [255]
+
 edit the plan via the editor
   $ cat >> $TESTTMP/editplan.sh <<EOF
   > cat > \$1 <<EOF2
