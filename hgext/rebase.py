@@ -390,7 +390,8 @@ def rebase(ui, repo, **opts):
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
                 p1, p2, base = defineparents(repo, rev, target, state,
-                                             targetancestors)
+                                             targetancestors,
+                                             obsoletenotrebased)
                 storestatus(repo, originalwd, target, state, collapsef, keepf,
                             keepbranchesf, external, activebookmark)
                 storecollapsemsg(repo, collapsemsg)
@@ -455,7 +456,8 @@ def rebase(ui, repo, **opts):
 
         if collapsef and not keepopen:
             p1, p2, _base = defineparents(repo, min(state), target,
-                                          state, targetancestors)
+                                          state, targetancestors,
+                                          obsoletenotrebased)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if collapsemsg:
@@ -744,10 +746,12 @@ def _checkobsrebase(repo, ui,
                  'experimental.rebaseskipobsolete to False')
         raise error.Abort(msg, hint=hint)
 
-def defineparents(repo, rev, target, state, targetancestors):
+def defineparents(repo, rev, target, state, targetancestors,
+                  obsoletenotrebased):
     'Return the new parent relationship of the revision that will be rebased'
     parents = repo[rev].parents()
     p1 = p2 = nullrev
+    rp1 = None
 
     p1n = parents[0].rev()
     if p1n in targetancestors:
@@ -771,6 +775,8 @@ def defineparents(repo, rev, target, state, targetancestors):
         if p2n in state:
             if p1 == target: # p1n in targetancestors or external
                 p1 = state[p2n]
+                if p1 == revprecursor:
+                    rp1 = obsoletenotrebased[p2n]
             elif state[p2n] in revskipped:
                 p2 = nearestrebased(repo, p2n, state)
                 if p2 is None:
@@ -784,7 +790,7 @@ def defineparents(repo, rev, target, state, targetancestors):
                         'would have 3 parents') % rev)
             p2 = p2n
     repo.ui.debug(" future parents are %d and %d\n" %
-                            (repo[p1].rev(), repo[p2].rev()))
+                            (repo[rp1 or p1].rev(), repo[p2].rev()))
 
     if not any(p.rev() in state for p in parents):
         # Case (1) root changeset of a non-detaching rebase set.
@@ -828,6 +834,8 @@ def defineparents(repo, rev, target, state, targetancestors):
         # make it feasible to consider different cases separately. In these
         # other cases we currently just leave it to the user to correctly
         # resolve an impossible merge using a wrong ancestor.
+        #
+        # xx, p1 could be -4, and both parents could probably be -4...
         for p in repo[rev].parents():
             if state.get(p.rev()) == p1:
                 base = p.rev()
@@ -838,7 +846,7 @@ def defineparents(repo, rev, target, state, targetancestors):
             # Raise because this function is called wrong (see issue 4106)
             raise AssertionError('no base found to rebase on '
                                  '(defineparents called wrong)')
-    return p1, p2, base
+    return rp1 or p1, p2, base
 
 def isagitpatch(repo, patchname):
     'Return true if the given patch is in git format'
