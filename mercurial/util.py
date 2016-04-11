@@ -1583,7 +1583,19 @@ def makedate(timestamp=None):
 def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     """represent a (unixtime, offset) tuple as a localized time.
     unixtime is seconds since the epoch, and offset is the time zone's
-    number of seconds away from UTC."""
+    number of seconds away from UTC.
+
+    >>> datestr((0, 0))
+    'Thu Jan 01 00:00:00 1970 +0000'
+    >>> datestr((42, 0))
+    'Thu Jan 01 00:00:42 1970 +0000'
+    >>> datestr((-42, 0))
+    'Wed Dec 31 23:59:18 1969 +0000'
+    >>> datestr((0x7fffffff, 0))
+    'Tue Jan 19 03:14:07 2038 +0000'
+    >>> datestr((-0x80000000, 0))
+    'Fri Dec 13 20:45:52 1901 +0000'
+    """
     t, tz = date or makedate()
     if "%1" in format or "%2" in format or "%z" in format:
         sign = (tz > 0) and "-" or "+"
