@@ -567,6 +567,11 @@ def find_cycles(imports):
 def _cycle_sortkey(c):
     return len(c), c
 
+def sources(f, modname):
+    if f.endswith('.py'):
+        with open(f) as src:
+            yield src.read(), modname
+
 def main(argv):
     if len(argv) < 2 or (argv[1] == '-' and len(argv) > 2):
         print('Usage: %s {-|file [file] [file] ...}')
@@ -580,15 +585,14 @@ def main(argv):
     for source_path in argv[1:]:
         modname = dotted_name_of_path(source_path, trimpure=True)
         localmods[modname] = source_path
-    for modname, source_path in sorted(localmods.items()):
-        f = open(source_path)
-        src = f.read()
-        used_imports[modname] = sorted(
-            imported_modules(src, modname, localmods, ignore_nested=True))
-        for error, lineno in verify_import_convention(modname, src, localmods):
-            any_errors = True
-            print('%s:%d: %s' % (source_path, lineno, error))
-        f.close()
+    for localmodname, source_path in sorted(localmods.items()):
+        for src, modname in sources(source_path, localmodname):
+            used_imports[modname] = sorted(
+                imported_modules(src, modname, localmods, ignore_nested=True))
+            for error, lineno in verify_import_convention(modname, src,
+                                                          localmods):
+                any_errors = True
+                print('%s:%d: %s' % (source_path, lineno, error))
     cycles = find_cycles(used_imports)
     if cycles:
         firstmods = set()
