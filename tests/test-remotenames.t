@@ -235,29 +235,29 @@ but configured, it'll do the expected thing:
   | |
   o |  changeset:   4:8948da77173b
   |\|  branch:      stable
-  | |  branch:      beta/stable
-  | |  parent:      2:95cb4ab9fe1d
-  | |  parent:      3:78f83396d79e
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merged
-  | |
-  | o  changeset:   3:78f83396d79e
-  | |  bookmark:    beta/babar
-  | |  branch:      beta/default
-  | |  parent:      1:7c3bad9141dc
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     add d
-  | |
+  ~ |  branch:      beta/stable
+    |  parent:      2:95cb4ab9fe1d
+    |  parent:      3:78f83396d79e
+    |  user:        test
+    |  date:        Thu Jan 01 00:00:00 1970 +0000
+    |  summary:     merged
+   /
+  o  changeset:   3:78f83396d79e
+  |  bookmark:    beta/babar
+  ~  branch:      beta/default
+     parent:      1:7c3bad9141dc
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add d
+  
   $ hg log --limit 2 --graph -r 'heads(upstream())'
   o  changeset:   2:95cb4ab9fe1d
   |  branch:      stable
-  |  branch:      alpha/stable
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add c
-  |
+  ~  branch:      alpha/stable
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     add c
+  
 
 Test remotenames revset and keyword
 
