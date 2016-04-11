@@ -1595,8 +1595,8 @@ def datestr(date=None, format='%a %b %d %H:%M:%S %Y %1%2'):
     d = t - tz
     if d > 0x7fffffff:
         d = 0x7fffffff
-    elif d < -0x7fffffff:
-        d = -0x7fffffff
+    elif d < -0x80000000:
+        d = -0x80000000
     # Never use time.gmtime() and datetime.datetime.fromtimestamp()
     # because they use the gmtime() system call which is buggy on Windows
     # for negative values.
@@ -1720,7 +1720,7 @@ def parsedate(date, formats=None, bias=None):
     # time zone offset. values must fit in signed 32 bits for
     # current 32-bit linux runtimes. timezones go from UTC-12
     # to UTC+14
-    if abs(when) > 0x7fffffff:
+    if when < -0x80000000 or when > 0x7fffffff:
         raise Abort(_('date exceeds 32 bits: %d') % when)
     if offset < -50400 or offset > 43200:
         raise Abort(_('impossible time zone offset: %d') % offset)
