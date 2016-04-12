@@ -352,12 +352,13 @@ def reposetup(ui, repo):
     # is used to write status out.
     repo._lfstatuswriters = [ui.status]
 
-    def prepushoutgoinghook(local, remote, outgoing):
-        if outgoing.missing:
+    def prepushoutgoinghook(pushop):
+        if pushop.outgoing.missing:
             toupload = set()
             addfunc = lambda fn, lfhash: toupload.add(lfhash)
-            lfutil.getlfilestoupload(local, outgoing.missing, addfunc)
-            lfcommands.uploadlfiles(ui, local, remote, toupload)
+            lfutil.getlfilestoupload(pushop.repo, pushop.outgoing.missing,
+                                     addfunc)
+            lfcommands.uploadlfiles(ui, pushop.repo, pushop.remote, toupload)
     repo.prepushoutgoinghooks.add("largefiles", prepushoutgoinghook)
 
     def checkrequireslfiles(ui, repo, **kwargs):

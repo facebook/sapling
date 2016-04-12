@@ -694,9 +694,7 @@ def _pushb2ctx(pushop, bundler):
     # Send known heads to the server for race detection.
     if not _pushcheckoutgoing(pushop):
         return
-    pushop.repo.prepushoutgoinghooks(pushop.repo,
-                                     pushop.remote,
-                                     pushop.outgoing)
+    pushop.repo.prepushoutgoinghooks(pushop)
 
     _pushb2ctxcheckheads(pushop, bundler)
 
@@ -884,9 +882,7 @@ def _pushchangeset(pushop):
     pushop.stepsdone.add('changesets')
     if not _pushcheckoutgoing(pushop):
         return
-    pushop.repo.prepushoutgoinghooks(pushop.repo,
-                                     pushop.remote,
-                                     pushop.outgoing)
+    pushop.repo.prepushoutgoinghooks(pushop)
     outgoing = pushop.outgoing
     unbundle = pushop.remote.capable('unbundle')
     # TODO: get bundlecaps from remote

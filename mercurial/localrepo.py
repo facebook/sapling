@@ -1887,8 +1887,8 @@ class localrepository(object):
 
     @unfilteredpropertycache
     def prepushoutgoinghooks(self):
-        """Return util.hooks consists of "(repo, remote, outgoing)"
-        functions, which are called before pushing changesets.
+        """Return util.hooks consists of a pushop with repo, remote, outgoing
+        methods, which are called before pushing changesets.
         """
         return util.hooks()
 
