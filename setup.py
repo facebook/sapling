@@ -16,7 +16,6 @@ setup(
     license='',
     py_modules=[
         'arcdiff',
-        'automv',
         'backups',
         'bundle2hooks',
         'catnotate',
