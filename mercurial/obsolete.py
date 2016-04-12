@@ -629,7 +629,7 @@ class obsstore(object):
         return len(new)
 
     def delete(self, indices):
-        """Delete some obsmarkers from store and return the number of them
+        """Delete some obsmarkers from store and return how many were deleted
 
         Indices is a list of ints which are the indices
         of the markers to be deleted."""

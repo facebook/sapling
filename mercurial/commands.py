@@ -3063,29 +3063,22 @@ def debugobsolete(ui, repo, precursor=None, *successors, **opts):
                              'node identifiers')
 
     if opts.get('delete'):
-        try:
-            indices = [int(v) for v in opts.get('delete')]
-        except ValueError:
-            raise error.Abort(_('invalid index value'),
-                              hint=_('use integers fro indices'))
+        indices = []
+        for v in opts.get('delete'):
+            try:
+                indices.append(int(v))
+            except ValueError:
+                raise error.Abort(_('invalid index value: %r') % v,
+                                  hint=_('use integers for indices'))
 
         if repo.currenttransaction():
-            raise error.Abort(_('Cannot delete obsmarkers in the middle '
+            raise error.Abort(_('cannot delete obsmarkers in the middle '
                                 'of transaction.'))
 
-        w = repo.wlock()
-        l = repo.lock()
-        try:
-            tr = repo.transaction('debugobsolete')
-            try:
-                n = repo.obsstore.delete(indices)
-                ui.write(_('Deleted %i obsolescense markers\n') % n)
-                tr.close()
-            finally:
-                tr.release()
-        finally:
-            l.release()
-            w.release()
+        with repo.lock():
+            n = repo.obsstore.delete(indices)
+            ui.write(_('deleted %i obsolescense markers\n') % n)
+
         return
 
     if precursor is not None:
