@@ -145,11 +145,22 @@ Known-bad files are excluded by -X as some of them would produce unstable
 outputs, which should be fixed later.
 
   $ hg locate 'mercurial/**.py' 'hgext/**.py' 'tests/**.py' \
+  > 'tests/**.t' \
   > -X tests/test-hgweb-auth.py \
   > -X tests/hypothesishelpers.py \
   > -X tests/test-ctxmanager.py \
   > -X tests/test-lock.py \
   > -X tests/test-verify-repo-operations.py \
+  > -X tests/test-hook.t \
+  > -X tests/test-import.t \
+  > -X tests/test-check-module-imports.t \
+  > -X tests/test-commit-interactive.t \
+  > -X tests/test-contrib-check-code.t \
+  > -X tests/test-extension.t \
+  > -X tests/test-hghave.t \
+  > -X tests/test-hgweb-no-path-info.t \
+  > -X tests/test-hgweb-no-request-uri.t \
+  > -X tests/test-hgweb-non-interactive.t \
   > | sed 's-\\-/-g' | python "$import_checker" -
   Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
   [1]
