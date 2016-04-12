@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function
 import ast
 import collections
 import os
+import re
 import sys
 
 # Import a minimal set of stdlib modules needed for list_stdlib_modules()
@@ -568,10 +569,97 @@ def find_cycles(imports):
 def _cycle_sortkey(c):
     return len(c), c
 
+def embedded(f, modname, src):
+    """Extract embedded python code
+
+    >>> def test(fn, lines):
+    ...     for s, m, f, l in embedded(fn, "example", lines):
+    ...         print("%s %s %s" % (m, f, l))
+    ...         print(repr(s))
+    >>> lines = [
+    ...   'comment',
+    ...   '  >>> from __future__ import print_function',
+    ...   "  >>> ' multiline",
+    ...   "  ... string'",
+    ...   '  ',
+    ...   'comment',
+    ...   '  $ cat > foo.py <<EOF',
+    ...   '  > from __future__ import print_function',
+    ...   '  > EOF',
+    ... ]
+    >>> test("example.t", lines)
+    example[2] doctest.py 2
+    "from __future__ import print_function\\n' multiline\\nstring'\\n"
+    example[7] foo.py 7
+    'from __future__ import print_function\\n'
+    """
+    inlinepython = 0
+    shpython = 0
+    script = []
+    prefix = 6
+    t = ''
+    n = 0
+    for l in src:
+        n += 1
+        if not l.endswith(b'\n'):
+            l += b'\n'
+        if l.startswith(b'  >>> '): # python inlines
+            if shpython:
+                print("%s:%d: Parse Error" % (f, n))
+            if not inlinepython:
+                # We've just entered a Python block.
+                inlinepython = n
+                t = 'doctest.py'
+            script.append(l[prefix:])
+            continue
+        if l.startswith(b'  ... '): # python inlines
+            script.append(l[prefix:])
+            continue
+        cat = re.search(r"\$ \s*cat\s*>\s*(\S+\.py)\s*<<\s*EOF", l)
+        if cat:
+            if inlinepython:
+                yield ''.join(script), ("%s[%d]" %
+                       (modname, inlinepython)), t, inlinepython
+                script = []
+                inlinepython = 0
+            shpython = n
+            t = cat.group(1)
+            continue
+        if shpython and l.startswith(b'  > '): # sh continuation
+            if l == b'  > EOF\n':
+                yield ''.join(script), ("%s[%d]" %
+                       (modname, shpython)), t, shpython
+                script = []
+                shpython = 0
+            else:
+                script.append(l[4:])
+            continue
+        if inlinepython and l == b'  \n':
+            yield ''.join(script), ("%s[%d]" %
+                   (modname, inlinepython)), t, inlinepython
+            script = []
+            inlinepython = 0
+            continue
+
 def sources(f, modname):
+    """Yields possibly multiple sources from a filepath
+
+    input: filepath, modulename
+    yields:  script(string), modulename, filepath, linenumber
+
+    For embedded scripts, the modulename and filepath will be different
+    from the function arguments. linenumber is an offset relative to
+    the input file.
+    """
+    py = False
     if f.endswith('.py'):
         with open(f) as src:
-            yield src.read(), modname
+            yield src.read(), modname, f, 0
+            py = True
+    if py or f.endswith('.t'):
+        with open(f) as src:
+            for script, modname, t, line in embedded(f, modname, src):
+                yield script, modname, t, line
 
 def main(argv):
     if len(argv) < 2 or (argv[1] == '-' and len(argv) > 2):
@@ -587,18 +675,18 @@ def main(argv):
         modname = dotted_name_of_path(source_path, trimpure=True)
         localmods[modname] = source_path
     for localmodname, source_path in sorted(localmods.items()):
-        for src, modname in sources(source_path, localmodname):
+        for src, modname, name, line in sources(source_path, localmodname):
             try:
                 used_imports[modname] = sorted(
-                    imported_modules(src, modname, source_path, localmods,
+                    imported_modules(src, modname, name, localmods,
                                      ignore_nested=True))
                 for error, lineno in verify_import_convention(modname, src,
                                                               localmods):
                     any_errors = True
-                    print('%s:%d: %s' % (source_path, lineno, error))
+                    print('%s:%d: %s' % (source_path, lineno + line, error))
             except SyntaxError as e:
                 print('%s:%d: SyntaxError: %s' %
-                      (source_path, e.lineno, e))
+                      (source_path, e.lineno + line, e))
     cycles = find_cycles(used_imports)
     if cycles:
         firstmods = set()
