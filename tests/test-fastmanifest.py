@@ -13,7 +13,7 @@ class HybridManifest(unittest.TestCase):
        hybridmanifest implement it, this test validates that all magic methods
        of manifestdict are implemented by hybridmanifest to avoid breakage in
        prod"""
-    hd = fastmanifest.hybridmanifest(None)
+    hd = fastmanifest.hybridmanifest(None, None)
     ismagic = lambda x: x.startswith("__") and x.endswith("__")
     magicmethods = [k for k, v in  manifest.manifestdict.__dict__.items()
                       if util.safehasattr(v, '__call__') and ismagic(k)]

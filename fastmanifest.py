@@ -14,11 +14,51 @@ Configuration options:
 
 [fastmanifest]
 logfile = "" # Filename, is not empty will log access to any manifest
+
+
+Description:
+
+`manifestaccesslogger` logs manifest accessed to a logfile specified with
+the option fastmanifest.logfile
+
+`fastmanifesttocache` is a revset of relevant manifests to cache
+
+`hybridmanifest` is a proxy class for flat and cached manifest that loads
+manifest from cache or from disk.
+It chooses what kind of manifest is relevant to create based on the operation,
+ideally the fastest.
+TODO instantiate fastmanifest when they are more suitable
+
+`manifestcache` is the class handling the interface with the cache, it supports
+caching flat and fast manifest and retrieving them.
+TODO logic for loading fastmanifest
+TODO logic for saving fastmanifest
+TODO garbage collection
+
+`manifestfactory` is a class whose method wraps manifest creating method of
+manifest.manifest. It intercepts the calls to build hybridmanifest instead of
+regularmanifests. We use a class for that to allow sharing the ui object that
+is not normally accessible to manifests.
+
+`debugcachemanifest` is a command calling `_cachemanifest`, a function to add
+manifests to the cache and manipulate what is cached. It allows caching fast
+and flat manifest, asynchronously and synchronously.
+TODO handle asynchronous save
+TODO size limit handling
 """
+import os
+
+from mercurial import cmdutil
 from mercurial import extensions
 from mercurial import manifest
 from mercurial import revset
+from mercurial import revlog
+from mercurial import scmutil
 from mercurial import util
+
+CACHE_SUBDIR = "manifestcache"
+cmdtable = {}
+command = cmdutil.command(cmdtable)
 
 
 class manifestaccesslogger(object):
@@ -39,16 +79,7 @@ class manifestaccesslogger(object):
 
 def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache"""
-    return repo.revs("not public()")
-
-
-class fastmanifestcache(object):
-    """Cache of fastmanifest"""
-    def __contains__(self, key):
-        return False
-
-    def __getitem__(self, key):
-        return NotImplementedError("not yet available")
+    return scmutil.revrange(repo, ["not public() + bookmark()"])
 
 
 class hybridmanifest(object):
@@ -62,92 +93,302 @@ class hybridmanifest(object):
     For the moment, behaves like a lazymanifest since cachedmanifest is not
     yet available.
     """
-    def __init__(self, loadflat, cache=None, node=None):
+    def __init__(self, loadflat, ui, flatcache=None, fastcache=None,
+                 node=None):
         self.loadflat = loadflat
-        self.cache = cache
+        self.__flatmanifest = None
+        self.flatcache = flatcache
+        self.__cachedmanifest = None
+        self.fastcache = fastcache
         self.node = node
+        self.ui = ui
+        if self.node:
+            self.node = revlog.hex(self.node)
 
-    @util.propertycache
     def _flatmanifest(self):
-        k = self.loadflat()
-        if isinstance(k, hybridmanifest):
-            # See comment in extsetup to see why we have to do that
-            k = k.loadflat()
-        assert isinstance(k, manifest.manifestdict), type(k)
-        return k
+        if not self.__flatmanifest:
+            # Cache lookup
+            if (self.node and self.flatcache
+               and self.flatcache.contains(self.node)):
+                self.__flatmanifest = self.flatcache.get(self.node)
+                if self.__flatmanifest:
+                    self.ui.debug("cache hit for flatmanifest %s\n"
+                                  % self.node)
+                    return self.__flatmanifest
+            if self.node:
+                self.ui.debug("cache miss for flatmanifest %s\n" % self.node)
 
-    @util.propertycache
+            # Disk lookup
+            self.__flatmanifest = self.loadflat()
+            if isinstance(self.__flatmanifest, hybridmanifest):
+                # See comment in extsetup to see why we have to do that
+                self.__flatmanifest = self.__flatmanifest._flatmanifest()
+            assert isinstance(self.__flatmanifest, manifest.manifestdict)
+        return self.__flatmanifest
+
     def _cachedmanifest(self):
+        if not self.__cachedmanifest:
+            # Cache lookup
+            if (self.node and self.fastcache
+               and self.fastcache.contains(self.node)):
+                self.__cachedmanifest = self.fastcache.get(self.node)
+                if self.__cachedmanifest:
+                    self.ui.debug("cache hit for fastmanifest %s\n"
+                                  % self.node)
+                    return self.__cachedmanifest
         return None
 
-    @util.propertycache
     def _incache(self):
+        if self.flatcache and self.node:
+            return self.flatcache.contains(self.node)
         return False
+
+    def _manifest(self, operation):
+        # Get the manifest most suited for the operations (flat or cached)
+        # TODO return fastmanifest when suitable
+        return self._flatmanifest()
 
     # Proxy all the manifest methods to the flatmanifest except magic methods
     def __getattr__(self, name):
-        return getattr(self._flatmanifest, name)
+        return getattr(self._manifest(name), name)
 
     # Magic methods should be proxied differently than __getattr__
     # For the moment all methods they all use the _flatmanifest
     def __iter__(self):
-        return self._flatmanifest.__iter__()
+        return self._manifest('__iter__').__iter__()
 
     def __contains__(self, key):
-        return self._flatmanifest.__contains__(key)
+        return self._manifest('__contains__').__contains__(key)
 
     def __getitem__(self, key):
-        return self._flatmanifest.__getitem__(key)
+        return self._manifest('__getitem__').__getitem__(key)
 
     def __setitem__(self, key, val):
-        return self._flatmanifest.__setitem__(key, val)
+        return self._manifest('__setitem__').__setitem__(key, val)
 
     def __delitem__(self, key):
-        return self._flatmanifest.__delitem__(key)
+        return self._manifest('__delitem__').__delitem__(key)
 
     def __len__(self):
-        return self._flatmanifest.__len__()
+        return self._manifest('__len__').__len__()
 
     def copy(self):
-        return hybridmanifest(loadflat=lambda: self._flatmanifest.copy())
+        return hybridmanifest(loadflat=lambda: self._flatmanifest().copy(),
+                              flatcache=self.flatcache,
+                              fastcache=self.fastcache,
+                              node=self.node,
+                              ui=self.ui)
+
+    def matches(self, *args, **kwargs):
+        newload = lambda: self._flatmanifest().matches(*args, **kwargs)
+        return hybridmanifest(loadflat=newload,
+                              flatcache=self.flatcache,
+                              fastcache=self.fastcache,
+                              ui=self.ui)
 
     def diff(self, m2, *args, **kwargs):
+        self.ui.debug("performing diff\n")
         # Find _m1 and _m2 of the same type, to provide the fastest computation
         _m1, _m2 = None, None
 
         if isinstance(m2, hybridmanifest):
+            self.ui.debug("other side is hybrid manifest\n")
             # CACHE HIT
-            if self._incache and m2._incache:
-                _m1, _m2 = self._cachedmanifestm, m2._cachedmanifest
+            if self._incache() and m2._incache():
+                _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
                 if not _m1 or not _m2:
-                    _m1, _m2 = self._flatmanifest, m2._flatmanifest
+                    self.ui.debug("fallback to regular diff\n")
+                    _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
+                else:
+                    self.ui.debug("fastmanifest diff\n")
 
             # CACHE MISS
             else:
-                _m1, _m2 = self._flatmanifest, m2._flatmanifest
+                self.ui.debug("fallback to regular diff\n")
+                _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
         else:
             # This happens when diffing against a new manifest (like rev -1)
-            _m1, _m2 = self._flatmanifest, m2
+            self.ui.debug("fallback to regular diff\n")
+            _m1, _m2 = self._flatmanifest(), m2
 
         assert type(_m1) == type(_m2)
         return _m1.diff(_m2, *args, **kwargs)
 
 
+class manifestcache(object):
+    def __init__(self, opener, ui):
+        self.opener = opener
+        self.ui = ui
+        self.inmemorycache = {}
+        base = opener.join(None)
+        self.cachepath = os.path.join(base, CACHE_SUBDIR)
+        if not os.path.exists(self.cachepath):
+            os.makedirs(self.cachepath)
+
+    def keyprefix(self):
+        raise NotImplementedError("abstract method, should be overriden")
+
+    def load(self, data):
+        raise NotImplementedError("abstract method, should be overriden")
+
+    def dump(self, manifest):
+        raise NotImplementedError("abstract method, should be overriden")
+
+    def inmemorycachekey(self, key):
+        return (self.keyprefix(), key)
+
+    def filecachepath(self, key):
+        return os.path.join(self.cachepath, self.keyprefix() + key)
+
+    def get(self, key):
+        # In memory cache lookup
+        ident = self.inmemorycachekey(key)
+        r = self.inmemorycache.get(ident, None)
+        if r:
+            return r
+
+        # On disk cache lookup
+        try:
+            with open(self.filecachepath(key)) as f:
+                r = self.load(f.read())
+        except EnvironmentError:
+            return None
+
+        # In memory cache update
+        if r:
+            self.inmemorycache[ident] = r
+        return r
+
+    def contains(self, key):
+        if self.inmemorycachekey(key) in self.inmemorycache:
+            return True
+        return os.path.exists(self.filecachepath(key))
+
+    def put(self, key, manifest):
+        if self.contains(key):
+            self.ui.debug("skipped %s, already cached\n" % key)
+        else:
+            self.ui.debug("caching revision %s\n" % key)
+            fh = util.atomictempfile(self.filecachepath(key), mode="w+")
+            try:
+                fh.write(self.dump(manifest))
+            finally:
+                fh.close()
+
+    def prune(self, limit):
+        # TODO logic to prune old entries
+        pass
+
+# flatmanifestcache and fastmanifestcache are singletons
+# Implementation inspired from:
+# https://stackoverflow.com/questions/31875/
+# is-there-a-simple-elegant-way-to-define-singletons-in-python
+
+
+class flatmanifestcache(manifestcache):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(flatmanifestcache, cls).__new__(cls, *args,
+                                                                  **kwargs)
+        return cls._instance
+
+    def keyprefix(self):
+        return "flat"
+
+    def load(self, data):
+        return manifest.manifestdict(data)
+
+    def dump(self, manifest):
+        return manifest.text()
+
+
+class fastmanifestcache(manifestcache):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(fastmanifestcache, cls).__new__(cls, *args,
+                                                                  **kwargs)
+        return cls._instance
+
+    def keyprefix(self):
+        return "fast"
+
+    def load(self, data):
+        raise NotImplementedError("TODO integrate with @ttung's code")
+
+    def dump(self, manifest):
+        raise NotImplementedError("TODO integrate with @ttung's code")
+
+
 class manifestfactory(object):
+    def __init__(self, ui):
+        self.ui = ui
+
     def newmanifest(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
-        return hybridmanifest(loadflat=loadfn)
+        fastcache = fastmanifestcache(args[0].opener, self.ui)
+        flatcache = flatmanifestcache(args[0].opener, self.ui)
+        return hybridmanifest(loadflat=loadfn,
+                              ui=self.ui,
+                              flatcache=flatcache,
+                              fastcache=fastcache)
 
     def read(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
-        return hybridmanifest(loadflat=loadfn, node=args[1])
+        fastcache = fastmanifestcache(args[0].opener, self.ui)
+        flatcache = flatmanifestcache(args[0].opener, self.ui)
+        return hybridmanifest(loadflat=loadfn,
+                              ui=self.ui,
+                              flatcache=flatcache,
+                              fastcache=fastcache,
+                              node=args[1])
+
+
+def _cachemanifest(ui, repo, revs, flat, sync, limit):
+    ui.debug(("caching rev: %s , synchronous(%s), flat(%s)\n")
+             % (revs, sync, flat))
+    if flat:
+        cache = flatmanifestcache(repo.store.opener, ui)
+    else:
+        cache = fastmanifestcache(repo.store.opener, ui)
+
+    for rev in revs:
+        manifest = repo[rev].manifest()
+        nodehex = manifest.node
+        cache.put(nodehex, manifest)
+
+    if limit:
+        cache.prune(limit)
+
+
+@command('^debugcachemanifest', [
+    ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
+    ('f', 'flat', False, 'cache flat manifests instead of fast manifests', ''),
+    ('a', 'all', False, 'cache all relevant revisions', ''),
+    ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
+    ('s', 'synchronous', False, 'wait for completion to return', '')],
+    'hg debugcachemanifest')
+def debugcachemanifest(ui, repo, *pats, **opts):
+    flat = opts["flat"]
+    sync = opts["synchronous"]
+    limit = opts["limit"]
+    if opts["all"]:
+        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    elif opts["rev"]:
+        revs = scmutil.revrange(repo, opts["rev"])
+    else:
+        revs = []
+    _cachemanifest(ui, repo, revs, flat, sync, limit)
 
 
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
-    factory = manifestfactory()
+    factory = manifestfactory(ui)
     if logfile:
         logger = manifestaccesslogger(logfile)
         extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
@@ -185,3 +426,4 @@ def extsetup(ui):
 
     revset.symbols['fastmanifesttocache'] = fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
+
