@@ -468,15 +468,10 @@ handling of untracked directories and missing files
   \r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   removing d1/a (glob)
-#if windows
+
   $ hg rm --after nosuch
   nosuch: * (glob)
-  [1]
-#else
-  $ hg rm --after nosuch
-  nosuch: No such file or directory
   \r (no-eol) (esc)
   deleting [===========================================>] 1/1\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
   [1]
-#endif
