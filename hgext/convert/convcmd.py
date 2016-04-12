@@ -472,6 +472,9 @@ class converter(object):
             parents = [self.map.get(p, p) for p in parents]
         except KeyError:
             parents = [b[0] for b in pbranches]
+            parents.extend(self.map[x]
+                           for x in commit.optparents
+                           if x in self.map)
         if len(pbranches) != 2:
             cleanp2 = set()
         if len(parents) < 3:

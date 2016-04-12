@@ -582,7 +582,9 @@ class mercurial_source(common.converter_source):
 
     def getcommit(self, rev):
         ctx = self._changectx(rev)
-        parents = [p.hex() for p in self._parents(ctx)]
+        _parents = self._parents(ctx)
+        parents = [p.hex() for p in _parents]
+        optparents = [p.hex() for p in ctx.parents() if p and p not in _parents]
         crev = rev
 
         return common.commit(author=ctx.user(),
@@ -591,6 +593,7 @@ class mercurial_source(common.converter_source):
                              desc=ctx.description(),
                              rev=crev,
                              parents=parents,
+                             optparents=optparents,
                              branch=ctx.branch(),
                              extra=ctx.extra(),
                              sortkey=ctx.rev(),
