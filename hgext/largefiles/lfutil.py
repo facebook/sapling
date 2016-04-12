@@ -486,7 +486,7 @@ def getlfilestoupload(repo, missing, addfunc):
     for i, n in enumerate(missing):
         repo.ui.progress(_('finding outgoing largefiles'), i,
             unit=_('revisions'), total=len(missing))
-        parents = [p for p in repo.changelog.parents(n) if p != node.nullid]
+        parents = [p for p in repo[n].parents() if p != node.nullid]
 
         oldlfstatus = repo.lfstatus
         repo.lfstatus = False
