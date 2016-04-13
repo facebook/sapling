@@ -2,8 +2,14 @@
 # with files from different users/groups, we cheat a bit by
 # monkey-patching some functions in the util module
 
+from __future__ import absolute_import
+
 import os
-from mercurial import ui, util, error
+from mercurial import (
+    error,
+    ui as uimod,
+    util,
+)
 
 hgrc = os.environ['HGRCPATH']
 f = open(hgrc)
@@ -60,7 +66,7 @@ def testui(user='foo', group='bar', tusers=(), tgroups=(),
     print '# %s user, %s group%s' % (kind[user == cuser], kind[group == cgroup],
                                      trusted)
 
-    u = ui.ui()
+    u = uimod.ui()
     u.setconfig('ui', 'debug', str(bool(debug)))
     u.setconfig('ui', 'report_untrusted', str(bool(report)))
     u.readconfig('.hg/hgrc')
@@ -150,7 +156,7 @@ print u.config('foobar', 'baz')
 
 print
 print "# read trusted, untrusted, new ui, trusted"
-u = ui.ui()
+u = uimod.ui()
 u.setconfig('ui', 'debug', 'on')
 u.readconfig(filename)
 u2 = u.copy()

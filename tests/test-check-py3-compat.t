@@ -65,7 +65,6 @@
   tests/test-run-tests.py not using absolute_import
   tests/test-simplemerge.py not using absolute_import
   tests/test-symlink-os-yes-fs-no.py not using absolute_import
-  tests/test-trusted.py not using absolute_import
   tests/test-trusted.py requires print_function
   tests/test-ui-color.py not using absolute_import
   tests/test-url.py not using absolute_import
