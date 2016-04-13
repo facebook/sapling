@@ -587,12 +587,17 @@ def main(argv):
         localmods[modname] = source_path
     for localmodname, source_path in sorted(localmods.items()):
         for src, modname in sources(source_path, localmodname):
-            used_imports[modname] = sorted(
-                imported_modules(src, modname, localmods, ignore_nested=True))
-            for error, lineno in verify_import_convention(modname, src,
-                                                          localmods):
-                any_errors = True
-                print('%s:%d: %s' % (source_path, lineno, error))
+            try:
+                used_imports[modname] = sorted(
+                    imported_modules(src, modname, localmods,
+                                     ignore_nested=True))
+                for error, lineno in verify_import_convention(modname, src,
+                                                              localmods):
+                    any_errors = True
+                    print('%s:%d: %s' % (source_path, lineno, error))
+            except SyntaxError as e:
+                print('%s:%d: SyntaxError: %s' %
+                      (source_path, e.lineno, e))
     cycles = find_cycles(used_imports)
     if cycles:
         firstmods = set()
