@@ -1,4 +1,6 @@
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
+import doctest
 import os
 
 def check(a, b):
@@ -8,8 +10,11 @@ def check(a, b):
 def cert(cn):
     return {'subject': ((('commonName', cn),),)}
 
-from mercurial.sslutil import _verifycert
+from mercurial import (
+    sslutil,
+)
 
+_verifycert = sslutil._verifycert
 # Test non-wildcard certificates
 check(_verifycert(cert('example.com'), 'example.com'),
       None)
@@ -57,8 +62,6 @@ check(_verifycert(None, 'example.com'),
 # Unicode (IDN) certname isn't supported
 check(_verifycert(cert(u'\u4f8b.jp'), 'example.jp'),
       'IDN in certificate not supported')
-
-import doctest
 
 def test_url():
     """
