@@ -5,6 +5,8 @@
 # that have proven likely to expose bugs and divergent behavior in
 # different encoding implementations.
 
+from __future__ import print_function
+
 from mercurial import store
 import binascii, itertools, math, os, random, sys, time
 import collections
@@ -154,10 +156,10 @@ def runtests(rng, seed, count):
         r = store._hybridencode(p, True) # reference implementation in Python
         if h != r:
             if nerrs == 0:
-                print >> sys.stderr, 'seed:', hex(seed)[:-1]
-            print >> sys.stderr, "\np: '%s'" % p.encode("string_escape")
-            print >> sys.stderr, "h: '%s'" % h.encode("string_escape")
-            print >> sys.stderr, "r: '%s'" % r.encode("string_escape")
+                print('seed:', hex(seed)[:-1], file=sys.stderr)
+            print("\np: '%s'" % p.encode("string_escape"), file=sys.stderr)
+            print("h: '%s'" % h.encode("string_escape"), file=sys.stderr)
+            print("r: '%s'" % r.encode("string_escape"), file=sys.stderr)
             nerrs += 1
     return nerrs
 
