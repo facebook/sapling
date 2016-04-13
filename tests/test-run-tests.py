@@ -3,13 +3,14 @@
 run-test.t only checks positive matches and can not see warnings
 (both by design)
 """
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-import os, re
+import doctest
+import os
+import re
 # this is hack to make sure no escape characters are inserted into the output
 if 'TERM' in os.environ:
     del os.environ['TERM']
-import doctest
 run_tests = __import__('run-tests')
 
 def prn(ex):
