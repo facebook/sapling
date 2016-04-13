@@ -2115,6 +2115,7 @@ class TestRunner(object):
 
         if self.options.pure:
             os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
+            os.environ["HGMODULEPOLICY"] = "py"
 
         if self.options.allow_slow_tests:
             os.environ["HGTEST_SLOW"] = "slow"
