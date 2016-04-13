@@ -225,7 +225,7 @@ def list_stdlib_modules():
 
 stdlib_modules = set(list_stdlib_modules())
 
-def imported_modules(source, modulename, localmods, ignore_nested=False):
+def imported_modules(source, modulename, f, localmods, ignore_nested=False):
     """Given the source of a file as a string, yield the names
     imported by that file.
 
@@ -239,6 +239,7 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
     Returns:
       A list of absolute module names imported by the given source.
 
+    >>> f = 'foo/xxx.py'
     >>> modulename = 'foo.xxx'
     >>> localmods = {'foo.__init__': True,
     ...              'foo.foo1': True, 'foo.foo2': True,
@@ -247,43 +248,43 @@ def imported_modules(source, modulename, localmods, ignore_nested=False):
     >>> # standard library (= not locally defined ones)
     >>> sorted(imported_modules(
     ...        'from stdlib1 import foo, bar; import stdlib2',
-    ...        modulename, localmods))
+    ...        modulename, f, localmods))
     []
     >>> # relative importing
     >>> sorted(imported_modules(
     ...        'import foo1; from bar import bar1',
-    ...        modulename, localmods))
+    ...        modulename, f, localmods))
     ['foo.bar.bar1', 'foo.foo1']
     >>> sorted(imported_modules(
     ...        'from bar.bar1 import name1, name2, name3',
-    ...        modulename, localmods))
+    ...        modulename, f, localmods))
     ['foo.bar.bar1']
     >>> # absolute importing
     >>> sorted(imported_modules(
     ...        'from baz import baz1, name1',
-    ...        modulename, localmods))
+    ...        modulename, f, localmods))
     ['baz.__init__', 'baz.baz1']
     >>> # mixed importing, even though it shouldn't be recommended
     >>> sorted(imported_modules(
     ...        'import stdlib, foo1, baz',
-    ...        modulename, localmods))
+    ...        modulename, f, localmods))
     ['baz.__init__', 'foo.foo1']
     >>> # ignore_nested
     >>> sorted(imported_modules(
     ... '''import foo
     ... def wat():
     ...     import bar
-    ... ''', modulename, localmods))
+    ... ''', modulename, f, localmods))
     ['foo.__init__', 'foo.bar.__init__']
     >>> sorted(imported_modules(
     ... '''import foo
     ... def wat():
     ...     import bar
-    ... ''', modulename, localmods, ignore_nested=True))
+    ... ''', modulename, f, localmods, ignore_nested=True))
     ['foo.__init__']
     """
     fromlocal = fromlocalfunc(modulename, localmods)
-    for node in ast.walk(ast.parse(source)):
+    for node in ast.walk(ast.parse(source, f)):
         if ignore_nested and getattr(node, 'col_offset', 0) > 0:
             continue
         if isinstance(node, ast.Import):
@@ -589,7 +590,7 @@ def main(argv):
         for src, modname in sources(source_path, localmodname):
             try:
                 used_imports[modname] = sorted(
-                    imported_modules(src, modname, localmods,
+                    imported_modules(src, modname, source_path, localmods,
                                      ignore_nested=True))
                 for error, lineno in verify_import_convention(modname, src,
                                                               localmods):
