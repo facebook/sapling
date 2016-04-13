@@ -5968,7 +5968,7 @@ def recover(ui, repo):
 @command('^remove|rm',
     [('A', 'after', None, _('record delete for missing files')),
     ('f', 'force', None,
-     _('remove (and delete) file even if added or modified')),
+     _('forget added files, delete modified files')),
     ] + subrepoopts + walkopts,
     _('[OPTION]... FILE...'),
     inferrepo=True)

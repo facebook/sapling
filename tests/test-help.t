@@ -2551,7 +2551,7 @@ Dish up an empty repo; serve it cold.
   <td>record delete for missing files</td></tr>
   <tr><td>-f</td>
   <td>--force</td>
-  <td>remove (and delete) file even if added or modified</td></tr>
+  <td>forget added files, delete modified files</td></tr>
   <tr><td>-S</td>
   <td>--subrepos</td>
   <td>recurse into subrepositories</td></tr>
