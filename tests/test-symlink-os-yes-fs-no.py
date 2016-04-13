@@ -1,5 +1,14 @@
-import os, sys, time
-from mercurial import hg, ui, commands, util
+from __future__ import absolute_import
+
+import os
+import sys
+import time
+from mercurial import (
+    commands,
+    hg,
+    ui as uimod,
+    util,
+)
 
 TESTDIR = os.environ["TESTDIR"]
 BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
@@ -8,7 +17,7 @@ BUNDLEPATH = os.path.join(TESTDIR, 'bundles', 'test-no-symlinks.hg')
 if not getattr(os, "symlink", False):
     sys.exit(80) # SKIPPED_STATUS defined in run-tests.py
 
-u = ui.ui()
+u = uimod.ui()
 # hide outer repo
 hg.peer(u, {}, '.', create=True)
 
@@ -36,10 +45,10 @@ for f in 'test0/a.lnk', 'test0/d/b.lnk':
     fp.close()
 
 # reload repository
-u = ui.ui()
+u = uimod.ui()
 repo = hg.repository(u, 'test0')
 commands.status(u, repo)
 
 # try cloning a repo which contains symlinks
-u = ui.ui()
+u = uimod.ui()
 hg.clone(u, {}, BUNDLEPATH, 'test1')
