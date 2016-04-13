@@ -1,7 +1,13 @@
-from __future__ import print_function
+from __future__ import absolute_import, print_function
+
 import os
-from hgext import color
-from mercurial import dispatch, ui
+from hgext import (
+    color,
+)
+from mercurial import (
+    dispatch,
+    ui as uimod,
+)
 
 # ensure errors aren't buffered
 testui = color.colorui()
@@ -17,7 +23,7 @@ hgrc.write('[extensions]\n')
 hgrc.write('color=\n')
 hgrc.close()
 
-ui_ = ui.ui()
+ui_ = uimod.ui()
 ui_.setconfig('ui', 'formatted', 'True')
 
 # we're not interested in the output, so write that to devnull

@@ -66,7 +66,6 @@
   tests/test-simplemerge.py not using absolute_import
   tests/test-symlink-os-yes-fs-no.py not using absolute_import
   tests/test-trusted.py requires print_function
-  tests/test-ui-color.py not using absolute_import
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
