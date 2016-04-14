@@ -162,12 +162,12 @@ def _exthook(ui, repo, name, cmd, args, throw):
     return r
 
 def _allhooks(ui):
-    hooks = []
+    hooks = {}
     for name, cmd in ui.configitems('hooks'):
         if not name.startswith('priority'):
             priority = ui.configint('hooks', 'priority.%s' % name, 0)
-            hooks.append((-priority, len(hooks), name, cmd))
-    return [(k, v) for p, o, k, v in sorted(hooks)]
+            hooks[name] = (-priority, len(hooks), name, cmd)
+    return [(k, v) for p, o, k, v in sorted(hooks.values())]
 
 _redirect = False
 def redirect(state):
