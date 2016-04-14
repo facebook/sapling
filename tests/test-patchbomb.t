@@ -2899,3 +2899,11 @@ node missing at public
   abort: public url $TESTTMP/t3 is missing 3b6f1ec9dde9
   (use "hg push $TESTTMP/t3 -r 3b6f1ec9dde9")
   [255]
+
+multiple heads are missing at public
+
+  $ hg email --date '1980-1-1 0:1' -t foo -s test -r '2+10'
+  abort: public "$TESTTMP/t3" is missing ff2c9fa2018b and 1 others
+  (use "hg push $TESTTMP/t3 -r ff2c9fa2018b -r 3b6f1ec9dde9")
+  [255]
+
