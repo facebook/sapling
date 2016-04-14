@@ -339,7 +339,7 @@ pull in change on different branch than dirstate
   (branches are permanent and global, did you want a bookmark?)
   $ hg -R n2 fetch -m merge n1
   abort: working directory not at branch tip
-  (use "hg update" to check out branch tip)
+  (use 'hg update' to check out branch tip)
   [255]
 
 parent should be 0 (fetch did not update or merge anything)

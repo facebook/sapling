@@ -61,7 +61,7 @@ def fetch(ui, repo, source='default', **opts):
         branchnode = None
     if parent != branchnode:
         raise error.Abort(_('working directory not at branch tip'),
-                         hint=_('use "hg update" to check out branch tip'))
+                         hint=_("use 'hg update' to check out branch tip"))
 
     wlock = lock = None
     try:
