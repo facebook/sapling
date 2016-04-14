@@ -29,7 +29,15 @@ def extsetup(ui):
     _setuplog(ui)
     _setupadd(ui)
     _setupdirstate(ui)
-    # if hgwatchman is installed, tell it to use our hash function
+    # if fsmonitor is enabled, tell it to use our hash function
+    try:
+        fsmonitor = extensions.find('fsmonitor')
+        def _hashignore(orig, ignore):
+            return _hashmatcher(ignore)
+        extensions.wrapfunction(fsmonitor, '_hashignore', _hashignore)
+    except KeyError:
+        pass
+    # do the same for hgwatchman, old name
     try:
         hgwatchman = extensions.find('hgwatchman')
         def _hashignore(orig, ignore):
