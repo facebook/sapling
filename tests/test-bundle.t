@@ -260,7 +260,7 @@ Cannot produce streaming clone bundles with "hg bundle"
 
   $ hg -R test bundle -t packed1 packed.hg
   abort: packed bundles cannot be produced by "hg bundle"
-  (use "hg debugcreatestreamclonebundle")
+  (use 'hg debugcreatestreamclonebundle')
   [255]
 
 packed1 is produced properly

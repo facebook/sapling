@@ -1387,7 +1387,7 @@ def bundle(ui, repo, fname, dest=None, **opts):
     # Packed bundles are a pseudo bundle format for now.
     if cgversion == 's1':
         raise error.Abort(_('packed bundles cannot be produced by "hg bundle"'),
-                          hint=_('use "hg debugcreatestreamclonebundle"'))
+                          hint=_("use 'hg debugcreatestreamclonebundle'"))
 
     if opts.get('all'):
         if dest:
@@ -4236,7 +4236,7 @@ def _dograft(ui, repo, *revs, **opts):
                     extra += ' --date %s' % opts['date']
                 if opts.get('log'):
                     extra += ' --log'
-                hint=_('use hg resolve and hg graft --continue%s') % extra
+                hint=_("use 'hg resolve' and 'hg graft --continue%s'") % extra
                 raise error.Abort(
                     _("unresolved conflicts, can't continue"),
                     hint=hint)
@@ -6319,7 +6319,7 @@ def revert(ui, repo, *pats, **opts):
     if not opts.get('rev') and p2 != nullid:
         # revert after merge is a trap for new users (issue2915)
         raise error.Abort(_('uncommitted merge with no revision specified'),
-                         hint=_('use "hg update" or see "hg help revert"'))
+                         hint=_("use 'hg update' or see 'hg help revert'"))
 
     ctx = scmutil.revsingle(repo, opts.get('rev'))
 
