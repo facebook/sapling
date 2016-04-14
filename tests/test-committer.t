@@ -50,7 +50,7 @@
   $ echo "username = " >> .hg/hgrc
   $ hg commit -m commit-1
   abort: no username supplied
-  (use "hg config --edit" to set your username)
+  (use 'hg config --edit' to set your username)
   [255]
 
 # test alternate config var
