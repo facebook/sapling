@@ -1417,11 +1417,10 @@ the following are valid keystrokes:
 
         return response
 
-    def confirmcommit(self, review=False):
+    def reviewcommit(self):
         """ask for 'y' to be pressed to confirm selected. return True if
         confirmed."""
-        if review:
-            confirmtext = (
+        confirmtext = (
 """if you answer yes to the following, the your currently chosen patch chunks
 will be loaded into an editor.  you may modify the patch from the editor, and
 save the changes if you wish to change the patch.  otherwise, you can just
@@ -1432,10 +1431,6 @@ note: don't add/remove lines unless you also modify the range information.
 
 are you sure you want to review/edit and confirm the selected changes [yn]?
 """)
-        else:
-            confirmtext = (
-                "are you sure you want to confirm the selected changes [yn]? ")
-
         response = self.confirmationwindow(confirmtext)
         if response is None:
             response = "n"
@@ -1604,7 +1599,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         elif test and keypressed in ['X']:
             return True
         elif keypressed in ["r"]:
-            if self.confirmcommit(review=True):
+            if self.reviewcommit():
                 self.opts['review'] = True
                 return True
         elif test and keypressed in ['R']:
