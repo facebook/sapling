@@ -794,7 +794,6 @@ new commits must be visible in pretxnchangegroup (issue3428)
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     b
   
-  $ cd ..
 
 pretxnclose hook failure should abort the transaction
 
@@ -816,3 +815,62 @@ pretxnclose hook failure should abort the transaction
   $ hg recover
   no interrupted transaction available
   [1]
+  $ cd ..
+
+Hook from untrusted hgrc are reported as failure
+================================================
+
+  $ cat << EOF > $TESTTMP/untrusted.py
+  > from mercurial import scmutil, util
+  > def uisetup(ui):
+  >     class untrustedui(ui.__class__):
+  >         def _trusted(self, fp, f):
+  >             if util.normpath(fp.name).endswith('untrusted/.hg/hgrc'):
+  >                 return False
+  >             return super(untrustedui, self)._trusted(fp, f)
+  >     ui.__class__ = untrustedui
+  > EOF
+  $ cat << EOF >> $HGRCPATH
+  > [extensions]
+  > untrusted=$TESTTMP/untrusted.py
+  > EOF
+  $ hg init untrusted
+  $ cd untrusted
+
+Non-blocking hook
+-----------------
+
+  $ cat << EOF >> .hg/hgrc
+  > [hooks]
+  > txnclose.testing=echo txnclose hook called
+  > EOF
+  $ touch a && hg commit -Aqm a
+  warning: untrusted hook txnclose not executed
+  $ hg log
+  changeset:   0:3903775176ed
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  
+
+Non-blocking hook
+-----------------
+
+  $ cat << EOF >> .hg/hgrc
+  > [hooks]
+  > pretxnclose.testing=echo pre-txnclose hook called
+  > EOF
+  $ touch b && hg commit -Aqm a
+  transaction abort!
+  rollback completed
+  abort: untrusted hook pretxnclose not executed
+  (see 'hg help config.trusted')
+  [255]
+  $ hg log
+  changeset:   0:3903775176ed
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     a
+  

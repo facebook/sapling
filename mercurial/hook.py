@@ -161,15 +161,28 @@ def _exthook(ui, repo, name, cmd, args, throw):
         ui.warn(_('warning: %s hook %s\n') % (name, desc))
     return r
 
+# represent an untrusted hook command
+_fromuntrusted = object()
+
 def _allhooks(ui):
     """return a list of (hook-id, cmd) pairs sorted by priority"""
     hooks = _hookitems(ui)
+    # Be careful in this section, propagating the real commands from untrusted
+    # sources would create a security vulnerability, make sure anything altered
+    # in that section uses "_fromuntrusted" as its command.
+    untrustedhooks = _hookitems(ui, _untrusted=True)
+    for name, value in untrustedhooks.items():
+        trustedvalue = hooks.get(name, (None, None, name, _fromuntrusted))
+        if value != trustedvalue:
+            (lp, lo, lk, lv) = trustedvalue
+            hooks[name] = (lp, lo, lk, _fromuntrusted)
+    # (end of the security sensitive section)
     return [(k, v) for p, o, k, v in sorted(hooks.values())]
 
-def _hookitems(ui):
+def _hookitems(ui, _untrusted=False):
     """return all hooks items ready to be sorted"""
     hooks = {}
-    for name, cmd in ui.configitems('hooks'):
+    for name, cmd in ui.configitems('hooks', untrusted=_untrusted):
         if not name.startswith('priority'):
             priority = ui.configint('hooks', 'priority.%s' % name, 0)
             hooks[name] = (-priority, len(hooks), name, cmd)
@@ -214,7 +227,15 @@ def runhooks(ui, repo, name, hooks, throw=False, **args):
                     # files seem to be bogus, give up on redirecting (WSGI, etc)
                     pass
 
-            if callable(cmd):
+            if cmd is _fromuntrusted:
+                if throw:
+                    raise error.HookAbort(
+                        _('untrusted hook %s not executed') % name,
+                        hint = _("see 'hg help config.trusted'"))
+                ui.warn(_('warning: untrusted hook %s not executed\n') % name)
+                r = 1
+                raised = False
+            elif callable(cmd):
                 r, raised = _pythonhook(ui, repo, name, hname, cmd, args, throw)
             elif cmd.startswith('python:'):
                 if cmd.count(':') >= 2:
