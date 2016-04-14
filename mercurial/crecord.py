@@ -1600,8 +1600,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         elif keypressed in ['a']:
             self.toggleamend(self.opts, test)
         elif keypressed in ["c"]:
-            if self.confirmcommit():
-                return True
+            return True
         elif test and keypressed in ['X']:
             return True
         elif keypressed in ["r"]:
