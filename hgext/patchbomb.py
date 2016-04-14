@@ -572,7 +572,7 @@ def email(ui, repo, *revs, **opts):
                     msg %= (publicurl, missing[0])
                 revhint = ' '.join('-r %s' % h
                                   for h in repo.set('heads(%ld)', missing))
-                hint = _('use "hg push %s %s"') % (publicurl, revhint)
+                hint = _("use 'hg push %s %s'") % (publicurl, revhint)
                 raise error.Abort(msg, hint=hint)
 
     # start
