@@ -450,7 +450,7 @@ def expaths(orig, ui, repo, *args, **opts):
         if not repo.vfs.isfile('hgrc'):
             raise error.Abort(_("could not find hgrc file"))
         oldhgrc = repo.vfs.read('hgrc').splitlines(True)
-        f = repo.vfs('hgrc', 'w')
+        f = repo.vfs('hgrc', 'w', atomictemp=True)
         for line in oldhgrc:
             if '[paths]' in line:
                 foundpaths = True
@@ -468,7 +468,7 @@ def expaths(orig, ui, repo, *args, **opts):
         oldhgrc = []
         if repo.vfs.isfile("hgrc"):
             oldhgrc = repo.vfs.read('hgrc').splitlines(True)
-        f = repo.vfs('hgrc', 'w')
+        f = repo.vfs('hgrc', 'w', atomictemp=True)
         done = False
         for line in oldhgrc:
             if '[paths]' in line:
@@ -1316,7 +1316,7 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
         olddata = set(readremotenames(repo))
         oldbooks = {}
 
-        f = vfs('remotenames', 'w')
+        f = vfs('remotenames', 'w', atomictemp=True)
 
         # only update the given 'remote path'; iterate over
         # old data and re-save it
@@ -1378,7 +1378,7 @@ def calculatenamedistance(repo, fromname, toname):
 def writedistancecache(repo, distance):
     try:
         vfs = shareawarevfs(repo)
-        f = vfs('cache/distance', 'w')
+        f = vfs('cache/distance', 'w', atomictemp=True)
         for k, v in distance.iteritems():
             f.write('%s %d %d\n' % (k, v[0], v[1]))
     except (IOError, OSError):
