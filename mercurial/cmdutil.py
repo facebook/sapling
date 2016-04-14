@@ -1275,10 +1275,10 @@ class changeset_printer(object):
             self.ui.write(_("branch:      %s\n") % branch,
                           label='log.branch')
 
-        for name, ns in self.repo.names.iteritems():
+        for nsname, ns in self.repo.names.iteritems():
             # branches has special logic already handled above, so here we just
             # skip it
-            if name == 'branches':
+            if nsname == 'branches':
                 continue
             # we will use the templatename as the color name since those two
             # should be the same
