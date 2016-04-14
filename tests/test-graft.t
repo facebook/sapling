@@ -209,7 +209,7 @@ Graft out of order, skipping a merge and a duplicate
   my e@1905859650ec+ other e@9c233e8e184d ancestor e@4c60f11aa304
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue --log)
+  (use 'hg resolve' and 'hg graft --continue --log')
   [255]
 
 Summary should mention graft:
@@ -246,7 +246,7 @@ Graft again:
   merging e
   warning: conflicts while merging e! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
 
 Continue without resolve should fail:
@@ -441,7 +441,7 @@ Resolve conflicted graft
   $ hg graft 1 --tool internal:fail
   grafting 1:5d205f8b35b6 "1"
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
   $ hg resolve --all
   merging a
@@ -481,7 +481,7 @@ Resolve conflicted graft with rename
   $ hg graft 2 --tool internal:fail
   grafting 2:5c095ad7e90f "2"
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
   $ hg resolve --all
   merging a and b to b
@@ -768,7 +768,7 @@ graft --continue after --force
   $ hg graft 28 --force --tool internal:fail
   grafting 28:50a516bb8b57 "28"
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
   $ hg resolve --all
   merging a
