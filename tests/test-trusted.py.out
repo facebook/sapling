@@ -133,7 +133,7 @@ ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
 untrusted
 . . global = /some/path
-.ignoring untrusted configuration option paths.local = /another/path
+. ignoring untrusted configuration option paths.local = /another/path
 . local = /another/path
 
 # report_untrusted enabled without debug hides warnings
@@ -152,7 +152,7 @@ ignoring untrusted configuration option paths.local = /another/path
     global = /some/path
 untrusted
 . . global = /some/path
-.ignoring untrusted configuration option paths.local = /another/path
+. ignoring untrusted configuration option paths.local = /another/path
 . local = /another/path
 
 # ui.readconfig sections
