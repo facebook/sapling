@@ -67,6 +67,7 @@ clean:
 	if test -d .hg; then rm -f mercurial/__version__.py; fi
 	rm -rf build mercurial/locale
 	$(MAKE) -C doc clean
+	$(MAKE) -C contrib/chg distclean
 
 install: install-bin install-doc
 
