@@ -1,8 +1,12 @@
 # this is hack to make sure no escape characters are inserted into the output
-import os, sys
+
+from __future__ import absolute_import
+
+import doctest
+import os
+import sys
 if 'TERM' in os.environ:
     del os.environ['TERM']
-import doctest
 
 def testmod(name, optionflags=0, testtarget=None):
     __import__(name)

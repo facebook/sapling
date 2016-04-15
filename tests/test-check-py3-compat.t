@@ -55,7 +55,6 @@
   tests/test-atomictempfile.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
-  tests/test-doctest.py not using absolute_import
   tests/test-trusted.py requires print_function
 
 #if py3exe
