@@ -72,7 +72,7 @@ if [ "$BUILD" ]; then
     sed -i.tmp "s/__CODENAME__/$CODENAME/" $changelog
     rm $changelog.tmp
 
-    debuild -us -uc -b
+    debuild -us -uc -i -I -b
     if [ $? != 0 ]; then
         echo 'debuild failed!'
         exit 1
