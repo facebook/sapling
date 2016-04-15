@@ -59,7 +59,7 @@ doc:
 
 clean:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
-	find contrib doc hgext i18n mercurial tests \
+	find contrib doc hgext hgext3rd i18n mercurial tests \
 		\( -name '*.py[cdo]' -o -name '*.so' \) -exec rm -f '{}' ';'
 	rm -f $(addprefix mercurial/,$(notdir $(wildcard mercurial/pure/[a-z]*.py)))
 	rm -f MANIFEST MANIFEST.in hgext/__index__.py tests/*.err
