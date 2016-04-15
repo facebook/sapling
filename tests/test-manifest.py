@@ -1,11 +1,14 @@
+from __future__ import absolute_import
+
 import binascii
-import unittest
 import itertools
-
 import silenttestrunner
+import unittest
 
-from mercurial import manifest as manifestmod
-from mercurial import match as matchmod
+from mercurial import (
+    manifest as manifestmod,
+    match as matchmod,
+)
 
 EMTPY_MANIFEST = ''
 EMTPY_MANIFEST_V2 = '\0\n'
