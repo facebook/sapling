@@ -1,13 +1,21 @@
+from __future__ import absolute_import
+
 import os
-from mercurial import hg, ui
-from mercurial.hgweb.hgwebdir_mod import hgwebdir
+from mercurial import (
+    hg,
+    ui as uimod,
+)
+from mercurial.hgweb import (
+    hgwebdir_mod,
+)
+hgwebdir = hgwebdir_mod.hgwebdir
 
 os.mkdir('webdir')
 os.chdir('webdir')
 
 webdir = os.path.realpath('.')
 
-u = ui.ui()
+u = uimod.ui()
 hg.repository(u, 'a', create=1)
 hg.repository(u, 'b', create=1)
 os.chdir('b')
