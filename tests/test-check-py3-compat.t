@@ -57,7 +57,6 @@
   tests/test-demandimport.py requires print_function
   tests/test-doctest.py not using absolute_import
   tests/test-hgwebdir-paths.py not using absolute_import
-  tests/test-lrucachedict.py requires print_function
   tests/test-trusted.py requires print_function
 
 #if py3exe
@@ -191,7 +190,6 @@
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-lrucachedict.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   tests/test-trusted.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif
