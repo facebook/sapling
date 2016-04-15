@@ -5,11 +5,19 @@
 # that have proven likely to expose bugs and divergent behavior in
 # different encoding implementations.
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-from mercurial import store
-import binascii, itertools, math, os, random, sys, time
+import binascii
 import collections
+import itertools
+import math
+import os
+import random
+import sys
+import time
+from mercurial import (
+    store,
+)
 
 validchars = set(map(chr, range(0, 256)))
 alphanum = range(ord('A'), ord('Z'))

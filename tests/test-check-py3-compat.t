@@ -60,7 +60,6 @@
   tests/test-lrucachedict.py not using absolute_import
   tests/test-lrucachedict.py requires print_function
   tests/test-manifest.py not using absolute_import
-  tests/test-pathencode.py not using absolute_import
   tests/test-trusted.py requires print_function
 
 #if py3exe
