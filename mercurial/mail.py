@@ -48,9 +48,10 @@ class STARTTLS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, sslkwargs, **kwargs):
+    def __init__(self, sslkwargs, host=None, **kwargs):
         smtplib.SMTP.__init__(self, **kwargs)
         self._sslkwargs = sslkwargs
+        self._host = host
 
     def starttls(self, keyfile=None, certfile=None):
         if not self.has_extn("starttls"):
@@ -59,6 +60,7 @@ class STARTTLS(smtplib.SMTP):
         (resp, reply) = self.docmd("STARTTLS")
         if resp == 220:
             self.sock = sslutil.wrapsocket(self.sock, keyfile, certfile,
+                                           serverhostname=self._host,
                                            **self._sslkwargs)
             self.file = smtplib.SSLFakeFile(self.sock)
             self.helo_resp = None
@@ -72,10 +74,12 @@ class SMTPS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, sslkwargs, keyfile=None, certfile=None, **kwargs):
+    def __init__(self, sslkwargs, keyfile=None, certfile=None, host=None,
+                 **kwargs):
         self.keyfile = keyfile
         self.certfile = certfile
         smtplib.SMTP.__init__(self, **kwargs)
+        self._host = host
         self.default_port = smtplib.SMTP_SSL_PORT
         self._sslkwargs = sslkwargs
 
@@ -85,6 +89,7 @@ class SMTPS(smtplib.SMTP):
         new_socket = socket.create_connection((host, port), timeout)
         new_socket = sslutil.wrapsocket(new_socket,
                                         self.keyfile, self.certfile,
+                                        serverhostname=self._host,
                                         **self._sslkwargs)
         self.file = smtplib.SSLFakeFile(new_socket)
         return new_socket
@@ -114,9 +119,9 @@ def _smtp(ui):
         sslkwargs = {'ui': ui}
     if smtps:
         ui.note(_('(using smtps)\n'))
-        s = SMTPS(sslkwargs, local_hostname=local_hostname)
+        s = SMTPS(sslkwargs, local_hostname=local_hostname, host=mailhost)
     elif starttls:
-        s = STARTTLS(sslkwargs, local_hostname=local_hostname)
+        s = STARTTLS(sslkwargs, local_hostname=local_hostname, host=mailhost)
     else:
         s = smtplib.SMTP(local_hostname=local_hostname)
     if smtps:
