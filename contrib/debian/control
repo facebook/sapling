@@ -5,7 +5,8 @@ Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
 Build-Depends:
  debhelper (>= 7),
  dh-python,
- python-all
+ python-all,
+ python-all-dev
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6
 
