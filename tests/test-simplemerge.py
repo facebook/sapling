@@ -13,10 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-import unittest
-from unittest import TestCase
-from mercurial import util, simplemerge, error
+from __future__ import absolute_import
 
+import unittest
+from mercurial import (
+    error,
+    simplemerge,
+    util,
+)
+
+TestCase = unittest.TestCase
 # bzr compatible interface, for the tests
 class Merge3(simplemerge.Merge3Text):
     """3-way merge of texts.
