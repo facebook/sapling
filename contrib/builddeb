@@ -84,6 +84,7 @@ if [ "$CLEANUP" ] ; then
     OUTPUTDIR=${OUTPUTDIR:=packages/$DISTID-$CODENAME}
     mkdir -p "$OUTPUTDIR"
     find ../mercurial*.deb ../mercurial_*.build ../mercurial_*.changes \
+          ../mercurial*.dsc ../mercurial*.gz \
           -type f -newer $control -print0 2>/dev/null | \
       xargs -Inarf -0 mv narf "$OUTPUTDIR"
     echo "Built packages for $debver:"
