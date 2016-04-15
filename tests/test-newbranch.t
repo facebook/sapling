@@ -391,3 +391,75 @@ We expect that bare update on new branch, updates to parent
   commit: (new branch)
   update: (current)
   phases: 3 draft
+
+  $ cd ..
+
+We need special handling for repositories with no "default" branch because
+"null" revision belongs to non-existent "default" branch.
+
+  $ hg init nodefault
+  $ cd nodefault
+  $ hg branch -q foo
+  $ touch 0
+  $ hg ci -Aqm0
+  $ touch 1
+  $ hg ci -Aqm1
+  $ hg update -qr0
+  $ hg branch -q bar
+  $ touch 2
+  $ hg ci -Aqm2
+  $ hg update -qr0
+  $ hg branch -q baz
+  $ touch 3
+  $ hg ci -Aqm3
+  $ hg ci --close-branch -m 'close baz'
+  $ hg update -q null
+  $ hg log -GT'{rev} {branch}\n'
+  _  4 baz
+  |
+  o  3 baz
+  |
+  | o  2 bar
+  |/
+  | o  1 foo
+  |/
+  o  0 foo
+  
+
+ a) updating from "null" should bring us to the tip-most branch head as
+ there is no "default" branch:
+
+  $ hg update -q null
+  $ hg id -bn
+  -1 default
+  $ hg update
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -bn
+  2 bar
+
+ b) but if we are at uncommitted "default" branch, we should stick to the
+ current revision:
+
+  $ hg update -q 0
+  $ hg branch default
+  marked working directory as branch default
+  $ hg id -bn
+  0 default
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -bn
+  0 default
+
+ c) also, if we have uncommitted branch at "null", we should stick to it:
+
+  $ hg update -q null
+  $ hg branch new
+  marked working directory as branch new
+  $ hg id -bn
+  -1 new
+  $ hg update
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg id -bn
+  -1 new
+
+  $ cd ..

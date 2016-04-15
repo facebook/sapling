@@ -101,6 +101,10 @@ def _destupdatebranch(repo, clean, check):
             node = repo.revs('max(.::(%ln))', heads).first()
         if bookmarks.isactivewdirparent(repo):
             movemark = repo['.'].node()
+    elif currentbranch == 'default' and not wc.p1():
+        # "null" parent belongs to "default" branch, but it doesn't exist, so
+        # update to the tipmost non-closed branch head
+        node = repo.revs('max(head() and not closed())').first()
     else:
         node = repo['.'].node()
     return node, movemark, None
