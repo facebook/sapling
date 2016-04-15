@@ -458,7 +458,7 @@ def has_osx():
 
 @check("docker", "docker support")
 def has_docker():
-    pat = r'A self-sufficient runtime for linux containers\.'
+    pat = r'A self-sufficient runtime for'
     if matchoutput('docker --help', pat):
         if 'linux' not in sys.platform:
             # TODO: in theory we should be able to test docker-based
