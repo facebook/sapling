@@ -48,7 +48,6 @@
   tests/svn-safe-append.py not using absolute_import
   tests/test-atomictempfile.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
-  tests/test-demandimport.py requires print_function
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
@@ -180,6 +179,5 @@
   mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
   tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
-  tests/test-demandimport.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif
