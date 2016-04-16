@@ -42,7 +42,6 @@
   setup.py not using absolute_import
   tests/heredoctest.py requires print_function
   tests/md5sum.py not using absolute_import
-  tests/mockblackbox.py not using absolute_import
   tests/printenv.py not using absolute_import
   tests/readlink.py not using absolute_import
   tests/readlink.py requires print_function

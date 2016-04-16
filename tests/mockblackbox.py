@@ -1,4 +1,7 @@
-from mercurial import util
+from __future__ import absolute_import
+from mercurial import (
+    util,
+)
 
 def makedate():
     return 0, 0
