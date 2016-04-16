@@ -67,11 +67,8 @@ if [ "$BUILD" ]; then
     cp -r $PWD/contrib/debian debian
     chmod -R 0755 debian
 
-    # This looks like sed -i, but sed -i behaves just differently enough
-    # between BSD and GNU sed that I gave up and did the dumb thing.
-    sed "s/__VERSION__/$debver/" < $changelog > $changelog.tmp
-    date=$(date --rfc-2822)
-    sed "s/__DATE__/$date/" < $changelog.tmp > $changelog
+    sed -i.tmp "s/__VERSION__/$debver/" $changelog
+    sed -i.tmp "s/__DATE__/$(date --rfc-2822)/" $changelog
     rm $changelog.tmp
 
     debuild -us -uc -b
