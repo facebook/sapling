@@ -10,6 +10,7 @@ BUILD=1
 CLEANUP=1
 DISTID=`(lsb_release -is 2> /dev/null | tr '[:upper:]' '[:lower:]') || echo debian`
 CODENAME=`lsb_release -cs 2> /dev/null || echo unknown`
+DEBFLAGS=-b
 while [ "$1" ]; do
     case "$1" in
     --distid )
@@ -29,6 +30,10 @@ while [ "$1" ]; do
     --build )
         shift
         CLEANUP=
+        ;;
+    --source-only )
+        shift
+        DEBFLAGS=-S
         ;;
     * )
         echo "Invalid parameter $1!" 1>&2
@@ -76,7 +81,7 @@ if [ "$BUILD" ]; then
     SRCFILE="mercurial_$(echo $debver | sed "s,-$node,,").orig.tar.gz"
     "$PWD/hg" archive $SRCFILE
     mv $SRCFILE ..
-    debuild -us -uc -i -I -b
+    debuild -us -uc -i -I $DEBFLAGS
     if [ $? != 0 ]; then
         echo 'debuild failed!'
         exit 1
