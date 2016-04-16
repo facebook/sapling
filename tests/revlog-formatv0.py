@@ -17,7 +17,9 @@ description:
 empty file
 """
 
-import os, sys
+from __future__ import absolute_import
+import os
+import sys
 
 files = [
     ('formatv0/.hg/00changelog.i',
