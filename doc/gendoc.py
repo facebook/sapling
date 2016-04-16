@@ -4,7 +4,11 @@
 where DOC is the name of a document
 """
 
-import os, sys, textwrap
+from __future__ import absolute_import
+
+import os
+import sys
+import textwrap
 
 # This script is executed during installs and may not have C extensions
 # available. Relax C module requirements.
@@ -12,12 +16,22 @@ os.environ['HGMODULEPOLICY'] = 'allow'
 # import from the live mercurial repo
 sys.path.insert(0, "..")
 from mercurial import demandimport; demandimport.enable()
-from mercurial import minirst
-from mercurial.commands import table, globalopts
-from mercurial.i18n import gettext, _
-from mercurial.help import helptable, loaddoc
-from mercurial import extensions
-from mercurial import ui as uimod
+from mercurial import (
+    commands,
+    extensions,
+    help,
+    minirst,
+    ui as uimod,
+)
+from mercurial.i18n import (
+    gettext,
+    _,
+)
+
+table = commands.table
+globalopts = commands.globalopts
+helptable = help.helptable
+loaddoc = help.loaddoc
 
 def get_desc(docstr):
     if not docstr:
