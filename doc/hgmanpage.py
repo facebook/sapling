@@ -41,12 +41,18 @@ A unix-like system keeps an index of the DESCRIPTIONs, which is accesable
 by the command whatis or apropos.
 
 """
+from __future__ import absolute_import
 
 __docformat__ = 'reStructuredText'
 
+import inspect
 import re
 
-from docutils import nodes, writers, languages
+from docutils import (
+    languages,
+    nodes,
+    writers,
+)
 try:
     import roman
 except ImportError:
