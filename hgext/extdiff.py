@@ -60,11 +60,28 @@ needed files, so running the external diff program will actually be
 pretty fast (at least faster than having to compare the entire tree).
 '''
 
+from __future__ import absolute_import
+
+import os
+import re
+import shlex
+import shutil
+import tempfile
 from mercurial.i18n import _
-from mercurial.node import short, nullid
-from mercurial import cmdutil, scmutil, util, commands, encoding, filemerge
-from mercurial import archival, error
-import os, shlex, shutil, tempfile, re
+from mercurial.node import (
+    nullid,
+    short,
+)
+from mercurial import (
+    archival,
+    cmdutil,
+    commands,
+    encoding,
+    error,
+    filemerge,
+    scmutil,
+    util,
+)
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
