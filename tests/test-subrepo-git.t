@@ -1146,7 +1146,7 @@ test for Git CVE-2016-3068
   $ hg commit -m "add subrepo"
   $ cd ..
   $ env -u GIT_ALLOW_PROTOCOL hg clone malicious-subrepository malicious-subrepository-protected
-  Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'...
+  Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'... (glob)
   fatal: transport 'ext' not allowed
   updating to branch default
   cloning subrepo s from ext::sh -c echo% pwned% >&2
@@ -1155,7 +1155,7 @@ test for Git CVE-2016-3068
 
 whitelisting of ext should be respected (that's the git submodule behaviour)
   $ env GIT_ALLOW_PROTOCOL=ext hg clone malicious-subrepository malicious-subrepository-clone-allowed
-  Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'...
+  Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'... (glob)
   pwned
   fatal: Could not read from remote repository.
   
