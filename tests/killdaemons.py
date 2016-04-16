@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 
-import os, sys, time, errno, signal
+from __future__ import absolute_import
+import errno
+import os
+import signal
+import sys
+import time
 
 if os.name =='nt':
     import ctypes
