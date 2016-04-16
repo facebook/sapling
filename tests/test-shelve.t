@@ -1497,8 +1497,10 @@ expect that after resolving conflicts and succesfully
 running 'shelve --continue' the branch information won't be
 restored and branch will be unchanged.
 
-  $ hg init shelve_on_new_branch_conflict_with_previous_shelvedstate
-  $ cd shelve_on_new_branch_conflict_with_previous_shelvedstate
+shelve on new branch, conflict with previous shelvedstate
+
+  $ hg init conflict
+  $ cd conflict
   $ echo "aaa" >> a
   $ hg commit -A -m "a"
   adding a
