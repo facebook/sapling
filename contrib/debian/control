@@ -7,7 +7,9 @@ Build-Depends:
  dh-python,
  python-all,
  python-all-dev,
- python-docutils
+ python-docutils,
+ zip,
+ unzip
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6
 
