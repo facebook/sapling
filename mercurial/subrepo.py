@@ -1387,6 +1387,8 @@ class gitsubrepo(abstractsubrepo):
         self.ui.debug('%s: git %s\n' % (self._relpath, ' '.join(commands)))
         if env is None:
             env = os.environ.copy()
+        # disable localization for Git output (issue5176)
+        env['LC_ALL'] = 'C'
         # fix for Git CVE-2015-7545
         if 'GIT_ALLOW_PROTOCOL' not in env:
             env['GIT_ALLOW_PROTOCOL'] = 'file:git:http:https:ssh'
