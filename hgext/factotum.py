@@ -45,10 +45,19 @@ service entry controls the service name used when reading keys.
 
 '''
 
+from __future__ import absolute_import
+
+import os
 from mercurial.i18n import _
-from mercurial.url import passwordmgr
-from mercurial import httpconnection, error
-import os, urllib2
+from mercurial import (
+    error,
+    httpconnection,
+    url,
+    util,
+)
+
+urlreq = util.urlreq
+passwordmgr = url.passwordmgr
 
 ERRMAX = 128
 
@@ -93,7 +102,7 @@ def monkeypatch_method(cls):
 
 @monkeypatch_method(passwordmgr)
 def find_user_password(self, realm, authuri):
-    user, passwd = urllib2.HTTPPasswordMgrWithDefaultRealm.find_user_password(
+    user, passwd = urlreq.httppasswordmgrwithdefaultrealm.find_user_password(
         self, realm, authuri)
     if user and passwd:
         self._writedebug(user, passwd)

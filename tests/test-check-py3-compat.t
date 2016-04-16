@@ -3,7 +3,6 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
-  hgext/factotum.py not using absolute_import
   hgext/fetch.py not using absolute_import
   hgext/fsmonitor/pywatchman/__init__.py not using absolute_import
   hgext/fsmonitor/pywatchman/__init__.py requires print_function
@@ -72,7 +71,7 @@
   hgext/convert/transport.py: error importing module: <ImportError> No module named 'svn.client' (line *) (glob)
   hgext/eol.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/extdiff.py: error importing module: <SyntaxError> invalid syntax (archival.py, line *) (line *) (glob)
-  hgext/factotum.py: error importing: <ImportError> No module named 'httplib' (error at url.py:*) (glob)
+  hgext/factotum.py: error importing: <ImportError> No module named 'httplib' (error at __init__.py:*) (glob)
   hgext/fetch.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
   hgext/fsmonitor/watchmanclient.py: error importing module: <SystemError> Parent module 'hgext.fsmonitor' not loaded, cannot perform relative import (line *) (glob)
   hgext/gpg.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
