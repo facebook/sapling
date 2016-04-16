@@ -431,6 +431,8 @@ class transaction(object):
             categories = sorted(self._finalizecallback)
             for cat in categories:
                 self._finalizecallback[cat](self)
+            # Prevent double usage and help clear cycles.
+            self._finalizecallback = None
             self._generatefiles(group=GenerationGroup.POSTFINALIZE)
 
         self.count -= 1
@@ -486,6 +488,8 @@ class transaction(object):
         categories = sorted(self._postclosecallback)
         for cat in categories:
             self._postclosecallback[cat](self)
+        # Prevent double usage and help clear cycles.
+        self._postclosecallback = None
 
     @active
     def abort(self):
@@ -539,6 +543,8 @@ class transaction(object):
             try:
                 for cat in sorted(self._abortcallback):
                     self._abortcallback[cat](self)
+                # Prevent double usage and help clear cycles.
+                self._abortcallback = None
                 _playback(self.journal, self.report, self.opener, self._vfsmap,
                           self.entries, self._backupentries, False)
                 self.report(_("rollback completed\n"))
