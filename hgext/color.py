@@ -153,10 +153,18 @@ the pager is active::
 If ``pagermode`` is not defined, the ``mode`` will be used.
 '''
 
-import os
+from __future__ import absolute_import
 
-from mercurial import cmdutil, commands, dispatch, extensions, subrepo, util
-from mercurial import ui as uimod
+import os
+from mercurial import (
+    cmdutil,
+    commands,
+    dispatch,
+    extensions,
+    subrepo,
+    ui as uimod,
+    util,
+)
 from mercurial.i18n import _
 
 cmdtable = {}
@@ -523,7 +531,8 @@ def debugcolor(ui, repo, **opts):
 if os.name != 'nt':
     w32effects = None
 else:
-    import re, ctypes
+    import ctypes
+    import re
 
     _kernel32 = ctypes.windll.kernel32
 
