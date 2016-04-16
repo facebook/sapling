@@ -1,4 +1,4 @@
-mercurial (__VERSION__) unstable; urgency=medium
+mercurial (__VERSION__) __CODENAME__; urgency=medium
 
   * Automated build performed by upstream.
 

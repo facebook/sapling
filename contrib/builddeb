@@ -69,6 +69,7 @@ if [ "$BUILD" ]; then
 
     sed -i.tmp "s/__VERSION__/$debver/" $changelog
     sed -i.tmp "s/__DATE__/$(date --rfc-2822)/" $changelog
+    sed -i.tmp "s/__CODENAME__/$CODENAME/" $changelog
     rm $changelog.tmp
 
     debuild -us -uc -b
