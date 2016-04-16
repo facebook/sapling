@@ -3,7 +3,6 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
-  doc/check-seclevel.py not using absolute_import
   doc/gendoc.py not using absolute_import
   doc/hgmanpage.py not using absolute_import
   hgext/color.py not using absolute_import

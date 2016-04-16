@@ -2,18 +2,26 @@
 #
 # checkseclevel - checking section title levels in each online help document
 
-import sys, os
+from __future__ import absolute_import
+
 import optparse
+import os
+import sys
 
 # import from the live mercurial repo
 os.environ['HGMODULEPOLICY'] = 'py'
 sys.path.insert(0, "..")
 from mercurial import demandimport; demandimport.enable()
-from mercurial.commands import table
-from mercurial.help import helptable
-from mercurial import extensions
-from mercurial import minirst
-from mercurial import ui as uimod
+from mercurial import (
+    commands,
+    extensions,
+    help,
+    minirst,
+    ui as uimod,
+)
+
+table = commands.table
+helptable = help.helptable
 
 level2mark = ['"', '=', '-', '.', '#']
 reservedmarks = ['"']
