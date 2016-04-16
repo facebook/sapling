@@ -24,4 +24,5 @@ main deb should have .so but no .py
 mercurial-common should have .py but no .so or .pyc
   $ ar x mercurial-common_*.deb
   $ tar tf data.tar* | egrep '(localrepo|parsers)'
+  ./usr/lib/python2.7/dist-packages/mercurial/pure/parsers.py
   ./usr/lib/python2.7/dist-packages/mercurial/localrepo.py
