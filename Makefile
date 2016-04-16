@@ -165,6 +165,9 @@ osx:
 deb:
 	contrib/builddeb
 
+ppa:
+	contrib/builddeb --source-only
+
 docker-debian-jessie:
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
