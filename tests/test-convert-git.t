@@ -730,6 +730,8 @@ damage git repository by renaming a tree object
   $ hg convert git-repo4 git-repo4-broken-hg 2>&1 | grep 'abort:'
   abort: cannot read changes in 1c0ce3c5886f83a1d78a7b517cdff5cf9ca17bdd
 
+#if no-windows
+
 test for escaping the repo name (CVE-2016-3069)
 
   $ git init '`echo pwned >COMMAND-INJECTION`'
@@ -746,3 +748,6 @@ test for escaping the repo name (CVE-2016-3069)
   updating bookmarks
   $ test -f COMMAND-INJECTION
   [1]
+
+#endif
+
