@@ -46,7 +46,6 @@
   tests/readlink.py requires print_function
   tests/run-tests.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import
-  tests/svnxml.py not using absolute_import
   tests/test-atomictempfile.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
   tests/test-demandimport.py requires print_function
