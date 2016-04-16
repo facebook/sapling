@@ -3,7 +3,6 @@
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py
-  hgext/eol.py not using absolute_import
   hgext/extdiff.py not using absolute_import
   hgext/factotum.py not using absolute_import
   hgext/fetch.py not using absolute_import

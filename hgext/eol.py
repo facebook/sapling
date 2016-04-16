@@ -91,9 +91,18 @@ See :hg:`help patterns` for more information about the glob patterns
 used.
 """
 
+from __future__ import absolute_import
+
+import os
+import re
 from mercurial.i18n import _
-from mercurial import util, config, extensions, match, error
-import re, os
+from mercurial import (
+    config,
+    error,
+    extensions,
+    match,
+    util,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
