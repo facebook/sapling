@@ -234,6 +234,8 @@ class lock(object):
             if not self._parentheld:
                 for callback in self.postrelease:
                     callback()
+                # Prevent double usage and help clear cycles.
+                self.postrelease = None
 
 def release(*locks):
     for lock in locks:
