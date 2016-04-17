@@ -5,6 +5,7 @@ Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
 Build-Depends:
  debhelper (>= 7),
  dh-python,
+ netbase,
  python-all,
  python-all-dev,
  python-docutils,
