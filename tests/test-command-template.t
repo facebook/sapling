@@ -3768,10 +3768,10 @@ Unparsable alias:
   $ hg debugtemplate --config templatealias.bad='x(' -v '{bad}'
   (template
     ('symbol', 'bad'))
-  abort: failed to parse the definition of template alias "bad": at 2: not a prefix: end
+  abort: bad definition of template alias "bad": at 2: not a prefix: end
   [255]
   $ hg log --config templatealias.bad='x(' -T '{bad}'
-  abort: failed to parse the definition of template alias "bad": at 2: not a prefix: end
+  abort: bad definition of template alias "bad": at 2: not a prefix: end
   [255]
 
   $ cd ..

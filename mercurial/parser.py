@@ -447,15 +447,13 @@ class basealiasrules(object):
         repl = efmt = None
         name, args, err = cls._builddecl(decl)
         if err:
-            efmt = _('failed to parse the declaration of %(section)s '
-                     '"%(name)s": %(error)s')
+            efmt = _('bad declaration of %(section)s "%(name)s": %(error)s')
         else:
             try:
                 repl = cls._builddefn(defn, args)
             except error.ParseError as inst:
                 err = parseerrordetail(inst)
-                efmt = _('failed to parse the definition of %(section)s '
-                         '"%(name)s": %(error)s')
+                efmt = _('bad definition of %(section)s "%(name)s": %(error)s')
         if err:
             err = efmt % {'section': cls._section, 'name': name, 'error': err}
         return alias(name, args, err, repl)
