@@ -72,6 +72,10 @@ if [ "$BUILD" ]; then
     sed -i.tmp "s/__CODENAME__/$CODENAME/" $changelog
     rm $changelog.tmp
 
+    # remove the node from the version string
+    SRCFILE="mercurial_$(echo $debver | sed "s,-$node,,").orig.tar.gz"
+    "$PWD/hg" archive $SRCFILE
+    mv $SRCFILE ..
     debuild -us -uc -i -I -b
     if [ $? != 0 ]; then
         echo 'debuild failed!'
