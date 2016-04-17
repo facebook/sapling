@@ -325,13 +325,13 @@ class basealiasrules(object):
         >>> builddecl('foo')
         ('foo', None, None)
         >>> builddecl('$foo')
-        ('$foo', None, "'$' not for alias arguments")
+        ('$foo', None, "invalid symbol '$foo'")
         >>> builddecl('foo::bar')
         ('foo::bar', None, 'invalid format')
         >>> builddecl('foo()')
         ('foo', [], None)
         >>> builddecl('$foo()')
-        ('$foo()', None, "'$' not for alias arguments")
+        ('$foo()', None, "invalid function '$foo'")
         >>> builddecl('foo($1, $2)')
         ('foo', ['$1', '$2'], None)
         >>> builddecl('foo(bar_bar, baz.baz)')
@@ -358,7 +358,7 @@ class basealiasrules(object):
             # "name = ...." style
             name = tree[1]
             if name.startswith('$'):
-                return (decl, None, _("'$' not for alias arguments"))
+                return (decl, None, _("invalid symbol '%s'") % name)
             return (name, None, None)
 
         func = cls._trygetfunc(tree)
@@ -366,7 +366,7 @@ class basealiasrules(object):
             # "name(arg, ....) = ...." style
             name, args = func
             if name.startswith('$'):
-                return (decl, None, _("'$' not for alias arguments"))
+                return (decl, None, _("invalid function '%s'") % name)
             if any(t[0] != cls._symbolnode for t in args):
                 return (decl, None, _("invalid argument list"))
             if len(args) != len(set(args)):
@@ -389,7 +389,7 @@ class basealiasrules(object):
         if sym in args:
             op = '_aliasarg'
         elif sym.startswith('$'):
-            raise error.ParseError(_("'$' not for alias arguments"))
+            raise error.ParseError(_("invalid symbol '%s'") % sym)
         return (op, sym)
 
     @classmethod
@@ -423,7 +423,7 @@ class basealiasrules(object):
         ...     builddefn('$1 or $bar', args)
         ... except error.ParseError as inst:
         ...     print parseerrordetail(inst)
-        '$' not for alias arguments
+        invalid symbol '$bar'
         >>> args = ['$1', '$10', 'foo']
         >>> pprint(builddefn('$10 or baz', args))
         (or

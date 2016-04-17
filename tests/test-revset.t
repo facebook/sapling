@@ -1967,7 +1967,7 @@ test unknown reference:
   (func
     ('symbol', 'unknownref')
     ('symbol', '0'))
-  abort: failed to parse the definition of revset alias "unknownref": '$' not for alias arguments
+  abort: failed to parse the definition of revset alias "unknownref": invalid symbol '$2'
   [255]
 
   $ hg debugrevspec --debug --config revsetalias.anotherbadone='branch(' "tip"
