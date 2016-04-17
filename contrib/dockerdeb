@@ -4,7 +4,7 @@
 . $(dirname $0)/packagelib.sh
 
 BUILDDIR=$(dirname $0)
-export ROOTDIR=$(cd $BUILDDIR/..; pwd)
+export ROOTDIR=$(cd $BUILDDIR/.. > /dev/null; pwd)
 
 checkdocker
 
