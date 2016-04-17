@@ -2217,18 +2217,12 @@ def optimize(x, small):
 _aliassyminitletters = set(c for c in [chr(i) for i in xrange(256)]
                            if c.isalnum() or c in '._@$' or ord(c) > 127)
 
-def _tokenizealias(program, lookup=None):
-    """Parse alias declaration/definition into a stream of tokens
+def _parsealias(spec):
+    """Parse alias declaration/definition ``spec``
 
     This allows symbol names to use also ``$`` as an initial letter
     (for backward compatibility), and callers of this function should
     examine whether ``$`` is used also for unexpected symbols or not.
-    """
-    return tokenize(program, lookup=lookup,
-                    syminitletters=_aliassyminitletters)
-
-def _parsealias(spec):
-    """Parse alias declaration/definition ``spec``
 
     >>> _parsealias('foo($1)')
     ('func', ('symbol', 'foo'), ('symbol', '$1'))
@@ -2238,7 +2232,7 @@ def _parsealias(spec):
     ParseError: ('invalid token', 4)
     """
     p = parser.parser(elements)
-    tree, pos = p.parse(_tokenizealias(spec))
+    tree, pos = p.parse(tokenize(spec, syminitletters=_aliassyminitletters))
     if pos != len(spec):
         raise error.ParseError(_('invalid token'), pos)
     return parser.simplifyinfixops(tree, ('list', 'or'))
