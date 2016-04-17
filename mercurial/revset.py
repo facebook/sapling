@@ -2238,19 +2238,19 @@ def _parsewith(spec, lookup=None, syminitletters=None):
         raise error.ParseError(_('invalid token'), pos)
     return parser.simplifyinfixops(tree, ('list', 'or'))
 
-def _parsealias(spec):
-    """Parse alias declaration/definition ``spec``
-
-    This allows symbol names to use also ``$`` as an initial letter
-    (for backward compatibility), and callers of this function should
-    examine whether ``$`` is used also for unexpected symbols or not.
-    """
-    return _parsewith(spec, syminitletters=_aliassyminitletters)
-
 class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of revset aliases"""
     _section = _('revset alias')
-    _parse = staticmethod(_parsealias)
+
+    @staticmethod
+    def _parse(spec):
+        """Parse alias declaration/definition ``spec``
+
+        This allows symbol names to use also ``$`` as an initial letter
+        (for backward compatibility), and callers of this function should
+        examine whether ``$`` is used also for unexpected symbols or not.
+        """
+        return _parsewith(spec, syminitletters=_aliassyminitletters)
 
     @staticmethod
     def _trygetfunc(tree):
