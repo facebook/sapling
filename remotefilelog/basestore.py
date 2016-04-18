@@ -1,4 +1,4 @@
-import os, shutil, time
+import grp, os, shutil, time
 import shallowutil
 from mercurial import util
 from mercurial.i18n import _
@@ -40,8 +40,8 @@ class basestore(object):
                     if groupname:
                         gid = grp.getgrnam(groupname).gr_gid
                         if gid:
-                            os.chown(cachepath, os.getuid(), gid)
-                            os.chmod(cachepath, 0o2775)
+                            os.chown(path, os.getuid(), gid)
+                            os.chmod(path, 0o2775)
                 finally:
                     os.umask(oldumask)
 
