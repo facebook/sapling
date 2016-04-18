@@ -23,8 +23,7 @@ static size_t calculate_required_size(
 
 static void initialize_node(
     node_t *node, size_t block_sz,
-    const char *name, uint16_t name_sz,
-    uint32_t num_children) {
+    const char *name, uint16_t name_sz) {
   node->block_sz = block_sz;
   node->num_children = 0;
   node->name_sz = name_sz;
@@ -43,7 +42,7 @@ node_t *alloc_node(
     return result;
   }
 
-  initialize_node(result, size, name, name_sz, max_children);
+  initialize_node(result, size, name, name_sz);
   return result;
 }
 
@@ -60,7 +59,7 @@ void *setup_node(
   intptr_t next = (intptr_t) ptr;
   next += size;
 
-  initialize_node(node, size, name, name_sz, max_children);
+  initialize_node(node, size, name, name_sz);
 
   return (void *) next;
 }
