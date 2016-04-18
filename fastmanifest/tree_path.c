@@ -44,8 +44,14 @@ tree_add_child_result_t tree_add_child(
     node_t *const root_parent,
     node_t *root,
     const char *name, const size_t name_sz,
+    size_t num_children_hint,
     tree_state_changes_t *changes) {
   tree_add_child_result_t result;
+
+  if (!VERIFY_CHILD_NUM(num_children_hint)) {
+    return (tree_add_child_result_t) {
+        TREE_ADD_CHILD_WTF, NULL, NULL};
+  }
 
   // create a new child node, and record the deltas in the change
   // register.
@@ -55,7 +61,7 @@ tree_add_child_result_t tree_add_child(
   // this is a potential optimization opportunity.  we could theoretically try
   // to allocate the new node in the arena and maintain compacted state of the
   // tree.
-  node_t *node = alloc_node(name, name_sz, 0);
+  node_t *node = alloc_node(name, name_sz, num_children_hint);
   if (node == NULL) {
     return (tree_add_child_result_t) {
         TREE_ADD_CHILD_OOM, NULL, NULL};
@@ -167,7 +173,11 @@ find_path_result_t find_path(
         // create the new child.
         tree_add_child_result_t tree_add_child_result =
             tree_add_child(
-                tree, root_parent, root, path, first_component_sz, changes);
+                tree, root_parent, root, path, first_component_sz,
+                // since we're creating the intermediate nodes that lead to a
+                // leaf node, we'll have at least one child.
+                1,
+                changes);
         switch (tree_add_child_result.code) {
           case TREE_ADD_CHILD_OOM:
             return FIND_PATH_OOM;

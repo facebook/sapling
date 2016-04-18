@@ -220,6 +220,7 @@ find_path_callback_result_t add_or_update_path_callback(
             root_parent,
             root,
             name, name_sz,
+            0, // leaf nodes don't have children.
             changes);
     switch (tree_add_child_result.code) {
       case TREE_ADD_CHILD_OOM:

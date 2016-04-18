@@ -61,6 +61,7 @@ extern tree_add_child_result_t tree_add_child(
     node_t *const root_parent,
     node_t *root,
     const char *name, const size_t name_sz,
+    size_t num_children_hint,
     tree_state_changes_t *changes);
 
 extern find_path_result_t find_path(
