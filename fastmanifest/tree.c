@@ -258,6 +258,8 @@ find_path_callback_result_t add_or_update_path_callback(
   child->checksum_valid = true;
   child->flags = metadata->flags;
 
+  changes->checksum_dirty = true;
+
   return (find_path_callback_result_t) {FIND_PATH_OK, root};
 }
 
