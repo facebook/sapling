@@ -43,18 +43,18 @@ find_library(OPENSSL
 target_include_directories(fastmanifest PUBLIC /opt/local/include)
 target_link_libraries(fastmanifest PUBLIC ${OPENSSL})
 
-SET(TEST_HEADER_FILES tests.c tests.h)
+SET(TEST_FILES tests.c tests.h)
 
-add_executable(checksum_test checksum_test.c ${TEST_HEADER_FILES})
+add_executable(checksum_test checksum_test.c ${TEST_FILES})
 target_link_libraries(checksum_test bsearch fastmanifest)
 
-add_executable(node_test node_test.c ${TEST_HEADER_FILES})
+add_executable(node_test node_test.c ${TEST_FILES})
 target_link_libraries(node_test bsearch fastmanifest)
 
-add_executable(tree_test tree_test.c ${TEST_HEADER_FILES})
+add_executable(tree_test tree_test.c ${TEST_FILES})
 target_link_libraries(tree_test bsearch fastmanifest)
 
-add_executable(tree_convert_test tree_convert_test.c ${TEST_HEADER_FILES})
+add_executable(tree_convert_test tree_convert_test.c ${TEST_FILES})
 target_link_libraries(tree_convert_test bsearch fastmanifest)
 
 add_executable(tree_copy_test tree_copy_test.c)
