@@ -6,7 +6,15 @@
 // no-check-code
 
 #include "checksum.h"
+#include "tree.h"
+
+void test_empty_tree() {
+  tree_t* tree = alloc_tree();
+  update_checksums(tree);
+}
 
 int main(int argc, char *argv[]) {
+  test_empty_tree();
+
   return 0;
 }

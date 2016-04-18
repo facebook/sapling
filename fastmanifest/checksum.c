@@ -15,8 +15,8 @@ static void update_checksum(node_t *node) {
   SHA1_Init(&ctx);
 
   // find all the children and make sure their checksums are up-to-date.
-  for (int ix = 0; ix < node->num_children; node++) {
-    node_t *child = get_child_by_index(node, ix);
+  for (size_t ix = 0; ix < node->num_children; ix++) {
+    node_t* child = get_child_by_index(node, ix);
     if (child->checksum_valid == false) {
       update_checksum(child);
     }
