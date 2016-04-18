@@ -14,6 +14,8 @@ typedef unsigned char bool;
 #include <stdbool.h>
 #endif
 
+#include "tree.h"
+
 
 /* TODO @ttung replace this with your structs and fix
    reference */
@@ -32,22 +34,10 @@ typedef struct tmnode {
   int maxchildren;
 } tmnode;
 
-enum tmquerystatus {
-  OOM,
-  NOT_FOUND,
-  FOUND_DIR,
-  FOUND_FILE,
-};
-
 typedef struct {
   PyObject_HEAD;
-  tmnode *root;
+  tree_t *tree;
 } fastmanifest;
-
-typedef struct tmquery {
-  enum tmquerystatus status;
-  tmnode *node;
-} tmquery;
 
 
 static PyTypeObject fastmanifestType;
@@ -59,12 +49,13 @@ static PyTypeObject fastmanifestType;
 /* Deallocate all the nodes in the tree */
 static void ifastmanifest_dealloc(fastmanifest *self)
 {
-  /* TODO integration with @ttung */
+  destroy_tree(self->tree);
 }
 
 static fastmanifest *ifastmanifest_copy(fastmanifest *copy, fastmanifest *self)
 {
-  /* TODO integration with @ttung */
+  copy->tree = copy_tree(self->tree);
+  return copy;
 }
 
 static void ifastmanifest_save(fastmanifest *copy, char *filename, int len)
@@ -77,56 +68,54 @@ static void ifastmanifest_load(fastmanifest *copy, char *filename, int len)
   /* TODO integration with @ttung */
 }
 
-static tmquery ifastmanifest_getitem(fastmanifest *self, char *path, int plen)
+static get_path_result_t ifastmanifest_getitem(
+    fastmanifest *self, char *path, ssize_t plen)
 {
-  /* TODO Integration with @ttung */
+  get_path_result_t get_path_result = get_path(self->tree, path, plen);
+  return get_path_result;
 }
 
-static int ifastmanifest_insert(fastmanifest *self,
-                                char *path, ssize_t plen,
-                                char *hash, ssize_t hlen,
-                                char *flags, ssize_t flen, bool ishexhash)
+static add_update_path_result_t ifastmanifest_insert(
+    fastmanifest *self,
+    char *path, ssize_t plen,
+    char *hash, ssize_t hlen,
+    char *flags, ssize_t flen)
 {
-  /* TODO Integration with @ttung */
+  add_update_path_result_t result = add_or_update_path(
+      self->tree,
+      path, plen,
+      hash, hlen,
+      *flags);
+
+  return result;
 }
 
 
-static int ifastmanifest_insert_lines(fastmanifest *self, char *data,
-                    Py_ssize_t len)
+static convert_from_flat_code_t ifastmanifest_init(
+    fastmanifest *self, char *data, ssize_t len)
 {
-  while (len > 0) {
-    char *next = memchr(data, '\n', len);
-    if (!next) {
-      return MANIFEST_MALFORMED;
-    }
+  convert_from_flat_result_t from_result = convert_from_flat(
+      data, len);
 
-    next++; /* advance past newline */
-    int llen = next - data;
-    int plen = strlen(data);
-    char *hash = data + plen + 1;
-    char *flags = data + plen + 42;
-    int hlen = 40;
-    int flen = next - flags;
-    ifastmanifest_insert(self, data, plen, hash, hlen, flags, flen, true);
-    len = len - llen;
-    data = next;
+  if (from_result.code == CONVERT_FROM_FLAT_OK) {
+    tree_t *tree = from_result.tree;
+    self->tree = tree;
   }
-  return 0;
-}
 
-static int ifastmanifest_init(fastmanifest *self, char *data, ssize_t len)
-{
-  /* TODO Integration with @ttung */
+  return from_result.code;
 }
 
 static ssize_t ifastmanifest_size(fastmanifest *self)
 {
-  /* TODO Integration with @ttung */
+  return self->tree->num_leaf_nodes;
 }
 
-static tmquery ifastmanifest_delitem(fastmanifest *tm, char *path, int plen)
+static remove_path_result_t ifastmanifest_delitem(
+    fastmanifest *self, char *path, int plen)
 {
-  /* TODO Integration with @ttung */
+  remove_path_result_t remove_path_result =
+      remove_path(self->tree, path, plen);
+  return remove_path_result;
 }
 
 /* Fastmanifest: end of pure C layer | start of CPython layer */
@@ -169,30 +158,25 @@ static PyObject *tm_nodeof(tmnode *l) {
   return hash;
 }
 
-static PyObject *fastmanifest_formatfile(tmnode *l) {
-  if (l == NULL) {
+static PyObject *fastmanifest_formatfile(
+    const uint8_t *checksum, const uint8_t checksum_sz, const uint8_t flags) {
+  PyObject *py_checksum = PyString_FromStringAndSize(checksum, checksum_sz);
+
+  if (!py_checksum) {
     return NULL;
   }
-  char *s = l->start;
-  size_t plen = strlen(l->start);
-  PyObject *hash = tm_nodeof(l);
 
-  /* 40 for hash, 1 for null byte, 1 for newline */
-  size_t hplen = plen + 42;
-  Py_ssize_t flen = l->len - hplen;
-  PyObject *flags;
+  PyObject *py_flags;
   PyObject *tup;
 
-  if (!hash)
-    return NULL;
-  flags = PyString_FromStringAndSize(s + hplen - 1, flen);
-  if (!flags) {
-    Py_DECREF(hash);
+  py_flags = PyString_FromStringAndSize(&flags, (flags == 0) ? 0 : 1);
+  if (!py_flags) {
+    Py_DECREF(py_checksum);
     return NULL;
   }
-  tup = PyTuple_Pack(2, hash, flags);
-  Py_DECREF(flags);
-  Py_DECREF(hash);
+  tup = PyTuple_Pack(2, py_checksum, py_flags);
+  Py_DECREF(py_flags);
+  Py_DECREF(py_checksum);
   return tup;
 }
 
@@ -210,12 +194,12 @@ static int fastmanifest_init(fastmanifest *self, PyObject *args) {
   int err = PyString_AsStringAndSize(pydata, &data, &len);
   if (err == -1)
     return -1;
-  err = ifastmanifest_init(self, data, len);
-  switch(err) {
-  case MANIFEST_OOM:
+  convert_from_flat_code_t from_code = ifastmanifest_init(self, data, len);
+  switch(from_code) {
+  case CONVERT_FROM_FLAT_OOM:
     PyErr_NoMemory();
     return -1;
-  case MANIFEST_MALFORMED:
+  case CONVERT_FROM_FLAT_WTF:
     PyErr_Format(PyExc_ValueError,
            "Manifest did not end in a newline.");
     return -1;
@@ -295,31 +279,24 @@ static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key)
     return NULL;
   }
 
-  tmquery query = ifastmanifest_getitem(self, ckey, clen);
-  switch (query.status) {
-  case OOM:
-    PyErr_NoMemory();
-    break;
-
-  case FOUND_DIR:
-    PyErr_Format(PyExc_ValueError,
-           "Found dir matching path, expected file");
-    break;
-
-  case NOT_FOUND:
-    PyErr_Format(PyExc_ValueError,
+  get_path_result_t query = ifastmanifest_getitem(self, ckey, clen);
+  switch (query.code) {
+  case GET_PATH_NOT_FOUND:
+    PyErr_Format(PyExc_KeyError,
            "File not found");
-    break;
+    return NULL;
+
+  case GET_PATH_WTF:
+    PyErr_Format(PyExc_ValueError,
+           "tree corrupt");
+    return NULL;
+
   default:
     break;
   }
 
-  if (query.status != FOUND_FILE) {
-    PyErr_Format(PyExc_KeyError, "File not found");
-    return NULL;
-  }
-
-  PyObject *ret = fastmanifest_formatfile(query.node);
+  PyObject *ret = fastmanifest_formatfile(
+      query.checksum, query.checksum_sz, query.flags);
   if (ret == NULL) {
     PyErr_Format(PyExc_ValueError,
            "Error formatting file");
@@ -333,7 +310,6 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
   char *path, *hash, *flags;
   ssize_t plen, hlen, flen;
   int err;
-  tmquery response;
   /* Decode path */
   if (!fastmanifest_is_valid_manifest_key(key)) {
     return -1;
@@ -346,25 +322,22 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
   }
 
   if (!value) {
-    response = ifastmanifest_delitem(self, path, plen);
+    remove_path_result_t remove_path_result =
+        ifastmanifest_delitem(self, path, plen);
 
-    switch(response.status) {
+   switch(remove_path_result) {
 
-    case OOM:
-      PyErr_NoMemory();
-      return -1;
-
-    case FOUND_FILE:
+    case REMOVE_PATH_OK:
       return 0;
 
-    case FOUND_DIR:
-      PyErr_Format(PyExc_KeyError,
-             "Cannot delete manifest dir");
-      return -1;
-
-    case NOT_FOUND:
+    case REMOVE_PATH_NOT_FOUND:
       PyErr_Format(PyExc_KeyError,
              "Not found");
+      return -1;
+
+    case REMOVE_PATH_WTF:
+      PyErr_Format(PyExc_KeyError,
+             "tree corrupt");
       return -1;
     }
   }
@@ -391,10 +364,22 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
     return -1;
   }
 
-  err = ifastmanifest_insert(self, path, plen, hash, hlen, flags, flen, false);
-  if (err == MANIFEST_OOM) {
-    PyErr_NoMemory();
-    return -1;
+  add_update_path_result_t add_update_path_result =
+      ifastmanifest_insert(self, path, plen, hash, hlen, flags, flen);
+  switch (add_update_path_result) {
+    case ADD_UPDATE_PATH_OOM:
+    {
+      PyErr_NoMemory();
+      return -1;
+    }
+
+    case ADD_UPDATE_PATH_WTF:
+    case ADD_UPDATE_PATH_CONFLICT:
+    {
+      PyErr_Format(PyExc_TypeError,
+           "unexpected stuff happened");
+      return -1;
+    }
   }
 
   return 0;
@@ -406,6 +391,26 @@ static PyMappingMethods fastmanifest_mapping_methods = {
   (objobjargproc)fastmanifest_setitem, /* mp_ass_subscript */
 };
 
+/* sequence methods (important or __contains__ builds an iterator) */
+
+static int fastmanifest_contains(fastmanifest *self, PyObject *key)
+{
+  if (!fastmanifest_is_valid_manifest_key(key)) {
+    /* Our keys are always strings, so if the contains
+     * check is for a non-string, just return false. */
+    return 0;
+  }
+  char *path;
+  ssize_t plen;
+  int err = PyString_AsStringAndSize(key, &path, &plen);
+  if (err == -1) {
+    PyErr_Format(PyExc_TypeError,
+           "Error decoding path");
+    return -1;
+  }
+  return contains_path(self->tree, path, plen) ? 1 : 0;
+}
+
 static PySequenceMethods fastmanifest_seq_meths = {
   (lenfunc)fastmanifest_size, /* sq_length */
   0, /* sq_concat */
@@ -414,7 +419,7 @@ static PySequenceMethods fastmanifest_seq_meths = {
   0, /* sq_slice */
   0, /* sq_ass_item */
   0, /* sq_ass_slice */
-  0, /* sq_contains */
+  (objobjproc)fastmanifest_contains, /* sq_contains */
   0, /* sq_inplace_concat */
   0, /* sq_inplace_repeat */
 };
@@ -491,5 +496,3 @@ initfastmanifest_wrapper(void)
     Py_INCREF(&fastmanifestType);
     PyModule_AddObject(m, "fastManifest", (PyObject *)&fastmanifestType);
 }
-
-
