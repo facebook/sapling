@@ -386,3 +386,41 @@ remove_path_result_t remove_path(
       return REMOVE_PATH_WTF;
   }
 }
+
+bool contains_path(
+    const tree_t *tree,
+    const char *path,
+    const size_t path_sz) {
+  tree_state_changes_t changes = {0};
+  get_path_metadata_t metadata;
+
+  node_t *shadow_root = tree->shadow_root;
+  node_t *real_root = get_child_by_index(shadow_root, 0);
+
+  if (real_root == NULL) {
+    return false;
+  }
+
+  find_path_result_t result =
+      find_path(
+          tree,
+          shadow_root,
+          real_root,
+          path, path_sz,
+          BASIC_WALK,
+          &changes,
+          get_path_callback,
+          &metadata);
+
+  assert(changes.size_change == 0);
+  assert(changes.num_leaf_node_change == 0);
+  assert(changes.non_arena_allocations == false);
+
+  switch (result) {
+    case FIND_PATH_OK:
+      return true;
+
+    default:
+      return false;
+  }
+}
