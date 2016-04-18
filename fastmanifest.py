@@ -47,6 +47,7 @@ TODO handle asynchronous save
 TODO size limit handling
 """
 import os
+import fastmanifest_wrapper
 
 from mercurial import cmdutil
 from mercurial import extensions
@@ -102,6 +103,11 @@ class hybridmanifest(object):
         self.fastcache = fastcache
         self.node = node
         self.ui = ui
+        if self.ui:
+            self.debugfastmanifest = self.ui.configbool("fastmanifest",
+                                                        "debugfastmanifest")
+        else:
+            self.debugfastmanifest = False
         if self.node:
             self.node = revlog.hex(self.node)
 
@@ -146,6 +152,8 @@ class hybridmanifest(object):
     def _manifest(self, operation):
         # Get the manifest most suited for the operations (flat or cached)
         # TODO return fastmanifest when suitable
+        if self.debugfastmanifest:
+            return fastmanifest_wrapper(self._flatmanifest().text())
         return self._flatmanifest()
 
     # Proxy all the manifest methods to the flatmanifest except magic methods

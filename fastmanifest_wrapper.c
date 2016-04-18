@@ -471,3 +471,25 @@ static PyTypeObject fastmanifestType = {
   (initproc)fastmanifest_init,                      /* tp_init */
   0,                                                /* tp_alloc */
 };
+
+static PyMethodDef methods[] = {
+  {NULL, NULL, 0, NULL}
+};
+
+PyMODINIT_FUNC
+initfastmanifest_wrapper(void)
+{
+    PyObject* m;
+
+    fastmanifestType.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&fastmanifestType) < 0)
+        return;
+
+    m = Py_InitModule3("fastmanifest_wrapper", methods,
+                       "Wrapper around fast_manifest");
+
+    Py_INCREF(&fastmanifestType);
+    PyModule_AddObject(m, "fastManifest", (PyObject *)&fastmanifestType);
+}
+
+
