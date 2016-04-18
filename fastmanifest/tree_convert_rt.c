@@ -12,6 +12,7 @@
 #include <sys/time.h>
 
 #include "tree.h"
+#include "checksum.h"
 
 int main(int argc, char *argv[]) {
   if (argc < 3) {
@@ -57,6 +58,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
+  struct timeval before_checksum, after_checksum;
+  gettimeofday(&before_checksum, NULL);
+  update_checksums(from_flat.tree);
+  gettimeofday(&after_checksum, NULL);
+
+  if (from_flat.code != CONVERT_FROM_FLAT_OK) {
+    fprintf(stderr, "Error: converting from flat manifest\n");
+    exit(1);
+  }
+
   struct timeval before_to, after_to;
   gettimeofday(&before_to, NULL);
   convert_to_flat_result_t to_flat = convert_to_flat(from_flat.tree);
@@ -78,12 +89,17 @@ int main(int argc, char *argv[]) {
                                before_from.tv_usec;
   uint64_t usecs_after_from = after_from.tv_sec * 1000000 +
                               after_from.tv_usec;
+  uint64_t usecs_before_checksum = before_checksum.tv_sec * 1000000 +
+                               before_checksum.tv_usec;
+  uint64_t usecs_after_checksum = after_checksum.tv_sec * 1000000 +
+                              after_checksum.tv_usec;
   uint64_t usecs_before_to = before_to.tv_sec * 1000000 +
                              before_to.tv_usec;
   uint64_t usecs_after_to = after_to.tv_sec * 1000000 +
                             after_to.tv_usec;
 
   printf("flat -> tree: %lld us\n", (usecs_after_from - usecs_before_from));
+  printf("checksum: %lld us\n", (usecs_after_checksum - usecs_before_checksum));
   printf("tree -> flat: %lld us\n", (usecs_after_to - usecs_before_to));
   printf("tree consumed memory: %ld\n", from_flat.tree->consumed_memory);
 }
