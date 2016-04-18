@@ -281,6 +281,9 @@ static close_folder_result_t close_folder(
   }
   node_t *node = arena_alloc_node_result.node;
   node->type = TYPE_IMPLICIT;
+  // we must initialize flags to a known value, even if it's not used
+  // because it participates in checksum calculation.
+  node->flags = 0;
   node->num_children = folder->closed_children_count; // this is a huge
                                                       // abstraction violation,
                                                       // but it allows us to use

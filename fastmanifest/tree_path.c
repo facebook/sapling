@@ -192,6 +192,9 @@ find_path_result_t find_path(
 
         // it's an implicit node.
         child->type = TYPE_IMPLICIT;
+        // we must initialize flags to a known value, even if it's not used
+        // because it participates in checksum calculation.
+        child->flags = 0;
       } else {
         // didn't find it, return.
         return FIND_PATH_NOT_FOUND;
