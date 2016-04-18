@@ -212,6 +212,13 @@ void test_many_children_reverse() {
 
 void test_clone() {
   node_t *parent = ALLOC_NODE_STR("parent", TEST_CLONE_COUNT);
+  parent->in_use = true;
+  parent->type = TYPE_IMPLICIT;
+  memset(parent->checksum, 0x2e, SHA1_BYTES);
+  parent->checksum_valid = true;
+  parent->checksum_sz = SHA1_BYTES;
+  parent->flags = 0x3e;
+
   node_t *children[TEST_CLONE_COUNT];   // this should be ordered as we
                                         // expect to find them in the
                                         // parent's list of children.
@@ -220,8 +227,6 @@ void test_clone() {
         TEST_CLONE_NAME_STR,
         name_sz,
         0);
-    parent->in_use = true;
-    parent->type = TYPE_IMPLICIT;
     child->in_use = true;
     child->type = TYPE_LEAF;
 
@@ -240,6 +245,12 @@ void test_clone() {
         name_sz);
     ASSERT(result == children[name_sz - 1]);
   }
+
+  ASSERT(clone->checksum_sz == SHA1_BYTES);
+  for (uint8_t ix = 0; ix < SHA1_BYTES; ix++) {
+    ASSERT(clone->checksum[ix] == 0x2e);
+  }
+  ASSERT(clone->flags == 0x3e);
 
   ASSERT(max_children(clone) > max_children(parent));
 }

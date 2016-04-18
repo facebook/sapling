@@ -86,9 +86,11 @@ node_t *clone_node(const node_t *node) {
   clone->num_children = node->num_children;
   if (node->checksum_valid) {
     memcpy(clone->checksum, node->checksum, sizeof(node->checksum));
+    clone->checksum_sz = node->checksum_sz;
   }
   clone->type = node->type;
   clone->checksum_valid = node->checksum_valid;
+  clone->flags = node->flags;
 
   // calculate the difference we need to apply to the relative pointers.
   ptrdiff_t delta = ((intptr_t) node) - ((intptr_t) clone);
