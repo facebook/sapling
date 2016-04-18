@@ -10,7 +10,7 @@
 
 void test_copy_empty() {
   tree_t *src = alloc_tree();
-  tree_t *dst = copy(src);
+  tree_t *dst = copy_tree(src);
 
   ASSERT(dst != NULL);
   ASSERT(dst->compacted == true);
@@ -27,7 +27,7 @@ void test_copy_empty_chain() {
   tree_t *src = original;
 
   for (int ix = 0; ix < 10; ix++) {
-    tree_t *dst = copy(src);
+    tree_t *dst = copy_tree(src);
 
     ASSERT(dst != NULL);
     ASSERT(dst->compacted == true);
@@ -91,7 +91,7 @@ void test_copy_normal_tree() {
   ASSERT(src->compacted == false);
   ASSERT(src->num_leaf_nodes == input_sz);
 
-  tree_t *dst = copy(src);
+  tree_t *dst = copy_tree(src);
 
   for (size_t ix = 0; ix < input_sz; ix++) {
     get_path_result_t get_result =

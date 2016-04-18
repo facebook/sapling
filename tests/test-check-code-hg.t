@@ -25,6 +25,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping fastmanifest/node_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/null_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/result.h it has no-che?k-code (glob)
+  Skipping fastmanifest/tests.c it has no-che?k-code (glob)
   Skipping fastmanifest/tests.h it has no-che?k-code (glob)
   Skipping fastmanifest/tree.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree.h it has no-che?k-code (glob)

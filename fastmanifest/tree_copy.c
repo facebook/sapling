@@ -74,7 +74,7 @@ copy_helper_result_t copy_helper(
   return COPY_OK;
 }
 
-tree_t *copy(const tree_t *src) {
+tree_t *copy_tree(const tree_t *src) {
   tree_t *dst = alloc_tree_with_arena(src->consumed_memory);
 
   // prerequisite for using copy_helper is that child_num must be <
