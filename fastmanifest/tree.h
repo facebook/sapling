@@ -27,13 +27,6 @@ typedef enum {
 } allocation_mode_t;
 #endif /* #if 0 */
 
-typedef struct _tree_state_changes_t {
-  ptrdiff_t size_change;
-  int32_t num_leaf_node_change;
-  bool non_arena_allocations;
-  bool checksum_dirty;
-} tree_state_changes_t;
-
 typedef struct _tree_t {
   // these fields are preserved during serialization.
   size_t consumed_memory;

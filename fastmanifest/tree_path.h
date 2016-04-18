@@ -10,6 +10,13 @@
 
 #include "node.h"
 
+typedef struct _tree_state_changes_t {
+  ptrdiff_t size_change;
+  int32_t num_leaf_node_change;
+  bool non_arena_allocations;
+  bool checksum_dirty;
+} tree_state_changes_t;
+
 typedef enum {
   TREE_ADD_CHILD_OK,
   TREE_ADD_CHILD_OOM,
