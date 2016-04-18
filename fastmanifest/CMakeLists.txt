@@ -43,7 +43,7 @@ find_library(OPENSSL
 target_include_directories(fastmanifest PUBLIC /opt/local/include)
 target_link_libraries(fastmanifest PUBLIC ${OPENSSL})
 
-SET(TEST_HEADER_FILES tests.h)
+SET(TEST_HEADER_FILES tests.c tests.h)
 
 add_executable(checksum_test checksum_test.c ${TEST_HEADER_FILES})
 target_link_libraries(checksum_test bsearch fastmanifest)
