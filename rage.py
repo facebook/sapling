@@ -1,22 +1,18 @@
 # Copyright 2014 Facebook Inc.
 #
-"""log useful diagnostics and file a task to source control oncall"""
+"""upload useful diagnostics and give instructions for asking for help"""
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
 from hgext import blackbox
+import os, socket, re, time, traceback
 import smartlog
-import atexit, os, socket, re, time, traceback
+import sparse
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
 _failsafeerrors = []
-
-@atexit.register
-def _printfailsafeerrors():
-    if _failsafeerrors:
-        print('\n'.join(_failsafeerrors))
 
 def _failsafe(func):
     try:
@@ -27,34 +23,75 @@ def _failsafe(func):
         _failsafeerrors.append(message)
         return '(Failed. See footnote [%d])' % index
 
-@command('^rage',
-    [('p', 'preview', None,
-      _('print information generated locally, no paste or task created'))],
-    _('hg rage'))
+def shcmd(cmd, input=None, check=True, keeperr=True):
+    _, _, _, p = util.popen4(cmd)
+    out, err = p.communicate(input)
+    if check and p.returncode:
+        raise error.Abort(cmd + ' error: ' + err)
+    elif keeperr:
+        out += err
+    return out
+
+def createtask(ui, repo, defaultdesc):
+    """FBONLY: create task for source control oncall"""
+    prompt = '''Title: [hg rage] %s on %s by %s
+
+Description:
+%s
+
+HG: Edit task title and description. Lines beginning with 'HG:' are removed."
+HG: First line is the title followed by the description.
+HG: Feel free to add relevant information.
+''' % (repo.root, socket.gethostname(), os.getenv('LOGNAME'), defaultdesc)
+
+    text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
+    lines = text.splitlines()
+    title = re.sub("(?m)^Title:\s+", "", lines[0])
+    desc = re.sub("(?m)^Description:\s+", "", '\n'.join(lines[1:]))
+    tag = 'hg rage'
+    oncall = 'source_control'
+    taskid = shcmd(' '.join([
+        'tasks',
+        'create',
+        '--title=' + util.shellquote(title),
+        '--pri=low',
+        '--assign=' + util.shellquote(oncall),
+        '--sub=' + util.shellquote(oncall),
+        '--tag=' + util.shellquote(tag),
+        '--desc=' + util.shellquote(desc),
+        ])
+    )
+    tasknum = shcmd('tasks view ' + taskid).splitlines()[0].split()[0]
+    print('Task created: https://our.intern.facebook.com/intern/tasks/?t=%s'
+          % tasknum)
+
+def existsinpath(name):
+    """ """
+    return any([os.path.exists(os.path.join(p, name))
+                for p in os.environ.get('PATH', '/bin').split(os.pathsep)])
+
+rageopts = [('p', 'preview', None,
+             _('print diagnostic information without doing arc paste'))]
+if existsinpath('oncalls'):
+    rageopts.append(('', 'oncall', None,
+                     _('file a task for source control oncall')))
+
+def localconfig(ui):
+    result = []
+    for section, name, value in ui.walkconfig():
+        source = ui.configsource(section, name)
+        if source.find('/etc/') == -1 and source.find('/default.d/') == -1:
+            result.append('%s.%s=%s  # %s' % (section, name, value, source))
+    return result
+
+@command('^rage', rageopts , _('hg rage'))
 def rage(ui, repo, *pats, **opts):
-    """log useful diagnostics and file a task to source control oncall
+    """collect useful diagnostics for asking help from the source control team
 
-    The rage command is for logging useful diagnostics about various
-    environment information and filing a task to the source control oncall.
+    The rage command collects useful diagnostic information.
 
-    The following basic information is included in the task description:
-
-    - unixname
-    - hostname
-    - repo location
-    - active bookmark
-
-    Your configured editor will be invoked to let you edit the task title
-    and description.
-
-    The following detailed information is uploaded to a Phabricator paste:
-
-    - all the basic information (see above)
-    - 'df -h' output
-    - 'hg sl' output
-    - 'hg config'
-    - first 20 lines of 'hg status'
-    - last 20 events from 'hg blackbox' ('hg blackbox -l 20')
+    By default, the information will be uploaded to Phabricator and
+    instructions about how to ask for help will be printed.
     """
 
     def format(pair, basic=True):
@@ -69,12 +106,8 @@ def rage(ui, repo, *pats, **opts):
         func(ui, repo, *args, **opts)
         return ui.popbuffer()
 
-    def shcmd(cmd, input=None, check=True):
-            _, _, _, p = util.popen4(cmd)
-            out, err = p.communicate(input)
-            if check and p.returncode:
-                raise error.Abort(cmd + ' error: ' + err)
-            return out
+    if opts.get('oncall') and opts.get('preview'):
+        raise error.Abort('--preview and --oncall cannot be used together')
 
     basic = [
         ('date', time.ctime()),
@@ -83,62 +116,55 @@ def rage(ui, repo, *pats, **opts):
         ('repo location', _failsafe(lambda: repo.root)),
         ('active bookmark',
             _failsafe(lambda: bookmarks._readactive(repo, repo._bookmarks))),
+        ('hg version', _failsafe(
+            lambda: __import__('mercurial.__version__').__version__.version)),
+        ('obsstore size', _failsafe(
+            lambda: str(repo.vfs.stat('store/obsstore').st_size))),
     ]
 
     ui._colormode = None
 
     detailed = [
         ('df -h', _failsafe(lambda: shcmd('df -h', check=False))),
-        ('hg sl', _failsafe(lambda: hgcmd(smartlog.smartlog))),
-        ('hg config', _failsafe(lambda: hgcmd(commands.config))),
+        ('hg sl', _failsafe(lambda: hgcmd(smartlog.smartlog, all=True))),
         ('first 20 lines of "hg status"',
             _failsafe(lambda:
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
-        ('hg blackbox -l20',
-            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=20))),
+        ('hg blackbox -l40',
+            _failsafe(lambda: hgcmd(blackbox.blackbox, limit=40))),
+        ('hg config (local)', _failsafe(lambda: '\n'.join(localconfig(ui)))),
+        ('hg sparse',
+            _failsafe(
+                lambda: hgcmd(
+                    sparse.sparse, include=False, exclude=False, delete=False,
+                    force=False, enable_profile=False, disable_profile=False,
+                    refresh=False, reset=False))),
+        ('usechg', _failsafe(
+            lambda: shcmd('cat /etc/mercurial/usechg  ~/.usechg'))),
+        ('rpm -q mercurial', _failsafe(
+            lambda: shcmd('rpm -q mercurial', check=False))),
+        ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
+        ('airport', _failsafe(
+            lambda: shcmd('/System/Library/PrivateFrameworks/Apple80211.' +
+                          'framework/Versions/Current/Resources/airport ' +
+                          '--getinfo', check=False))),
+        ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
-    basic_msg = '\n'.join(map(format, basic))
-    detailed_msg = '\n'.join(map(lambda x: format(x, False), detailed))
+    msg = '\n'.join(map(format, basic)) + '\n' +\
+          '\n'.join(map(lambda x: format(x, False), detailed))
+    if _failsafeerrors:
+        msg += '\n' + '\n'.join(_failsafeerrors)
+
     if opts.get('preview'):
-        print(basic_msg + '\n' + detailed_msg)
+        print(msg)
         return
 
-    prompt = '''Title: [hg rage] %s on %s by %s
+    pasteurl = shcmd('arc paste --lang hgrage', msg).split()[1]
 
-Description:
-
-%s
-HG: Edit task title and description. Lines beginning with 'HG:' are removed."
-HG: First line is the title followed by the description.
-HG: Feel free to add relevant information.
-''' % (repo.root, socket.gethostname(), os.getenv('LOGNAME'), basic_msg)
-
-    text = re.sub("(?m)^HG:.*(\n|$)", "", ui.edit(prompt, ui.username()))
-    lines = text.splitlines()
-    title = re.sub("(?m)^Title:\s+", "", lines[0])
-    desc = re.sub("(?m)^Description:\s+", "", '\n'.join(lines[1:]))
-
-    print 'pasting the rage info:'
-    paste_url = shcmd('arc paste', desc + detailed_msg).split()[1]
-    print paste_url
-
-    desc += '\ndetailed output @ ' + paste_url
-    tag = 'hg rage'
-    oncall = shcmd('oncalls --output unixname source_control').strip()
-
-    print 'filing a task for the oncall %s:' % oncall
-    task_id = shcmd(' '.join([
-        'tasks',
-        'create',
-        '--title=' + util.shellquote(title),
-        '--pri=low',
-        '--assign=' + oncall,
-        '--sub=' + oncall,
-        '--tag=' + util.shellquote(tag),
-        '--desc=' + util.shellquote(desc),
-        ])
-    )
-
-    task_num = shcmd('tasks view ' + task_id).splitlines()[0].split()[0]
-    print 'https://our.intern.facebook.com/intern/tasks/?t=' + task_num
+    if opts.get('oncall'):
+        createtask(ui, repo, 'rage info: %s' % pasteurl)
+    else:
+        print('Please post your problem and the following link at'
+              ' %s for help:\n%s'
+              % (ui.config('ui', 'supportcontact'), pasteurl))
