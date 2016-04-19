@@ -187,6 +187,7 @@ Regular commits should go through without changing hash
   $ log -r tip
   @  b => quux [draft:741fd2094512]
   |
+  ~
 
   $ hg push --to default
   pushing to ssh://user@dummy/server

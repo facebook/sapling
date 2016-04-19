@@ -1,6 +1,9 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > smartlog = $TESTDIR/../smartlog.py
+  > [experimental]
+  > graphstyle.grandparent=|
+  > graphstyle.missing=|
   > EOF
 
 Build up a repo
