@@ -698,7 +698,7 @@ graft with failing merge
   merging bar.txt
   warning: conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
   $ hg resolve --list
   U bar.txt

@@ -69,7 +69,7 @@ Test graft state
   $ hg graft -q 2977a57
   warning: conflicts while merging a! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   [255]
   $ hg status
   M a
