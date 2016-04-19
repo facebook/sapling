@@ -290,18 +290,13 @@ class manifestcache(object):
         pass
 
 # flatmanifestcache and fastmanifestcache are singletons
-# Implementation inspired from:
-# https://stackoverflow.com/questions/31875/
-# is-there-a-simple-elegant-way-to-define-singletons-in-python
-
 
 class flatmanifestcache(manifestcache):
     _instance = None
-
-    def __new__(cls, *args, **kwargs):
+    @classmethod
+    def getinstance(cls, opener, ui):
         if not cls._instance:
-            cls._instance = super(flatmanifestcache, cls).__new__(cls, *args,
-                                                                  **kwargs)
+            cls._instance = flatmanifestcache(opener, ui)
         return cls._instance
 
     def keyprefix(self):
@@ -316,11 +311,10 @@ class flatmanifestcache(manifestcache):
 
 class fastmanifestcache(manifestcache):
     _instance = None
-
-    def __new__(cls, *args, **kwargs):
+    @classmethod
+    def getinstance(cls, opener, ui):
         if not cls._instance:
-            cls._instance = super(fastmanifestcache, cls).__new__(cls, *args,
-                                                                  **kwargs)
+            cls._instance = fastmanifestcache(opener, ui)
         return cls._instance
 
     def keyprefix(self):
@@ -339,8 +333,8 @@ class manifestfactory(object):
 
     def newmanifest(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
-        fastcache = fastmanifestcache(args[0].opener, self.ui)
-        flatcache = flatmanifestcache(args[0].opener, self.ui)
+        fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
+        flatcache = flatmanifestcache.getinstance(args[0].opener, self.ui)
         return hybridmanifest(loadflat=loadfn,
                               ui=self.ui,
                               flatcache=flatcache,
@@ -348,8 +342,8 @@ class manifestfactory(object):
 
     def read(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
-        fastcache = fastmanifestcache(args[0].opener, self.ui)
-        flatcache = flatmanifestcache(args[0].opener, self.ui)
+        fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
+        flatcache = flatmanifestcache.getinstance(args[0].opener, self.ui)
         return hybridmanifest(loadflat=loadfn,
                               ui=self.ui,
                               flatcache=flatcache,
@@ -361,9 +355,9 @@ def _cachemanifest(ui, repo, revs, flat, sync, limit):
     ui.debug(("caching rev: %s , synchronous(%s), flat(%s)\n")
              % (revs, sync, flat))
     if flat:
-        cache = flatmanifestcache(repo.store.opener, ui)
+        cache = flatmanifestcache.getinstance(repo.store.opener, ui)
     else:
-        cache = fastmanifestcache(repo.store.opener, ui)
+        cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
     for rev in revs:
         manifest = repo[rev].manifest()
