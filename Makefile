@@ -165,8 +165,9 @@ osx:
 	  mkdir -p $$OUTPUTDIR && \
 	  N=`cd dist && echo mercurial-*.mpkg | sed 's,\.mpkg$$,,'` && \
 	  hdiutil create -srcfolder dist/$$N.mpkg/ -scrub -volname "$$N" \
-	    -ov $$OUTPUTDIR/$$N.dmg
-	rm -rf dist/mercurial-*.mpkg
+	    -ov $$OUTPUTDIR/$$N.dmg && \
+	  [ -n "$$KEEPMPKG" ] && mv dist/mercurial-*.mpkg $$OUTPUTDIR || \
+	  rm -rf dist/mercurial-*.mpkg
 
 deb:
 	contrib/builddeb
