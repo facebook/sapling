@@ -456,6 +456,14 @@ def has_aix():
 def has_osx():
     return sys.platform == 'darwin'
 
+@check("bdistmpkg", "bdist_mpkg Python Package")
+def has_bdistmpkg():
+    try:
+        import bdist_mpkg.script_bdist_mpkg
+        return True
+    except ImportError:
+        return False
+
 @check("docker", "docker support")
 def has_docker():
     pat = r'A self-sufficient runtime for'
