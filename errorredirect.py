@@ -33,28 +33,27 @@ Examples::
 import os
 import subprocess
 import sys
+import traceback
 
+from mercurial import (
+    dispatch,
+    extensions,
+)
 
-def wrapui(ui):
-    class errorredirectui(ui.__class__):
-        def errorredirect(self, content, env):
-            script = self.config('errorredirect', 'script')
-            if not script:
-                return
-            p = subprocess.Popen(script, shell=True, stdin=subprocess.PIPE,
-                                 env=dict(os.environ.items() + env.items()))
-            p.communicate(content)
-            # prevent hg from printing the stack trace
-            sys.exit(1)
+def _handlecommandexception(orig, ui):
+    script = ui.config('errorredirect', 'script')
+    if not script:
+        return orig(ui)
 
-        def log(self, event, *msg, **opts):
-            if event == 'commandexception':
-                warning, traceback = msg[-2:]
-                self.errorredirect(traceback,
-                                   {'WARNING': warning, 'TRACE': traceback})
-            return super(errorredirectui, self).log(event, *msg, **opts)
-
-    ui.__class__ = errorredirectui
+    warning = dispatch._exceptionwarning(ui)
+    trace = traceback.format_exc()
+    env = os.environ.copy()
+    env['WARNING'] = warning
+    env['TRACE'] = trace
+    p = subprocess.Popen(script, shell=True, stdin=subprocess.PIPE, env=env)
+    p.communicate(trace)
+    return True # do not re-raise
 
 def uisetup(ui):
-    wrapui(ui)
+    extensions.wrapfunction(dispatch, 'handlecommandexception',
+                            _handlecommandexception)

@@ -22,4 +22,4 @@ Test errorredirect will respect original behavior by default
 Test the errorredirect script will override stack trace output
   $ hg crash --config errorredirect.script='echo overridden-message'
   overridden-message
-  [1]
+  [255]
