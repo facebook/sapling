@@ -1096,6 +1096,15 @@ class EntryRevlog(revlog.revlog):
     """Pseudo-revlog implementation that allows applying data directly to
     the end of the revlog.
     """
+    def __init__(self, opener, path):
+        super(EntryRevlog, self).__init__(opener, path)
+
+        # This is a copy of the changelog init implementation.
+        # It hard codes no generaldelta.
+        if path == '00changelog.i' and self._initempty:
+            self.version &= ~revlog.REVLOGGENERALDELTA
+            self._generaldelta = False
+
     def addentry(self, transaction, ifh, dfh, entry, data0, data1):
         curr = len(self)
         offset = self.end(curr - 1)

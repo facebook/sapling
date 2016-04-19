@@ -96,3 +96,36 @@ Test lazily acquiring the lock during unbundle
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
+
+  $ cd ..
+  $ rm -rf master*
+
+Test constructing a generaldelta repo
+
+  $ hg init --config format.generaldelta=1 gdclient
+  $ configureclient gdclient
+  $ cd gdclient
+- Insert enough commits to cause the changelog to split to a .d
+- This exposes a bug in generaldelta handling.
+  $ for i in {0..10} ; do
+  > for k in {0..20000} ; do echo $k$i >> ../logmessage ; done
+  > echo a >> a ; hg commit -Aql ../logmessage
+  > done
+  $ cd ..
+
+  $ hg init --config format.generaldelta=1 master1
+  $ hg init --config format.generaldelta=1 master2
+  $ configureserver master1 gdrepo
+  $ configureserver master2 gdrepo
+  $ hg -R gdclient push -q ssh://user@dummy/master1
+
+  $ cd master2
+  $ cat .hg/requires | grep generaldelta
+  generaldelta
+
+- Verify the synced changelog is not generaldelta (has a base column)
+- and the synced manifest is generaldelta (has a delta column).
+  $ hg debugindex -c | head -n 1
+     rev    offset  length   base linkrev nodeid       p1           p2
+  $ hg debugindex -m | head -n 1
+     rev    offset  length  delta linkrev nodeid       p1           p2

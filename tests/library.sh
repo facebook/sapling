@@ -40,6 +40,10 @@ UNIQUE KEY bookmarkindex (repo, namespace, name)
 
 function initserver() {
   hg init $1
+  configureserver $1 $2
+}
+
+configureserver() {
   cat >> $1/.hg/hgrc <<EOF
 [extensions]
 hgsql=$TESTDIR/../hgsql.py
@@ -61,6 +65,10 @@ EOF
 
 function initclient() {
   hg init $1
+  configureclient $1
+}
+
+configureclient() {
   cat >> $1/.hg/hgrc <<EOF
 [ui]
 ssh=python "$TESTDIR/dummyssh"
