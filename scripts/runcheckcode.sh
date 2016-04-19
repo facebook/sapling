@@ -1,4 +1,6 @@
-cd tests
+#!/bin/bash
+
+REPOROOT=$(dirname `readlink -f "$0"`)/../
 
 # Look in $PATH
 if hash run-tests.py 2>/dev/null; then
@@ -12,4 +14,12 @@ if [[ -z $MERCURIALRUNTEST ]]; then
     exit 1 ;
 fi
 
-$MERCURIALRUNTEST -j8 -l test-check-code-hg.t --extra-config-opt=extensions.lz4revlog=
+# Check lz4revlog requirement
+RUNTESTOPTS=
+if grep -q lz4revlog $REPOROOT/.hg/requires; then
+  RUNTESTOPTS+='--extra-config-opt=extensions.lz4revlog='
+fi
+
+# Run test-check-code-hg.t
+cd $REPOROOT/tests
+$MERCURIALRUNTEST -j8 -l $RUNTESTOPTS test-check-code-hg.t
