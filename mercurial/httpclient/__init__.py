@@ -41,6 +41,7 @@ from __future__ import absolute_import
 # Many functions in this file have too many arguments.
 # pylint: disable=R0913
 
+import cStringIO
 import errno
 import httplib
 import logging
