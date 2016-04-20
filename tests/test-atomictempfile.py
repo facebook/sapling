@@ -14,7 +14,7 @@ class testatomictempfile(unittest.TestCase):
         self.assertFalse(os.path.isfile('foo'))
         self.assertTrue(basename in glob.glob('.foo-*'))
 
-        file.write('argh\n')
+        file.write(b'argh\n')
         file.close()
 
         self.assertTrue(os.path.isfile('foo'))
@@ -27,7 +27,7 @@ class testatomictempfile(unittest.TestCase):
         file = atomictempfile('foo')
         (dir, basename) = os.path.split(file._tempname)
 
-        file.write('yo\n')
+        file.write(b'yo\n')
         file.discard()
 
         self.assertFalse(os.path.isfile('foo'))
