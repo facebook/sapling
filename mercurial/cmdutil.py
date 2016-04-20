@@ -2234,20 +2234,26 @@ def displaygraph(ui, repo, dag, displayer, edgefn, getrenamed=None,
     formatnode = _graphnodeformatter(ui, displayer)
     state = graphmod.asciistate()
     styles = state['styles']
-    edgetypes = {
-        'parent': graphmod.PARENT,
-        'grandparent': graphmod.GRANDPARENT,
-        'missing': graphmod.MISSINGPARENT
-    }
-    for name, key in edgetypes.items():
-        # experimental config: experimental.graphstyle.*
-        styles[key] = ui.config('experimental', 'graphstyle.%s' % name,
-                                styles[key])
-        if not styles[key]:
-            styles[key] = None
 
-    # experimental config: experimental.graphshorten
-    state['graphshorten'] = ui.configbool('experimental', 'graphshorten')
+    # only set graph styling if HGPLAIN is not set.
+    if ui.plain('graph'):
+        # set all edge styles to |, the default pre-3.8 behaviour
+        styles.update(dict.fromkeys(styles, '|'))
+    else:
+        edgetypes = {
+            'parent': graphmod.PARENT,
+            'grandparent': graphmod.GRANDPARENT,
+            'missing': graphmod.MISSINGPARENT
+        }
+        for name, key in edgetypes.items():
+            # experimental config: experimental.graphstyle.*
+            styles[key] = ui.config('experimental', 'graphstyle.%s' % name,
+                                    styles[key])
+            if not styles[key]:
+                styles[key] = None
+
+        # experimental config: experimental.graphshorten
+        state['graphshorten'] = ui.configbool('experimental', 'graphshorten')
 
     for rev, type, ctx, parents in dag:
         char = formatnode(repo, ctx)
