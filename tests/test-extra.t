@@ -68,7 +68,7 @@ Test some nutty filenames
   $ hg mv 'c2 => c3' 'c3 => c4'
   warning: filename contains '>', which is reserved on Windows: 'c3 => c4'
   $ fn_hg_commit -m 'test filename with arrow 2'
-  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 3
+  $ hg log --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 3 --config "experimental.graphstyle.missing=|"
   @  6 bca4ba69a6844c133b069e227dfa043d41e3c197 test filename with arrow 2
   |  branch=default
   |
