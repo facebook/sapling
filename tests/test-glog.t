@@ -2736,3 +2736,58 @@ behavior with newlines
   
   
   $ cd ..
+
+When inserting extra line nodes to handle more than 2 parents, ensure that
+the right node styles are used (issue5174):
+
+  $ hg init repo-issue5174
+  $ cd repo-issue5174
+  $ echo a > f0
+  $ hg ci -Aqm 0
+  $ echo a > f1
+  $ hg ci -Aqm 1
+  $ echo a > f2
+  $ hg ci -Aqm 2
+  $ hg co ".^"
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo a > f3
+  $ hg ci -Aqm 3
+  $ hg co ".^^"
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  $ echo a > f4
+  $ hg ci -Aqm 4
+  $ hg merge -r 2
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -qm 5
+  $ hg merge -r 3
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (branch merge, don't forget to commit)
+  $ hg ci -qm 6
+  $ hg log -G -r '0 | 1 | 2 | 6'
+  @    changeset:   6:851fe89689ad
+  :\   tag:         tip
+  : :  parent:      5:4f1e3cf15f5d
+  : :  parent:      3:b74ba7084d2d
+  : :  user:        test
+  : :  date:        Thu Jan 01 00:00:00 1970 +0000
+  : :  summary:     6
+  : :
+  : \
+  : :\
+  : o :  changeset:   2:3e6599df4cce
+  : :/   user:        test
+  : :    date:        Thu Jan 01 00:00:00 1970 +0000
+  : :    summary:     2
+  : :
+  : o  changeset:   1:bd9a55143933
+  :/   user:        test
+  :    date:        Thu Jan 01 00:00:00 1970 +0000
+  :    summary:     1
+  :
+  o  changeset:   0:870a5edc339c
+     user:        test
+     date:        Thu Jan 01 00:00:00 1970 +0000
+     summary:     0
+  
+

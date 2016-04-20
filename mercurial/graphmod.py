@@ -401,6 +401,7 @@ def asciiedges(type, char, lines, state, rev, parents):
     edges = [(nodeidx, nextseen.index(p))
              for p in knownparents if p != nullrev]
 
+    seen[:] = nextseen
     while len(newparents) > 2:
         # ascii() only knows how to add or remove a single column between two
         # calls. Nodes with more than two parents break this constraint so we
@@ -422,7 +423,6 @@ def asciiedges(type, char, lines, state, rev, parents):
     if len(newparents) > 1:
         edges.append((nodeidx, nodeidx + 1))
     nmorecols = len(nextseen) - ncols
-    seen[:] = nextseen
     # remove current node from edge characters, no longer needed
     state['edges'].pop(rev, None)
     yield (type, char, lines, (nodeidx, edges, ncols, nmorecols))
