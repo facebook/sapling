@@ -17,7 +17,7 @@ fi
 # Check lz4revlog requirement
 RUNTESTOPTS=
 if grep -q lz4revlog $REPOROOT/.hg/requires; then
-  RUNTESTOPTS+='--extra-config-opt=extensions.lz4revlog='
+    RUNTESTOPTS+='--extra-config-opt=extensions.lz4revlog='
 fi
 
 # Run test-check-code-hg.t
