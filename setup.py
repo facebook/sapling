@@ -63,7 +63,6 @@ setup(
                            'fastmanifest/tree.c',
                            'fastmanifest/tree_arena.c',
                            'fastmanifest/tree_convert.c',
-                           'fastmanifest/tree_convert_rt.c',
                            'fastmanifest/tree_copy.c',
                            'fastmanifest/tree_path.c',
                   ],
