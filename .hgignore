@@ -4,6 +4,6 @@
 ^build/
 ^.*\.egg-info/
 ^dist/
+.testtimes*
 tests/getdb\.sh
-tests/.testtimes*
 subinclude:fastmanifest/.hgignore
