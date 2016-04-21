@@ -182,6 +182,7 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
+  ui.usehttp2=true (?)
   ui.foo=bar
   ui.nontty=true
   *** runcommand init foo
@@ -193,6 +194,7 @@ check that local configs for the cached repo aren't inherited when -R is used:
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed
+  ui.usehttp2=true (?)
   ui.nontty=true
 
   $ rm -R foo
