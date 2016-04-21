@@ -7,6 +7,7 @@
 //
 // no-check-code
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -98,8 +99,12 @@ int main(int argc, char *argv[]) {
   uint64_t usecs_after_to = after_to.tv_sec * 1000000 +
                             after_to.tv_usec;
 
-  printf("flat -> tree: %lld us\n", (usecs_after_from - usecs_before_from));
-  printf("checksum: %lld us\n", (usecs_after_checksum - usecs_before_checksum));
-  printf("tree -> flat: %lld us\n", (usecs_after_to - usecs_before_to));
-  printf("tree consumed memory: %ld\n", from_flat.tree->consumed_memory);
+  printf("flat -> tree: %" PRIu64 " us\n",
+      (usecs_after_from - usecs_before_from));
+  printf("checksum: %" PRIu64 " us\n",
+      (usecs_after_checksum - usecs_before_checksum));
+  printf("tree -> flat: %" PRIu64 " us\n",
+      (usecs_after_to - usecs_before_to));
+  printf("tree consumed memory: %" PRIuPTR "\n",
+      from_flat.tree->consumed_memory);
 }
