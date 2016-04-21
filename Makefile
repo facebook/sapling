@@ -19,6 +19,10 @@ TESTFLAGS ?= $(shell echo $$HGTESTFLAGS)
 # Set this to e.g. "mingw32" to use a non-default compiler.
 COMPILER=
 
+COMPILERFLAG_tmp_ =
+COMPILERFLAG_tmp_${COMPILER} ?= -c $(COMPILER)
+COMPILERFLAG=${COMPILERFLAG_tmp_${COMPILER}}
+
 help:
 	@echo 'Commonly used make targets:'
 	@echo '  all          - build program and documentation'
@@ -43,16 +47,16 @@ all: build doc
 local:
 	$(PYTHON) setup.py $(PURE) \
 	  build_py -c -d . \
-	  build_ext $(COMPILER:%=-c %) -i \
-	  build_hgexe $(COMPILER:%=-c %) -i \
+	  build_ext $(COMPILERFLAG) -i \
+	  build_hgexe $(COMPILERFLAG) -i \
 	  build_mo
 	env HGRCPATH= $(PYTHON) hg version
 
 build:
-	$(PYTHON) setup.py $(PURE) build $(COMPILER:%=-c %)
+	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 
 wheel:
-	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILER:%=-c %)
+	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
 
 doc:
 	$(MAKE) -C doc
