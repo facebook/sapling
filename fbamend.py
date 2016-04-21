@@ -19,12 +19,13 @@ automatically disable itself if changeset evolution is enabled.
 """
 
 from mercurial import util, cmdutil, phases, commands, bookmarks, repair
-from mercurial import merge, extensions, error
-from mercurial.node import hex
+from mercurial import merge, extensions, error, scmutil, hg, util
+from mercurial.node import hex, nullid
 from mercurial import obsolete
 from mercurial import lock as lockmod
 from mercurial.i18n import _
 import errno, os, re
+from contextlib import nested
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -58,6 +59,8 @@ def uisetup(ui):
        ] + amendopts + commands.walkopts + commands.commitopts,
        _('hg amend [OPTION]...'))(amend)
 
+    command('^unamend', [])(unamend)
+
     def has_automv(loaded):
         if not loaded:
             return
@@ -82,6 +85,77 @@ def commit(orig, ui, repo, *pats, **opts):
                     badflags[0])
 
         return orig(ui, repo, *pats, **opts)
+
+def unamend(ui, repo, **opts):
+    """undo the amned operation on a current commit
+
+    This command with roll back to the previous version of a commit,
+    leaving working directory in state in which it was before running
+    `hg amend` (e.g. files modified as part of an amend will be 
+    marked as modified `hg status`)"""
+    try:
+        inhibitmod = extensions.find('inhibit')
+    except:
+        hint = _("please add inhibit to the list of enabled extensions")
+        e = _("unamend requires inhibit extension to be enabled")
+        raise error.Abort(e, hint=hint)
+
+    unfi = repo.unfiltered()
+
+    # identify the commit from which to unamend
+    revs = list(scmutil.revrange(repo, ['.']))
+    if len(revs) != 1:
+        e = _("please specify only one matching revision")
+        raise error.Abort(e)
+    currev = revs[0]
+    curctx = repo[currev]
+
+    # identify the commit to which to unamend
+    markers = list(obsolete.precursormarkers(curctx))
+    if len(markers) != 1:
+        e = _("commit must have one precursor, found %i precursors")
+        raise error.Abort(e % len(markers))
+
+    precnode = markers[0].precnode()
+    precctx = unfi[precnode]
+    precrev = precctx.rev()
+
+    if curctx.children():
+        raise error.Abort(_("cannot unamend in the middle of a stack"))
+
+    with nested(repo.wlock(), repo.lock()):
+        repobookmarks = repo._bookmarks
+        ctxbookmarks = curctx.bookmarks()
+
+        cmdutil.bailifchanged(repo, merge=False)
+        inhibitmod._inhibitmarkers(unfi, [precnode])
+
+        changedfiles = []
+        wctx = repo[None]
+        wm = wctx.manifest()
+        cm = precctx.manifest()
+        dirstate = repo.dirstate
+        diff = cm.diff(wm)
+        changedfiles.extend(diff.iterkeys())
+
+        tr = repo.transaction('unamend')
+        dirstate.beginparentchange()
+        dirstate.rebuild(precnode, cm, changedfiles)
+        # we want added and removed files to be shown
+        # properly, not with ? and ! prefixes
+        for filename, data in diff.iteritems():
+            if data[0][0] is None:
+                dirstate.add(filename)
+            if data[1][0] is None:
+                dirstate.remove(filename)
+        dirstate.endparentchange()
+        for book in ctxbookmarks:
+            repobookmarks[book] = precnode
+        repobookmarks.recordchange(tr)
+        tr.close()
+        # we want to mark the changeset from which we were unamending
+        # as obsolete
+        obsolete.createmarkers(repo, [(curctx, ())])
 
 def amend(ui, repo, *pats, **opts):
     '''amend the current commit with more changes

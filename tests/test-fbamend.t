@@ -298,7 +298,7 @@ Test that --addremove/-A works
 
 Test that the extension disables itself when evolution is enabled
 
-  $ $PYTHON -c 'import evolve' || exit 80
+  $ $PYTHON -c 'import evolve' 2> /dev/null || $PYTHON -c 'import hgext.evolve' 2> /dev/null || exit 80
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > evolve=
@@ -476,7 +476,7 @@ Test hg amend works with a logfile
   $ rm alogfile
 
 Test fbamend with inhibit
-  $ $PYTHON -c 'import inhibit' || exit 80
+  $ $PYTHON -c 'import inhibit' 2> /dev/null || $PYTHON -c 'import hgext.inhibit' 2> /dev/null || exit 80
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > inhibit=
@@ -532,5 +532,90 @@ Test fbamend with inhibit
   |
   o  1f0dee641bb7 add a
   
+  $ cd ..
 
+Prepare a repo for unamend testing
+  $ hg init unamendrepo
+  $ cd unamendrepo
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > evolve=
+  > [experimental]
+  > evolution=createmarkers
+  > EOF
+  $ echo a > a && echo b > b
+  $ hg ci -Am ab
+  adding a
+  adding b
 
+Create and activate a bookmark to test bookmark movement around unamend
+  $ hg book -r . b1
+  $ hg book -r . b2
+  $ hg up b1
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark b1)
+
+See how the original commit looks
+  $ hg log
+  changeset:   0:b6a1406d8886
+  bookmark:    b1
+  bookmark:    b2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ab
+  
+Amend a commit
+  $ hg rm b
+  $ echo c > c && hg add c
+  $ echo aa > a
+  $ hg status
+  M a
+  A c
+  R b
+  $ hg amend -m ab2
+
+See how the amended commit looks
+  $ hg log
+  changeset:   2:551468b37da8
+  bookmark:    b1
+  bookmark:    b2
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ab2
+  
+Make sure that unamend does not work without inhibit
+  $ hg unamend
+  abort: unamend requires inhibit extension to be enabled
+  (please add inhibit to the list of enabled extensions)
+  [255]
+
+Make sure that unamend works as expected with inhibit
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > inhibit=
+  > directaccess=
+  > EOF
+  $ hg unamend
+
+See how the commit looks after unamending
+  $ hg log
+  changeset:   0:b6a1406d8886
+  bookmark:    b1
+  bookmark:    b2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ab
+  
+  $ hg status
+  M a
+  A c
+  R b
+
+Check whether active bookmark remained active
+  $ hg book
+   * b1                        0:b6a1406d8886
+     b2                        0:b6a1406d8886
