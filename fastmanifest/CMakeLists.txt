@@ -27,6 +27,7 @@ add_library(fastmanifest
         buffer.h
         checksum.c
         checksum.h
+        convert.h
         internal_result.h
         node.c
         result.h
