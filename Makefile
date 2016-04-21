@@ -4,8 +4,7 @@
 #
 # % make PREFIX=/opt/ install
 
-PREFIX=/usr/local
-export PREFIX
+export PREFIX=/usr/local
 PYTHON=python
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
