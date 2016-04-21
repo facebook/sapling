@@ -23,6 +23,8 @@ add_executable(bsearch_test bsearch_test.c)
 target_link_libraries(bsearch_test bsearch)
 
 add_library(fastmanifest
+        buffer.c
+        buffer.h
         checksum.c
         checksum.h
         internal_result.h
@@ -32,8 +34,6 @@ add_library(fastmanifest
         tree_arena.c
         tree_arena.h
         tree_convert.c
-        buffer.c
-        buffer.h
         tree_copy.c
         tree_path.c
         tree_path.h)
