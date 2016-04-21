@@ -95,7 +95,7 @@ def unamend(ui, repo, **opts):
     marked as modified `hg status`)"""
     try:
         inhibitmod = extensions.find('inhibit')
-    except:
+    except KeyError:
         hint = _("please add inhibit to the list of enabled extensions")
         e = _("unamend requires inhibit extension to be enabled")
         raise error.Abort(e, hint=hint)
