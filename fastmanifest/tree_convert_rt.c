@@ -64,11 +64,6 @@ int main(int argc, char *argv[]) {
   update_checksums(from_flat.tree);
   gettimeofday(&after_checksum, NULL);
 
-  if (from_flat.code != CONVERT_FROM_FLAT_OK) {
-    fprintf(stderr, "Error: converting from flat manifest\n");
-    exit(1);
-  }
-
   struct timeval before_to, after_to;
   gettimeofday(&before_to, NULL);
   convert_to_flat_result_t to_flat = convert_to_flat(from_flat.tree);
