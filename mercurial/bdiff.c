@@ -259,22 +259,18 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 	/* normalize the hunk list, try to push each hunk towards the end */
 	for (curr = base->next; curr; curr = curr->next) {
 		struct hunk *next = curr->next;
-		int shift = 0;
 
 		if (!next)
 			break;
 
 		if (curr->a2 == next->a1 || curr->b2 == next->b1)
-			while (curr->a2 + shift < an && curr->b2 + shift < bn
-			       && !cmp(a + curr->a2 + shift,
-				       b + curr->b2 + shift))
-				shift++;
-		if (!shift)
-			continue;
-		curr->b2 += shift;
-		next->b1 += shift;
-		curr->a2 += shift;
-		next->a1 += shift;
+			while (curr->a2 < an && curr->b2 < bn
+			       && !cmp(a + curr->a2, b + curr->b2)) {
+				curr->a2++;
+				next->a1++;
+				curr->b2++;
+				next->b1++;
+			}
 	}
 
 	for (curr = base->next; curr; curr = curr->next)
