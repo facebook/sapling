@@ -5,16 +5,28 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import  util, cmdutil, graphmod, scmutil
-from mercurial import bookmarks, commands, error, revset
-from mercurial import obsolete, templatekw, phases
-from mercurial.extensions import wrapfunction
-from hgext import pager
-from mercurial.node import short, nullrev
-from mercurial.i18n import _
+from __future__ import absolute_import
+
 from itertools import chain
 import re
 import inspect
+
+from mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    error,
+    extensions,
+    graphmod,
+    obsolete,
+    revset,
+    scmutil,
+    templatekw,
+    util,
+)
+from mercurial import node as nodemod
+from mercurial.i18n import _
+from hgext import pager
 
 pager.attended.append('smartlog')
 
@@ -35,15 +47,15 @@ def uisetup(ui):
 
         if commit_info and ctx == self.repo['.']:
             changes = ctx.p1().status(ctx)
-            prefix = ['M', 'A', 'R', '!', '?', 'I', 'C']
-            for i in range (0, len(prefix)):
-                for f in changes[i]:
-                    self.ui.write(' ' + prefix[i] + ' ' + f + '\n')
+            prefixes = ['M', 'A', 'R', '!', '?', 'I', 'C']
+            for prefix, change in zip(prefixes, changes):
+                for fname in change:
+                    self.ui.write(' {0} {1}\n'.format(prefix, fname))
             self.ui.write('\n')
         return res
 
-    wrapfunction(cmdutil.changeset_printer, '_show', show)
-    wrapfunction(cmdutil.changeset_templater, '_show', show)
+    extensions.wrapfunction(cmdutil.changeset_printer, '_show', show)
+    extensions.wrapfunction(cmdutil.changeset_templater, '_show', show)
 
     def ascii(orig, ui, state, type, char, text, coldata):
         # Show : for fake nodes
@@ -63,7 +75,8 @@ def uisetup(ui):
             if color is not None:
                 text = [color + line + "\033[0m" for line in text]
         return orig(ui, state, type, char, text, coldata)
-    wrapfunction(graphmod, 'ascii', ascii)
+
+    extensions.wrapfunction(graphmod, 'ascii', ascii)
 
     def drawedges(orig, echars, edges, nodeline, interline):
         orig(echars, edges, nodeline, interline)
@@ -74,7 +87,8 @@ def uisetup(ui):
                     # the commit marker (.) also be a .
                     if '.' in nodeline:
                         interline[2 * start] = "."
-    wrapfunction(graphmod, '_drawedges', drawedges)
+
+    extensions.wrapfunction(graphmod, '_drawedges', drawedges)
 
     revset.symbols['smartlog'] = smartlogrevset
     revset.safesymbols.add('smartlog')
@@ -184,14 +198,13 @@ def getdag(ui, repo, revs, master):
                               if p.rev() in knownrevs]))
         # Parents not in the dag
         mpars = [p.rev() for p in ctx.parents() if
-                 p.rev() != nullrev and p.rev() not in unzip(parents)]
+                 p.rev() != nodemod.nullrev and p.rev() not in unzip(parents)]
 
         for mpar in mpars:
             gp = gpcache.get(mpar)
             if gp is None:
-                gp = gpcache[mpar] = revset.reachableroots(repo,
-                                                           revset.baseset(revs),
-                                                           [mpar])
+                gp = gpcache[mpar] = revset.reachableroots(
+                    repo, revset.baseset(revs), [mpar])
             if not gp:
                 parents.append((graphmod.MISSINGPARENT, mpar))
             else:
@@ -200,7 +213,7 @@ def getdag(ui, repo, revs, master):
                     # Insert fake nodes in between children and grandparents.
                     # Reuse them across multiple children when the grandparent
                     # is the same.
-                    if not g in fakes:
+                    if g not in fakes:
                         fakes[g] = (mpar, 'F', fakectx(mpar),
                                     [(graphmod.GRANDPARENT, g)])
                         results.append(fakes[g])
@@ -221,7 +234,7 @@ def getdag(ui, repo, revs, master):
     queue = [master]
     while queue:
         m = queue.pop()
-        if not m in masters:
+        if m not in masters:
             masters.add(m)
             queue.extend(lookup.get(m, []))
 
@@ -232,7 +245,7 @@ def getdag(ui, repo, revs, master):
     # Sort the actual results based on their position in the 'order'
     try:
         return sorted(results, key=lambda x: order[x[0]], reverse=True)
-    except ValueError: # Happend when 'order' is empty
+    except ValueError:  # Happened when 'order' is empty
         msg = _('note: smartlog encountered an error\n')
         hint = _('(so the sorting might be wrong.\n\n)')
         ui.warn(msg)
@@ -331,9 +344,9 @@ def smartlogrevset(repo, subset, x):
     headquery = 'head() & branch(.)'
     if remotebooks:
         # When we have remote bookmarks, only show draft heads, since public
-        # heads should have a remote bookmark indicating them. This allows us to
-        # force push server bookmarks to new locations, and not have the commits
-        # clutter the user's smartlog.
+        # heads should have a remote bookmark indicating them. This allows us
+        # to force push server bookmarks to new locations, and not have the
+        # commits clutter the user's smartlog.
         headquery = 'draft() &' + headquery
 
     allheads = set(repo.revs(headquery))
@@ -366,7 +379,7 @@ def smartlogrevset(repo, subset, x):
                     # local-only (draft) branch
                     rs = 'branch("%s")' % branch
                     branchmaster = repo.revs(rs).first()
-            except Exception as e:
+            except Exception:
                 branchmaster = repo.revs('tip').first()
         else:
             branchmaster = masterrev
@@ -380,7 +393,7 @@ def smartlogrevset(repo, subset, x):
             queue = [head]
             while queue:
                 current = queue.pop(0)
-                if not current in revs:
+                if current not in revs:
                     revs.add(current)
                     if current != anc:
                         parents = parentrevs(current)
@@ -413,7 +426,7 @@ def smartlogrevset(repo, subset, x):
     ('r', 'rev', [], _('show the specified revisions or range'), _('REV')),
     ('', 'all', False, _('don\'t hide old local commits'), ''),
     ('', 'commit-info', False, _('show changes in current commit'), ''),
-    ] + commands.logopts, _('hg smartlog|slog'))
+] + commands.logopts, _('hg smartlog|slog'))
 def smartlog(ui, repo, *pats, **opts):
     '''Displays the graph of commits that are relevant to you.
 Also highlights your current commit in purple.
@@ -460,8 +473,8 @@ Excludes:
         revs.remove(-1)
 
     # It's important that these function caches come after the revsets above,
-    # because the revsets may cause extra nodes to become visible, which in turn
-    # invalidates the changelog instance.
+    # because the revsets may cause extra nodes to become visible, which in
+    # turn invalidates the changelog instance.
     rev = repo.changelog.rev
     ancestor = repo.changelog.ancestor
     node = repo.changelog.node
@@ -503,12 +516,13 @@ Excludes:
         revdag = getdag(ui, repo, revs, masterrev)
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
         if 'repo' in inspect.getargspec(cmdutil.displaygraph).args:
-            cmdutil.displaygraph(ui, repo, revdag, displayer,
-                         graphmod.asciiedges, None, None)
+            cmdutil.displaygraph(
+                ui, repo, revdag, displayer, graphmod.asciiedges, None, None)
         else:
             showparents = [ctx.node() for ctx in repo[None].parents()]
-            cmdutil.displaygraph(ui, revdag, displayer, showparents,
-                         graphmod.asciiedges, None, None)
+            cmdutil.displaygraph(
+                ui, revdag, displayer, showparents, graphmod.asciiedges, None,
+                None)
 
         try:
             with open(repo.join('completionhints'), 'w+') as f:
@@ -516,7 +530,7 @@ Excludes:
                     commit_hash = rev[2].node()
                     # Skip fakectxt nodes
                     if commit_hash != '...':
-                        f.write(short(commit_hash) + '\n')
+                        f.write(nodemod.short(commit_hash) + '\n')
         except IOError:
             # No write access. No big deal.
             pass
@@ -524,7 +538,8 @@ Excludes:
         enabled = False
 
     if hiddenchanges:
-        msg = _("note: hiding %s old heads without bookmarks\n") % hiddenchanges
+        msg = _(
+            "note: hiding %s old heads without bookmarks\n") % hiddenchanges
         hint = _("(use --all to see them)\n")
         ui.warn(msg)
         ui.warn(hint)
