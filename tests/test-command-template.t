@@ -3323,6 +3323,27 @@ Test width argument passed to pad function
   hg: parse error: pad() expects an integer width
   [255]
 
+Test boolean argument passed to pad function
+
+ no crash
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "f{"oo"}")}\n'
+  ---------0
+
+ string/literal
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "false")}\n'
+  ---------0
+  $ hg log -r 0 -T '{pad(rev, 10, "-", false)}\n'
+  0---------
+  $ hg log -r 0 -T '{pad(rev, 10, "-", "")}\n'
+  0---------
+
+ unknown keyword is evaluated to ''
+
+  $ hg log -r 0 -T '{pad(rev, 10, "-", unknownkeyword)}\n'
+  0---------
+
 Test separate function
 
   $ hg log -r 0 -T '{separate("-", "", "a", "b", "", "", "c", "")}\n'
@@ -3331,6 +3352,23 @@ Test separate function
   0:f7769ec2ab97 test default
   $ hg log -r 0 --color=always -T '{separate(" ", "a", label(red, "b"), "c", label(red, ""), "d")}\n'
   a \x1b[0;31mb\x1b[0m c d (esc)
+
+Test boolean expression/literal passed to if function
+
+  $ hg log -r 0 -T '{if(rev, "rev 0 is True")}\n'
+  rev 0 is True
+  $ hg log -r 0 -T '{if(0, "literal 0 is True as well")}\n'
+  literal 0 is True as well
+  $ hg log -r 0 -T '{if("", "", "empty string is False")}\n'
+  empty string is False
+  $ hg log -r 0 -T '{if(revset(r"0 - 0"), "", "empty list is False")}\n'
+  empty list is False
+  $ hg log -r 0 -T '{if(true, "true is True")}\n'
+  true is True
+  $ hg log -r 0 -T '{if(false, "", "false is False")}\n'
+  false is False
+  $ hg log -r 0 -T '{if("false", "non-empty string is True")}\n'
+  non-empty string is True
 
 Test ifcontains function
 

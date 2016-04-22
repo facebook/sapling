@@ -290,8 +290,15 @@ def evalfuncarg(context, mapping, arg):
     return thing
 
 def evalboolean(context, mapping, arg):
+    """Evaluate given argument as boolean, but also takes boolean literals"""
     func, data = arg
-    thing = func(context, mapping, data)
+    if func is runsymbol:
+        thing = func(context, mapping, data, default=None)
+        if thing is None:
+            # not a template keyword, takes as a boolean literal
+            thing = util.parsebool(data)
+    else:
+        thing = func(context, mapping, data)
     if isinstance(thing, bool):
         return thing
     # other objects are evaluated as strings, which means 0 is True, but
@@ -516,7 +523,7 @@ def pad(context, mapping, args):
     if len(args) > 2:
         fillchar = evalstring(context, mapping, args[2])
     if len(args) > 3:
-        right = util.parsebool(args[3][1])
+        right = evalboolean(context, mapping, args[3])
 
     if right:
         return text.rjust(width, fillchar)
