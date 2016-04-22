@@ -311,13 +311,11 @@ class manifestwithdc(manifest.manifest):
                     "prunemanifestdiskcache"])
         subprocess.Popen(cmd, close_fds=True)
 
-@replaceclass(localrepo, 'localrepository')
-class repowithmdc(localrepo.localrepository):
-    def _applyopenerreqs(self):
-        super(repowithmdc, self)._applyopenerreqs()
-        self.svfs.options[CONFIG_KEY] = self.ui.configbool(
+def reposetup(ui, repo):
+    if isinstance(repo, localrepo.localrepository):
+        repo.svfs.options[CONFIG_KEY] = repo.ui.configbool(
             CONFIG_KEY, 'enabled', False)
-        self.svfs.options[REPO_ROOT_KEY] = self.root
+        repo.svfs.options[REPO_ROOT_KEY] = repo.root
 
 def _reposnames(ui):
     # '' is local repo. This also defines an order precedence for master.
