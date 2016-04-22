@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+from .i18n import _
 from .node import hex, nullid
 from . import (
     encoding,
@@ -421,6 +422,12 @@ def showgraphnode(repo, ctx, **args):
         return '_'
     else:
         return 'o'
+
+@templatekeyword('index')
+def showindex(**args):
+    """Integer. The current iteration of the loop. (0 indexed)"""
+    # just hosts documentation; should be overridden by template mapping
+    raise error.Abort(_("can't use index in this context"))
 
 @templatekeyword('latesttag')
 def showlatesttag(**args):

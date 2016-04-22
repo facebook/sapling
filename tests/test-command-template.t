@@ -2683,6 +2683,16 @@ Pass generator object created by template function to filter
   $ hg log -l 1 --template '{if(author, author)|user}\n'
   test
 
+Test index keyword:
+
+  $ hg log -l 2 -T '{index + 10}{files % " {index}:{file}"}\n'
+  10 0:a 1:b 2:fifth 3:fourth 4:third
+  11 0:a
+
+  $ hg branches -T '{index} {branch}\n'
+  0 default
+  1 foo
+
 Test diff function:
 
   $ hg diff -c 8

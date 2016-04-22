@@ -103,6 +103,7 @@ baz: foo, bar
 
 from __future__ import absolute_import
 
+import itertools
 import os
 
 from .i18n import _
@@ -338,6 +339,7 @@ class templateformatter(baseformatter):
         self._topic = topic
         self._t = gettemplater(ui, topic, opts.get('template', ''),
                                cache=templatekw.defaulttempl)
+        self._counter = itertools.count()
         self._cache = {}  # for templatekw/funcs to store reusable data
     def context(self, **ctxs):
         '''insert context objects to be used to render template keywords'''
@@ -350,6 +352,7 @@ class templateformatter(baseformatter):
         props = {}
         if 'ctx' in self._item:
             props.update(templatekw.keywords)
+        props['index'] = next(self._counter)
         # explicitly-defined fields precede templatekw
         props.update(self._item)
         if 'ctx' in self._item:

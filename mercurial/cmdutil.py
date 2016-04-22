@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import itertools
 import os
 import re
 import tempfile
@@ -1452,6 +1453,7 @@ class changeset_templater(changeset_printer):
             self.t = formatter.maketemplater(ui, 'changeset', tmpl,
                                              cache=defaulttempl)
 
+        self._counter = itertools.count()
         self.cache = {}
 
         # find correct templates for current mode
@@ -1490,6 +1492,7 @@ class changeset_templater(changeset_printer):
         props['ctx'] = ctx
         props['repo'] = self.repo
         props['ui'] = self.repo.ui
+        props['index'] = next(self._counter)
         props['revcache'] = {'copies': copies}
         props['cache'] = self.cache
 

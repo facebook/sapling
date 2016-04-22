@@ -411,8 +411,9 @@ def runmap(context, mapping, data):
             else:
                 raise error.ParseError(_("%r is not iterable") % d)
 
-    for v in diter:
+    for i, v in enumerate(diter):
         lm = mapping.copy()
+        lm['index'] = i
         if isinstance(v, dict):
             lm.update(v)
             lm['originalnode'] = mapping.get('node')
