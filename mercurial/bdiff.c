@@ -265,6 +265,8 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 
 		if (curr->a2 == next->a1 || curr->b2 == next->b1)
 			while (curr->a2 < an && curr->b2 < bn
+			       && next->a1 < next->a2
+			       && next->b1 < next->b2
 			       && !cmp(a + curr->a2, b + curr->b2)) {
 				curr->a2++;
 				next->a1++;
