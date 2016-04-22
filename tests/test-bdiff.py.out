@@ -20,5 +20,8 @@
 6 6 'y\n\n'
 6 6 'y\n\n'
 9 9 'y\n\n'
+0 0 'a\nb\nb\n'
+12 12 'b\nc\n.\n'
+16 18 ''
 done
 done

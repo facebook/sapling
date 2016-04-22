@@ -52,6 +52,9 @@ def showdiff(a, b):
         pos += l
 showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\nx\n\nz\n")
 showdiff("x\n\nx\n\nx\n\nx\n\nz\n", "x\n\nx\n\ny\n\nx\n\ny\n\nx\n\nz\n")
+# we should pick up abbbc. rather than bc.de as the longest match
+showdiff("a\nb\nb\nb\nc\n.\nd\ne\n.\nf\n",
+         "a\nb\nb\na\nb\nb\nb\nc\n.\nb\nc\n.\nd\ne\nf\n")
 
 print("done")
 
