@@ -264,15 +264,10 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 		if (!next)
 			break;
 
-		if (curr->a2 == next->a1)
+		if (curr->a2 == next->a1 || curr->b2 == next->b1)
 			while (curr->a2 + shift < an && curr->b2 + shift < bn
 			       && !cmp(a + curr->a2 + shift,
 				       b + curr->b2 + shift))
-				shift++;
-		else if (curr->b2 == next->b1)
-			while (curr->b2 + shift < bn && curr->a2 + shift < an
-			       && !cmp(b + curr->b2 + shift,
-				       a + curr->a2 + shift))
 				shift++;
 		if (!shift)
 			continue;
