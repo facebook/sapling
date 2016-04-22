@@ -411,17 +411,17 @@ def runmap(context, mapping, data):
             else:
                 raise error.ParseError(_("%r is not iterable") % d)
 
-    for i in diter:
+    for v in diter:
         lm = mapping.copy()
-        if isinstance(i, dict):
-            lm.update(i)
+        if isinstance(v, dict):
+            lm.update(v)
             lm['originalnode'] = mapping.get('node')
             yield tfunc(context, lm, tdata)
         else:
             # v is not an iterable of dicts, this happen when 'key'
             # has been fully expanded already and format is useless.
             # If so, return the expanded value.
-            yield i
+            yield v
 
 def buildnegate(exp, context):
     arg = compileexp(exp[1], context, exprmethods)
