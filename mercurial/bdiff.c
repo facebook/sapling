@@ -148,7 +148,15 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 static int longest_match(struct line *a, struct line *b, struct pos *pos,
 			 int a1, int a2, int b1, int b2, int *omi, int *omj)
 {
-	int mi = a1, mj = b1, mk = 0, mb = 0, i, j, k, half = (a1 + a2) / 2;
+	int mi = a1, mj = b1, mk = 0, mb = 0, i, j, k, half;
+
+	/* window our search on large regions to better bound
+	   worst-case performance. by choosing a window at the end, we
+	   reduce skipping overhead on the b chains. */
+	if (a2 - a1 > 30000)
+		a1 = a2 - 30000;
+
+	half = (a1 + a2) / 2;
 
 	for (i = a1; i < a2; i++) {
 		/* skip all lines in b after the current block */
