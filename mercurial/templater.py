@@ -504,7 +504,7 @@ def fill(context, mapping, args):
 
     return templatefilters.fill(text, width, initindent, hangindent)
 
-@templatefunc('pad(text, width[, fillchar=\' \'[, right=False]])')
+@templatefunc('pad(text, width[, fillchar=\' \'[, left=False]])')
 def pad(context, mapping, args):
     """Pad text with a
     fill character."""
@@ -518,14 +518,14 @@ def pad(context, mapping, args):
 
     text = evalstring(context, mapping, args[0])
 
-    right = False
+    left = False
     fillchar = ' '
     if len(args) > 2:
         fillchar = evalstring(context, mapping, args[2])
     if len(args) > 3:
-        right = evalboolean(context, mapping, args[3])
+        left = evalboolean(context, mapping, args[3])
 
-    if right:
+    if left:
         return text.rjust(width, fillchar)
     else:
         return text.ljust(width, fillchar)
