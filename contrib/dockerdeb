@@ -11,7 +11,7 @@ checkdocker
 DISTID="$1"
 CODENAME="$2"
 PLATFORM="$1-$2"
-shift # extra params are passed to build process
+shift; shift # extra params are passed to build process
 
 OUTPUTDIR=${OUTPUTDIR:=$ROOTDIR/packages/$PLATFORM}
 
