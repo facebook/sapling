@@ -27,7 +27,7 @@ if [ $(uname) = "Darwin" ] ; then
             sh -c "cd /mnt/$dn && make clean && make local"
 fi
 $DOCKER run -u $DBUILDUSER --rm -v $PWD/..:/mnt $CONTAINER \
-  sh -c "cd /mnt/$dn && DEB_BUILD_OPTIONS='${DEB_BUILD_OPTIONS:=}' contrib/builddeb --build --distid $DISTID --codename $CODENAME"
+  sh -c "cd /mnt/$dn && DEB_BUILD_OPTIONS='${DEB_BUILD_OPTIONS:=}' contrib/builddeb --build --distid $DISTID --codename $CODENAME $@"
 contrib/builddeb --cleanup --distid $DISTID --codename $CODENAME
 if [ $(uname) = "Darwin" ] ; then
     $DOCKER run -u $DBUILDUSER --rm -v $PWD/..:/mnt $CONTAINER \
