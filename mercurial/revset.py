@@ -1859,9 +1859,6 @@ def sort(repo, subset, x):
 
     s = l[0]
     keys = keys.split()
-    l = []
-    def invert(s):
-        return "".join(chr(255 - ord(c)) for c in s)
     revs = getset(repo, subset, s)
     if keys == ["rev"]:
         revs.sort()
@@ -1869,36 +1866,33 @@ def sort(repo, subset, x):
     elif keys == ["-rev"]:
         revs.sort(reverse=True)
         return revs
-    for r in revs:
-        c = repo[r]
-        e = []
-        for k in keys:
+    # sort() is guaranteed to be stable
+    ctxs = [repo[r] for r in revs]
+    if True:
+        for k in reversed(keys):
             if k == 'rev':
-                e.append(r)
+                ctxs.sort(key=lambda c: c.rev())
             elif k == '-rev':
-                e.append(-r)
+                ctxs.sort(key=lambda c: c.rev(), reverse=True)
             elif k == 'branch':
-                e.append(c.branch())
+                ctxs.sort(key=lambda c: c.branch())
             elif k == '-branch':
-                e.append(invert(c.branch()))
+                ctxs.sort(key=lambda c: c.branch(), reverse=True)
             elif k == 'desc':
-                e.append(c.description())
+                ctxs.sort(key=lambda c: c.description())
             elif k == '-desc':
-                e.append(invert(c.description()))
+                ctxs.sort(key=lambda c: c.description(), reverse=True)
             elif k in 'user author':
-                e.append(c.user())
+                ctxs.sort(key=lambda c: c.user())
             elif k in '-user -author':
-                e.append(invert(c.user()))
+                ctxs.sort(key=lambda c: c.user(), reverse=True)
             elif k == 'date':
-                e.append(c.date()[0])
+                ctxs.sort(key=lambda c: c.date()[0])
             elif k == '-date':
-                e.append(-c.date()[0])
+                ctxs.sort(key=lambda c: c.date()[0], reverse=True)
             else:
                 raise error.ParseError(_("unknown sort key %r") % k)
-        e.append(r)
-        l.append(e)
-    l.sort()
-    return baseset([e[-1] for e in l])
+    return baseset([c.rev() for c in ctxs])
 
 @predicate('subrepo([pattern])')
 def subrepo(repo, subset, x):

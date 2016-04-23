@@ -952,6 +952,147 @@ test sorting two sorted collections in different orders backwards
   6
   2
 
+  $ cd ..
+
+test sorting by multiple keys including variable-length strings
+
+  $ hg init sorting
+  $ cd sorting
+  $ cat <<EOF >> .hg/hgrc
+  > [ui]
+  > logtemplate = '{rev} {branch|p5}{desc|p5}{author|p5}{date|hgdate}\n'
+  > [templatealias]
+  > p5(s) = pad(s, 5)
+  > EOF
+  $ hg branch -qf b12
+  $ hg ci -m m111 -u u112 -d '111 10800'
+  $ hg branch -qf b11
+  $ hg ci -m m12 -u u111 -d '112 7200'
+  $ hg branch -qf b111
+  $ hg ci -m m11 -u u12 -d '111 3600'
+  $ hg branch -qf b112
+  $ hg ci -m m111 -u u11 -d '120 0'
+  $ hg branch -qf b111
+  $ hg ci -m m112 -u u111 -d '110 14400'
+  created new head
+
+ compare revisions (has fast path):
+
+  $ hg log -r 'sort(all(), rev)'
+  0 b12  m111 u112 111 10800
+  1 b11  m12  u111 112 7200
+  2 b111 m11  u12  111 3600
+  3 b112 m111 u11  120 0
+  4 b111 m112 u111 110 14400
+
+  $ hg log -r 'sort(all(), -rev)'
+  4 b111 m112 u111 110 14400
+  3 b112 m111 u11  120 0
+  2 b111 m11  u12  111 3600
+  1 b11  m12  u111 112 7200
+  0 b12  m111 u112 111 10800
+
+ compare variable-length strings (issue5218):
+
+  $ hg log -r 'sort(all(), branch)'
+  1 b11  m12  u111 112 7200
+  2 b111 m11  u12  111 3600
+  4 b111 m112 u111 110 14400
+  3 b112 m111 u11  120 0
+  0 b12  m111 u112 111 10800
+
+  $ hg log -r 'sort(all(), -branch)'
+  0 b12  m111 u112 111 10800
+  3 b112 m111 u11  120 0
+  2 b111 m11  u12  111 3600
+  4 b111 m112 u111 110 14400
+  1 b11  m12  u111 112 7200
+
+  $ hg log -r 'sort(all(), desc)'
+  2 b111 m11  u12  111 3600
+  0 b12  m111 u112 111 10800
+  3 b112 m111 u11  120 0
+  4 b111 m112 u111 110 14400
+  1 b11  m12  u111 112 7200
+
+  $ hg log -r 'sort(all(), -desc)'
+  1 b11  m12  u111 112 7200
+  4 b111 m112 u111 110 14400
+  0 b12  m111 u112 111 10800
+  3 b112 m111 u11  120 0
+  2 b111 m11  u12  111 3600
+
+  $ hg log -r 'sort(all(), user)'
+  3 b112 m111 u11  120 0
+  1 b11  m12  u111 112 7200
+  4 b111 m112 u111 110 14400
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+
+  $ hg log -r 'sort(all(), -user)'
+  2 b111 m11  u12  111 3600
+  0 b12  m111 u112 111 10800
+  1 b11  m12  u111 112 7200
+  4 b111 m112 u111 110 14400
+  3 b112 m111 u11  120 0
+
+ compare dates (tz offset should have no effect):
+
+  $ hg log -r 'sort(all(), date)'
+  4 b111 m112 u111 110 14400
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+  1 b11  m12  u111 112 7200
+  3 b112 m111 u11  120 0
+
+  $ hg log -r 'sort(all(), -date)'
+  3 b112 m111 u11  120 0
+  1 b11  m12  u111 112 7200
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+  4 b111 m112 u111 110 14400
+
+ be aware that 'sort(x, -k)' is not exactly the same as 'reverse(sort(x, k))'
+ because '-k' reverses the comparison, not the list itself:
+
+  $ hg log -r 'sort(0 + 2, date)'
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+
+  $ hg log -r 'sort(0 + 2, -date)'
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+
+  $ hg log -r 'reverse(sort(0 + 2, date))'
+  2 b111 m11  u12  111 3600
+  0 b12  m111 u112 111 10800
+
+ sort by multiple keys:
+
+  $ hg log -r 'sort(all(), "branch -rev")'
+  1 b11  m12  u111 112 7200
+  4 b111 m112 u111 110 14400
+  2 b111 m11  u12  111 3600
+  3 b112 m111 u11  120 0
+  0 b12  m111 u112 111 10800
+
+  $ hg log -r 'sort(all(), "-desc -date")'
+  1 b11  m12  u111 112 7200
+  4 b111 m112 u111 110 14400
+  3 b112 m111 u11  120 0
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+
+  $ hg log -r 'sort(all(), "user -branch date rev")'
+  3 b112 m111 u11  120 0
+  4 b111 m112 u111 110 14400
+  1 b11  m12  u111 112 7200
+  0 b12  m111 u112 111 10800
+  2 b111 m11  u12  111 3600
+
+  $ cd ..
+  $ cd repo
+
 test subtracting something from an addset
 
   $ log '(outgoing() or removes(a)) - removes(a)'
