@@ -1868,30 +1868,29 @@ def sort(repo, subset, x):
         return revs
     # sort() is guaranteed to be stable
     ctxs = [repo[r] for r in revs]
-    if True:
-        for k in reversed(keys):
-            if k == 'rev':
-                ctxs.sort(key=lambda c: c.rev())
-            elif k == '-rev':
-                ctxs.sort(key=lambda c: c.rev(), reverse=True)
-            elif k == 'branch':
-                ctxs.sort(key=lambda c: c.branch())
-            elif k == '-branch':
-                ctxs.sort(key=lambda c: c.branch(), reverse=True)
-            elif k == 'desc':
-                ctxs.sort(key=lambda c: c.description())
-            elif k == '-desc':
-                ctxs.sort(key=lambda c: c.description(), reverse=True)
-            elif k in 'user author':
-                ctxs.sort(key=lambda c: c.user())
-            elif k in '-user -author':
-                ctxs.sort(key=lambda c: c.user(), reverse=True)
-            elif k == 'date':
-                ctxs.sort(key=lambda c: c.date()[0])
-            elif k == '-date':
-                ctxs.sort(key=lambda c: c.date()[0], reverse=True)
-            else:
-                raise error.ParseError(_("unknown sort key %r") % k)
+    for k in reversed(keys):
+        if k == 'rev':
+            ctxs.sort(key=lambda c: c.rev())
+        elif k == '-rev':
+            ctxs.sort(key=lambda c: c.rev(), reverse=True)
+        elif k == 'branch':
+            ctxs.sort(key=lambda c: c.branch())
+        elif k == '-branch':
+            ctxs.sort(key=lambda c: c.branch(), reverse=True)
+        elif k == 'desc':
+            ctxs.sort(key=lambda c: c.description())
+        elif k == '-desc':
+            ctxs.sort(key=lambda c: c.description(), reverse=True)
+        elif k in 'user author':
+            ctxs.sort(key=lambda c: c.user())
+        elif k in '-user -author':
+            ctxs.sort(key=lambda c: c.user(), reverse=True)
+        elif k == 'date':
+            ctxs.sort(key=lambda c: c.date()[0])
+        elif k == '-date':
+            ctxs.sort(key=lambda c: c.date()[0], reverse=True)
+        else:
+            raise error.ParseError(_("unknown sort key %r") % k)
     return baseset([c.rev() for c in ctxs])
 
 @predicate('subrepo([pattern])')
