@@ -25,49 +25,111 @@ def dirstatetuple(*x):
     # x is a tuple
     return x
 
+indexformatng = ">Qiiiiii20s12x"
+indexfirst = struct.calcsize('Q')
+sizeint = struct.calcsize('i')
+indexsize = struct.calcsize(indexformatng)
+
+def gettype(q):
+    return int(q & 0xFFFF)
+
+def offset_type(offset, type):
+    return long(long(offset) << 16 | type)
+
+class BaseIndexObject(object):
+    def __len__(self):
+        return self._lgt + len(self._extra) + 1
+
+    def insert(self, i, tup):
+        assert i == -1
+        self._extra.append(tup)
+
+    def _fix_index(self, i):
+        if not isinstance(i, int):
+            raise TypeError("expecting int indexes")
+        if i < 0:
+            i = len(self) + i
+        if i < 0 or i >= len(self):
+            raise IndexError
+        return i
+
+    def __getitem__(self, i):
+        i = self._fix_index(i)
+        if i == len(self) - 1:
+            return (0, 0, 0, -1, -1, -1, -1, nullid)
+        if i >= self._lgt:
+            return self._extra[i - self._lgt]
+        index = self._calculate_index(i)
+        r = struct.unpack(indexformatng, self._data[index:index + indexsize])
+        if i == 0:
+            e = list(r)
+            type = gettype(e[0])
+            e[0] = offset_type(0, type)
+            return tuple(e)
+        return r
+
+class IndexObject(BaseIndexObject):
+    def __init__(self, data):
+        assert len(data) % indexsize == 0
+        self._data = data
+        self._lgt = len(data) // indexsize
+        self._extra = []
+
+    def _calculate_index(self, i):
+        return i * indexsize
+
+    def __delitem__(self, i):
+        if not isinstance(i, slice) or not i.stop == -1 or not i.step is None:
+            raise ValueError("deleting slices only supports a:-1 with step 1")
+        i = self._fix_index(i.start)
+        if i < self._lgt:
+            self._data = self._data[:i * indexsize]
+            self._lgt = i
+            self._extra = []
+        else:
+            self._extra = self._extra[:i - self._lgt]
+
+class InlinedIndexObject(BaseIndexObject):
+    def __init__(self, data, inline=0):
+        self._data = data
+        self._lgt = self._inline_scan(None)
+        self._inline_scan(self._lgt)
+        self._extra = []
+
+    def _inline_scan(self, lgt):
+        off = 0
+        if lgt is not None:
+            self._offsets = [0] * lgt
+        count = 0
+        while off <= len(self._data) - indexsize:
+            s, = struct.unpack('>i',
+                self._data[off + indexfirst:off + sizeint + indexfirst])
+            if lgt is not None:
+                self._offsets[count] = off
+            count += 1
+            off += indexsize + s
+        if off != len(self._data):
+            raise ValueError("corrupted data")
+        return count
+
+    def __delitem__(self, i):
+        if not isinstance(i, slice) or not i.stop == -1 or not i.step is None:
+            raise ValueError("deleting slices only supports a:-1 with step 1")
+        i = self._fix_index(i.start)
+        if i < self._lgt:
+            self._offsets = self._offsets[:i]
+            self._lgt = i
+            self._extra = []
+        else:
+            self._extra = self._extra[:i - self._lgt]
+
+    def _calculate_index(self, i):
+        return self._offsets[i]
+
 def parse_index2(data, inline):
-    def gettype(q):
-        return int(q & 0xFFFF)
-
-    def offset_type(offset, type):
-        return long(long(offset) << 16 | type)
-
-    indexformatng = ">Qiiiiii20s12x"
-
-    s = struct.calcsize(indexformatng)
-    index = []
-    cache = None
-    off = 0
-
-    l = len(data) - s
-    append = index.append
-    if inline:
-        cache = (0, data)
-        while off <= l:
-            e = _unpack(indexformatng, data[off:off + s])
-            append(e)
-            if e[1] < 0:
-                break
-            off += e[1] + s
-    else:
-        while off <= l:
-            e = _unpack(indexformatng, data[off:off + s])
-            append(e)
-            off += s
-
-    if off != len(data):
-        raise ValueError('corrupt index file')
-
-    if index:
-        e = list(index[0])
-        type = gettype(e[0])
-        e[0] = offset_type(0, type)
-        index[0] = tuple(e)
-
-    # add the magic null revision at -1
-    index.append((0, 0, 0, -1, -1, -1, -1, nullid))
-
-    return index, cache
+    if not inline:
+        return IndexObject(data), None
+    return InlinedIndexObject(data, inline), (0, data)
 
 def parse_dirstate(dmap, copymap, st):
     parents = [st[:20], st[20: 40]]
