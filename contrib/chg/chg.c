@@ -42,7 +42,7 @@ struct cmdserveropts {
 static void initcmdserveropts(struct cmdserveropts *opts) {
 	memset(opts, 0, sizeof(struct cmdserveropts));
 	opts->lockfd = -1;
-	opts->sockdirfd = AT_FDCWD;
+	opts->sockdirfd = -1;
 }
 
 static void freecmdserveropts(struct cmdserveropts *opts) {
@@ -50,9 +50,9 @@ static void freecmdserveropts(struct cmdserveropts *opts) {
 	opts->args = NULL;
 	opts->argsize = 0;
 	assert(opts->lockfd == -1 && "should be closed by unlockcmdserver()");
-	if (opts->sockdirfd != AT_FDCWD) {
+	if (opts->sockdirfd >= 0) {
 		close(opts->sockdirfd);
-		opts->sockdirfd = AT_FDCWD;
+		opts->sockdirfd = -1;
 	}
 }
 
