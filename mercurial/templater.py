@@ -307,6 +307,7 @@ def evalrawexp(context, mapping, arg):
 def evalfuncarg(context, mapping, arg):
     """Evaluate given argument as value type"""
     thing = evalrawexp(context, mapping, arg)
+    thing = templatekw.unwrapvalue(thing)
     # evalrawexp() may return string, generator of strings or arbitrary object
     # such as date tuple, but filter does not want generator.
     if isinstance(thing, types.GeneratorType):
@@ -323,6 +324,7 @@ def evalboolean(context, mapping, arg):
             thing = util.parsebool(data)
     else:
         thing = func(context, mapping, data)
+    thing = templatekw.unwrapvalue(thing)
     if isinstance(thing, bool):
         return thing
     # other objects are evaluated as strings, which means 0 is True, but
@@ -768,6 +770,7 @@ def join(context, mapping, args):
     # TODO: perhaps this should be evalfuncarg(), but it can't because hgweb
     # abuses generator as a keyword that returns a list of dicts.
     joinset = evalrawexp(context, mapping, args[0])
+    joinset = templatekw.unwrapvalue(joinset)
     joinfmt = getattr(joinset, 'joinfmt', pycompat.identity)
     joiner = " "
     if len(args) > 1:

@@ -70,6 +70,28 @@ class _hybrid(object):
             raise AttributeError(name)
         return getattr(self._values, name)
 
+class _mappable(object):
+    """Wrapper for non-list/dict object to support map operation
+
+    This class allows us to handle both:
+    - "{manifest}"
+    - "{manifest % '{rev}:{node}'}"
+
+    Unlike a _hybrid, this does not simulate the behavior of the underling
+    value. Use unwrapvalue() or unwraphybrid() to obtain the inner object.
+    """
+
+    def __init__(self, gen, value, makemap):
+        self.gen = gen
+        self._value = value  # may be generator of strings
+        self._makemap = makemap
+
+    def tomap(self):
+        return self._makemap()
+
+    def itermaps(self):
+        yield self.tomap()
+
 def hybriddict(data, key='key', value='value', fmt='%s=%s', gen=None):
     """Wrap data to support both dict-like and string-like operations"""
     return _hybrid(gen, data, lambda k: {key: k, value: data[k]},
@@ -85,6 +107,12 @@ def unwraphybrid(thing):
     if not util.safehasattr(thing, 'gen'):
         return thing
     return thing.gen
+
+def unwrapvalue(thing):
+    """Move the inner value object out of the wrapper"""
+    if not util.safehasattr(thing, '_value'):
+        return thing
+    return thing._value
 
 def showdict(name, data, mapping, plural=None, key='key', value='value',
              fmt='%s=%s', separator=' '):
@@ -543,10 +571,14 @@ def showmanifest(**args):
     if mnode is None:
         # just avoid crash, we might want to use the 'ff...' hash in future
         return
+    mrev = repo.manifestlog._revlog.rev(mnode)
+    mhex = hex(mnode)
     args = args.copy()
-    args.update({r'rev': repo.manifestlog._revlog.rev(mnode),
-                 r'node': hex(mnode)})
-    return templ('manifest', **args)
+    args.update({r'rev': mrev, r'node': mhex})
+    f = templ('manifest', **args)
+    # TODO: perhaps 'ctx' should be dropped from mapping because manifest
+    # rev and node are completely different from changeset's.
+    return _mappable(f, f, lambda: {'rev': mrev, 'node': mhex})
 
 def shownames(namespace, **args):
     """helper method to generate a template keyword for a namespace"""

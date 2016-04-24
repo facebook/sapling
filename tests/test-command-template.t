@@ -3119,6 +3119,20 @@ Test new-style inline templating:
   hg: parse error: None is not iterable
   [255]
 
+Test new-style inline templating of non-list/dict type:
+
+  $ hg log -R latesttag -r tip -T '{manifest}\n'
+  11:2bc6e9006ce2
+  $ hg log -R latesttag -r tip -T 'string length: {manifest|count}\n'
+  string length: 15
+  $ hg log -R latesttag -r tip -T '{manifest % "{rev}:{node}"}\n'
+  11:2bc6e9006ce29882383a22d39fd1f4e66dd3e2fc
+
+Test manifest can be join()-ed as before, though it's silly:
+
+  $ hg log -R latesttag -r tip -T '{join(manifest, "")}\n'
+  11:2bc6e9006ce2
+
 Test the sub function of templating for expansion:
 
   $ hg log -R latesttag -r 10 --template '{sub("[0-9]", "x", "{rev}")}\n'
