@@ -19,14 +19,17 @@ from . import (
     util,
 )
 
-# This helper class allows us to handle both:
-#  "{files}" (legacy command-line-specific list hack) and
-#  "{files % '{file}\n'}" (hgweb-style with inlining and function support)
-# and to access raw values:
-#  "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
-#  "{get(extras, key)}"
-
 class _hybrid(object):
+    """Wrapper for list or dict to support legacy template
+
+    This class allows us to handle both:
+    - "{files}" (legacy command-line-specific list hack) and
+    - "{files % '{file}\n'}" (hgweb-style with inlining and function support)
+    and to access raw values:
+    - "{ifcontains(file, files, ...)}", "{ifcontains(key, extras, ...)}"
+    - "{get(extras, key)}"
+    """
+
     def __init__(self, gen, values, makemap, joinfmt):
         self.gen = gen
         self.values = values
