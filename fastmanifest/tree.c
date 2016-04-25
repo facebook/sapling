@@ -388,7 +388,7 @@ remove_path_result_t remove_path(
 }
 
 bool contains_path(
-    const tree_t *tree,
+    tree_t *tree,
     const char *path,
     const size_t path_sz) {
   tree_state_changes_t changes = {0};
@@ -403,7 +403,7 @@ bool contains_path(
 
   find_path_result_t result =
       find_path(
-          tree,
+          (tree_t *) tree,
           shadow_root,
           real_root,
           path, path_sz,

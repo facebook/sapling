@@ -48,7 +48,8 @@ tree_add_child_result_t tree_add_child(
     tree_state_changes_t *changes) {
   tree_add_child_result_t result;
 
-  if (!VERIFY_CHILD_NUM(num_children_hint)) {
+  if (!VERIFY_CHILD_NUM(num_children_hint) ||
+      !VERIFY_NAME_SZ(name_sz)) {
     return (tree_add_child_result_t) {
         TREE_ADD_CHILD_WTF, NULL, NULL};
   }
@@ -61,7 +62,8 @@ tree_add_child_result_t tree_add_child(
   // this is a potential optimization opportunity.  we could theoretically try
   // to allocate the new node in the arena and maintain compacted state of the
   // tree.
-  node_t *node = alloc_node(name, name_sz, num_children_hint);
+  node_t *node = alloc_node(name, (name_sz_t) name_sz,
+      (child_num_t) num_children_hint);
   if (node == NULL) {
     return (tree_add_child_result_t) {
         TREE_ADD_CHILD_OOM, NULL, NULL};

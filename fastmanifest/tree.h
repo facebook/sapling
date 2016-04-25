@@ -82,7 +82,10 @@ extern remove_path_result_t remove_path(
     const size_t path_sz);
 
 extern bool contains_path(
-    const tree_t *tree,
+    // we ought to be able to do this as a const, but we can't propagate
+    // const-ness through a method call.  so unless we dupe the code to create
+    // a const-version of find_path, we cannot enforce this programmatically.
+    /* const */ tree_t *tree,
     const char *path,
     const size_t path_sz);
 

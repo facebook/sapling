@@ -24,7 +24,10 @@ static size_t calculate_required_size(
 static void initialize_node(
     node_t *node, size_t block_sz,
     const char *name, uint16_t name_sz) {
-  node->block_sz = block_sz;
+  if (!VERIFY_BLOCK_SZ(block_sz)) {
+    abort();
+  }
+  node->block_sz = (uint32_t) block_sz;
   node->num_children = 0;
   node->name_sz = name_sz;
   node->in_use = true;
@@ -66,13 +69,20 @@ void *setup_node(
 
 node_t *clone_node(const node_t *node) {
   uint32_t old_capacity = max_children(node);
-  uint32_t new_capacity = (((uint64_t) old_capacity) *
-                           (100 + STORAGE_INCREMENT_PERCENTAGE)) /
-                          100;
-  if (new_capacity - old_capacity < MIN_STORAGE_INCREMENT) {
-    new_capacity = old_capacity + MIN_STORAGE_INCREMENT;
-  } else if (new_capacity - old_capacity > MAX_STORAGE_INCREMENT) {
-    new_capacity = old_capacity + MAX_STORAGE_INCREMENT;
+  uint64_t desired_new_capacity = (((uint64_t) old_capacity) *
+                                   (100 + STORAGE_INCREMENT_PERCENTAGE)) /
+                                  100;
+  if (desired_new_capacity - old_capacity < MIN_STORAGE_INCREMENT) {
+    desired_new_capacity = old_capacity + MIN_STORAGE_INCREMENT;
+  } else if (desired_new_capacity - old_capacity > MAX_STORAGE_INCREMENT) {
+    desired_new_capacity = old_capacity + MAX_STORAGE_INCREMENT;
+  }
+
+  uint32_t new_capacity;
+  if (desired_new_capacity > UINT32_MAX) {
+    new_capacity = UINT32_MAX;
+  } else {
+    new_capacity = (uint32_t) desired_new_capacity;
   }
 
   node_t *clone = alloc_node(
@@ -257,7 +267,7 @@ node_search_children_result_t search_children(
   node_t *child = get_child_from_diff(node, diff);
   if (name_compare(name, name_sz, child) == 0) {
     // huzzah, we found it.
-    return (node_search_children_result_t) {child, offset};
+    return (node_search_children_result_t) {child, (uint32_t) offset};
   }
 
   return (node_search_children_result_t) {NULL, UINT32_MAX};

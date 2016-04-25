@@ -43,8 +43,8 @@ arena_alloc_node_result_t arena_alloc_node_helper(
     node_t *candidate = (node_t *) tree->arena_free_start;
     void *next = setup_node(
         tree->arena_free_start, arena_free,
-        name, name_sz,
-        max_children);
+        name, (name_sz_t) name_sz,
+        (child_num_t) max_children);
 
     if (next == NULL) {
       if (policy == ARENA_POLICY_FAIL) {

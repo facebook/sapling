@@ -7,7 +7,7 @@
 #include "bsearch.h"
 #include "tests.h"
 
-#define CMP(left, right) (*((intptr_t*) left) - *((intptr_t*) right))
+#define CMP(left, right) ((int) (*((intptr_t*) left) - *((intptr_t*) right)))
 
 COMPARATOR_BUILDER(intptr_cmp, CMP)
 

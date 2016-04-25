@@ -84,15 +84,19 @@ static inline int folder_name_compare(
     const char *name,
     size_t name_sz,
     const open_folder_t *folder) {
-  uint32_t min_sz = (name_sz < folder->subfolder_name_sz) ?
+  size_t min_sz = (name_sz < folder->subfolder_name_sz) ?
                     name_sz : folder->subfolder_name_sz;
-  int sz_compare = name_sz - folder->subfolder_name_sz;
+  ssize_t sz_compare = name_sz - folder->subfolder_name_sz;
 
   int cmp = strncmp(name, folder->subfolder_name, min_sz);
   if (cmp) {
     return cmp;
+  } else if (sz_compare < 0) {
+    return -1;
+  } else if (sz_compare > 0) {
+    return 1;
   } else {
-    return sz_compare;
+    return 0;
   }
 }
 
@@ -225,12 +229,12 @@ static close_folder_result_t close_folder(
   // we must initialize flags to a known value, even if it's not used
   // because it participates in checksum calculation.
   node->flags = 0;
-  node->num_children = folder->closed_children_count; // this is a huge
-                                                      // abstraction violation,
-                                                      // but it allows us to use
-                                                      // `set_child_by_index`,
-                                                      // which is significantly
-                                                      // more efficient.
+  if (!VERIFY_CHILD_NUM(folder->closed_children_count)) {
+    abort();
+  }
+  // this is a huge abstraction violation, but it allows us to use
+  // `set_child_by_index`, which is significantly more efficient.
+  node->num_children = (child_num_t) folder->closed_children_count;
 
   // node is set up.  now add all the children!
   intptr_t arena_start = (intptr_t) state->tree->arena;

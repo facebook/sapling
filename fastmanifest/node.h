@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "internal_result.h"
@@ -45,6 +46,18 @@ typedef struct _node_t {
   // padding to the nearest ptrdiff_t boundary.
   // then a series of ptrdiff_t-sized pointers to the children.
 } node_t;
+
+/**
+ * Define some macros for users to test if their values are within the
+ * restrictions of our node implementation.
+ */
+#define VERIFY_BLOCK_SZ(block_sz) ((uintmax_t) (block_sz) < UINT32_MAX)
+#define VERIFY_NAME_SZ(name_sz) ((uintmax_t) (name_sz) < UINT16_MAX)
+#define VERIFY_CHILD_NUM(child_num) ((uintmax_t) (child_num) < UINT32_MAX)
+
+#define block_sz_t uint32_t
+#define name_sz_t uint16_t
+#define child_num_t uint32_t
 
 /**
  * Returns <0 if (`name`, `name_sz`) is lexicographically less than the name in
@@ -108,7 +121,12 @@ static inline uint32_t max_children(const node_t *node) {
   ptrdiff_t bytes_avail = node->block_sz;
   bytes_avail -=
       ((intptr_t) get_child_ptr_base_const(node)) - ((intptr_t) node);
-  return bytes_avail / sizeof(intptr_t);
+
+  // if it requires > 32b, then we're kind of hosed.
+  if (!VERIFY_CHILD_NUM(bytes_avail)) {
+    abort();
+  }
+  return ((uint32_t) (bytes_avail / sizeof(intptr_t)));
 }
 
 static inline node_t *get_child_by_index(
@@ -149,13 +167,6 @@ static inline void set_child_by_index(
   ptrdiff_t delta = ((intptr_t) child) - ((intptr_t) node);
   base[child_num] = delta;
 }
-
-/**
- * Define some macros for users to test if their values are within the
- * restrictions of our node implementation.
- */
-#define VERIFY_NAME_SZ(name_sz) ((uintmax_t) (name_sz) < UINT16_MAX)
-#define VERIFY_CHILD_NUM(child_num) ((uintmax_t) (child_num) < UINT32_MAX)
 
 /**
  * Allocate a node on the heap suitably sized for a given name and a given

@@ -9,7 +9,7 @@ project(fastmanifest)
 
 #set(CMAKE_VERBOSE_MAKEFILE on)
 
-SET(CMAKE_C_FLAGS "-Wall -Werror")
+SET(CMAKE_C_FLAGS "-Wall -Wshorten-64-to-32 -Wincompatible-pointer-types-discards-qualifiers -Werror")
 SET(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 SET(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 SET(CMAKE_C_FLAGS_RELWITHDEBINFO "-O0 -g")
