@@ -19,17 +19,20 @@ This extension changes defaults to be more user friendly.
 """
 
 from mercurial import util, cmdutil, commands, extensions, hg, scmutil
-from mercurial import bookmarks, templater
+from mercurial import bookmarks, obsolete, templater
 from mercurial.extensions import wrapcommand, wrapfunction
 from mercurial import extensions
 from mercurial import error
 from mercurial.i18n import _
 from hgext import rebase
-import errno, os, re, stat, subprocess, time
+import errno, inspect, os, re, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 testedwith = 'internal'
+
+globaldata = 'globaldata'
+createmarkersoperation = 'createmarkersoperation'
 
 logopts = [
     ('', 'all', None, _('shows all commits in the repo')),
@@ -53,7 +56,8 @@ def extsetup(ui):
     options = entry[1]
     options.insert(9, ('M', 'reuse-message', '',
         _('reuse commit message from REV'), _('REV')))
-    wrapcommand(rebase.cmdtable, 'rebase', _rebase)
+    opawarerebase = markermetadatawritingcommand(ui, _rebase, 'rebase')
+    wrapcommand(rebase.cmdtable, 'rebase', opawarerebase)
     entry = wrapcommand(commands.table, 'pull', pull)
     options = entry[1]
     options.append(
@@ -91,9 +95,15 @@ def extsetup(ui):
     wrapcommand(commands.table, 'graft', graftcmd)
     try:
         fbamendmodule = extensions.find('fbamend')
-        wrapcommand(fbamendmodule.cmdtable, 'amend', amendcmd)
+        opawareamend = markermetadatawritingcommand(ui, amendcmd, 'amend')
+        wrapcommand(fbamendmodule.cmdtable, 'amend', opawareamend)
     except KeyError:
         pass
+
+    # wrapped createmarkers knows how to write operation-aware
+    # metadata (e.g. 'amend', 'rebase' and so forth)
+    wrapfunction(obsolete, 'createmarkers', _createmarkers)
+
 
     # Tweak Behavior
     tweakbehaviors(ui)
@@ -420,6 +430,33 @@ def grep(ui, repo, pattern, *pats, **opts):
     p.stdin.close()
     return p.wait()
 
+def markermetadatawritingcommand(ui, origcmd, operationame):
+    """Wrap origcmd in a context where globaldata config contains
+    the name of current operation so that any function up the call
+    stack can query for this value:
+        `repo.ui.config(globaldata, createmarkersoperation)`
+
+    In particular, we want `obsolete.createmarkers` to know whether
+    top-level scenario is amend, rebase or something else so that
+    it can write these values into marker metadata.
+    """
+    origargs = inspect.getargspec(origcmd)
+    try:
+        repo_index = origargs.args.index('repo')
+    except ValueError:
+        ui.warn(_("cannot wrap a command that does not have repo argument"))
+        return origcmd
+
+    def cmd(*args, **kwargs):
+        repo = args[repo_index]
+        backupconfig = repo.ui.backupconfig(globaldata, createmarkersoperation)
+        repo.ui.setconfig(globaldata, createmarkersoperation, operationame)
+        try:
+            return origcmd(*args, **kwargs)
+        finally:
+            repo.ui.restoreconfig(backupconfig)
+    return cmd
+
 def _rebase(orig, ui, repo, **opts):
     if not opts.get('date') and not ui.configbool('tweakdefaults',
                                                   'rebasekeepdate'):
@@ -560,3 +597,13 @@ def bmactive(repo):
         return repo._activebookmark
     except AttributeError:
         return repo._bookmarkcurrent
+
+def _createmarkers(orig, repo, relations, flag=0, date=None, metadata=None):
+    operation = repo.ui.config(globaldata, createmarkersoperation, None)
+    if operation is None:
+        return orig(repo, relations, flag, date, metadata)
+
+    if metadata is None:
+        metadata = {}
+    metadata['operation'] = operation
+    return orig(repo, relations, flag, date, metadata)
