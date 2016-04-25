@@ -6,7 +6,7 @@
 
 export PREFIX=/usr/local
 PYTHON=python
-HGROOT != pwd
+$(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
 PURE=
 PYFILES:=$(shell find mercurial hgext doc -name '*.py')
