@@ -91,7 +91,7 @@ def unamend(ui, repo, **opts):
 
     This command with roll back to the previous version of a commit,
     leaving working directory in state in which it was before running
-    `hg amend` (e.g. files modified as part of an amend will be 
+    `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
     try:
         inhibitmod = extensions.find('inhibit')
