@@ -87,9 +87,9 @@ def commit(orig, ui, repo, *pats, **opts):
         return orig(ui, repo, *pats, **opts)
 
 def unamend(ui, repo, **opts):
-    """undo the amned operation on a current commit
+    """undo the amend operation on a current commit
 
-    This command with roll back to the previous version of a commit,
+    This command will roll back to the previous version of a commit,
     leaving working directory in state in which it was before running
     `hg amend` (e.g. files modified as part of an amend will be
     marked as modified `hg status`)"""
@@ -103,12 +103,8 @@ def unamend(ui, repo, **opts):
     unfi = repo.unfiltered()
 
     # identify the commit from which to unamend
-    revs = list(scmutil.revrange(repo, ['.']))
-    if len(revs) != 1:
-        e = _("please specify only one matching revision")
-        raise error.Abort(e)
-    currev = revs[0]
-    curctx = repo[currev]
+    curctx = repo['.']
+    currev = curctx.rev()
 
     # identify the commit to which to unamend
     markers = list(obsolete.precursormarkers(curctx))
@@ -126,10 +122,8 @@ def unamend(ui, repo, **opts):
     with nested(repo.wlock(), repo.lock()):
         repobookmarks = repo._bookmarks
         ctxbookmarks = curctx.bookmarks()
-
-        cmdutil.bailifchanged(repo, merge=False)
+        # we want to inhibit markers that mark precnode obsolete
         inhibitmod._inhibitmarkers(unfi, [precnode])
-
         changedfiles = []
         wctx = repo[None]
         wm = wctx.manifest()

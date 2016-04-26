@@ -619,3 +619,36 @@ Check whether active bookmark remained active
   $ hg book
    * b1                        0:b6a1406d8886
      b2                        0:b6a1406d8886
+
+Check whether unamend works with dirty working directory
+  $ hg amend -m "bring back the amended commit"
+  $ hg st
+  $ hg log -r .
+  changeset:   3:dd05d03a1c51
+  bookmark:    b1
+  bookmark:    b2
+  tag:         tip
+  parent:      -1:000000000000
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     bring back the amended commit
+  
+  $ echo d > d && hg add d
+  $ hg st
+  A d
+  $ hg unamend
+  $ hg log -r .
+  changeset:   0:b6a1406d8886
+  bookmark:    b1
+  bookmark:    b2
+  tag:         tip
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     ab
+  
+  $ hg st
+  M a
+  A c
+  A d
+  R b
+
