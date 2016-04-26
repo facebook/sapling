@@ -36,8 +36,8 @@ Verify corrupt cache error message
   $ chmod u+w $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ echo x > $CACHEDIR/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0
   $ hg up tip 2>&1 | grep "corrupt cache data"
-      raise Exception("corrupt cache data")
-  Exception: corrupt cache data
+      raise RuntimeError("corrupt cache data")
+  RuntimeError: corrupt cache data
 
 Verify detection and remediation when remotefilelog.validatecachelog is set
 

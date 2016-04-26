@@ -8,9 +8,8 @@ setup(
     maintainer_email='durham@fb.com',
     url='https://bitbucket.org/facebook/remotefilelog',
     description='Remote filelog extension for Mercurial',
-    long_description="""
-This extension adds support for remote filelogs in Mercurial where all the file history is stored remotely.
-    """.strip(),
+    long_description="This extension adds support for remote filelogs in "
+        "Mercurial where all the file history is stored remotely.".strip(),
     keywords='hg shallow mercurial remote filelog',
     license='GPLv2+',
     packages=['remotefilelog'],

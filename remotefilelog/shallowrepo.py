@@ -10,8 +10,10 @@ from mercurial.i18n import _
 from mercurial import localrepo, context, util, match, scmutil
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
-from contentstore import remotefilelogcontentstore, unioncontentstore, remotecontentstore
-from metadatastore import remotefilelogmetadatastore, unionmetadatastore, remotemetadatastore
+from contentstore import remotefilelogcontentstore, unioncontentstore
+from contentstore import remotecontentstore
+from metadatastore import remotefilelogmetadatastore, unionmetadatastore
+from metadatastore import remotemetadatastore
 
 requirement = "remotefilelog"
 
@@ -48,7 +50,8 @@ def wraprepo(repo):
             if self.shallowmatch(path):
                 return remotefilectx.remotefilectx(self, path, changeid, fileid)
             else:
-                return super(shallowrepository, self).filectx(path, changeid, fileid)
+                return super(shallowrepository, self).filectx(path, changeid,
+                                                              fileid)
 
         @localrepo.unfilteredmethod
         def commitctx(self, ctx, error=False):
@@ -76,8 +79,8 @@ def wraprepo(repo):
                 # become obsolete if the local commits are stripped.
                 localrevs = repo.revs('outgoing(%s)', fallbackpath)
                 if base is not None and base != nullrev:
-                    serverbase = list(repo.revs('first(reverse(::%s) - %ld)', base,
-                                     localrevs))
+                    serverbase = list(repo.revs('first(reverse(::%s) - %ld)',
+                                                base, localrevs))
                     if serverbase:
                         base = serverbase[0]
             else:
@@ -155,7 +158,8 @@ def wraprepo(repo):
     # Instantiate shared cache stores
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     if not cachepath:
-        raise util.Abort(_("could not find config option remotefilelog.cachepath"))
+        raise error.Abort(_("could not find config option "
+                            "remotefilelog.cachepath"))
     cachecontent = remotefilelogcontentstore(repo.ui, cachepath, repo.name,
                                              shared=True)
     cachemetadata = remotefilelogmetadatastore(repo.ui, cachepath, repo.name,
@@ -164,15 +168,20 @@ def wraprepo(repo):
     # Instantiate remote stores
     repo.fileservice = fileserverclient.fileserverclient(repo)
     remotecontent = remotecontentstore(repo.ui, repo.fileservice, cachecontent)
-    remotemetadata = remotemetadatastore(repo.ui, repo.fileservice, cachemetadata)
+    remotemetadata = remotemetadatastore(repo.ui, repo.fileservice,
+                                         cachemetadata)
 
     # Instantiate union stores
-    repo.contentstore = unioncontentstore(localcontent, cachecontent, remotecontent)
-    repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata, remotemetadata)
+    repo.contentstore = unioncontentstore(localcontent, cachecontent,
+                                          remotecontent)
+    repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata,
+                                            remotemetadata)
     repo.fileservice.setstore(repo.contentstore)
 
-    repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern", None)
-    repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern", None)
+    repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",
+                                             None)
+    repo.excludepattern = repo.ui.configlist("remotefilelog", "excludepattern",
+                                             None)
     if repo.includepattern or repo.excludepattern:
         repo.shallowmatch = match.match(repo.root, '', None,
             repo.includepattern, repo.excludepattern)

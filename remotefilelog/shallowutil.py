@@ -70,7 +70,7 @@ def parsesize(raw):
         index = raw.index('\0')
         size = int(raw[:index])
     except ValueError:
-        raise Exception("corrupt cache data")
+        raise RuntimeError("corrupt cache data")
     return index, size
 
 def ancestormap(raw):
@@ -111,7 +111,7 @@ def writefile(path, content, readonly=False):
     if not os.path.exists(dirname):
         try:
             os.makedirs(dirname)
-        except OSError, ex:
+        except OSError as ex:
             if ex.errno != errno.EEXIST:
                 raise
 
