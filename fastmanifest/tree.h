@@ -47,6 +47,8 @@ typedef struct _tree_t {
 #endif /* #if 0 */
 } tree_t;
 
+typedef struct _iterator_t iterator_t;
+
 /**
  * Returns true iff the path is something digestible by this tree library.  The
  * rules are:
@@ -97,5 +99,11 @@ extern convert_from_flat_result_t convert_from_flat(
     char *manifest, size_t manifest_sz);
 
 extern convert_to_flat_result_t convert_to_flat(tree_t *tree);
+
+extern iterator_t *create_iterator(const tree_t *tree, bool construct_paths);
+
+extern iterator_result_t iterator_next(iterator_t *iterator);
+
+extern void destroy_iterator(iterator_t *iterator);
 
 #endif /* #ifndef __FASTMANIFEST_TREE_H__ */

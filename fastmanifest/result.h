@@ -64,4 +64,13 @@ typedef struct _convert_to_flat_result_t {
   size_t flat_manifest_sz;
 } convert_to_flat_result_t;
 
+typedef struct _iterator_result_t {
+  bool valid;
+  const char *path;
+  size_t path_sz;
+  const uint8_t *checksum;
+  uint8_t checksum_sz;
+  uint8_t flags;
+} iterator_result_t;
+
 #endif /* #ifndef __FASTMANIFEST_RESULT_H__ */
