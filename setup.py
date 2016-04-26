@@ -76,7 +76,7 @@ setup(
                   ],
                   libraries=['crypto',
                   ],
-                  extra_compile_args=["-std=c99"],
+                  extra_compile_args=["-std=c99", "-Wall", "-Werror"],
         )
     ],
 )

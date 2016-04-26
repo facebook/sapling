@@ -40,12 +40,12 @@ static fastmanifest *ifastmanifest_copy(fastmanifest *copy, fastmanifest *self)
   return copy;
 }
 
-static void ifastmanifest_save(fastmanifest *copy, char *filename, int len)
+static void ifastmanifest_save(fastmanifest *copy, char *filename, size_t len)
 {
   /* TODO integration with @ttung */
 }
 
-static void ifastmanifest_load(fastmanifest *copy, char *filename, int len)
+static void ifastmanifest_load(fastmanifest *copy, char *filename, size_t len)
 {
   /* TODO integration with @ttung */
 }
@@ -60,7 +60,7 @@ static get_path_result_t ifastmanifest_getitem(
 static add_update_path_result_t ifastmanifest_insert(
     fastmanifest *self,
     char *path, ssize_t plen,
-    char *hash, ssize_t hlen,
+    unsigned char *hash, ssize_t hlen,
     char *flags, ssize_t flen)
 {
   add_update_path_result_t result = add_or_update_path(
@@ -93,7 +93,7 @@ static ssize_t ifastmanifest_size(fastmanifest *self)
 }
 
 static remove_path_result_t ifastmanifest_delitem(
-    fastmanifest *self, char *path, int plen)
+    fastmanifest *self, char *path, size_t plen)
 {
   remove_path_result_t remove_path_result =
       remove_path(self->tree, path, plen);
@@ -124,7 +124,8 @@ static bool fastmanifest_is_valid_manifest_value(PyObject *value) {
 
 static PyObject *fastmanifest_formatfile(
     const uint8_t *checksum, const uint8_t checksum_sz, const uint8_t flags) {
-  PyObject *py_checksum = PyString_FromStringAndSize(checksum, checksum_sz);
+  PyObject *py_checksum = PyString_FromStringAndSize(
+      (const char *) checksum, checksum_sz);
 
   if (!py_checksum) {
     return NULL;
@@ -133,7 +134,8 @@ static PyObject *fastmanifest_formatfile(
   PyObject *py_flags;
   PyObject *tup;
 
-  py_flags = PyString_FromStringAndSize(&flags, (flags == 0) ? 0 : 1);
+  py_flags = PyString_FromStringAndSize(
+      (const char *) &flags, (flags == 0) ? 0 : 1);
   if (!py_flags) {
     Py_DECREF(py_checksum);
     return NULL;
@@ -185,13 +187,13 @@ static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
   char *data;
   ssize_t len;
   if (!PyArg_ParseTuple(args, "S", &pydata)) {
-    return -1;
+    return NULL;
   }
   int err = PyString_AsStringAndSize(pydata, &data, &len);
-  if (err == -1)
-    return -1;
+  if (err == -1 || len < 0)
+    return NULL;
   /* TODO @ttung error handling */
-  ifastmanifest_save(self, data, len);
+  ifastmanifest_save(self, data, (size_t) len);
 	return NULL;
 }
 
@@ -200,13 +202,13 @@ static PyObject *fastmanifest_load(fastmanifest *self, PyObject *args) {
   char *data;
   ssize_t len;
   if (!PyArg_ParseTuple(args, "S", &pydata)) {
-    return -1;
+    return NULL;
   }
   int err = PyString_AsStringAndSize(pydata, &data, &len);
-  if (err == -1)
-    return -1;
+  if (err == -1 || len < 0)
+    return NULL;
   /* TODO @ttung error handling */
-  ifastmanifest_load(self, data, len);
+  ifastmanifest_load(self, data, (size_t) len);
 	return NULL;
 }
 
@@ -279,7 +281,7 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
     return -1;
   }
   err = PyString_AsStringAndSize(key, &path, &plen);
-  if (err == -1) {
+  if (err == -1 || plen < 0) {
     PyErr_Format(PyExc_TypeError,
            "Error decoding path");
     return -1;
@@ -287,7 +289,7 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
 
   if (!value) {
     remove_path_result_t remove_path_result =
-        ifastmanifest_delitem(self, path, plen);
+        ifastmanifest_delitem(self, path, (size_t) plen);
 
    switch(remove_path_result) {
 
@@ -329,7 +331,8 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
   }
 
   add_update_path_result_t add_update_path_result =
-      ifastmanifest_insert(self, path, plen, hash, hlen, flags, flen);
+      ifastmanifest_insert(self, path, plen,
+          (unsigned char *) hash, hlen, flags, flen);
   switch (add_update_path_result) {
     case ADD_UPDATE_PATH_OOM:
     {
@@ -337,16 +340,16 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
       return -1;
     }
 
-    case ADD_UPDATE_PATH_WTF:
-    case ADD_UPDATE_PATH_CONFLICT:
+    case ADD_UPDATE_PATH_OK:
+      return 0;
+
+    default:
     {
       PyErr_Format(PyExc_TypeError,
            "unexpected stuff happened");
       return -1;
     }
   }
-
-  return 0;
 }
 
 static PyMappingMethods fastmanifest_mapping_methods = {
