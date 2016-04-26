@@ -18,41 +18,6 @@ AllFiles = 2
 
 requirement = "remotefilelog"
 
-def sortnodes(nodes, parentfunc):
-    """Topologically sorts the nodes, using the parentfunc to find
-    the parents of nodes."""
-    nodes = set(nodes)
-    childmap = {}
-    parentmap = {}
-    roots = []
-
-    # Build a child and parent map
-    for n in nodes:
-        parents = [p for p in parentfunc(n) if p in nodes]
-        parentmap[n] = set(parents)
-        for p in parents:
-            childmap.setdefault(p, set()).add(n)
-        if not parents:
-            roots.append(n)
-
-    # Process roots, adding children to the queue as they become roots
-    results = []
-    while roots:
-        n = roots.pop(0)
-        results.append(n)
-        if n in childmap:
-            children = childmap[n]
-            for c in children:
-                childparents = parentmap[c]
-                childparents.remove(n)
-                if len(childparents) == 0:
-                    # insert at the beginning, that way child nodes
-                    # are likely to be output immediately after their
-                    # parents.  This gives better compression results.
-                    roots.insert(0, c)
-
-    return results
-
 def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
     if isinstance(rlog, revlog.revlog):
         for c in super(cls, self).group(nodelist, rlog, lookup,
@@ -64,7 +29,7 @@ def shallowgroup(cls, self, nodelist, rlog, lookup, units=None, reorder=None):
         yield self.close()
         return
 
-    nodelist = sortnodes(nodelist, rlog.parents)
+    nodelist = shallowutil.sortnodes(nodelist, rlog.parents)
 
     # add the parent of the first rev
     p = rlog.parents(nodelist[0])[0]
