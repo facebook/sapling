@@ -37,6 +37,7 @@ add_library(fastmanifest
         tree_arena.h
         tree_convert.c
         tree_copy.c
+        tree_diff.c
         tree_iterator.c
         tree_iterator.h
         tree_path.c
@@ -64,6 +65,9 @@ target_link_libraries(tree_convert_test bsearch fastmanifest)
 
 add_executable(tree_copy_test tree_copy_test.c)
 target_link_libraries(tree_copy_test bsearch fastmanifest)
+
+add_executable(tree_diff_test tree_diff_test.c)
+target_link_libraries(tree_diff_test bsearch fastmanifest)
 
 add_executable(tree_iterator_test tree_iterator_test.c)
 target_link_libraries(tree_iterator_test bsearch fastmanifest)
@@ -110,6 +114,11 @@ IF(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo OR CMAKE_BUILD_TYPE MATCHES Release)
             TARGET tree_copy_test
             POST_BUILD
             COMMAND valgrind -q --error-exitcode=127 $<TARGET_FILE:tree_copy_test>)
+
+    add_custom_command(
+            TARGET tree_diff_test
+            POST_BUILD
+            COMMAND valgrind -q --error-exitcode=127 $<TARGET_FILE:tree_diff_test>)
 
     add_custom_command(
             TARGET tree_iterator_test

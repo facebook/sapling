@@ -64,6 +64,12 @@ typedef struct _convert_to_flat_result_t {
   size_t flat_manifest_sz;
 } convert_to_flat_result_t;
 
+typedef enum {
+  DIFF_OK,
+  DIFF_OOM,
+  DIFF_WTF,
+} diff_result_t;
+
 typedef struct _iterator_result_t {
   bool valid;
   const char *path;

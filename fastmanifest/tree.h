@@ -100,6 +100,42 @@ extern convert_from_flat_result_t convert_from_flat(
 
 extern convert_to_flat_result_t convert_to_flat(tree_t *tree);
 
+/**
+ * Calculate the difference between two trees, and call a given function with
+ * information about the nodes.
+ *
+ * If `include_all` is true, then the callback is called with all the nodes,
+ * regardless of whether a difference exists or not.
+ *
+ * If `include_all` is false, then the callback is only called on the nodes
+ * where there is a difference.
+ *
+ * To maintain compatibility with flat manifests, the nodes are traversed in
+ * lexicographical order.  If the caller wishes to maintain a reference to
+ * the path beyond the scope of the immediate callback, it must save a copy
+ * of the path.  It is *not* guaranteed to be valid once the callback
+ * function terminates.
+ */
+extern diff_result_t diff_trees(
+    tree_t *const left,
+    tree_t *const right,
+    bool include_all,
+    void (*callback)(
+        const char *path,
+        const size_t path_sz,
+        const bool left_present,
+        const uint8_t *left_checksum,
+        const uint8_t left_checksum_sz,
+        const uint8_t left_flags,
+        const bool right_present,
+        const uint8_t *right_checksum,
+        const uint8_t right_checksum_sz,
+        const uint8_t right_flags,
+        void *context
+    ),
+    void *context
+);
+
 extern iterator_t *create_iterator(const tree_t *tree, bool construct_paths);
 
 extern iterator_result_t iterator_next(iterator_t *iterator);
