@@ -650,8 +650,9 @@ def expushdiscoverybookmarks(pushop):
             anonheads = []
             knownlist = pushop.remote.known(revs)
             for node, known in zip(revs, knownlist):
-                obs = repo[node].obsolete()
-                closes = repo[node].closesbranch()
+                ctx = repo[node]
+                obs = ctx.obsolete()
+                closes = ctx.closesbranch()
                 if known or obs or closes:
                     continue
                 anonheads.append(short(node))
