@@ -1420,7 +1420,12 @@ class atomictempfile(object):
             self.discard()
 
 def makedirs(name, mode=None, notindexed=False):
-    """recursive directory creation with parent mode inheritance"""
+    """recursive directory creation with parent mode inheritance
+
+    Newly created directories are marked as "not to be indexed by
+    the content indexing service", if ``notindexed`` is specified
+    for "write" mode access.
+    """
     try:
         makedir(name, notindexed)
     except OSError as err:
@@ -1432,29 +1437,13 @@ def makedirs(name, mode=None, notindexed=False):
         if parent == name:
             raise
         makedirs(parent, mode, notindexed)
-        makedir(name, notindexed)
-    if mode is not None:
-        os.chmod(name, mode)
-
-def ensuredirs(name, mode=None, notindexed=False):
-    """race-safe recursive directory creation
-
-    Newly created directories are marked as "not to be indexed by
-    the content indexing service", if ``notindexed`` is specified
-    for "write" mode access.
-    """
-    if os.path.isdir(name):
-        return
-    parent = os.path.dirname(os.path.abspath(name))
-    if parent != name:
-        ensuredirs(parent, mode, notindexed)
-    try:
-        makedir(name, notindexed)
-    except OSError as err:
-        if err.errno == errno.EEXIST and os.path.isdir(name):
-            # someone else seems to have won a directory creation race
-            return
-        raise
+        try:
+            makedir(name, notindexed)
+        except OSError as err:
+            # Catch EEXIST to handle races
+            if err.errno == errno.EEXIST:
+                return
+            raise
     if mode is not None:
         os.chmod(name, mode)
 
