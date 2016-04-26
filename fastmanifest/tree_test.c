@@ -231,7 +231,7 @@ void tree_add_get_implicit_node() {
 
   uint8_t checksum[SHA1_BYTES];
 
-  for (int ix = 0; ix < SHA1_BYTES; ix ++) {
+  for (int ix = 0; ix < SHA1_BYTES; ix++) {
     checksum[ix] = (uint8_t) ix;
   }
 
