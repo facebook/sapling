@@ -653,7 +653,8 @@ def expushdiscoverybookmarks(pushop):
                 ctx = repo[node]
                 obs = ctx.obsolete()
                 closes = ctx.closesbranch()
-                if known or obs or closes:
+                # if there is a topic, let's just skip it for now
+                if known or obs or closes or 'topic' in ctx.extra():
                     continue
                 anonheads.append(short(node))
 
