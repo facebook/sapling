@@ -19,7 +19,7 @@ without changegroup2 support
   $ hg testcg2 || exit 80
 
   $ cat > disablecg2.py << EOF
-  > from mercurial import changegroup, util
+  > from mercurial import changegroup, util, error
   > deleted = False
   > def reposetup(ui, repo):
   >     global deleted
@@ -28,10 +28,10 @@ without changegroup2 support
   >     packermap = changegroup._packermap
   >     # protect against future changes
   >     if len(packermap) != 3:
-  >         raise util.Abort('packermap has %d versions, expected 3!' % len(packermap))
+  >         raise error.Abort('packermap has %d versions, expected 3!' % len(packermap))
   >     for k in ['01', '02', '03']:
   >         if not packermap.get(k):
-  >             raise util.Abort("packermap doesn't have key '%s'!" % k)
+  >             raise error.Abort("packermap doesn't have key '%s'!" % k)
   > 
   >     del packermap['02']
   >     deleted = True

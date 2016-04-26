@@ -35,20 +35,26 @@
 #      ./run-tests.py -j2 -c --local test-s*  # unsupported (and broken)
 #  9) parallel, custom tmp dir:
 #      ./run-tests.py -j2 --tmpdir /tmp/myhgtests
+#  10) parallel, pure, tests that call run-tests:
+#      ./run-tests.py --pure `grep -l run-tests.py *.t`
 #
 # (You could use any subset of the tests: test-s* happens to match
 # enough that it's worth doing parallel runs, few enough that it
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
+from __future__ import print_function
+
 from distutils import version
 import difflib
 import errno
+import json
 import optparse
 import os
 import shutil
 import subprocess
 import signal
+import socket
 import sys
 import tempfile
 import time
@@ -56,25 +62,55 @@ import random
 import re
 import threading
 import killdaemons as killmod
-import Queue as queue
+try:
+    import Queue as queue
+except ImportError:
+    import queue
 from xml.dom import minidom
 import unittest
 
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        json = None
-
+osenvironb = getattr(os, 'environb', os.environ)
 processlock = threading.Lock()
 
-# subprocess._cleanup can race with any Popen.wait or Popen.poll on py24
-# http://bugs.python.org/issue1731717 for details. We shouldn't be producing
-# zombies but it's pretty harmless even if we do.
-if sys.version_info < (2, 5):
-    subprocess._cleanup = lambda: None
+if sys.version_info > (3, 5, 0):
+    PYTHON3 = True
+    xrange = range # we use xrange in one place, and we'd rather not use range
+    def _bytespath(p):
+        return p.encode('utf-8')
+
+    def _strpath(p):
+        return p.decode('utf-8')
+
+elif sys.version_info >= (3, 0, 0):
+    print('%s is only supported on Python 3.5+ and 2.6-2.7, not %s' %
+          (sys.argv[0], '.'.join(str(v) for v in sys.version_info[:3])))
+    sys.exit(70) # EX_SOFTWARE from `man 3 sysexit`
+else:
+    PYTHON3 = False
+
+    # In python 2.x, path operations are generally done using
+    # bytestrings by default, so we don't have to do any extra
+    # fiddling there. We define the wrapper functions anyway just to
+    # help keep code consistent between platforms.
+    def _bytespath(p):
+        return p
+
+    _strpath = _bytespath
+
+# For Windows support
+wifexited = getattr(os, "WIFEXITED", lambda x: False)
+
+def checkportisavailable(port):
+    """return true if a port seems free to bind on localhost"""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(('localhost', port))
+        s.close()
+        return True
+    except socket.error as exc:
+        if not exc.errno == errno.EADDRINUSE:
+            raise
+        return False
 
 closefds = os.name == 'posix'
 def Popen4(cmd, wd, timeout, env=None):
@@ -102,17 +138,21 @@ def Popen4(cmd, wd, timeout, env=None):
 
     return p
 
-PYTHON = sys.executable.replace('\\', '/')
-IMPL_PATH = 'PYTHONPATH'
+PYTHON = _bytespath(sys.executable.replace('\\', '/'))
+IMPL_PATH = b'PYTHONPATH'
 if 'java' in sys.platform:
-    IMPL_PATH = 'JYTHONPATH'
+    IMPL_PATH = b'JYTHONPATH'
 
 defaults = {
     'jobs': ('HGTEST_JOBS', 1),
     'timeout': ('HGTEST_TIMEOUT', 180),
+    'slowtimeout': ('HGTEST_SLOWTIMEOUT', 500),
     'port': ('HGTEST_PORT', 20059),
     'shell': ('HGTEST_SHELL', 'sh'),
 }
+
+def canonpath(path):
+    return os.path.realpath(os.path.expanduser(path))
 
 def parselistfiles(files, listtype, warn=True):
     entries = dict()
@@ -120,15 +160,15 @@ def parselistfiles(files, listtype, warn=True):
         try:
             path = os.path.expanduser(os.path.expandvars(filename))
             f = open(path, "rb")
-        except IOError, err:
+        except IOError as err:
             if err.errno != errno.ENOENT:
                 raise
             if warn:
-                print "warning: no such %s file: %s" % (listtype, filename)
+                print("warning: no such %s file: %s" % (listtype, filename))
             continue
 
         for line in f.readlines():
-            line = line.split('#', 1)[0].strip()
+            line = line.split(b'#', 1)[0].strip()
             if line:
                 entries[line] = filename
 
@@ -170,6 +210,8 @@ def getparser():
         help="shortcut for --with-hg=<testdir>/../hg")
     parser.add_option("--loop", action="store_true",
         help="loop tests repeatedly")
+    parser.add_option("--runs-per-test", type="int", dest="runs_per_test",
+        help="run each test N times (default=1)", default=1)
     parser.add_option("-n", "--nodiff", action="store_true",
         help="skip showing test changes")
     parser.add_option("-p", "--port", type="int",
@@ -190,6 +232,9 @@ def getparser():
     parser.add_option("-t", "--timeout", type="int",
         help="kill errant tests after TIMEOUT seconds"
              " (default: $%s or %d)" % defaults['timeout'])
+    parser.add_option("--slowtimeout", type="int",
+        help="kill errant slow tests after SLOWTIMEOUT seconds"
+             " (default: $%s or %d)" % defaults['slowtimeout'])
     parser.add_option("--time", action="store_true",
         help="time how long each test takes")
     parser.add_option("--json", action="store_true",
@@ -207,12 +252,31 @@ def getparser():
         metavar="HG",
         help="test using specified hg script rather than a "
              "temporary installation")
+    parser.add_option("--chg", action="store_true",
+                      help="install and use chg wrapper in place of hg")
+    parser.add_option("--with-chg", metavar="CHG",
+                      help="use specified chg wrapper in place of hg")
     parser.add_option("-3", "--py3k-warnings", action="store_true",
         help="enable Py3k warnings on Python 2.6+")
+    # This option should be deleted once test-check-py3-compat.t and other
+    # Python 3 tests run with Python 3.
+    parser.add_option("--with-python3", metavar="PYTHON3",
+                      help="Python 3 interpreter (if running under Python 2)"
+                           " (TEMPORARY)")
     parser.add_option('--extra-config-opt', action="append",
                       help='set the given config opt in the test hgrc')
     parser.add_option('--random', action="store_true",
                       help='run tests in random order')
+    parser.add_option('--profile-runner', action='store_true',
+                      help='run statprof on run-tests')
+    parser.add_option('--allow-slow-tests', action='store_true',
+                      help='allow extremely slow tests')
+    parser.add_option('--showchannels', action='store_true',
+                      help='show scheduling channels')
+    parser.add_option('--known-good-rev', type="string",
+                      metavar="known_good_rev",
+                      help=("Automatically bisect any failures using this "
+                            "revision as a known-good revision."))
 
     for option, (envvar, default) in defaults.items():
         defaults[option] = type(default)(os.environ.get(envvar, default))
@@ -229,19 +293,32 @@ def parseargs(args, parser):
         options.pure = True
 
     if options.with_hg:
-        options.with_hg = os.path.expanduser(options.with_hg)
+        options.with_hg = canonpath(_bytespath(options.with_hg))
         if not (os.path.isfile(options.with_hg) and
                 os.access(options.with_hg, os.X_OK)):
             parser.error('--with-hg must specify an executable hg script')
-        if not os.path.basename(options.with_hg) == 'hg':
+        if not os.path.basename(options.with_hg) == b'hg':
             sys.stderr.write('warning: --with-hg should specify an hg script\n')
     if options.local:
-        testdir = os.path.dirname(os.path.realpath(sys.argv[0]))
-        hgbin = os.path.join(os.path.dirname(testdir), 'hg')
+        testdir = os.path.dirname(_bytespath(canonpath(sys.argv[0])))
+        hgbin = os.path.join(os.path.dirname(testdir), b'hg')
         if os.name != 'nt' and not os.access(hgbin, os.X_OK):
             parser.error('--local specified, but %r not found or not executable'
                          % hgbin)
         options.with_hg = hgbin
+
+    if (options.chg or options.with_chg) and os.name == 'nt':
+        parser.error('chg does not work on %s' % os.name)
+    if options.with_chg:
+        options.chg = False  # no installation to temporary location
+        options.with_chg = canonpath(_bytespath(options.with_chg))
+        if not (os.path.isfile(options.with_chg) and
+                os.access(options.with_chg, os.X_OK)):
+            parser.error('--with-chg must specify a chg executable')
+    if options.chg and options.with_hg:
+        # chg shares installation location with hg
+        parser.error('--chg does not work when --with-hg is specified '
+                     '(use --with-chg instead)')
 
     options.anycoverage = options.cover or options.annotate or options.htmlcov
     if options.anycoverage:
@@ -258,12 +335,16 @@ def parseargs(args, parser):
         parser.error("sorry, coverage options do not work when --local "
                      "is specified")
 
+    if options.anycoverage and options.with_hg:
+        parser.error("sorry, coverage options do not work when --with-hg "
+                     "is specified")
+
     global verbose
     if options.verbose:
         verbose = ''
 
     if options.tmpdir:
-        options.tmpdir = os.path.expanduser(options.tmpdir)
+        options.tmpdir = canonpath(options.tmpdir)
 
     if options.jobs < 1:
         parser.error('--jobs must be positive')
@@ -273,16 +354,46 @@ def parseargs(args, parser):
         if options.timeout != defaults['timeout']:
             sys.stderr.write(
                 'warning: --timeout option ignored with --debug\n')
+        if options.slowtimeout != defaults['slowtimeout']:
+            sys.stderr.write(
+                'warning: --slowtimeout option ignored with --debug\n')
         options.timeout = 0
+        options.slowtimeout = 0
     if options.py3k_warnings:
-        if sys.version_info[:2] < (2, 6) or sys.version_info[:2] >= (3, 0):
-            parser.error('--py3k-warnings can only be used on Python 2.6+')
+        if PYTHON3:
+            parser.error(
+                '--py3k-warnings can only be used on Python 2.6 and 2.7')
+    if options.with_python3:
+        if PYTHON3:
+            parser.error('--with-python3 cannot be used when executing with '
+                         'Python 3')
+
+        options.with_python3 = canonpath(options.with_python3)
+        # Verify Python3 executable is acceptable.
+        proc = subprocess.Popen([options.with_python3, b'--version'],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        out, _err = proc.communicate()
+        ret = proc.wait()
+        if ret != 0:
+            parser.error('could not determine version of python 3')
+        if not out.startswith('Python '):
+            parser.error('unexpected output from python3 --version: %s' %
+                         out)
+        vers = version.LooseVersion(out[len('Python '):])
+        if vers < version.LooseVersion('3.5.0'):
+            parser.error('--with-python3 version must be 3.5.0 or greater; '
+                         'got %s' % out)
+
     if options.blacklist:
         options.blacklist = parselistfiles(options.blacklist, 'blacklist')
     if options.whitelist:
         options.whitelisted = parselistfiles(options.whitelist, 'whitelist')
     else:
         options.whitelisted = {}
+
+    if options.showchannels:
+        options.nodiff = True
 
     return (options, args)
 
@@ -293,17 +404,22 @@ def rename(src, dst):
     shutil.copy(src, dst)
     os.remove(src)
 
+_unified_diff = difflib.unified_diff
+if PYTHON3:
+    import functools
+    _unified_diff = functools.partial(difflib.diff_bytes, difflib.unified_diff)
+
 def getdiff(expected, output, ref, err):
     servefail = False
     lines = []
-    for line in difflib.unified_diff(expected, output, ref, err):
-        if line.startswith('+++') or line.startswith('---'):
-            line = line.replace('\\', '/')
-            if line.endswith(' \n'):
-                line = line[:-2] + '\n'
+    for line in _unified_diff(expected, output, ref, err):
+        if line.startswith(b'+++') or line.startswith(b'---'):
+            line = line.replace(b'\\', b'/')
+            if line.endswith(b' \n'):
+                line = line[:-2] + b'\n'
         lines.append(line)
         if not servefail and line.startswith(
-                             '+  abort: child process failed to start'):
+                             b'+  abort: child process failed to start'):
             servefail = True
 
     return servefail, lines
@@ -318,7 +434,7 @@ def vlog(*msg):
 
 # Bytes that break XML even in a CDATA block: control characters 0-31
 # sans \t, \n and \r
-CDATA_EVIL = re.compile(r"[\000-\010\013\014\016-\037]")
+CDATA_EVIL = re.compile(br"[\000-\010\013\014\016-\037]")
 
 def cdatasafe(data):
     """Make a string safe to include in a CDATA block.
@@ -328,21 +444,20 @@ def cdatasafe(data):
     replaces illegal bytes with ? and adds a space between the ]] so
     that it won't break the CDATA block.
     """
-    return CDATA_EVIL.sub('?', data).replace(']]>', '] ]>')
+    return CDATA_EVIL.sub(b'?', data).replace(b']]>', b'] ]>')
 
 def log(*msg):
     """Log something to stdout.
 
     Arguments are strings to print.
     """
-    iolock.acquire()
-    if verbose:
-        print verbose,
-    for m in msg:
-        print m,
-    print
-    sys.stdout.flush()
-    iolock.release()
+    with iolock:
+        if verbose:
+            print(verbose, end=' ')
+        for m in msg:
+            print(m, end=' ')
+        print()
+        sys.stdout.flush()
 
 def terminate(proc):
     """Terminate subprocess (with fallback for Python versions < 2.6)"""
@@ -371,7 +486,8 @@ class Test(unittest.TestCase):
                  debug=False,
                  timeout=defaults['timeout'],
                  startport=defaults['port'], extraconfigopts=None,
-                 py3kwarnings=False, shell=None):
+                 py3kwarnings=False, shell=None, hgcommand=None,
+                 slowtimeout=defaults['slowtimeout'], usechg=False):
         """Create a test from parameters.
 
         path is the full path to the file defining the test.
@@ -385,7 +501,9 @@ class Test(unittest.TestCase):
         output.
 
         timeout controls the maximum run time of the test. It is ignored when
-        debug is True.
+        debug is True. See slowtimeout for tests with #require slow.
+
+        slowtimeout overrides timeout if the test has #require slow.
 
         startport controls the starting port number to use for this test. Each
         test will reserve 3 port numbers for execution. It is the caller's
@@ -400,20 +518,23 @@ class Test(unittest.TestCase):
 
         shell is the shell to execute tests in.
         """
-
         self.path = path
-        self.name = os.path.basename(path)
+        self.bname = os.path.basename(path)
+        self.name = _strpath(self.bname)
         self._testdir = os.path.dirname(path)
-        self.errpath = os.path.join(self._testdir, '%s.err' % self.name)
+        self.errpath = os.path.join(self._testdir, b'%s.err' % self.bname)
 
         self._threadtmp = tmpdir
         self._keeptmpdir = keeptmpdir
         self._debug = debug
         self._timeout = timeout
+        self._slowtimeout = slowtimeout
         self._startport = startport
         self._extraconfigopts = extraconfigopts or []
         self._py3kwarnings = py3kwarnings
-        self._shell = shell
+        self._shell = _bytespath(shell)
+        self._hgcommand = hgcommand or b'hg'
+        self._usechg = usechg
 
         self._aborted = False
         self._daemonpids = []
@@ -422,6 +543,7 @@ class Test(unittest.TestCase):
         self._out = None
         self._skipped = None
         self._testtmp = None
+        self._chgsockdir = None
 
         # If we're not in --debug mode and reference output file exists,
         # check test output against it.
@@ -433,6 +555,11 @@ class Test(unittest.TestCase):
             f.close()
         else:
             self._refout = []
+
+    # needed to get base class __repr__ running
+    @property
+    def _testMethodName(self):
+        return self.name
 
     def __str__(self):
         return self.name
@@ -449,17 +576,29 @@ class Test(unittest.TestCase):
 
         try:
             os.mkdir(self._threadtmp)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
 
-        self._testtmp = os.path.join(self._threadtmp,
-                                     os.path.basename(self.path))
+        name = os.path.basename(self.path)
+        self._testtmp = os.path.join(self._threadtmp, name)
         os.mkdir(self._testtmp)
 
         # Remove any previous output files.
         if os.path.exists(self.errpath):
-            os.remove(self.errpath)
+            try:
+                os.remove(self.errpath)
+            except OSError as e:
+                # We might have raced another test to clean up a .err
+                # file, so ignore ENOENT when removing a previous .err
+                # file.
+                if e.errno != errno.ENOENT:
+                    raise
+
+        if self._usechg:
+            self._chgsockdir = os.path.join(self._threadtmp,
+                                            b'%s.chgsock' % name)
+            os.mkdir(self._chgsockdir)
 
     def run(self, result):
         """Run this test and report results against a TestResult instance."""
@@ -484,20 +623,22 @@ class Test(unittest.TestCase):
             except KeyboardInterrupt:
                 self._aborted = True
                 raise
-            except SkipTest, e:
+            except SkipTest as e:
                 result.addSkip(self, str(e))
                 # The base class will have already counted this as a
                 # test we "ran", but we want to exclude skipped tests
                 # from those we count towards those run.
                 result.testsRun -= 1
-            except IgnoreTest, e:
+            except IgnoreTest as e:
                 result.addIgnore(self, str(e))
                 # As with skips, ignores also should be excluded from
                 # the number of tests executed.
                 result.testsRun -= 1
-            except WarnTest, e:
+            except WarnTest as e:
                 result.addWarn(self, str(e))
-            except self.failureException, e:
+            except ReportedTest as e:
+                pass
+            except self.failureException as e:
                 # This differs from unittest in that we don't capture
                 # the stack trace. This is for historical reasons and
                 # this decision could be revisited in the future,
@@ -528,14 +669,13 @@ class Test(unittest.TestCase):
 
         This will return a tuple describing the result of the test.
         """
-        replacements = self._getreplacements()
         env = self._getenv()
         self._daemonpids.append(env['DAEMON_PIDS'])
         self._createhgrc(env['HGRCPATH'])
 
         vlog('# Test', self.name)
 
-        ret, out = self._run(replacements, env)
+        ret, out = self._run(env)
         self._finished = True
         self._ret = ret
         self._out = out
@@ -595,9 +735,18 @@ class Test(unittest.TestCase):
             killdaemons(entry)
         self._daemonpids = []
 
-        if not self._keeptmpdir:
+        if self._keeptmpdir:
+            log('\nKeeping testtmp dir: %s\nKeeping threadtmp dir: %s' %
+                (self._testtmp.decode('utf-8'),
+                 self._threadtmp.decode('utf-8')))
+        else:
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
+
+        if self._usechg:
+            # chgservers will stop automatically after they find the socket
+            # files are deleted
+            shutil.rmtree(self._chgsockdir, True)
 
         if (self._ret != 0 or self._out != self._refout) and not self._skipped \
             and not self._debug and self._out:
@@ -606,15 +755,19 @@ class Test(unittest.TestCase):
                 f.write(line)
             f.close()
 
-        vlog("# Ret was:", self._ret)
+        vlog("# Ret was:", self._ret, '(%s)' % self.name)
 
-    def _run(self, replacements, env):
+    def _run(self, env):
         # This should be implemented in child classes to run tests.
         raise SkipTest('unknown test type')
 
     def abort(self):
         """Terminate execution of this test."""
         self._aborted = True
+
+    def _portmap(self, i):
+        offset = b'' if i == 0 else b'%d' % i
+        return (br':%d\b' % (self._startport + i), b':$HGPORT%s' % offset)
 
     def _getreplacements(self):
         """Obtain a mapping of text replacements to apply to test output.
@@ -624,33 +777,41 @@ class Test(unittest.TestCase):
         occur.
         """
         r = [
-            (r':%s\b' % self._startport, ':$HGPORT'),
-            (r':%s\b' % (self._startport + 1), ':$HGPORT1'),
-            (r':%s\b' % (self._startport + 2), ':$HGPORT2'),
-            (r'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
-             r'\1 (glob)'),
+            # This list should be parallel to defineport in _getenv
+            self._portmap(0),
+            self._portmap(1),
+            self._portmap(2),
+            (br'(?m)^(saved backup bundle to .*\.hg)( \(glob\))?$',
+             br'\1 (glob)'),
             ]
-
-        if os.name == 'nt':
-            r.append(
-                (''.join(c.isalpha() and '[%s%s]' % (c.lower(), c.upper()) or
-                    c in '/\\' and r'[/\\]' or c.isdigit() and c or '\\' + c
-                    for c in self._testtmp), '$TESTTMP'))
-        else:
-            r.append((re.escape(self._testtmp), '$TESTTMP'))
+        r.append((self._escapepath(self._testtmp), b'$TESTTMP'))
 
         return r
 
+    def _escapepath(self, p):
+        if os.name == 'nt':
+            return (
+                (b''.join(c.isalpha() and b'[%s%s]' % (c.lower(), c.upper()) or
+                    c in b'/\\' and br'[/\\]' or c.isdigit() and c or b'\\' + c
+                    for c in p))
+            )
+        else:
+            return re.escape(p)
+
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
+        def defineport(i):
+            offset = '' if i == 0 else '%s' % i
+            env["HGPORT%s" % offset] = '%s' % (self._startport + i)
         env = os.environ.copy()
         env['TESTTMP'] = self._testtmp
         env['HOME'] = self._testtmp
-        env["HGPORT"] = str(self._startport)
-        env["HGPORT1"] = str(self._startport + 1)
-        env["HGPORT2"] = str(self._startport + 2)
-        env["HGRCPATH"] = os.path.join(self._threadtmp, '.hgrc')
-        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, 'daemon.pids')
+        # This number should match portneeded in _getport
+        for port in xrange(3):
+            # This list should be parallel to _portmap in _getreplacements
+            defineport(port)
+        env["HGRCPATH"] = os.path.join(self._threadtmp, b'.hgrc')
+        env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b'daemon.pids')
         env["HGEDITOR"] = ('"' + sys.executable + '"'
                            + ' -c "import sys; sys.exit(0)"')
         env["HGMERGE"] = "internal:merge"
@@ -676,30 +837,35 @@ class Test(unittest.TestCase):
             if k.startswith('HG_'):
                 del env[k]
 
+        if self._usechg:
+            env['CHGSOCKNAME'] = os.path.join(self._chgsockdir, b'server')
+
         return env
 
     def _createhgrc(self, path):
         """Create an hgrc file for this test."""
         hgrc = open(path, 'wb')
-        hgrc.write('[ui]\n')
-        hgrc.write('slash = True\n')
-        hgrc.write('interactive = False\n')
-        hgrc.write('mergemarkers = detailed\n')
-        hgrc.write('promptecho = True\n')
-        hgrc.write('[defaults]\n')
-        hgrc.write('backout = -d "0 0"\n')
-        hgrc.write('commit = -d "0 0"\n')
-        hgrc.write('shelve = --date "0 0"\n')
-        hgrc.write('tag = -d "0 0"\n')
-        hgrc.write('[largefiles]\n')
-        hgrc.write('usercache = %s\n' %
-                   (os.path.join(self._testtmp, '.cache/largefiles')))
+        hgrc.write(b'[ui]\n')
+        hgrc.write(b'slash = True\n')
+        hgrc.write(b'interactive = False\n')
+        hgrc.write(b'mergemarkers = detailed\n')
+        hgrc.write(b'promptecho = True\n')
+        hgrc.write(b'[defaults]\n')
+        hgrc.write(b'backout = -d "0 0"\n')
+        hgrc.write(b'commit = -d "0 0"\n')
+        hgrc.write(b'shelve = --date "0 0"\n')
+        hgrc.write(b'tag = -d "0 0"\n')
+        hgrc.write(b'[devel]\n')
+        hgrc.write(b'all-warnings = true\n')
+        hgrc.write(b'[largefiles]\n')
+        hgrc.write(b'usercache = %s\n' %
+                   (os.path.join(self._testtmp, b'.cache/largefiles')))
 
         for opt in self._extraconfigopts:
             section, key = opt.split('.', 1)
             assert '=' in key, ('extra config opt %s must '
                                 'have an = for assignment' % opt)
-            hgrc.write('[%s]\n%s\n' % (section, key))
+            hgrc.write(b'[%s]\n%s\n' % (section, key))
         hgrc.close()
 
     def fail(self, msg):
@@ -707,21 +873,69 @@ class Test(unittest.TestCase):
         # Failed is denoted by AssertionError (by default at least).
         raise AssertionError(msg)
 
+    def _runcommand(self, cmd, env, normalizenewlines=False):
+        """Run command in a sub-process, capturing the output (stdout and
+        stderr).
+
+        Return a tuple (exitcode, output). output is None in debug mode.
+        """
+        if self._debug:
+            proc = subprocess.Popen(cmd, shell=True, cwd=self._testtmp,
+                                    env=env)
+            ret = proc.wait()
+            return (ret, None)
+
+        proc = Popen4(cmd, self._testtmp, self._timeout, env)
+        def cleanup():
+            terminate(proc)
+            ret = proc.wait()
+            if ret == 0:
+                ret = signal.SIGTERM << 8
+            killdaemons(env['DAEMON_PIDS'])
+            return ret
+
+        output = ''
+        proc.tochild.close()
+
+        try:
+            output = proc.fromchild.read()
+        except KeyboardInterrupt:
+            vlog('# Handling keyboard interrupt')
+            cleanup()
+            raise
+
+        ret = proc.wait()
+        if wifexited(ret):
+            ret = os.WEXITSTATUS(ret)
+
+        if proc.timeout:
+            ret = 'timeout'
+
+        if ret:
+            killdaemons(env['DAEMON_PIDS'])
+
+        for s, r in self._getreplacements():
+            output = re.sub(s, r, output)
+
+        if normalizenewlines:
+            output = output.replace('\r\n', '\n')
+
+        return ret, output.splitlines(True)
+
 class PythonTest(Test):
     """A Python-based test."""
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, '%s.out' % self.name)
+        return os.path.join(self._testdir, b'%s.out' % self.bname)
 
-    def _run(self, replacements, env):
-        py3kswitch = self._py3kwarnings and ' -3' or ''
-        cmd = '%s%s "%s"' % (PYTHON, py3kswitch, self.path)
+    def _run(self, env):
+        py3kswitch = self._py3kwarnings and b' -3' or b''
+        cmd = b'%s%s "%s"' % (PYTHON, py3kswitch, self.path)
         vlog("# Running", cmd)
-        if os.name == 'nt':
-            replacements.append((r'\r\n', '\n'))
-        result = run(cmd, self._testtmp, replacements, env,
-                   debug=self._debug, timeout=self._timeout)
+        normalizenewlines = os.name == 'nt'
+        result = self._runcommand(cmd, env,
+                                  normalizenewlines=normalizenewlines)
         if self._aborted:
             raise KeyboardInterrupt()
 
@@ -731,27 +945,31 @@ class PythonTest(Test):
 # Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
 # warn if that is the case for anything matching these lines.
 checkcodeglobpats = [
-    re.compile(r'^pushing to \$TESTTMP/.*[^)]$'),
-    re.compile(r'^moving \S+/.*[^)]$'),
-    re.compile(r'^pulling from \$TESTTMP/.*[^)]$')
+    re.compile(br'^pushing to \$TESTTMP/.*[^)]$'),
+    re.compile(br'^moving \S+/.*[^)]$'),
+    re.compile(br'^pulling from \$TESTTMP/.*[^)]$')
 ]
+
+bchr = chr
+if PYTHON3:
+    bchr = lambda x: bytes([x])
 
 class TTest(Test):
     """A "t test" is a test backed by a .t file."""
 
-    SKIPPED_PREFIX = 'skipped: '
-    FAILED_PREFIX = 'hghave check failed: '
-    NEEDESCAPE = re.compile(r'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
+    SKIPPED_PREFIX = b'skipped: '
+    FAILED_PREFIX = b'hghave check failed: '
+    NEEDESCAPE = re.compile(br'[\x00-\x08\x0b-\x1f\x7f-\xff]').search
 
-    ESCAPESUB = re.compile(r'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
-    ESCAPEMAP = dict((chr(i), r'\x%02x' % i) for i in range(256))
-    ESCAPEMAP.update({'\\': '\\\\', '\r': r'\r'})
+    ESCAPESUB = re.compile(br'[\x00-\x08\x0b-\x1f\\\x7f-\xff]').sub
+    ESCAPEMAP = dict((bchr(i), br'\x%02x' % i) for i in range(256))
+    ESCAPEMAP.update({b'\\': b'\\\\', b'\r': br'\r'})
 
     @property
     def refpath(self):
-        return os.path.join(self._testdir, self.name)
+        return os.path.join(self._testdir, self.bname)
 
-    def _run(self, replacements, env):
+    def _run(self, env):
         f = open(self.path, 'rb')
         lines = f.readlines()
         f.close()
@@ -759,17 +977,16 @@ class TTest(Test):
         salt, script, after, expected = self._parsetest(lines)
 
         # Write out the generated script.
-        fname = '%s.sh' % self._testtmp
+        fname = b'%s.sh' % self._testtmp
         f = open(fname, 'wb')
         for l in script:
             f.write(l)
         f.close()
 
-        cmd = '%s "%s"' % (self._shell, fname)
+        cmd = b'%s "%s"' % (self._shell, fname)
         vlog("# Running", cmd)
 
-        exitcode, output = run(cmd, self._testtmp, replacements, env,
-                               debug=self._debug, timeout=self._timeout)
+        exitcode, output = self._runcommand(cmd, env)
 
         if self._aborted:
             raise KeyboardInterrupt()
@@ -783,30 +1000,36 @@ class TTest(Test):
 
     def _hghave(self, reqs):
         # TODO do something smarter when all other uses of hghave are gone.
-        tdir = self._testdir.replace('\\', '/')
-        proc = Popen4('%s -c "%s/hghave %s"' %
-                      (self._shell, tdir, ' '.join(reqs)),
+        runtestdir = os.path.abspath(os.path.dirname(_bytespath(__file__)))
+        tdir = runtestdir.replace(b'\\', b'/')
+        proc = Popen4(b'%s -c "%s/hghave %s"' %
+                      (self._shell, tdir, b' '.join(reqs)),
                       self._testtmp, 0, self._getenv())
         stdout, stderr = proc.communicate()
         ret = proc.wait()
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
-            print stdout
+            print(stdout.decode('utf-8'))
             sys.exit(1)
 
-        return ret == 0
+        if ret != 0:
+            return False, stdout
+
+        if 'slow' in reqs:
+            self._timeout = self._slowtimeout
+        return True, None
 
     def _parsetest(self, lines):
         # We generate a shell script which outputs unique markers to line
         # up script results with our source. These markers include input
         # line number and the last return code.
-        salt = "SALT" + str(time.time())
+        salt = b"SALT%d" % time.time()
         def addsalt(line, inpython):
             if inpython:
-                script.append('%s %d 0\n' % (salt, line))
+                script.append(b'%s %d 0\n' % (salt, line))
             else:
-                script.append('echo %s %s $?\n' % (salt, line))
+                script.append(b'echo %s %d $?\n' % (salt, line))
 
         script = []
 
@@ -829,42 +1052,45 @@ class TTest(Test):
         inpython = False
 
         if self._debug:
-            script.append('set -x\n')
+            script.append(b'set -x\n')
+        if self._hgcommand != b'hg':
+            script.append(b'alias hg="%s"\n' % self._hgcommand)
         if os.getenv('MSYSTEM'):
-            script.append('alias pwd="pwd -W"\n')
+            script.append(b'alias pwd="pwd -W"\n')
 
         for n, l in enumerate(lines):
-            if not l.endswith('\n'):
-                l += '\n'
-            if l.startswith('#require'):
+            if not l.endswith(b'\n'):
+                l += b'\n'
+            if l.startswith(b'#require'):
                 lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != '#require':
+                if len(lsplit) < 2 or lsplit[0] != b'#require':
                     after.setdefault(pos, []).append('  !!! invalid #require\n')
-                if not self._hghave(lsplit[1:]):
-                    script = ["exit 80\n"]
+                haveresult, message = self._hghave(lsplit[1:])
+                if not haveresult:
+                    script = [b'echo "%s"\nexit 80\n' % message]
                     break
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#if'):
+            elif l.startswith(b'#if'):
                 lsplit = l.split()
-                if len(lsplit) < 2 or lsplit[0] != '#if':
+                if len(lsplit) < 2 or lsplit[0] != b'#if':
                     after.setdefault(pos, []).append('  !!! invalid #if\n')
                 if skipping is not None:
                     after.setdefault(pos, []).append('  !!! nested #if\n')
-                skipping = not self._hghave(lsplit[1:])
+                skipping = not self._hghave(lsplit[1:])[0]
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#else'):
+            elif l.startswith(b'#else'):
                 if skipping is None:
                     after.setdefault(pos, []).append('  !!! missing #if\n')
                 skipping = not skipping
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('#endif'):
+            elif l.startswith(b'#endif'):
                 if skipping is None:
                     after.setdefault(pos, []).append('  !!! missing #if\n')
                 skipping = None
                 after.setdefault(pos, []).append(l)
             elif skipping:
                 after.setdefault(pos, []).append(l)
-            elif l.startswith('  >>> '): # python inlines
+            elif l.startswith(b'  >>> '): # python inlines
                 after.setdefault(pos, []).append(l)
                 prepos = pos
                 pos = n
@@ -872,39 +1098,39 @@ class TTest(Test):
                     # We've just entered a Python block. Add the header.
                     inpython = True
                     addsalt(prepos, False) # Make sure we report the exit code.
-                    script.append('%s -m heredoctest <<EOF\n' % PYTHON)
+                    script.append(b'%s -m heredoctest <<EOF\n' % PYTHON)
                 addsalt(n, True)
                 script.append(l[2:])
-            elif l.startswith('  ... '): # python inlines
+            elif l.startswith(b'  ... '): # python inlines
                 after.setdefault(prepos, []).append(l)
                 script.append(l[2:])
-            elif l.startswith('  $ '): # commands
+            elif l.startswith(b'  $ '): # commands
                 if inpython:
-                    script.append('EOF\n')
+                    script.append(b'EOF\n')
                     inpython = False
                 after.setdefault(pos, []).append(l)
                 prepos = pos
                 pos = n
                 addsalt(n, False)
                 cmd = l[4:].split()
-                if len(cmd) == 2 and cmd[0] == 'cd':
-                    l = '  $ cd %s || exit 1\n' % cmd[1]
+                if len(cmd) == 2 and cmd[0] == b'cd':
+                    l = b'  $ cd %s || exit 1\n' % cmd[1]
                 script.append(l[4:])
-            elif l.startswith('  > '): # continuations
+            elif l.startswith(b'  > '): # continuations
                 after.setdefault(prepos, []).append(l)
                 script.append(l[4:])
-            elif l.startswith('  '): # results
+            elif l.startswith(b'  '): # results
                 # Queue up a list of expected results.
                 expected.setdefault(pos, []).append(l[2:])
             else:
                 if inpython:
-                    script.append('EOF\n')
+                    script.append(b'EOF\n')
                     inpython = False
                 # Non-command/result. Queue up for merged output.
                 after.setdefault(pos, []).append(l)
 
         if inpython:
-            script.append('EOF\n')
+            script.append(b'EOF\n')
         if skipping is not None:
             after.setdefault(pos, []).append('  !!! missing #endif\n')
         addsalt(n + 1, False)
@@ -924,43 +1150,74 @@ class TTest(Test):
             if salt in l:
                 lout, lcmd = l.split(salt, 1)
 
-            if lout:
-                if not lout.endswith('\n'):
-                    lout += ' (no-eol)\n'
+            while lout:
+                if not lout.endswith(b'\n'):
+                    lout += b' (no-eol)\n'
 
                 # Find the expected output at the current position.
-                el = None
+                els = [None]
                 if expected.get(pos, None):
-                    el = expected[pos].pop(0)
+                    els = expected[pos]
 
-                r = TTest.linematch(el, lout)
-                if isinstance(r, str):
-                    if r == '+glob':
-                        lout = el[:-1] + ' (glob)\n'
-                        r = '' # Warn only this line.
-                    elif r == '-glob':
-                        lout = ''.join(el.rsplit(' (glob)', 1))
-                        r = '' # Warn only this line.
-                    else:
-                        log('\ninfo, unknown linematch result: %r\n' % r)
-                        r = False
+                i = 0
+                optional = []
+                while i < len(els):
+                    el = els[i]
+
+                    r = TTest.linematch(el, lout)
+                    if isinstance(r, str):
+                        if r == '+glob':
+                            lout = el[:-1] + ' (glob)\n'
+                            r = '' # Warn only this line.
+                        elif r == '-glob':
+                            lout = ''.join(el.rsplit(' (glob)', 1))
+                            r = '' # Warn only this line.
+                        elif r == "retry":
+                            postout.append(b'  ' + el)
+                            els.pop(i)
+                            break
+                        else:
+                            log('\ninfo, unknown linematch result: %r\n' % r)
+                            r = False
+                    if r:
+                        els.pop(i)
+                        break
+                    if el and el.endswith(b" (?)\n"):
+                        optional.append(i)
+                    i += 1
+
                 if r:
-                    postout.append('  ' + el)
+                    if r == "retry":
+                        continue
+                    # clean up any optional leftovers
+                    for i in optional:
+                        postout.append(b'  ' + els[i])
+                    for i in reversed(optional):
+                        del els[i]
+                    postout.append(b'  ' + el)
                 else:
                     if self.NEEDESCAPE(lout):
-                        lout = TTest._stringescape('%s (esc)\n' %
-                                                   lout.rstrip('\n'))
-                    postout.append('  ' + lout) # Let diff deal with it.
+                        lout = TTest._stringescape(b'%s (esc)\n' %
+                                                   lout.rstrip(b'\n'))
+                    postout.append(b'  ' + lout) # Let diff deal with it.
                     if r != '': # If line failed.
                         warnonly = 3 # for sure not
                     elif warnonly == 1: # Is "not yet" and line is warn only.
                         warnonly = 2 # Yes do warn.
+                break
+            else:
+                # clean up any optional leftovers
+                while expected.get(pos, None):
+                    el = expected[pos].pop(0)
+                    if el and not el.endswith(b" (?)\n"):
+                        break
+                    postout.append(b'  ' + el)
 
             if lcmd:
                 # Add on last return code.
                 ret = int(lcmd.split()[1])
                 if ret != 0:
-                    postout.append('  [%s]\n' % ret)
+                    postout.append(b'  [%d]\n' % ret)
                 if pos in after:
                     # Merge in non-active test bits.
                     postout += after.pop(pos)
@@ -979,8 +1236,8 @@ class TTest(Test):
         try:
             # use \Z to ensure that the regex matches to the end of the string
             if os.name == 'nt':
-                return re.match(el + r'\r?\n\Z', l)
-            return re.match(el + r'\n\Z', l)
+                return re.match(el + br'\r?\n\Z', l)
+            return re.match(el + br'\n\Z', l)
         except re.error:
             # el is an invalid regex
             return False
@@ -989,51 +1246,59 @@ class TTest(Test):
     def globmatch(el, l):
         # The only supported special characters are * and ? plus / which also
         # matches \ on windows. Escaping of these characters is supported.
-        if el + '\n' == l:
+        if el + b'\n' == l:
             if os.altsep:
                 # matching on "/" is not needed for this line
                 for pat in checkcodeglobpats:
                     if pat.match(el):
                         return True
-                return '-glob'
+                return b'-glob'
             return True
         i, n = 0, len(el)
-        res = ''
+        res = b''
         while i < n:
-            c = el[i]
+            c = el[i:i + 1]
             i += 1
-            if c == '\\' and el[i] in '*?\\/':
+            if c == b'\\' and i < n and el[i:i + 1] in b'*?\\/':
                 res += el[i - 1:i + 1]
                 i += 1
-            elif c == '*':
-                res += '.*'
-            elif c == '?':
-                res += '.'
-            elif c == '/' and os.altsep:
-                res += '[/\\\\]'
+            elif c == b'*':
+                res += b'.*'
+            elif c == b'?':
+                res += b'.'
+            elif c == b'/' and os.altsep:
+                res += b'[/\\\\]'
             else:
                 res += re.escape(c)
         return TTest.rematch(res, l)
 
     @staticmethod
     def linematch(el, l):
+        retry = False
         if el == l: # perfect match (fast)
             return True
         if el:
-            if el.endswith(" (esc)\n"):
-                el = el[:-7].decode('string-escape') + '\n'
-            if el == l or os.name == 'nt' and el[:-1] + '\r\n' == l:
+            if el.endswith(b" (?)\n"):
+                retry = "retry"
+                el = el[:-5] + b"\n"
+            if el.endswith(b" (esc)\n"):
+                if PYTHON3:
+                    el = el[:-7].decode('unicode_escape') + '\n'
+                    el = el.encode('utf-8')
+                else:
+                    el = el[:-7].decode('string-escape') + '\n'
+            if el == l or os.name == 'nt' and el[:-1] + b'\r\n' == l:
                 return True
-            if el.endswith(" (re)\n"):
-                return TTest.rematch(el[:-6], l)
-            if el.endswith(" (glob)\n"):
+            if el.endswith(b" (re)\n"):
+                return TTest.rematch(el[:-6], l) or retry
+            if el.endswith(b" (glob)\n"):
                 # ignore '(glob)' added to l by 'replacements'
-                if l.endswith(" (glob)\n"):
-                    l = l[:-8] + "\n"
+                if l.endswith(b" (glob)\n"):
+                    l = l[:-8] + b"\n"
                 return TTest.globmatch(el[:-8], l)
-            if os.altsep and l.replace('\\', '/') == el:
-                return '+glob'
-        return False
+            if os.altsep and l.replace(b'\\', b'/') == el:
+                return b'+glob'
+        return retry
 
     @staticmethod
     def parsehghaveoutput(lines):
@@ -1047,10 +1312,10 @@ class TTest(Test):
         for line in lines:
             if line.startswith(TTest.SKIPPED_PREFIX):
                 line = line.splitlines()[0]
-                missing.append(line[len(TTest.SKIPPED_PREFIX):])
+                missing.append(line[len(TTest.SKIPPED_PREFIX):].decode('utf-8'))
             elif line.startswith(TTest.FAILED_PREFIX):
                 line = line.splitlines()[0]
-                failed.append(line[len(TTest.FAILED_PREFIX):])
+                failed.append(line[len(TTest.FAILED_PREFIX):].decode('utf-8'))
 
         return missing, failed
 
@@ -1062,49 +1327,6 @@ class TTest(Test):
     def _stringescape(s):
         return TTest.ESCAPESUB(TTest._escapef, s)
 
-
-wifexited = getattr(os, "WIFEXITED", lambda x: False)
-def run(cmd, wd, replacements, env, debug=False, timeout=None):
-    """Run command in a sub-process, capturing the output (stdout and stderr).
-    Return a tuple (exitcode, output).  output is None in debug mode."""
-    if debug:
-        proc = subprocess.Popen(cmd, shell=True, cwd=wd, env=env)
-        ret = proc.wait()
-        return (ret, None)
-
-    proc = Popen4(cmd, wd, timeout, env)
-    def cleanup():
-        terminate(proc)
-        ret = proc.wait()
-        if ret == 0:
-            ret = signal.SIGTERM << 8
-        killdaemons(env['DAEMON_PIDS'])
-        return ret
-
-    output = ''
-    proc.tochild.close()
-
-    try:
-        output = proc.fromchild.read()
-    except KeyboardInterrupt:
-        vlog('# Handling keyboard interrupt')
-        cleanup()
-        raise
-
-    ret = proc.wait()
-    if wifexited(ret):
-        ret = os.WEXITSTATUS(ret)
-
-    if proc.timeout:
-        ret = 'timeout'
-
-    if ret:
-        killdaemons(env['DAEMON_PIDS'])
-
-    for s, r in replacements:
-        output = re.sub(s, r, output)
-    return ret, output.splitlines(True)
-
 iolock = threading.RLock()
 
 class SkipTest(Exception):
@@ -1115,6 +1337,9 @@ class IgnoreTest(Exception):
 
 class WarnTest(Exception):
     """Raised to indicate that a test warned."""
+
+class ReportedTest(Exception):
+    """Raised to indicate that a test already reported."""
 
 class TestResult(unittest._TextTestResult):
     """Holds results when executing via unittest."""
@@ -1140,8 +1365,7 @@ class TestResult(unittest._TextTestResult):
         self.warned = []
 
         self.times = []
-        self._started = {}
-        self._stopped = {}
+        self._firststarttime = None
         # Data stored for the benefit of generating xunit reports.
         self.successes = []
         self.faildata = {}
@@ -1152,18 +1376,19 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
         else:
-            iolock.acquire()
-            if not self._options.nodiff:
-                self.stream.write('\nERROR: %s output changed\n' % test)
+            with iolock:
+                if reason == "timed out":
+                    self.stream.write('t')
+                else:
+                    if not self._options.nodiff:
+                        self.stream.write('\nERROR: %s output changed\n' % test)
+                    self.stream.write('!')
 
-            self.stream.write('!')
-            self.stream.flush()
-            iolock.release()
+                self.stream.flush()
 
     def addSuccess(self, test):
-        iolock.acquire()
-        super(TestResult, self).addSuccess(test)
-        iolock.release()
+        with iolock:
+            super(TestResult, self).addSuccess(test)
         self.successes.append(test)
 
     def addError(self, test, err):
@@ -1174,26 +1399,24 @@ class TestResult(unittest._TextTestResult):
     # Polyfill.
     def addSkip(self, test, reason):
         self.skipped.append((test, reason))
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('skipped %s' % reason)
-        else:
-            self.stream.write('s')
-            self.stream.flush()
-        iolock.release()
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('skipped %s' % reason)
+            else:
+                self.stream.write('s')
+                self.stream.flush()
 
     def addIgnore(self, test, reason):
         self.ignored.append((test, reason))
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('ignored %s' % reason)
-        else:
-            if reason != 'not retesting' and reason != "doesn't match keyword":
-                self.stream.write('i')
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('ignored %s' % reason)
             else:
-                self.testsRun += 1
-            self.stream.flush()
-        iolock.release()
+                if reason not in ('not retesting', "doesn't match keyword"):
+                    self.stream.write('i')
+                else:
+                    self.testsRun += 1
+                self.stream.flush()
 
     def addWarn(self, test, reason):
         self.warned.append((test, reason))
@@ -1201,13 +1424,12 @@ class TestResult(unittest._TextTestResult):
         if self._options.first:
             self.stop()
 
-        iolock.acquire()
-        if self.showAll:
-            self.stream.writeln('warned %s' % reason)
-        else:
-            self.stream.write('~')
-            self.stream.flush()
-        iolock.release()
+        with iolock:
+            if self.showAll:
+                self.stream.writeln('warned %s' % reason)
+            else:
+                self.stream.write('~')
+                self.stream.flush()
 
     def addOutputMismatch(self, test, ret, got, expected):
         """Record a mismatch in test output for a particular test."""
@@ -1218,41 +1440,48 @@ class TestResult(unittest._TextTestResult):
             return
 
         accepted = False
-        failed = False
         lines = []
 
-        iolock.acquire()
-        if self._options.nodiff:
-            pass
-        elif self._options.view:
-            os.system("%s %s %s" %
-                      (self._options.view, test.refpath, test.errpath))
-        else:
-            servefail, lines = getdiff(expected, got,
-                                       test.refpath, test.errpath)
-            if servefail:
-                self.addFailure(
-                    test,
-                    'server failed to start (HGPORT=%s)' % test._startport)
+        with iolock:
+            if self._options.nodiff:
+                pass
+            elif self._options.view:
+                v = self._options.view
+                if PYTHON3:
+                    v = _bytespath(v)
+                os.system(b"%s %s %s" %
+                          (v, test.refpath, test.errpath))
             else:
-                self.stream.write('\n')
-                for line in lines:
-                    self.stream.write(line)
-                self.stream.flush()
-
-        # handle interactive prompt without releasing iolock
-        if self._options.interactive:
-            self.stream.write('Accept this change? [n] ')
-            answer = sys.stdin.readline().strip()
-            if answer.lower() in ('y', 'yes'):
-                if test.name.endswith('.t'):
-                    rename(test.errpath, test.path)
+                servefail, lines = getdiff(expected, got,
+                                           test.refpath, test.errpath)
+                if servefail:
+                    self.addFailure(
+                        test,
+                        'server failed to start (HGPORT=%s)' % test._startport)
+                    raise ReportedTest('server failed to start')
                 else:
-                    rename(test.errpath, '%s.out' % test.path)
-                accepted = True
-        if not accepted and not failed:
-            self.faildata[test.name] = ''.join(lines)
-        iolock.release()
+                    self.stream.write('\n')
+                    for line in lines:
+                        if PYTHON3:
+                            self.stream.flush()
+                            self.stream.buffer.write(line)
+                            self.stream.buffer.flush()
+                        else:
+                            self.stream.write(line)
+                            self.stream.flush()
+
+            # handle interactive prompt without releasing iolock
+            if self._options.interactive:
+                self.stream.write('Accept this change? [n] ')
+                answer = sys.stdin.readline().strip()
+                if answer.lower() in ('y', 'yes'):
+                    if test.name.endswith('.t'):
+                        rename(test.errpath, test.path)
+                    else:
+                        rename(test.errpath, '%s.out' % test.path)
+                    accepted = True
+            if not accepted:
+                self.faildata[test.name] = b''.join(lines)
 
         return accepted
 
@@ -1263,32 +1492,37 @@ class TestResult(unittest._TextTestResult):
         # child's processes along with real elapsed time taken by a process.
         # This module has one limitation. It can only work for Linux user
         # and not for Windows.
-        self._started[test.name] = os.times()
+        test.started = os.times()
+        if self._firststarttime is None: # thread racy but irrelevant
+            self._firststarttime = test.started[4]
 
     def stopTest(self, test, interrupted=False):
         super(TestResult, self).stopTest(test)
 
-        self._stopped[test.name] = os.times()
+        test.stopped = os.times()
 
-        starttime = self._started[test.name]
-        endtime = self._stopped[test.name]
-        self.times.append((test.name, endtime[2] - starttime[2],
-                    endtime[3] - starttime[3], endtime[4] - starttime[4]))
-
-        del self._started[test.name]
-        del self._stopped[test.name]
+        starttime = test.started
+        endtime = test.stopped
+        origin = self._firststarttime
+        self.times.append((test.name,
+                           endtime[2] - starttime[2], # user space CPU time
+                           endtime[3] - starttime[3], # sys  space CPU time
+                           endtime[4] - starttime[4], # real time
+                           starttime[4] - origin, # start date in run context
+                           endtime[4] - origin, # end date in run context
+                           ))
 
         if interrupted:
-            iolock.acquire()
-            self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
-                test.name, self.times[-1][3]))
-            iolock.release()
+            with iolock:
+                self.stream.writeln('INTERRUPTED: %s (after %d seconds)' % (
+                    test.name, self.times[-1][3]))
 
 class TestSuite(unittest.TestSuite):
     """Custom unittest TestSuite that knows how to execute Mercurial tests."""
 
     def __init__(self, testdir, jobs=1, whitelist=None, blacklist=None,
-                 retest=False, keywords=None, loop=False,
+                 retest=False, keywords=None, loop=False, runs_per_test=1,
+                 loadtest=None, showchannels=False,
                  *args, **kwargs):
         """Create a new instance that can run tests with a configuration.
 
@@ -1299,6 +1533,8 @@ class TestSuite(unittest.TestSuite):
         jobs specifies the number of jobs to run concurrently. Each test
         executes on its own thread. Tests actually spawn new processes, so
         state mutation should not be an issue.
+
+        If there is only one job, it will use the main thread.
 
         whitelist and blacklist denote tests that have been whitelisted and
         blacklisted, respectively. These arguments don't belong in TestSuite.
@@ -1323,19 +1559,28 @@ class TestSuite(unittest.TestSuite):
         self._retest = retest
         self._keywords = keywords
         self._loop = loop
+        self._runs_per_test = runs_per_test
+        self._loadtest = loadtest
+        self._showchannels = showchannels
 
     def run(self, result):
         # We have a number of filters that need to be applied. We do this
         # here instead of inside Test because it makes the running logic for
         # Test simpler.
         tests = []
+        num_tests = [0]
         for test in self._tests:
+            def get():
+                num_tests[0] += 1
+                if getattr(test, 'should_reload', False):
+                    return self._loadtest(test.path, num_tests[0])
+                return test
             if not os.path.exists(test.path):
                 result.addSkip(test, "Doesn't exist")
                 continue
 
             if not (self._whitelist and test.name in self._whitelist):
-                if self._blacklist and test.name in self._blacklist:
+                if self._blacklist and test.bname in self._blacklist:
                     result.addSkip(test, 'blacklisted')
                     continue
 
@@ -1345,7 +1590,7 @@ class TestSuite(unittest.TestSuite):
 
                 if self._keywords:
                     f = open(test.path, 'rb')
-                    t = f.read().lower() + test.name.lower()
+                    t = f.read().lower() + test.bname.lower()
                     f.close()
                     ignored = False
                     for k in self._keywords.lower().split():
@@ -1356,14 +1601,21 @@ class TestSuite(unittest.TestSuite):
 
                     if ignored:
                         continue
-
-            tests.append(test)
+            for _ in xrange(self._runs_per_test):
+                tests.append(get())
 
         runtests = list(tests)
         done = queue.Queue()
         running = 0
 
+        channels = [""] * self._jobs
+
         def job(test, result):
+            for n, v in enumerate(channels):
+                if not v:
+                    channel = n
+                    break
+            channels[channel] = "=" + test.name[5:].split(".")[0]
             try:
                 test(result)
                 done.put(None)
@@ -1372,30 +1624,125 @@ class TestSuite(unittest.TestSuite):
             except: # re-raises
                 done.put(('!', test, 'run-test raised an error, see traceback'))
                 raise
+            try:
+                channels[channel] = ''
+            except IndexError:
+                pass
+
+        def stat():
+            count = 0
+            while channels:
+                d = '\n%03s  ' % count
+                for n, v in enumerate(channels):
+                    if v:
+                        d += v[0]
+                        channels[n] = v[1:] or '.'
+                    else:
+                        d += ' '
+                    d += ' '
+                with iolock:
+                    sys.stdout.write(d + '  ')
+                    sys.stdout.flush()
+                for x in xrange(10):
+                    if channels:
+                        time.sleep(.1)
+                count += 1
+
+        stoppedearly = False
+
+        if self._showchannels:
+            statthread = threading.Thread(target=stat, name="stat")
+            statthread.start()
 
         try:
             while tests or running:
                 if not done.empty() or running == self._jobs or not tests:
                     try:
                         done.get(True, 1)
+                        running -= 1
                         if result and result.shouldStop:
+                            stoppedearly = True
                             break
                     except queue.Empty:
                         continue
-                    running -= 1
                 if tests and not running == self._jobs:
                     test = tests.pop(0)
                     if self._loop:
-                        tests.append(test)
-                    t = threading.Thread(target=job, name=test.name,
-                                         args=(test, result))
-                    t.start()
+                        if getattr(test, 'should_reload', False):
+                            num_tests[0] += 1
+                            tests.append(
+                                self._loadtest(test.name, num_tests[0]))
+                        else:
+                            tests.append(test)
+                    if self._jobs == 1:
+                        job(test, result)
+                    else:
+                        t = threading.Thread(target=job, name=test.name,
+                                             args=(test, result))
+                        t.start()
                     running += 1
+
+            # If we stop early we still need to wait on started tests to
+            # finish. Otherwise, there is a race between the test completing
+            # and the test's cleanup code running. This could result in the
+            # test reporting incorrect.
+            if stoppedearly:
+                while running:
+                    try:
+                        done.get(True, 1)
+                        running -= 1
+                    except queue.Empty:
+                        continue
         except KeyboardInterrupt:
             for test in runtests:
                 test.abort()
 
+        channels = []
+
         return result
+
+# Save the most recent 5 wall-clock runtimes of each test to a
+# human-readable text file named .testtimes. Tests are sorted
+# alphabetically, while times for each test are listed from oldest to
+# newest.
+
+def loadtimes(testdir):
+    times = []
+    try:
+        with open(os.path.join(testdir, b'.testtimes-')) as fp:
+            for line in fp:
+                ts = line.split()
+                times.append((ts[0], [float(t) for t in ts[1:]]))
+    except IOError as err:
+        if err.errno != errno.ENOENT:
+            raise
+    return times
+
+def savetimes(testdir, result):
+    saved = dict(loadtimes(testdir))
+    maxruns = 5
+    skipped = set([str(t[0]) for t in result.skipped])
+    for tdata in result.times:
+        test, real = tdata[0], tdata[3]
+        if test not in skipped:
+            ts = saved.setdefault(test, [])
+            ts.append(real)
+            ts[:] = ts[-maxruns:]
+
+    fd, tmpname = tempfile.mkstemp(prefix=b'.testtimes',
+                                   dir=testdir, text=True)
+    with os.fdopen(fd, 'w') as fp:
+        for name, ts in sorted(saved.items()):
+            fp.write('%s %s\n' % (name, ' '.join(['%.3f' % (t,) for t in ts])))
+    timepath = os.path.join(testdir, b'.testtimes')
+    try:
+        os.unlink(timepath)
+    except OSError:
+        pass
+    try:
+        os.rename(tmpname, timepath)
+    except OSError:
+        pass
 
 class TextTestRunner(unittest.TextTestRunner):
     """Custom unittest test runner that uses appropriate settings."""
@@ -1416,97 +1763,127 @@ class TextTestRunner(unittest.TextTestRunner):
         skipped = len(result.skipped)
         ignored = len(result.ignored)
 
-        iolock.acquire()
-        self.stream.writeln('')
+        with iolock:
+            self.stream.writeln('')
 
-        if not self._runner.options.noskips:
-            for test, msg in result.skipped:
-                self.stream.writeln('Skipped %s: %s' % (test.name, msg))
-        for test, msg in result.warned:
-            self.stream.writeln('Warned %s: %s' % (test.name, msg))
-        for test, msg in result.failures:
-            self.stream.writeln('Failed %s: %s' % (test.name, msg))
-        for test, msg in result.errors:
-            self.stream.writeln('Errored %s: %s' % (test.name, msg))
+            if not self._runner.options.noskips:
+                for test, msg in result.skipped:
+                    self.stream.writeln('Skipped %s: %s' % (test.name, msg))
+            for test, msg in result.warned:
+                self.stream.writeln('Warned %s: %s' % (test.name, msg))
+            for test, msg in result.failures:
+                self.stream.writeln('Failed %s: %s' % (test.name, msg))
+            for test, msg in result.errors:
+                self.stream.writeln('Errored %s: %s' % (test.name, msg))
 
-        if self._runner.options.xunit:
-            xuf = open(self._runner.options.xunit, 'wb')
-            try:
-                timesd = dict(
-                    (test, real) for test, cuser, csys, real in result.times)
-                doc = minidom.Document()
-                s = doc.createElement('testsuite')
-                s.setAttribute('name', 'run-tests')
-                s.setAttribute('tests', str(result.testsRun))
-                s.setAttribute('errors', "0") # TODO
-                s.setAttribute('failures', str(failed))
-                s.setAttribute('skipped', str(skipped + ignored))
-                doc.appendChild(s)
-                for tc in result.successes:
-                    t = doc.createElement('testcase')
-                    t.setAttribute('name', tc.name)
-                    t.setAttribute('time', '%.3f' % timesd[tc.name])
-                    s.appendChild(t)
-                for tc, err in sorted(result.faildata.iteritems()):
-                    t = doc.createElement('testcase')
-                    t.setAttribute('name', tc)
-                    t.setAttribute('time', '%.3f' % timesd[tc])
-                    cd = doc.createCDATASection(cdatasafe(err))
-                    t.appendChild(cd)
-                    s.appendChild(t)
-                xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
-            finally:
-                xuf.close()
+            if self._runner.options.xunit:
+                with open(self._runner.options.xunit, 'wb') as xuf:
+                    timesd = dict((t[0], t[3]) for t in result.times)
+                    doc = minidom.Document()
+                    s = doc.createElement('testsuite')
+                    s.setAttribute('name', 'run-tests')
+                    s.setAttribute('tests', str(result.testsRun))
+                    s.setAttribute('errors', "0") # TODO
+                    s.setAttribute('failures', str(failed))
+                    s.setAttribute('skipped', str(skipped + ignored))
+                    doc.appendChild(s)
+                    for tc in result.successes:
+                        t = doc.createElement('testcase')
+                        t.setAttribute('name', tc.name)
+                        t.setAttribute('time', '%.3f' % timesd[tc.name])
+                        s.appendChild(t)
+                    for tc, err in sorted(result.faildata.items()):
+                        t = doc.createElement('testcase')
+                        t.setAttribute('name', tc)
+                        t.setAttribute('time', '%.3f' % timesd[tc])
+                        # createCDATASection expects a unicode or it will
+                        # convert using default conversion rules, which will
+                        # fail if string isn't ASCII.
+                        err = cdatasafe(err).decode('utf-8', 'replace')
+                        cd = doc.createCDATASection(err)
+                        t.appendChild(cd)
+                        s.appendChild(t)
+                    xuf.write(doc.toprettyxml(indent='  ', encoding='utf-8'))
 
-        if self._runner.options.json:
-            if json is None:
-                raise ImportError("json module not installed")
-            jsonpath = os.path.join(self._runner._testdir, 'report.json')
-            fp = open(jsonpath, 'w')
-            try:
-                timesd = {}
-                for test, cuser, csys, real in result.times:
-                    timesd[test] = (real, cuser, csys)
+            if self._runner.options.json:
+                jsonpath = os.path.join(self._runner._testdir, b'report.json')
+                with open(jsonpath, 'w') as fp:
+                    timesd = {}
+                    for tdata in result.times:
+                        test = tdata[0]
+                        timesd[test] = tdata[1:]
 
-                outcome = {}
-                for tc in result.successes:
-                    testresult = {'result': 'success',
-                                  'time': ('%0.3f' % timesd[tc.name][0]),
-                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                  'csys': ('%0.3f' % timesd[tc.name][2])}
-                    outcome[tc.name] = testresult
+                    outcome = {}
+                    groups = [('success', ((tc, None)
+                               for tc in result.successes)),
+                              ('failure', result.failures),
+                              ('skip', result.skipped)]
+                    for res, testcases in groups:
+                        for tc, __ in testcases:
+                            if tc.name in timesd:
+                                diff = result.faildata.get(tc.name, b'')
+                                tres = {'result': res,
+                                        'time': ('%0.3f' % timesd[tc.name][2]),
+                                        'cuser': ('%0.3f' % timesd[tc.name][0]),
+                                        'csys': ('%0.3f' % timesd[tc.name][1]),
+                                        'start': ('%0.3f' % timesd[tc.name][3]),
+                                        'end': ('%0.3f' % timesd[tc.name][4]),
+                                        'diff': diff.decode('unicode_escape'),
+                                        }
+                            else:
+                                # blacklisted test
+                                tres = {'result': res}
 
-                for tc, err in sorted(result.faildata.iteritems()):
-                    testresult = {'result': 'failure',
-                                  'time': ('%0.3f' % timesd[tc][0]),
-                                  'cuser': ('%0.3f' % timesd[tc][1]),
-                                  'csys': ('%0.3f' % timesd[tc][2])}
-                    outcome[tc] = testresult
+                            outcome[tc.name] = tres
+                    jsonout = json.dumps(outcome, sort_keys=True, indent=4)
+                    fp.writelines(("testreport =", jsonout))
 
-                for tc, reason in result.skipped:
-                    testresult = {'result': 'skip',
-                                  'time': ('%0.3f' % timesd[tc.name][0]),
-                                  'cuser': ('%0.3f' % timesd[tc.name][1]),
-                                  'csys': ('%0.3f' % timesd[tc.name][2])}
-                    outcome[tc.name] = testresult
+            self._runner._checkhglib('Tested')
 
-                jsonout = json.dumps(outcome, sort_keys=True, indent=4)
-                fp.writelines(("testreport =", jsonout))
-            finally:
-                fp.close()
+            savetimes(self._runner._testdir, result)
 
-        self._runner._checkhglib('Tested')
-
-        self.stream.writeln('# Ran %d tests, %d skipped, %d warned, %d failed.'
-            % (result.testsRun,
-               skipped + ignored, warned, failed))
-        if failed:
-            self.stream.writeln('python hash seed: %s' %
-                os.environ['PYTHONHASHSEED'])
-        if self._runner.options.time:
-            self.printtimes(result.times)
-
-        iolock.release()
+            if failed and self._runner.options.known_good_rev:
+                def nooutput(args):
+                    p = subprocess.Popen(args, stderr=subprocess.STDOUT,
+                                         stdout=subprocess.PIPE)
+                    p.stdout.read()
+                    p.wait()
+                for test, msg in result.failures:
+                    nooutput(['hg', 'bisect', '--reset']),
+                    nooutput(['hg', 'bisect', '--bad', '.'])
+                    nooutput(['hg', 'bisect', '--good',
+                              self._runner.options.known_good_rev])
+                    # TODO: we probably need to forward some options
+                    # that alter hg's behavior inside the tests.
+                    rtc = '%s %s %s' % (sys.executable, sys.argv[0], test)
+                    sub = subprocess.Popen(['hg', 'bisect', '--command', rtc],
+                                           stderr=subprocess.STDOUT,
+                                           stdout=subprocess.PIPE)
+                    data = sub.stdout.read()
+                    sub.wait()
+                    m = re.search(
+                        (r'\nThe first (?P<goodbad>bad|good) revision '
+                         r'is:\nchangeset: +\d:(?P<node>[a-f0-9]+)\n.*\n'
+                         r'summary: +(?P<summary>[^\n]+)\n'),
+                        data, (re.MULTILINE | re.DOTALL))
+                    if m is None:
+                        self.stream.writeln(
+                            'Failed to identify failure point for %s' % test)
+                        continue
+                    dat = m.groupdict()
+                    verb = 'broken' if dat['goodbad'] == 'bad' else 'fixed'
+                    self.stream.writeln(
+                        '%s %s by %s (%s)' % (
+                            test, verb, dat['node'], dat['summary']))
+            self.stream.writeln(
+                '# Ran %d tests, %d skipped, %d warned, %d failed.'
+                % (result.testsRun,
+                   skipped + ignored, warned, failed))
+            if failed:
+                self.stream.writeln('python hash seed: %s' %
+                    os.environ['PYTHONHASHSEED'])
+            if self._runner.options.time:
+                self.printtimes(result.times)
 
         return result
 
@@ -1514,11 +1891,13 @@ class TextTestRunner(unittest.TextTestRunner):
         # iolock held by run
         self.stream.writeln('# Producing time report')
         times.sort(key=lambda t: (t[3]))
-        cols = '%7.3f %7.3f %7.3f   %s'
-        self.stream.writeln('%-7s %-7s %-7s   %s' % ('cuser', 'csys', 'real',
-                    'Test'))
-        for test, cuser, csys, real in times:
-            self.stream.writeln(cols % (cuser, csys, real, test))
+        cols = '%7.3f %7.3f %7.3f %7.3f %7.3f   %s'
+        self.stream.writeln('%-7s %-7s %-7s %-7s %-7s   %s' %
+                            ('start', 'end', 'cuser', 'csys', 'real', 'Test'))
+        for tdata in times:
+            test = tdata[0]
+            cuser, csys, real, start, end = tdata[1:6]
+            self.stream.writeln(cols % (start, end, cuser, csys, real, test))
 
 class TestRunner(object):
     """Holds context for executing tests.
@@ -1528,23 +1907,24 @@ class TestRunner(object):
 
     # Programs required to run tests.
     REQUIREDTOOLS = [
-        os.path.basename(sys.executable),
-        'diff',
-        'grep',
-        'unzip',
-        'gunzip',
-        'bunzip2',
-        'sed',
+        os.path.basename(_bytespath(sys.executable)),
+        b'diff',
+        b'grep',
+        b'unzip',
+        b'gunzip',
+        b'bunzip2',
+        b'sed',
     ]
 
     # Maps file extensions to test class.
     TESTTYPES = [
-        ('.py', PythonTest),
-        ('.t', TTest),
+        (b'.py', PythonTest),
+        (b'.t', TTest),
     ]
 
     def __init__(self):
         self.options = None
+        self._hgroot = None
         self._testdir = None
         self._hgtmp = None
         self._installdir = None
@@ -1553,19 +1933,33 @@ class TestRunner(object):
         self._pythondir = None
         self._coveragefile = None
         self._createdfiles = []
+        self._hgcommand = None
         self._hgpath = None
+        self._portoffset = 0
+        self._ports = {}
 
     def run(self, args, parser=None):
         """Run the test suite."""
-        oldmask = os.umask(022)
+        oldmask = os.umask(0o22)
         try:
             parser = parser or getparser()
             options, args = parseargs(args, parser)
+            # positional arguments are paths to test files to run, so
+            # we make sure they're all bytestrings
+            args = [_bytespath(a) for a in args]
             self.options = options
 
             self._checktools()
             tests = self.findtests(args)
-            return self._run(tests)
+            if options.profile_runner:
+                import statprof
+                statprof.start()
+            result = self._run(tests)
+            if options.profile_runner:
+                statprof.stop()
+                statprof.display()
+            return result
+
         finally:
             os.umask(oldmask)
 
@@ -1574,22 +1968,42 @@ class TestRunner(object):
             random.shuffle(tests)
         else:
             # keywords for slow tests
-            slow = 'svn gendoc check-code-hg'.split()
+            slow = {b'svn': 10,
+                    b'cvs': 10,
+                    b'hghave': 10,
+                    b'largefiles-update': 10,
+                    b'run-tests': 10,
+                    b'corruption': 10,
+                    b'race': 10,
+                    b'i18n': 10,
+                    b'check': 100,
+                    b'gendoc': 100,
+                    b'contrib-perf': 200,
+                   }
+            perf = {}
             def sortkey(f):
                 # run largest tests first, as they tend to take the longest
                 try:
-                    val = -os.stat(f).st_size
-                except OSError, e:
-                    if e.errno != errno.ENOENT:
-                        raise
-                    return -1e9 # file does not exist, tell early
-                for kw in slow:
-                    if kw in f:
-                        val *= 10
-                return val
+                    return perf[f]
+                except KeyError:
+                    try:
+                        val = -os.stat(f).st_size
+                    except OSError as e:
+                        if e.errno != errno.ENOENT:
+                            raise
+                        perf[f] = -1e9 # file does not exist, tell early
+                        return -1e9
+                    for kw, mul in slow.items():
+                        if kw in f:
+                            val *= mul
+                    if f.endswith(b'.py'):
+                        val /= 10.0
+                    perf[f] = val / 1000.0
+                    return perf[f]
             tests.sort(key=sortkey)
 
-        self._testdir = os.environ['TESTDIR'] = os.getcwd()
+        self._testdir = osenvironb[b'TESTDIR'] = getattr(
+            os, 'getcwdb', os.getcwd)()
 
         if 'PYTHONHASHSEED' not in os.environ:
             # use a random python hash seed all the time
@@ -1598,12 +2012,12 @@ class TestRunner(object):
 
         if self.options.tmpdir:
             self.options.keep_tmpdir = True
-            tmpdir = self.options.tmpdir
+            tmpdir = _bytespath(self.options.tmpdir)
             if os.path.exists(tmpdir):
                 # Meaning of tmpdir has changed since 1.3: we used to create
                 # HGTMP inside tmpdir; now HGTMP is tmpdir.  So fail if
                 # tmpdir already exists.
-                print "error: temp dir %r already exists" % tmpdir
+                print("error: temp dir %r already exists" % tmpdir)
                 return 1
 
                 # Automatically removing tmpdir sounds convenient, but could
@@ -1617,15 +2031,19 @@ class TestRunner(object):
             if os.name == 'nt':
                 # without this, we get the default temp dir location, but
                 # in all lowercase, which causes troubles with paths (issue3490)
-                d = os.getenv('TMP')
-            tmpdir = tempfile.mkdtemp('', 'hgtests.', d)
-        self._hgtmp = os.environ['HGTMP'] = os.path.realpath(tmpdir)
+                d = osenvironb.get(b'TMP', None)
+            tmpdir = tempfile.mkdtemp(b'', b'hgtests.', d)
+
+        self._hgtmp = osenvironb[b'HGTMP'] = (
+            os.path.realpath(tmpdir))
 
         if self.options.with_hg:
             self._installdir = None
-            self._bindir = os.path.dirname(os.path.realpath(
-                                           self.options.with_hg))
-            self._tmpbindir = os.path.join(self._hgtmp, 'install', 'bin')
+            whg = self.options.with_hg
+            self._bindir = os.path.dirname(os.path.realpath(whg))
+            assert isinstance(self._bindir, bytes)
+            self._hgcommand = os.path.basename(whg)
+            self._tmpbindir = os.path.join(self._hgtmp, b'install', b'bin')
             os.makedirs(self._tmpbindir)
 
             # This looks redundant with how Python initializes sys.path from
@@ -1635,20 +2053,48 @@ class TestRunner(object):
             # ... which means it's not really redundant at all.
             self._pythondir = self._bindir
         else:
-            self._installdir = os.path.join(self._hgtmp, "install")
-            self._bindir = os.environ["BINDIR"] = \
-                os.path.join(self._installdir, "bin")
+            self._installdir = os.path.join(self._hgtmp, b"install")
+            self._bindir = os.path.join(self._installdir, b"bin")
+            self._hgcommand = b'hg'
             self._tmpbindir = self._bindir
-            self._pythondir = os.path.join(self._installdir, "lib", "python")
+            self._pythondir = os.path.join(self._installdir, b"lib", b"python")
 
-        os.environ["BINDIR"] = self._bindir
-        os.environ["PYTHON"] = PYTHON
+        # set CHGHG, then replace "hg" command by "chg"
+        chgbindir = self._bindir
+        if self.options.chg or self.options.with_chg:
+            osenvironb[b'CHGHG'] = os.path.join(self._bindir, self._hgcommand)
+        if self.options.chg:
+            self._hgcommand = b'chg'
+        elif self.options.with_chg:
+            chgbindir = os.path.dirname(os.path.realpath(self.options.with_chg))
+            self._hgcommand = os.path.basename(self.options.with_chg)
 
-        runtestdir = os.path.abspath(os.path.dirname(__file__))
-        path = [self._bindir, runtestdir] + os.environ["PATH"].split(os.pathsep)
+        osenvironb[b"BINDIR"] = self._bindir
+        osenvironb[b"PYTHON"] = PYTHON
+
+        if self.options.with_python3:
+            osenvironb[b'PYTHON3'] = self.options.with_python3
+
+        fileb = _bytespath(__file__)
+        runtestdir = os.path.abspath(os.path.dirname(fileb))
+        osenvironb[b'RUNTESTDIR'] = runtestdir
+        if PYTHON3:
+            sepb = _bytespath(os.pathsep)
+        else:
+            sepb = os.pathsep
+        path = [self._bindir, runtestdir] + osenvironb[b"PATH"].split(sepb)
+        if os.path.islink(__file__):
+            # test helper will likely be at the end of the symlink
+            realfile = os.path.realpath(fileb)
+            realdir = os.path.abspath(os.path.dirname(realfile))
+            path.insert(2, realdir)
+        if chgbindir != self._bindir:
+            path.insert(1, chgbindir)
+        if self._testdir != runtestdir:
+            path = [self._testdir] + path
         if self._tmpbindir != self._bindir:
             path = [self._tmpbindir] + path
-        os.environ["PATH"] = os.pathsep.join(path)
+        osenvironb[b"PATH"] = sepb.join(path)
 
         # Include TESTDIR in PYTHONPATH so that out-of-tree extensions
         # can run .../tests/run-tests.py test-foo where test-foo
@@ -1659,20 +2105,26 @@ class TestRunner(object):
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
         # are in /opt/subversion.)
-        oldpypath = os.environ.get(IMPL_PATH)
+        oldpypath = osenvironb.get(IMPL_PATH)
         if oldpypath:
             pypath.append(oldpypath)
-        os.environ[IMPL_PATH] = os.pathsep.join(pypath)
+        osenvironb[IMPL_PATH] = sepb.join(pypath)
 
         if self.options.pure:
             os.environ["HGTEST_RUN_TESTS_PURE"] = "--pure"
 
-        self._coveragefile = os.path.join(self._testdir, '.coverage')
+        if self.options.allow_slow_tests:
+            os.environ["HGTEST_SLOW"] = "slow"
+        elif 'HGTEST_SLOW' in os.environ:
+            del os.environ['HGTEST_SLOW']
+
+        self._coveragefile = os.path.join(self._testdir, b'.coverage')
 
         vlog("# Using TESTDIR", self._testdir)
+        vlog("# Using RUNTESTDIR", osenvironb[b'RUNTESTDIR'])
         vlog("# Using HGTMP", self._hgtmp)
         vlog("# Using PATH", os.environ["PATH"])
-        vlog("# Using", IMPL_PATH, os.environ[IMPL_PATH])
+        vlog("# Using", IMPL_PATH, osenvironb[IMPL_PATH])
 
         try:
             return self._runtests(tests) or 0
@@ -1691,13 +2143,13 @@ class TestRunner(object):
                 proc = Popen4('hg st --rev "%s" -man0 .' %
                               self.options.changed, None, 0)
                 stdout, stderr = proc.communicate()
-                args = stdout.strip('\0').split('\0')
+                args = stdout.strip(b'\0').split(b'\0')
             else:
-                args = os.listdir('.')
+                args = os.listdir(b'.')
 
         return [t for t in args
-                if os.path.basename(t).startswith('test-')
-                    and (t.endswith('.py') or t.endswith('.t'))]
+                if os.path.basename(t).startswith(b'test-')
+                    and (t.endswith(b'.py') or t.endswith(b'.t'))]
 
     def _runtests(self, tests):
         try:
@@ -1706,6 +2158,9 @@ class TestRunner(object):
                 self._checkhglib("Testing")
             else:
                 self._usecorrectpython()
+            if self.options.chg:
+                assert self._installdir
+                self._installchg()
 
             if self.options.restart:
                 orig = list(tests)
@@ -1714,22 +2169,27 @@ class TestRunner(object):
                         break
                     tests.pop(0)
                 if not tests:
-                    print "running all tests"
+                    print("running all tests")
                     tests = orig
 
             tests = [self._gettest(t, i) for i, t in enumerate(tests)]
 
             failed = False
             warned = False
+            kws = self.options.keywords
+            if kws is not None and PYTHON3:
+                kws = kws.encode('utf-8')
 
             suite = TestSuite(self._testdir,
                               jobs=self.options.jobs,
                               whitelist=self.options.whitelisted,
                               blacklist=self.options.blacklist,
                               retest=self.options.retest,
-                              keywords=self.options.keywords,
+                              keywords=kws,
                               loop=self.options.loop,
-                              tests=tests)
+                              runs_per_test=self.options.runs_per_test,
+                              showchannels=self.options.showchannels,
+                              tests=tests, loadtest=self._gettest)
             verbosity = 1
             if self.options.verbose:
                 verbosity = 2
@@ -1745,12 +2205,30 @@ class TestRunner(object):
                 self._outputcoverage()
         except KeyboardInterrupt:
             failed = True
-            print "\ninterrupted!"
+            print("\ninterrupted!")
 
         if failed:
             return 1
         if warned:
             return 80
+
+    def _getport(self, count):
+        port = self._ports.get(count) # do we have a cached entry?
+        if port is None:
+            portneeded = 3
+            # above 100 tries we just give up and let test reports failure
+            for tries in xrange(100):
+                allfree = True
+                port = self.options.port + self._portoffset
+                for idx in xrange(portneeded):
+                    if not checkportisavailable(port + idx):
+                        allfree = False
+                        break
+                self._portoffset += portneeded
+                if allfree:
+                    break
+            self._ports[count] = port
+        return port
 
     def _gettest(self, test, count):
         """Obtain a Test by looking at its filename.
@@ -1767,20 +2245,23 @@ class TestRunner(object):
                 break
 
         refpath = os.path.join(self._testdir, test)
-        tmpdir = os.path.join(self._hgtmp, 'child%d' % count)
+        tmpdir = os.path.join(self._hgtmp, b'child%d' % count)
 
-        return testcls(refpath, tmpdir,
-                       keeptmpdir=self.options.keep_tmpdir,
-                       debug=self.options.debug,
-                       timeout=self.options.timeout,
-                       startport=self.options.port + count * 3,
-                       extraconfigopts=self.options.extra_config_opt,
-                       py3kwarnings=self.options.py3k_warnings,
-                       shell=self.options.shell)
+        t = testcls(refpath, tmpdir,
+                    keeptmpdir=self.options.keep_tmpdir,
+                    debug=self.options.debug,
+                    timeout=self.options.timeout,
+                    startport=self._getport(count),
+                    extraconfigopts=self.options.extra_config_opt,
+                    py3kwarnings=self.options.py3k_warnings,
+                    shell=self.options.shell,
+                    hgcommand=self._hgcommand,
+                    usechg=bool(self.options.with_chg or self.options.chg))
+        t.should_reload = True
+        return t
 
     def _cleanup(self):
         """Clean up state from this test invocation."""
-
         if self.options.keep_tmpdir:
             return
 
@@ -1795,7 +2276,7 @@ class TestRunner(object):
     def _usecorrectpython(self):
         """Configure the environment to use the appropriate Python in tests."""
         # Tests must use the same interpreter as us or bad things will happen.
-        pyexename = sys.platform == 'win32' and 'python.exe' or 'python'
+        pyexename = sys.platform == 'win32' and b'python.exe' or b'python'
         if getattr(os, 'symlink', None):
             vlog("# Making python executable in test path a symlink to '%s'" %
                  sys.executable)
@@ -1804,14 +2285,14 @@ class TestRunner(object):
                 if os.readlink(mypython) == sys.executable:
                     return
                 os.unlink(mypython)
-            except OSError, err:
+            except OSError as err:
                 if err.errno != errno.ENOENT:
                     raise
             if self._findprogram(pyexename) != sys.executable:
                 try:
                     os.symlink(sys.executable, mypython)
                     self._createdfiles.append(mypython)
-                except OSError, err:
+                except OSError as err:
                     # child processes may race, which is harmless
                     if err.errno != errno.EEXIST:
                         raise
@@ -1824,7 +2305,7 @@ class TestRunner(object):
                 path.remove(exedir)
             os.environ['PATH'] = os.pathsep.join([exedir] + path)
             if not self._findprogram(pyexename):
-                print "WARNING: Cannot find %s in search path" % pyexename
+                print("WARNING: Cannot find %s in search path" % pyexename)
 
     def _installhg(self):
         """Install hg into the test environment.
@@ -1832,45 +2313,69 @@ class TestRunner(object):
         This will also configure hg with the appropriate testing settings.
         """
         vlog("# Performing temporary installation of HG")
-        installerrs = os.path.join("tests", "install.err")
+        installerrs = os.path.join(b"tests", b"install.err")
         compiler = ''
         if self.options.compiler:
             compiler = '--compiler ' + self.options.compiler
-        pure = self.options.pure and "--pure" or ""
-        py3 = ''
-        if sys.version_info[0] == 3:
-            py3 = '--c2to3'
+        if self.options.pure:
+            pure = b"--pure"
+        else:
+            pure = b""
 
         # Run installer in hg root
         script = os.path.realpath(sys.argv[0])
+        exe = sys.executable
+        if PYTHON3:
+            compiler = _bytespath(compiler)
+            script = _bytespath(script)
+            exe = _bytespath(exe)
         hgroot = os.path.dirname(os.path.dirname(script))
+        self._hgroot = hgroot
         os.chdir(hgroot)
-        nohome = '--home=""'
+        nohome = b'--home=""'
         if os.name == 'nt':
             # The --home="" trick works only on OS where os.sep == '/'
             # because of a distutils convert_path() fast-path. Avoid it at
             # least on Windows for now, deal with .pydistutils.cfg bugs
             # when they happen.
-            nohome = ''
-        cmd = ('%(exe)s setup.py %(py3)s %(pure)s clean --all'
-               ' build %(compiler)s --build-base="%(base)s"'
-               ' install --force --prefix="%(prefix)s"'
-               ' --install-lib="%(libdir)s"'
-               ' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
-               % {'exe': sys.executable, 'py3': py3, 'pure': pure,
-                  'compiler': compiler,
-                  'base': os.path.join(self._hgtmp, "build"),
-                  'prefix': self._installdir, 'libdir': self._pythondir,
-                  'bindir': self._bindir,
-                  'nohome': nohome, 'logfile': installerrs})
+            nohome = b''
+        cmd = (b'%(exe)s setup.py %(pure)s clean --all'
+               b' build %(compiler)s --build-base="%(base)s"'
+               b' install --force --prefix="%(prefix)s"'
+               b' --install-lib="%(libdir)s"'
+               b' --install-scripts="%(bindir)s" %(nohome)s >%(logfile)s 2>&1'
+               % {b'exe': exe, b'pure': pure,
+                  b'compiler': compiler,
+                  b'base': os.path.join(self._hgtmp, b"build"),
+                  b'prefix': self._installdir, b'libdir': self._pythondir,
+                  b'bindir': self._bindir,
+                  b'nohome': nohome, b'logfile': installerrs})
+
+        # setuptools requires install directories to exist.
+        def makedirs(p):
+            try:
+                os.makedirs(p)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+        makedirs(self._pythondir)
+        makedirs(self._bindir)
+
         vlog("# Running", cmd)
         if os.system(cmd) == 0:
             if not self.options.verbose:
-                os.remove(installerrs)
+                try:
+                    os.remove(installerrs)
+                except OSError as e:
+                    if e.errno != errno.ENOENT:
+                        raise
         else:
             f = open(installerrs, 'rb')
             for line in f:
-                print line
+                if PYTHON3:
+                    sys.stdout.buffer.write(line)
+                else:
+                    sys.stdout.write(line)
             f.close()
             sys.exit(1)
         os.chdir(self._testdir)
@@ -1888,21 +2393,21 @@ class TestRunner(object):
                 f.write(line + '\n')
             f.close()
 
-        hgbat = os.path.join(self._bindir, 'hg.bat')
+        hgbat = os.path.join(self._bindir, b'hg.bat')
         if os.path.isfile(hgbat):
             # hg.bat expects to be put in bin/scripts while run-tests.py
             # installation layout put it in bin/ directly. Fix it
             f = open(hgbat, 'rb')
             data = f.read()
             f.close()
-            if '"%~dp0..\python" "%~dp0hg" %*' in data:
-                data = data.replace('"%~dp0..\python" "%~dp0hg" %*',
-                                    '"%~dp0python" "%~dp0hg" %*')
+            if b'"%~dp0..\python" "%~dp0hg" %*' in data:
+                data = data.replace(b'"%~dp0..\python" "%~dp0hg" %*',
+                                    b'"%~dp0python" "%~dp0hg" %*')
                 f = open(hgbat, 'wb')
                 f.write(data)
                 f.close()
             else:
-                print 'WARNING: cannot fix hg.bat reference to python.exe'
+                print('WARNING: cannot fix hg.bat reference to python.exe')
 
         if self.options.anycoverage:
             custom = os.path.join(self._testdir, 'sitecustomize.py')
@@ -1912,8 +2417,14 @@ class TestRunner(object):
             rc = os.path.join(self._testdir, '.coveragerc')
             vlog('# Installing coverage rc to %s' % rc)
             os.environ['COVERAGE_PROCESS_START'] = rc
-            fn = os.path.join(self._installdir, '..', '.coverage')
-            os.environ['COVERAGE_FILE'] = fn
+            covdir = os.path.join(self._installdir, '..', 'coverage')
+            try:
+                os.mkdir(covdir)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
+
+            os.environ['COVERAGE_DIR'] = covdir
 
     def _checkhglib(self, verb):
         """Ensure that the 'mercurial' package imported by python is
@@ -1923,7 +2434,7 @@ class TestRunner(object):
             # The pythondir has been inferred from --with-hg flag.
             # We cannot expect anything sensible here.
             return
-        expecthg = os.path.join(self._pythondir, 'mercurial')
+        expecthg = os.path.join(self._pythondir, b'mercurial')
         actualhg = self._gethgpath()
         if os.path.abspath(actualhg) != os.path.abspath(expecthg):
             sys.stderr.write('warning: %s with unexpected mercurial lib: %s\n'
@@ -1935,42 +2446,72 @@ class TestRunner(object):
         if self._hgpath is not None:
             return self._hgpath
 
-        cmd = '%s -c "import mercurial; print (mercurial.__path__[0])"'
-        pipe = os.popen(cmd % PYTHON)
+        cmd = b'%s -c "import mercurial; print (mercurial.__path__[0])"'
+        cmd = cmd % PYTHON
+        if PYTHON3:
+            cmd = _strpath(cmd)
+        pipe = os.popen(cmd)
         try:
-            self._hgpath = pipe.read().strip()
+            self._hgpath = _bytespath(pipe.read().strip())
         finally:
             pipe.close()
 
         return self._hgpath
 
+    def _installchg(self):
+        """Install chg into the test environment"""
+        vlog('# Performing temporary installation of CHG')
+        assert os.path.dirname(self._bindir) == self._installdir
+        assert self._hgroot, 'must be called after _installhg()'
+        cmd = (b'"%(make)s" clean install PREFIX="%(prefix)s"'
+               % {b'make': 'make',  # TODO: switch by option or environment?
+                  b'prefix': self._installdir})
+        cwd = os.path.join(self._hgroot, b'contrib', b'chg')
+        vlog("# Running", cmd)
+        proc = subprocess.Popen(cmd, shell=True, cwd=cwd,
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        out, _err = proc.communicate()
+        if proc.returncode != 0:
+            if PYTHON3:
+                sys.stdout.buffer.write(out)
+            else:
+                sys.stdout.write(out)
+            sys.exit(1)
+
     def _outputcoverage(self):
         """Produce code coverage output."""
+        from coverage import coverage
+
         vlog('# Producing coverage report')
-        os.chdir(self._pythondir)
+        # chdir is the easiest way to get short, relative paths in the
+        # output.
+        os.chdir(self._hgroot)
+        covdir = os.path.join(self._installdir, '..', 'coverage')
+        cov = coverage(data_file=os.path.join(covdir, 'cov'))
 
-        def covrun(*args):
-            cmd = 'coverage %s' % ' '.join(args)
-            vlog('# Running: %s' % cmd)
-            os.system(cmd)
+        # Map install directory paths back to source directory.
+        cov.config.paths['srcdir'] = ['.', self._pythondir]
 
-        covrun('-c')
-        omit = ','.join(os.path.join(x, '*') for x in
-                        [self._bindir, self._testdir])
-        covrun('-i', '-r', '"--omit=%s"' % omit) # report
+        cov.combine()
+
+        omit = [os.path.join(x, '*') for x in [self._bindir, self._testdir]]
+        cov.report(ignore_errors=True, omit=omit)
+
         if self.options.htmlcov:
             htmldir = os.path.join(self._testdir, 'htmlcov')
-            covrun('-i', '-b', '"--directory=%s"' % htmldir,
-                   '"--omit=%s"' % omit)
+            cov.html_report(directory=htmldir, omit=omit)
         if self.options.annotate:
             adir = os.path.join(self._testdir, 'annotated')
             if not os.path.isdir(adir):
                 os.mkdir(adir)
-            covrun('-i', '-a', '"--directory=%s"' % adir, '"--omit=%s"' % omit)
+            cov.annotate(directory=adir, omit=omit)
 
     def _findprogram(self, program):
         """Search PATH for a executable program"""
-        for p in os.environ.get('PATH', os.defpath).split(os.pathsep):
+        dpb = _bytespath(os.defpath)
+        sepb = _bytespath(os.pathsep)
+        for p in osenvironb.get(b'PATH', dpb).split(sepb):
             name = os.path.join(p, program)
             if os.name == 'nt' or os.access(name, os.X_OK):
                 return name
@@ -1985,7 +2526,8 @@ class TestRunner(object):
             if found:
                 vlog("# Found prerequisite", p, "at", found)
             else:
-                print "WARNING: Did not find prerequisite tool: %s " % p
+                print("WARNING: Did not find prerequisite tool: %s " %
+                      p.decode("utf-8"))
 
 if __name__ == '__main__':
     runner = TestRunner()

@@ -15,5 +15,5 @@ while lines:
         c = compile(snippet, '<heredoc>', 'single')
         try:
             exec c in globalvars, localvars
-        except Exception, inst:
+        except Exception as inst:
             print repr(inst)

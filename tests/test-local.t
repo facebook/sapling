@@ -184,4 +184,4 @@
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m merge
-  $ hg strip -q -r .^
+  $ hg strip -q -r ".^"

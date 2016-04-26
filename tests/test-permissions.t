@@ -36,7 +36,7 @@
 # crashes)
 
   $ rm -rf $CACHEDIR
-  $ hg -q clone --shallow ssh://user@dummy/master shallow2 --config remotefilelog.cachegroup="$(id -g -n)"
+  $ hg -q clone --shallow ssh://user@dummy/master shallow2 --config remotefilelog.cachegroup="`id -g -n`"
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
   $ ls -ld $CACHEDIR
   * $TESTTMP/hgcache (glob)

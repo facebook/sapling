@@ -34,7 +34,7 @@ Unbundling a shallow bundle
 
 Unbundling a full bundle
 
-  $ hg -R ../master bundle -r 66ee28d0328c:: --base 66ee28d0328c^ ../fullbundle.hg
+  $ hg -R ../master bundle -r 66ee28d0328c:: --base "66ee28d0328c^" ../fullbundle.hg
   2 changesets found
   $ hg strip -r 66ee28d0328c
   saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/66ee28d0328c-3d7aafd1-backup.hg (glob)
