@@ -8,6 +8,7 @@ class unioncontentstore(object):
         self._local = local
         self._shared = shared
         self._remote = remote
+        self.writestore = local
 
     def get(self, name, node):
         try:
@@ -38,7 +39,10 @@ class unioncontentstore(object):
         return missing
 
     def addremotefilelognode(self, name, node, data):
-        self._local.addremotefilelognode(name, node, data)
+        if self.writestore:
+            self.writestore.addremotefilelognode(name, node, data)
+        else:
+            raise Exception("no writable store configured")
 
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):

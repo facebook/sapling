@@ -8,6 +8,7 @@ class unionmetadatastore(object):
         self._local = local
         self._shared = shared
         self._remote = remote
+        self.writestore = local
 
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""

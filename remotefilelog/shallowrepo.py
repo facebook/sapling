@@ -176,7 +176,7 @@ def wraprepo(repo):
                                           remotecontent)
     repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata,
                                             remotemetadata)
-    repo.fileservice.setstore(repo.contentstore)
+    repo.fileservice.setstore(repo.contentstore, cachecontent)
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",
                                              None)

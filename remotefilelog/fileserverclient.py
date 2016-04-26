@@ -204,14 +204,14 @@ class fileserverclient(object):
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
         self.contentstore = None
-        self.sharedcache = None
+        self.writestore = None
 
         self.remotecache = cacheconnection()
         self.remoteserver = None
 
-    def setstore(self, store):
+    def setstore(self, store, writestore):
         self.contentstore = store
-        self.sharedcache = store._shared
+        self.writestore = writestore
 
     def _connect(self):
         fallbackpath = self.repo.fallbackpath
@@ -236,7 +236,7 @@ class fileserverclient(object):
         if not self.remotecache.connected:
             self.connect()
         cache = self.remotecache
-        sharedcache = self.sharedcache
+        writestore = self.writestore
 
         repo = self.repo
         count = len(fileids)
@@ -333,7 +333,7 @@ class fileserverclient(object):
             self.ui.progress(_downloading, None)
 
             # mark ourselves as a user of this cache
-            sharedcache.markrepo(self.repo.path)
+            writestore.markrepo(self.repo.path)
         finally:
             os.umask(oldumask)
 
@@ -351,12 +351,12 @@ class fileserverclient(object):
                                         "only received %s of %s bytes") %
                                       (len(data), size))
 
-        self.sharedcache.addremotefilelognode(filename, bin(node),
-                                              lz4.decompress(data))
+        self.writestore.addremotefilelognode(filename, bin(node),
+                                             lz4.decompress(data))
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, self.sharedcache._path)
+            cmd = "%s %s" % (self.cacheprocess, self.writestore._path)
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
