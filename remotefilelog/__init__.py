@@ -15,8 +15,8 @@ from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 from mercurial import ancestor, mdiff, parsers, error, util, dagutil
 from mercurial import repair, extensions, filelog, revlog, wireproto, cmdutil
-from mercurial import copies, store, context, changegroup, localrepo
-from mercurial import commands, sshpeer, scmutil, dispatch, merge, context, changelog
+from mercurial import copies, store, context, changegroup, localrepo, changelog
+from mercurial import commands, sshpeer, scmutil, dispatch, merge, context
 from mercurial import templatekw, repoview, revset, hg, patch, verify
 from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
@@ -27,7 +27,7 @@ try:
     from mercurial import streamclone
     streamclone._walkstreamfiles
     hasstreamclone = True
-except:
+except Exception:
     hasstreamclone = False
 
 cmdtable = {}
@@ -42,13 +42,15 @@ else:
     repoclass.supported.add(shallowrepo.requirement)
 
 def uisetup(ui):
-    """Wraps user facing Mercurial commands to swap them out with shallow versions.
+    """Wraps user facing Mercurial commands to swap them out with shallow
+    versions.
     """
     hg.wirepeersetupfuncs.append(fileserverclient.peersetup)
 
     entry = extensions.wrapcommand(commands.table, 'clone', cloneshallow)
     entry[1].append(('', 'shallow', None,
-                     _("create a shallow clone which uses remote file history")))
+                     _("create a shallow clone which uses remote file "
+                       "history")))
 
     extensions.wrapcommand(commands.table, 'debugindex',
         debugcommands.debugindex)
@@ -60,7 +62,7 @@ def uisetup(ui):
     # Prevent 'hg manifest --all'
     def _manifest(orig, ui, repo, *args, **opts):
         if shallowrepo.requirement in repo.requirements and opts.get('all'):
-            raise util.Abort(_("--all is not supported in a shallow repo"))
+            raise error.Abort(_("--all is not supported in a shallow repo"))
 
         return orig(ui, repo, *args, **opts)
     extensions.wrapcommand(commands.table, "manifest", _manifest)
@@ -109,7 +111,8 @@ def cloneshallow(orig, ui, repo, *args, **opts):
             def stream_wrap(orig, op):
                 setup_streamout(op.repo, op.remote)
                 return orig(op)
-            wrapfunction(streamclone, 'maybeperformlegacystreamclone', stream_wrap)
+            wrapfunction(streamclone, 'maybeperformlegacystreamclone',
+                         stream_wrap)
 
             def canperformstreamclone(orig, *args, **kwargs):
                 supported, requirements = orig(*args, **kwargs)
@@ -123,7 +126,8 @@ def cloneshallow(orig, ui, repo, *args, **opts):
                 setup_streamout(repo, remote)
                 requirements.add(shallowrepo.requirement)
                 return orig(repo, remote, requirements)
-            wrapfunction(localrepo.localrepository, 'stream_in', stream_in_shallow)
+            wrapfunction(localrepo.localrepository, 'stream_in',
+                         stream_in_shallow)
 
     try:
         orig(ui, repo, *args, **opts)
@@ -141,7 +145,7 @@ def reposetup(ui, repo):
     isshallowclient = shallowrepo.requirement in repo.requirements
 
     if isserverenabled and isshallowclient:
-        raise Exception("Cannot be both a server and shallow client.")
+        raise RuntimeError("Cannot be both a server and shallow client.")
 
     if isshallowclient:
         setupclient(ui, repo)
@@ -344,9 +348,11 @@ def onetimeclientsetup(ui):
     pendingfilecommits = []
     def filelogadd(orig, self, text, meta, transaction, link, p1, p2):
         if isinstance(link, int):
-            pendingfilecommits.append((self, text, meta, transaction, link, p1, p2))
+            pendingfilecommits.append((self, text, meta, transaction, link, p1,
+                                       p2))
 
-            hashtext = shallowutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+            hashtext = shallowutil.createrevlogtext(text, meta.get('copy'),
+                                                    meta.get('copyrev'))
             node = revlog.hash(hashtext, p1, p2)
             return node
         else:
@@ -462,7 +468,7 @@ def walkfilerevs(orig, repo, match, follow, revs, fncache):
     pctx = repo['.']
     for filename in match.files():
         if filename not in pctx:
-            raise util.Abort(_('cannot follow file not in parent '
+            raise error.Abort(_('cannot follow file not in parent '
                                'revision: "%s"') % filename)
         fctx = pctx[filename]
 
@@ -558,7 +564,7 @@ def gcclient(ui, cachepath):
     # get list of repos that use this cache
     repospath = os.path.join(cachepath, 'repos')
     if not os.path.exists(repospath):
-        ui.warn("no known cache at %s\n" % cachepath)
+        ui.warn(_("no known cache at %s\n") % cachepath)
         return
 
     reposfile = open(repospath, 'r')
@@ -580,7 +586,7 @@ def gcclient(ui, cachepath):
         try:
             path = ui.expandpath(os.path.normpath(path))
         except TypeError as e:
-            ui.warn("warning: malformed path: %r:%s\n" % (path, e))
+            ui.warn(_("warning: malformed path: %r:%s\n") % (path, e))
             traceback.print_exc()
             continue
         try:
@@ -597,8 +603,10 @@ def gcclient(ui, cachepath):
         # We want to keep:
         # 1. All parents of draft commits
         # 2. Recent heads in the repo
-        # 3. The tip commit (since it might be an old head, but we still want it)
-        keep = peer._repo.revs("(parents(draft()) + (heads(all()) & date(-7)) + tip) & public()")
+        # 3. The tip commit (since it may be an old head, but we still want it)
+        keepset = ("(parents(draft()) + (heads(all()) & date(-7)) + tip) & "
+                   "public()")
+        keep = peer._repo.revs(keepset)
         for r in keep:
             m = peer._repo[r].manifest()
             for filename, filenode in m.iteritems():
@@ -661,7 +669,7 @@ def pull(orig, ui, repo, *pats, **opts):
         # prefetch if it's configured
         prefetchrevset = ui.config('remotefilelog', 'pullprefetch', None)
         if prefetchrevset:
-            ui.status("prefetching file contents\n")
+            ui.status(_("prefetching file contents\n"))
             revs = repo.revs(prefetchrevset)
             base = repo['.'].rev()
             repo.prefetch(revs, base=base)
@@ -680,9 +688,11 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
                 bundlecaps = []
             bundlecaps.append('remotefilelog')
             if repo.includepattern:
-                bundlecaps.append("includepattern=" + '\0'.join(repo.includepattern))
+                includecap = "includepattern=" + '\0'.join(repo.includepattern)
+                bundlecaps.append(includecap)
             if repo.excludepattern:
-                bundlecaps.append("excludepattern=" + '\0'.join(repo.excludepattern))
+                excludecap = "excludepattern=" + '\0'.join(repo.excludepattern)
+                bundlecaps.append(excludecap)
             opts['bundlecaps'] = ','.join(bundlecaps)
         return orig(command, **opts)
 
@@ -694,9 +704,9 @@ def exchangepull(orig, repo, remote, *args, **kwargs):
         return orig(source, heads=heads, common=common, bundlecaps=bundlecaps,
                     **kwargs)
 
-    if hasattr(remote, '_callstream'):
+    if util.safehasattr(remote, '_callstream'):
         wrapfunction(remote, '_callstream', remotecallstream)
-    elif hasattr(remote, 'getbundle'):
+    elif util.safehasattr(remote, 'getbundle'):
         wrapfunction(remote, 'getbundle', localgetbundle)
 
     return orig(repo, remote, *args, **kwargs)
@@ -755,7 +765,7 @@ def prefetch(ui, repo, *pats, **opts):
     Return 0 on success.
     """
     if not shallowrepo.requirement in repo.requirements:
-        raise util.Abort(_("repo is not shallow"))
+        raise error.Abort(_("repo is not shallow"))
 
     if not opts.get('rev'):
         opts['rev'] = '.'
