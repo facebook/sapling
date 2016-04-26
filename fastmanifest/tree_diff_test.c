@@ -168,9 +168,206 @@ static void diff_identical_trees() {
          include_all_expectations.expectations_sz);
 }
 
+/**
+ * Diff two trees with no identical names in the same directory.
+ */
+static void diff_no_identical_trees() {
+  tree_t *left = alloc_tree();
+  tree_t *right = alloc_tree();
+
+  add_to_tree_t toadd_left[] = {
+      {STRPLUSLEN("ab/cdef/ghi_left"), 44252, 22},
+      {STRPLUSLEN("ab/cdef/g/hi_left"), 112123, 64},
+      {STRPLUSLEN("ab/cdef/g/hij_left"), 54654, 58},
+  };
+
+  add_to_tree_t toadd_right[] = {
+      {STRPLUSLEN("ab/cdef/ghi_right"), 44252, 22},
+      {STRPLUSLEN("ab/cdef/g/hi_right"), 112123, 64},
+      {STRPLUSLEN("ab/cdef/g/hij_right"), 54654, 58},
+  };
+
+  add_to_tree(left, toadd_left, sizeof(toadd_left) / sizeof(add_to_tree_t));
+  add_to_tree(right, toadd_right, sizeof(toadd_right) / sizeof(add_to_tree_t));
+
+  diff_expectation_t expectation_array[] =
+      {
+          {
+              STRPLUSLEN("ab/cdef/g/hi_left"),
+              true, 112123, 64,
+              false, 0, 0,
+          },
+          {
+              STRPLUSLEN("ab/cdef/g/hi_right"),
+              false, 0, 0,
+              true, 112123, 64,
+          },
+          {
+              STRPLUSLEN("ab/cdef/g/hij_left"),
+              true, 54654, 58,
+              false, 0, 0,
+          },
+          {
+              STRPLUSLEN("ab/cdef/g/hij_right"),
+              false, 0, 0,
+              true, 54654, 58,
+          },
+          {
+              STRPLUSLEN("ab/cdef/ghi_left"),
+              true, 44252, 22,
+              false, 0, 0,
+          },
+          {
+              STRPLUSLEN("ab/cdef/ghi_right"),
+              false, 0, 0,
+              true, 44252, 22,
+          },
+      };
+  diff_expectations_t normal_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      false,
+      expectations_matcher, &normal_expectations) == DIFF_OK);
+  ASSERT(normal_expectations.expectations_idx ==
+         normal_expectations.expectations_sz);
+
+  diff_expectations_t include_all_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      true,
+      expectations_matcher, &include_all_expectations) == DIFF_OK);
+  ASSERT(include_all_expectations.expectations_idx ==
+         include_all_expectations.expectations_sz);
+}
+
+/**
+ * Diff two trees with a leaf vs implicit node difference.
+ */
+static void diff_different_types_trees() {
+  tree_t *left = alloc_tree();
+  tree_t *right = alloc_tree();
+
+  add_to_tree_t toadd_left[] = {
+      {STRPLUSLEN("ab/cdef/ghi_left"), 44252, 22},
+  };
+
+  add_to_tree_t toadd_right[] = {
+      {STRPLUSLEN("ab/cdef"), 44252, 22},
+  };
+
+  add_to_tree(left, toadd_left, sizeof(toadd_left) / sizeof(add_to_tree_t));
+  add_to_tree(right, toadd_right, sizeof(toadd_right) / sizeof(add_to_tree_t));
+
+  diff_expectation_t expectation_array[] =
+      {
+          {
+              STRPLUSLEN("ab/cdef"),
+              false, 0, 0,
+              true, 44252, 22,
+          },
+          {
+              STRPLUSLEN("ab/cdef/ghi_left"),
+              true, 44252, 22,
+              false, 0, 0,
+          },
+      };
+  diff_expectations_t normal_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      false,
+      expectations_matcher, &normal_expectations) == DIFF_OK);
+  ASSERT(normal_expectations.expectations_idx ==
+         normal_expectations.expectations_sz);
+
+  diff_expectations_t include_all_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      true,
+      expectations_matcher, &include_all_expectations) == DIFF_OK);
+  ASSERT(include_all_expectations.expectations_idx ==
+         include_all_expectations.expectations_sz);
+}
+
+/**
+ * Diff two trees with differences in the metadata.
+ */
+static void diff_different_metadata() {
+  tree_t *left = alloc_tree();
+  tree_t *right = alloc_tree();
+
+  add_to_tree_t toadd_left[] = {
+      {STRPLUSLEN("ab/cdef"), 44253, 22},
+      {STRPLUSLEN("ab/cdefg"), 44252, 23},
+  };
+
+  add_to_tree_t toadd_right[] = {
+      {STRPLUSLEN("ab/cdef"), 44252, 22},
+      {STRPLUSLEN("ab/cdefg"), 44252, 22},
+  };
+
+  add_to_tree(left, toadd_left, sizeof(toadd_left) / sizeof(add_to_tree_t));
+  add_to_tree(right, toadd_right, sizeof(toadd_right) / sizeof(add_to_tree_t));
+
+  diff_expectation_t expectation_array[] =
+      {
+          {
+              STRPLUSLEN("ab/cdef"),
+              true, 44253, 22,
+              true, 44252, 22,
+          },
+          {
+              STRPLUSLEN("ab/cdefg"),
+              true, 44252, 23,
+              true, 44252, 22,
+          },
+      };
+  diff_expectations_t normal_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      false,
+      expectations_matcher, &normal_expectations) == DIFF_OK);
+  ASSERT(normal_expectations.expectations_idx ==
+         normal_expectations.expectations_sz);
+
+  diff_expectations_t include_all_expectations = {
+      expectation_array,
+      0, sizeof(expectation_array) / sizeof(diff_expectation_t)
+  };
+
+  ASSERT(diff_trees(
+      left, right,
+      true,
+      expectations_matcher, &include_all_expectations) == DIFF_OK);
+  ASSERT(include_all_expectations.expectations_idx ==
+         include_all_expectations.expectations_sz);
+}
+
 int main(int argc, char *argv[]) {
   diff_empty_trees();
   diff_identical_trees();
+  diff_no_identical_trees();
+  diff_different_types_trees();
+  diff_different_metadata();
 
   return 0;
 }

@@ -85,15 +85,13 @@ consider_children_result_t consider_children(
     } else if (order > 0) {
       // right goes first, clear left
       left_candidate = NULL;
-    }
-
-    // okay they have identical names.  what about types?  if one is a leaf
-    // node and the other is not, the leaf node goes first.
-    if (left_candidate->type == TYPE_LEAF &&
+    } else if (left_candidate->type == TYPE_LEAF &&
         right_candidate->type != TYPE_LEAF) {
+      // identical types, left is a leaf node and right is not, so clear right.
       right_candidate = NULL;
     } else if (left_candidate->type != TYPE_LEAF &&
                right_candidate->type == TYPE_LEAF) {
+      // identical types, right is a leaf node and left is not, so clear left.
       left_candidate = NULL;
     }
   }
