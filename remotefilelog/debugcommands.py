@@ -18,18 +18,18 @@ def debugremotefilelog(ui, *args, **opts):
 
     size, firstnode, mapping = parsefileblob(path, decompress)
 
-    ui.status("size: %s bytes\n" % (size))
-    ui.status("path: %s \n" % (path))
-    ui.status("key: %s \n" % (short(firstnode)))
-    ui.status("\n")
-    ui.status("%12s => %12s %13s %13s %12s\n" %
+    ui.status(_("size: %s bytes\n") % (size))
+    ui.status(_("path: %s \n") % (path))
+    ui.status(_("key: %s \n") % (short(firstnode)))
+    ui.status(_("\n"))
+    ui.status(_("%12s => %12s %13s %13s %12s\n") %
               ("node", "p1", "p2", "linknode", "copyfrom"))
 
     queue = [firstnode]
     while queue:
         node = queue.pop(0)
         p1, p2, linknode, copyfrom = mapping[node]
-        ui.status("%s => %s  %s  %s  %s\n" %
+        ui.status(_("%s => %s  %s  %s  %s\n") %
             (short(node), short(p1), short(p2), short(linknode), copyfrom))
         if p1 != nullid:
             queue.append(p1)
@@ -55,7 +55,7 @@ def buildtemprevlog(repo, file):
     r = filelog.filelog(repo.svfs, 'temprevlog')
 
     class faket(object):
-        def add(self, a,b,c):
+        def add(self, a, b, c):
             pass
     t = faket()
     for fctx in fctxs:
@@ -72,7 +72,7 @@ def buildtemprevlog(repo, file):
 
     return r
 
-def debugindex(orig, ui, repo, file_ = None, **opts):
+def debugindex(orig, ui, repo, file_=None, **opts):
     """dump the contents of an index file"""
     if (opts.get('changelog') or opts.get('manifest') or
         not shallowrepo.requirement in repo.requirements or
@@ -84,7 +84,7 @@ def debugindex(orig, ui, repo, file_ = None, **opts):
     # debugindex like normal
     format = opts.get('format', 0)
     if format not in (0, 1):
-        raise util.Abort(_("unknown format %d") % format)
+        raise error.Abort(_("unknown format %d") % format)
 
     generaldelta = r.version & revlog.REVLOGGENERALDELTA
     if generaldelta:
@@ -150,8 +150,10 @@ def verifyremotefilelog(ui, *args, **opts):
             for p1, p2, linknode, copyfrom in mapping.itervalues():
                 if linknode == nullid:
                     actualpath = os.path.relpath(root, path)
-                    key = fileserverclient.getcachekey(repo.name, actualpath, file)
-                    ui.status("%s %s\n" % (key, os.path.relpath(filepath, path)))
+                    key = fileserverclient.getcachekey(repo.name, actualpath,
+                                                       file)
+                    ui.status("%s %s\n" % (key, os.path.relpath(filepath,
+                                                                path)))
 
 def parsefileblob(path, decompress):
     raw = None

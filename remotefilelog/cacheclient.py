@@ -136,7 +136,7 @@ def setKeys():
             # Large files are stored as an integer representing how many
             # chunks it's broken into.
             value = i
-        
+
         values[key] = value
 
         if len(values) == batchsize:
@@ -156,7 +156,7 @@ def main(argv=None):
     When memcache requests need to be made, it will execute this process
     with the following arguments:
 
-    cacheclient <ip address:port> <memcache prefix><internal prefix> <cache path>
+    cacheclient <ip address:port> <memcache prefix><internal prefix> <cachepath>
 
     Communication happens via stdin and stdout. To make a get request,
     the following is written to stdin:
@@ -167,7 +167,7 @@ def main(argv=None):
     <key...>\n
     <keyN>\n
 
-    The results of any cache hits will be written directly to <cache path>/<key>.
+    The results of any cache hits will be written directly to <cachepath>/<key>.
     Any cache misses will be written to stdout in the form <key>\n. Once all
     hits and misses are finished 0\n will be written to stdout to signal
     completion.
@@ -180,7 +180,7 @@ def main(argv=None):
     not in parallel), so it stays open until it receives exit\n via stdin.
 
     """
-    if argv == None:
+    if argv is None:
         argv = sys.argv
 
     global cachepath
