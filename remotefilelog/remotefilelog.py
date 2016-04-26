@@ -1,4 +1,5 @@
-# remotefilelog.py - filelog implementation where filelog history is stored remotely
+# remotefilelog.py - filelog implementation where filelog history is stored
+#                    remotely
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -31,7 +32,8 @@ class remotefilelog(object):
         hashtext = text
 
         # hash with the metadata, like in vanilla filelogs
-        hashtext = shallowutil.createrevlogtext(text, meta.get('copy'), meta.get('copyrev'))
+        hashtext = shallowutil.createrevlogtext(text, meta.get('copy'),
+                                                meta.get('copyrev'))
         node = revlog.hash(hashtext, p1, p2)
 
         def _createfileblob():
@@ -121,7 +123,7 @@ class remotefilelog(object):
             # .hgtags a normal filelog.
             return 0
 
-        raise Exception("len not supported")
+        raise RuntimeError("len not supported")
 
     def empty(self):
         return False
@@ -153,7 +155,8 @@ class remotefilelog(object):
         if len(node) == 40:
             node = bin(node)
         if len(node) != 20:
-            raise error.LookupError(node, self.filename, _('invalid lookup input'))
+            raise error.LookupError(node, self.filename,
+                                    _('invalid lookup input'))
 
         return node
 
@@ -170,7 +173,8 @@ class remotefilelog(object):
         if node == nullid:
             return ""
         if len(node) != 20:
-            raise error.LookupError(node, self.filename, _('invalid revision input'))
+            raise error.LookupError(node, self.filename,
+                                    _('invalid revision input'))
 
         return self.repo.contentstore.get(self.filename, node)
 
@@ -178,7 +182,8 @@ class remotefilelog(object):
         """reads the raw file blob from disk, cache, or server"""
         fileservice = self.repo.fileservice
         localcache = fileservice.localcache
-        cachekey = fileserverclient.getcachekey(self.repo.name, self.filename, id)
+        cachekey = fileserverclient.getcachekey(self.repo.name, self.filename,
+                                                id)
         try:
             return localcache.read(cachekey)
         except KeyError:
@@ -207,7 +212,7 @@ class remotefilelog(object):
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v,k) for (k,v) in revmap.iteritems()))
+        nodemap = dict(((v, k) for (k, v) in revmap.iteritems()))
 
         ancs = ancestor.ancestors(parentfunc, revmap[a], revmap[b])
         if ancs:
@@ -222,7 +227,7 @@ class remotefilelog(object):
             return nullid
 
         revmap, parentfunc = self._buildrevgraph(a, b)
-        nodemap = dict(((v,k) for (k,v) in revmap.iteritems()))
+        nodemap = dict(((v, k) for (k, v) in revmap.iteritems()))
 
         ancs = ancestor.commonancestorsheads(parentfunc, revmap[a], revmap[b])
         return map(nodemap.__getitem__, ancs)

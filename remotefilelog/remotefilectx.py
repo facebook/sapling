@@ -1,4 +1,4 @@
-# remotefilectx.py - filectx and workingfilectx implementations for remotefilelog
+# remotefilectx.py - filectx/workingfilectx implementations for remotefilelog
 #
 # Copyright 2013 Facebook, Inc.
 #
@@ -89,8 +89,9 @@ class remotefilectx(context.filectx):
         noctx = not ('_changeid' in attrs or '_changectx' in attrs)
         if noctx or self.rev() == lkr:
             return lkr
-        linknode = self._adjustlinknode(self._path, self._filelog, self._filenode,
-                                        self.rev(), inclusive=True)
+        linknode = self._adjustlinknode(self._path, self._filelog,
+                                        self._filenode, self.rev(),
+                                        inclusive=True)
         return self._repo.changelog.rev(linknode)
 
     def renamed(self):
