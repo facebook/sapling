@@ -16,24 +16,6 @@ typedef unsigned char bool;
 
 #include "tree.h"
 
-
-/* TODO @ttung replace this with your structs and fix
-   reference */
-#define MANIFEST_OOM -1
-#define MANIFEST_NOT_SORTED -2
-#define MANIFEST_MALFORMED -3
-#define DEFAULT_NUM_CHILDREN 12
-#define NULLHASH "00000000000000000000"
-
-typedef struct tmnode {
-  char *start;
-  Py_ssize_t len;
-  char hash_suffix;
-  struct tmnode *children;
-  int numchildren;
-  int maxchildren;
-} tmnode;
-
 typedef struct {
   PyObject_HEAD;
   tree_t *tree;
@@ -138,24 +120,6 @@ static bool fastmanifest_is_valid_manifest_value(PyObject *value) {
     return false;
   }
   return true;
-}
-
-/* get the node value of tmnode */
-static PyObject *tm_nodeof(tmnode *l) {
-  char *s = l->start;
-  ssize_t llen = strlen(l->start);
-  PyObject *hash = unhexlify(s + llen + 1, 40);
-  if (!hash) {
-    return NULL;
-  }
-  if (l->hash_suffix != '\0') {
-    char newhash[21];
-    memcpy(newhash, PyString_AsString(hash), 20);
-    Py_DECREF(hash);
-    newhash[20] = l->hash_suffix;
-    hash = PyString_FromStringAndSize(newhash, 21);
-  }
-  return hash;
 }
 
 static PyObject *fastmanifest_formatfile(
