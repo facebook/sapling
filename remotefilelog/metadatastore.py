@@ -4,11 +4,9 @@ from mercurial import util
 from mercurial.node import hex
 
 class unionmetadatastore(object):
-    def __init__(self, local, shared, remote):
-        self._local = local
-        self._shared = shared
-        self._remote = remote
-        self.writestore = local
+    def __init__(self, *args, **kwargs):
+        self.stores = args
+        self.writestore = kwargs.get('writestore')
 
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""
@@ -23,20 +21,11 @@ class unionmetadatastore(object):
            ...
         }
         """
-        try:
-            return self._shared.getancestors(name, node)
-        except KeyError:
-            pass
-
-        try:
-            return self._local.getancestors(name, node)
-        except KeyError:
-            pass
-
-        try:
-            return self._remote.getancestors(name, node)
-        except KeyError:
-            pass
+        for store in self.stores:
+            try:
+                return store.getancestors(name, node)
+            except KeyError:
+                pass
 
         raise error.LookupError(node, name, _('no valid file history'))
 
@@ -49,9 +38,10 @@ class unionmetadatastore(object):
                         "contentstore")
 
     def getmissing(self, keys):
-        missing = self._local.getmissing(keys)
-        if missing:
-            missing = self._shared.getmissing(missing)
+        missing = keys
+        for store in self.stores:
+            if missing:
+                missing = store.getmissing(missing)
         return missing
 
 class remotefilelogmetadatastore(basestore.basestore):
@@ -92,8 +82,8 @@ class remotemetadatastore(object):
     def add(self, name, node, data):
         raise Exception("cannot add to a remote store")
 
-    def contains(self, keys):
-        raise NotImplemented()
+    def getmissing(self, keys):
+        return keys
 
     def getparents(self, name, node):
         raise NotImplemented()

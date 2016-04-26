@@ -422,7 +422,7 @@ class fileserverclient(object):
 
         store = self.contentstore
         if force:
-            store = self.contentstore._shared
+            store = self.writestore
         missingids = store.getmissing(idstocheck)
 
         if missingids:

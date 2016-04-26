@@ -164,6 +164,7 @@ def wraprepo(repo):
                                              shared=True)
     cachemetadata = remotefilelogmetadatastore(repo.ui, cachepath, repo.name,
                                                shared=True)
+    repo.sharedstore = cachecontent
 
     # Instantiate remote stores
     repo.fileservice = fileserverclient.fileserverclient(repo)
@@ -173,9 +174,11 @@ def wraprepo(repo):
 
     # Instantiate union stores
     repo.contentstore = unioncontentstore(localcontent, cachecontent,
-                                          remotecontent)
+                                          remotecontent,
+                                          writestore=localcontent)
     repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata,
-                                            remotemetadata)
+                                            remotemetadata,
+                                            writestore=localmetadata)
     repo.fileservice.setstore(repo.contentstore, cachecontent)
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",

@@ -598,7 +598,7 @@ def gcclient(ui, cachepath):
 
         reponame = peer._repo.name
         if not sharedcache:
-            sharedcache = peer._repo.contentstore._shared
+            sharedcache = peer._repo.sharedstore
 
         # We want to keep:
         # 1. All parents of draft commits

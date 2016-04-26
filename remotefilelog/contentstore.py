@@ -4,27 +4,16 @@ from mercurial import util
 from mercurial.node import hex
 
 class unioncontentstore(object):
-    def __init__(self, local, shared, remote):
-        self._local = local
-        self._shared = shared
-        self._remote = remote
-        self.writestore = local
+    def __init__(self, *args, **kwargs):
+        self.stores = args
+        self.writestore = kwargs.get('writestore')
 
     def get(self, name, node):
-        try:
-            return self._shared.get(name, node)
-        except KeyError:
-            pass
-
-        try:
-            return self._local.get(name, node)
-        except KeyError:
-            pass
-
-        try:
-            return self._remote.get(name, node)
-        except KeyError:
-            pass
+        for store in self.stores:
+            try:
+                return store.get(name, node)
+            except KeyError:
+                pass
 
         raise error.LookupError(id, self.filename, _('no node'))
 
@@ -33,9 +22,10 @@ class unioncontentstore(object):
                         "contentstore")
 
     def getmissing(self, keys):
-        missing = self._local.getmissing(keys)
-        if missing:
-            missing = self._shared.getmissing(missing)
+        missing = keys
+        for store in self.stores:
+            if missing:
+                missing = store.getmissing(missing)
         return missing
 
     def addremotefilelognode(self, name, node, data):
@@ -76,5 +66,5 @@ class remotecontentstore(object):
     def add(self, name, node, data):
         raise Exception("cannot add to a remote store")
 
-    def contains(self, keys):
-        raise NotImplemented()
+    def getmissing(self, keys):
+        return keys
