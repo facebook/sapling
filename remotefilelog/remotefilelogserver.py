@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 from mercurial import wireproto, changegroup, match, util, changelog, context
-from mercurial import exchange, sshserver, store
+from mercurial import exchange, sshserver, store, error
 from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
@@ -18,7 +18,7 @@ try:
     from mercurial import streamclone
     streamclone._walkstreamfiles
     hasstreamclone = True
-except:
+except Exception:
     hasstreamclone = False
 
 def setupserver(ui, repo):
@@ -136,8 +136,8 @@ def onetimesetup(ui):
             # don't allow cloning from a shallow repo to a full repo
             # since it would require fetching every version of every
             # file in order to create the revlogs.
-            raise util.Abort(_("Cannot clone from a shallow repo "
-                             + "to a full repo."))
+            raise error.Abort(_("Cannot clone from a shallow repo "
+                                "to a full repo."))
         else:
             for x in orig(repo):
                 yield x
@@ -209,7 +209,7 @@ def _loadfileblob(repo, cachepath, path, node):
             if not os.path.exists(dirname):
                 try:
                     os.makedirs(dirname)
-                except OSError, ex:
+                except OSError as ex:
                     if ex.errno != errno.EEXIST:
                         raise
 
@@ -251,9 +251,9 @@ def getfiles(repo, proto):
     """A server api for requesting particular versions of particular files.
     """
     if shallowrepo.requirement in repo.requirements:
-        raise util.Abort(_('cannot fetch remote files from shallow repo'))
+        raise error.Abort(_('cannot fetch remote files from shallow repo'))
     if not isinstance(proto, sshserver.sshserver):
-        raise util.Abort(_('cannot fetch remote files over non-ssh protocol'))
+        raise error.Abort(_('cannot fetch remote files over non-ssh protocol'))
 
     def streamer():
         fin = proto.fin

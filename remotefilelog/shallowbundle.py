@@ -9,7 +9,7 @@ import fileserverclient, remotefilelog, shallowutil
 import collections, os
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial import changegroup, revlog, phases, mdiff, match, bundlerepo
-from mercurial import util
+from mercurial import util, error
 from mercurial.i18n import _
 
 NoFiles = 0
@@ -102,12 +102,13 @@ class shallowcg1packer(changegroup.cg1packer):
                 # Force load the filelog data.
                 bundlerepo.bundlerepository.file(repo, 'foo')
                 if repo.bundlefilespos:
-                    raise util.Abort("cannot pull from full bundles",
-                                     hint="use `hg unbundle` instead")
+                    raise error.Abort("cannot pull from full bundles",
+                                      hint="use `hg unbundle` instead")
                 return []
             filestosend = self.shouldaddfilegroups(source)
             if filestosend == NoFiles:
-                changedfiles = list([f for f in changedfiles if not repo.shallowmatch(f)])
+                changedfiles = list([f for f in changedfiles
+                                     if not repo.shallowmatch(f)])
             else:
                 files = []
                 # Prefetch the revisions being bundled
@@ -119,9 +120,12 @@ class shallowcg1packer(changegroup.cg1packer):
                     for fnode, cnode in list(linkrevnodes.iteritems()):
                         # Adjust linknodes so remote file revisions aren't sent
                         if filestosend == LocalFiles:
-                            localkey = fileserverclient.getlocalkey(fname, hex(fnode))
-                            localpath = repo.sjoin(os.path.join("data", localkey))
-                            if not os.path.exists(localpath) and repo.shallowmatch(fname):
+                            localkey = fileserverclient.getlocalkey(fname,
+                                                                    hex(fnode))
+                            localpath = repo.sjoin(os.path.join("data",
+                                                                localkey))
+                            if (not os.path.exists(localpath)
+                                and repo.shallowmatch(fname)):
                                 del linkrevnodes[fnode]
                             else:
                                 files.append((fname, hex(fnode)))
@@ -160,7 +164,7 @@ class shallowcg1packer(changegroup.cg1packer):
                 return LocalFiles
             else:
                 # Serving to a full repo requires us to serve everything
-                repo.ui.warn("pulling from a shallow repo\n")
+                repo.ui.warn(_("pulling from a shallow repo\n"))
                 return AllFiles
 
         return NoFiles
@@ -281,11 +285,11 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
             queue.append((f, chain))
 
             if f not in visited:
-                newfiles +=1
+                newfiles += 1
                 visited.add(f)
 
-        if chain == None:
-            raise util.Abort(_("received file revlog group is empty"))
+        if chain is None:
+            raise error.Abort(_("received file revlog group is empty"))
 
     processed = set()
     def available(f, node, depf, depnode):
@@ -326,7 +330,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
 
         skipcount += 1
         if skipcount > len(queue) + 1:
-            raise util.Abort(_("circular node dependency"))
+            raise error.Abort(_("circular node dependency"))
 
         fl = repo.file(f)
 
