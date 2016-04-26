@@ -23,7 +23,7 @@ _downloading = _('downloading')
 def makedirs(root, path, owner):
     try:
         os.makedirs(path)
-    except OSError, ex:
+    except OSError as ex:
         if ex.errno != errno.EEXIST:
             raise
 
@@ -46,7 +46,7 @@ def peersetup(ui, peer):
         @wireproto.batchable
         def getfile(self, file, node):
             if not self.capable('getfile'):
-                raise util.Abort(
+                raise error.Abort(
                     'configured remotefile server does not support getfile')
             f = wireproto.future()
             yield {'file': file, 'node': node}, f
@@ -68,7 +68,7 @@ class cacheconnection(object):
 
     def connect(self, cachecommand):
         if self.pipeo:
-            raise util.Abort(_("cache connection already open"))
+            raise error.Abort(_("cache connection already open"))
         self.pipei, self.pipeo, self.pipee, self.subprocess = \
             util.popen4(cachecommand)
         self.connected = True
@@ -77,12 +77,12 @@ class cacheconnection(object):
         def tryclose(pipe):
             try:
                 pipe.close()
-            except:
+            except Exception:
                 pass
         if self.connected:
             try:
                 self.pipei.write("exit\n")
-            except:
+            except Exception:
                 pass
             tryclose(self.pipei)
             self.pipei = None
@@ -95,7 +95,7 @@ class cacheconnection(object):
                 # See https://docs.python.org/2/library/subprocess.html for
                 # warnings about wait() and deadlocking.
                 self.subprocess.communicate()
-            except:
+            except Exception:
                 pass
             self.subprocess = None
         self.connected = False
@@ -217,11 +217,11 @@ class fileserverclient(object):
         fallbackpath = self.repo.fallbackpath
         if not self.remoteserver:
             if not fallbackpath:
-                raise util.Abort("no remotefilelog server "
+                raise error.Abort("no remotefilelog server "
                     "configured - is your .hg/hgrc trusted?")
             self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
         elif (isinstance(self.remoteserver, sshpeer.sshpeer) and
-                 self.remoteserver.subprocess.poll() != None):
+                 self.remoteserver.subprocess.poll() is not None):
             # The ssh connection died, so recreate it.
             self.remoteserver = hg.peer(self.ui, {}, fallbackpath)
 
@@ -306,7 +306,8 @@ class fileserverclient(object):
                     # TODO: deduplicate this with the constant in shallowrepo
                     if remote.capable("remotefilelog"):
                         if not isinstance(remote, sshpeer.sshpeer):
-                            raise util.Abort('remotefilelog requires ssh servers')
+                            raise error.Abort('remotefilelog requires ssh '
+                                              'servers')
                         # If it's a new connection, issue the getfiles command
                         if oldremote != remote:
                             remote._callstream("getfiles")
@@ -320,7 +321,7 @@ class fileserverclient(object):
                             remote, self.receivemissing, progresstick, missed,
                             idmap, batchsize)
                     else:
-                        raise util.Abort("configured remotefilelog server"
+                        raise error.Abort("configured remotefilelog server"
                                          " does not support remotefilelog")
                 finally:
                     self.ui.verbose = verbose
@@ -347,9 +348,11 @@ class fileserverclient(object):
         data = pipe.read(size)
         if len(data) != size:
             raise error.ResponseError(_("error downloading file contents: "
-                "only received %s of %s bytes" % (len(data), size)))
+                                        "only received %s of %s bytes") %
+                                      (len(data), size))
 
-        self.sharedcache.addremotefilelognode(filename, bin(node), lz4.decompress(data))
+        self.sharedcache.addremotefilelognode(filename, bin(node),
+                                              lz4.decompress(data))
 
     def connect(self):
         if self.cacheprocess:
@@ -411,7 +414,8 @@ class fileserverclient(object):
             # - we don't use .hgtags
             # - workingctx produces ids with length 42,
             #   which we skip since they aren't in any cache
-            if file == '.hgtags' or len(id) == 42 or not repo.shallowmatch(file):
+            if (file == '.hgtags' or len(id) == 42
+                or not repo.shallowmatch(file)):
                 continue
 
             idstocheck.append((file, bin(id)))
@@ -439,7 +443,8 @@ class fileserverclient(object):
             start = time.time()
             missingids = self.request(missingids)
             if missingids:
-                raise util.Abort(_("unable to download %d files") % len(missingids))
+                raise error.Abort(_("unable to download %d files") %
+                                  len(missingids))
             fetchcost += time.time() - start
 
     def logstacktrace(self):
