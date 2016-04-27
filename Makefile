@@ -199,6 +199,9 @@ docker-ubuntu-wily-ppa: contrib/docker/ubuntu-wily
 docker-ubuntu-xenial: contrib/docker/ubuntu-xenial
 	contrib/dockerdeb ubuntu xenial
 
+docker-ubuntu-xenial-ppa: contrib/docker/ubuntu-xenial
+	contrib/dockerdeb ubuntu xenial --source-only
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
