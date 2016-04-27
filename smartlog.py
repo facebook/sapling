@@ -109,6 +109,26 @@ def uisetup(ui):
 
     templatekw.keywords['singlepublicsuccessor'] = singlepublicsuccessor
 
+    def rebasesuccessors(repo, ctx, **args):
+        """Return all of the node's successors created as a result of rebase"""
+        rsnodes = list(modifysuccessors(ctx, 'rebase'))
+        return templatekw.showlist('rebasesuccessor', rsnodes, **args)
+    templatekw.keywords['rebasesuccessors'] = rebasesuccessors
+
+    def amendsuccessors(repo, ctx, **args):
+        """Return all of the node's successors created as a result of amend"""
+        asnodes = list(modifysuccessors(ctx, 'amend'))
+        return templatekw.showlist('amendsuccessor', asnodes, **args)
+    templatekw.keywords['amendsuccessors'] = amendsuccessors
+
+def modifysuccessors(ctx, operation):
+    """Return all of the node's successors which were created as a result
+    of a given modification operation (amend/rebase)"""
+    hex = nodemod.hex
+    return (hex(m.succnodes()[0]) for m in obsolete.successormarkers(ctx)
+            if len(m.succnodes()) == 1
+            and m.metadata().get('operation') == operation)
+
 def sortnodes(nodes, parentfunc, masters):
     """Topologically sorts the nodes, using the parentfunc to find
     the parents of nodes.  Given a topological tie between children,
