@@ -42,6 +42,11 @@ These are the supported infix operators:
 ``x - y``
   Changesets in x but not in y.
 
+``x % y``
+  Changesets that are ancestors of x but not ancestors of y (i.e. ::x - ::y).
+  This is shorthand notation for ``only(x, y)`` (see below). The second
+  argument is optional and, if left out, is equivalent to ``only(x)``.
+
 ``x^n``
   The nth parent of x, n == 0, 1, or 2.
   For n == 0, x; for n == 1, the first parent of each changeset in x;
