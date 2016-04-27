@@ -83,8 +83,8 @@ class historypackstore(object):
         raise KeyError((name, node))
 
     def add(self, name, node, data):
-        raise Exception("cannot add to historypackstore (%s:%s)"
-                        % (name, hex(node)))
+        raise RuntimeError("cannot add to historypackstore (%s:%s)"
+                           % (name, hex(node)))
 
 class historypack(object):
     def __init__(self, path):
@@ -253,7 +253,8 @@ class mutablehistorypack(object):
 
         - node (The 20 byte hash of the filename)
         - pack entry offset (The location of this file section in the histpack)
-        - pack content size (The on-disk length of this file section's pack data)
+        - pack content size (The on-disk length of this file section's pack
+                             data)
 
         The fanout is a quick lookup table to reduce the number of steps for
         bisecting the index. It is a series of 4 byte pointers to positions
@@ -273,8 +274,12 @@ class mutablehistorypack(object):
     def __init__(self, path):
         self.path = path
         self.entries = []
-        self.packfp, self.historypackpath = tempfile.mkstemp(suffix=PACKSUFFIX + '-tmp', dir=path)
-        self.idxfp, self.historyidxpath = tempfile.mkstemp(suffix=INDEXSUFFIX + '-tmp', dir=path)
+        self.packfp, self.historypackpath = tempfile.mkstemp(
+                suffix=PACKSUFFIX + '-tmp',
+                dir=path)
+        self.idxfp, self.historyidxpath = tempfile.mkstemp(
+                suffix=INDEXSUFFIX + '-tmp',
+                dir=path)
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
@@ -291,8 +296,8 @@ class mutablehistorypack(object):
     def add(self, filename, node, p1, p2, linknode):
         if filename != self.currentfile:
             if filename in self.pastfiles:
-                raise Exception("cannot add file node after another file's "
-                                "nodes have been added")
+                raise RuntimeError("cannot add file node after another file's "
+                                   "nodes have been added")
             if self.currentfile:
                 self.pastfiles[self.currentfile] = (
                     self.currentfilestart,

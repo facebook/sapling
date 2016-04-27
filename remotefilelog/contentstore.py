@@ -78,8 +78,8 @@ class unioncontentstore(object):
         raise error.LookupError(name, hex(node), _('no node'))
 
     def add(self, name, node, data):
-        raise Exception("cannot add content only to remotefilelog "
-                        "contentstore")
+        raise RuntimeError("cannot add content only to remotefilelog "
+                           "contentstore")
 
     def getmissing(self, keys):
         missing = keys
@@ -92,7 +92,7 @@ class unioncontentstore(object):
         if self.writestore:
             self.writestore.addremotefilelognode(name, node, data)
         else:
-            raise Exception("no writable store configured")
+            raise RuntimeError("no writable store configured")
 
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
@@ -111,16 +111,16 @@ class remotefilelogcontentstore(basestore.basestore):
         return revision
 
     def getdeltachain(self, name, node):
-        # Since remotefilelog content stores just contain full texts, we return a
-        # fake delta chain that just consists of a single full text revision.
+        # Since remotefilelog content stores just contain full texts, we return
+        # a fake delta chain that just consists of a single full text revision.
         # The nullid in the deltabasenode slot indicates that the revision is a
         # fulltext.
         revision = self.get(name, node)
         return [(name, node, None, nullid, revision)]
 
     def add(self, name, node, data):
-        raise Exception("cannot add content only to remotefilelog "
-                        "contentstore")
+        raise RuntimeError("cannot add content only to remotefilelog "
+                           "contentstore")
 
 class remotecontentstore(object):
     def __init__(self, ui, fileservice, shared):
@@ -140,7 +140,7 @@ class remotecontentstore(object):
         return [(name, node, None, nullid, revision)]
 
     def add(self, name, node, data):
-        raise Exception("cannot add to a remote store")
+        raise RuntimeError("cannot add to a remote store")
 
     def getmissing(self, keys):
         return keys

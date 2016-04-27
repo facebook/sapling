@@ -23,7 +23,8 @@ class basestore(object):
         self._shared = shared
         self._uid = os.getuid()
 
-        self._validatecachelog = self.ui.config("remotefilelog", "validatecachelog")
+        self._validatecachelog = self.ui.config("remotefilelog",
+                                                "validatecachelog")
         self._validatecache = self.ui.config("remotefilelog", "validatecache",
                                              'on')
         if self._validatecache not in ('on', 'strict', 'off'):
@@ -153,7 +154,8 @@ class basestore(object):
                 os.rename(filepath, filepath + ".corrupt")
                 raise KeyError("corrupt local cache file %s" % filepath)
         except IOError:
-            raise KeyError("no file found at %s for %s:%s" % (filepath, name, hex(node)))
+            raise KeyError("no file found at %s for %s:%s" % (filepath, name,
+                                                              hex(node)))
 
         return data
 
@@ -180,7 +182,8 @@ class basestore(object):
 
             if self._validatecache:
                 if not self._validatekey(filepath, 'write'):
-                    raise util.Abort(_("local cache write was corrupted %s") % path)
+                    raise error.Abort(_("local cache write was corrupted %s") %
+                                      path)
         finally:
             os.umask(oldumask)
 
@@ -222,7 +225,7 @@ class basestore(object):
                     return False
 
                 # extract the node from the metadata
-                datanode = remainder[size:size+20]
+                datanode = remainder[size:size + 20]
 
                 # and compare against the path
                 if os.path.basename(path) == hex(datanode):
@@ -264,7 +267,8 @@ class basestore(object):
                 try:
                     stat = os.stat(path)
                 except OSError as e:
-                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                    # errno.ENOENT = no such file or directory
+                    if e.errno != errno.ENOENT:
                         raise
                     msg = _("warning: file %s was removed by another process\n")
                     ui.warn(msg % path)
@@ -279,9 +283,11 @@ class basestore(object):
                     try:
                         os.remove(path)
                     except OSError as e:
-                        if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                        # errno.ENOENT = no such file or directory
+                        if e.errno != errno.ENOENT:
                             raise
-                        msg = _("warning: file %s was removed by another process\n")
+                        msg = _("warning: file %s was removed by another "
+                                "process\n")
                         ui.warn(msg % path)
                         continue
                     removed += 1
@@ -293,12 +299,14 @@ class basestore(object):
             excess = size - limit
             removedexcess = 0
             while queue and size > limit and size > 0:
-                ui.progress(_truncating, removedexcess, unit="bytes", total=excess)
+                ui.progress(_truncating, removedexcess, unit="bytes",
+                            total=excess)
                 atime, oldpath, stat = queue.get()
                 try:
                     os.remove(oldpath)
                 except OSError as e:
-                    if e.errno != errno.ENOENT: # errno.ENOENT = no such file or directory
+                    # errno.ENOENT = no such file or directory
+                    if e.errno != errno.ENOENT:
                         raise
                     msg = _("warning: file %s was removed by another process\n")
                     ui.warn(msg % oldpath)
@@ -307,6 +315,7 @@ class basestore(object):
                 removedexcess += stat.st_size
         ui.progress(_truncating, None)
 
-        ui.status("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n" %
-                  (removed, count, float(originalsize) / 1024.0 / 1024.0 / 1024.0,
-                  float(size) / 1024.0 / 1024.0 / 1024.0))
+        ui.status(_("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n")
+                  % (removed, count,
+                     float(originalsize) / 1024.0 / 1024.0 / 1024.0,
+                     float(size) / 1024.0 / 1024.0 / 1024.0))

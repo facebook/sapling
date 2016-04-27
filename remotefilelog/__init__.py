@@ -781,6 +781,7 @@ def repack(ui, repo, *pats, **opts):
     dpack = datapack.mutabledatapack(repo.svfs.join('packs'))
     datagc.run(repo.contentstore.stores[2], dpack)
 
-    historygc = historypack.historygc(repo, repo.contentstore, repo.metadatastore)
+    historygc = historypack.historygc(repo, repo.contentstore,
+                                      repo.metadatastore)
     hpack = historypack.mutablehistorypack(repo.svfs.join('packs'))
     historygc.run(repo.metadatastore.stores[2], hpack)

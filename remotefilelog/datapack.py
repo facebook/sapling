@@ -57,7 +57,7 @@ class datapackstore(object):
         return missing
 
     def get(self, name, node):
-        raise Exception("must use getdeltachain with datapackstore")
+        raise RuntimeError("must use getdeltachain with datapackstore")
 
     def getdeltachain(self, name, node):
         for pack in self.packs:
@@ -69,7 +69,7 @@ class datapackstore(object):
         raise KeyError((name, node))
 
     def add(self, name, node, data):
-        raise Exception("cannot add to datapackstore")
+        raise RuntimeError("cannot add to datapackstore")
 
 class datapack(object):
     def __init__(self, path):
@@ -96,7 +96,8 @@ class datapack(object):
         self._fanouttable = []
         for i in range(0, FANOUTCOUNT):
             loc = i * 4
-            self._fanouttable.append(struct.unpack('!I', rawfanout[loc:loc + 4])[0])
+            fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
+            self._fanouttable.append(fanoutentry)
 
     def getmissing(self, keys):
         missing = []
@@ -108,8 +109,8 @@ class datapack(object):
         return missing
 
     def get(self, name, node):
-        raise Exception("must use getdeltachain with datapack (%s:%s)"
-                        % (name, hex(node)))
+        raise RuntimeError("must use getdeltachain with datapack (%s:%s)"
+                           % (name, hex(node)))
 
     def getdeltachain(self, name, node):
         value = self._find(node)
@@ -155,7 +156,7 @@ class datapack(object):
         return deltachain
 
     def add(self, name, node, data):
-        raise Exception("cannot add to datapack (%s:%s)" % (name, node))
+        raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
 
     def _find(self, node):
         fanoutkey = struct.unpack(FANOUTSTRUCT, node[:FANOUTPREFIX])[0]
@@ -348,7 +349,8 @@ class mutabledatapack(object):
                 # store a pointer directly to the index entry for the deltabase.
                 deltabaselocation = locations[deltabase]
 
-            entry = struct.pack(INDEXFORMAT, node, deltabaselocation, offset, size)
+            entry = struct.pack(INDEXFORMAT, node, deltabaselocation, offset,
+                                size)
             rawindex += entry
 
         rawfanouttable = ''
