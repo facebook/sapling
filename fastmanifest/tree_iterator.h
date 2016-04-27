@@ -23,7 +23,7 @@ typedef struct _path_record_t {
   size_t previous_path_idx;
 } path_record_t;
 
-typedef struct _iterator_t {
+struct _iterator_t {
   tree_t* copy;
 
   bool construct_paths;
@@ -38,6 +38,6 @@ typedef struct _iterator_t {
   char *path;
   size_t path_idx;
   size_t path_sz;
-} iterator_t;
+};
 
 #endif // #ifndef __FASTMANIFEST_TREE_ITERATOR_H__
