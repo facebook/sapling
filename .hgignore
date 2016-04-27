@@ -30,6 +30,7 @@ build
 contrib/chg/chg
 contrib/hgsh/hgsh
 contrib/vagrant/.vagrant
+contrib/docker/ubuntu-*
 dist
 packages
 doc/common.txt

@@ -181,8 +181,10 @@ docker-debian-jessie:
 	mkdir -p packages/debian-jessie
 	contrib/dockerdeb debian jessie
 
-docker-ubuntu-trusty:
-	mkdir -p packages/ubuntu-trusty
+contrib/docker/ubuntu-%: contrib/docker/ubuntu.template
+	sed "s/__CODENAME__/$*/" $< > $@
+
+docker-ubuntu-trusty: contrib/docker/ubuntu-trusty
 	contrib/dockerdeb ubuntu trusty
 
 fedora20:
