@@ -24,10 +24,149 @@ FANOUTSTRUCT = '!H'
 # The number of fanout table entries
 FANOUTCOUNT = 2**(FANOUTPREFIX * 8)
 # The total bytes used by the fanout table
-FANOUTSIZE = FANOUTCOUNT * 4
+FANOUTENTRYSTRUCT = '!I'
+FANOUTENTRYSIZE = 4
+FANOUTSIZE = FANOUTCOUNT * FANOUTENTRYSIZE
 
 INDEXSUFFIX = '.histidx'
 PACKSUFFIX = '.histpack'
+
+class AncestorIndicies(object):
+    NODE = 0
+    P1NODE = 1
+    P2NODE = 2
+    LINKNODE = 3
+
+class historypack(object):
+    def __init__(self, path):
+        self.path = path
+        self.packpath = path + PACKSUFFIX
+        self.indexpath = path + INDEXSUFFIX
+        self.indexfp = open(self.indexpath, 'r+b')
+        self.datafp = open(self.packpath, 'r+b')
+
+        self.indexsize = os.stat(self.indexpath).st_size
+        self.datasize = os.stat(self.packpath).st_size
+
+        # memory-map the file, size 0 means whole file
+        self._index = mmap.mmap(self.indexfp.fileno(), 0)
+        self._data = mmap.mmap(self.datafp.fileno(), 0)
+
+        rawfanout = self._index[:FANOUTSIZE]
+        self._fanouttable = []
+        for i in range(0, FANOUTCOUNT):
+            loc = i * FANOUTENTRYSIZE
+            fanoutentry = struct.unpack(FANOUTENTRYSTRUCT,
+                    rawfanout[loc:loc + FANOUTENTRYSIZE])[0]
+            self._fanouttable.append(fanoutentry)
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            value = self._find(node)
+            if not value:
+                missing.append((name, node))
+
+        return missing
+
+    def getparents(self, name, node):
+        section = self._findsection(name)
+        node, p1, p2, linknode = self._findnode(section, node)
+        return p1, p2
+
+    def getancestors(self, name, node):
+        """Returns as many ancestors as we're aware of.
+
+        return value: {
+           node: (p1, p2, linknode),
+           ...
+        }
+        """
+        filename, offset, size = self._findsection(name)
+        ancestors = set((node,))
+        results = {}
+        for o in range(offset, offset + size, PACKENTRYLENGTH):
+            entry = struct.unpack(PACKFORMAT,
+                                  self._data[o:o + PACKENTRYLENGTH])
+            if entry[AncestorIndicies.NODE] in ancestors:
+                ancestors.add(entry[AncestorIndicies.P1NODE])
+                ancestors.add(entry[AncestorIndicies.P2NODE])
+                result = (entry[AncestorIndicies.P1NODE],
+                          entry[AncestorIndicies.P2NODE],
+                          entry[AncestorIndicies.LINKNODE],
+                          # Add a fake None for the copyfrom entry for now
+                          # TODO: remove copyfrom from getancestor api
+                          None)
+                results[entry[AncestorIndicies.NODE]] = result
+
+        if not results:
+            raise KeyError((name, node))
+        return results
+
+    def getlinknode(self, name, node):
+        section = self._findsection(name)
+        node, p1, p2, linknode = self._findnode(section, node)
+        return linknode
+
+    def add(self, name, node, data):
+        raise RuntimeError("cannot add to historypack" % (name, hex(node)))
+
+    def _findnode(self, section, node):
+        name, offset, size = section
+        data = self._data
+        for i in range(offset, offset + size, PACKENTRYLENGTH):
+            entry = struct.unpack(PACKFORMAT,
+                                  data[offset:offset + PACKENTRYLENGTH])
+            if entry[0] == node:
+                return entry
+
+        raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
+
+    def _findsection(self, name):
+        namehash = util.sha1(name).digest()
+        fanoutkey = struct.unpack(FANOUTSTRUCT, namehash[:FANOUTPREFIX])[0]
+        fanout = self._fanouttable
+
+        start = fanout[fanoutkey] + FANOUTSIZE
+        if fanoutkey < FANOUTCOUNT - 1:
+            end = self._fanouttable[fanoutkey + 1] + FANOUTSIZE
+        else:
+            end = self.indexsize
+
+        # Bisect between start and end to find node
+        index = self._index
+        startnode = self._index[start:start + NODELENGTH]
+        endnode = self._index[end:end + NODELENGTH]
+        if startnode == namehash:
+            entry = self._index[start:start + INDEXENTRYLENGTH]
+        elif endnode == namehash:
+            entry = self._index[end:end + INDEXENTRYLENGTH]
+        else:
+            iteration = 0
+            while start < end - INDEXENTRYLENGTH:
+                iteration += 1
+                mid = start  + (end - start) / 2
+                mid = mid - ((mid - FANOUTSIZE) % INDEXENTRYLENGTH)
+                midnode = self._index[mid:mid + NODELENGTH]
+                if midnode == namehash:
+                    entry = self._index[mid:mid + INDEXENTRYLENGTH]
+                    break
+                if namehash > midnode:
+                    start = mid
+                    startnode = midnode
+                elif namehash < midnode:
+                    end = mid
+                    endnode = midnode
+            else:
+                raise KeyError(name)
+
+        filenamehash, offset, size = struct.unpack(INDEXFORMAT, entry)
+        filenamelength = struct.unpack('!H', self._data[offset:offset + 2])[0]
+        actualname = self._data[offset + 2:offset + 2 + filenamelength]
+        if name != actualname:
+            raise KeyError("found file name %s when looking for %s" %
+                           (actualname, name))
+        return (name, offset + 2 + filenamelength, size - filenamelength - 2)
 
 class mutablehistorypack(object):
     """A class for constructing and serializing a histpack file and index.
@@ -165,7 +304,7 @@ class mutablehistorypack(object):
         for offset in fanouttable:
             offset = offset if offset != -1 else last
             last = offset
-            rawfanouttable += struct.pack('!I', offset)
+            rawfanouttable += struct.pack(FANOUTENTRYSTRUCT, offset)
 
         # TODO: add version number to the index
         self.idxfp.write(rawfanouttable)
