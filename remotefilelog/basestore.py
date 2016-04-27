@@ -2,10 +2,10 @@ import grp, os, shutil, time
 import shallowutil
 from mercurial import util
 from mercurial.i18n import _
-from mercurial.node import hex
+from mercurial.node import bin, hex
 
 class basestore(object):
-    def __init__(self, ui, path, reponame, shared=False):
+    def __init__(self, repo, path, reponame, shared=False):
         """Creates a remotefilelog store object for the given repo name.
 
         `path` - The file path where this store keeps its data
@@ -16,7 +16,8 @@ class basestore(object):
         the local data for one repo.
         """
         path = util.expandpath(path)
-        self.ui = ui
+        self.repo = repo
+        self.ui = repo.ui
         self._path = path
         self._reponame = reponame
         self._shared = shared
@@ -58,7 +59,79 @@ class basestore(object):
 
         return missing
 
+    # BELOW THIS ARE IMPLEMENTATIONS OF REPACK SOURCE
+
+    def getfiles(self):
+        """Return a list of (filename, [node,...]) for all the revisions that
+        exist in the store.
+
+        This is useful for obtaining a list of all the contents of the store
+        when performing a repack to another store, since the store API requires
+        name+node keys and not namehash+node keys.
+        """
+        existing = {}
+        for filenamehash, node in self._listkeys():
+            existing.setdefault(filenamehash, []).append(node)
+
+        filenamemap = self._resolvefilenames(existing.keys())
+
+        for filename, sha in sorted(filenamemap.iteritems()):
+            yield (filename, existing[sha])
+
     # BELOW THIS ARE NON-STANDARD APIS
+
+    def _resolvefilenames(self, hashes):
+        """Given a list of filename hashes that are present in the
+        remotefilelog store, return a mapping from filename->hash.
+
+        This is useful when converting remotefilelog blobs into other storage
+        formats.
+        """
+        filenames = {}
+        missingfilename = set(hashes)
+
+        # Start with a full manifest, since it'll cover the majority of files
+        for filename in self.repo['tip'].manifest():
+            sha = util.sha1(filename).digest()
+            if sha in missingfilename:
+                filenames[filename] = sha
+                missingfilename.discard(sha)
+
+        # Scan the changelog until we've found every file name
+        cl = self.repo.unfiltered().changelog
+        for rev in xrange(len(cl), -1, -1):
+            if not missingfilename:
+                break
+            files = cl.readfiles(cl.node(rev))
+            for filename in files:
+                sha = util.sha1(filename).digest()
+                if sha in missingfilename:
+                    filenames[filename] = sha
+                    missingfilename.discard(sha)
+
+        return filenames
+
+    def _listkeys(self):
+        """List all the remotefilelog keys that exist in the store.
+
+        Returns a iterator of (filename hash, filecontent hash) tuples.
+        """
+        if self._shared:
+            path = os.path.join(self._path, self._reponame)
+        else:
+            path = self._path
+
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                if len(filename) != 40:
+                    continue
+                node = filename
+                if self._shared:
+                    # .../1a/85ffda..be21
+                    filenamehash = root[-41:-39] + root[-38:]
+                else:
+                    filenamehash = root[-40:]
+                yield (bin(filenamehash), bin(node))
 
     def _getfilepath(self, name, node):
         node = hex(node)

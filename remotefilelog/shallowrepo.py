@@ -150,19 +150,19 @@ def wraprepo(repo):
         os.makedirs(localpath)
 
     # Instantiate local data stores
-    localcontent = remotefilelogcontentstore(repo.ui, localpath, repo.name,
+    localcontent = remotefilelogcontentstore(repo, localpath, repo.name,
                                              shared=False)
-    localmetadata = remotefilelogmetadatastore(repo.ui, localpath, repo.name,
+    localmetadata = remotefilelogmetadatastore(repo, localpath, repo.name,
                                                shared=False)
 
     # Instantiate shared cache stores
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     if not cachepath:
-        raise error.Abort(_("could not find config option "
-                            "remotefilelog.cachepath"))
-    cachecontent = remotefilelogcontentstore(repo.ui, cachepath, repo.name,
+        raise util.Abort(_("could not find config option "
+                           "remotefilelog.cachepath"))
+    cachecontent = remotefilelogcontentstore(repo, cachepath, repo.name,
                                              shared=True)
-    cachemetadata = remotefilelogmetadatastore(repo.ui, cachepath, repo.name,
+    cachemetadata = remotefilelogmetadatastore(repo, cachepath, repo.name,
                                                shared=True)
     repo.sharedstore = cachecontent
 
