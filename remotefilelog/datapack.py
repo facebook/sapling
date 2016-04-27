@@ -372,7 +372,7 @@ class datagc(object):
     def run(self, source, target):
         ui = self.repo.ui
 
-        files = list(source.getfiles())
+        files = sorted(source.getfiles())
         count = 0
         for filename, nodes in files:
             ancestors = {}
