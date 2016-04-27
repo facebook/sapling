@@ -193,6 +193,9 @@ docker-ubuntu-trusty-ppa: contrib/docker/ubuntu-trusty
 docker-ubuntu-wily: contrib/docker/ubuntu-wily
 	contrib/dockerdeb ubuntu wily
 
+docker-ubuntu-wily-ppa: contrib/docker/ubuntu-wily
+	contrib/dockerdeb ubuntu wily --source-only
+
 docker-ubuntu-xenial: contrib/docker/ubuntu-xenial
 	contrib/dockerdeb ubuntu xenial
 
