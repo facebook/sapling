@@ -7101,8 +7101,7 @@ def unbundle(ui, repo, fname1, *fnames, **opts):
 
 @command('^update|up|checkout|co',
     [('C', 'clean', None, _('discard uncommitted changes (no backup)')),
-    ('c', 'check', None,
-     _('update across branches if no uncommitted changes')),
+    ('c', 'check', None, _('require clean working directory')),
     ('d', 'date', '', _('tipmost revision matching date'), _('DATE')),
     ('r', 'rev', '', _('revision'), _('REV'))
      ] + mergetoolopts,
