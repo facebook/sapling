@@ -8,6 +8,8 @@ import shallowutil
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.
 INDEXFORMAT = '!20siQQ'
+INDEXENTRYLENGTH = 40
+NODELENGTH = 20
 
 # The fanout prefix is the number of bytes that can be addressed by the fanout
 # table. Example: a fanout prefix of 1 means we use the first byte of a hash to
@@ -35,6 +37,135 @@ EMPTYFANOUT = -1
 
 INDEXSUFFIX = '.dataidx'
 PACKSUFFIX = '.datapack'
+
+class datapack(object):
+    def __init__(self, path):
+        self.path = path
+        self.packpath = path + PACKSUFFIX
+        self.indexpath = path + INDEXSUFFIX
+        # TODO: use an opener/vfs to access these paths
+        self.indexfp = open(self.indexpath, 'r+b')
+        self.datafp = open(self.packpath, 'r+b')
+
+        self.indexsize = os.stat(self.indexpath).st_size
+        self.datasize = os.stat(self.packpath).st_size
+
+        self._index = mmap.mmap(self.indexfp.fileno(), 0)
+
+        # memory-map the file, size 0 means whole file
+        self._data = mmap.mmap(self.datafp.fileno(), 0)
+        version = struct.unpack('!B', self._data[0])[0]
+        if version != VERSION:
+            raise RuntimeError("unsupported datapack version '%s'" %
+                               version)
+
+        rawfanout = self._index[:FANOUTSIZE]
+        self._fanouttable = []
+        for i in range(0, FANOUTCOUNT):
+            loc = i * 4
+            self._fanouttable.append(struct.unpack('!I', rawfanout[loc:loc + 4])[0])
+
+    def getmissing(self, keys):
+        missing = []
+        for name, node in keys:
+            value = self._find(node)
+            if not value:
+                missing.append((name, node))
+
+        return missing
+
+    def get(self, name, node):
+        raise Exception("must use getdeltachain with datapack (%s:%s)"
+                        % (name, hex(node)))
+
+    def getdeltachain(self, name, node):
+        value = self._find(node)
+        if value is None:
+            raise KeyError((name, node))
+
+        # Precompute chains
+        chain = [value]
+        deltabaseoffset = value[1]
+        while deltabaseoffset != -1:
+            loc = FANOUTSIZE + deltabaseoffset
+            value = struct.unpack(INDEXFORMAT, self._index[loc:loc +
+                                                           INDEXENTRYLENGTH])
+            deltabaseoffset = value[1]
+            chain.append(value)
+
+        # Read chain data
+        deltachain = []
+        for node, deltabaseoffset, offset, size in chain:
+            rawentry = self._data[offset:offset + size]
+
+            # <2 byte len> + <filename>
+            lengthsize = 2
+            filenamelen = struct.unpack('!H', rawentry[:2])[0]
+            filename = rawentry[lengthsize:lengthsize + filenamelen]
+
+            # <20 byte node> + <20 byte deltabase>
+            nodestart = lengthsize + filenamelen
+            deltabasestart = nodestart + NODELENGTH
+            node = rawentry[nodestart:deltabasestart]
+            deltabasenode = rawentry[deltabasestart:deltabasestart + NODELENGTH]
+
+            # <8 byte len> + <delta>
+            deltastart = deltabasestart + NODELENGTH
+            rawdeltalen = rawentry[deltastart:deltastart + 8]
+            deltalen = struct.unpack('!Q', rawdeltalen)[0]
+
+            delta = rawentry[deltastart + 8:deltastart + 8 + deltalen]
+            delta = lz4.decompress(delta)
+
+            deltachain.append((filename, node, filename, deltabasenode, delta))
+
+        return deltachain
+
+    def add(self, name, node, data):
+        raise Exception("cannot add to datapack (%s:%s)" % (name, node))
+
+    def _find(self, node):
+        fanoutkey = struct.unpack(FANOUTSTRUCT, node[:FANOUTPREFIX])[0]
+        fanout = self._fanouttable
+
+        start = fanout[fanoutkey] + FANOUTSIZE
+        # Scan forward to find the first non-same entry, which is the upper
+        # bound.
+        for i in range(fanoutkey + 1, FANOUTCOUNT):
+            end = self._fanouttable[i] + FANOUTSIZE
+            if end != start:
+                break
+        else:
+            end = self.indexsize
+
+        # Bisect between start and end to find node
+        index = self._index
+        startnode = self._index[start:start + NODELENGTH]
+        endnode = self._index[end:end + NODELENGTH]
+        if startnode == node:
+            entry = self._index[start:start + INDEXENTRYLENGTH]
+        elif endnode == node:
+            entry = self._index[end:end + INDEXENTRYLENGTH]
+        else:
+            iteration = 0
+            while start < end - INDEXENTRYLENGTH:
+                iteration += 1
+                mid = start  + (end - start) / 2
+                mid = mid - ((mid - FANOUTSIZE) % INDEXENTRYLENGTH)
+                midnode = self._index[mid:mid + NODELENGTH]
+                if midnode == node:
+                    entry = self._index[mid:mid + INDEXENTRYLENGTH]
+                    break
+                if node > midnode:
+                    start = mid
+                    startnode = midnode
+                elif node < midnode:
+                    end = mid
+                    endnode = midnode
+            else:
+                return None
+
+        return struct.unpack(INDEXFORMAT, entry)
 
 class mutabledatapack(object):
     """A class for constructing and serializing a datapack file and index.
@@ -162,14 +293,12 @@ class mutabledatapack(object):
 
         fanouttable = [EMPTYFANOUT] * FANOUTCOUNT
 
-        entrysize = 20 + 4 + 8 + 8
-
         # Precompute the location of each entry
         locations = {}
         deltaslots = {}
         count = 0
         for node, deltabase, offset, size in entries:
-            location = count * entrysize
+            location = count * INDEXENTRYLENGTH
             locations[node] = location
             count += 1
 
