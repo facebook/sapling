@@ -187,6 +187,9 @@ contrib/docker/ubuntu-%: contrib/docker/ubuntu.template
 docker-ubuntu-trusty: contrib/docker/ubuntu-trusty
 	contrib/dockerdeb ubuntu trusty
 
+docker-ubuntu-trusty-ppa: contrib/docker/ubuntu-trusty
+	contrib/dockerdeb ubuntu trusty --source-only
+
 docker-ubuntu-wily: contrib/docker/ubuntu-wily
 	contrib/dockerdeb ubuntu wily
 
