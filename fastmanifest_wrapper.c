@@ -21,8 +21,15 @@ typedef struct {
   tree_t *tree;
 } fastmanifest;
 
+typedef struct {
+  PyObject_HEAD;
+  iterator_t *iterator;
+} fmIter;
+
 
 static PyTypeObject fastmanifestType;
+static PyTypeObject fastmanifestKeysIterator;
+static PyTypeObject fastmanifestEntriesIterator;
 
 /* ========================== */
 /* Fastmanifest: C Interface */
@@ -179,7 +186,37 @@ static void fastmanifest_dealloc(fastmanifest *self) {
 }
 
 static PyObject *fastmanifest_getkeysiter(fastmanifest *self) {
-  return NULL;
+  fmIter *i = NULL;
+  iterator_t *iterator = create_iterator(self->tree, true);
+  if (!iterator) {
+    PyErr_NoMemory();
+    return NULL;
+  }
+  i = PyObject_New(fmIter, &fastmanifestKeysIterator);
+  if (i) {
+    i->iterator = iterator;
+  } else {
+    destroy_iterator(iterator);
+    PyErr_NoMemory();
+  }
+  return (PyObject *)i;
+}
+
+static PyObject *fastmanifest_getentriesiter(fastmanifest *self) {
+  fmIter *i = NULL;
+  iterator_t *iterator = create_iterator(self->tree, true);
+  if (!iterator) {
+    PyErr_NoMemory();
+    return NULL;
+  }
+  i = PyObject_New(fmIter, &fastmanifestEntriesIterator);
+  if (i) {
+    i->iterator = iterator;
+  } else {
+    destroy_iterator(iterator);
+    PyErr_NoMemory();
+  }
+  return (PyObject *)i;
 }
 
 static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
@@ -212,9 +249,7 @@ static PyObject *fastmanifest_load(fastmanifest *self, PyObject *args) {
 	return NULL;
 }
 
-static fastmanifest *fastmanifest_copy(fastmanifest *self)
-{
-
+static fastmanifest *fastmanifest_copy(fastmanifest *self) {
   fastmanifest *copy = PyObject_New(fastmanifest, &fastmanifestType);
   if (copy)
     ifastmanifest_copy(copy, self);
@@ -224,14 +259,189 @@ static fastmanifest *fastmanifest_copy(fastmanifest *self)
   return copy;
 }
 
-static Py_ssize_t fastmanifest_size(fastmanifest *self)
-{
+static PyObject *hashflags(
+    const uint8_t *checksum,
+    const uint8_t checksum_sz,
+    const uint8_t flags) {
+  PyObject *ret = NULL, *py_hash, *py_flags;
+  py_hash = PyString_FromStringAndSize((const char *)checksum, checksum_sz);
+  py_flags = PyString_FromStringAndSize(
+      (const char *) &flags,
+      flags == 0 ? 0 : 1);
+  if (!py_hash || !py_flags) {
+    goto cleanup;
+  }
+  ret = PyTuple_Pack(2, py_hash, py_flags);
+
+cleanup:
+  Py_XDECREF(py_hash);
+  Py_XDECREF(py_flags);
+  return ret;
+}
+
+typedef struct _fastmanifest_diff_context_t {
+  PyObject *result;
+  PyObject *emptyTuple;
+  bool error_occurred;
+} fastmanifest_diff_context_t;
+
+static void fastmanifest_diff_callback(
+    const char *path,
+    const size_t path_sz,
+    const bool left_present,
+    const uint8_t *left_checksum,
+    const uint8_t left_checksum_sz,
+    const uint8_t left_flags,
+    const bool right_present,
+    const uint8_t *right_checksum,
+    const uint8_t right_checksum_sz,
+    const uint8_t right_flags,
+    void *context) {
+  fastmanifest_diff_context_t *diff_context =
+      (fastmanifest_diff_context_t *) context;
+  PyObject *key, *outer = NULL, *py_left, *py_right;
+  bool decLeftReference, decRightReference;
+
+  if (left_present) {
+    py_left = hashflags(left_checksum, left_checksum_sz, left_flags);
+    decLeftReference = true;
+  } else {
+    py_left = diff_context->emptyTuple;
+  }
+
+  if (right_present) {
+    py_right = hashflags(right_checksum, right_checksum_sz, right_flags);
+    decRightReference = true;
+  } else {
+    py_right = diff_context->emptyTuple;
+  }
+
+  key = PyString_FromStringAndSize(path, path_sz);
+
+  if (!key || !py_left || !py_right) {
+    diff_context->error_occurred = true;
+    goto cleanup;
+  }
+
+  outer = PyTuple_Pack(2, py_left, py_right);
+  if (outer == NULL) {
+    diff_context->error_occurred = true;
+    goto cleanup;
+  }
+
+  // decrement references.
+  if (decLeftReference) {
+    Py_DECREF(py_left);
+    py_left = NULL;
+  }
+  if (decRightReference) {
+    Py_DECREF(py_right);
+    py_right = NULL;
+  }
+
+
+  if (PyDict_SetItem(diff_context->result, key, outer) != 0) {
+    diff_context->error_occurred = true;
+  }
+
+cleanup:
+  Py_XDECREF(outer);
+  Py_XDECREF(key);
+  Py_XDECREF(py_left);
+  Py_XDECREF(py_right);
+}
+
+static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
+  fastmanifest *other;
+  PyObject *pyclean = NULL;
+  bool listclean;
+  PyObject *emptyTuple = NULL, *ret = NULL;
+  PyObject *es;
+  fastmanifest_diff_context_t context;
+
+  if (!PyArg_ParseTuple(args, "O!|O", &fastmanifestType, &other, &pyclean)) {
+    return NULL;
+  }
+  listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
+  es = PyString_FromString("");
+  if (!es) {
+    goto nomem;
+  }
+  emptyTuple = PyTuple_Pack(2, Py_None, es);
+  Py_DECREF(es);
+  if (!emptyTuple) {
+    goto nomem;
+  }
+  ret = PyDict_New();
+  if (!ret) {
+    goto nomem;
+  }
+
+  context.result = ret;
+  context.emptyTuple = emptyTuple;
+
+  diff_result_t diff_result = diff_trees(self->tree, other->tree, listclean,
+      &fastmanifest_diff_callback, &context);
+
+  Py_CLEAR(emptyTuple);
+  Py_CLEAR(es);
+
+  switch (diff_result) {
+    case DIFF_OK:
+      if (context.error_occurred) {
+        // error occurred in the callback, i.e., our code.
+        Py_XDECREF(ret);
+        if (PyErr_Occurred() == NULL) {
+          PyErr_Format(PyExc_ValueError,
+              "ignore_fastmanifest_errcode set but no exception detected.");
+        }
+        return NULL;
+      }
+
+      return ret;
+
+    case DIFF_OOM:
+      goto nomem;
+
+    case DIFF_WTF:
+      PyErr_Format(PyExc_ValueError,
+          "Unexpected error diffing manifests.");
+      goto cleanup;
+  }
+
+nomem:
+  PyErr_NoMemory();
+
+cleanup:
+  Py_XDECREF(ret);
+  Py_XDECREF(emptyTuple);
+  Py_XDECREF(es);
+  return NULL;
+}
+
+static PyObject *fastmanifest_text(fastmanifest *self) {
+  convert_to_flat_result_t to_flat = convert_to_flat(self->tree);
+  switch (to_flat.code) {
+    case CONVERT_TO_FLAT_OK:
+      return PyString_FromStringAndSize(
+          to_flat.flat_manifest, to_flat.flat_manifest_sz);
+
+    case CONVERT_TO_FLAT_OOM:
+      PyErr_NoMemory();
+      return NULL;
+
+    case CONVERT_TO_FLAT_WTF:
+      PyErr_Format(PyExc_ValueError,
+          "Error converting manifest");
+      return NULL;
+  }
+}
+
+static Py_ssize_t fastmanifest_size(fastmanifest *self) {
   return ifastmanifest_size(self);
 }
 
-static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key)
-{
-
+static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key) {
   if (!fastmanifest_is_valid_manifest_key(key)) {
     return NULL;
   }
@@ -394,12 +604,18 @@ static PySequenceMethods fastmanifest_seq_meths = {
 static PyMethodDef fastmanifest_methods[] = {
   {"iterkeys", (PyCFunction)fastmanifest_getkeysiter, METH_NOARGS,
    "Iterate over file names in this fastmanifest."},
+  {"iterentries", (PyCFunction)fastmanifest_getentriesiter, METH_NOARGS,
+   "Iterate over (path, nodeid, flags) tuples in this fastmanifest."},
   {"copy", (PyCFunction)fastmanifest_copy, METH_NOARGS,
    "Make a copy of this fastmanifest."},
   {"save", (PyCFunction)fastmanifest_save, METH_NOARGS,
    "Save a fastmanifest to a file"},
   {"load", (PyCFunction)fastmanifest_load, METH_NOARGS,
    "Load a tree manifest from a file"},
+  {"diff", (PyCFunction)fastmanifest_diff, METH_VARARGS,
+   "Compare this fastmanifest to another one."},
+  {"text", (PyCFunction)fastmanifest_text, METH_NOARGS,
+   "Encode this manifest to text."},
   {NULL},
 };
 
@@ -429,8 +645,8 @@ static PyTypeObject fastmanifestType = {
   0,                                                /* tp_traverse */
   0,                                                /* tp_clear */
   0,                                                /* tp_richcompare */
-  0,                                             /* tp_weaklistoffset */
-  (getiterfunc)fastmanifest_getkeysiter,                /* tp_iter */
+  0,                                                /* tp_weaklistoffset */
+  (getiterfunc)fastmanifest_getkeysiter,            /* tp_iter */
   0,                                                /* tp_iternext */
   fastmanifest_methods,                             /* tp_methods */
   0,                                                /* tp_members */
@@ -442,6 +658,121 @@ static PyTypeObject fastmanifestType = {
   0,                                                /* tp_dictoffset */
   (initproc)fastmanifest_init,                      /* tp_init */
   0,                                                /* tp_alloc */
+};
+
+/* iteration support */
+
+typedef struct {
+  PyObject_HEAD iterator_t *iterator;
+} lmIter;
+
+static void fmiter_dealloc(PyObject *o) {
+  lmIter *self = (lmIter *)o;
+  destroy_iterator(self->iterator);
+  // TODO: lcharignon says this is suspicous.
+  PyObject_Del(self);
+}
+
+static PyObject *fmiter_iterkeysnext(PyObject *o) {
+  lmIter *self = (lmIter *)o;
+  iterator_result_t iterator_result = iterator_next(self->iterator);
+  if (!iterator_result.valid) {
+    return NULL;
+  }
+  return PyString_FromStringAndSize(
+      iterator_result.path, iterator_result.path_sz);
+}
+
+static PyObject *fmiter_iterentriesnext(PyObject *o) {
+  lmIter *self = (lmIter *)o;
+  iterator_result_t iterator_result = iterator_next(self->iterator);
+  if (!iterator_result.valid) {
+    return NULL;
+  }
+
+  PyObject *ret = NULL, *path, *hash, *flags;
+  path = PyString_FromStringAndSize(
+      iterator_result.path, iterator_result.path_sz);
+  hash = PyString_FromStringAndSize(
+      (const char *) iterator_result.checksum, iterator_result.checksum_sz);
+  flags = PyString_FromStringAndSize(
+      (const char *) &iterator_result.flags,
+      iterator_result.flags == 0 ? 0 : 1);
+  if (!path || !hash || !flags) {
+    goto done;
+  }
+  ret = PyTuple_Pack(3, path, hash, flags);
+done:
+  Py_XDECREF(path);
+  Py_XDECREF(hash);
+  Py_XDECREF(flags);
+  return ret;
+}
+
+static PyTypeObject fastmanifestKeysIterator = {
+	PyObject_HEAD_INIT(NULL)
+	0,                               /*ob_size */
+	"parsers.fastmanifest.keysiterator", /*tp_name */
+	sizeof(fmIter),                  /*tp_basicsize */
+	0,                               /*tp_itemsize */
+	fmiter_dealloc,                  /*tp_dealloc */
+	0,                               /*tp_print */
+	0,                               /*tp_getattr */
+	0,                               /*tp_setattr */
+	0,                               /*tp_compare */
+	0,                               /*tp_repr */
+	0,                               /*tp_as_number */
+	0,                               /*tp_as_sequence */
+	0,                               /*tp_as_mapping */
+	0,                               /*tp_hash */
+	0,                               /*tp_call */
+	0,                               /*tp_str */
+	0,                               /*tp_getattro */
+	0,                               /*tp_setattro */
+	0,                               /*tp_as_buffer */
+	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+	   use tp_iter and tp_iternext fields. */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	"Keys iterator for a fastmanifest.",  /* tp_doc */
+	0,                               /* tp_traverse */
+	0,                               /* tp_clear */
+	0,                               /* tp_richcompare */
+	0,                               /* tp_weaklistoffset */
+	PyObject_SelfIter,               /* tp_iter: __iter__() method */
+	fmiter_iterkeysnext,             /* tp_iternext: next() method */
+};
+
+static PyTypeObject fastmanifestEntriesIterator = {
+	PyObject_HEAD_INIT(NULL)
+	0,                               /*ob_size */
+	"parsers.fastmanifest.entriesiterator", /*tp_name */
+	sizeof(fmIter),                  /*tp_basicsize */
+	0,                               /*tp_itemsize */
+	fmiter_dealloc,                  /*tp_dealloc */
+	0,                               /*tp_print */
+	0,                               /*tp_getattr */
+	0,                               /*tp_setattr */
+	0,                               /*tp_compare */
+	0,                               /*tp_repr */
+	0,                               /*tp_as_number */
+	0,                               /*tp_as_sequence */
+	0,                               /*tp_as_mapping */
+	0,                               /*tp_hash */
+	0,                               /*tp_call */
+	0,                               /*tp_str */
+	0,                               /*tp_getattro */
+	0,                               /*tp_setattro */
+	0,                               /*tp_as_buffer */
+	/* tp_flags: Py_TPFLAGS_HAVE_ITER tells python to
+	   use tp_iter and tp_iternext fields. */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_ITER,
+	"Iterator for 3-tuples in a fastmanifest.",  /* tp_doc */
+	0,                               /* tp_traverse */
+	0,                               /* tp_clear */
+	0,                               /* tp_richcompare */
+	0,                               /* tp_weaklistoffset */
+	PyObject_SelfIter,               /* tp_iter: __iter__() method */
+	fmiter_iterentriesnext,          /* tp_iternext: next() method */
 };
 
 static PyMethodDef methods[] = {
