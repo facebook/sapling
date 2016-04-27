@@ -1,6 +1,7 @@
 import os
 import basestore, shallowutil
-from mercurial import util
+from mercurial import error, util
+from mercurial.i18n import _
 from mercurial.node import hex, nullid
 
 class unionmetadatastore(object):
