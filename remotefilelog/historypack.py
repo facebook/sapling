@@ -37,6 +37,55 @@ class AncestorIndicies(object):
     P2NODE = 2
     LINKNODE = 3
 
+class historypackstore(object):
+    def __init__(self, path):
+        self.packs = []
+        suffixlen = len(INDEXSUFFIX)
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                if (filename[-suffixlen:] == INDEXSUFFIX
+                    and ('%s%s' % (filename[:-suffixlen], PACKSUFFIX)) in files):
+                    packpath = os.path.join(root, filename)
+                    self.packs.append(historypack(packpath[:-suffixlen]))
+
+    def getmissing(self, keys):
+        missing = keys
+        for pack in self.packs:
+            missing = pack.getmissing(missing)
+
+        return missing
+
+    def getparents(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getparents(name, node)
+            except KeyError as ex:
+                pass
+
+        raise KeyError((name, node))
+
+    def getancestors(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getancestors(name, node)
+            except KeyError as ex:
+                pass
+
+        raise KeyError((name, node))
+
+    def getlinknode(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getlinknode(name, node)
+            except KeyError as ex:
+                pass
+
+        raise KeyError((name, node))
+
+    def add(self, name, node, data):
+        raise Exception("cannot add to historypackstore (%s:%s)"
+                        % (name, hex(node)))
+
 class historypack(object):
     def __init__(self, path):
         self.path = path
