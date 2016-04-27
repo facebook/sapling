@@ -65,6 +65,8 @@ setup(
                            'fastmanifest/tree_arena.c',
                            'fastmanifest/tree_convert.c',
                            'fastmanifest/tree_copy.c',
+                           'fastmanifest/tree_diff.c',
+                           'fastmanifest/tree_iterator.c',
                            'fastmanifest/tree_path.c',
                   ],
                   include_dirs=['fastmanifest',
