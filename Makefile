@@ -190,6 +190,9 @@ docker-ubuntu-trusty: contrib/docker/ubuntu-trusty
 docker-ubuntu-wily: contrib/docker/ubuntu-wily
 	contrib/dockerdeb ubuntu wily
 
+docker-ubuntu-xenial: contrib/docker/ubuntu-xenial
+	contrib/dockerdeb ubuntu xenial
+
 fedora20:
 	mkdir -p packages/fedora20
 	contrib/buildrpm
