@@ -153,7 +153,10 @@ class hybridmanifest(object):
         # Get the manifest most suited for the operations (flat or cached)
         # TODO return fastmanifest when suitable
         if self.debugfastmanifest:
-            return fastmanifest_wrapper(self._flatmanifest().text())
+            flatmanifest = self._flatmanifest().text()
+            fm = fastmanifest_wrapper.fastManifest(flatmanifest)
+
+            return fastmanifestdict(fm)
         return self._flatmanifest()
 
     # Proxy all the manifest methods to the flatmanifest except magic methods
@@ -429,3 +432,211 @@ def extsetup(ui):
     revset.symbols['fastmanifesttocache'] = fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
 
+class fastmanifestdict(object):
+    def __init__(self, fm):
+        self._fm = fm
+
+    def __getitem__(self, key):
+        return self._fm[key][0]
+
+    def find(self, key):
+        return self._fm[key]
+
+    def __len__(self):
+        return len(self._fm)
+
+    def __setitem__(self, key, node):
+        self._fm[key] = node, self.flags(key, '')
+
+    def __contains__(self, key):
+        return key in self._fm
+
+    def __delitem__(self, key):
+        del self._fm[key]
+
+    def __iter__(self):
+        return self._fm.__iter__()
+
+    def iterkeys(self):
+        return self._fm.iterkeys()
+
+    def keys(self):
+        return list(self.iterkeys())
+
+    def filesnotin(self, m2):
+        '''Set of files in this manifest that are not in the other'''
+        files = set(self)
+        files.difference_update(m2)
+        return files
+
+    @util.propertycache
+    def _dirs(self):
+        return util.dirs(self)
+
+    def dirs(self):
+        return self._dirs
+
+    def hasdir(self, dir):
+        return dir in self._dirs
+
+    def _filesfastpath(self, match):
+        '''Checks whether we can correctly and quickly iterate over matcher
+        files instead of over manifest files.'''
+        files = match.files()
+        return (len(files) < 100 and (match.isexact() or
+            (match.prefix() and all(fn in self for fn in files))))
+
+    def walk(self, match):
+        '''Generates matching file names.
+
+        Equivalent to manifest.matches(match).iterkeys(), but without creating
+        an entirely new manifest.
+
+        It also reports nonexistent files by marking them bad with match.bad().
+        '''
+        if match.always():
+            for f in iter(self):
+                yield f
+            return
+
+        fset = set(match.files())
+
+        # avoid the entire walk if we're only looking for specific files
+        if self._filesfastpath(match):
+            for fn in sorted(fset):
+                yield fn
+            return
+
+        for fn in self:
+            if fn in fset:
+                # specified pattern is the exact name
+                fset.remove(fn)
+            if match(fn):
+                yield fn
+
+        # for dirstate.walk, files=['.'] means "walk the whole tree".
+        # follow that here, too
+        fset.discard('.')
+
+        for fn in sorted(fset):
+            if not self.hasdir(fn):
+                match.bad(fn, None)
+
+    def matches(self, match):
+        '''generate a new manifest filtered by the match argument'''
+        if match.always():
+            return self.copy()
+
+        if self._filesfastpath(match):
+            m = manifestdict()
+            lm = self._fm
+            for fn in match.files():
+                if fn in lm:
+                    m._fm[fn] = lm[fn]
+            return m
+
+        m = manifestdict()
+        m._fm = self._fm.filtercopy(match)
+        return m
+
+    def diff(self, m2, clean=False):
+        '''Finds changes between the current manifest and m2.
+
+        Args:
+          m2: the manifest to which this manifest should be compared.
+          clean: if true, include files unchanged between these manifests
+                 with a None value in the returned dictionary.
+
+        The result is returned as a dict with filename as key and
+        values of the form ((n1,fl1),(n2,fl2)), where n1/n2 is the
+        nodeid in the current/other manifest and fl1/fl2 is the flag
+        in the current/other manifest. Where the file does not exist,
+        the nodeid will be None and the flags will be the empty
+        string.
+        '''
+        return self._fm.diff(m2._fm, clean)
+
+    def setflag(self, key, flag):
+        self._fm[key] = self[key], flag
+
+    def get(self, key, default=None):
+        try:
+            return self._fm[key][0]
+        except KeyError:
+            return default
+
+    def flags(self, key, default=''):
+        try:
+            return self._fm[key][1]
+        except KeyError:
+            return default
+
+    def copy(self):
+        c = manifestdict()
+        c._fm = self._fm.copy()
+        return c
+
+    def iteritems(self):
+        return (x[:2] for x in self._fm.iterentries())
+
+    def iterentries(self):
+        return self._fm.iterentries()
+
+    def text(self, usemanifestv2=False):
+        if usemanifestv2:
+            return _textv2(self._fm.iterentries())
+        else:
+            # use (probably) native version for v1
+            return self._fm.text()
+
+    def fastdelta(self, base, changes):
+        """Given a base manifest text as an array.array and a list of changes
+        relative to that text, compute a delta that can be used by revlog.
+        """
+        delta = []
+        dstart = None
+        dend = None
+        dline = [""]
+        start = 0
+        # zero copy representation of base as a buffer
+        addbuf = util.buffer(base)
+
+        changes = list(changes)
+        if len(changes) < 1000:
+            # start with a readonly loop that finds the offset of
+            # each line and creates the deltas
+            for f, todelete in changes:
+                # bs will either be the index of the item or the insert point
+                start, end = _msearch(addbuf, f, start)
+                if not todelete:
+                    h, fl = self._fm[f]
+                    l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
+                else:
+                    if start == end:
+                        # item we want to delete was not found, error out
+                        raise AssertionError(
+                                _("failed to remove %s from manifest") % f)
+                    l = ""
+                if dstart is not None and dstart <= start and dend >= start:
+                    if dend < end:
+                        dend = end
+                    if l:
+                        dline.append(l)
+                else:
+                    if dstart is not None:
+                        delta.append([dstart, dend, "".join(dline)])
+                    dstart = start
+                    dend = end
+                    dline = [l]
+
+            if dstart is not None:
+                delta.append([dstart, dend, "".join(dline)])
+            # apply the delta to the base, and get a delta for addrevision
+            deltatext, arraytext = _addlistdelta(base, delta)
+        else:
+            # For large changes, it's much cheaper to just build the text and
+            # diff it.
+            arraytext = array.array('c', self.text())
+            deltatext = mdiff.textdiff(base, arraytext)
+
+        return arraytext, deltatext
