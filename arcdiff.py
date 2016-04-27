@@ -14,7 +14,11 @@ import os
 import re
 import subprocess
 
-from phabricator import conduit, arcconfig
+from phabricator import (
+    arcconfig,
+    conduit,
+    diffprops,
+)
 
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'diff', _diff)
@@ -31,8 +35,8 @@ def _callconduit(ui, command, params):
     except arcconfig.ArcConfigError as e:
         raise error.Abort(str(e))
 
-def _getlastdiff(ui, diffid):
-    res = _callconduit(ui, 'differential.query', {'ids': [diffid]})
+def _getlastdiff(ui, phabrev):
+    res = _callconduit(ui, 'differential.query', {'ids': [phabrev]})
     if res is None:
         return None
 
@@ -46,8 +50,8 @@ def _getlastdiff(ui, diffid):
 
     return max(diffs)
 
-def _differentialhash(ui, diffid):
-    id = _getlastdiff(ui, diffid)
+def _differentialhash(ui, phabrev):
+    id = _getlastdiff(ui, phabrev)
     if id is None:
         return None
 
@@ -73,25 +77,18 @@ def _differentialhash(ui, diffid):
 
     return list(localcommits.keys())[0]
 
-def _differentialid(ctx):
-    descr = ctx.description()
-    match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)'
-                      , descr)
-    return match.group(1) if match else None
-
 def _diff(orig, ui, repo, *pats, **opts):
     if not opts.get('since_last_arc_diff'):
         return orig(ui, repo, *pats, **opts)
 
     ctx = repo['.']
-    diffid = _differentialid(ctx)
+    phabrev = diffprops.parserevfromcommitmsg(ctx.description())
 
-    if diffid is None:
+    if phabrev is None:
         mess = _('local commit is not associated with a differential revision')
         raise error.Abort(mess)
 
-    diffid = diffid[1:]
-    rev = _differentialhash(ui, diffid)
+    rev = _differentialhash(ui, phabrev)
     if rev is None:
         mess = _('unable to determine previous commit hash')
         raise error.Abort(mess)

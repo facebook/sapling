@@ -17,19 +17,11 @@ from mercurial import commands
 from mercurial import obsolete
 from mercurial import phases
 from mercurial import extensions
+from phabricator import diffprops
 
 def getdiff(rev):
-    m = re.findall("Differential Revision: https://phabricator.fb.com/D(.*)",
-                   rev.description(),
-                   re.MULTILINE)
-    if m:
-        try:
-            diffnum = int(m[0])
-            return diffnum
-        except ValueError:
-            return None
-    else:
-        return None
+    phabrev = diffprops.parserevfromcommitmsg(rev.description())
+    return int(phabrev) if phabrev else None
 
 def extsetup(ui):
     extensions.wrapcommand(commands.table, 'pull', _pull)

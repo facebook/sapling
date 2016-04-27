@@ -1,3 +1,4 @@
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "gitlookup = $TESTDIR/../phabdiff.py" >> $HGRCPATH
 

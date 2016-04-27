@@ -14,7 +14,11 @@ import subprocess
 import os
 import json
 
-from phabricator import arcconfig, conduit
+from phabricator import (
+    arcconfig,
+    conduit,
+    diffprops,
+)
 
 def memoize(f):
     """
@@ -119,13 +123,7 @@ def showphabstatus(repo, ctx, templ, **args):
         return getdiffstatus(repo, diffnum)[0]
 
 def getdiffnum(repo, ctx):
-    descr = ctx.description()
-    match = re.search('Differential Revision: https://phabricator.fb.com/(D\d+)'
-                      , descr)
-    revstr = match.group(1) if match else ''
-    if revstr.startswith('D') and revstr[1:].isdigit():
-        return revstr[1:]
-    return None
+    return diffprops.parserevfromcommitmsg(ctx.description())
 
 def _getdag(orig, *args):
     repo = args[1]
