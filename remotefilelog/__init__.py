@@ -774,3 +774,10 @@ def prefetch(ui, repo, *pats, **opts):
     revs = scmutil.revrange(repo, opts.get('rev'))
 
     repo.prefetch(revs, pats=pats, opts=opts)
+
+@command('repack', [], _('hg repack [OPTIONS]'))
+def repack(ui, repo, *pats, **opts):
+    import datapack
+    gc = datapack.datagc(repo, repo.contentstore, repo.metadatastore)
+    pack = datapack.mutabledatapack(repo.svfs.join('packs'))
+    gc.run(repo.contentstore.stores[2], pack)
