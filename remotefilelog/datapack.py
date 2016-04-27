@@ -38,6 +38,39 @@ EMPTYFANOUT = -1
 INDEXSUFFIX = '.dataidx'
 PACKSUFFIX = '.datapack'
 
+class datapackstore(object):
+    def __init__(self, path):
+        self.packs = []
+        suffixlen = len(INDEXSUFFIX)
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                if (filename[-suffixlen:] == INDEXSUFFIX
+                    and ('%s%s' % (filename[:-suffixlen], PACKSUFFIX)) in files):
+                    packpath = os.path.join(root, filename)
+                    self.packs.append(datapack(packpath[:-suffixlen]))
+
+    def getmissing(self, keys):
+        missing = keys
+        for pack in self.packs:
+            missing = pack.getmissing(missing)
+
+        return missing
+
+    def get(self, name, node):
+        raise Exception("must use getdeltachain with datapackstore")
+
+    def getdeltachain(self, name, node):
+        for pack in self.packs:
+            try:
+                return pack.getdeltachain(name, node)
+            except KeyError as ex:
+                pass
+
+        raise KeyError((name, node))
+
+    def add(self, name, node, data):
+        raise Exception("cannot add to datapackstore")
+
 class datapack(object):
     def __init__(self, path):
         self.path = path

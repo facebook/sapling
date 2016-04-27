@@ -14,6 +14,7 @@ from contentstore import remotefilelogcontentstore, unioncontentstore
 from contentstore import remotecontentstore
 from metadatastore import remotefilelogmetadatastore, unionmetadatastore
 from metadatastore import remotemetadatastore
+from datapack import datapackstore
 
 requirement = "remotefilelog"
 
@@ -173,9 +174,9 @@ def wraprepo(repo):
                                          cachemetadata)
 
     # Instantiate union stores
-    repo.contentstore = unioncontentstore(localcontent, cachecontent,
-                                          remotecontent,
-                                          writestore=localcontent)
+    packcontentstore = datapackstore(repo.svfs.join('packs'))
+    repo.contentstore = unioncontentstore(packcontentstore, localcontent,
+            cachecontent, remotecontent, writestore=localcontent)
     repo.metadatastore = unionmetadatastore(localmetadata, cachemetadata,
                                             remotemetadata,
                                             writestore=localmetadata)
