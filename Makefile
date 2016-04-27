@@ -156,18 +156,20 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 # Packaging targets
 
 osx:
-	python -c 'import bdist_mpkg.script_bdist_mpkg' || \
-	   (echo "Missing bdist_mpkg (easy_install bdist_mpkg)"; false)
-	rm -rf dist/mercurial-*.mpkg
-	python -m bdist_mpkg.script_bdist_mpkg setup.py --
-	python contrib/fixpax.py dist/mercurial-*.mpkg/Contents/Packages/*.pkg/Contents/Archive.pax.gz
-	OUTPUTDIR=$${OUTPUTDIR:=packages/osx} && \
-	  mkdir -p $$OUTPUTDIR && \
-	  N=`cd dist && echo mercurial-*.mpkg | sed 's,\.mpkg$$,,'` && \
-	  hdiutil create -srcfolder dist/$$N.mpkg/ -scrub -volname "$$N" \
-	    -ov $$OUTPUTDIR/$$N.dmg && \
-	  [ -n "$$KEEPMPKG" ] && mv dist/mercurial-*.mpkg $$OUTPUTDIR || \
-	  rm -rf dist/mercurial-*.mpkg
+	python setup.py install --optimize=1 \
+	  --root=build/mercurial/ --prefix=/usr/local/ \
+	  --install-lib=/Library/Python/2.7/site-packages/
+	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"
+	mkdir -p $${OUTPUTDIR:-dist}
+	pkgbuild --root build/mercurial/ --identifier org.mercurial-scm.mercurial \
+	  build/mercurial.pkg
+	HGVER=$$((cat build/mercurial/Library/Python/2.7/site-packages/mercurial/__version__.py; echo 'print(version)') | python) && \
+	OSXVER=$$(sw_vers -productVersion | cut -d. -f1,2) && \
+	productbuild --distribution contrib/macosx/distribution.xml \
+	  --package-path build/ \
+	  --version "$${HGVER}" \
+	  --resources contrib/macosx/ \
+	  "$${OUTPUTDIR:-dist/}"/Mercurial-"$${HGVER}"-macosx"$${OSXVER}".pkg
 
 deb:
 	contrib/builddeb

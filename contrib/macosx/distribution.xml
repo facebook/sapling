@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<installer-gui-script minSpecVersion="1">
+  <title>Mercurial SCM</title>
+  <organization>org.mercurial-scm</organization>
+  <options customize="never" require-scripts="false" rootVolumeOnly="true" />
+  <welcome file="Welcome.html" mime-type="text/html" />
+  <license file="../../COPYING" mime-type="text/plain" />
+  <readme file="Readme.html" mime-type="text/html" />
+  <pkg-ref id="org.mercurial-scm.mercurial"
+           version="0"
+           auth="root"
+           onConclusion="none">mercurial.pkg</pkg-ref>
+  <choices-outline>
+    <line choice="org.mercurial-scm.mercurial"/>
+  </choices-outline>
+  <choice id="org.mercurial-scm.mercurial" visible="false">
+    <pkg-ref id="org.mercurial-scm.mercurial"/>
+  </choice>
+</installer-gui-script>
