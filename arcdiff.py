@@ -14,6 +14,8 @@ import os
 import re
 import subprocess
 
+from phabricator import conduit, arcconfig
+
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, 'diff', _diff)
     options = entry[1]
@@ -22,29 +24,12 @@ def extsetup(ui):
 
 def _callconduit(ui, command, params):
     try:
-        process = subprocess.Popen(['arc', 'call-conduit', command],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                    preexec_fn=os.setsid)
-        input = json.dumps(params)
-        process.stdin.write(input)
-        process.stdin.close()
-        raw = process.stdout.read()
-
-        try:
-            parsed = json.loads(raw)
-            response = parsed.get('response')
-            if response is None:
-                ui.warn("%s\n" % parsed.get('errorMessage', 'unknown error'))
-                return None
-
-            return response
-        except ValueError as e:
-            ui.warn(_('unable to parse conduit response: %s\n') % str(e))
-            return None
-
-    except Exception as e:
-        ui.warn(_('could not call `arc call-conduit`.\n'))
+        return conduit.call_conduit(command, params)
+    except conduit.ClientError as e:
+        ui.warn(_('Error calling conduit: %s\n') % str(e))
         return None
+    except arcconfig.ArcConfigError as e:
+        raise error.Abort(str(e))
 
 def _getlastdiff(ui, diffid):
     res = _callconduit(ui, 'differential.query', {'ids': [diffid]})
@@ -56,6 +41,9 @@ def _getlastdiff(ui, diffid):
         return None
 
     diffs = info.get('diffs', [])
+    if not diffs:
+        return None
+
     return max(diffs)
 
 def _differentialhash(ui, diffid):
@@ -71,7 +59,15 @@ def _differentialhash(ui, diffid):
     if info is None:
         return None
 
-    localcommits = info.get('properties', {}).get('local:commits', {})
+    # Since php blurs the line between arrays and dicts, an empty dict
+    # serialized to json in PHP land looks like an empty list when it
+    # arrives in python land.  We're using a default value of an empty
+    # list here to drive home that that can happen and force us to
+    # deal with handling a list value where we expect a dict.
+    properties = info.get('properties', [])
+    if isinstance(properties, list):
+        properties = {}
+    localcommits = properties.get('local:commits', {})
     if localcommits is None or len(localcommits) == 0:
         return None
 

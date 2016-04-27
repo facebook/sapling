@@ -14,6 +14,8 @@ import subprocess
 import os
 import json
 
+from phabricator import arcconfig, conduit
+
 def memoize(f):
     """
     NOTE: This is a hack
@@ -62,57 +64,31 @@ def _fail(repo, diffids, *msgs):
 
 @memoize
 def getdiffstatus(repo, *diffid):
-    """Perform a Conduit API call by shelling out to `arc`
+    """Perform a Conduit API call to get the diff status
 
     Returns status of the diff"""
 
     if not diffid:
         return []
     timeout = repo.ui.configint('ssl', 'timeout', 5)
-    try:
-        proc = subprocess.Popen(
-                    [
-                        'arc',
-                        'call-conduit',
-                        'differential.query',
-                        '--conduit-timeout', str(timeout),
-                    ],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                    preexec_fn=os.setsid)
-    except Exception as ex:
-        msg = _('Unable to run arc. No diff information can be provided\n')
-        hint = _("Error info: ") + str(ex) + "\n"
-        return _fail(repo, diffid, msg, hint)
 
-    input = json.dumps({'ids': diffid})
-    repo.ui.debug("[diffrev] echo '%s' | "
-                  "arc call-conduit differential.query\n" %
-                  input)
-    proc.stdin.write(input)
-    resp, err = proc.communicate()
-    if proc.returncode != 0:
+    try:
+        resp = conduit.call_conduit('differential.query', {'ids': diffid},
+            timeout=timeout)
+
+    except conduit.ClientError as ex:
         msg = _('Error talking to phabricator. No diff information can be '
                 'provided.\n')
-        if err:
-            hint = _("Error info: ") + err
-        elif resp:
-            # Ugh.  Unfortunately arc prints error message on
-            # stdout rather than stderr.
-            hint = _("Error info: ") + resp
-        else:
-            hint = _("(Possibly disconnected operations or "
-                     "phabricator problems)\n")
+        hint = _("Error info: ") + str(ex)
+        return _fail(repo, diffid, msg, hint)
+    except arcconfig.ArcConfigError as ex:
+        msg = _('arcconfig configuration problem. No diff information can be '
+                'provided.\n')
+        hint = _("Error info: ") + str(ex)
         return _fail(repo, diffid, msg, hint)
 
-    jsresp = json.loads(resp)
-    if not jsresp:
-        msg = _('Could not decode Conduit response')
-        return _fail(repo, diffid, msg)
-
-    resp = jsresp.get('response')
     if not resp:
-        error = jsresp.get('errorMessage', 'unknown error')
-        return _fail(repo, diffid, "%s\n" % error)
+        resp = []
 
     # This makes the code more robust in case conduit does not return
     # what we need
