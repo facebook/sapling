@@ -1,7 +1,7 @@
 import os
 import basestore, shallowutil
 from mercurial import util
-from mercurial.node import hex
+from mercurial.node import hex, nullid
 
 class unionmetadatastore(object):
     def __init__(self, *args, **kwargs):
@@ -21,6 +21,37 @@ class unionmetadatastore(object):
            ...
         }
         """
+        ancestors = {}
+        def traverse(curname, curnode):
+            # TODO: this algorithm has the potential to traverse parts of
+            # history twice. Ex: with A->B->C->F and A->B->D->F, both D and C
+            # may be queued as missing, then B and A are traversed for both.
+            queue = [(curname, curnode)]
+            missing = []
+            while queue:
+                name, node = queue.pop()
+                value = ancestors.get(node)
+                if not value:
+                    missing.append((name, node))
+                    continue
+                p1, p2, linknode, copyfrom = value
+                if p1 != nullid:
+                    queue.append((copyfrom or curname, p1))
+                if p2 != nullid:
+                    queue.append((curname, p2))
+            return missing
+
+        missing = [(name, node)]
+        while missing:
+            curname, curnode = missing.pop()
+            ancestors.update(self._getpartialancestors(curname, curnode))
+            newmissing = traverse(curname, curnode)
+            missing.extend(newmissing)
+
+        # TODO: ancestors should probably be (name, node) -> (value)
+        return ancestors
+
+    def _getpartialancestors(self, name, node):
         for store in self.stores:
             try:
                 return store.getancestors(name, node)
