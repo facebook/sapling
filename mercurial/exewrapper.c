@@ -96,7 +96,8 @@ int main(int argc, char *argv[])
 			/* path pyhome exists, let's use it */
 			FindClose(hfind);
 			strcpy_s(pydllfile, sizeof(pydllfile), pyhome);
-			strcat_s(pydllfile, sizeof(pydllfile), "\\" HGPYTHONLIB);
+			strcat_s(pydllfile, sizeof(pydllfile),
+				 "\\" HGPYTHONLIB ".dll");
 			pydll = LoadLibrary(pydllfile);
 			if (pydll == NULL) {
 				err = "failed to load private Python DLL "
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (pydll == NULL) {
-		pydll = LoadLibrary(HGPYTHONLIB);
+		pydll = LoadLibrary(HGPYTHONLIB ".dll");
 		if (pydll == NULL) {
 			err = "failed to load Python DLL " HGPYTHONLIB ".dll";
 			goto bail;
