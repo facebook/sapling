@@ -55,24 +55,14 @@ def _differentialhash(ui, phabrev):
     if id is None:
         return None
 
-    res = _callconduit(ui, 'differential.querydiffs', {'ids':[id]})
-    if res is None:
+    res = _callconduit(ui, 'differential.getdiffproperties', {
+                       'diff_id': id,
+                       'names': ['local:commits']})
+    if not res:
         return None
 
-    info = res.get(str(id))
-    if info is None:
-        return None
-
-    # Since php blurs the line between arrays and dicts, an empty dict
-    # serialized to json in PHP land looks like an empty list when it
-    # arrives in python land.  We're using a default value of an empty
-    # list here to drive home that that can happen and force us to
-    # deal with handling a list value where we expect a dict.
-    properties = info.get('properties', [])
-    if isinstance(properties, list):
-        properties = {}
-    localcommits = properties.get('local:commits', {})
-    if localcommits is None or len(localcommits) == 0:
+    localcommits = res.get('local:commits', {})
+    if not localcommits:
         return None
 
     return list(localcommits.keys())[0]
