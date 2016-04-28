@@ -262,12 +262,12 @@ Report tag parse error on other head:
   $ hg commit -m "head"
   created new head
 
-  $ hg tags
+  $ hg tags --debug
   .hgtags@75d9f02dfe28, line 2: cannot parse entry
   .hgtags@75d9f02dfe28, line 4: node 'foo' is not well formed
   .hgtags@c4be69a18c11, line 2: node 'x' is not well formed
-  tip                                8:c4be69a18c11
-  first                              0:acb14030fe0a
+  tip                                8:c4be69a18c11e8bc3a5fdbb576017c25f7d84663
+  first                              0:acb14030fe0a21b60322c440ad2d20cf7685a376
   $ hg tip
   changeset:   8:c4be69a18c11
   tag:         tip
