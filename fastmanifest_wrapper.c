@@ -434,6 +434,10 @@ static PyObject *fastmanifest_text(fastmanifest *self) {
       PyErr_Format(PyExc_ValueError,
           "Error converting manifest");
       return NULL;
+
+    default:
+      PyErr_Format(PyExc_ValueError, "Unknown result code");
+      return NULL;
   }
 }
 
