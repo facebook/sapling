@@ -633,10 +633,16 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # run pre-hook, and abort if it fails
     hook.hook(lui, repo, "pre-%s" % cmd, True, args=" ".join(fullargs),
               pats=cmdpats, opts=cmdoptions)
-    ret = _runcommand(ui, options, cmd, d)
-    # run post-hook, passing command result
-    hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
-              result=ret, pats=cmdpats, opts=cmdoptions)
+    try:
+        ret = _runcommand(ui, options, cmd, d)
+        # run post-hook, passing command result
+        hook.hook(lui, repo, "post-%s" % cmd, False, args=" ".join(fullargs),
+                  result=ret, pats=cmdpats, opts=cmdoptions)
+    except Exception:
+        # run failure hook and re-raise
+        hook.hook(lui, repo, "fail-%s" % cmd, False, args=" ".join(fullargs),
+                  pats=cmdpats, opts=cmdoptions)
+        raise
     return ret
 
 def _getlocal(ui, rpath, wd=None):

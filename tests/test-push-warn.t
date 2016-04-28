@@ -785,4 +785,14 @@ outgoing:
   no changes found
   [1]
 
+Test fail hook
+
+  $ hg push inner --config hooks.fail-push="echo running fail-push hook"
+  pushing to inner
+  searching for changes
+  running fail-push hook
+  abort: push creates new remote head 7d0f4fb6cf04 on branch 'A'!
+  (merge or see "hg help push" for details about pushing new heads)
+  [255]
+
   $ cd ..

@@ -811,6 +811,15 @@ variables it is passed are listed with names of the form ``$HG_foo``.
   dictionary of options (with unspecified options set to their defaults).
   ``$HG_PATS`` is a list of arguments. Hook failure is ignored.
 
+``fail-<command>``
+  Run after a failed invocation of an associated command. The contents
+  of the command line are passed as ``$HG_ARGS``. Parsed command line
+  arguments are passed as ``$HG_PATS`` and ``$HG_OPTS``. These contain
+  string representations of the python data internally passed to
+  <command>. ``$HG_OPTS`` is a dictionary of options (with unspecified
+  options set to their defaults). ``$HG_PATS`` is a list of arguments.
+  Hook failure is ignored.
+
 ``pre-<command>``
   Run before executing the associated command. The contents of the
   command line are passed as ``$HG_ARGS``. Parsed command line arguments
