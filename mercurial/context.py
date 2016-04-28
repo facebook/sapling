@@ -275,9 +275,9 @@ class basectx(object):
         except error.LookupError:
             return ''
 
-    def sub(self, path):
+    def sub(self, path, allowcreate=True):
         '''return a subrepo for the stored revision of path, never wdir()'''
-        return subrepo.subrepo(self, path)
+        return subrepo.subrepo(self, path, allowcreate=allowcreate)
 
     def nullsub(self, path, pctx):
         return subrepo.nullsubrepo(self, path, pctx)

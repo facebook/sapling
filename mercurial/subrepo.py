@@ -340,7 +340,7 @@ def _sanitize(ui, vfs, ignore):
                           "in '%s'\n") % vfs.join(dirname))
                 vfs.unlink(vfs.reljoin(dirname, f))
 
-def subrepo(ctx, path, allowwdir=False):
+def subrepo(ctx, path, allowwdir=False, allowcreate=True):
     """return instance of the right subrepo class for subrepo in path"""
     # subrepo inherently violates our import layering rules
     # because it wants to make repo objects from deep inside the stack
@@ -356,7 +356,7 @@ def subrepo(ctx, path, allowwdir=False):
         raise error.Abort(_('unknown subrepo type %s') % state[2])
     if allowwdir:
         state = (state[0], ctx.subrev(path), state[2])
-    return types[state[2]](ctx, path, state[:2])
+    return types[state[2]](ctx, path, state[:2], allowcreate)
 
 def nullsubrepo(ctx, path, pctx):
     """return an empty subrepo in pctx for the extant subrepo in ctx"""
@@ -375,7 +375,7 @@ def nullsubrepo(ctx, path, pctx):
     subrev = ''
     if state[2] == 'hg':
         subrev = "0" * 40
-    return types[state[2]](pctx, path, (state[0], subrev))
+    return types[state[2]](pctx, path, (state[0], subrev), True)
 
 def newcommitphase(ui, ctx):
     commitphase = phases.newcommitphase(ui)
@@ -611,12 +611,12 @@ class abstractsubrepo(object):
         return self.wvfs.reljoin(reporelpath(self._ctx.repo()), self._path)
 
 class hgsubrepo(abstractsubrepo):
-    def __init__(self, ctx, path, state):
+    def __init__(self, ctx, path, state, allowcreate):
         super(hgsubrepo, self).__init__(ctx, path)
         self._state = state
         r = ctx.repo()
         root = r.wjoin(path)
-        create = not r.wvfs.exists('%s/.hg' % path)
+        create = allowcreate and not r.wvfs.exists('%s/.hg' % path)
         self._repo = hg.repository(r.baseui, root, create=create)
 
         # Propagate the parent's --hidden option
@@ -1064,7 +1064,7 @@ class hgsubrepo(abstractsubrepo):
         return reporelpath(self._repo)
 
 class svnsubrepo(abstractsubrepo):
-    def __init__(self, ctx, path, state):
+    def __init__(self, ctx, path, state, allowcreate):
         super(svnsubrepo, self).__init__(ctx, path)
         self._state = state
         self._exe = util.findexe('svn')
@@ -1284,7 +1284,7 @@ class svnsubrepo(abstractsubrepo):
 
 
 class gitsubrepo(abstractsubrepo):
-    def __init__(self, ctx, path, state):
+    def __init__(self, ctx, path, state, allowcreate):
         super(gitsubrepo, self).__init__(ctx, path)
         self._state = state
         self._abspath = ctx.repo().wjoin(path)

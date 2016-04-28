@@ -121,4 +121,22 @@ verify will warn if locked-in subrepo revisions are hidden or missing
   subrepo 'subrepo' is hidden in revision 674d05939c1e
   subrepo 'subrepo' not found in revision a7d05d9055a4
 
+verifying shouldn't init a new subrepo if the reference doesn't exist
+
+  $ mv subrepo b
+  $ hg verify
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 5 changesets, 5 total revisions
+  checking subrepo links
+  0: repository $TESTTMP/repo/subrepo not found (glob)
+  1: repository $TESTTMP/repo/subrepo not found (glob)
+  3: repository $TESTTMP/repo/subrepo not found (glob)
+  4: repository $TESTTMP/repo/subrepo not found (glob)
+  $ ls
+  b
+  $ mv b subrepo
+
   $ cd ..
