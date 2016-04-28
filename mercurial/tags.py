@@ -432,7 +432,10 @@ class hgtagsfnodescache(object):
 
         self._raw = array('c')
 
-        data = repo.vfs.tryread(_fnodescachefile)
+        try:
+            data = repo.vfs.read(_fnodescachefile)
+        except (OSError, IOError):
+            data = ""
         self._raw.fromstring(data)
 
         # The end state of self._raw is an array that is of the exact length
