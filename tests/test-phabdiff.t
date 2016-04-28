@@ -15,9 +15,14 @@ Test phabdiff template mapping
   $ hg log --template "{phabdiff}\n"
   D1234
 
+  $ echo c > c
+  $ hg commit -Aqm "Differential Revision: http://phabricator.intern.facebook.com/D1245
+  > Task ID: 2312"
+  $ hg log -r . --template "{phabdiff}\n"
+  D1245
+
   $ echo b > b
   $ hg commit -Aqm "Differential Revision: https://phabricator.fb.com/D5678
   > Tasks: 32, 44"
-  $ hg log --template "{phabdiff}: {tasks}\n"
+  $ hg log -r . --template "{phabdiff}: {tasks}\n"
   D5678: 32 44
-  D1234: 2312

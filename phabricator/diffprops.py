@@ -7,7 +7,7 @@ def parserevfromcommitmsg(description):
     host, so this can also work with our public phabricator instance,
     or for others.
     """
-    match = re.search('Differential Revision: https?://[a-zA-Z0-9_./]+/D(\d+)',
+    match = re.search('Differential Revision:.*/D(\d+)',
                       description)
     return match.group(1) if match else None
 

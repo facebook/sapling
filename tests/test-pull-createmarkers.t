@@ -31,7 +31,11 @@ Test that hg pull creates obsolescence markers for landed diffs
   >    hg add "$1"
   >    echo "add $1" > msg
   >    echo "" >> msg
-  >    [ -z "$2" ] || echo "Differential Revision: https://phabricator.fb.com/D$2" >> msg
+  >    url="https://phabricator.fb.com"
+  >    if [ -n "$3" ]; then
+  >      url="$3"
+  >    fi
+  >    [ -z "$2" ] || echo "Differential Revision: $url/D$2" >> msg
   >    hg ci -l msg
   > }
 
@@ -60,7 +64,7 @@ The first client works on several diffs while the second client lands one of her
   updating bookmark master
   $ cd ../client
   $ mkcommit c 123 # 123 is the phabricator rev number (see function above)
-  $ mkcommit d 124
+  $ mkcommit d 124 "https://phabricator.intern.facebook.com"
   $ mkcommit e 131
   $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
   @  4 "add e
@@ -68,7 +72,7 @@ The first client works on several diffs while the second client lands one of her
   |  Differential Revision: https://phabricator.fb.com/D131"
   o  3 "add d
   |
-  |  Differential Revision: https://phabricator.fb.com/D124"
+  |  Differential Revision: https://phabricator.intern.facebook.com/D124"
   o  2 "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
@@ -77,12 +81,12 @@ The first client works on several diffs while the second client lands one of her
   o  0 "add initial"
   
   $ hg push --to master
-  pushing rev 9cd182f81720 to destination ssh://user@dummy/server bookmark master
+  pushing rev d5895ab36037 to destination ssh://user@dummy/server bookmark master
   searching for changes
   remote: pushing 3 commits:
   remote:     1a07332e9fa1  add c
-  remote:     15b001df9359  add d
-  remote:     9cd182f81720  add e
+  remote:     ee96b78ae17d  add d
+  remote:     d5895ab36037  add e
   remote: 4 new commits from the server will be downloaded
   adding changesets
   adding manifests
@@ -94,7 +98,7 @@ Here we strip commits 6, 7, 8 to simulate what happens with landcastle, the
 push doesn't directly go to the server
 
   $ hg strip 6
-  saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-b0d4fb6e-backup.hg (glob)
+  saved backup bundle to $TESTTMP/client/.hg/strip-backup/d446b1b2be43-516f7371-backup.hg (glob)
 
 We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 
@@ -111,7 +115,7 @@ the remote
   | |  Differential Revision: https://phabricator.fb.com/D131"
   | o  3 "add d
   | |
-  | |  Differential Revision: https://phabricator.fb.com/D124"
+  | |  Differential Revision: https://phabricator.intern.facebook.com/D124"
   | o  2 "add c
   |/
   |    Differential Revision: https://phabricator.fb.com/D123"
@@ -133,7 +137,7 @@ the remote
   |  Differential Revision: https://phabricator.fb.com/D131" default/master
   o  7 "add d
   |
-  |  Differential Revision: https://phabricator.fb.com/D124"
+  |  Differential Revision: https://phabricator.intern.facebook.com/D124"
   o  6 "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
@@ -151,7 +155,7 @@ changesets
   $ mkcommit k
   $ hg rebase -d default/master
   note: not rebasing 2:1a07332e9fa1 "add c", already in destination as 6:d446b1b2be43 "add c"
-  note: not rebasing 3:15b001df9359 "add d", already in destination as 7:9ca38f3a0945 "add d"
-  note: not rebasing 4:9cd182f81720 "add e", already in destination as 8:a1875357147f "add e"
-  rebasing 9:1032a1515abe "add k" (tip)
+  note: not rebasing 3:ee96b78ae17d "add d", already in destination as 7:1f539cc6f364 "add d"
+  note: not rebasing 4:d5895ab36037 "add e", already in destination as 8:461a5b25b3dc "add e"
+  rebasing 9:df5f40cb6607 "add k" (tip)
 
