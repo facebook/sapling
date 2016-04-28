@@ -38,7 +38,7 @@ githelp on a command with unrecognized option packed with other options should f
   abort: unknown option v packed with other options
   Please try passing the option as it's own flag: -v
   
-  If this is a valid git command, please log a task for the source_control oncall.
+  If this is a valid git command, please search/ask in the Source Control @ FB group (and don't forget to tell us what the git command does).
   
   [255]
 
