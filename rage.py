@@ -4,6 +4,7 @@
 
 from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
+from mercurial import scmutil
 from hgext import blackbox
 import os, socket, re, time, traceback
 import smartlog
@@ -84,6 +85,16 @@ def localconfig(ui):
             result.append('%s.%s=%s  # %s' % (section, name, value, source))
     return result
 
+def obsoleteinfo(repo, hgcmd):
+    """Return obsolescence markers that are relevant to smartlog revset"""
+    unfi = repo.unfiltered()
+    revs = scmutil.revrange(unfi, ["smartlog()"])
+    hashes = '|'.join(unfi[rev].hex() for rev in revs)
+    markers = hgcmd(commands.debugobsolete, rev=[])
+    pat = re.compile('(^.*(?:'+hashes+').*$)', re.MULTILINE)
+    relevant = pat.findall(markers)
+    return "\n".join(relevant)
+
 @command('^rage', rageopts , _('hg rage'))
 def rage(ui, repo, *pats, **opts):
     """collect useful diagnostics for asking help from the source control team
@@ -148,6 +159,8 @@ def rage(ui, repo, *pats, **opts):
             lambda: shcmd('/System/Library/PrivateFrameworks/Apple80211.' +
                           'framework/Versions/Current/Resources/airport ' +
                           '--getinfo', check=False))),
+        ('hg debugobsolete <smartlog>',
+            _failsafe(lambda: obsoleteinfo(repo, hgcmd))),
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
