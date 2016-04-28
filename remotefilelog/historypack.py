@@ -43,8 +43,9 @@ class historypackstore(object):
         suffixlen = len(INDEXSUFFIX)
         for root, dirs, files in os.walk(path):
             for filename in files:
+                packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
                 if (filename[-suffixlen:] == INDEXSUFFIX
-                    and ('%s%s' % (filename[:-suffixlen], PACKSUFFIX)) in files):
+                    and packfilename in files):
                     packpath = os.path.join(root, filename)
                     self.packs.append(historypack(packpath[:-suffixlen]))
 

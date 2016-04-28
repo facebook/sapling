@@ -44,8 +44,9 @@ class datapackstore(object):
         suffixlen = len(INDEXSUFFIX)
         for root, dirs, files in os.walk(path):
             for filename in files:
+                packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
                 if (filename[-suffixlen:] == INDEXSUFFIX
-                    and ('%s%s' % (filename[:-suffixlen], PACKSUFFIX)) in files):
+                    and packfilename in files):
                     packpath = os.path.join(root, filename)
                     self.packs.append(datapack(packpath[:-suffixlen]))
 
@@ -316,8 +317,10 @@ class mutabledatapack(object):
         self.packfp.close()
         self.writeindex()
 
-        os.rename(self.datapackpath, os.path.join(self.packdir, sha + PACKSUFFIX))
-        os.rename(self.dataidxpath, os.path.join(self.packdir, sha + INDEXSUFFIX))
+        os.rename(self.datapackpath, os.path.join(self.packdir,
+                                                  sha + PACKSUFFIX))
+        os.rename(self.dataidxpath, os.path.join(self.packdir,
+                                                 sha + INDEXSUFFIX))
         return os.path.join(self.packdir, sha)
 
     def writeindex(self):

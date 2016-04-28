@@ -160,7 +160,7 @@ def wraprepo(repo):
     # Instantiate shared cache stores
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     if not cachepath:
-        raise util.Abort(_("could not find config option "
+        raise error.Abort(_("could not find config option "
                            "remotefilelog.cachepath"))
     cachecontent = remotefilelogcontentstore(repo, cachepath, repo.name,
                                              shared=True)
