@@ -130,13 +130,12 @@ def trywritehiddencache(repo, hideable, hidden):
         newhash = cachehash(repo, hideable)
         fh = repo.vfs.open(cachefile, 'w+b', atomictemp=True)
         _writehiddencache(fh, newhash, hidden)
+        fh.close()
     except (IOError, OSError):
         repo.ui.debug('error writing hidden changesets cache\n')
     except error.LockHeld:
         repo.ui.debug('cannot obtain lock to write hidden changesets cache\n')
     finally:
-        if fh:
-            fh.close()
         if wlock:
             wlock.release()
 
