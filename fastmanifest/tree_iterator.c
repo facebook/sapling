@@ -193,12 +193,27 @@ iterator_result_t iterator_next(iterator_t *iterator) {
     if (iterator->construct_paths) {
       result.path = iterator->path;
       result.path_sz = iterator->path_idx;
+    } else {
+      // strictly these shouldn't be necessary, because we only read these
+      // fields if we succeed, and that code path does set the fields.  however,
+      // gcc doesn't know that and throws a fit.
+      result.path = NULL;
+      result.path_sz = 0;
     }
     result.checksum = child->checksum;
     result.checksum_sz = child->checksum_sz;
     result.flags = child->flags;
   } else {
     result.valid = false;
+
+    // strictly these shouldn't be necessary, because we only read these fields
+    // if we succeed, and that code path does set the fields.  however, gcc
+    // doesn't know that and throws a fit.
+    result.path = NULL;
+    result.path_sz = 0;
+    result.checksum = NULL;
+    result.checksum_sz = 0;
+    result.flags = 0;
   }
 
   return result;
@@ -210,4 +225,3 @@ void destroy_iterator(iterator_t *iterator) {
   free(iterator->path);
   free(iterator);
 }
-

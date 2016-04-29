@@ -213,6 +213,11 @@ node_enlarge_child_capacity_result_t enlarge_child_capacity(
     node_t *node,
     uint32_t child_num) {
   node_enlarge_child_capacity_result_t result;
+  // strictly these shouldn't be necessary, because we only read these fields
+  // if we succeed, and that code path does set the fields.  however, gcc
+  // doesn'tknow that and throws a fit.
+  result.old_child = NULL;
+  result.new_child = NULL;
 
   // verify parent node.
   if (!node->in_use) {
