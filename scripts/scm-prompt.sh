@@ -99,8 +99,12 @@ _scm_prompt()
     local current="$hg/.hg/bookmarks.current"
     if  [[ -f "$current" ]]; then
       br=$(cat "$current")
-      # check to see if active bookmark needs update
+      # check to see if active bookmark needs update (eg, moved after pull)
       local marks="$hg/.hg/bookmarks"
+      if [[ -f "$hg/.hg/sharedpath"  && -f "$hg/.hg/shared" ]] &&
+          grep -q '^bookmarks$' "$hg/.hg/shared"; then
+        marks="$(cat $hg/.hg/sharedpath)/bookmarks"
+      fi
       if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
         local markstate=$(grep --color=never " $br$" "$marks" | cut -f 1 -d ' ')
         if [[ $markstate != "$dirstate" ]]; then
