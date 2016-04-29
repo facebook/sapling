@@ -93,8 +93,8 @@ _scm_prompt()
     elif [ -d "$hg/.hg/merge" ]; then
       extra="|MERGE"
     fi
-    local dirstate=$(test -f $hg/.hg/dirstate && \
-      hexdump -vn 20 -e '1/1 "%02x"' $hg/.hg/dirstate || \
+    local dirstate=$(test -f "$hg/.hg/dirstate" && \
+      hexdump -vn 20 -e '1/1 "%02x"' "$hg/.hg/dirstate" || \
       echo "empty")
     local current="$hg/.hg/bookmarks.current"
     if  [[ -f "$current" ]]; then
@@ -103,12 +103,12 @@ _scm_prompt()
       local marks="$hg/.hg/bookmarks"
       if [[ -z "$extra" ]] && [[ -f "$marks" ]]; then
         local markstate=$(grep --color=never " $br$" "$marks" | cut -f 1 -d ' ')
-        if [[ $markstate != $dirstate ]]; then
+        if [[ $markstate != "$dirstate" ]]; then
           extra="|UPDATE_NEEDED"
         fi
       fi
     else
-      br=$(echo $dirstate | cut -c 1-7)
+      br=$(echo "$dirstate" | cut -c 1-7)
     fi
     local remote="$hg/.hg/remotenames"
     if [[ -f "$remote" ]]; then
@@ -119,8 +119,8 @@ _scm_prompt()
       fi
     fi
     local branch
-    if [[ -f $hg/.hg/branch ]]; then
-      branch=$(cat $hg/.hg/branch)
+    if [[ -f "$hg/.hg/branch" ]]; then
+      branch=$(cat "$hg/.hg/branch")
       if [[ $branch != "default" ]]; then
         br="$br|$branch"
       fi
@@ -131,7 +131,7 @@ _scm_prompt()
       read br < "$git/.git/HEAD"
       case $br in
         ref:\ refs/heads/*) br=${br#ref: refs/heads/} ;;
-        *) br=$(echo $br | cut -c 1-7) ;;
+        *) br=$(echo "$br" | cut -c 1-7) ;;
       esac
       if [ -f "$git/.git/rebase-merge/interactive" ]; then
         b="$(cat "$git/.git/rebase-merge/head-name")"
