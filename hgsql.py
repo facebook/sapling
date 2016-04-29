@@ -39,7 +39,7 @@ from mercurial import error, cmdutil, revlog
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
-import struct, time, Queue, threading
+import os, struct, time, Queue, threading
 import warnings
 import sys
 
@@ -252,6 +252,7 @@ class sqlcontext(object):
         self._used = False
         self._startlocktime = 0
         self._active = False
+        self._profiler = None
 
     def active(self):
         return self._active
@@ -270,6 +271,7 @@ class sqlcontext(object):
         if self.takelock and not writelock in repo.heldlocks:
             startwait = time.time()
             repo.sqllock(writelock)
+            self._startprofile()
             self._locked = True
             elapsed = time.time() - startwait
             repo.ui.log("sqllock", "waited for sql lock for %s seconds\n",
@@ -286,6 +288,7 @@ class sqlcontext(object):
                 elapsed = time.time() - self._startlocktime
                 repo.ui.log("sqllock", "held sql lock for %s seconds\n",
                             elapsed, elapsed=elapsed, valuetype='lockheld')
+                self._stopprofile(elapsed)
                 repo.sqlunlock(writelock)
 
             if self._connected:
@@ -296,6 +299,52 @@ class sqlcontext(object):
             # Only raise sql exceptions if the wrapped code threw no exception
             if type is None:
                 raise
+
+    def _startprofile(self):
+        profiler = self.repo.ui.config('hgsql', 'profiler', None)
+        if not profiler:
+            return
+
+        freq = self.repo.ui.configint('profiling', 'freq', default=1000)
+        if profiler == 'ls':
+            from mercurial import lsprof
+            self._profiler = lsprof.Profiler()
+            self._profiler.enable(subcalls=True)
+        elif profiler == 'stat':
+            import statprof
+            statprof.reset(freq)
+            statprof.start()
+        else:
+            raise Exception("unknown profiler: %s" % profiler)
+
+    def _stopprofile(self, elapsed):
+        profiler = self.repo.ui.config('hgsql', 'profiler', None)
+        if not profiler:
+            return
+        outputdir = self.repo.ui.config('hgsql', 'profileoutput', '/tmp')
+        import random
+        pid = os.getpid()
+        rand = random.random()
+        timestamp = time.time()
+
+        if profiler == 'ls':
+            from mercurial import lsprof
+            self._profiler.disable()
+            stats = lsprof.Stats(self._profiler.getstats())
+            stats.sort('inlinetime')
+            path = os.path.join(outputdir, 'hgsql-profile-%s-%s-%s' %
+                                           (pid, timestamp, rand))
+            with open(path, 'a+') as f:
+                stats.pprint(limit=30, file=f, climit=0)
+                f.write("Total Elapsed Time: %s\n" % elapsed)
+        elif profiler == 'stat':
+            import statprof
+            statprof.stop()
+            path = os.path.join(outputdir, 'hgsql-profile-%s-%s-%s' %
+                                           (pid, timestamp, rand))
+            with open(path, 'a+') as f:
+                statprof.display(f)
+                f.write("Total Elapsed Time: %s\n" % elapsed)
 
 def executewithsql(repo, action, sqllock=False, *args, **kwargs):
     """Executes the given action while having a SQL connection open.
