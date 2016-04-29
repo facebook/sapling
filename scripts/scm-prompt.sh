@@ -154,6 +154,10 @@ _scm_prompt()
           else
             br="$br|AM/REBASE"
           fi
+        elif [ -f "$git/.git/CHERRY_PICK_HEAD" ]; then
+          br="$br|CHERRY-PICKING"
+        elif [ -f "$git/.git/REVERT_HEAD" ]; then
+          br="$br|REVERTING"
         elif [ -f "$git/.git/MERGE_HEAD" ]; then
           br="$br|MERGE"
         elif [ -f "$git/.git/BISECT_LOG" ]; then
