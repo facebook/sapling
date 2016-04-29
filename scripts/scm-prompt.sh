@@ -144,7 +144,7 @@ _scm_prompt()
       elif [ -d "$git/.git/rebase-merge" ]; then
         b="$(cat "$git/.git/rebase-merge/head-name")"
         b=${b#refs/heads/}
-        br="br|REBASE-m|$b"
+        br="$br|REBASE-m|$b"
       else
         if [ -d "$git/.git/rebase-apply" ]; then
           if [ -f "$git/.git/rebase-apply/rebasing" ]; then
