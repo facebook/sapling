@@ -31,6 +31,8 @@ FANOUTSIZE = FANOUTCOUNT * FANOUTENTRYSIZE
 INDEXSUFFIX = '.histidx'
 PACKSUFFIX = '.histpack'
 
+VERSION = 0
+
 class AncestorIndicies(object):
     NODE = 0
     P1NODE = 1
@@ -83,9 +85,9 @@ class historypackstore(object):
 
         raise KeyError((name, node))
 
-    def add(self, name, node, data):
+    def add(self, filename, node, p1, p2, linknode):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
-                           % (name, hex(node)))
+                           % (filename, hex(node)))
 
 class historypack(object):
     def __init__(self, path):
@@ -102,6 +104,12 @@ class historypack(object):
         self._index = mmap.mmap(self.indexfp.fileno(), 0)
         self._data = mmap.mmap(self.datafp.fileno(), 0)
 
+        self._data = mmap.mmap(self.datafp.fileno(), 0)
+        version = struct.unpack('!B', self._data[0])[0]
+        if version != VERSION:
+            raise RuntimeError("unsupported histpack version '%s'" %
+                               version)
+
         rawfanout = self._index[:FANOUTSIZE]
         self._fanouttable = []
         for i in range(0, FANOUTCOUNT):
@@ -113,8 +121,13 @@ class historypack(object):
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
-            value = self._find(node)
-            if not value:
+            section = self._findsection(name)
+            if not section:
+                missing.append((name, node))
+                continue
+            try:
+                value = self._findnode(section, node)
+            except KeyError:
                 missing.append((name, node))
 
         return missing
@@ -158,15 +171,16 @@ class historypack(object):
         node, p1, p2, linknode = self._findnode(section, node)
         return linknode
 
-    def add(self, name, node, data):
-        raise RuntimeError("cannot add to historypack" % (name, hex(node)))
+    def add(self, filename, node, p1, p2, linknode):
+        raise RuntimeError("cannot add to historypack (%s:%s)" %
+                           (filename, hex(node)))
 
     def _findnode(self, section, node):
         name, offset, size = section
         data = self._data
         for i in range(offset, offset + size, PACKENTRYLENGTH):
             entry = struct.unpack(PACKFORMAT,
-                                  data[offset:offset + PACKENTRYLENGTH])
+                                  data[i:i + PACKENTRYLENGTH])
             if entry[0] == node:
                 return entry
 
@@ -272,22 +286,22 @@ class mutablehistorypack(object):
                      <pack file section offset: 8 byte unsigned int>
                      <pack file section size: 8 byte unsigned int>
     """
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, packdir):
+        self.packdir = packdir
         self.entries = []
         self.packfp, self.historypackpath = tempfile.mkstemp(
                 suffix=PACKSUFFIX + '-tmp',
-                dir=path)
+                dir=packdir)
         self.idxfp, self.historyidxpath = tempfile.mkstemp(
                 suffix=INDEXSUFFIX + '-tmp',
-                dir=path)
+                dir=packdir)
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
 
         # Write header
         # TODO: make it extensible
-        version = struct.pack('!B', 0) # unsigned 1 byte int
+        version = struct.pack('!B', VERSION) # unsigned 1 byte int
         self.writeraw(version)
 
         self.pastfiles = {}
@@ -330,10 +344,11 @@ class mutablehistorypack(object):
         self.packfp.close()
         self.writeindex()
 
-        os.rename(self.historypackpath, os.path.join(self.path, sha +
+        os.rename(self.historypackpath, os.path.join(self.packdir, sha +
                                                      PACKSUFFIX))
-        os.rename(self.historyidxpath, os.path.join(self.path, sha +
+        os.rename(self.historyidxpath, os.path.join(self.packdir, sha +
                                                     INDEXSUFFIX))
+        return os.path.join(self.packdir, sha)
 
     def writeindex(self):
         files = ((util.sha1(node).digest(), offset, size)

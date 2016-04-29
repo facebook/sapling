@@ -2100,7 +2100,8 @@ class TestRunner(object):
         # can run .../tests/run-tests.py test-foo where test-foo
         # adds an extension to HGRC. Also include run-test.py directory to
         # import modules like heredoctest.
-        pypath = [self._pythondir, self._testdir, runtestdir]
+        reporoot = os.path.dirname(self._testdir)
+        pypath = [self._pythondir, self._testdir, runtestdir, reporoot]
         # We have to augment PYTHONPATH, rather than simply replacing
         # it, in case external libraries are only available via current
         # PYTHONPATH.  (In particular, the Subversion bindings on OS X
