@@ -209,7 +209,7 @@ def getchangegroup(orig, repo, source, heads=None, common=None, bundlecaps=None,
 
 def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     if not requirement in repo.requirements:
-        return orig(repo, source, revmap, trp, pr, *args)
+        return orig(repo, source, revmap, trp, expectedfiles, *args)
 
     files = 0
     newfiles = 0
