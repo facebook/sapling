@@ -77,7 +77,7 @@ Test graft
   merging b
   warning: conflicts while merging b! (edit, then use 'hg resolve --mark')
   abort: unresolved conflicts, can't continue
-  (use hg resolve and hg graft --continue)
+  (use 'hg resolve' and 'hg graft --continue')
   (4b6cc7d|GRAFT)
   $ cmd hg revert -r 775bfdddc842 b
   (4b6cc7d|GRAFT)
