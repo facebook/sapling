@@ -45,23 +45,39 @@ except OSError as ex:
 
 output, error = proc.communicate()
 
+context_file = None
 lines = error.split('\n')
 # We expect a run of 3 lines to describe the error, with the first
 # of those to look like a filename and line number location
-while len(lines) >= 3:
+while lines:
     line = lines[0]
-    if not re.match('^\+ +[a-zA-Z0-9_./-]+:\d+:$', line):
-        lines.pop(0)
+    lines.pop(0)
+
+    if re.match('^--- (.*)$', line):
+        context_file = os.path.relpath(line[4:])
         continue
-    location = lines[0]
-    context = lines[1]  # we ignore this
-    why = lines[2]
+
+    m = re.match('^\+  (Skipping (.*) it has no.*)$', line)
+    if m:
+        filename = m.group(2)
+        if filename in wanted:
+            print '%s:0: ERROR:CheckCode: Update %s to add %s' % (
+                filename, context_file, m.group(1))
+        continue
+
+    if not re.match('^\+ +[a-zA-Z0-9_./-]+:\d+:$', line):
+        continue
+
+    if len(lines) < 2:
+        continue
+
+    location = line
+    context = lines.pop(0) # we ignore this
+    why = lines.pop(0)
 
     location = location[1:].strip() # strip off the "+  " bit
     location = location.rstrip(':')
     filename, lineno = location.split(':')
-    # Consume those 3 lines
-    lines = lines[3:]
 
     if filename not in wanted:
         # lint doesn't care about this file.
