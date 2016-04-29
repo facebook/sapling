@@ -651,10 +651,11 @@ def expushdiscoverybookmarks(pushop):
             knownlist = pushop.remote.known(revs)
             for node, known in zip(revs, knownlist):
                 ctx = repo[node]
-                obs = ctx.obsolete()
-                closes = ctx.closesbranch()
-                # if there is a topic, let's just skip it for now
-                if known or obs or closes or 'topic' in ctx.extra():
+                if (known or
+                    ctx.obsolete() or
+                    ctx.closesbranch() or
+                    # if there is a topic, let's just skip it for now
+                    (ctx.mutable() and 'topic' in ctx.extra())):
                     continue
                 anonheads.append(short(node))
 
