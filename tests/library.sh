@@ -39,7 +39,7 @@ UNIQUE KEY bookmarkindex (repo, namespace, name)
 );' 2>/dev/null
 
 function initserver() {
-  hg init $1
+  hg init --config extensions.hgsql=$TESTDIR/../hgsql.py $1
   configureserver $1 $2
 }
 

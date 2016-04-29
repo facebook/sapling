@@ -35,7 +35,7 @@ UNIQUE KEY bookmarkindex (repo, namespace, name)
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction, wrapcommand
-from mercurial import error, cmdutil, revlog
+from mercurial import error, cmdutil, revlog, localrepo
 from mercurial import wireproto, bookmarks, repair, commands, hg, mdiff, phases
 from mercurial import util, changegroup, exchange, bundle2, bundlerepo
 from mercurial import demandimport
@@ -60,6 +60,16 @@ INITIAL_SYNC_FORCE = 'force'
 
 initialsync = INITIAL_SYNC_NORMAL
 
+cls = localrepo.localrepository
+for reqs in ['supportedformats', 'openerreqs', '_basesupported']:
+    getattr(cls, reqs).add('hgsql')
+
+def newreporequirements(orig, repo):
+    reqs = orig(repo)
+    if repo.ui.configbool('format', 'usehgsql', True):
+        reqs.add('hgsql')
+    return reqs
+
 class CorruptionException(Exception):
     pass
 
@@ -70,6 +80,8 @@ def cansyncwithsql(repo):
     return issqlrepo(repo) and not isinstance(repo, bundlerepo.bundlerepository)
 
 def uisetup(ui):
+    wrapfunction(localrepo, 'newreporequirements', newreporequirements)
+
     # Enable SQL for local commands that write to the repository.
     wrapcommand(commands.table, 'pull', pull)
     wrapcommand(commands.table, 'commit', commit)
