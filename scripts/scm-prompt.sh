@@ -148,7 +148,9 @@ _scm_prompt()
       else
         if [ -d "$git/.git/rebase-apply" ]; then
           if [ -f "$git/.git/rebase-apply/rebasing" ]; then
-            br="$br|REBASE"
+            b="$(cat "$git/.git/rebase-apply/head-name")"
+            b=${b#refs/heads/}
+            br="$br|REBASE|$b"
           elif [ -f "$git/.git/rebase-apply/applying" ]; then
             br="$br|AM"
           else
