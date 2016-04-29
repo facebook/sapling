@@ -74,7 +74,7 @@ _scm_prompt()
     fi
     test "$d" = / && break
     # portable "realpath" equivalent
-    d=$(cd "$d/.." && echo "$PWD")
+    d=$(cd -P "$d/.." && echo "$PWD")
   done
 
   local br
