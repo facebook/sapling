@@ -1,7 +1,7 @@
 Initialize scm prompt
-  $ source $TESTDIR/../scripts/scm-prompt.sh
+  $ . $TESTDIR/../scripts/scm-prompt.sh
 
-  $ function cmd() {
+  $ cmd() {
   >   "$@"
   >   _scm_prompt "(%s)\n"
   > }
@@ -92,7 +92,7 @@ Test graft
 Test bisect
   $ cmd hg bisect -b .
   (42eaf5c|BISECT)
-  $ cmd hg bisect -g .^^
+  $ cmd hg bisect -g ".^^"
   Testing changeset 2:4b6cc7d5194b (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (4b6cc7d|BISECT)
@@ -105,7 +105,7 @@ Test unshelve
   shelved as default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (4b6cc7d)
-  $ cmd hg up -q .^
+  $ cmd hg up -q ".^"
   (5cad84d)
   $ cmd hg unshelve --config "extensions.shelve="
   unshelving change 'default'
