@@ -256,7 +256,7 @@ msgdestmerge = {
         },
     }
 
-def _destmergebook(repo, action='merge', sourceset=None):
+def _destmergebook(repo, action='merge', sourceset=None, destspace=None):
     """find merge destination in the active bookmark case"""
     node = None
     bmheads = repo.bookmarkheads(repo._activebookmark)
@@ -275,7 +275,8 @@ def _destmergebook(repo, action='merge', sourceset=None):
     assert node is not None
     return node
 
-def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
+def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True,
+                     destspace=None):
     """find merge destination based on branch heads"""
     node = None
 
@@ -308,6 +309,12 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
     bheads = list(repo.revs('%ln - (%ld::)', bheads, sourceset))
     # filters out bookmarked heads
     nbhs = list(repo.revs('%ld - bookmark()', bheads))
+
+    if destspace is not None:
+        # restrict search space
+        # used in the 'hg pull --rebase' case, see issue 5214.
+        nbhs = list(repo.revs('%ld and %ld', destspace, nbhs))
+
     if len(nbhs) > 1:
         # Case B: There is more than 1 other anonymous heads
         #
@@ -339,18 +346,22 @@ def _destmergebranch(repo, action='merge', sourceset=None, onheadcheck=True):
     assert node is not None
     return node
 
-def destmerge(repo, action='merge', sourceset=None, onheadcheck=True):
+def destmerge(repo, action='merge', sourceset=None, onheadcheck=True,
+              destspace=None):
     """return the default destination for a merge
 
     (or raise exception about why it can't pick one)
 
     :action: the action being performed, controls emitted error message
     """
+    # destspace is here to work around issues with `hg pull --rebase` see
+    # issue5214 for details
     if repo._activebookmark:
-        node = _destmergebook(repo, action=action, sourceset=sourceset)
+        node = _destmergebook(repo, action=action, sourceset=sourceset,
+                              destspace=destspace)
     else:
         node = _destmergebranch(repo, action=action, sourceset=sourceset,
-                                onheadcheck=onheadcheck)
+                                onheadcheck=onheadcheck, destspace=destspace)
     return repo[node].rev()
 
 histeditdefaultrevset = 'reverse(only(.) and not public() and not ::merge())'

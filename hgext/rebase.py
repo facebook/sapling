@@ -69,12 +69,12 @@ def _makeextrafn(copiers):
             c(ctx, extra)
     return extrafn
 
-def _destrebase(repo, sourceset):
+def _destrebase(repo, sourceset, destspace=None):
     """small wrapper around destmerge to pass the right extra args
 
     Please wrap destutil.destmerge instead."""
     return destutil.destmerge(repo, action='rebase', sourceset=sourceset,
-                              onheadcheck=False)
+                              onheadcheck=False, destspace=destspace)
 
 revsetpredicate = registrar.revsetpredicate()
 
@@ -222,6 +222,9 @@ def rebase(ui, repo, **opts):
         srcf = opts.get('source', None)
         basef = opts.get('base', None)
         revf = opts.get('rev', [])
+        # search default destination in this space
+        # used in the 'hg pull --rebase' case, see issue 5214.
+        destspace = opts.get('_destspace')
         contf = opts.get('continue')
         abortf = opts.get('abort')
         collapsef = opts.get('collapse', False)
@@ -296,7 +299,8 @@ def rebase(ui, repo, **opts):
                 _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs,
                                 rebaseobsskipped)
         else:
-            dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf)
+            dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf,
+                                          destspace=destspace)
             if dest is None:
                 return _nothingtorebase()
 
@@ -525,9 +529,12 @@ def rebase(ui, repo, **opts):
     finally:
         release(lock, wlock)
 
-def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
+def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[],
+                destspace=None):
     """use revisions argument to define destination and rebase set
     """
+    # destspace is here to work around issues with `hg pull --rebase` see
+    # issue5214 for details
     if srcf and basef:
         raise error.Abort(_('cannot specify both a source and a base'))
     if revf and basef:
@@ -560,7 +567,7 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
                         "can't compute rebase set\n"))
             return None, None
         if not destf:
-            dest = repo[_destrebase(repo, base)]
+            dest = repo[_destrebase(repo, base, destspace=destspace)]
             destf = str(dest)
 
         commonanc = repo.revs('ancestor(%ld, %d)', base, dest).first()
@@ -598,7 +605,7 @@ def _definesets(ui, repo, destf=None, srcf=None, basef=None, revf=[]):
             return None, None
 
     if not destf:
-        dest = repo[_destrebase(repo, rebaseset)]
+        dest = repo[_destrebase(repo, rebaseset, destspace=destspace)]
         destf = str(dest)
 
     return dest, rebaseset
