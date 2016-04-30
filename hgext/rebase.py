@@ -1244,6 +1244,9 @@ def pullrebase(orig, ui, repo, *args, **opts):
                 # --source.
                 if 'source' in opts:
                     del opts['source']
+                # revsprepull is the len of the repo, not revnum of tip.
+                destspace = list(repo.changelog.revs(start=revsprepull))
+                opts['_destspace'] = destspace
                 try:
                     rebase(ui, repo, **opts)
                 except error.NoMergeDestAbort:
