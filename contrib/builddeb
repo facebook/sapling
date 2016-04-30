@@ -57,7 +57,7 @@ if [ -n "$type" ] ; then
     debver="$debver~$type"
 fi
 if [ -n "$distance" ] ; then
-    debver="$debver+$distance-$node"
+    debver="$debver+$distance-$CODENAME-$node"
 fi
 
 control=debian/control
