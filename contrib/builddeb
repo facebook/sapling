@@ -70,7 +70,6 @@ if [ "$BUILD" ]; then
     fi
 
     cp -r $PWD/contrib/debian debian
-    chmod -R 0755 debian
 
     sed -i.tmp "s/__VERSION__/$debver/" $changelog
     sed -i.tmp "s/__DATE__/$(date --rfc-2822)/" $changelog
