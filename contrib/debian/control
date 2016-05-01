@@ -3,7 +3,7 @@ Section: vcs
 Priority: optional
 Maintainer: Mercurial Developers <mercurial-devel@selenic.com>
 Build-Depends:
- debhelper (>= 7),
+ debhelper (>= 9),
  dh-python,
  netbase,
  python-all,
