@@ -1020,8 +1020,8 @@ This section specifies behavior during merges and updates.
    file in the changeset being merged or updated to, and has different
    contents. Options are ``abort``, ``warn`` and ``ignore``. With ``abort``,
    abort on such files. With ``warn``, warn on such files and back them up as
-   .orig. With ``ignore``, don't print a warning and back them up as
-   .orig. (default: ``abort``)
+   ``.orig``. With ``ignore``, don't print a warning and back them up as
+   ``.orig``. (default: ``abort``)
 
 ``checkunknown``
    Controls behavior when an unknown file that isn't ignored has the same name
