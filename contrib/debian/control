@@ -9,8 +9,8 @@ Build-Depends:
  python-all,
  python-all-dev,
  python-docutils,
- zip,
- unzip
+ unzip,
+ zip
 Standards-Version: 3.9.4
 X-Python-Version: >= 2.6
 
