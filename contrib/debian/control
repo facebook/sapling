@@ -42,6 +42,7 @@ Depends:
  ${misc:Depends},
  ${python:Depends},
 Recommends: mercurial (= ${source:Version}), ca-certificates
+Suggests: wish
 Breaks: mercurial (<< ${source:Version})
 Replaces: mercurial (<< 2.6.3)
 Description: easy-to-use, scalable distributed version control system (common files)
