@@ -2072,6 +2072,16 @@ methods = {
     "parentpost": p1,
 }
 
+def _isonly(revs, bases):
+    return (
+        revs is not None
+        and revs[0] == 'func'
+        and getstring(revs[1], _('not a symbol')) == 'ancestors'
+        and bases is not None
+        and bases[0] == 'not'
+        and bases[1][0] == 'func'
+        and getstring(bases[1][1], _('not a symbol')) == 'ancestors')
+
 def optimize(x, small):
     if x is None:
         return 0, x
@@ -2106,22 +2116,12 @@ def optimize(x, small):
     elif op == 'and':
         wa, ta = optimize(x[1], True)
         wb, tb = optimize(x[2], True)
+        w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
-        def isonly(revs, bases):
-            return (
-                revs is not None
-                and revs[0] == 'func'
-                and getstring(revs[1], _('not a symbol')) == 'ancestors'
-                and bases is not None
-                and bases[0] == 'not'
-                and bases[1][0] == 'func'
-                and getstring(bases[1][1], _('not a symbol')) == 'ancestors')
-
-        w = min(wa, wb)
-        if isonly(ta, tb):
+        if _isonly(ta, tb):
             return w, ('func', ('symbol', 'only'), ('list', ta[2], tb[1][2]))
-        if isonly(tb, ta):
+        if _isonly(tb, ta):
             return w, ('func', ('symbol', 'only'), ('list', tb[2], ta[1][2]))
 
         if tb is not None and tb[0] == 'not':
