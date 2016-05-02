@@ -2099,8 +2099,8 @@ def optimize(x, small):
     if op == 'minus':
         return optimize(('and', x[1], ('not', x[2])), small)
     elif op == 'only':
-        return optimize(('func', ('symbol', 'only'),
-                         ('list', x[1], x[2])), small)
+        t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
+        return optimize(t, small)
     elif op == 'onlypost':
         return optimize(('func', ('symbol', 'only'), x[1]), small)
     elif op == 'dagrangepre':
@@ -2114,8 +2114,8 @@ def optimize(x, small):
     elif op == 'rangepost':
         return optimize(('range', x[1], ('string', 'tip')), small)
     elif op == 'negate':
-        return optimize(('string',
-                         '-' + getstring(x[1], _("can't negate that"))), small)
+        s = getstring(x[1], _("can't negate that"))
+        return optimize(('string', '-' + s), small)
     elif op in 'string symbol negate':
         return smallbonus, x # single revisions are small
     elif op == 'and':
