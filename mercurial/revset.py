@@ -2087,7 +2087,7 @@ def _matchonly(revs, bases):
         and getstring(bases[1][1], _('not a symbol')) == 'ancestors'):
         return ('list', revs[2], bases[1][2])
 
-def optimize(x, small):
+def _optimize(x, small):
     if x is None:
         return 0, x
 
@@ -2097,30 +2097,30 @@ def optimize(x, small):
 
     op = x[0]
     if op == 'minus':
-        return optimize(('and', x[1], ('not', x[2])), small)
+        return _optimize(('and', x[1], ('not', x[2])), small)
     elif op == 'only':
         t = ('func', ('symbol', 'only'), ('list', x[1], x[2]))
-        return optimize(t, small)
+        return _optimize(t, small)
     elif op == 'onlypost':
-        return optimize(('func', ('symbol', 'only'), x[1]), small)
+        return _optimize(('func', ('symbol', 'only'), x[1]), small)
     elif op == 'dagrangepre':
-        return optimize(('func', ('symbol', 'ancestors'), x[1]), small)
+        return _optimize(('func', ('symbol', 'ancestors'), x[1]), small)
     elif op == 'dagrangepost':
-        return optimize(('func', ('symbol', 'descendants'), x[1]), small)
+        return _optimize(('func', ('symbol', 'descendants'), x[1]), small)
     elif op == 'rangeall':
-        return optimize(('range', ('string', '0'), ('string', 'tip')), small)
+        return _optimize(('range', ('string', '0'), ('string', 'tip')), small)
     elif op == 'rangepre':
-        return optimize(('range', ('string', '0'), x[1]), small)
+        return _optimize(('range', ('string', '0'), x[1]), small)
     elif op == 'rangepost':
-        return optimize(('range', x[1], ('string', 'tip')), small)
+        return _optimize(('range', x[1], ('string', 'tip')), small)
     elif op == 'negate':
         s = getstring(x[1], _("can't negate that"))
-        return optimize(('string', '-' + s), small)
+        return _optimize(('string', '-' + s), small)
     elif op in 'string symbol negate':
         return smallbonus, x # single revisions are small
     elif op == 'and':
-        wa, ta = optimize(x[1], True)
-        wb, tb = optimize(x[2], True)
+        wa, ta = _optimize(x[1], True)
+        wb, tb = _optimize(x[2], True)
         w = min(wa, wb)
 
         # (::x and not ::y)/(not ::y and ::x) have a fast path
@@ -2146,12 +2146,12 @@ def optimize(x, small):
             else:
                 s = '\0'.join(t[1] for w, t in ss)
                 y = ('func', ('symbol', '_list'), ('string', s))
-                w, t = optimize(y, False)
+                w, t = _optimize(y, False)
             ws.append(w)
             ts.append(t)
             del ss[:]
         for y in x[1:]:
-            w, t = optimize(y, False)
+            w, t = _optimize(y, False)
             if t is not None and (t[0] == 'string' or t[0] == 'symbol'):
                 ss.append((w, t))
                 continue
@@ -2169,34 +2169,34 @@ def optimize(x, small):
         # Optimize not public() to _notpublic() because we have a fast version
         if x[1] == ('func', ('symbol', 'public'), None):
             newsym = ('func', ('symbol', '_notpublic'), None)
-            o = optimize(newsym, not small)
+            o = _optimize(newsym, not small)
             return o[0], o[1]
         else:
-            o = optimize(x[1], not small)
+            o = _optimize(x[1], not small)
             return o[0], (op, o[1])
     elif op == 'parentpost':
-        o = optimize(x[1], small)
+        o = _optimize(x[1], small)
         return o[0], (op, o[1])
     elif op == 'group':
-        return optimize(x[1], small)
+        return _optimize(x[1], small)
     elif op in 'dagrange range parent ancestorspec':
         if op == 'parent':
             # x^:y means (x^) : y, not x ^ (:y)
             post = ('parentpost', x[1])
             if x[2][0] == 'dagrangepre':
-                return optimize(('dagrange', post, x[2][1]), small)
+                return _optimize(('dagrange', post, x[2][1]), small)
             elif x[2][0] == 'rangepre':
-                return optimize(('range', post, x[2][1]), small)
+                return _optimize(('range', post, x[2][1]), small)
 
-        wa, ta = optimize(x[1], small)
-        wb, tb = optimize(x[2], small)
+        wa, ta = _optimize(x[1], small)
+        wb, tb = _optimize(x[2], small)
         return wa + wb, (op, ta, tb)
     elif op == 'list':
-        ws, ts = zip(*(optimize(y, small) for y in x[1:]))
+        ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
     elif op == 'func':
         f = getstring(x[1], _("not a symbol"))
-        wa, ta = optimize(x[2], small)
+        wa, ta = _optimize(x[2], small)
         if f in ("author branch closed date desc file grep keyword "
                  "outgoing user"):
             w = 10 # slow
@@ -2214,6 +2214,10 @@ def optimize(x, small):
             w = 1
         return w + wa, (op, x[1], ta)
     return 1, x
+
+def optimize(tree):
+    _weight, newtree = _optimize(tree, small=True)
+    return newtree
 
 # the set of valid characters for the initial letter of symbols in
 # alias declarations and definitions
@@ -2330,7 +2334,7 @@ def _makematcher(ui, tree, repo):
     if ui:
         tree = expandaliases(ui, tree, showwarning=ui.warn)
     tree = foldconcat(tree)
-    weight, tree = optimize(tree, True)
+    tree = optimize(tree)
     posttreebuilthook(tree, repo)
     def mfunc(repo, subset=None):
         if subset is None:

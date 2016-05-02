@@ -751,7 +751,7 @@ def revsingle(repo, revspec, default='.'):
 
 def _pairspec(revspec):
     tree = revset.parse(revspec)
-    tree = revset.optimize(tree, True)[1]  # fix up "x^:y" -> "(x^):y"
+    tree = revset.optimize(tree)  # fix up "x^:y" -> "(x^):y"
     return tree and tree[0] in ('range', 'rangepre', 'rangepost', 'rangeall')
 
 def revpair(repo, revs):

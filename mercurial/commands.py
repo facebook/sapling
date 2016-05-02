@@ -3514,7 +3514,7 @@ def debugrevspec(ui, repo, expr, **opts):
         if newtree != tree:
             ui.note("* concatenated:\n", revset.prettyformat(newtree), "\n")
         if opts["optimize"]:
-            weight, optimizedtree = revset.optimize(newtree, True)
+            optimizedtree = revset.optimize(newtree)
             ui.note("* optimized:\n", revset.prettyformat(optimizedtree), "\n")
     func = revset.match(ui, expr, repo)
     revs = func(repo)
