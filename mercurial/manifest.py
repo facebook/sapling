@@ -211,8 +211,10 @@ class manifestdict(object):
 
     def filesnotin(self, m2):
         '''Set of files in this manifest that are not in the other'''
-        files = set(self)
-        files.difference_update(m2)
+        diff = self.diff(m2)
+        files = set(filepath
+                    for filepath, hashflags in diff.iteritems()
+                    if hashflags[1][0] is None)
         return files
 
     @propertycache
