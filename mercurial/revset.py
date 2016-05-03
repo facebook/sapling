@@ -1901,8 +1901,8 @@ def _getsortargs(x):
 
     return args['set'], keyflags, opts
 
-@predicate('sort(set[, [-]key... [, ...]])', safe=True)
-def sort(repo, subset, x):
+@predicate('sort(set[, [-]key... [, ...]])', safe=True, takeorder=True)
+def sort(repo, subset, x, order):
     """Sort set by keys. The default sort order is ascending, specify a key
     as ``-key`` to sort in descending order.
 
@@ -1923,7 +1923,7 @@ def sort(repo, subset, x):
     s, keyflags, opts = _getsortargs(x)
     revs = getset(repo, subset, s)
 
-    if not keyflags:
+    if not keyflags or order != defineorder:
         return revs
     if len(keyflags) == 1 and keyflags[0][0] == "rev":
         revs.sort(reverse=keyflags[0][1])

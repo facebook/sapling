@@ -1633,12 +1633,20 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset+ 0:2>,
     <spanset+ 0:9>>
-  2
-  1
   0
- BROKEN: should be '0 1 2'
+  1
+  2
+
+ invalid argument passed to noop sort():
+
+  $ log '0:2 & sort()'
+  hg: parse error: sort requires one or two arguments
+  [255]
+  $ log '0:2 & sort(all(), -invalid)'
+  hg: parse error: unknown sort key '-invalid'
+  [255]
 
  for 'A & f(B)', 'B' should not be affected by the order of 'A':
 
