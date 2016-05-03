@@ -386,9 +386,7 @@ def dagrange(repo, subset, x, y):
     r = fullreposet(repo)
     xs = reachableroots(repo, getset(repo, r, x), getset(repo, r, y),
                          includepath=True)
-    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
-    # necessary to ensure we preserve the order in subset.
-    return xs & subset
+    return subset & xs
 
 def andset(repo, subset, x, y):
     return getset(repo, getset(repo, subset, x), y)

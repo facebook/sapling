@@ -898,6 +898,16 @@ Test working-directory revision
   $ log 'tag(tip)'
   9
 
+Test order of revisions in compound expression
+----------------------------------------------
+
+ 'A & B' should follow the order of 'A':
+
+  $ log '2:0 & 0::2'
+  2
+  1
+  0
+
 test sort revset
 --------------------------------------------
 
