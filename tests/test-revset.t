@@ -1255,6 +1255,36 @@ ordering defined by it.
   1
   0
 
+ 'x:y' takes ordering parameter into account:
+
+  $ try -p optimized '3:0 & 0:3 & not 2:1'
+  * optimized:
+  (difference
+    (and
+      (range
+        ('symbol', '3')
+        ('symbol', '0')
+        define)
+      (range
+        ('symbol', '0')
+        ('symbol', '3')
+        follow)
+      define)
+    (range
+      ('symbol', '2')
+      ('symbol', '1')
+      any)
+    define)
+  * set:
+  <filteredset
+    <filteredset
+      <spanset- 0:3>,
+      <spanset+ 0:3>>,
+    <not
+      <spanset+ 1:2>>>
+  3
+  0
+
  'a + b', which is optimized to '_list(a b)', should take the ordering of
  the left expression:
 
@@ -1377,12 +1407,11 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
-    <baseset [0, 2, 1]>>
+    <baseset [0, 2, 1]>,
+    <spanset- 0:2>>
+  0
   2
   1
-  0
- BROKEN: should be '0 2 1'
 
  '_hexlist(a b)' should behave like 'a + b':
 
@@ -1724,8 +1753,8 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <baseset [1]>,
-    <spanset- 0:2>>
+    <spanset- 0:2>,
+    <baseset [1]>>
   1
 
  'A & B' can be rewritten as 'B & A' by weight, but that's fine as long as

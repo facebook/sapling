@@ -378,12 +378,12 @@ def rangeset(repo, subset, x, y, order):
         r = spanset(repo, m, n + 1)
     else:
         r = spanset(repo, m, n - 1)
-    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
-    # necessary to ensure we preserve the order in subset.
-    #
-    # This has performance implication, carrying the sorting over when possible
-    # would be more efficient.
-    return r & subset
+
+    if order == defineorder:
+        return r & subset
+    else:
+        # carrying the sorting over when possible would be more efficient
+        return subset & r
 
 def dagrange(repo, subset, x, y, order):
     r = fullreposet(repo)
