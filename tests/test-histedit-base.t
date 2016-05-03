@@ -39,7 +39,10 @@ Create repo a:
   |/
   o  0:cd010b8cd998f3981a5a8115f94f8da4ab506089:draft 'A'
   
+Verify that implicit base command and help are listed
 
+  $ HGEDITOR=cat hg histedit |grep base
+  #  b, base = checkout changeset and apply further changesets from there
 
 Go to D
   $ hg update 3
