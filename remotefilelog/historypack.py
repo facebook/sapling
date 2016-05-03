@@ -205,8 +205,10 @@ class historypack(object):
         fanout = self._fanouttable
 
         start = fanout[fanoutkey] + INDEXSTART
-        if fanoutkey < FANOUTCOUNT - 1:
-            end = self._fanouttable[fanoutkey + 1] + INDEXSTART
+        for i in xrange(fanoutkey + 1, FANOUTCOUNT):
+            end = fanout[i] + INDEXSTART
+            if end != start:
+                break
         else:
             end = self.indexsize
 
