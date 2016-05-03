@@ -1594,12 +1594,11 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <spanset- 0:2>,
+    <spanset+ 0:2>,
     <spanset+ 0:9>>
-  2
-  1
   0
- BROKEN: should be '0 1 2'
+  1
+  2
 
  'sort()' should take effect only if it is the outermost expression:
 

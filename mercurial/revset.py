@@ -1833,12 +1833,13 @@ def matching(repo, subset, x):
 
     return subset.filter(matches, condrepr=('<matching%r %r>', fields, revs))
 
-@predicate('reverse(set)', safe=True)
-def reverse(repo, subset, x):
+@predicate('reverse(set)', safe=True, takeorder=True)
+def reverse(repo, subset, x, order):
     """Reverse order of set.
     """
     l = getset(repo, subset, x)
-    l.reverse()
+    if order == defineorder:
+        l.reverse()
     return l
 
 @predicate('roots(set)', safe=True)
