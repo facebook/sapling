@@ -95,7 +95,7 @@ class datapack(object):
 
         rawfanout = self._index[:FANOUTSIZE]
         self._fanouttable = []
-        for i in range(0, FANOUTCOUNT):
+        for i in xrange(0, FANOUTCOUNT):
             loc = i * 4
             fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
             self._fanouttable.append(fanoutentry)
@@ -166,8 +166,8 @@ class datapack(object):
         start = fanout[fanoutkey] + FANOUTSIZE
         # Scan forward to find the first non-same entry, which is the upper
         # bound.
-        for i in range(fanoutkey + 1, FANOUTCOUNT):
-            end = self._fanouttable[i] + FANOUTSIZE
+        for i in xrange(fanoutkey + 1, FANOUTCOUNT):
+            end = fanout[i] + FANOUTSIZE
             if end != start:
                 break
         else:
@@ -175,21 +175,19 @@ class datapack(object):
 
         # Bisect between start and end to find node
         index = self._index
-        startnode = self._index[start:start + NODELENGTH]
-        endnode = self._index[end:end + NODELENGTH]
+        startnode = index[start:start + NODELENGTH]
+        endnode = index[end:end + NODELENGTH]
         if startnode == node:
-            entry = self._index[start:start + INDEXENTRYLENGTH]
+            entry = index[start:start + INDEXENTRYLENGTH]
         elif endnode == node:
-            entry = self._index[end:end + INDEXENTRYLENGTH]
+            entry = index[end:end + INDEXENTRYLENGTH]
         else:
-            iteration = 0
             while start < end - INDEXENTRYLENGTH:
-                iteration += 1
                 mid = start  + (end - start) / 2
                 mid = mid - ((mid - FANOUTSIZE) % INDEXENTRYLENGTH)
-                midnode = self._index[mid:mid + NODELENGTH]
+                midnode = index[mid:mid + NODELENGTH]
                 if midnode == node:
-                    entry = self._index[mid:mid + INDEXENTRYLENGTH]
+                    entry = index[mid:mid + INDEXENTRYLENGTH]
                     break
                 if node > midnode:
                     start = mid
