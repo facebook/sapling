@@ -66,14 +66,17 @@ HG: Feel free to add relevant information.
     print('Task created: https://our.intern.facebook.com/intern/tasks/?t=%s'
           % tasknum)
 
-def existsinpath(name):
+def which(name):
     """ """
-    return any([os.path.exists(os.path.join(p, name))
-                for p in os.environ.get('PATH', '/bin').split(os.pathsep)])
+    for p in os.environ.get('PATH', '/bin').split(os.pathsep):
+        path = os.path.join(p, name)
+        if os.path.exists(path):
+            return path
+    return None
 
 rageopts = [('p', 'preview', None,
              _('print diagnostic information without doing arc paste'))]
-if existsinpath('oncalls'):
+if which('oncalls'):
     rageopts.append(('', 'oncall', None,
                      _('file a task for source control oncall')))
 
@@ -110,6 +113,16 @@ def usechginfo():
             value = '(not set)'
         result.append('%s: %s' % (name, value))
     return '\n'.join(result)
+
+def rpminfo():
+    """FBONLY: Information about RPM packages"""
+    result = set()
+    for name in ['hg', 'hg.real']:
+        path = which(name)
+        if not path:
+            continue
+        result.add(shcmd('rpm -qf %s' % path, check=False))
+    return ''.join(result)
 
 @command('^rage', rageopts , _('hg rage'))
 def rage(ui, repo, *pats, **opts):
@@ -167,8 +180,7 @@ def rage(ui, repo, *pats, **opts):
                     force=False, enable_profile=False, disable_profile=False,
                     refresh=False, reset=False))),
         ('usechg', _failsafe(usechginfo)),
-        ('rpm -q mercurial', _failsafe(
-            lambda: shcmd('rpm -q mercurial', check=False))),
+        ('rpm info', _failsafe(rpminfo)),
         ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
         ('airport', _failsafe(
             lambda: shcmd('/System/Library/PrivateFrameworks/Apple80211.' +
