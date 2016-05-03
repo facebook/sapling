@@ -120,19 +120,6 @@ static from_flat_state_t *init_from_state(size_t flat_sz) {
 
   state->tree = alloc_tree_with_arena(flat_sz * 2);
 
-  // set up ONLY the shadow root.  the real root will be created by the
-  // conversion process.
-  arena_alloc_node_result_t alloc_result =
-      arena_alloc_node(state->tree, "/", 1, 1);
-  if (alloc_result.code != ARENA_ALLOC_OK) {
-    return NULL;
-  }
-  node_t *shadow_root = alloc_result.node;
-  shadow_root->type = TYPE_ROOT;
-
-  state->tree->shadow_root = shadow_root;
-  state->tree->consumed_memory += shadow_root->block_sz;
-
   return state;
 }
 

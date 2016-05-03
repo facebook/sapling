@@ -78,7 +78,6 @@ tree_t *alloc_tree() {
 
   tree->shadow_root = shadow_root;
   tree->consumed_memory = 0;
-  tree->consumed_memory += shadow_root->block_sz;
   tree->consumed_memory += real_root->block_sz;
   tree->arena = NULL;
   tree->arena_free_start = NULL;
@@ -114,9 +113,15 @@ static void destroy_tree_helper(tree_t *tree, node_t *node) {
 void destroy_tree(tree_t *tree) {
   if (tree->compacted == false) {
     destroy_tree_helper(tree, tree->shadow_root);
+  } else {
+    if (tree->shadow_root != NULL) {
+      free(tree->shadow_root);
+      tree->shadow_root = NULL;
+    }
   }
   if (tree->arena != NULL) {
     free(tree->arena);
+    tree->arena = NULL;
   }
 
   free(tree);

@@ -107,13 +107,17 @@ arena_alloc_node_result_t arena_alloc_node_helper(
 tree_t *alloc_tree_with_arena(size_t arena_sz) {
   void *arena = malloc(arena_sz);
   tree_t *tree = (tree_t *) calloc(1, sizeof(tree_t));
+  node_t *shadow_root = alloc_node("/", 1, 1);
 
-  if (arena == NULL || tree == NULL) {
+  if (arena == NULL || tree == NULL || shadow_root == NULL) {
     if (arena != NULL) {
       free(arena);
     }
     if (tree != NULL) {
       free(tree);
+    }
+    if (shadow_root != NULL) {
+      free(shadow_root);
     }
     return NULL;
   }
@@ -129,15 +133,7 @@ tree_t *alloc_tree_with_arena(size_t arena_sz) {
   tree->consumed_memory = 0;
   tree->num_leaf_nodes = 0;
 
-  // set up ONLY the shadow root.
-  arena_alloc_node_result_t alloc_result =
-      arena_alloc_node(tree, "/", 1, 1);
-  if (alloc_result.code != ARENA_ALLOC_OK) {
-    return NULL;
-  }
-  node_t *shadow_root = alloc_result.node;
   shadow_root->type = TYPE_ROOT;
-
   tree->shadow_root = shadow_root;
 
   return tree;

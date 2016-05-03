@@ -23,7 +23,7 @@ void tree_init_test() {
   ASSERT(real_root != NULL);
   ASSERT(real_root->num_children == 0);
 
-  ASSERT(tree->consumed_memory == shadow_root->block_sz + real_root->block_sz);
+  ASSERT(tree->consumed_memory == real_root->block_sz);
 }
 
 /**
@@ -293,7 +293,7 @@ void tree_add_remove() {
 
   // because the directory nodes may have undergone expansion, we may not
   // have the exact same memory requirement.
-  ASSERT(tree->consumed_memory == shadow_root->block_sz + real_root->block_sz);
+  ASSERT(tree->consumed_memory == real_root->block_sz);
 }
 
 /**
@@ -353,7 +353,7 @@ void tree_add_remove_multi() {
   // because the directory nodes may have undergone expansion, we may not
   // have the exact same memory requirement.  however, we should only have
   // two nodes left, so we can just sum them up directly.
-  ASSERT(tree->consumed_memory == shadow_root->block_sz + real_root->block_sz);
+  ASSERT(tree->consumed_memory == real_root->block_sz);
 }
 
 int main(int argc, char *argv[]) {
