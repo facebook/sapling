@@ -9,7 +9,7 @@ import unittest
 import silenttestrunner
 
 from remotefilelog.historypack import historypack, mutablehistorypack
-from remotefilelog.historypack import historypackstore, historygc
+from remotefilelog.historypack import historypackstore
 
 from mercurial import util
 from mercurial.node import hex, bin, nullid

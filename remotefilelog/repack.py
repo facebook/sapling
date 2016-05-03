@@ -110,7 +110,64 @@ class repacker(object):
         target.close()
 
     def repackhistory(self, ledger, target):
-        pass
+        ui = self.repo.ui
+
+        byfile = {}
+        for entry in ledger.entries.itervalues():
+            if entry.historysource:
+                byfile.setdefault(entry.filename, {})[entry.node] = entry
+
+        count = 0
+        for filename, entries in sorted(byfile.iteritems()):
+            ancestors = {}
+            nodes = list(node for node in entries.iterkeys())
+
+            for node in nodes:
+                ancestors.update(self.history.getancestors(filename, node))
+
+            # Order the nodes children first
+            orderednodes = reversed(self._toposort(ancestors))
+
+            # Write to the pack
+            dontprocess = set()
+            for node in orderednodes:
+                p1, p2, linknode, copyfrom = ancestors[node]
+
+                if node in dontprocess:
+                    if p1 != nullid:
+                        dontprocess.add(p1)
+                    if p2 != nullid:
+                        dontprocess.add(p2)
+                    continue
+
+                if copyfrom:
+                    dontprocess.add(p1)
+                    p1 = nullid
+
+                target.add(filename, node, p1, p2, linknode)
+
+                if node in entries:
+                    entries[node].historyrepacked = True
+
+            count += 1
+            ui.progress(_("repacking history"), count, unit="files",
+                        total=len(byfile))
+
+        ui.progress(_("repacking history"), None)
+        target.close()
+
+    def _toposort(self, ancestors):
+        def parentfunc(node):
+            p1, p2, linknode, copyfrom = ancestors[node]
+            parents = []
+            if p1 != nullid:
+                parents.append(p1)
+            if p2 != nullid:
+                parents.append(p2)
+            return parents
+
+        sortednodes = shallowutil.sortnodes(ancestors.keys(), parentfunc)
+        return sortednodes
 
 class repackledger(object):
     """Storage for all the bookkeeping that happens during a repack. It contains
