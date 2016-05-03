@@ -95,6 +95,22 @@ def obsoleteinfo(repo, hgcmd):
     relevant = pat.findall(markers)
     return "\n".join(relevant)
 
+def usechginfo():
+    """FBONLY: Information about whether chg is enabled"""
+    files = {
+        'system': '/etc/mercurial/usechg',
+        'user': os.path.expanduser('~/.usechg'),
+    }
+    result = []
+    for name, path in files.items():
+        if os.path.exists(path):
+            with open(path) as f:
+                value = f.read().strip()
+        else:
+            value = '(not set)'
+        result.append('%s: %s' % (name, value))
+    return '\n'.join(result)
+
 @command('^rage', rageopts , _('hg rage'))
 def rage(ui, repo, *pats, **opts):
     """collect useful diagnostics for asking help from the source control team
@@ -150,8 +166,7 @@ def rage(ui, repo, *pats, **opts):
                     sparse.sparse, include=False, exclude=False, delete=False,
                     force=False, enable_profile=False, disable_profile=False,
                     refresh=False, reset=False))),
-        ('usechg', _failsafe(
-            lambda: shcmd('cat /etc/mercurial/usechg  ~/.usechg'))),
+        ('usechg', _failsafe(usechginfo)),
         ('rpm -q mercurial', _failsafe(
             lambda: shcmd('rpm -q mercurial', check=False))),
         ('ifconfig', _failsafe(lambda: shcmd('ifconfig'))),
