@@ -779,6 +779,6 @@ def prefetch(ui, repo, *pats, **opts):
 @command('repack', [], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     repacker = repackmod.repacker(repo, repo.contentstore, repo.metadatastore)
-    dpack = datapack.mutabledatapack(repo.svfs.join('packs'))
-    hpack = historypack.mutablehistorypack(repo.svfs.join('packs'))
-    repacker.run(dpack, hpack)
+    with datapack.mutabledatapack(repo.svfs.join('packs')) as dpack:
+        with historypack.mutablehistorypack(repo.svfs.join('packs')) as hpack:
+            repacker.run(dpack, hpack)

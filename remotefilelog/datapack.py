@@ -279,12 +279,28 @@ class mutabledatapack(object):
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
+        self._closed = False
 
         # Write header
         # TODO: make it extensible (ex: allow specifying compression algorithm,
         # a flexible key/value header, delta algorithm, fanout size, etc)
         version = struct.pack('!B', VERSION) # unsigned 1 byte int
         self.writeraw(version)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            if not self._closed:
+                self.close()
+        else:
+            # Unclean exit
+            try:
+                os.unlink(self.datapackpath)
+                os.unlink(self.dataidxpath)
+            except Exception:
+                pass
 
     def add(self, name, node, deltabasenode, delta):
         if len(name) > 2**16:
@@ -327,6 +343,8 @@ class mutabledatapack(object):
                                                   sha + PACKSUFFIX))
         os.rename(self.dataidxpath, os.path.join(self.packdir,
                                                  sha + INDEXSUFFIX))
+
+        self._closed = True
         return os.path.join(self.packdir, sha)
 
     def writeindex(self):

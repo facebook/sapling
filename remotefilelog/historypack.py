@@ -306,6 +306,7 @@ class mutablehistorypack(object):
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
+        self._closed = False
 
         # Write header
         # TODO: make it extensible
@@ -315,6 +316,21 @@ class mutablehistorypack(object):
         self.pastfiles = {}
         self.currentfile = None
         self.currentfilestart = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            if not self._closed:
+                self.close()
+        else:
+            # Unclean exit
+            try:
+                os.unlink(self.historypackpath)
+                os.unlink(self.historyidxpath)
+            except Exception:
+                pass
 
     def add(self, filename, node, p1, p2, linknode):
         if filename != self.currentfile:
@@ -356,6 +372,8 @@ class mutablehistorypack(object):
                                                      PACKSUFFIX))
         os.rename(self.historyidxpath, os.path.join(self.packdir, sha +
                                                     INDEXSUFFIX))
+
+        self._closed = True
         return os.path.join(self.packdir, sha)
 
     def writeindex(self):
