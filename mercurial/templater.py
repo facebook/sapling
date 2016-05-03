@@ -724,6 +724,25 @@ def rstdoc(context, mapping, args):
 
     return minirst.format(text, style=style, keep=['verbose'])
 
+@templatefunc('separate(sep, args)')
+def separate(context, mapping, args):
+    """Add a separator between non-empty arguments."""
+    if not args:
+        # i18n: "separate" is a keyword
+        raise error.ParseError(_("separate expects at least one argument"))
+
+    sep = evalstring(context, mapping, args[0])
+    first = True
+    for arg in args[1:]:
+        argstr = evalstring(context, mapping, arg)
+        if not argstr:
+            continue
+        if first:
+            first = False
+        else:
+            yield sep
+        yield argstr
+
 @templatefunc('shortest(node, minlength=4)')
 def shortest(context, mapping, args):
     """Obtain the shortest representation of

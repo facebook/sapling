@@ -81,6 +81,10 @@ Some sample command line templates:
 
    $ hg log -r 0 --template "files: {join(files, ', ')}\n"
 
+- Separate non-empty arguments by a " "::
+
+   $ hg log -r 0 --template "{separate(' ', node, bookmarks, tags}\n"
+
 - Modify each line of a commit description::
 
    $ hg log --template "{splitlines(desc) % '**** {line}\n'}"

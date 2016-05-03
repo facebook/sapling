@@ -3320,6 +3320,15 @@ Test width argument passed to pad function
   hg: parse error: pad() expects an integer width
   [255]
 
+Test separate function
+
+  $ hg log -r 0 -T '{separate("-", "", "a", "b", "", "", "c", "")}\n'
+  a-b-c
+  $ hg log -r 0 -T '{separate(" ", "{rev}:{node|short}", author|user, branch)}\n'
+  0:f7769ec2ab97 test default
+  $ hg log -r 0 --color=always -T '{separate(" ", "a", label(red, "b"), "c", label(red, ""), "d")}\n'
+  a \x1b[0;31mb\x1b[0m c d (esc)
+
 Test ifcontains function
 
   $ hg log --template '{rev} {ifcontains(rev, "2 two 0", "is in the string", "is not")}\n'
