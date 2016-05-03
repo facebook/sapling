@@ -1,4 +1,4 @@
-import grp, os, shutil, time
+import errno, grp, os, shutil, time
 import shallowutil
 from mercurial import util
 from mercurial.i18n import _
@@ -62,7 +62,34 @@ class basestore(object):
 
     # BELOW THIS ARE IMPLEMENTATIONS OF REPACK SOURCE
 
-    def getfiles(self):
+    def markledger(self, ledger):
+        if self._shared:
+            for filename, nodes in self._getfiles():
+                for node in nodes:
+                    ledger.markdataentry(self, filename, node)
+                    ledger.markhistoryentry(self, filename, node)
+
+    def cleanup(self, ledger):
+        ui = self.ui
+        entries = ledger.sources.get(self, [])
+        count = 0
+        for entry in entries:
+            if entry.datarepacked and entry.historyrepacked:
+                ui.progress(_("cleaning up"), count, unit="files",
+                            total=len(entries))
+                path = self._getfilepath(entry.filename, entry.node)
+                try:
+                    os.remove(path)
+                except OSError as ex:
+                    # If the file is already gone, no big deal
+                    if ex.errno != errno.ENOENT:
+                        raise
+            count += 1
+        ui.progress(_("cleaning up"), None)
+
+    # BELOW THIS ARE NON-STANDARD APIS
+
+    def _getfiles(self):
         """Return a list of (filename, [node,...]) for all the revisions that
         exist in the store.
 
@@ -78,8 +105,6 @@ class basestore(object):
 
         for filename, sha in sorted(filenamemap.iteritems()):
             yield (filename, existing[sha])
-
-    # BELOW THIS ARE NON-STANDARD APIS
 
     def _resolvefilenames(self, hashes):
         """Given a list of filename hashes that are present in the

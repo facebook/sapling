@@ -76,6 +76,10 @@ class unionmetadatastore(object):
                 missing = store.getmissing(missing)
         return missing
 
+    def markledger(self, ledger):
+        for store in self.stores:
+            store.markledger(ledger)
+
 class remotefilelogmetadatastore(basestore.basestore):
     def getparents(self, name, node):
         """Returns the immediate parents of the node."""
@@ -122,3 +126,6 @@ class remotemetadatastore(object):
 
     def getlinknode(self, name, node):
         raise NotImplemented()
+
+    def markledger(self, ledger):
+        pass

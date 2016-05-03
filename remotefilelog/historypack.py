@@ -89,6 +89,10 @@ class historypackstore(object):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
                            % (filename, hex(node)))
 
+    def markledger(self, ledger):
+        for pack in self.packs:
+            pack.markledger(ledger)
+
 class historypack(object):
     def __init__(self, path):
         self.path = path
@@ -231,6 +235,10 @@ class historypack(object):
             raise KeyError("found file name %s when looking for %s" %
                            (actualname, name))
         return (name, offset + 2 + filenamelength, size - filenamelength - 2)
+
+    def markledger(self, ledger):
+        # TODO: implement
+        pass
 
 class mutablehistorypack(object):
     """A class for constructing and serializing a histpack file and index.

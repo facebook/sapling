@@ -94,6 +94,10 @@ class unioncontentstore(object):
         else:
             raise RuntimeError("no writable store configured")
 
+    def markledger(self, ledger):
+        for store in self.stores:
+            store.markledger(ledger)
+
 class remotefilelogcontentstore(basestore.basestore):
     def get(self, name, node):
         data = self._getdata(name, node)
@@ -144,3 +148,6 @@ class remotecontentstore(object):
 
     def getmissing(self, keys):
         return keys
+
+    def markledger(self, ledger):
+        pass

@@ -72,6 +72,10 @@ class datapackstore(object):
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapackstore")
 
+    def markledger(self, ledger):
+        for pack in self.packs:
+            pack.markledger(ledger)
+
 class datapack(object):
     def __init__(self, path):
         self.path = path
@@ -199,6 +203,10 @@ class datapack(object):
                 return None
 
         return struct.unpack(INDEXFORMAT, entry)
+
+    def markledger(self, ledger):
+        # TODO: implement
+        pass
 
 class mutabledatapack(object):
     """A class for constructing and serializing a datapack file and index.
