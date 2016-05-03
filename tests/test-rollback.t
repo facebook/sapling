@@ -196,3 +196,15 @@ corrupt journal test
   checking files
   1 files, 2 changesets, 2 total revisions
 
+rollback disabled by config
+  $ cat >> $HGRCPATH <<EOF
+  > [ui]
+  > rollback = false
+  > EOF
+  $ echo narf >> pinky-sayings.txt
+  $ hg add pinky-sayings.txt
+  $ hg ci -m 'First one.'
+  $ hg rollback
+  abort: rollback is disabled because it is unsafe
+  (see `hg help -v rollback` for information)
+  [255]

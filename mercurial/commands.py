@@ -6383,6 +6383,11 @@ def rollback(ui, repo, **opts):
       commit transaction if it isn't checked out. Use --force to
       override this protection.
 
+      The rollback command can be entirely disabled by setting the
+      ``ui.rollback`` configuration setting to false. If you're here
+      because you want to use rollback and it's disabled, you can
+      re-enable the command by setting ``ui.rollback`` to true.
+
     This command is not intended for use on public repositories. Once
     changes are visible for pull by other users, rolling a transaction
     back locally is ineffective (someone else may already have pulled
@@ -6392,6 +6397,9 @@ def rollback(ui, repo, **opts):
 
     Returns 0 on success, 1 if no rollback data is available.
     """
+    if not ui.configbool('ui', 'rollback', True):
+        raise error.Abort(_('rollback is disabled because it is unsafe'),
+                          hint=('see `hg help -v rollback` for information'))
     return repo.rollback(dryrun=opts.get('dry_run'),
                          force=opts.get('force'))
 
