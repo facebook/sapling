@@ -116,19 +116,26 @@ class basestore(object):
         '''Verify the existence (and, optionally, contents) of every big
         file revision referenced by every changeset in revs.
         Return 0 if all is well, non-zero on any errors.'''
-        failed = False
 
         self.ui.status(_('searching %d changesets for largefiles\n') %
                        len(revs))
         verified = set()                # set of (filename, filenode) tuples
-
+        filestocheck = []               # list of (cset, filename, expectedhash)
         for rev in revs:
             cctx = self.repo[rev]
             cset = "%d:%s" % (cctx.rev(), node.short(cctx.node()))
 
             for standin in cctx:
-                if self._verifyfile(cctx, cset, contents, standin, verified):
-                    failed = True
+                filename = lfutil.splitstandin(standin)
+                if filename:
+                    fctx = cctx[standin]
+                    key = (filename, fctx.filenode())
+                    if key not in verified:
+                        verified.add(key)
+                        expectedhash = fctx.data()[0:40]
+                        filestocheck.append((cset, filename, expectedhash))
+
+        failed = self._verifyfiles(contents, filestocheck)
 
         numrevs = len(verified)
         numlfiles = len(set([fname for (fname, fnode) in verified]))
@@ -150,13 +157,11 @@ class basestore(object):
         exist in the store).'''
         raise NotImplementedError('abstract method')
 
-    def _verifyfile(self, cctx, cset, contents, standin, verified):
-        '''Perform the actual verification of a file in the store.
-        'cset' is only used in warnings.
+    def _verifyfiles(self, contents, filestocheck):
+        '''Perform the actual verification of files in the store.
         'contents' controls verification of content hash.
-        'standin' is the standin path of the largefile to verify.
-        'verified' is maintained as a set of already verified files.
-        Returns _true_ if it is a standin and any problems are found!
+        'filestocheck' is list of files to check.
+        Returns _true_ if any problems are found!
         '''
         raise NotImplementedError('abstract method')
 
