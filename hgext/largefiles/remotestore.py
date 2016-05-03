@@ -67,8 +67,11 @@ class remotestore(basestore.basestore):
 
     def _verifyfiles(self, contents, filestocheck):
         failed = False
+        expectedhashes = [expectedhash
+                          for cset, filename, expectedhash in filestocheck]
+        stats = self._stat(expectedhashes)
         for cset, filename, expectedhash in filestocheck:
-            stat = self._stat([expectedhash])[expectedhash]
+            stat = stats[expectedhash]
             if stat:
                 if stat == 1:
                     self.ui.warn(

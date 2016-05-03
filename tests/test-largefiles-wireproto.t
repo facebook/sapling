@@ -306,4 +306,46 @@ largefiles pulled on update - no server side problems:
 used all HGPORTs, kill all daemons
   $ killdaemons.py
 
+largefiles should batch verify remote calls
+
+  $ hg init batchverifymain
+  $ cd batchverifymain
+  $ echo "aaa" >> a
+  $ hg add --large a
+  $ hg commit -m "a"
+  Invoking status precommit hook
+  A a
+  $ echo "bbb" >> b
+  $ hg add --large b
+  $ hg commit -m "b"
+  Invoking status precommit hook
+  A b
+  $ cd ..
+  $ hg serve -R batchverifymain -d -p $HGPORT --pid-file hg.pid \
+  > -A access.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ hg clone http://localhost:$HGPORT batchverifyclone
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 2 files
+  updating to branch default
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg -R batchverifyclone verify --large
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 2 changesets, 2 total revisions
+  searching 1 changesets for largefiles
+  verified existence of 2 revisions of 2 largefiles
+  $ tail -1 access.log
+  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3D972a1a11f19934401291cc99117ec614933374ce%3Bstatlfile+sha%3Dc801c9cfe94400963fcb683246217d5db77f9a9a (glob)
+  $ rm access.log
+
+  $ killdaemons.py
+
 #endif
