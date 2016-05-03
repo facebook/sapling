@@ -2694,13 +2694,21 @@ def posttreebuilthook(tree, repo):
     # hook for extensions to execute code on the optimized tree
     pass
 
-def match(ui, spec, repo=None):
-    """Create a matcher for a single revision spec."""
-    return matchany(ui, [spec], repo=repo)
+def match(ui, spec, repo=None, order=defineorder):
+    """Create a matcher for a single revision spec
 
-def matchany(ui, specs, repo=None):
+    If order=followorder, a matcher takes the ordering specified by the input
+    set.
+    """
+    return matchany(ui, [spec], repo=repo, order=order)
+
+def matchany(ui, specs, repo=None, order=defineorder):
     """Create a matcher that will include any revisions matching one of the
-    given specs"""
+    given specs
+
+    If order=followorder, a matcher takes the ordering specified by the input
+    set.
+    """
     if not specs:
         def mfunc(repo, subset=None):
             return baseset()
@@ -2718,7 +2726,7 @@ def matchany(ui, specs, repo=None):
     if ui:
         tree = expandaliases(ui, tree)
     tree = foldconcat(tree)
-    tree = analyze(tree)
+    tree = analyze(tree, order)
     tree = optimize(tree)
     posttreebuilthook(tree, repo)
     return makematcher(tree)
