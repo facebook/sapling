@@ -10,7 +10,7 @@ import unittest
 import silenttestrunner
 
 from remotefilelog.datapack import datapack, mutabledatapack
-from remotefilelog.datapack import datapackstore, datagc
+from remotefilelog.datapack import datapackstore
 
 from mercurial import util
 from mercurial.node import hex, bin, nullid

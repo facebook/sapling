@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from mercurial import util
+from mercurial import mdiff, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
 import shallowutil
@@ -30,7 +30,84 @@ class repacker(object):
             source.cleanup(ledger)
 
     def repackdata(self, ledger, target):
-        pass
+        ui = self.repo.ui
+
+        byfile = {}
+        for entry in ledger.entries.itervalues():
+            if entry.datasource:
+                byfile.setdefault(entry.filename, {})[entry.node] = entry
+
+        count = 0
+        for filename, entries in sorted(byfile.iteritems()):
+            ancestors = {}
+            nodes = list(node for node in entries.iterkeys())
+            for node in nodes:
+                ancestors.update(self.history.getancestors(filename, node))
+
+            # Order the nodes children first, so we can produce reverse deltas
+            orderednodes = reversed(self._toposort(ancestors))
+
+            # getancestors() will return the ancestry of a commit, even across
+            # renames. We currently don't support producing deltas across
+            # renames, so we use dontprocess to store when an ancestory
+            # traverses across a rename, so we can avoid processing those.
+            dontprocess = set()
+
+            # Compute deltas and write to the pack
+            deltabases = defaultdict(lambda: nullid)
+            nodes = set(nodes)
+            for node in orderednodes:
+                # orderednodes is all ancestors, but we only want to serialize
+                # the files we have.
+                if node not in nodes:
+                    continue
+                # Find delta base
+                # TODO: allow delta'ing against most recent descendant instead
+                # of immediate child
+                deltabase = deltabases[node]
+
+                # Record this child as the delta base for its parents.
+                # This may be non optimal, since the parents may have many
+                # children, and this will only choose the last one.
+                # TODO: record all children and try all deltas to find best
+                p1, p2, linknode, copyfrom = ancestors[node]
+
+                if node in dontprocess:
+                    if p1 != nullid:
+                        dontprocess.add(p1)
+                    if p2 != nullid:
+                        dontprocess.add(p2)
+                    continue
+
+                if copyfrom:
+                    dontprocess.add(p1)
+                    p1 = nullid
+
+                if p1 != nullid:
+                    deltabases[p1] = node
+                if p2 != nullid:
+                    deltabases[p2] = node
+
+                # Compute delta
+                # TODO: reuse existing deltas if it matches our deltabase
+                if deltabase != nullid:
+                    deltabasetext = self.data.get(filename, deltabase)
+                    original = self.data.get(filename, node)
+                    delta = mdiff.textdiff(deltabasetext, original)
+                else:
+                    delta = self.data.get(filename, node)
+
+                # TODO: don't use the delta if it's larger than the fulltext
+                target.add(filename, node, deltabase, delta)
+
+                entries[node].datarepacked = True
+
+            count += 1
+            ui.progress(_("repacking data"), count, unit="files",
+                        total=len(byfile))
+
+        ui.progress(_("repacking data"), None)
+        target.close()
 
     def repackhistory(self, ledger, target):
         pass
