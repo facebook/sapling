@@ -174,14 +174,22 @@ def wraprepo(repo):
     remotemetadata = remotemetadatastore(repo.ui, repo.fileservice,
                                          cachemetadata)
 
+    # Instantiate pack stores
+    packpath = os.path.join(cachepath, repo.name, 'packs')
+    packcontentstore = datapackstore(packpath)
+    packmetadatastore = historypackstore(packpath)
+
     # Instantiate union stores
-    packcontentstore = datapackstore(repo.svfs.join('packs'))
     repo.contentstore = unioncontentstore(packcontentstore, localcontent,
             cachecontent, remotecontent, writestore=localcontent)
-    packmetadatastore = historypackstore(repo.svfs.join('packs'))
     repo.metadatastore = unionmetadatastore(packmetadatastore, localmetadata,
                 cachemetadata, remotemetadata, writestore=localmetadata)
     repo.fileservice.setstore(repo.contentstore, cachecontent)
+
+    # Record which ones are shared stores
+    repo.shareddatastores = [packcontentstore, cachecontent, remotecontent]
+    repo.sharedhistorystores = [packmetadatastore, cachemetadata,
+                                remotemetadata]
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",
                                              None)

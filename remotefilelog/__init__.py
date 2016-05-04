@@ -9,7 +9,8 @@ testedwith = 'internal'
 
 import fileserverclient, remotefilelog, remotefilectx, shallowstore, shallowrepo
 import shallowbundle, debugcommands, remotefilelogserver, shallowverifier
-import shallowutil, historypack, datapack
+import shallowutil, historypack, datapack, basestore, contentstore
+import metadatastore
 import repack as repackmod
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
@@ -778,7 +779,15 @@ def prefetch(ui, repo, *pats, **opts):
 
 @command('repack', [], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
-    repacker = repackmod.repacker(repo, repo.contentstore, repo.metadatastore)
-    with datapack.mutabledatapack(repo.svfs.join('packs')) as dpack:
-        with historypack.mutablehistorypack(repo.svfs.join('packs')) as hpack:
+    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    packpath = os.path.join(cachepath, repo.name, 'packs')
+    util.makedirs(packpath)
+
+    datasource = contentstore.unioncontentstore(*repo.shareddatastores)
+    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores)
+
+    repacker = repackmod.repacker(repo, datasource, historysource)
+
+    with datapack.mutabledatapack(packpath) as dpack:
+        with historypack.mutablehistorypack(packpath) as hpack:
             repacker.run(dpack, hpack)
