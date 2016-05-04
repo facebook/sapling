@@ -12,7 +12,7 @@ import silenttestrunner
 from remotefilelog.datapack import datapack, mutabledatapack
 from remotefilelog.datapack import datapackstore
 
-from mercurial import util
+from mercurial import scmutil, util
 from mercurial.node import hex, bin, nullid
 
 class datapacktests(unittest.TestCase):
@@ -39,7 +39,8 @@ class datapacktests(unittest.TestCase):
             revisions = [("filename", self.getFakeHash(), nullid, "content")]
 
         packdir = self.makeTempDir()
-        packer = mutabledatapack(packdir)
+        opener = scmutil.vfs(packdir)
+        packer = mutabledatapack(opener)
 
         for filename, node, base, content in revisions:
             packer.add(filename, node, base, content)

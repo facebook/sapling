@@ -307,15 +307,13 @@ class mutabledatapack(object):
                      <pack entry offset: 8 byte unsigned int>
                      <pack entry size: 8 byte unsigned int>
     """
-    def __init__(self, packdir):
-        self.packdir = packdir
+    def __init__(self, opener):
+        self.opener = opener
         self.entries = {}
-        self.packfp, self.datapackpath = tempfile.mkstemp(
-            suffix=PACKSUFFIX + '-tmp',
-            dir=packdir)
-        self.idxfp, self.dataidxpath = tempfile.mkstemp(
-            suffix=INDEXSUFFIX + '-tmp',
-            dir=packdir)
+        self.packfp, self.datapackpath = opener.mkstemp(
+            suffix=PACKSUFFIX + '-tmp')
+        self.idxfp, self.dataidxpath = opener.mkstemp(
+            suffix=INDEXSUFFIX + '-tmp')
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
@@ -337,8 +335,8 @@ class mutabledatapack(object):
         else:
             # Unclean exit
             try:
-                os.unlink(self.datapackpath)
-                os.unlink(self.dataidxpath)
+                self.opener.unlink(self.datapackpath)
+                self.opener.unlink(self.dataidxpath)
             except Exception:
                 pass
 
@@ -379,13 +377,11 @@ class mutabledatapack(object):
         self.packfp.close()
         self.writeindex()
 
-        os.rename(self.datapackpath, os.path.join(self.packdir,
-                                                  sha + PACKSUFFIX))
-        os.rename(self.dataidxpath, os.path.join(self.packdir,
-                                                 sha + INDEXSUFFIX))
+        self.opener.rename(self.datapackpath, sha + PACKSUFFIX)
+        self.opener.rename(self.dataidxpath, sha + INDEXSUFFIX)
 
         self._closed = True
-        return os.path.join(self.packdir, sha)
+        return self.opener.join(sha)
 
     def writeindex(self):
         entries = sorted((n, db, o, s) for n, (db, o, s)

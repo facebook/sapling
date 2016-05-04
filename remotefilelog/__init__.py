@@ -788,6 +788,7 @@ def repack(ui, repo, *pats, **opts):
 
     repacker = repackmod.repacker(repo, datasource, historysource)
 
-    with datapack.mutabledatapack(packpath) as dpack:
-        with historypack.mutablehistorypack(packpath) as hpack:
+    opener = scmutil.vfs(packpath)
+    with datapack.mutabledatapack(opener) as dpack:
+        with historypack.mutablehistorypack(opener) as hpack:
             repacker.run(dpack, hpack)

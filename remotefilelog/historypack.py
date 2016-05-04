@@ -340,15 +340,13 @@ class mutablehistorypack(object):
                      <pack file section offset: 8 byte unsigned int>
                      <pack file section size: 8 byte unsigned int>
     """
-    def __init__(self, packdir):
-        self.packdir = packdir
+    def __init__(self, opener):
+        self.opener = opener
         self.entries = []
-        self.packfp, self.historypackpath = tempfile.mkstemp(
-                suffix=PACKSUFFIX + '-tmp',
-                dir=packdir)
-        self.idxfp, self.historyidxpath = tempfile.mkstemp(
-                suffix=INDEXSUFFIX + '-tmp',
-                dir=packdir)
+        self.packfp, self.historypackpath = opener.mkstemp(
+                suffix=PACKSUFFIX + '-tmp')
+        self.idxfp, self.historyidxpath = opener.mkstemp(
+                suffix=INDEXSUFFIX + '-tmp')
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
@@ -373,8 +371,8 @@ class mutablehistorypack(object):
         else:
             # Unclean exit
             try:
-                os.unlink(self.historypackpath)
-                os.unlink(self.historyidxpath)
+                self.opener.unlink(self.historypackpath)
+                self.opener.unlink(self.historyidxpath)
             except Exception:
                 pass
 
@@ -423,13 +421,11 @@ class mutablehistorypack(object):
         self.packfp.close()
         self.writeindex()
 
-        os.rename(self.historypackpath, os.path.join(self.packdir, sha +
-                                                     PACKSUFFIX))
-        os.rename(self.historyidxpath, os.path.join(self.packdir, sha +
-                                                    INDEXSUFFIX))
+        self.opener.rename(self.historypackpath, sha + PACKSUFFIX)
+        self.opener.rename(self.historyidxpath, sha + INDEXSUFFIX)
 
         self._closed = True
-        return os.path.join(self.packdir, sha)
+        return self.opener.join(sha)
 
     def writeindex(self):
         files = ((util.sha1(node).digest(), offset, size)

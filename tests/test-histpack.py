@@ -11,7 +11,7 @@ import silenttestrunner
 from remotefilelog.historypack import historypack, mutablehistorypack
 from remotefilelog.historypack import historypackstore
 
-from mercurial import util
+from mercurial import scmutil, util
 from mercurial.node import hex, bin, nullid
 
 class histpacktests(unittest.TestCase):
@@ -44,7 +44,8 @@ class histpacktests(unittest.TestCase):
                           self.getFakeHash())]
 
         packdir = self.makeTempDir()
-        packer = mutablehistorypack(packdir)
+        opener = scmutil.vfs(packdir)
+        packer = mutablehistorypack(opener)
 
         for filename, node, p1, p2, linknode in revisions:
             packer.add(filename, node, p1, p2, linknode)
