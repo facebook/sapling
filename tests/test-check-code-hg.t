@@ -35,6 +35,8 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping fastmanifest/tree_convert_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_copy.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_copy_test.c it has no-che?k-code (glob)
+  Skipping fastmanifest/tree_disk.c it has no-che?k-code (glob)
+  Skipping fastmanifest/tree_disk_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_diff.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_diff_test.c it has no-che?k-code (glob)
   Skipping fastmanifest/tree_iterate_rt.c it has no-che?k-code (glob)

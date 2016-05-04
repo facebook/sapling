@@ -39,8 +39,28 @@ typedef enum {
 } remove_path_result_t;
 
 typedef enum {
-  WRITE_TO_FILE_OK,
+  READ_FROM_FILE_OK,
+  READ_FROM_FILE_OOM,
 
+  // consult the err field in read_from_file_result_t for more details.
+  READ_FROM_FILE_NOT_READABLE,
+
+  // should nuke this file.  it doesn't parse logically.
+  READ_FROM_FILE_WTF,
+
+  // should nuke this file.  it might parse logically, but not on this host.
+  READ_FROM_FILE_NOT_USABLE,
+} read_from_file_code_t;
+typedef struct _read_from_file_result_t {
+  read_from_file_code_t code;
+  int err;
+  struct _tree_t *tree;
+} read_from_file_result_t;
+
+typedef enum {
+  WRITE_TO_FILE_OK,
+  WRITE_TO_FILE_OOM,
+  WRITE_TO_FILE_WTF,
 } write_to_file_result_t;
 
 typedef enum {

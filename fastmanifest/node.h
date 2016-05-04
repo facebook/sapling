@@ -42,6 +42,7 @@ typedef struct _node_t {
   bool in_use         : 1;
   unsigned int type   : 2;
   bool checksum_valid : 1;
+  unsigned int unused : 4;
   char name[0];
   // padding to the nearest ptrdiff_t boundary.
   // then a series of ptrdiff_t-sized pointers to the children.

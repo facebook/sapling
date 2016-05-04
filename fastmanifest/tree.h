@@ -91,9 +91,10 @@ extern bool contains_path(
     const char *path,
     const size_t path_sz);
 
-extern tree_t *read_from_file(char *fname);
+extern read_from_file_result_t read_from_file(char *fname, size_t fname_sz);
 
-extern write_to_file_result_t write_to_file(tree_t *tree, char *fname);
+extern write_to_file_result_t write_to_file(
+    tree_t *tree, char *fname, size_t fname_sz);
 
 extern convert_from_flat_result_t convert_from_flat(
     char *manifest, size_t manifest_sz);
