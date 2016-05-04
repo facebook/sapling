@@ -23,6 +23,7 @@ from mercurial import templatekw, repoview, revset, hg, patch, verify
 from mercurial import match, exchange
 import struct, zlib, errno, collections, time, os, socket, subprocess, lz4
 import stat
+import sys
 import traceback
 
 try:
@@ -777,8 +778,16 @@ def prefetch(ui, repo, *pats, **opts):
 
     repo.prefetch(revs, pats=pats, opts=opts)
 
-@command('repack', [], _('hg repack [OPTIONS]'))
+@command('repack', [
+     ('', 'background', None, _('run in a background process'), None),
+    ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
+    if opts.get('background'):
+        cmd = ' '.join(map(util.shellquote, util.hgcmd() + ['-R', repo.origroot,
+                                                            'repack']))
+        shallowutil.runshellcommand(cmd, os.environ)
+        return
+
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     packpath = os.path.join(cachepath, repo.name, 'packs')
     util.makedirs(packpath)

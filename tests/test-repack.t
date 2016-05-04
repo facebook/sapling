@@ -97,3 +97,28 @@
   $ hg repack
   abort: skipping repack - another repack is already running
   [255]
+  $ sleep 3
+
+# Run repack in the background
+  $ cd ../master
+  $ echo x >> x
+  $ hg commit -m x4
+  $ cd ../shallow
+  $ hg pull -q
+  $ hg up -q tip
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
+  $ find $CACHEDIR -type f
+  $TESTTMP/hgcache/repos
+  $TESTTMP/hgcache/master/packs/cf96d8e28f1cf03420d033984ac3f90d6711b7dd.histidx
+  $TESTTMP/hgcache/master/packs/cf96d8e28f1cf03420d033984ac3f90d6711b7dd.histpack
+  $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.dataidx
+  $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.datapack
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1bb2e6237e035c8f8ef508e281f1ce075bc6db72
+  $ hg repack --background
+  $ sleep 2
+  $ find $CACHEDIR -type f
+  $TESTTMP/hgcache/repos
+  $TESTTMP/hgcache/master/packs/df386f2f6445110b843b012c2017039f1ba67a75.histidx
+  $TESTTMP/hgcache/master/packs/df386f2f6445110b843b012c2017039f1ba67a75.histpack
+  $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.dataidx
+  $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack
