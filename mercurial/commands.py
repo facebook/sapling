@@ -6297,7 +6297,10 @@ def revert(ui, repo, *pats, **opts):
     related method.
 
     Modified files are saved with a .orig suffix before reverting.
-    To disable these backups, use --no-backup.
+    To disable these backups, use --no-backup. It is possible to store
+    the backup files in a custom directory relative to the root of the
+    repository by setting the ``ui.origbackuppath`` configuration
+    option.
 
     See :hg:`help dates` for a list of formats valid for -d/--date.
 
