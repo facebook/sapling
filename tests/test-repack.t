@@ -91,3 +91,9 @@
   $TESTTMP/hgcache/master/packs/cf96d8e28f1cf03420d033984ac3f90d6711b7dd.histpack
   $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.dataidx
   $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.datapack
+
+# Run two repacks at once
+  $ hg repack --config "hooks.prerepack=sleep 2" &
+  $ hg repack
+  abort: skipping repack - another repack is already running
+  [255]

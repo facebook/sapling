@@ -793,4 +793,8 @@ def repack(ui, repo, *pats, **opts):
     opener.createmode = 0o444
     with datapack.mutabledatapack(opener) as dpack:
         with historypack.mutablehistorypack(opener) as hpack:
-            repacker.run(dpack, hpack)
+            try:
+                repacker.run(dpack, hpack)
+            except error.LockHeld:
+                raise error.Abort(_("skipping repack - another repack is "
+                                    "already running"))

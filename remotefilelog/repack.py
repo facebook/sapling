@@ -17,17 +17,20 @@ class repacker(object):
     def run(self, targetdata, targethistory):
         ledger = repackledger()
 
-        # Populate ledger from source
-        self.data.markledger(ledger)
-        self.history.markledger(ledger)
+        with self.repo._lock(self.repo.svfs, "repacklock", False, None,
+                             None, _('repacking %s') % self.repo.origroot):
+            self.repo.hook('prerepack')
+            # Populate ledger from source
+            self.data.markledger(ledger)
+            self.history.markledger(ledger)
 
-        # Run repack
-        self.repackdata(ledger, targetdata)
-        self.repackhistory(ledger, targethistory)
+            # Run repack
+            self.repackdata(ledger, targetdata)
+            self.repackhistory(ledger, targethistory)
 
-        # Call cleanup on each source
-        for source in ledger.sources:
-            source.cleanup(ledger)
+            # Call cleanup on each source
+            for source in ledger.sources:
+                source.cleanup(ledger)
 
     def repackdata(self, ledger, target):
         ui = self.repo.ui
