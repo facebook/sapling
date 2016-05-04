@@ -29,7 +29,7 @@ FANOUTSIZE = FANOUTCOUNT * 4
 VERSION = 0
 VERSIONSIZE = 1
 
-FANOUTSTART = 0
+FANOUTSTART = VERSIONSIZE
 INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 # The indicator value in the index for a fulltext entry.
@@ -92,13 +92,17 @@ class datapack(object):
         self.indexsize = os.stat(self.indexpath).st_size
         self.datasize = os.stat(self.packpath).st_size
 
-        self._index = mmap.mmap(self.indexfp.fileno(), 0)
-
         # memory-map the file, size 0 means whole file
+        self._index = mmap.mmap(self.indexfp.fileno(), 0)
         self._data = mmap.mmap(self.datafp.fileno(), 0)
+
         version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
         if version != VERSION:
             raise RuntimeError("unsupported datapack version '%s'" %
+                               version)
+        version = struct.unpack('!B', self._index[:VERSIONSIZE])[0]
+        if version != VERSION:
+            raise RuntimeError("unsupported datapack index version '%s'" %
                                version)
 
         rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
@@ -423,7 +427,7 @@ class mutabledatapack(object):
             last = offset
             rawfanouttable += struct.pack('!I', offset)
 
-        # TODO: add version number header
+        self.idxfp.write(struct.pack('!B', VERSION))
         self.idxfp.write(rawfanouttable)
         self.idxfp.write(rawindex)
         self.idxfp.close()

@@ -34,7 +34,7 @@ PACKSUFFIX = '.histpack'
 VERSION = 0
 VERSIONSIZE = 1
 
-FANOUTSTART = 0
+FANOUTSTART = VERSIONSIZE
 INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 class AncestorIndicies(object):
@@ -112,10 +112,13 @@ class historypack(object):
         self._index = mmap.mmap(self.indexfp.fileno(), 0)
         self._data = mmap.mmap(self.datafp.fileno(), 0)
 
-        self._data = mmap.mmap(self.datafp.fileno(), 0)
         version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
         if version != VERSION:
             raise RuntimeError("unsupported histpack version '%s'" %
+                               version)
+        version = struct.unpack('!B', self._index[:VERSIONSIZE])[0]
+        if version != VERSION:
+            raise RuntimeError("unsupported histpack index version '%s'" %
                                version)
 
         rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
@@ -454,7 +457,7 @@ class mutablehistorypack(object):
             last = offset
             rawfanouttable += struct.pack(FANOUTENTRYSTRUCT, offset)
 
-        # TODO: add version number to the index
+        self.idxfp.write(struct.pack('!B', VERSION))
         self.idxfp.write(rawfanouttable)
         self.idxfp.write(rawindex)
         self.idxfp.close()
