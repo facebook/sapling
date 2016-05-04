@@ -42,6 +42,8 @@ class repacker(object):
             ancestors = {}
             nodes = list(node for node in entries.iterkeys())
             for node in nodes:
+                if node in ancestors:
+                    continue
                 ancestors.update(self.history.getancestors(filename, node))
 
             # Order the nodes children first, so we can produce reverse deltas
@@ -123,6 +125,8 @@ class repacker(object):
             nodes = list(node for node in entries.iterkeys())
 
             for node in nodes:
+                if node in ancestors:
+                    continue
                 ancestors.update(self.history.getancestors(filename, node))
 
             # Order the nodes children first
@@ -185,7 +189,11 @@ class repackledger(object):
         """
         entry = self._getorcreateentry(filename, node)
         entry.datasource = True
-        self.sources.setdefault(source, set()).add(entry)
+        entries = self.sources.get(source)
+        if not entries:
+            entries = set()
+            self.sources[source] = entries
+        entries.add(entry)
 
     def markhistoryentry(self, source, filename, node):
         """Mark the given filename+node revision as having a history rev in the
@@ -193,13 +201,18 @@ class repackledger(object):
         """
         entry = self._getorcreateentry(filename, node)
         entry.historysource = True
-        self.sources.setdefault(source, set()).add(entry)
+        entries = self.sources.get(source)
+        if not entries:
+            entries = set()
+            self.sources[source] = entries
+        entries.add(entry)
 
     def _getorcreateentry(self, filename, node):
-        value = self.entries.get((filename, node))
+        key = (filename, node)
+        value = self.entries.get(key)
         if not value:
             value = repackentry(filename, node)
-            self.entries[(filename, node)] = value
+            self.entries[key] = value
 
         return value
 
@@ -209,6 +222,8 @@ class repackledger(object):
 class repackentry(object):
     """Simple class representing a single revision entry in the repackledger.
     """
+    __slots__ = ['filename', 'node', 'datasource', 'historysource',
+                 'datarepacked', 'historyrepacked']
     def __init__(self, filename, node):
         self.filename = filename
         self.node = node

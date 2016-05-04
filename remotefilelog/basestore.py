@@ -103,7 +103,7 @@ class basestore(object):
 
         filenamemap = self._resolvefilenames(existing.keys())
 
-        for filename, sha in sorted(filenamemap.iteritems()):
+        for filename, sha in filenamemap.iteritems():
             yield (filename, existing[sha])
 
     def _resolvefilenames(self, hashes):
@@ -113,6 +113,9 @@ class basestore(object):
         This is useful when converting remotefilelog blobs into other storage
         formats.
         """
+        if not hashes:
+            return {}
+
         filenames = {}
         missingfilename = set(hashes)
 

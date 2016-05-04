@@ -37,11 +37,10 @@ VERSIONSIZE = 1
 FANOUTSTART = VERSIONSIZE
 INDEXSTART = FANOUTSTART + FANOUTSIZE
 
-class AncestorIndicies(object):
-    NODE = 0
-    P1NODE = 1
-    P2NODE = 2
-    LINKNODE = 3
+ANC_NODE = 0
+ANC_P1NODE = 1
+ANC_P2NODE = 2
+ANC_LINKNODE = 3
 
 class historypackstore(object):
     def __init__(self, path):
@@ -160,20 +159,20 @@ class historypack(object):
         """
         filename, offset, size = self._findsection(name)
         ancestors = set((node,))
+        data = self._data[offset:offset + size]
         results = {}
-        for o in range(offset, offset + size, PACKENTRYLENGTH):
-            entry = struct.unpack(PACKFORMAT,
-                                  self._data[o:o + PACKENTRYLENGTH])
-            if entry[AncestorIndicies.NODE] in ancestors:
-                ancestors.add(entry[AncestorIndicies.P1NODE])
-                ancestors.add(entry[AncestorIndicies.P2NODE])
-                result = (entry[AncestorIndicies.P1NODE],
-                          entry[AncestorIndicies.P2NODE],
-                          entry[AncestorIndicies.LINKNODE],
+        for o in range(0, len(data), PACKENTRYLENGTH):
+            entry = struct.unpack(PACKFORMAT, data[o:o + PACKENTRYLENGTH])
+            if entry[ANC_NODE] in ancestors:
+                ancestors.add(entry[ANC_P1NODE])
+                ancestors.add(entry[ANC_P2NODE])
+                result = (entry[ANC_P1NODE],
+                          entry[ANC_P2NODE],
+                          entry[ANC_LINKNODE],
                           # Add a fake None for the copyfrom entry for now
                           # TODO: remove copyfrom from getancestor api
                           None)
-                results[entry[AncestorIndicies.NODE]] = result
+                results[entry[ANC_NODE]] = result
 
         if not results:
             raise KeyError((name, node))
