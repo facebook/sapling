@@ -4567,7 +4567,10 @@ def help_(ui, name=None, **opts):
     Returns 0 if successful.
     """
 
-    textwidth = min(ui.termwidth(), 80) - 2
+    textwidth = ui.configint('ui', 'textwidth', 78)
+    termwidth = ui.termwidth() - 2
+    if textwidth <= 0 or termwidth < textwidth:
+        textwidth = termwidth
 
     keep = opts.get('system') or []
     if len(keep) == 0:

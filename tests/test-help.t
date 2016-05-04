@@ -429,6 +429,22 @@ Verbose help for add
    -h --help              display help and exit
       --hidden            consider hidden changesets
 
+Test the textwidth config option
+
+  $ hg root -h  --config ui.textwidth=50
+  hg root
+  
+  print the root (top) of the current working
+  directory
+  
+      Print the root directory of the current
+      repository.
+  
+      Returns 0 on success.
+  
+  (some details hidden, use --verbose to show
+  complete help)
+
 Test help option with version option
 
   $ hg add -h --version
