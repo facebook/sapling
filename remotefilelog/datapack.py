@@ -27,6 +27,10 @@ FANOUTSIZE = FANOUTCOUNT * 4
 # rev'd whenever the byte format changes. Ex: changing the fanout prefix,
 # changing any of the int sizes, changing the delta algorithm, etc.
 VERSION = 0
+VERSIONSIZE = 1
+
+FANOUTSTART = 0
+INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 # The indicator value in the index for a fulltext entry.
 FULLTEXTINDEXMARK = -1
@@ -92,12 +96,12 @@ class datapack(object):
 
         # memory-map the file, size 0 means whole file
         self._data = mmap.mmap(self.datafp.fileno(), 0)
-        version = struct.unpack('!B', self._data[0])[0]
+        version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
         if version != VERSION:
             raise RuntimeError("unsupported datapack version '%s'" %
                                version)
 
-        rawfanout = self._index[:FANOUTSIZE]
+        rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
         self._fanouttable = []
         for i in xrange(0, FANOUTCOUNT):
             loc = i * 4
@@ -126,7 +130,7 @@ class datapack(object):
         chain = [value]
         deltabaseoffset = value[1]
         while deltabaseoffset != -1:
-            loc = FANOUTSIZE + deltabaseoffset
+            loc = INDEXSTART + deltabaseoffset
             value = struct.unpack(INDEXFORMAT, self._index[loc:loc +
                                                            INDEXENTRYLENGTH])
             deltabaseoffset = value[1]
@@ -167,11 +171,11 @@ class datapack(object):
         fanoutkey = struct.unpack(FANOUTSTRUCT, node[:FANOUTPREFIX])[0]
         fanout = self._fanouttable
 
-        start = fanout[fanoutkey] + FANOUTSIZE
+        start = fanout[fanoutkey] + INDEXSTART
         # Scan forward to find the first non-same entry, which is the upper
         # bound.
         for i in xrange(fanoutkey + 1, FANOUTCOUNT):
-            end = fanout[i] + FANOUTSIZE
+            end = fanout[i] + INDEXSTART
             if end != start:
                 break
         else:
@@ -188,7 +192,7 @@ class datapack(object):
         else:
             while start < end - INDEXENTRYLENGTH:
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - FANOUTSIZE) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - INDEXSTART) % INDEXENTRYLENGTH)
                 midnode = index[mid:mid + NODELENGTH]
                 if midnode == node:
                     entry = index[mid:mid + INDEXENTRYLENGTH]

@@ -32,6 +32,10 @@ INDEXSUFFIX = '.histidx'
 PACKSUFFIX = '.histpack'
 
 VERSION = 0
+VERSIONSIZE = 1
+
+FANOUTSTART = 0
+INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 class AncestorIndicies(object):
     NODE = 0
@@ -109,12 +113,12 @@ class historypack(object):
         self._data = mmap.mmap(self.datafp.fileno(), 0)
 
         self._data = mmap.mmap(self.datafp.fileno(), 0)
-        version = struct.unpack('!B', self._data[0])[0]
+        version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
         if version != VERSION:
             raise RuntimeError("unsupported histpack version '%s'" %
                                version)
 
-        rawfanout = self._index[:FANOUTSIZE]
+        rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
         self._fanouttable = []
         for i in range(0, FANOUTCOUNT):
             loc = i * FANOUTENTRYSIZE
@@ -195,9 +199,9 @@ class historypack(object):
         fanoutkey = struct.unpack(FANOUTSTRUCT, namehash[:FANOUTPREFIX])[0]
         fanout = self._fanouttable
 
-        start = fanout[fanoutkey] + FANOUTSIZE
+        start = fanout[fanoutkey] + INDEXSTART
         if fanoutkey < FANOUTCOUNT - 1:
-            end = self._fanouttable[fanoutkey + 1] + FANOUTSIZE
+            end = self._fanouttable[fanoutkey + 1] + INDEXSTART
         else:
             end = self.indexsize
 
@@ -214,7 +218,7 @@ class historypack(object):
             while start < end - INDEXENTRYLENGTH:
                 iteration += 1
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - FANOUTSIZE) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - INDEXSTART) % INDEXENTRYLENGTH)
                 midnode = self._index[mid:mid + NODELENGTH]
                 if midnode == namehash:
                     entry = self._index[mid:mid + INDEXENTRYLENGTH]
