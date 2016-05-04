@@ -205,8 +205,40 @@ class datapack(object):
         return struct.unpack(INDEXFORMAT, entry)
 
     def markledger(self, ledger):
-        # TODO: implement
-        pass
+        for filename, node in self._iterkeys():
+            ledger.markdataentry(self, filename, node)
+
+    def cleanup(self, ledger):
+        entries = ledger.sources.get(self, [])
+        allkeys = set(self._iterkeys())
+        repackedkeys = set((e.filename, e.node) for e in entries if
+                           e.datarepacked)
+
+        if len(allkeys - repackedkeys) == 0:
+            util.unlinkpath(self.indexpath, ignoremissing=True)
+            util.unlinkpath(self.packpath, ignoremissing=True)
+
+    def _iterkeys(self):
+        # Start at 1 to skip the header
+        offset = 1
+        data = self._data
+        while offset < self.datasize:
+            # <2 byte len> + <filename>
+            filenamelen = struct.unpack('!H', data[offset:offset + 2])[0]
+            offset += 2
+            filename = data[offset:offset + filenamelen]
+            offset += filenamelen
+
+            # <20 byte node> + <20 byte deltabase>
+            node = data[offset:offset + 20]
+            offset += 40
+
+            # <8 byte len> + <delta>
+            rawdeltalen = data[offset:offset + 8]
+            deltalen = struct.unpack('!Q', rawdeltalen)[0]
+            offset += 8 + deltalen
+
+            yield (filename, node)
 
 class mutabledatapack(object):
     """A class for constructing and serializing a datapack file and index.
