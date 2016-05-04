@@ -22,11 +22,13 @@
   $ find $CACHEDIR -type f
   $TESTTMP/hgcache/repos
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/aee31534993a501858fb6dd96a065671922e7d51
+
   $ hg repack
+
   $ find $CACHEDIR -type f
   $TESTTMP/hgcache/repos
-  $TESTTMP/hgcache/master/packs/77444b7b7ca6b511042ecbecf1a27401728e788a.histidx
-  $TESTTMP/hgcache/master/packs/77444b7b7ca6b511042ecbecf1a27401728e788a.histpack
+  $TESTTMP/hgcache/master/packs/e4e3c3b58b4be3368caa2996ff34a8bc21e7b01d.histidx
+  $TESTTMP/hgcache/master/packs/e4e3c3b58b4be3368caa2996ff34a8bc21e7b01d.histpack
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.dataidx
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.datapack
 

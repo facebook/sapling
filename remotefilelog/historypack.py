@@ -230,11 +230,19 @@ class historypack(object):
 
         filenamehash, offset, size = struct.unpack(INDEXFORMAT, entry)
         filenamelength = struct.unpack('!H', self._data[offset:offset + 2])[0]
-        actualname = self._data[offset + 2:offset + 2 + filenamelength]
+        offset += 2
+
+        actualname = self._data[offset:offset + filenamelength]
+        offset += filenamelength
+
         if name != actualname:
             raise KeyError("found file name %s when looking for %s" %
                            (actualname, name))
-        return (name, offset + 2 + filenamelength, size - filenamelength - 2)
+
+        revcount = struct.unpack('!I', self._data[offset:offset + 4])[0]
+        offset += 4
+
+        return (name, offset, revcount * PACKENTRYLENGTH)
 
     def markledger(self, ledger):
         # TODO: implement
@@ -350,14 +358,15 @@ class mutablehistorypack(object):
         self.pastfiles[filename] = (
             self.packfp.tell(),
             # Length of the section = filename len (2) + length of
-            # filename + entries (80 each)
-            2 + len(filename) + (len(self.currententries) * 80),
+            # filename + entry count (4) + entries (80 each)
+            2 + len(filename) + 4 + (len(self.currententries) * 80),
         )
 
         # Write the file section header
-        self.writeraw("%s%s" % (
+        self.writeraw("%s%s%s" % (
             struct.pack('!H', len(filename)),
             filename,
+            struct.pack('!I', len(self.currententries)),
         ))
 
         # Write the file section content
