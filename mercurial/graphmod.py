@@ -32,7 +32,9 @@ PARENT = 'P'
 GRANDPARENT = 'G'
 MISSINGPARENT = 'M'
 # Style of line to draw. None signals a line that ends and is removed at this
-# point.
+# point. A number prefix means only the last N characters of the current block
+# will use that style, the rest will use the PARENT style. Add a - sign
+# (so making N negative) and all but the first N characters use that style.
 EDGES = {PARENT: '|', GRANDPARENT: ':', MISSINGPARENT: None}
 
 def groupbranchiter(revs, parentsfunc, firstbranch=()):
@@ -652,6 +654,22 @@ def ascii(ui, state, type, char, text, coldata):
 
     while len(text) < len(lines):
         text.append("")
+
+    if any(len(char) > 1 for char in edgemap.values()):
+        # limit drawing an edge to the first or last N lines of the current
+        # section the rest of the edge is drawn like a parent line.
+        parent = state['styles'][PARENT][-1]
+        def _drawgp(char, i):
+            # should a grandparent character be drawn for this line?
+            if len(char) < 2:
+                return True
+            num = int(char[:-1])
+            # either skip first num lines or take last num lines, based on sign
+            return -num <= i if num < 0 else (len(lines) - i) <= num
+        for i, line in enumerate(lines):
+            line[:] = [c[-1] if _drawgp(c, i) else parent for c in line]
+        edgemap = dict(
+            (e, c if len(c) < 2 else parent) for e, c in edgemap.items())
 
     # print lines
     indentation_level = max(ncols, ncols + coldiff)
