@@ -87,15 +87,9 @@ tree_t *alloc_tree() {
   return tree;
 
 fail:
-  if (shadow_root != NULL) {
-    free(shadow_root);
-  }
-  if (real_root != NULL) {
-    free(real_root);
-  }
-  if (tree != NULL) {
-    free(tree);
-  }
+  free(shadow_root);
+  free(real_root);
+  free(tree);
 
   return NULL;
 }
@@ -114,15 +108,9 @@ void destroy_tree(tree_t *tree) {
   if (tree->compacted == false) {
     destroy_tree_helper(tree, tree->shadow_root);
   } else {
-    if (tree->shadow_root != NULL) {
-      free(tree->shadow_root);
-      tree->shadow_root = NULL;
-    }
+    free(tree->shadow_root);
   }
-  if (tree->arena != NULL) {
-    free(tree->arena);
-    tree->arena = NULL;
-  }
+  free(tree->arena);
 
   free(tree);
 }

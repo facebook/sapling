@@ -110,15 +110,9 @@ tree_t *alloc_tree_with_arena(size_t arena_sz) {
   node_t *shadow_root = alloc_node("/", 1, 1);
 
   if (arena == NULL || tree == NULL || shadow_root == NULL) {
-    if (arena != NULL) {
-      free(arena);
-    }
-    if (tree != NULL) {
-      free(tree);
-    }
-    if (shadow_root != NULL) {
-      free(shadow_root);
-    }
+    free(arena);
+    free(tree);
+    free(shadow_root);
     return NULL;
   }
 

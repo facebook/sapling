@@ -56,13 +56,8 @@ fail:
     free(result);
   }
 
-  if (path_records != NULL) {
-    free(path_records);
-  }
-
-  if (path != NULL) {
-    free(path);
-  }
+  free(path_records);
+  free(path);
 
   return NULL;
 }

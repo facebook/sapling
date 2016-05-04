@@ -585,12 +585,9 @@ convert_to_flat_result_t convert_to_flat(tree_t *tree) {
     result = convert_to_flat_helper(&state, tree);
   }
 
-  if (state.dirpath_build_buffer != NULL) {
-    free(state.dirpath_build_buffer);
-  }
+  free(state.dirpath_build_buffer);
 
-  if (state.output_buffer != NULL &&
-      result != CONVERT_TO_FLAT_OK) {
+  if (result != CONVERT_TO_FLAT_OK) {
     // free the buffer if any error occurred.
     free(state.output_buffer);
     return (convert_to_flat_result_t) {result, NULL, 0};
