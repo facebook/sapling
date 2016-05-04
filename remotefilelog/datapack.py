@@ -1,6 +1,6 @@
-import lz4, mmap, os, struct, tempfile
+import errno, lz4, mmap, os, struct, tempfile
 from collections import defaultdict
-from mercurial import mdiff, util
+from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
 import shallowutil
@@ -46,13 +46,26 @@ class datapackstore(object):
     def __init__(self, path):
         self.packs = []
         suffixlen = len(INDEXSUFFIX)
-        for root, dirs, files in os.walk(path):
-            for filename in files:
-                packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
-                if (filename[-suffixlen:] == INDEXSUFFIX
-                    and packfilename in files):
-                    packpath = os.path.join(root, filename)
-                    self.packs.append(datapack(packpath[:-suffixlen]))
+
+        files = []
+        filenames = set()
+        try:
+            for filename, size, stat in osutil.listdir(path, stat=True):
+                files.append((stat.st_mtime, filename))
+                filenames.add(filename)
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+
+        # Put most recent pack files first since they contain the most recent
+        # info.
+        files = sorted(files, reverse=True)
+        for mtime, filename in files:
+            packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
+            if (filename[-suffixlen:] == INDEXSUFFIX
+                and packfilename in filenames):
+                packpath = os.path.join(path, filename)
+                self.packs.append(datapack(packpath[:-suffixlen]))
 
     def getmissing(self, keys):
         missing = keys

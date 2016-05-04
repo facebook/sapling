@@ -54,7 +54,7 @@
   $ cd ../shallow
   $ hg pull -q
   $ hg up -q tip
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over 0.07s
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob)
 
   $ find $CACHEDIR -type f
   $TESTTMP/hgcache/repos
