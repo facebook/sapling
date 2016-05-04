@@ -81,3 +81,13 @@
   $ hg cat -r '.^' x
   x
   x
+
+# Test that repacking again without new data does not delete the pack files
+# and did not change the pack names
+  $ hg repack
+  $ find $CACHEDIR -type f
+  $TESTTMP/hgcache/repos
+  $TESTTMP/hgcache/master/packs/cf96d8e28f1cf03420d033984ac3f90d6711b7dd.histidx
+  $TESTTMP/hgcache/master/packs/cf96d8e28f1cf03420d033984ac3f90d6711b7dd.histpack
+  $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.dataidx
+  $TESTTMP/hgcache/master/packs/1e386660a2bca1c6949a1cbf5b095765e98fd241.datapack

@@ -107,7 +107,7 @@ class repacker(object):
                         total=len(byfile))
 
         ui.progress(_("repacking data"), None)
-        target.close()
+        target.close(ledger=ledger)
 
     def repackhistory(self, ledger, target):
         ui = self.repo.ui
@@ -154,7 +154,7 @@ class repacker(object):
                         total=len(byfile))
 
         ui.progress(_("repacking history"), None)
-        target.close()
+        target.close(ledger=ledger)
 
     def _toposort(self, ancestors):
         def parentfunc(node):
@@ -177,6 +177,7 @@ class repackledger(object):
     def __init__(self):
         self.entries = {}
         self.sources = {}
+        self.created = set()
 
     def markdataentry(self, source, filename, node):
         """Mark the given filename+node revision as having a data rev in the
@@ -201,6 +202,9 @@ class repackledger(object):
             self.entries[(filename, node)] = value
 
         return value
+
+    def addcreated(self, value):
+        self.created.add(value)
 
 class repackentry(object):
     """Simple class representing a single revision entry in the repackledger.

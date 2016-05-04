@@ -225,8 +225,9 @@ class datapack(object):
                            e.datarepacked)
 
         if len(allkeys - repackedkeys) == 0:
-            util.unlinkpath(self.indexpath, ignoremissing=True)
-            util.unlinkpath(self.packpath, ignoremissing=True)
+            if self.path not in ledger.created:
+                util.unlinkpath(self.indexpath, ignoremissing=True)
+                util.unlinkpath(self.packpath, ignoremissing=True)
 
     def _iterkeys(self):
         # Start at 1 to skip the header
@@ -380,7 +381,7 @@ class mutabledatapack(object):
         self.packfp.write(data)
         self.sha.update(data)
 
-    def close(self):
+    def close(self, ledger=None):
         sha = self.sha.hexdigest()
         self.packfp.close()
         self.writeindex()
@@ -389,7 +390,10 @@ class mutabledatapack(object):
         self.opener.rename(self.dataidxpath, sha + INDEXSUFFIX)
 
         self._closed = True
-        return self.opener.join(sha)
+        result = self.opener.join(sha)
+        if ledger:
+            ledger.addcreated(result)
+        return result
 
     def writeindex(self):
         entries = sorted((n, db, o, s) for n, (db, o, s)
