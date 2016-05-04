@@ -285,6 +285,10 @@ class basestore(object):
                 if file == 'repos':
                     continue
 
+                # Don't delete pack files
+                if '/packs/' in root:
+                    continue
+
                 ui.progress(_removing, count, unit="files")
                 path = os.path.join(root, file)
                 key = os.path.relpath(path, cachepath)
