@@ -32,6 +32,14 @@
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.dataidx
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.datapack
 
+# Test that the packs are readonly
+  $ ls -l $CACHEDIR/master/packs
+  * (glob)
+  -r--r--r--* 817d294043bd21a3de01f807721971abe45219ce.dataidx (glob)
+  -r--r--r--* 817d294043bd21a3de01f807721971abe45219ce.datapack (glob)
+  -r--r--r--* e4e3c3b58b4be3368caa2996ff34a8bc21e7b01d.histidx (glob)
+  -r--r--r--* e4e3c3b58b4be3368caa2996ff34a8bc21e7b01d.histpack (glob)
+
 # Test that the data in the new packs is accessible
   $ hg cat -r . x
   x

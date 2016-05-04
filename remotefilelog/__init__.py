@@ -789,6 +789,8 @@ def repack(ui, repo, *pats, **opts):
     repacker = repackmod.repacker(repo, datasource, historysource)
 
     opener = scmutil.vfs(packpath)
+    # Packs should be write-once files, so set them to read-only.
+    opener.createmode = 0o444
     with datapack.mutabledatapack(opener) as dpack:
         with historypack.mutablehistorypack(opener) as hpack:
             repacker.run(dpack, hpack)

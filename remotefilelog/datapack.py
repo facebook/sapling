@@ -86,15 +86,17 @@ class datapack(object):
         self.packpath = path + PACKSUFFIX
         self.indexpath = path + INDEXSUFFIX
         # TODO: use an opener/vfs to access these paths
-        self.indexfp = open(self.indexpath, 'r+b')
-        self.datafp = open(self.packpath, 'r+b')
+        self.indexfp = open(self.indexpath, 'rb')
+        self.datafp = open(self.packpath, 'rb')
 
         self.indexsize = os.stat(self.indexpath).st_size
         self.datasize = os.stat(self.packpath).st_size
 
         # memory-map the file, size 0 means whole file
-        self._index = mmap.mmap(self.indexfp.fileno(), 0)
-        self._data = mmap.mmap(self.datafp.fileno(), 0)
+        self._index = mmap.mmap(self.indexfp.fileno(), 0,
+                                access=mmap.ACCESS_READ)
+        self._data = mmap.mmap(self.datafp.fileno(), 0,
+                                access=mmap.ACCESS_READ)
 
         version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
         if version != VERSION:
@@ -318,6 +320,12 @@ class mutabledatapack(object):
         self.idxfp = os.fdopen(self.idxfp, 'w+')
         self.sha = util.sha1()
         self._closed = False
+
+        # The opener provides no way of doing permission fixup on files created
+        # via mkstemp, so we must fix it ourselves. We can probably fix this
+        # upstream in vfs.mkstemp so we don't need to use the private method.
+        opener._fixfilemode(opener.join(self.datapackpath))
+        opener._fixfilemode(opener.join(self.dataidxpath))
 
         # Write header
         # TODO: make it extensible (ex: allow specifying compression algorithm,
