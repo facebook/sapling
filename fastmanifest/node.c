@@ -18,7 +18,7 @@ static size_t calculate_required_size(
   address += name_sz;
   address += sizeof(ptrdiff_t) - 1;
   address &= ~((intptr_t) (sizeof(ptrdiff_t) - 1));
-  return address + name_sz + (sizeof(ptrdiff_t) * num_children);
+  return address + (sizeof(ptrdiff_t) * num_children);
 }
 
 static void initialize_node(
