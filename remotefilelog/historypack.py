@@ -315,7 +315,7 @@ class mutablehistorypack(object):
 
         self.pastfiles = {}
         self.currentfile = None
-        self.currentfilestart = 0
+        self.currententries = []
 
     def __enter__(self):
         return self
@@ -338,19 +338,30 @@ class mutablehistorypack(object):
                 raise RuntimeError("cannot add file node after another file's "
                                    "nodes have been added")
             if self.currentfile:
-                self.pastfiles[self.currentfile] = (
-                    self.currentfilestart,
-                    self.packfp.tell() - self.currentfilestart
-                )
-            self.currentfile = filename
-            self.currentfilestart = self.packfp.tell()
-            # TODO: prefix the filename section with the number of entries
-            self.writeraw("%s%s" % (
-                struct.pack('!H', len(filename)),
-                filename,
-            ))
+                self._writependingsection()
 
-        rawdata = struct.pack('!20s20s20s20s', node, p1, p2, linknode)
+            self.currentfile = filename
+            self.currententries = []
+
+        self.currententries.append((node, p1, p2, linknode))
+
+    def _writependingsection(self):
+        filename = self.currentfile
+        self.pastfiles[filename] = (
+            self.packfp.tell(),
+            # Length of the section = filename len (2) + length of
+            # filename + entries (80 each)
+            2 + len(filename) + (len(self.currententries) * 80),
+        )
+
+        # Write the file section header
+        self.writeraw("%s%s" % (
+            struct.pack('!H', len(filename)),
+            filename,
+        ))
+
+        # Write the file section content
+        rawdata = ''.join('%s%s%s%s' % e for e in self.currententries)
         self.writeraw(rawdata)
 
     def writeraw(self, data):
@@ -359,10 +370,7 @@ class mutablehistorypack(object):
 
     def close(self):
         if self.currentfile:
-            self.pastfiles[self.currentfile] = (
-                self.currentfilestart,
-                self.packfp.tell() - self.currentfilestart
-            )
+            self._writependingsection()
 
         sha = self.sha.hexdigest()
         self.packfp.close()
