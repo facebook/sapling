@@ -261,18 +261,26 @@ def sslkwargs(ui, host):
 
     # No CAs in config. See if we can load defaults.
     cacerts = _defaultcacerts()
+
+    # We found an alternate CA bundle to use. Load it.
     if cacerts:
         ui.debug('using %s to enable OS X system CA\n' % cacerts)
-    else:
-        if not _canloaddefaultcerts:
-            cacerts = '!'
-
-    ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
-
-    if cacerts != '!':
+        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
         kws.update({'ca_certs': cacerts,
-                    'cert_reqs': ssl.CERT_REQUIRED,
-                    })
+                    'cert_reqs': ssl.CERT_REQUIRED})
+        return kws
+
+    # FUTURE this can disappear once wrapsocket() is secure by default.
+    if _canloaddefaultcerts:
+        kws['cert_reqs'] = ssl.CERT_REQUIRED
+        return kws
+
+    # This is effectively indicating that no CAs can be loaded because
+    # we can't get here if web.cacerts is set or if we can find
+    # CA certs elsewhere. Using a config option (which is later
+    # consulted by validator.__call__ is not very obvious).
+    # FUTURE fix this
+    ui.setconfig('web', 'cacerts', '!', 'defaultcacerts')
     return kws
 
 class validator(object):
