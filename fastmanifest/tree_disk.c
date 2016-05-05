@@ -166,7 +166,11 @@ read_from_file_result_t read_from_file(char *fname, size_t fname_sz) {
     goto cleanup;
   }
 
-  size_t arena_sz = header.file_sz - header.header_sz;
+  if (header.file_sz - header.header_sz > SIZE_MAX) {
+    result.code = READ_FROM_FILE_WTF;
+    goto cleanup;
+  }
+  size_t arena_sz = (size_t) (header.file_sz - header.header_sz);
 
   // allocate the tree
   result.tree = alloc_tree_with_arena(arena_sz);
