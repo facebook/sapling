@@ -881,12 +881,6 @@ class localrepository(object):
             f = f[1:]
         return filelog.filelog(self.svfs, f)
 
-    def parents(self, changeid=None):
-        '''get list of changectxs for parents of changeid'''
-        msg = 'repo.parents() is deprecated, use repo[%r].parents()' % changeid
-        self.ui.deprecwarn(msg, '3.7')
-        return self[changeid].parents()
-
     def changectx(self, changeid):
         return self[changeid]
 
