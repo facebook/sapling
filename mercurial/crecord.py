@@ -671,7 +671,7 @@ class curseschunkselector(object):
 
         currentitem = self.currentselecteditem
         nextitem = currentitem.nextitem()
-        # if there's no previous item on this level, try choosing the parent's
+        # if there's no next item on this level, try choosing the parent's
         # nextitem.
         if nextitem is None:
             try:
