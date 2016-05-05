@@ -23,6 +23,8 @@ bookmarktype = 'bookmark'
 workingcopyparenttype = 'workingcopyparent'
 remotebookmarktype = 'remotebookmark'
 
+currentcommand = []
+
 def wrapfilecache(cls, propname, wrapper):
     """Wraps a filecache property. These can't be wrapped using the normal
     wrapfunction. This should eventually go into upstream Mercurial.
@@ -43,9 +45,14 @@ def wrapfilecache(cls, propname, wrapper):
         raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
                              propname))
 
+def runcommand(orig, lui, repo, cmd, fullargs, *args):
+    currentcommand[:] = fullargs
+    return orig(lui, repo, cmd, fullargs, *args)
+
 def extsetup(ui):
     wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
     wrapfunction(dirstate.dirstate, 'write', recorddirstateparents)
+    wrapfunction(dispatch, 'runcommand', runcommand)
 
     try:
         remotenames = find('remotenames')
@@ -62,9 +69,7 @@ def extsetup(ui):
 
 def reposetup(ui, repo):
     if repo.local():
-        currentcommand = ' '.join(sys.argv[1:])
-        currentcommand = currentcommand.split('\n', 1)[0]
-        repo.reflog = reflog(repo, currentcommand)
+        repo.reflog = reflog(repo)
 
 def recordbookmarks(orig, self, fp):
     """Records all bookmark changes to the reflog."""
@@ -196,9 +201,8 @@ def reflog(ui, repo, *args, **opts):
         ui.status(_("no recorded locations\n"))
 
 class reflog(object):
-    def __init__(self, repo, command):
+    def __init__(self, repo):
         self.repo = repo
-        self.command = command
         self.user = getpass.getuser()
         if repo.shared():
             self.path = repo.sharedpath + "/reflog"
@@ -216,6 +220,14 @@ class reflog(object):
             if refnamecond and refname != refnamecond:
                 continue
             yield entry
+
+    @property
+    def command(self):
+        commandstr = ' '.join(map(util.shellquote, currentcommand))
+        if '\n' in commandstr:
+            # truncate multi-line commands
+            commandstr = commandstr.split('\n', 1)[0] + ' ...'
+        return commandstr
 
     def _read(self):
         if not os.path.exists(self.path):

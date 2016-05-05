@@ -125,7 +125,7 @@ Test pulls
   $ hg reflog foo
   Previous locations of 'foo':
   1e6c11564562  pull -q ../repo2
-  cb9a9f314b8b  strip -q -r . --config extensions.strip=
+  cb9a9f314b8b  strip -q -r .
   1e6c11564562  up
   cb9a9f314b8b  book -f foo
   1e6c11564562  book -r tip foo
@@ -134,7 +134,7 @@ Test --commits option
 
   $ hg reflog --commits
   Previous locations of '.':
-  cb9a9f314b8b  strip -q -r . --config extensions.strip=
+  cb9a9f314b8b  strip -q -r .
   changeset:   0:cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -187,7 +187,7 @@ Test --commits with JSON output
   ]
   
    {
-    "command": "strip -q -r . --config extensions.strip=",
+    "command": "strip -q -r .",
     "date": "*", (glob)
     "newhashes": "cb9a9f314b8b",
     "oldhashes": "1e6c11564562",
@@ -283,7 +283,7 @@ Test --commits with -v
 
   $ hg reflog --commits -v
   Previous locations of '.':
-  1e6c11564562 -> cb9a9f314b8b * *  strip -q -r . --config extensions.strip= (glob)
+  1e6c11564562 -> cb9a9f314b8b * *  strip -q -r . (glob)
   changeset:   0:cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -337,7 +337,7 @@ Test --commits with -p
 
   $ hg reflog --commits -p
   Previous locations of '.':
-  cb9a9f314b8b  strip -q -r . --config extensions.strip=
+  cb9a9f314b8b  strip -q -r .
   changeset:   0:cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
