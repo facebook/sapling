@@ -155,9 +155,11 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
 
     if ca_certs is not None:
         sslcontext.load_verify_locations(cafile=ca_certs)
+        caloaded = True
     else:
         # This is a no-op on old Python.
         sslcontext.load_default_certs()
+        caloaded = _canloaddefaultcerts
 
     sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
     # check if wrap_socket failed silently because socket had been
@@ -165,6 +167,9 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
     # - see http://bugs.python.org/issue13721
     if not sslsocket.cipher():
         raise error.Abort(_('ssl connection failed'))
+
+    sslsocket._hgcaloaded = caloaded
+
     return sslsocket
 
 def _verifycert(cert, hostname):
@@ -280,12 +285,6 @@ def sslkwargs(ui, host):
         kws['cert_reqs'] = ssl.CERT_REQUIRED
         return kws
 
-    # This is effectively indicating that no CAs can be loaded because
-    # we can't get here if web.cacerts is set or if we can find
-    # CA certs elsewhere. Using a config option (which is later
-    # consulted by validator.__call__ is not very obvious).
-    # FUTURE fix this
-    ui.setconfig('web', 'cacerts', '!', 'defaultcacerts')
     return kws
 
 class validator(object):
@@ -342,23 +341,23 @@ class validator(object):
                          (host, nicefingerprint))
             return
 
-        # No pinned fingerprint. Establish trust by looking at the CAs.
-        cacerts = self.ui.config('web', 'cacerts')
-        if cacerts != '!':
-            msg = _verifycert(peercert2, host)
-            if msg:
-                raise error.Abort(_('%s certificate error: %s') % (host, msg),
-                                 hint=_('configure hostfingerprint %s or use '
-                                        '--insecure to connect insecurely') %
-                                      nicefingerprint)
-            self.ui.debug('%s certificate successfully verified\n' % host)
-        elif strict:
-            raise error.Abort(_('%s certificate with fingerprint %s not '
-                               'verified') % (host, nicefingerprint),
-                             hint=_('check hostfingerprints or web.cacerts '
-                                     'config setting'))
-        else:
-            self.ui.warn(_('warning: %s certificate with fingerprint %s not '
-                           'verified (check hostfingerprints or web.cacerts '
-                           'config setting)\n') %
-                         (host, nicefingerprint))
+        if not sock._hgcaloaded:
+            if strict:
+                raise error.Abort(_('%s certificate with fingerprint %s not '
+                                    'verified') % (host, nicefingerprint),
+                                  hint=_('check hostfingerprints or '
+                                         'web.cacerts config setting'))
+            else:
+                self.ui.warn(_('warning: %s certificate with fingerprint %s '
+                               'not verified (check hostfingerprints or '
+                               'web.cacerts config setting)\n') %
+                             (host, nicefingerprint))
+
+            return
+
+        msg = _verifycert(peercert2, host)
+        if msg:
+            raise error.Abort(_('%s certificate error: %s') % (host, msg),
+                             hint=_('configure hostfingerprint %s or use '
+                                    '--insecure to connect insecurely') %
+                                  nicefingerprint)
