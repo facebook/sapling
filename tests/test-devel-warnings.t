@@ -10,13 +10,16 @@
   > 
   > @command('buggylocking', [], '')
   > def buggylocking(ui, repo):
-  >     tr = repo.transaction('buggy')
-  >     # make sure we rollback the transaction as we don't want to rely on the__del__
-  >     tr.release()
   >     lo = repo.lock()
   >     wl = repo.wlock()
   >     wl.release()
   >     lo.release()
+  > 
+  > @command('buggytransaction', [], '')
+  > def buggylocking(ui, repo):
+  >     tr = repo.transaction('buggy')
+  >     # make sure we rollback the transaction as we don't want to rely on the__del__
+  >     tr.release()
   > 
   > @command('properlocking', [], '')
   > def properlocking(ui, repo):
@@ -74,7 +77,6 @@
   $ hg init lock-checker
   $ cd lock-checker
   $ hg buggylocking
-  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ cat << EOF >> $HGRCPATH
   > [devel]
@@ -82,21 +84,8 @@
   > check-locks=1
   > EOF
   $ hg buggylocking
-  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   devel-warn: "wlock" acquired after "lock" at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
   $ hg buggylocking --traceback
-  devel-warn: transaction with no lock at:
-   */hg:* in * (glob)
-   */mercurial/dispatch.py:* in run (glob)
-   */mercurial/dispatch.py:* in dispatch (glob)
-   */mercurial/dispatch.py:* in _runcatch (glob)
-   */mercurial/dispatch.py:* in _dispatch (glob)
-   */mercurial/dispatch.py:* in runcommand (glob)
-   */mercurial/dispatch.py:* in _runcommand (glob)
-   */mercurial/dispatch.py:* in checkargs (glob)
-   */mercurial/dispatch.py:* in <lambda> (glob)
-   */mercurial/util.py:* in check (glob)
-   $TESTTMP/buggylocking.py:* in buggylocking (glob)
   devel-warn: "wlock" acquired after "lock" at:
    */hg:* in * (glob)
    */mercurial/dispatch.py:* in run (glob)
@@ -167,4 +156,10 @@
    $TESTTMP/buggylocking.py:* in oldanddeprecated (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> oldanddeprecated --traceback exited 0 after * seconds (glob)
   1970/01/01 00:00:00 bob @cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b (5000)> blackbox -l 9
+
+Test programming error failure:
+
+  $ hg buggytransaction
+  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
+
   $ cd ..
