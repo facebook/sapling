@@ -1,4 +1,4 @@
-#require test-repo pyflakes
+#require test-repo pyflakes hg10
 
   $ cd "`dirname "$TESTDIR"`"
 
