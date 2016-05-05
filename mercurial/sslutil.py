@@ -329,6 +329,19 @@ class validator(object):
                           (host, nicefingerprint))
             return
 
+        # If insecure connections were explicitly requested via --insecure,
+        # print a warning and do no verification.
+        #
+        # It may seem odd that this is checked *after* host fingerprint pinning.
+        # This is for backwards compatibility (for now). The message is also
+        # the same as below for BC.
+        if self.ui.insecureconnections:
+            self.ui.warn(_('warning: %s certificate with fingerprint %s not '
+                           'verified (check hostfingerprints or web.cacerts '
+                           'config setting)\n') %
+                         (host, nicefingerprint))
+            return
+
         # No pinned fingerprint. Establish trust by looking at the CAs.
         cacerts = self.ui.config('web', 'cacerts')
         if cacerts != '!':
