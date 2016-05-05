@@ -104,7 +104,7 @@ def matchoutput(cmd, regexp, ignorestatus=False):
 
 @check("baz", "GNU Arch baz client")
 def has_baz():
-    return matchoutput('baz --version 2>&1', r'baz Bazaar version')
+    return matchoutput('baz --version 2>&1', br'baz Bazaar version')
 
 @check("bzr", "Canonical's Bazaar client")
 def has_bzr():
@@ -130,27 +130,27 @@ def has_chg():
 
 @check("cvs", "cvs client/server")
 def has_cvs():
-    re = r'Concurrent Versions System.*?server'
+    re = br'Concurrent Versions System.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
 @check("cvs112", "cvs client/server 1.12.* (not cvsnt)")
 def has_cvs112():
-    re = r'Concurrent Versions System \(CVS\) 1.12.*?server'
+    re = br'Concurrent Versions System \(CVS\) 1.12.*?server'
     return matchoutput('cvs --version 2>&1', re) and not has_msys()
 
 @check("cvsnt", "cvsnt client/server")
 def has_cvsnt():
-    re = r'Concurrent Versions System \(CVSNT\) (\d+).(\d+).*\(client/server\)'
+    re = br'Concurrent Versions System \(CVSNT\) (\d+).(\d+).*\(client/server\)'
     return matchoutput('cvsnt --version 2>&1', re)
 
 @check("darcs", "darcs client")
 def has_darcs():
-    return matchoutput('darcs --version', r'2\.[2-9]', True)
+    return matchoutput('darcs --version', br'2\.[2-9]', True)
 
 @check("mtn", "monotone client (>= 1.0)")
 def has_mtn():
-    return matchoutput('mtn --version', r'monotone', True) and not matchoutput(
-        'mtn --version', r'monotone 0\.', True)
+    return matchoutput('mtn --version', br'monotone', True) and not matchoutput(
+        'mtn --version', br'monotone 0\.', True)
 
 @check("eol-in-paths", "end-of-lines in paths")
 def has_eol_in_paths():
@@ -236,7 +236,7 @@ def has_lsprof():
         return False
 
 def gethgversion():
-    m = matchoutput('hg --version --quiet 2>&1', r'(\d+)\.(\d+)')
+    m = matchoutput('hg --version --quiet 2>&1', br'(\d+)\.(\d+)')
     if not m:
         return (0, 0)
     return (int(m.group(1)), int(m.group(2)))
@@ -267,11 +267,11 @@ def has_hg06():
 
 @check("gettext", "GNU Gettext (msgfmt)")
 def has_gettext():
-    return matchoutput('msgfmt --version', 'GNU gettext-tools')
+    return matchoutput('msgfmt --version', br'GNU gettext-tools')
 
 @check("git", "git command line client")
 def has_git():
-    return matchoutput('git --version 2>&1', r'^git version')
+    return matchoutput('git --version 2>&1', br'^git version')
 
 @check("docutils", "Docutils text processing library")
 def has_docutils():
@@ -283,7 +283,7 @@ def has_docutils():
         return False
 
 def getsvnversion():
-    m = matchoutput('svn --version --quiet 2>&1', r'^(\d+)\.(\d+)')
+    m = matchoutput('svn --version --quiet 2>&1', br'^(\d+)\.(\d+)')
     if not m:
         return (0, 0)
     return (int(m.group(1)), int(m.group(2)))
@@ -295,8 +295,8 @@ def has_svn_range(v):
 
 @check("svn", "subversion client and admin tools")
 def has_svn():
-    return matchoutput('svn --version 2>&1', r'^svn, version') and \
-        matchoutput('svnadmin --version 2>&1', r'^svnadmin, version')
+    return matchoutput('svn --version 2>&1', br'^svn, version') and \
+        matchoutput('svnadmin --version 2>&1', br'^svnadmin, version')
 
 @check("svn-bindings", "subversion python bindings")
 def has_svn_bindings():
@@ -311,8 +311,8 @@ def has_svn_bindings():
 
 @check("p4", "Perforce server and client")
 def has_p4():
-    return (matchoutput('p4 -V', r'Rev\. P4/') and
-            matchoutput('p4d -V', r'Rev\. P4D/'))
+    return (matchoutput('p4 -V', br'Rev\. P4/') and
+            matchoutput('p4d -V', br'Rev\. P4D/'))
 
 @check("symlink", "symbolic links")
 def has_symlink():
@@ -343,11 +343,11 @@ def has_hardlink():
 
 @check("tla", "GNU Arch tla client")
 def has_tla():
-    return matchoutput('tla --version 2>&1', r'The GNU Arch Revision')
+    return matchoutput('tla --version 2>&1', br'The GNU Arch Revision')
 
 @check("gpg", "gpg client")
 def has_gpg():
-    return matchoutput('gpg --version 2>&1', r'GnuPG')
+    return matchoutput('gpg --version 2>&1', br'GnuPG')
 
 @check("unix-permissions", "unix-style permissions")
 def has_unix_permissions():
@@ -377,7 +377,7 @@ def has_root():
 @check("pyflakes", "Pyflakes python linter")
 def has_pyflakes():
     return matchoutput("sh -c \"echo 'import re' 2>&1 | pyflakes\"",
-                       r"<stdin>:1: 're' imported but unused",
+                       br"<stdin>:1: 're' imported but unused",
                        True)
 
 @check("pygments", "Pygments source highlighting library")
@@ -393,7 +393,7 @@ def has_pygments():
 def has_outer_repo():
     # failing for other reasons than 'no repo' imply that there is a repo
     return not matchoutput('hg root 2>&1',
-                           r'abort: no repository found', True)
+                           br'abort: no repository found', True)
 
 @check("ssl", "ssl module available")
 def has_ssl():
@@ -440,7 +440,7 @@ def has_tic():
     try:
         import curses
         curses.COLOR_BLUE
-        return matchoutput('test -x "`which tic`"', '')
+        return matchoutput('test -x "`which tic`"', br'')
     except ImportError:
         return False
 
@@ -459,19 +459,19 @@ def has_osx():
 @check("osxpackaging", "OS X packaging tools")
 def has_osxpackaging():
     try:
-        return (matchoutput('pkgbuild', 'Usage: pkgbuild ', ignorestatus=1)
+        return (matchoutput('pkgbuild', br'Usage: pkgbuild ', ignorestatus=1)
                 and matchoutput(
-                    'productbuild', 'Usage: productbuild ',
+                    'productbuild', br'Usage: productbuild ',
                     ignorestatus=1)
-                and matchoutput('lsbom', 'Usage: lsbom', ignorestatus=1)
+                and matchoutput('lsbom', br'Usage: lsbom', ignorestatus=1)
                 and matchoutput(
-                    'xar --help', 'Usage: xar', ignorestatus=1))
+                    'xar --help', br'Usage: xar', ignorestatus=1))
     except ImportError:
         return False
 
 @check("docker", "docker support")
 def has_docker():
-    pat = r'A self-sufficient runtime for'
+    pat = br'A self-sufficient runtime for'
     if matchoutput('docker --help', pat):
         if 'linux' not in sys.platform:
             # TODO: in theory we should be able to test docker-based
@@ -489,11 +489,11 @@ def has_docker():
 @check("debhelper", "debian packaging tools")
 def has_debhelper():
     dpkg = matchoutput('dpkg --version',
-                       "Debian `dpkg' package management program")
+                       br"Debian `dpkg' package management program")
     dh = matchoutput('dh --help',
-                     'dh is a part of debhelper.', ignorestatus=True)
+                     br'dh is a part of debhelper.', ignorestatus=True)
     dh_py2 = matchoutput('dh_python2 --help',
-                         'other supported Python versions')
+                         br'other supported Python versions')
     return dpkg and dh and dh_py2
 
 @check("absimport", "absolute_import in __future__")
