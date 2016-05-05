@@ -159,7 +159,15 @@
 
 Test programming error failure:
 
-  $ hg buggytransaction
-  devel-warn: transaction with no lock at: $TESTTMP/buggylocking.py:* (buggylocking) (glob)
+  $ hg buggytransaction 2>&1 | egrep -v '^  '
+  ** Unknown exception encountered with possibly-broken third-party extension buggylocking
+  ** which supports versions unknown of Mercurial.
+  ** Please disable buggylocking and try your action again.
+  ** If that fixes the bug please report it to the extension author.
+  ** Python * (glob)
+  ** Mercurial Distributed SCM (*) (glob)
+  ** Extensions loaded: * (glob)
+  Traceback (most recent call last):
+  RuntimeError: programming error: transaction requires locking
 
   $ cd ..

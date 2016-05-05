@@ -1000,7 +1000,8 @@ class localrepository(object):
                 or self.ui.configbool('devel', 'check-locks')):
             l = self._lockref and self._lockref()
             if l is None or not l.held:
-                self.ui.develwarn('transaction with no lock')
+                raise RuntimeError('programming error: transaction requires '
+                                   'locking')
         tr = self.currenttransaction()
         if tr is not None:
             return tr.nest()
