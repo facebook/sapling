@@ -91,6 +91,7 @@ class patchnode(object):
     def allchildren(self):
         "Return a list of all of the direct children of this node"
         raise NotImplementedError("method must be implemented by subclass")
+
     def nextsibling(self):
         """
         Return the closest next item of the same type where there are no items
@@ -109,7 +110,6 @@ class patchnode(object):
 
     def parentitem(self):
         raise NotImplementedError("method must be implemented by subclass")
-
 
     def nextitem(self, constrainlevel=True, skipfolded=True):
         """
@@ -235,7 +235,6 @@ class uiheader(patchnode):
         # flag is False if this header was ever unfolded from initial state
         self.neverunfolded = True
         self.hunks = [uihunk(h, self) for h in self.hunks]
-
 
     def prettystr(self):
         x = stringio()
@@ -392,6 +391,7 @@ class uihunk(patchnode):
     def allchildren(self):
         "return a list of all of the direct children of this node"
         return self.changedlines
+
     def countchanges(self):
         """changedlines -> (n+,n-)"""
         add = len([l for l in self.changedlines if l.applied
@@ -455,6 +455,7 @@ class uihunk(patchnode):
 
     def __getattr__(self, name):
         return getattr(self._hunk, name)
+
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
@@ -766,7 +767,6 @@ class curseschunkselector(object):
             # negative values scroll in pgup direction
             self.scrolllines(selstart - padstartbuffered)
 
-
     def scrolllines(self, numlines):
         "scroll the screen up (down) by numlines when numlines >0 (<0)."
         self.firstlineofpadtoprint += numlines
@@ -893,7 +893,6 @@ class curseschunkselector(object):
 
         if isinstance(item, (uiheader, uihunk)):
             item.folded = not item.folded
-
 
     def alignstring(self, instr, window):
         """
@@ -1132,7 +1131,6 @@ class curseschunkselector(object):
 
         lineprefix = " "*self.hunkindentnumchars + checkbox
         frtoline = "   " + hunk.getfromtoline().strip("\n")
-
 
         outstr += self.printstring(self.chunkpad, lineprefix, towin=towin,
                                    align=False) # add uncolored checkbox/indent
