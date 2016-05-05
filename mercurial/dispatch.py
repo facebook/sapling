@@ -830,8 +830,6 @@ def _dispatch(req):
     if cmdoptions.get('insecure', False):
         for ui_ in uis:
             ui_.insecureconnections = True
-            # TODO remove once consumers are gone.
-            ui_.setconfig('web', 'cacerts', '!', '--insecure')
 
     if options['version']:
         return commands.version_(ui)
