@@ -1290,7 +1290,7 @@ def _pullbundle2(pullop):
     kwargs['heads'] = pullop.heads or pullop.rheads
     kwargs['cg'] = pullop.fetch
     if 'listkeys' in pullop.remotebundle2caps:
-        kwargs['listkeys'] = ['phase']
+        kwargs['listkeys'] = ['phases']
         if pullop.remotebookmarks is None:
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
