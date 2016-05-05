@@ -600,9 +600,6 @@ class curseschunkselector(object):
         the last hunkline of the hunk prior to the selected hunk.  or, if
         the first hunkline of a hunk is currently selected, then select the
         hunk itself.
-
-        if the currently selected item is already at the top of the screen,
-        scroll the screen down to show the new-selected item.
         """
         currentitem = self.currentselecteditem
 
@@ -620,9 +617,6 @@ class curseschunkselector(object):
         select (if possible) the previous item on the same level as the
         currently selected item.  otherwise, select (if possible) the
         parent-item of the currently selected item.
-
-        if the currently selected item is already at the top of the screen,
-        scroll the screen down to show the new-selected item.
         """
         currentitem = self.currentselecteditem
         nextitem = currentitem.previtem()
@@ -643,9 +637,6 @@ class curseschunkselector(object):
         the first hunkline of the selected hunk.  or, if the last hunkline of
         a hunk is currently selected, then select the next hunk, if one exists,
         or if not, the next header if one exists.
-
-        if the currently selected item is already at the bottom of the screen,
-        scroll the screen up to show the new-selected item.
         """
         #self.startprintline += 1 #debug
         currentitem = self.currentselecteditem
