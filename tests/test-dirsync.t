@@ -565,3 +565,30 @@ Test updating missing mirror
   +a2
 
   $ cd ..
+
+Dont mirror during shelve
+  $ rm -rf repo
+  $ hg init repo
+  $ cd repo
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > shelve=
+  > [dirsync]
+  > group1.dir1 = dir1/
+  > group1.dir2 = dir2/
+  > EOF
+  $ mkdir dir1
+  $ echo a > dir1/a
+  $ hg add dir1
+  adding dir1/a
+  $ hg commit -m 'add dir1/a'
+  mirrored adding 'dir1/a' to 'dir2/a'
+  $ echo a >> dir1/a
+  $ hg shelve
+  shelved as default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg status
+  $ hg unshelve
+  unshelving change 'default'
+  $ hg status
+  M dir1/a

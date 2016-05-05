@@ -32,7 +32,7 @@ projectY.dir3 = foo/goo/hoo
 
 from collections import defaultdict
 import errno
-from mercurial import extensions, localrepo, util
+from mercurial import commands, extensions, localrepo, util
 from mercurial import match as matchmod
 from mercurial import error
 from mercurial.i18n import _
@@ -41,6 +41,24 @@ testedwith = 'internal'
 
 def extsetup(ui):
     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
+    def wrapshelve(loaded=False):
+        try:
+            shelvemod = extensions.find('shelve')
+            extensions.wrapcommand(shelvemod.cmdtable, 'shelve',
+                                   _bypassdirsync)
+            extensions.wrapcommand(shelvemod.cmdtable, 'unshelve',
+                                   _bypassdirsync)
+        except KeyError:
+            pass
+    extensions.afterloaded('shelve', wrapshelve)
+
+def _bypassdirsync(orig, ui, repo, *args, **kwargs):
+    backup = ui.backupconfig('dirsync', '_tempdisable')
+    try:
+        ui.setconfig('dirsync', '_tempdisable', True)
+        return orig(ui, repo, *args, **kwargs)
+    finally:
+        ui.restoreconfig(backup)
 
 def getconfigs(ui):
     maps = defaultdict(list)
@@ -64,6 +82,9 @@ def getmirrors(maps, filename):
     return []
 
 def _commit(orig, self, *args, **kwargs):
+    if self.ui.configbool('dirsync', '_tempdisable', False):
+        return orig(self, *args, **kwargs)
+
     wlock = self.wlock()
     try:
         maps = getconfigs(self.ui)
