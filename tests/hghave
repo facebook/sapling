@@ -13,13 +13,13 @@ import hghave
 checks = hghave.checks
 
 def list_features():
-    for name, feature in sorted(checks.iteritems()):
+    for name, feature in sorted(checks.items()):
         desc = feature[1]
         print(name + ':', desc)
 
 def test_features():
     failed = 0
-    for name, feature in checks.iteritems():
+    for name, feature in checks.items():
         check, _ = feature
         try:
             check()
