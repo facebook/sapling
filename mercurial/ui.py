@@ -1161,6 +1161,9 @@ class ui(object):
         - msg: message explaining what is deprecated and how to upgrade,
         - version: last version where the API will be supported,
         """
+        if not (self.configbool('devel', 'all-warnings')
+                or self.configbool('devel', 'deprec-warn')):
+            return
         msg += ("\n(compatibility will be dropped after Mercurial-%s,"
                 " update your code.)") % version
         self.develwarn(msg, stacklevel=2)

@@ -44,12 +44,10 @@ Clone with background file closing enabled
   sending getbundle command
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
+  bundle2-input-part: total payload size 58
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
-  preparing listkeys for "phases"
-  sending listkeys command
-  received listkey for "phases": 58 bytes
 
 
 Stream clone while repo is changing:

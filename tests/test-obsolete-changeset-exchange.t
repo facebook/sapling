@@ -130,11 +130,11 @@ client only pulls down 1 changeset
   1 changesets found
   list of changesets:
   bec0734cd68e84477ba7fc1d13e6cff53ab70129
-  listing keys for "phase"
+  listing keys for "phases"
   listing keys for "bookmarks"
   bundle2-output-bundle: "HG20", 3 parts total
   bundle2-output-part: "changegroup" (params: 1 mandatory 1 advisory) streamed payload
-  bundle2-output-part: "listkeys" (params: 1 mandatory) empty payload
+  bundle2-output-part: "listkeys" (params: 1 mandatory) 58 bytes payload
   bundle2-output-part: "listkeys" (params: 1 mandatory) empty payload
   bundle2-input-bundle: with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory 1 advisory) supported
@@ -146,9 +146,9 @@ client only pulls down 1 changeset
   added 1 changesets with 1 changes to 1 files (+1 heads)
   bundle2-input-part: total payload size 474
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
+  bundle2-input-part: total payload size 58
   bundle2-input-part: "listkeys" (params: 1 mandatory) supported
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
-  listing keys for "phases"
   updating the branch cache
   (run 'hg heads' to see heads, 'hg merge' to merge)

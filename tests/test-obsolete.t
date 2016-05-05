@@ -982,17 +982,21 @@ Test cache consistency for the visible filter
 bookmarks change
   $ cd ..
   $ cat >$TESTTMP/test_extension.py  << EOF
+  > import weakref
   > from mercurial import cmdutil, extensions, bookmarks, repoview
   > def _bookmarkchanged(orig, bkmstoreinst, *args, **kwargs):
-  >  repo = bkmstoreinst._repo
-  >  ret = orig(bkmstoreinst, *args, **kwargs)
-  >  hidden1 = repoview.computehidden(repo)
-  >  hidden = repoview.filterrevs(repo, 'visible')
-  >  if sorted(hidden1) != sorted(hidden):
-  >    print "cache inconsistency"
-  >  return ret
+  >  reporef = weakref.ref(bkmstoreinst._repo)
+  >  def trhook(tr):
+  >   repo = reporef()
+  >   hidden1 = repoview.computehidden(repo)
+  >   hidden = repoview.filterrevs(repo, 'visible')
+  >   if sorted(hidden1) != sorted(hidden):
+  >     print "cache inconsistency"
+  >  bkmstoreinst._repo.currenttransaction().addpostclose('test_extension', trhook)
+  >  orig(bkmstoreinst, *args, **kwargs)
   > def extsetup(ui):
-  >   extensions.wrapfunction(bookmarks.bmstore, 'write', _bookmarkchanged)
+  >   extensions.wrapfunction(bookmarks.bmstore, 'recordchange',
+  >                           _bookmarkchanged)
   > EOF
 
   $ hg init repo-cache-inconsistency
@@ -1012,6 +1016,10 @@ bookmarks change
   abort: hidden revision '13bedc178fce'!
   (use --hidden to access hidden revisions)
   [255]
+
+Empty out the test extension, as it isn't compatible with later parts
+of the test.
+  $ echo > $TESTTMP/test_extension.py
 
 Test ability to pull changeset with locally applying obsolescence markers
 (issue4945)
