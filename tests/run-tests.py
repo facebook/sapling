@@ -1836,7 +1836,8 @@ class TextTestRunner(unittest.TextTestRunner):
                                 tres = {'result': res}
 
                             outcome[tc.name] = tres
-                    jsonout = json.dumps(outcome, sort_keys=True, indent=4)
+                    out = json.dumps(outcome, sort_keys=True, indent=4)
+                    jsonout = '\n'.join([l.rstrip() for l in out.splitlines()])
                     fp.writelines(("testreport =", jsonout))
 
             self._runner._checkhglib('Tested')

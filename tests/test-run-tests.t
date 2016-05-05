@@ -586,7 +586,7 @@ Missing skips or blacklisted skips don't count as executed:
   testreport ={
       "test-bogus.t": {
           "result": "skip"
-      }, 
+      },
       "test-failure.t": {
           "result": "skip"
       }
