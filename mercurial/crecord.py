@@ -164,7 +164,7 @@ class patchnode(object):
             except AttributeError: # parent and/or grandparent was None
                 return None
 
-    def previtem(self, constrainlevel=True, skipfolded=True):
+    def previtem(self, constrainlevel=True):
         """
         If constrainLevel == True, return the closest previous item
         of the same type where there are no items of different types between
@@ -173,10 +173,6 @@ class patchnode(object):
         If constrainLevel == False, then try to return the previous item
         closest to this item, regardless of item's type (header, hunk, or
         HunkLine).
-
-        If skipFolded == True, and the current item is folded, then the items
-        that are hidden due to folding will be skipped when determining the
-        next item.
 
         If it is not possible to get the previous item, return None.
         """
