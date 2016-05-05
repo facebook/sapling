@@ -1375,7 +1375,7 @@ the following are valid keystrokes:
                       F : fold / unfold parent item and all of its ancestors
                       m : edit / resume editing the commit message
                       e : edit the currently selected hunk
-                      a : toggle amend mode (hg rev >= 2.2), only with commit -i
+                      a : toggle amend mode, only with commit -i
                       c : confirm selected changes
                       r : review/edit and confirm selected changes
                       q : quit without confirming (no changes will be made)
