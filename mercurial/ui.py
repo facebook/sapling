@@ -107,6 +107,8 @@ class ui(object):
         self._trustusers = set()
         self._trustgroups = set()
         self.callhooks = True
+        # Insecure server connections requested.
+        self.insecureconnections = False
 
         if src:
             self.fout = src.fout
@@ -120,6 +122,7 @@ class ui(object):
             self._trustgroups = src._trustgroups.copy()
             self.environ = src.environ
             self.callhooks = src.callhooks
+            self.insecureconnections = src.insecureconnections
             self.fixconfig()
         else:
             self.fout = sys.stdout
