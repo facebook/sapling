@@ -232,22 +232,35 @@ def _defaultcacerts():
     return '!'
 
 def sslkwargs(ui, host):
+    """Determine arguments to pass to wrapsocket().
+
+    ``host`` is the hostname being connected to.
+    """
     kws = {'ui': ui}
+
+    # If a host key fingerprint is on file, it is the only thing that matters
+    # and CA certs don't come into play.
     hostfingerprint = ui.config('hostfingerprints', host)
     if hostfingerprint:
         return kws
+
+    # dispatch sets web.cacerts=! when --insecure is used.
     cacerts = ui.config('web', 'cacerts')
     if cacerts == '!':
-        pass
-    elif cacerts:
+        return kws
+
+    if cacerts:
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise error.Abort(_('could not find web.cacerts: %s') % cacerts)
     else:
+        # CA certs aren't explicitly listed in the config. See if we can load
+        # defaults.
         cacerts = _defaultcacerts()
         if cacerts and cacerts != '!':
             ui.debug('using %s to enable OS X system CA\n' % cacerts)
         ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
+
     if cacerts != '!':
         kws.update({'ca_certs': cacerts,
                     'cert_reqs': ssl.CERT_REQUIRED,
