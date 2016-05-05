@@ -1009,11 +1009,9 @@ bookmarks change
   $ echo "hello" > b
   $ hg commit --amend -m "message"
   $ hg book bookb -r 13bedc178fce --hidden
-  cache inconsistency
   $ hg log -r 13bedc178fce
   5:13bedc178fce (draft) [ bookb] add b
   $ hg book -d bookb
-  cache inconsistency
   $ hg log -r 13bedc178fce
   abort: hidden revision '13bedc178fce'!
   (use --hidden to access hidden revisions)

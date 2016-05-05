@@ -181,6 +181,7 @@ class bmstore(dict):
         for name, node in self.iteritems():
             fp.write("%s %s\n" % (hex(node), encoding.fromlocal(name)))
         self._clean = True
+        self._repo.invalidatevolatilesets()
 
     def expandname(self, bname):
         if bname == '.':
