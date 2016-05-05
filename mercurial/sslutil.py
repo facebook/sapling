@@ -243,8 +243,13 @@ def sslkwargs(ui, host):
     if hostfingerprint:
         return kws
 
-    # dispatch sets web.cacerts=! when --insecure is used.
+    # The code below sets up CA verification arguments. If --insecure is
+    # used, we don't take CAs into consideration, so return early.
+    if ui.insecureconnections:
+        return kws
+
     cacerts = ui.config('web', 'cacerts')
+    # TODO remove check when we stop setting this config.
     if cacerts == '!':
         return kws
 
