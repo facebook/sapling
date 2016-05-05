@@ -74,6 +74,8 @@ def _trypending(root, vfs, filename):
                 raise
     return (vfs(filename), False)
 
+_token = object()
+
 class dirstate(object):
 
     def __init__(self, opener, ui, root, validate):
@@ -688,12 +690,12 @@ class dirstate(object):
         self._pl = (parent, nullid)
         self._dirty = True
 
-    def write(self, tr=False):
+    def write(self, tr=_token):
         if not self._dirty:
             return
 
         filename = self._filename
-        if tr is False: # not explicitly specified
+        if tr is _token: # not explicitly specified
             self._ui.deprecwarn('use dirstate.write with '
                                'repo.currenttransaction()',
                                '3.9')
