@@ -254,9 +254,6 @@ def sslkwargs(ui, host):
         return kws
 
     cacerts = ui.config('web', 'cacerts')
-    # TODO remove check when we stop setting this config.
-    if cacerts == '!':
-        return kws
 
     # If a value is set in the config, validate against a path and load
     # and require those certs.
