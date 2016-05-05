@@ -222,14 +222,13 @@ def _plainapplepython():
             exe.startswith('/system/library/frameworks/python.framework/'))
 
 def _defaultcacerts():
-    """return path to CA certificates; None for system's store; ! to disable"""
+    """return path to default CA certificates or None."""
     if _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
             return dummycert
-    if _canloaddefaultcerts:
-        return None
-    return '!'
+
+    return None
 
 def sslkwargs(ui, host):
     """Determine arguments to pass to wrapsocket().
@@ -262,8 +261,12 @@ def sslkwargs(ui, host):
 
     # No CAs in config. See if we can load defaults.
     cacerts = _defaultcacerts()
-    if cacerts and cacerts != '!':
+    if cacerts:
         ui.debug('using %s to enable OS X system CA\n' % cacerts)
+    else:
+        if not _canloaddefaultcerts:
+            cacerts = '!'
+
     ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
 
     if cacerts != '!':
