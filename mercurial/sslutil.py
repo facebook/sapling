@@ -249,17 +249,22 @@ def sslkwargs(ui, host):
     if cacerts == '!':
         return kws
 
+    # If a value is set in the config, validate against a path and load
+    # and require those certs.
     if cacerts:
         cacerts = util.expandpath(cacerts)
         if not os.path.exists(cacerts):
             raise error.Abort(_('could not find web.cacerts: %s') % cacerts)
-    else:
-        # CA certs aren't explicitly listed in the config. See if we can load
-        # defaults.
-        cacerts = _defaultcacerts()
-        if cacerts and cacerts != '!':
-            ui.debug('using %s to enable OS X system CA\n' % cacerts)
-        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
+
+        kws.update({'ca_certs': cacerts,
+                    'cert_reqs': ssl.CERT_REQUIRED})
+        return kws
+
+    # No CAs in config. See if we can load defaults.
+    cacerts = _defaultcacerts()
+    if cacerts and cacerts != '!':
+        ui.debug('using %s to enable OS X system CA\n' % cacerts)
+    ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
 
     if cacerts != '!':
         kws.update({'ca_certs': cacerts,
