@@ -12,12 +12,8 @@
 static size_t calculate_required_size(
     uint16_t name_sz,
     uint32_t num_children) {
-  node_t *ptr = 0;
-  void *name_start = &ptr->name;
-  intptr_t address = (intptr_t) name_start;
-  address += name_sz;
-  address += sizeof(ptrdiff_t) - 1;
-  address &= ~((intptr_t) (sizeof(ptrdiff_t) - 1));
+  intptr_t address = get_child_ptr_base_offset(name_sz);
+
   return address + (sizeof(ptrdiff_t) * num_children);
 }
 

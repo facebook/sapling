@@ -91,8 +91,11 @@ static inline int name_compare(
  */
 static inline ptrdiff_t get_child_ptr_base_offset(
     uint16_t name_sz) {
-  node_t *node = (node_t *) 0;
-  intptr_t ptr = (intptr_t) &node->name[name_sz];
+  intptr_t ptr = offsetof(node_t, name);
+  ptr += name_sz;
+
+  // this aligns to ptrdiff_t, since some platforms do not support unaligned
+  // loads.
   ptr = (ptr + sizeof(intptr_t) - 1) & PTR_ALIGN_MASK;
 
   return (ptrdiff_t) ptr;
