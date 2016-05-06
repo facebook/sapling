@@ -42,7 +42,6 @@ demandimport.ignore.extend([
     'svn.ra',
     ])
 
-from mercurial import templatekw
 from mercurial import revset
 from mercurial import subrepo
 
@@ -51,6 +50,7 @@ import util
 import svnrepo
 import wrappers
 import svnexternals
+import compathacks
 
 svnopts = [
     ('', 'stupid', None,
@@ -165,14 +165,6 @@ def extsetup(ui):
 
     help.helptable.extend(entries)
 
-    templatekeywords = {
-        'svnrev': svnrevkw,
-        'svnpath': svnpathkw,
-        'svnuuid': svnuuidkw,
-    }
-
-    templatekw.keywords.update(templatekeywords)
-
     revset.symbols.update(util.revsets)
 
     subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
@@ -226,6 +218,24 @@ cmdtable = {
 # only these methods are public
 __all__ = ('cmdtable', 'reposetup', 'uisetup')
 
+# set up templatekeywords (written this way to maintain backwards compatibility
+# until we drop support for 3.7)
+try:
+    from mercurial import registrar
+    templatekeyword = registrar.templatekeyword()
+    loadkeyword = lambda registrarobj: None  # no-op
+except (ImportError, AttributeError):
+    # registrar.templatekeyword isn't available = loading by old hg
+
+    templatekeyword = compathacks._funcregistrarbase()
+    templatekeyword._docformat = ":%s: %s"
+
+    # minimum copy from templatekw.loadkeyword
+    def loadkeyword(registrarobj):
+        from mercurial import templatekw
+        for name, func in registrarobj._table.iteritems():
+            templatekw.keywords[name] = func
+
 def _templatehelper(ctx, kw):
     '''
     Helper function for displaying information about converted changesets.
@@ -244,14 +254,17 @@ def _templatehelper(ctx, kw):
     else:
         raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
 
+@templatekeyword('svnrev')
 def svnrevkw(**args):
     """:svnrev: String. Converted subversion revision number."""
     return _templatehelper(args['ctx'], 'svnrev')
 
+@templatekeyword('svnpath')
 def svnpathkw(**args):
     """:svnpath: String. Converted subversion revision project path."""
     return _templatehelper(args['ctx'], 'svnpath')
 
+@templatekeyword('svnuuid')
 def svnuuidkw(**args):
     """:svnuuid: String. Converted subversion revision repository identifier."""
     return _templatehelper(args['ctx'], 'svnuuid')
