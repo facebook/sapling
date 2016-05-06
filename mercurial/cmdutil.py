@@ -3071,7 +3071,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
 
             # tell newly modified apart.
             dsmodified &= modified
-            dsmodified |= modified & dsadded # dirstate added may needs backup
+            dsmodified |= modified & dsadded # dirstate added may need backup
             modified -= dsmodified
 
             # We need to wait for some post-processing to update this set
