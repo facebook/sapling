@@ -72,7 +72,9 @@ invalid arch type should give 404
   > from __future__ import absolute_import
   > import os
   > import sys
-  > import urllib2
+  > from mercurial import (
+  >     util,
+  > )
   > try:
   >     # Set stdout to binary mode for win32 platforms
   >     import msvcrt
@@ -90,10 +92,10 @@ invalid arch type should give 404
   > except AttributeError:
   >     stdout = sys.stdout
   > try:
-  >     f = urllib2.urlopen('http://127.0.0.1:%s/?%s'
+  >     f = util.urlreq.urlopen('http://127.0.0.1:%s/?%s'
   >                     % (os.environ['HGPORT'], requeststr))
   >     stdout.write(f.read())
-  > except urllib2.HTTPError, e:
+  > except util.urlerr.httperror as e:
   >     sys.stderr.write(str(e) + '\n')
   > EOF
   $ python getarchive.py "$TIP" gz | gunzip | tar tf - 2>/dev/null
