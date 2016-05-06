@@ -202,8 +202,8 @@ The '-t' should override autodetection
   >     from md5 import md5
   > import sys
   > f1, f2 = sys.argv[1:3]
-  > h1 = md5(file(f1, 'rb').read()).hexdigest()
-  > h2 = md5(file(f2, 'rb').read()).hexdigest()
+  > h1 = md5(open(f1, 'rb').read()).hexdigest()
+  > h2 = md5(open(f2, 'rb').read()).hexdigest()
   > print(h1 == h2 or "md5 differ: " + repr((h1, h2)))
   > EOF
 
