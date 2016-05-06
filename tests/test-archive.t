@@ -69,7 +69,10 @@ invalid arch type should give 404
   $ TIP=`hg id -v | cut -f1 -d' '`
   $ QTIP=`hg id -q`
   $ cat > getarchive.py <<EOF
-  > import os, sys, urllib2
+  > from __future__ import absolute_import
+  > import os
+  > import sys
+  > import urllib2
   > try:
   >     # Set stdout to binary mode for win32 platforms
   >     import msvcrt
