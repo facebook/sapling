@@ -10,7 +10,6 @@
   hgext/hgcia.py not using absolute_import
   hgext/highlight/__init__.py not using absolute_import
   hgext/highlight/highlight.py not using absolute_import
-  hgext/histedit.py not using absolute_import
   hgext/largefiles/__init__.py not using absolute_import
   hgext/largefiles/basestore.py not using absolute_import
   hgext/largefiles/lfcommands.py not using absolute_import

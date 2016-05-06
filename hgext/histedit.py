@@ -169,30 +169,34 @@ the drop to be implicit for missing commits by adding::
 
 """
 
-import pickle
+from __future__ import absolute_import
+
 import errno
 import os
+import pickle
 import sys
-
-from mercurial import bundle2
-from mercurial import cmdutil
-from mercurial import discovery
-from mercurial import error
-from mercurial import copies
-from mercurial import context
-from mercurial import destutil
-from mercurial import exchange
-from mercurial import extensions
-from mercurial import hg
-from mercurial import node
-from mercurial import repair
-from mercurial import scmutil
-from mercurial import util
-from mercurial import obsolete
-from mercurial import merge as mergemod
-from mercurial.lock import release
+from mercurial import (
+    bundle2,
+    cmdutil,
+    context,
+    copies,
+    destutil,
+    discovery,
+    error,
+    exchange,
+    extensions,
+    hg,
+    lock,
+    merge as mergemod,
+    node,
+    obsolete,
+    repair,
+    scmutil,
+    util,
+)
 from mercurial.i18n import _
 
+release = lock.release
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
