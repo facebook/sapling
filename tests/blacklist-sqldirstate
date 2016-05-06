@@ -1,0 +1,47 @@
+# non-significant output changes
+test-empty.t
+test-basic.t
+test-largefiles-small-disk.t
+test-debugextensions.t
+test-inherit-mode.t
+test-init.t
+test-completion.t
+test-lfconvert.t
+test-fncache.t
+test-clonebundles.t
+test-ssh.t
+test-ssh-bundle1.t
+test-globalopts.t
+test-extension.t
+test-hgweb-commands.t
+test-commandserver.t
+test-help.t
+# zeroconf
+test-paths.t
+
+# tests changing hgrc after initinializing repos
+# and failing because of the not met requirements.
+test-hgrc.t
+test-hardlinks.t
+test-keyword.t
+test-treemanifest.t
+test-wireproto.t
+test-run-tests.t
+
+# tests chmoding -w .hg directory
+test-eol.t
+test-phases-exchange.t
+test-issue3084.t
+
+# Legit failures:
+# bundlerepos don't work yet.
+#  test-bundle.t
+#  test-shelve.t
+#  test-import.t
+# the wd parent is wrong
+#  test-obsolete.t
+# tries to open a sqlite db folr http repo
+#  test-static-http.t
+
+
+
