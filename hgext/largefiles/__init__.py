@@ -104,14 +104,20 @@ largefile. To add the first largefile to a repository, you must
 explicitly do so with the --large flag passed to the :hg:`add`
 command.
 '''
+from __future__ import absolute_import
 
-from mercurial import hg, localrepo
+from mercurial import (
+    hg,
+    localrepo,
+)
 
-import lfcommands
-import proto
-import reposetup
-import uisetup as uisetupmod
-import overrides
+from . import (
+    lfcommands,
+    overrides,
+    proto,
+    reposetup,
+    uisetup as uisetupmod,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
