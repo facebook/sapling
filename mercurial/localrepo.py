@@ -57,12 +57,10 @@ from . import (
 )
 
 release = lockmod.release
-propertycache = util.propertycache
 urlerr = util.urlerr
 urlreq = util.urlreq
-filecache = scmutil.filecache
 
-class repofilecache(filecache):
+class repofilecache(scmutil.filecache):
     """All filecache usage on repo are done for logic that should be unfiltered
     """
 
@@ -78,7 +76,7 @@ class storecache(repofilecache):
     def join(self, obj, fname):
         return obj.sjoin(fname)
 
-class unfilteredpropertycache(propertycache):
+class unfilteredpropertycache(util.propertycache):
     """propertycache that apply to unfiltered repo only"""
 
     def __get__(self, repo, type=None):
@@ -87,7 +85,7 @@ class unfilteredpropertycache(propertycache):
             return super(unfilteredpropertycache, self).__get__(unfi)
         return getattr(unfi, self.name)
 
-class filteredpropertycache(propertycache):
+class filteredpropertycache(util.propertycache):
     """propertycache that must take filtering in account"""
 
     def cachevalue(self, obj, value):
