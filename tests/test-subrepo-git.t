@@ -1145,7 +1145,8 @@ test for Git CVE-2016-3068
   $ hg add .hgsub
   $ hg commit -m "add subrepo"
   $ cd ..
-  $ env -u GIT_ALLOW_PROTOCOL hg clone malicious-subrepository malicious-subrepository-protected
+  $ unset GIT_ALLOW_PROTOCOL
+  $ hg clone malicious-subrepository malicious-subrepository-protected
   Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'... (glob)
   fatal: transport 'ext' not allowed
   updating to branch default
