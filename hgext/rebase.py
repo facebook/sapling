@@ -14,14 +14,41 @@ For more information:
 https://mercurial-scm.org/wiki/RebaseExtension
 '''
 
-from mercurial import hg, util, repair, merge, cmdutil, commands, bookmarks
-from mercurial import extensions, patch, scmutil, phases, obsolete, error
-from mercurial import copies, destutil, repoview, registrar, revset
-from mercurial.commands import templateopts
-from mercurial.node import nullrev, nullid, hex, short
-from mercurial.lock import release
+from __future__ import absolute_import
+
+import errno
+import os
+from mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    copies,
+    destutil,
+    error,
+    extensions,
+    hg,
+    lock,
+    merge,
+    obsolete,
+    patch,
+    phases,
+    registrar,
+    repair,
+    repoview,
+    revset,
+    scmutil,
+    util,
+)
+from mercurial.node import (
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
 from mercurial.i18n import _
-import os, errno
+
+release = lock.release
+templateopts = commands.templateopts
 
 # The following constants are used throughout the rebase module. The ordering of
 # their values must be maintained.
