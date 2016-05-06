@@ -7,11 +7,13 @@
 # GNU General Public License version 2 or any later version.
 
 '''base class for store implementations and store-related utility code'''
+from __future__ import absolute_import
 
-from mercurial import util, node
 from mercurial.i18n import _
 
-import lfutil
+from mercurial import node, util
+
+from . import lfutil
 
 class StoreError(Exception):
     '''Raised when there is a problem getting files from or putting
