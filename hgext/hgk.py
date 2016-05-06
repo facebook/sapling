@@ -34,9 +34,21 @@ Revisions context menu will now display additional entries to fire
 vdiff on hovered and selected revisions.
 '''
 
+from __future__ import absolute_import
+
 import os
-from mercurial import cmdutil, commands, patch, scmutil, obsolete
-from mercurial.node import nullid, nullrev, short
+from mercurial import (
+    cmdutil,
+    commands,
+    obsolete,
+    patch,
+    scmutil,
+)
+from mercurial.node import (
+    nullid,
+    nullrev,
+    short,
+)
 from mercurial.i18n import _
 
 cmdtable = {}

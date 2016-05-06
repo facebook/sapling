@@ -8,7 +8,6 @@
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   hgext/hgcia.py not using absolute_import
-  hgext/hgk.py not using absolute_import
   hgext/highlight/__init__.py not using absolute_import
   hgext/highlight/highlight.py not using absolute_import
   hgext/histedit.py not using absolute_import
