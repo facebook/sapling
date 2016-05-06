@@ -7,12 +7,23 @@
 
 '''pull, update and merge in one command (DEPRECATED)'''
 
-from mercurial.i18n import _
-from mercurial.node import short
-from mercurial import commands, cmdutil, hg, util, error
-from mercurial.lock import release
-from mercurial import exchange
+from __future__ import absolute_import
 
+from mercurial.i18n import _
+from mercurial.node import (
+    short,
+)
+from mercurial import (
+    cmdutil,
+    commands,
+    error,
+    exchange,
+    hg,
+    lock,
+    util,
+)
+
+release = lock.release
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 # Note for extension authors: ONLY specify testedwith = 'internal' for
