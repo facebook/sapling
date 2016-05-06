@@ -58,6 +58,10 @@ if [ -n "$type" ] ; then
 fi
 if [ -n "$distance" ] ; then
     debver="$debver+$distance-$CODENAME-$node"
+elif [ "$DEBFLAGS" = "-S" ] ; then
+    # for building a ppa (--source-only) for a release (distance == 0), we need
+    # to version the distroseries so that we can upload to launchpad
+    debver="$debver~${CODENAME}1"
 fi
 
 control=debian/control
