@@ -384,7 +384,7 @@ class cmdalias(object):
         self.cmdname = ''
         self.definition = definition
         self.fn = None
-        self.args = []
+        self.givenargs = []
         self.opts = []
         self.help = ''
         self.badalias = None
@@ -432,7 +432,7 @@ class cmdalias(object):
                              % (self.name, inst))
             return
         self.cmdname = cmd = args.pop(0)
-        args = map(util.expandpath, args)
+        self.givenargs = args
 
         for invalidarg in ("--cwd", "-R", "--repository", "--repo", "--config"):
             if _earlygetopt([invalidarg], args):
@@ -448,7 +448,6 @@ class cmdalias(object):
             else:
                 self.fn, self.opts = tableentry
 
-            self.args = aliasargs(self.fn, args)
             if self.help.startswith("hg " + cmd):
                 # drop prefix in old-style help lines so hg shows the alias
                 self.help = self.help[4 + len(cmd):]
@@ -461,6 +460,11 @@ class cmdalias(object):
         except error.AmbiguousCommand:
             self.badalias = (_("alias '%s' resolves to ambiguous command '%s'")
                              % (self.name, cmd))
+
+    @property
+    def args(self):
+        args = map(util.expandpath, self.givenargs)
+        return aliasargs(self.fn, args)
 
     def __getattr__(self, name):
         adefaults = {'norepo': True, 'optionalrepo': False, 'inferrepo': False}

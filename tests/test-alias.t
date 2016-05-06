@@ -525,6 +525,24 @@ invalid global arguments for normal commands, aliases, and shell aliases
   (use "hg help" for the full list of commands or "hg -v" for details)
   [255]
 
+environment variable changes in alias commands
+
+  $ cat > $TESTTMP/setcount.py <<EOF
+  > import os
+  > def uisetup(ui):
+  >     os.environ['COUNT'] = '2'
+  > EOF
+
+  $ cat >> $HGRCPATH <<'EOF'
+  > [extensions]
+  > setcount = $TESTTMP/setcount.py
+  > [alias]
+  > showcount = log -T "$COUNT\n" -r .
+  > EOF
+
+  $ COUNT=1 hg showcount
+  2
+
 This should show id:
 
   $ hg --config alias.log='id' log
