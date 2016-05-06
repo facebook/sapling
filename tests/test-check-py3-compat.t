@@ -7,7 +7,6 @@
   hgext/fsmonitor/pywatchman/__init__.py requires print_function
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
-  hgext/gpg.py not using absolute_import
   hgext/hgcia.py not using absolute_import
   hgext/hgk.py not using absolute_import
   hgext/highlight/__init__.py not using absolute_import
@@ -72,7 +71,7 @@
   hgext/factotum.py: error importing: <ImportError> No module named 'cStringIO' (error at __init__.py:*) (glob)
   hgext/fetch.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/fsmonitor/watchmanclient.py: error importing module: <SystemError> Parent module 'hgext.fsmonitor' not loaded, cannot perform relative import (line *) (glob)
-  hgext/gpg.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
+  hgext/gpg.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/graphlog.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/hgcia.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/hgk.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
