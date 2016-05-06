@@ -86,9 +86,13 @@ invalid arch type should give 404
   >     node, archive, file = sys.argv[1:]
   >     requeststr = 'cmd=archive;node=%s;type=%s;file=%s' % (node, archive, file)
   > try:
+  >     stdout = sys.stdout.buffer
+  > except AttributeError:
+  >     stdout = sys.stdout
+  > try:
   >     f = urllib2.urlopen('http://127.0.0.1:%s/?%s'
   >                     % (os.environ['HGPORT'], requeststr))
-  >     sys.stdout.write(f.read())
+  >     stdout.write(f.read())
   > except urllib2.HTTPError, e:
   >     sys.stderr.write(str(e) + '\n')
   > EOF
