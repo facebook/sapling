@@ -21,7 +21,6 @@
   hgext/largefiles/reposetup.py not using absolute_import
   hgext/largefiles/uisetup.py not using absolute_import
   hgext/largefiles/wirestore.py not using absolute_import
-  hgext/mq.py not using absolute_import
   hgext/rebase.py not using absolute_import
   hgext/share.py not using absolute_import
   hgext/win32text.py not using absolute_import
@@ -85,7 +84,7 @@
   hgext/largefiles/reposetup.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/largefiles/uisetup.py: error importing module: <SyntaxError> invalid syntax (archival.py, line *) (line *) (glob)
   hgext/largefiles/wirestore.py: error importing module: <ImportError> No module named 'lfutil' (line *) (glob)
-  hgext/mq.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
+  hgext/mq.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/notify.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/pager.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/patchbomb.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)

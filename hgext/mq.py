@@ -62,19 +62,39 @@ This extension used to provide a strip command. This command now lives
 in the strip extension.
 '''
 
-from mercurial.i18n import _
-from mercurial.node import bin, hex, short, nullid, nullrev
-from mercurial.lock import release
-from mercurial import commands, cmdutil, hg, scmutil, util, revset
-from mercurial import dispatch
-from mercurial import extensions, error, phases
-from mercurial import patch as patchmod
-from mercurial import lock as lockmod
-from mercurial import localrepo
-from mercurial import registrar
-from mercurial import subrepo
-import os, re, errno, shutil
+from __future__ import absolute_import
 
+import errno
+import os
+import re
+import shutil
+from mercurial.i18n import _
+from mercurial.node import (
+    bin,
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
+from mercurial import (
+    cmdutil,
+    commands,
+    dispatch,
+    error,
+    extensions,
+    hg,
+    localrepo,
+    lock as lockmod,
+    patch as patchmod,
+    phases,
+    registrar,
+    revset,
+    scmutil,
+    subrepo,
+    util,
+)
+
+release = lockmod.release
 seriesopts = [('s', 'summary', None, _('print first line of patch header'))]
 
 cmdtable = {}
