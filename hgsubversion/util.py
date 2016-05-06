@@ -307,47 +307,9 @@ def issamefile(parentctx, childctx, f):
     # parentctx is not an ancestor of childctx, files are unrelated
     return False
 
-
 def getsvnrev(ctx, defval=None):
     '''Extract SVN revision from commit metadata'''
     return ctx.extra().get('convert_revision', defval)
-
-
-def _templatehelper(ctx, kw):
-    '''
-    Helper function for displaying information about converted changesets.
-    '''
-    convertinfo = getsvnrev(ctx, '')
-
-    if not convertinfo or not convertinfo.startswith('svn:'):
-        return ''
-
-    if kw == 'svnuuid':
-        return convertinfo[4:40]
-    elif kw == 'svnpath':
-        return convertinfo[40:].rsplit('@', 1)[0]
-    elif kw == 'svnrev':
-        return convertinfo[40:].rsplit('@', 1)[-1]
-    else:
-        raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
-
-def svnrevkw(**args):
-    """:svnrev: String. Converted subversion revision number."""
-    return _templatehelper(args['ctx'], 'svnrev')
-
-def svnpathkw(**args):
-    """:svnpath: String. Converted subversion revision project path."""
-    return _templatehelper(args['ctx'], 'svnpath')
-
-def svnuuidkw(**args):
-    """:svnuuid: String. Converted subversion revision repository identifier."""
-    return _templatehelper(args['ctx'], 'svnuuid')
-
-templatekeywords = {
-    'svnrev': svnrevkw,
-    'svnpath': svnpathkw,
-    'svnuuid': svnuuidkw,
-}
 
 def revset_fromsvn(repo, subset, x):
     '''``fromsvn()``

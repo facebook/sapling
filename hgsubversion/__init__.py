@@ -165,7 +165,13 @@ def extsetup(ui):
 
     help.helptable.extend(entries)
 
-    templatekw.keywords.update(util.templatekeywords)
+    templatekeywords = {
+        'svnrev': svnrevkw,
+        'svnpath': svnpathkw,
+        'svnuuid': svnuuidkw,
+    }
+
+    templatekw.keywords.update(templatekeywords)
 
     revset.symbols.update(util.revsets)
 
@@ -219,3 +225,53 @@ cmdtable = {
 
 # only these methods are public
 __all__ = ('cmdtable', 'reposetup', 'uisetup')
+
+def _templatehelper(ctx, kw):
+    '''
+    Helper function for displaying information about converted changesets.
+    '''
+    convertinfo = util.getsvnrev(ctx, '')
+
+    if not convertinfo or not convertinfo.startswith('svn:'):
+        return ''
+
+    if kw == 'svnuuid':
+        return convertinfo[4:40]
+    elif kw == 'svnpath':
+        return convertinfo[40:].rsplit('@', 1)[0]
+    elif kw == 'svnrev':
+        return convertinfo[40:].rsplit('@', 1)[-1]
+    else:
+        raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
+
+def svnrevkw(**args):
+    """:svnrev: String. Converted subversion revision number."""
+    return _templatehelper(args['ctx'], 'svnrev')
+
+def svnpathkw(**args):
+    """:svnpath: String. Converted subversion revision project path."""
+    return _templatehelper(args['ctx'], 'svnpath')
+
+def svnuuidkw(**args):
+    """:svnuuid: String. Converted subversion revision repository identifier."""
+    return _templatehelper(args['ctx'], 'svnuuid')
+
+def listsvnkeys(repo):
+    keys = {}
+    repo = repo.local()
+    metadir = os.path.join(repo.path, 'svn')
+
+    if util.subversionmetaexists(repo.path):
+        w = repo.wlock()
+        try:
+            for key in util.pushkeyfiles:
+                fullpath = os.path.join(metadir, key)
+                if os.path.isfile(fullpath):
+                    data = open(fullpath).read()
+
+                    # Some of the files could be large, but also quite compressible
+                    keys[key] = base85.b85encode(zlib.compress(data))
+        finally:
+            w.release()
+
+    return keys
