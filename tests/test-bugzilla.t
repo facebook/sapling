@@ -54,7 +54,7 @@ push with default template:
   $ cat bzmock.log && rm bzmock.log
   update bugid=123, newstate={}, committer='test'
   ----
-  changeset 7875a8342c6f in repo $TESTTMP/mockremote refers to bug 123.
+  changeset 7875a8342c6f in repo $TESTTMP/mockremote refers to bug 123. (glob)
   details:
   	Fixes bug 123
   ----

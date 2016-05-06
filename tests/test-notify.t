@@ -571,7 +571,7 @@ default template:
   Message-Id: <hg.3548c9e294b6.*.*@*> (glob)
   To: baz@test.com, foo@bar
   
-  changeset 3548c9e294b6 in $TESTTMP/b
+  changeset 3548c9e294b6 in $TESTTMP/b (glob)
   details: http://test/b?cmd=changeset;node=3548c9e294b6
   description: default template
 
