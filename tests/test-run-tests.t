@@ -591,6 +591,30 @@ Missing skips or blacklisted skips don't count as executed:
           "result": "skip"
       }
   } (no-eol)
+
+Whitelist trumps blacklist
+  $ echo test-failure.t > whitelist
+  $ rt --blacklist=blacklist --whitelist=whitelist --json\
+  >   test-failure.t test-bogus.t
+  s
+  --- $TESTTMP/test-failure.t
+  +++ $TESTTMP/test-failure.t.err
+  @@ -1,5 +1,5 @@
+     $ echo babar
+  -  rataxes
+  +  babar
+   This is a noop statement so that
+   this test is still more bytes than success.
+   pad pad pad pad............................................................
+  
+  ERROR: test-failure.t output changed
+  !
+  Skipped test-bogus.t: Doesn't exist
+  Failed test-failure.t: output changed
+  # Ran 1 tests, 1 skipped, 0 warned, 1 failed.
+  python hash seed: * (glob)
+  [1]
+
 test for --json
 ==================
 
