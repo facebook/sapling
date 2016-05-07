@@ -80,6 +80,7 @@ def _hashlist(items):
 
 # sensitive config sections affecting confighash
 _configsections = [
+    'alias',  # affects global state commands.table
     'extdiff',  # uisetup will register new commands
     'extensions',
 ]
