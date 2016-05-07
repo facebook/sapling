@@ -126,6 +126,7 @@ path variables are expanded (~ is the same as $TESTTMP)
   $ python wixxml.py help
   Not installed:
     help/common.txt
+    help/hg-ssh.8.txt
     help/hg.1.txt
     help/hgignore.5.txt
     help/hgrc.5.txt

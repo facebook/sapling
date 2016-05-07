@@ -136,6 +136,7 @@ def showtopic(ui, topic):
     extrahelptable = [
         (["common"], '', loaddoc('common')),
         (["hg.1"], '', loaddoc('hg.1')),
+        (["hg-ssh.8"], '', loaddoc('hg-ssh.8')),
         (["hgignore.5"], '', loaddoc('hgignore.5')),
         (["hgrc.5"], '', loaddoc('hgrc.5')),
         (["hgignore.5.gendoc"], '', loaddoc('hgignore')),
