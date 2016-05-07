@@ -177,3 +177,15 @@ even though stdout is no longer a tty.
   paged! 'date:        Thu Jan 01 00:00:00 1970 +0000\n'
   paged! 'summary:     modify a 8\n'
   paged! '\n'
+
+Pager works with shell aliases.
+
+  $ cat >> $HGRCPATH <<EOF
+  > [alias]
+  > echoa = !echo a
+  > EOF
+
+  $ hg echoa
+  a
+  $ hg --config pager.attend-echoa=yes echoa
+  paged! 'a\n'
