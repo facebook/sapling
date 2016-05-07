@@ -126,9 +126,15 @@ def fromlocalfunc(modulename, localmods):
     False
     >>> fromlocal(None, 1)
     ('foo', 'foo.__init__', True)
+    >>> fromlocal('foo1', 1)
+    ('foo.foo1', 'foo.foo1', False)
     >>> fromlocal2 = fromlocalfunc('foo.xxx.yyy', localmods)
     >>> fromlocal2(None, 2)
     ('foo', 'foo.__init__', True)
+    >>> fromlocal2('bar2', 1)
+    False
+    >>> fromlocal2('bar', 2)
+    ('foo.bar', 'foo.bar.__init__', True)
     """
     prefix = '.'.join(modulename.split('.')[:-1])
     if prefix:
@@ -140,8 +146,12 @@ def fromlocalfunc(modulename, localmods):
             assert level > 0
             candidates = ['.'.join(modulename.split('.')[:-level])]
         else:
-            # Check relative name first.
-            candidates = [prefix + name, name]
+            if not level:
+                # Check relative name first.
+                candidates = [prefix + name, name]
+            else:
+                candidates = ['.'.join(modulename.split('.')[:-level]) +
+                              '.' + name]
 
         for n in candidates:
             if n in localmods:
