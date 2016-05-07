@@ -7,20 +7,38 @@
 # GNU General Public License version 2 or any later version.
 
 '''High-level command function for lfconvert, plus the cmdtable.'''
+from __future__ import absolute_import
 
-import os, errno
+import errno
+import os
 import shutil
 
-from mercurial import util, match as match_, hg, node, context, error, \
-    cmdutil, scmutil, commands
 from mercurial.i18n import _
-from mercurial.lock import release
 
-from hgext.convert import convcmd
-from hgext.convert import filemap
+from mercurial import (
+    cmdutil,
+    commands,
+    context,
+    error,
+    hg,
+    lock,
+    match as match_,
+    node,
+    scmutil,
+    util,
+)
 
-import lfutil
-import storefactory
+from ..convert import (
+    convcmd,
+    filemap,
+)
+
+from . import (
+    lfutil,
+    storefactory
+)
+
+release = lock.release
 
 # -- Commands ----------------------------------------------------------
 
