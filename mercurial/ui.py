@@ -1135,12 +1135,15 @@ class ui(object):
         '''
         return msg
 
-    def develwarn(self, msg, stacklevel=1):
+    def develwarn(self, msg, stacklevel=1, config=None):
         """issue a developer warning message
 
         Use 'stacklevel' to report the offender some layers further up in the
         stack.
         """
+        if not self.configbool('devel', 'all-warnings'):
+            if config is not None and not self.configbool('devel', config):
+                return
         msg = 'devel-warn: ' + msg
         stacklevel += 1 # get in develwarn
         if self.tracebackflag:
