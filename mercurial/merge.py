@@ -1442,9 +1442,7 @@ def update(repo, node, branchmerge, force, ancestor=None,
             pas = [repo[ancestor]]
 
         if node is None:
-            if (repo.ui.configbool('devel', 'all-warnings')
-                    or repo.ui.configbool('devel', 'oldapi')):
-                repo.ui.develwarn('update with no target')
+            repo.ui.develwarn('update with no target', 'oldapi')
             rev, _mark, _act = destutil.destupdate(repo)
             node = repo[rev].node()
 
