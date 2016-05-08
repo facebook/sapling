@@ -1169,7 +1169,7 @@ class ui(object):
             return
         msg += ("\n(compatibility will be dropped after Mercurial-%s,"
                 " update your code.)") % version
-        self.develwarn(msg, stacklevel=2)
+        self.develwarn(msg, stacklevel=2, config='deprec-warn')
 
 class paths(dict):
     """Represents a collection of paths and their configs.
