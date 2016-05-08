@@ -25,10 +25,10 @@ def checkconsistency(ui, orig, dmap, _nonnormalset, label):
     """Compute nonnormalset from dmap, check that it matches _nonnormalset"""
     nonnormalcomputedmap = nonnormalentries(dmap)
     if _nonnormalset != nonnormalcomputedmap:
-        ui.develwarn("%s call to %s\n" % (label, orig))
-        ui.develwarn("inconsistency in nonnormalset\n")
-        ui.develwarn("[nonnormalset] %s\n" % _nonnormalset)
-        ui.develwarn("[map] %s\n" % nonnormalcomputedmap)
+        ui.develwarn("%s call to %s\n" % (label, orig), config='dirstate')
+        ui.develwarn("inconsistency in nonnormalset\n", config='dirstate')
+        ui.develwarn("[nonnormalset] %s\n" % _nonnormalset, config='dirstate')
+        ui.develwarn("[map] %s\n" % nonnormalcomputedmap, config='dirstate')
 
 def _checkdirstate(orig, self, arg):
     """Check nonnormal set consistency before and after the call to orig"""
