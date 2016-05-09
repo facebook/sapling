@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 
 #include "checksum.h"
 #include "node.h"
@@ -118,6 +119,7 @@ read_from_file_result_t read_from_file(char *fname, size_t fname_sz) {
   fname_dst[fname_sz] = '\x00';
 
   read_from_file_result_t result;
+  result.err = 0;
   result.tree = NULL;
 
   FILE *fh = fopen(fname_dst, "rb");
