@@ -360,6 +360,19 @@ class RevMap(dict):
         dict.clear(self)
         self._hashes = None
 
+    def batchset(self, items):
+        '''Set items in batches
+
+        items is an array of (rev num, branch, binary hash)
+
+        For performance reason, meta.lastpulled and meta.firstpulled
+        are not updated.
+        '''
+        f = open(self.meta.revmap_file, 'a')
+        f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
+                        for revnum, br, binhash in items))
+        f.close()
+
     @classmethod
     def readmapfile(cls, path, missingok=True):
         try:
