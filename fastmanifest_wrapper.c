@@ -396,6 +396,7 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
   PyObject *emptyTuple = NULL, *ret = NULL;
   PyObject *es;
   fastmanifest_diff_context_t context;
+  context.error_occurred = false;
 
   if (!PyArg_ParseTuple(args, "O!|O", &fastmanifestType, &other, &pyclean)) {
     return NULL;
