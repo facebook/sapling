@@ -355,6 +355,11 @@ class RevMap(dict):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.iteritems()), reverse=True)
 
+    def clear(self):
+        self._write()
+        dict.clear(self)
+        self._hashes = None
+
     @classmethod
     def readmapfile(cls, path, missingok=True):
         try:
