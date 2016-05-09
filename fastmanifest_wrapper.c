@@ -47,14 +47,16 @@ static fastmanifest *ifastmanifest_copy(fastmanifest *copy, fastmanifest *self)
   return copy;
 }
 
-static void ifastmanifest_save(fastmanifest *copy, char *filename, size_t len)
+static write_to_file_result_t ifastmanifest_save(
+    fastmanifest *copy, char *filename, size_t len)
 {
-  /* TODO integration with @ttung */
+  return write_to_file(copy->tree, filename, len);
 }
 
-static void ifastmanifest_load(fastmanifest *copy, char *filename, size_t len)
+static read_from_file_result_t ifastmanifest_load(
+    char *filename, size_t len)
 {
-  /* TODO integration with @ttung */
+  return read_from_file(filename, len);
 }
 
 static get_path_result_t ifastmanifest_getitem(
@@ -227,14 +229,28 @@ static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
     return NULL;
   }
   int err = PyString_AsStringAndSize(pydata, &data, &len);
-  if (err == -1 || len < 0)
+  if (err == -1 || len < 0) {
+    PyErr_Format(PyExc_ValueError, "Illegal filepath");
     return NULL;
-  /* TODO @ttung error handling */
-  ifastmanifest_save(self, data, (size_t) len);
-	return NULL;
+  }
+  write_to_file_result_t result =
+      ifastmanifest_save(self, data, (size_t) len);
+
+  switch (result) {
+    case WRITE_TO_FILE_OK:
+      return Py_None;
+
+    case WRITE_TO_FILE_OOM:
+      PyErr_NoMemory();
+      return NULL;
+
+    default:
+      PyErr_Format(PyExc_ValueError, "Unexpected error saving manifest");
+      return NULL;
+  }
 }
 
-static PyObject *fastmanifest_load(fastmanifest *self, PyObject *args) {
+static PyObject *fastmanifest_load(PyObject *cls, PyObject *args) {
   PyObject *pydata = NULL;
   char *data;
   ssize_t len;
@@ -242,11 +258,33 @@ static PyObject *fastmanifest_load(fastmanifest *self, PyObject *args) {
     return NULL;
   }
   int err = PyString_AsStringAndSize(pydata, &data, &len);
-  if (err == -1 || len < 0)
+  if (err == -1 || len < 0) {
+    PyErr_Format(PyExc_ValueError, "Illegal filepath");
     return NULL;
-  /* TODO @ttung error handling */
-  ifastmanifest_load(self, data, (size_t) len);
-	return NULL;
+  }
+  read_from_file_result_t result = ifastmanifest_load(data, (size_t) len);
+
+  switch (result.code) {
+    case READ_FROM_FILE_OK: {
+      fastmanifest *read_manifest = PyObject_New(
+          fastmanifest, &fastmanifestType);
+      read_manifest->tree = result.tree;
+      return (PyObject *) read_manifest;
+    }
+
+    case READ_FROM_FILE_OOM:
+      PyErr_NoMemory();
+      return NULL;
+
+    case READ_FROM_FILE_NOT_READABLE:
+      errno = result.err;
+      PyErr_SetFromErrno(PyExc_IOError);
+      return NULL;
+
+    default:
+      PyErr_Format(PyExc_ValueError, "Unexpected error loading manifest");
+      return NULL;
+  }
 }
 
 static fastmanifest *fastmanifest_copy(fastmanifest *self) {
@@ -612,9 +650,9 @@ static PyMethodDef fastmanifest_methods[] = {
    "Iterate over (path, nodeid, flags) tuples in this fastmanifest."},
   {"copy", (PyCFunction)fastmanifest_copy, METH_NOARGS,
    "Make a copy of this fastmanifest."},
-  {"save", (PyCFunction)fastmanifest_save, METH_NOARGS,
+  {"save", (PyCFunction)fastmanifest_save, METH_VARARGS,
    "Save a fastmanifest to a file"},
-  {"load", (PyCFunction)fastmanifest_load, METH_NOARGS,
+  {"load", (PyCFunction)fastmanifest_load, METH_VARARGS | METH_CLASS,
    "Load a tree manifest from a file"},
   {"diff", (PyCFunction)fastmanifest_diff, METH_VARARGS,
    "Compare this fastmanifest to another one."},
