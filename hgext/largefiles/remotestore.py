@@ -14,11 +14,13 @@ urlreq = util.urlreq
 
 import lfutil
 import basestore
+import localstore
 
 class remotestore(basestore.basestore):
     '''a largefile store accessed over a network'''
     def __init__(self, ui, repo, url):
         super(remotestore, self).__init__(ui, repo, url)
+        self._lstore = localstore.localstore(self.ui, self.repo, self.repo)
 
     def put(self, source, hash):
         if self.sendfile(source, hash):
@@ -65,27 +67,42 @@ class remotestore(basestore.basestore):
 
         return lfutil.copyandhash(chunks, tmpfile)
 
+    def _hashesavailablelocally(self, hashes):
+        existslocallymap = self._lstore.exists(hashes)
+        localhashes = [hash for hash in hashes if existslocallymap[hash]]
+        return localhashes
+
     def _verifyfiles(self, contents, filestocheck):
         failed = False
         expectedhashes = [expectedhash
                           for cset, filename, expectedhash in filestocheck]
-        stats = self._stat(expectedhashes)
+        localhashes = self._hashesavailablelocally(expectedhashes)
+        stats = self._stat([expectedhash for expectedhash in expectedhashes
+                            if expectedhash not in localhashes])
+
         for cset, filename, expectedhash in filestocheck:
-            stat = stats[expectedhash]
-            if stat:
-                if stat == 1:
-                    self.ui.warn(
-                        _('changeset %s: %s: contents differ\n')
-                        % (cset, filename))
+            if expectedhash in localhashes:
+                filetocheck = (cset, filename, expectedhash)
+                verifyresult = self._lstore._verifyfiles(contents,
+                                                         [filetocheck])
+                if verifyresult:
                     failed = True
-                elif stat == 2:
-                    self.ui.warn(
-                        _('changeset %s: %s missing\n')
-                        % (cset, filename))
-                    failed = True
-                else:
-                    raise RuntimeError('verify failed: unexpected response '
-                                       'from statlfile (%r)' % stat)
+            else:
+                stat = stats[expectedhash]
+                if stat:
+                    if stat == 1:
+                        self.ui.warn(
+                            _('changeset %s: %s: contents differ\n')
+                            % (cset, filename))
+                        failed = True
+                    elif stat == 2:
+                        self.ui.warn(
+                            _('changeset %s: %s missing\n')
+                            % (cset, filename))
+                        failed = True
+                    else:
+                        raise RuntimeError('verify failed: unexpected response '
+                                           'from statlfile (%r)' % stat)
         return failed
 
     def batch(self):

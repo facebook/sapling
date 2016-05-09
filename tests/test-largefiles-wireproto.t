@@ -324,27 +324,59 @@ largefiles should batch verify remote calls
   $ hg serve -R batchverifymain -d -p $HGPORT --pid-file hg.pid \
   > -A access.log
   $ cat hg.pid >> $DAEMON_PIDS
-  $ hg clone http://localhost:$HGPORT batchverifyclone
+  $ hg clone --noupdate http://localhost:$HGPORT batchverifyclone
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  updating to branch default
-  getting changed largefiles
-  2 largefiles updated, 0 removed
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R batchverifyclone verify --large
+  $ hg -R batchverifyclone verify --large --lfa
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
   checking files
   2 files, 2 changesets, 2 total revisions
-  searching 1 changesets for largefiles
+  searching 2 changesets for largefiles
   verified existence of 2 revisions of 2 largefiles
   $ tail -1 access.log
   127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3D972a1a11f19934401291cc99117ec614933374ce%3Bstatlfile+sha%3Dc801c9cfe94400963fcb683246217d5db77f9a9a (glob)
-  $ rm access.log
+  $ hg -R batchverifyclone update
+  getting changed largefiles
+  2 largefiles updated, 0 removed
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+Clear log file before next test
+
+  $ printf "" > access.log
+
+Verify should check file on remote server only when file is not
+available locally.
+
+  $ echo "ccc" >> batchverifymain/c
+  $ hg -R batchverifymain status
+  ? c
+  $ hg -R batchverifymain add --large batchverifymain/c
+  $ hg -R batchverifymain commit -m "c"
+  Invoking status precommit hook
+  A c
+  $ hg -R batchverifyclone pull
+  pulling from http://localhost:$HGPORT/
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  (run 'hg update' to get a working copy)
+  $ hg -R batchverifyclone verify --lfa
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  3 files, 3 changesets, 3 total revisions
+  searching 3 changesets for largefiles
+  verified existence of 3 revisions of 3 largefiles
+  $ tail -1 access.log
+  127.0.0.1 - - [*] "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=statlfile+sha%3Dc8559c3c9cfb42131794b7d8009230403b9b454c (glob)
 
   $ killdaemons.py
 
