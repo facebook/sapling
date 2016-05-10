@@ -5,16 +5,24 @@
 # GNU General Public License version 2 or any later version.
 
 '''remote largefile store; the base class for wirestore'''
+from __future__ import absolute_import
 
-from mercurial import util, wireproto, error
 from mercurial.i18n import _
+
+from mercurial import (
+    error,
+    util,
+    wireproto,
+)
+
+from . import (
+    basestore,
+    lfutil,
+    localstore,
+)
 
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-import lfutil
-import basestore
-import localstore
 
 class remotestore(basestore.basestore):
     '''a largefile store accessed over a network'''
