@@ -2,17 +2,26 @@
 #
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
+from __future__ import absolute_import
 
 import os
 import re
 
-from mercurial import error, httppeer, util, wireproto
 from mercurial.i18n import _
+
+from mercurial import (
+    error,
+    httppeer,
+    util,
+    wireproto,
+)
+
+from . import (
+    lfutil,
+)
 
 urlerr = util.urlerr
 urlreq = util.urlreq
-
-import lfutil
 
 LARGEFILES_REQUIRED_MSG = ('\nThis repository uses the largefiles extension.'
                            '\n\nPlease enable it in your Mercurial config '
