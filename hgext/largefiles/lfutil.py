@@ -7,15 +7,24 @@
 # GNU General Public License version 2 or any later version.
 
 '''largefiles utility code: must not import other modules in this package.'''
+from __future__ import absolute_import
 
+import copy
 import os
 import platform
 import stat
-import copy
 
-from mercurial import dirstate, httpconnection, match as match_, util, scmutil
 from mercurial.i18n import _
-from mercurial import node, error
+
+from mercurial import (
+    dirstate,
+    error,
+    httpconnection,
+    match as match_,
+    node,
+    scmutil,
+    util,
+)
 
 shortname = '.hglf'
 shortnameslash = shortname + '/'
