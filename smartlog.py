@@ -65,15 +65,6 @@ def uisetup(ui):
             # --extra-config-opt=experimental.graphstyle.grandparent="|"
             if char == '|':
                 char = '.'
-        # Color the current commits. @ is too subtle
-        if enabled and getattr(ui, '_colormode', '') == 'ansi':
-            color = None
-            if char == "@":
-                color = "\033[35m"
-            elif char == "x":
-                color = "\033[30m\033[1m"
-            if color is not None:
-                text = [color + line + "\033[0m" for line in text]
         return orig(ui, state, type, char, text, coldata)
 
     extensions.wrapfunction(graphmod, 'ascii', ascii)
