@@ -7,14 +7,23 @@
 # GNU General Public License version 2 or any later version.
 
 '''setup for largefiles repositories: reposetup'''
+from __future__ import absolute_import
+
 import copy
 
-from mercurial import error, match as match_, error
 from mercurial.i18n import _
-from mercurial import scmutil, localrepo
 
-import lfcommands
-import lfutil
+from mercurial import (
+    error,
+    localrepo,
+    match as match_,
+    scmutil,
+)
+
+from . import (
+    lfcommands,
+    lfutil,
+)
 
 def reposetup(ui, repo):
     # wire repositories should be given new wireproto functions
