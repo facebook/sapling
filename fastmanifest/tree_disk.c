@@ -118,9 +118,7 @@ read_from_file_result_t read_from_file(char *fname, size_t fname_sz) {
   memcpy(fname_dst, fname, fname_sz);
   fname_dst[fname_sz] = '\x00';
 
-  read_from_file_result_t result;
-  result.err = 0;
-  result.tree = NULL;
+  read_from_file_result_t result = { 0 };
 
   FILE *fh = fopen(fname_dst, "rb");
   if (fh == NULL) {
