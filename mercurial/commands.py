@@ -2740,6 +2740,13 @@ def debuginstall(ui, **opts):
     fm.write('pythonlib', _("checking Python lib (%s)...\n"),
              os.path.dirname(os.__file__))
 
+    # hg version
+    hgver = util.version()
+    fm.write('hgver', _("checking Mercurial version (%s)\n"),
+             hgver.split('+')[0])
+    fm.write('hgverextra', _("checking Mercurial custom build (%s)\n"),
+             '+'.join(hgver.split('+')[1:]))
+
     # compiled modules
     fm.write('hgmodules', _("checking installed modules (%s)...\n"),
              os.path.dirname(__file__))
