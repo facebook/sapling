@@ -4,9 +4,12 @@
 # GNU General Public License version 2 or any later version.
 
 '''largefile store working over Mercurial's wire protocol'''
+from __future__ import absolute_import
 
-import lfutil
-import remotestore
+from . import (
+    lfutil,
+    remotestore,
+)
 
 class wirestore(remotestore.remotestore):
     def __init__(self, ui, repo, remote):

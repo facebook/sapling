@@ -10,7 +10,6 @@
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   hgext/highlight/__init__.py not using absolute_import
   hgext/highlight/highlight.py not using absolute_import
-  hgext/largefiles/wirestore.py not using absolute_import
   hgext/share.py not using absolute_import
   hgext/win32text.py not using absolute_import
   i18n/check-translation.py not using absolute_import
