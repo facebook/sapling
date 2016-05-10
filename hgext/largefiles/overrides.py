@@ -7,17 +7,31 @@
 # GNU General Public License version 2 or any later version.
 
 '''Overridden Mercurial commands and functions for the largefiles extension'''
+from __future__ import absolute_import
 
-import os
 import copy
+import os
 
-from mercurial import hg, util, cmdutil, scmutil, match as match_, \
-        archival, pathutil, registrar, revset, error
 from mercurial.i18n import _
 
-import lfutil
-import lfcommands
-import storefactory
+from mercurial import (
+    archival,
+    cmdutil,
+    error,
+    hg,
+    match as match_,
+    pathutil,
+    registrar,
+    revset,
+    scmutil,
+    util,
+)
+
+from . import (
+    lfcommands,
+    lfutil,
+    storefactory,
+)
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
