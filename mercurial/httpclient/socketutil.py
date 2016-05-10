@@ -122,7 +122,8 @@ else:
                 server_side=False, cert_reqs=CERT_NONE,
                 ssl_version=_PROTOCOL_SSLv23, ca_certs=None,
                 do_handshake_on_connect=True,
-                suppress_ragged_eofs=True):
+                suppress_ragged_eofs=True,
+                server_hostname=None):
         """Backport of ssl.wrap_socket from Python 2.6."""
         if cert_reqs != CERT_NONE and ca_certs:
             raise CertificateValidationUnsupported(

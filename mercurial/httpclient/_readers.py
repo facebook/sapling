@@ -33,7 +33,12 @@ have any clients outside of httpplus.
 """
 from __future__ import absolute_import
 
-import httplib
+try:
+    import httplib
+    httplib.HTTPException
+except ImportError:
+    import http.client as httplib
+
 import logging
 
 logger = logging.getLogger(__name__)

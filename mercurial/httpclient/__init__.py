@@ -41,18 +41,29 @@ from __future__ import absolute_import
 # Many functions in this file have too many arguments.
 # pylint: disable=R0913
 
-import cStringIO
 import errno
-import httplib
+import inspect
 import logging
 import rfc822
 import select
 import socket
 
+try:
+    import cStringIO as io
+    io.StringIO
+except ImportError:
+    import io
+
+try:
+    import httplib
+    httplib.HTTPException
+except ImportError:
+    import http.client as httplib
+
 from . import (
     _readers,
     socketutil,
-    )
+)
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +253,7 @@ class HTTPResponse(object):
         self.status = int(self.status)
         if self._eol != EOL:
             hdrs = hdrs.replace(self._eol, '\r\n')
-        headers = rfc822.Message(cStringIO.StringIO(hdrs))
+        headers = rfc822.Message(io.StringIO(hdrs))
         content_len = None
         if HDR_CONTENT_LENGTH in headers:
             content_len = int(headers[HDR_CONTENT_LENGTH])
@@ -296,6 +307,46 @@ def _foldheaders(headers):
     """
     return dict((k.lower(), (k, v)) for k, v in headers.iteritems())
 
+try:
+    inspect.signature
+    def _handlesarg(func, arg):
+        """ Try to determine if func accepts arg
+
+        If it takes arg, return True
+        If it happens to take **args, then it could do anything:
+            * It could throw a different TypeError, just for fun
+            * It could throw an ArgumentError or anything else
+            * It could choose not to throw an Exception at all
+        ... return 'unknown'
+
+        Otherwise, return False
+        """
+        params = inspect.signature(func).parameters
+        if arg in params:
+            return True
+        for p in params:
+            if params[p].kind == inspect._ParameterKind.VAR_KEYWORD:
+                return 'unknown'
+        return False
+except AttributeError:
+    def _handlesarg(func, arg):
+        """ Try to determine if func accepts arg
+
+        If it takes arg, return True
+        If it happens to take **args, then it could do anything:
+            * It could throw a different TypeError, just for fun
+            * It could throw an ArgumentError or anything else
+            * It could choose not to throw an Exception at all
+        ... return 'unknown'
+
+        Otherwise, return False
+        """
+        spec = inspect.getargspec(func)
+        if arg in spec.args:
+            return True
+        if spec.keywords:
+            return 'unknown'
+        return False
 
 class HTTPConnection(object):
     """Connection to a single http server.
@@ -346,9 +397,31 @@ class HTTPConnection(object):
             if '[' in host:
                 host = host[1:-1]
         if ssl_wrap_socket is not None:
-            self._ssl_wrap_socket = ssl_wrap_socket
+            _wrap_socket = ssl_wrap_socket
         else:
-            self._ssl_wrap_socket = socketutil.wrap_socket
+            _wrap_socket = socketutil.wrap_socket
+        call_wrap_socket = None
+        handlesubar = _handlesarg(_wrap_socket, 'server_hostname')
+        if handlesubar is True:
+            # supports server_hostname
+            call_wrap_socket = _wrap_socket
+        handlesnobar = _handlesarg(_wrap_socket, 'serverhostname')
+        if handlesnobar is True and handlesubar is not True:
+            # supports serverhostname
+            def call_wrap_socket(sock, server_hostname=None, **ssl_opts):
+                return _wrap_socket(sock, serverhostname=server_hostname,
+                                    **ssl_opts)
+        if handlesubar is False and handlesnobar is False:
+            # does not support either
+            def call_wrap_socket(sock, server_hostname=None, **ssl_opts):
+                return _wrap_socket(sock, **ssl_opts)
+        if call_wrap_socket is None:
+            # we assume it takes **args
+            def call_wrap_socket(sock, **ssl_opts):
+                if 'server_hostname' in ssl_opts:
+                    ssl_opts['serverhostname'] = ssl_opts['server_hostname']
+                return _wrap_socket(sock, **ssl_opts)
+        self._ssl_wrap_socket = call_wrap_socket
         if use_ssl is None and port is None:
             use_ssl = False
             port = 80
@@ -429,7 +502,8 @@ class HTTPConnection(object):
             sock.setblocking(1)
             logger.debug('wrapping socket for ssl with options %r',
                          self.ssl_opts)
-            sock = self._ssl_wrap_socket(sock, **self.ssl_opts)
+            sock = self._ssl_wrap_socket(sock, server_hostname=self.host,
+                                         **self.ssl_opts)
             if self._ssl_validator:
                 self._ssl_validator(sock)
         sock.setblocking(0)
