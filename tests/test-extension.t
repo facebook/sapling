@@ -958,7 +958,7 @@ Ability to point to a different point
   ** Extensions loaded: throw, older
 
 Declare the version as supporting this hg version, show regular bts link:
-  $ hgver=`$PYTHON -c 'from mercurial import util; print util.version().split("+")[0]'`
+  $ hgver=`hg debuginstall -T '{hgver}'`
   $ echo 'testedwith = """'"$hgver"'"""' >> throw.py
   $ if [ -z "$hgver" ]; then
   >   echo "unable to fetch a mercurial version. Make sure __version__ is correct";
