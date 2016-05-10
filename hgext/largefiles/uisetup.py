@@ -7,14 +7,36 @@
 # GNU General Public License version 2 or any later version.
 
 '''setup for largefiles extension: uisetup'''
+from __future__ import absolute_import
 
-from mercurial import archival, cmdutil, commands, extensions, filemerge, hg, \
-    httppeer, merge, scmutil, sshpeer, wireproto, subrepo, copies, exchange
 from mercurial.i18n import _
-from mercurial.hgweb import hgweb_mod, webcommands
 
-import overrides
-import proto
+from mercurial.hgweb import (
+    hgweb_mod,
+    webcommands,
+)
+
+from mercurial import (
+    archival,
+    cmdutil,
+    commands,
+    copies,
+    exchange,
+    extensions,
+    filemerge,
+    hg,
+    httppeer,
+    merge,
+    scmutil,
+    sshpeer,
+    subrepo,
+    wireproto,
+)
+
+from . import (
+    overrides,
+    proto,
+)
 
 def uisetup(ui):
     # Disable auto-status for some commands which assume that all
