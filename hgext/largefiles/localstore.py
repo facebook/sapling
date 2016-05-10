@@ -7,11 +7,14 @@
 # GNU General Public License version 2 or any later version.
 
 '''store class for local filesystem'''
+from __future__ import absolute_import
 
 from mercurial.i18n import _
 
-import lfutil
-import basestore
+from . import (
+    basestore,
+    lfutil,
+)
 
 class localstore(basestore.basestore):
     '''localstore first attempts to grab files out of the store in the remote

@@ -10,7 +10,6 @@
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
   hgext/highlight/__init__.py not using absolute_import
   hgext/highlight/highlight.py not using absolute_import
-  hgext/largefiles/localstore.py not using absolute_import
   hgext/largefiles/overrides.py not using absolute_import
   hgext/largefiles/proto.py not using absolute_import
   hgext/largefiles/remotestore.py not using absolute_import
