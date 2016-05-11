@@ -121,8 +121,6 @@ def uisetup(ui):
     # Reorder incoming revs to be in linkrev order
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
 
-    # Write SQL bookmarks at the same time as local bookmarks
-    wrapfunction(bookmarks.bmstore, 'write', bookmarkwrite)
 
 def extsetup(ui):
     if ui.configbool('hgsql', 'enabled'):
@@ -1389,31 +1387,6 @@ def bookmarkcommand(orig, ui, repo, *names, **opts):
         return executewithsql(repo, _bookmarkcommand, True)
     else:
         return _bookmarkcommand()
-
-def bookmarkwrite(orig, self):
-    repo = self._repo
-    if not issqlrepo(repo) or repo.disablesync:
-        return orig(self)
-
-    if not repo.sqlconn:
-        raise util.Abort("attempted bookmark write without sql connection")
-    elif not repo.hassqllock(writelock):
-        raise util.Abort("attempted bookmark write without write lock")
-
-    try:
-        cursor = repo.sqlcursor
-        cursor.execute("""DELETE FROM revision_references WHERE repo = %s AND
-                       namespace = 'bookmarks'""", (repo.sqlreponame,))
-
-        for k, v in self.iteritems():
-            cursor.execute("""INSERT INTO revision_references(repo, namespace, name, value)
-                           VALUES(%s, 'bookmarks', %s, %s)""",
-                           (repo.sqlreponame, k, hex(v)))
-        repo.sqlconn.commit()
-        return orig(self)
-    except:
-        repo.sqlconn.rollback()
-        raise
 
 def pushkey(orig, repo, proto, namespace, key, old, new):
     if issqlrepo(repo):
