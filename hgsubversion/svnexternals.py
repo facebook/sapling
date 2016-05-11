@@ -457,10 +457,17 @@ def parse(ui, ctx):
         raise hgutil.Abort(_('unknown externals modes: %s') % mode)
     return external
 
+_notset = object()
+
 class svnsubrepo(subrepo.svnsubrepo):
-    def __init__(self, ctx, path, state):
+    def __init__(self, ctx, path, state, allowcreate=_notset):
         state = (state[0].split(':', 1)[1], state[1])
-        super(svnsubrepo, self).__init__(ctx, path, state)
+        if allowcreate is _notset:
+            # Mercurial 3.7 and earlier
+            super(svnsubrepo, self).__init__(ctx, path, state)
+        else:
+            # Mercurial 3.8 and later
+            super(svnsubrepo, self).__init__(ctx, path, state, allowcreate)
         # Mercurial 3.3+ set 'ui' rather than '_ui' -- set that and use 'ui'
         # everywhere to maintain compatibility across versions
         if not hgutil.safehasattr(self, 'ui'):

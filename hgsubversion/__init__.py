@@ -15,7 +15,7 @@ details.
 For more information and instructions, see :hg:`help subversion`.
 '''
 
-testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3 3.4 3.5 3.6 3.7'
+testedwith = '2.8.2 3.0.1 3.1 3.2.2 3.3 3.4 3.5 3.6 3.7 3.8'
 
 import os
 import sys
@@ -42,7 +42,6 @@ demandimport.ignore.extend([
     'svn.ra',
     ])
 
-from mercurial import templatekw
 from mercurial import revset
 from mercurial import subrepo
 
@@ -51,6 +50,7 @@ import util
 import svnrepo
 import wrappers
 import svnexternals
+import compathacks
 
 svnopts = [
     ('', 'stupid', None,
@@ -165,8 +165,6 @@ def extsetup(ui):
 
     help.helptable.extend(entries)
 
-    templatekw.keywords.update(util.templatekeywords)
-
     revset.symbols.update(util.revsets)
 
     subrepo.types['hgsubversion'] = svnexternals.svnsubrepo
@@ -219,3 +217,74 @@ cmdtable = {
 
 # only these methods are public
 __all__ = ('cmdtable', 'reposetup', 'uisetup')
+
+# set up templatekeywords (written this way to maintain backwards compatibility
+# until we drop support for 3.7)
+try:
+    from mercurial import registrar
+    templatekeyword = registrar.templatekeyword()
+    loadkeyword = lambda registrarobj: None  # no-op
+except (ImportError, AttributeError):
+    # registrar.templatekeyword isn't available = loading by old hg
+
+    templatekeyword = compathacks._funcregistrarbase()
+    templatekeyword._docformat = ":%s: %s"
+
+    # minimum copy from templatekw.loadkeyword
+    def loadkeyword(registrarobj):
+        from mercurial import templatekw
+        for name, func in registrarobj._table.iteritems():
+            templatekw.keywords[name] = func
+
+def _templatehelper(ctx, kw):
+    '''
+    Helper function for displaying information about converted changesets.
+    '''
+    convertinfo = util.getsvnrev(ctx, '')
+
+    if not convertinfo or not convertinfo.startswith('svn:'):
+        return ''
+
+    if kw == 'svnuuid':
+        return convertinfo[4:40]
+    elif kw == 'svnpath':
+        return convertinfo[40:].rsplit('@', 1)[0]
+    elif kw == 'svnrev':
+        return convertinfo[40:].rsplit('@', 1)[-1]
+    else:
+        raise hgutil.Abort('unrecognized hgsubversion keyword %s' % kw)
+
+@templatekeyword('svnrev')
+def svnrevkw(**args):
+    """:svnrev: String. Converted subversion revision number."""
+    return _templatehelper(args['ctx'], 'svnrev')
+
+@templatekeyword('svnpath')
+def svnpathkw(**args):
+    """:svnpath: String. Converted subversion revision project path."""
+    return _templatehelper(args['ctx'], 'svnpath')
+
+@templatekeyword('svnuuid')
+def svnuuidkw(**args):
+    """:svnuuid: String. Converted subversion revision repository identifier."""
+    return _templatehelper(args['ctx'], 'svnuuid')
+
+def listsvnkeys(repo):
+    keys = {}
+    repo = repo.local()
+    metadir = os.path.join(repo.path, 'svn')
+
+    if util.subversionmetaexists(repo.path):
+        w = repo.wlock()
+        try:
+            for key in util.pushkeyfiles:
+                fullpath = os.path.join(metadir, key)
+                if os.path.isfile(fullpath):
+                    data = open(fullpath).read()
+
+                    # Some of the files could be large, but also quite compressible
+                    keys[key] = base85.b85encode(zlib.compress(data))
+        finally:
+            w.release()
+
+    return keys
