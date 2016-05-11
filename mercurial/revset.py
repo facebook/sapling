@@ -333,7 +333,7 @@ def getset(repo, subset, x):
     # else case should not happen, because all non-func are internal,
     # ignoring for now.
     if x[0] == 'func' and x[1][0] == 'symbol' and x[1][1] in symbols:
-        repo.ui.deprecwarn('revset "%s" use list instead of smartset'
+        repo.ui.deprecwarn('revset "%s" uses list instead of smartset'
                            % x[1][1],
                            '3.9')
     return baseset(s)
