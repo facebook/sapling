@@ -37,7 +37,6 @@
 
 #if py3exe
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs $PYTHON3 contrib/check-py3-compat.py
-  contrib/check-code.py: invalid syntax: (unicode error) 'unicodeescape' codec can't decode bytes in position *-*: malformed \N character escape (<unknown>, line *) (glob)
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   hgext/automv.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
   hgext/blackbox.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
