@@ -491,12 +491,11 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     result = True
 
     try:
-        fp = open(f)
+        with open(f) as fp:
+            pre = post = fp.read()
     except IOError as e:
         print("Skipping %s, %s" % (f, str(e).split(':', 1)[0]))
         return result
-    pre = post = fp.read()
-    fp.close()
 
     for name, match, magic, filters, pats in checks:
         if debug:
