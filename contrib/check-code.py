@@ -26,6 +26,11 @@ import optparse
 import os
 import re
 import sys
+if sys.version_info[0] < 3:
+    opentext = open
+else:
+    def opentext(f):
+        return open(f, encoding='ascii')
 try:
     xrange
 except NameError:
@@ -491,8 +496,12 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
     result = True
 
     try:
-        with open(f) as fp:
-            pre = post = fp.read()
+        with opentext(f) as fp:
+            try:
+                pre = post = fp.read()
+            except UnicodeDecodeError as e:
+                print("%s while reading %s" % (e, f))
+                return result
     except IOError as e:
         print("Skipping %s, %s" % (f, str(e).split(':', 1)[0]))
         return result
