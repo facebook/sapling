@@ -2,10 +2,7 @@ This file tests the behavior of run-tests.py itself.
 
 Avoid interference from actual test env:
 
-  $ unset HGTEST_JOBS
-  $ unset HGTEST_TIMEOUT
-  $ unset HGTEST_PORT
-  $ unset HGTEST_SHELL
+  $ . "$TESTDIR/helper-runtests.sh"
 
 Smoke test with install
 ============
