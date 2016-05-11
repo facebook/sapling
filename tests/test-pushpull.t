@@ -141,7 +141,7 @@
   > python "$(which hg-ssh)" --read-only "$TESTTMP/master"
   > EOF
 
-  $ hg -R master --config extensions.hgsql=! strip -r tip
+  $ hg -R master --config hgsql.bypass=True strip -r tip
   saved backup bundle to $TESTTMP/master/.hg/strip-backup/2fbb8bb2b903-cf7ff44e-backup.hg (glob)
   $ hg -R client pull --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/master"
   pulling from ssh://user@dummy/$TESTTMP/master
@@ -160,7 +160,7 @@
   > EOF
   $ hg log -r tip -T '{rev}\n'
   5
-  $ hg strip -q -r tip --config extensions.hgsql=! --config hooks.pretxnclose.abort=
+  $ hg strip -q -r tip --config hgsql.bypass=True --config hooks.pretxnclose.abort=
 
 # Verify hooks still run, even after sync disabled them temporarily
   $ cd ../client

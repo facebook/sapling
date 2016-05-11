@@ -80,6 +80,8 @@ def cansyncwithsql(repo):
     return issqlrepo(repo) and not isinstance(repo, bundlerepo.bundlerepository)
 
 def uisetup(ui):
+    if ui.configbool("hgsql", "bypass"):
+        return
     wrapfunction(localrepo, 'newreporequirements', newreporequirements)
 
     # Enable SQL for local commands that write to the repository.
@@ -121,8 +123,10 @@ def uisetup(ui):
     # Reorder incoming revs to be in linkrev order
     wrapfunction(revlog.revlog, 'addgroup', addgroup)
 
-
 def extsetup(ui):
+    if ui.configbool("hgsql", "bypass"):
+        return
+
     if ui.configbool('hgsql', 'enabled'):
         commands.globalopts.append(
                 ('', 'forcesync', False,
@@ -140,6 +144,9 @@ def extsetup(ui):
         initialsync = INITIAL_SYNC_FORCE
 
 def reposetup(ui, repo):
+    if ui.configbool("hgsql", "bypass"):
+        return
+
     if issqlrepo(repo):
         wraprepo(repo)
 
