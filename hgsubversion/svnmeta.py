@@ -221,7 +221,7 @@ class SVNMeta(object):
 
     @property
     def editor(self):
-        if not hasattr(self, '_editor'):
+        if not hgutil.safehasattr(self, '_editor'):
             self._editor = editor.HgEditor(self)
         return self._editor
 

@@ -488,7 +488,7 @@ class svnsubrepo(subrepo.svnsubrepo):
     def dirty(self, ignoreupdate=False):
         # You cannot compare anything with HEAD. Just accept it
         # can be anything.
-        if hasattr(self, '_wcrevs'):
+        if hgutil.safehasattr(self, '_wcrevs'):
             wcrevs = self._wcrevs()
         else:
             wcrev = self._wcrev()

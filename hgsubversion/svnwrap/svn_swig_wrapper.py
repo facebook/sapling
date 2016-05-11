@@ -170,7 +170,7 @@ def _create_auth_baton(pool, password_stores):
                     providers.append(p)
     else:
         for p in platform_specific:
-            if hasattr(core, p):
+            if getattr(core, p, None) is not None:
                 try:
                     providers.append(getattr(core, p)())
                 except RuntimeError:
