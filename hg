@@ -28,9 +28,9 @@ if libdir != '@' 'LIBDIR' '@':
 
 # enable importing on demand to reduce startup time
 try:
-    from mercurial import demandimport; demandimport.enable()
+    if sys.version_info[0] < 3:
+        from mercurial import demandimport; demandimport.enable()
 except ImportError:
-    import sys
     sys.stderr.write("abort: couldn't find mercurial libraries in [%s]\n" %
                      ' '.join(sys.path))
     sys.stderr.write("(check your install and PYTHONPATH)\n")
