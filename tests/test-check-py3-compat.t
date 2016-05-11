@@ -28,7 +28,6 @@
   tests/heredoctest.py requires print_function
   tests/md5sum.py not using absolute_import
   tests/readlink.py not using absolute_import
-  tests/readlink.py requires print_function
   tests/run-tests.py not using absolute_import
   tests/svn-safe-append.py not using absolute_import
   tests/test-atomictempfile.py not using absolute_import
@@ -161,6 +160,5 @@
   mercurial/win*.py: error importing module: <ImportError> No module named 'msvcrt' (line *) (glob)
   mercurial/windows.py: error importing module: <ImportError> No module named '_winreg' (line *) (glob)
   mercurial/wireproto.py: error importing module: <SyntaxError> invalid syntax (bundle*.py, line *) (line *) (glob)
-  tests/readlink.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
 
 #endif
