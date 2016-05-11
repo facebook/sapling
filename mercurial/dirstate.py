@@ -694,9 +694,9 @@ class dirstate(object):
 
         filename = self._filename
         if tr is False: # not explicitly specified
-            self._ui.develwarn('use dirstate.write with '
+            self._ui.deprecwarn('use dirstate.write with '
                                'repo.currenttransaction()',
-                               config='check-dirstate-write')
+                               '3.9')
 
             if self._opener.lexists(self._pendingfilename):
                 # if pending file already exists, in-memory changes
