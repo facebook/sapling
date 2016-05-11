@@ -301,6 +301,8 @@ Verify that we can try other ports
   .
   # Ran 1 tests, 0 skipped, 0 warned, 0 failed.
   $ rm test-serve-inuse.t
+  $ killdaemons.py $DAEMON_PIDS
+  $ rm $DAEMON_PIDS
 
 Running In Debug Mode
 ======================
