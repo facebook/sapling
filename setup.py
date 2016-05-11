@@ -14,7 +14,10 @@ setup(
     long_description="",
     keywords='fb hg mercurial',
     license='',
-    packages=['phabricator'],
+    packages=[
+        'phabricator',
+        'sqldirstate',
+    ],
     py_modules=[
         'arcdiff',
         'backups',
