@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, platform, os, subprocess, sys
+import errno, platform, os, subprocess, sys, tempfile
 from mercurial import filelog, util
 
 def interposeclass(container, classname):
@@ -107,7 +107,7 @@ def readfile(path):
         f.close()
 
 def writefile(path, content, readonly=False):
-    dirname = os.path.dirname(path)
+    dirname, filename = os.path.split(path)
     if not os.path.exists(dirname):
         try:
             os.makedirs(dirname)
@@ -115,16 +115,31 @@ def writefile(path, content, readonly=False):
             if ex.errno != errno.EEXIST:
                 raise
 
-    # atomictempfile doesn't pick up the fact that we changed the umask, so we
-    # need to set it manually.
-    f = util.atomictempfile(path, 'w', createmode=~os.umask(0))
+    fd, temp = tempfile.mkstemp(prefix='.%s-' % filename, dir=dirname)
     try:
+        f = util.posixfile(temp, 'w')
         f.write(content)
-    finally:
         f.close()
 
-    if readonly:
-        os.chmod(path, 0o444)
+        if readonly:
+            mode = 0o444
+        else:
+            # tempfiles are created with 0o600, so we need to manually set the
+            # mode.
+            oldumask = os.umask(0)
+            # there's no way to get the umask without modifying it, so set it
+            # back
+            os.umask(oldumask)
+            mode = ~oldumask
+
+        os.chmod(temp, mode)
+        os.rename(temp, path)
+    except Exception:
+        try:
+            os.unlink(temp)
+        except OSError:
+            pass
+        raise
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find

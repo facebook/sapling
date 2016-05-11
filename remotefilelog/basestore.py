@@ -201,10 +201,6 @@ class basestore(object):
                 if os.path.exists(newfilename):
                     os.unlink(newfilename)
                 shutil.copy(filepath, newfilename)
-                # writefile creates atomictempfile, which copies
-                # access permission from file 'path', if it exists.
-                # It's better to delete it
-                os.unlink(filepath)
 
             shallowutil.writefile(filepath, data, readonly=True)
 
