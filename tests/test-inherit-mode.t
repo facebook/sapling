@@ -117,6 +117,7 @@ group can still write everything
   00660 ../push/.hg/cache/branch2-base
   00660 ../push/.hg/cache/rbc-names-v1
   00660 ../push/.hg/cache/rbc-revs-v1
+  00660 ../push/.hg/dirstate
   00660 ../push/.hg/requires
   00770 ../push/.hg/store/
   00660 ../push/.hg/store/00changelog.i

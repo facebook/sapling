@@ -1012,9 +1012,6 @@ class localrepository(object):
                 _("abandoned transaction found"),
                 hint=_("run 'hg recover' to clean up transaction"))
 
-        # make journal.dirstate contain in-memory changes at this point
-        self.dirstate.write(None)
-
         idbase = "%.40f#%f" % (random.random(), time.time())
         txnid = 'TXN:' + util.sha1(idbase).hexdigest()
         self.hook('pretxnopen', throw=True, txnname=desc, txnid=txnid)
@@ -1099,8 +1096,7 @@ class localrepository(object):
         return [(vfs, undoname(x)) for vfs, x in self._journalfiles()]
 
     def _writejournal(self, desc):
-        self.vfs.write("journal.dirstate",
-                          self.vfs.tryread("dirstate"))
+        self.dirstate.savebackup(None, prefix='journal.')
         self.vfs.write("journal.branch",
                           encoding.fromlocal(self.dirstate.branch()))
         self.vfs.write("journal.desc",
