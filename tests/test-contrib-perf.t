@@ -2,6 +2,7 @@
 
 Set vars:
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ CONTRIBDIR="$TESTDIR/../contrib"
 
 Prepare repo:

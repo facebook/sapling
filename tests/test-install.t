@@ -78,6 +78,8 @@ path variables are expanded (~ is the same as $TESTTMP)
   no problems detected
 
 #if test-repo
+  $ . "$TESTDIR/helpers-testrepo.sh"
+
   $ cat >> wixxml.py << EOF
   > import os, subprocess, sys
   > import xml.etree.ElementTree as ET

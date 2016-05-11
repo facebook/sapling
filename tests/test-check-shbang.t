@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
 
 look for python scripts that do not use /usr/bin/env

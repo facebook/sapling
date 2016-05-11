@@ -1,5 +1,6 @@
 #require test-repo pyflakes hg10
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
 
 run pyflakes on all tracked files ending in .py or without a file ending

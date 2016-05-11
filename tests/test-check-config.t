@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
 
 New errors are not allowed. Warnings are strongly discouraged.

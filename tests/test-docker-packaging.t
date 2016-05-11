@@ -1,5 +1,7 @@
 #require test-repo slow docker
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
+
 Ensure debuild doesn't run the testsuite, as that could get silly.
   $ DEB_BUILD_OPTIONS=nocheck
   $ export DEB_BUILD_OPTIONS

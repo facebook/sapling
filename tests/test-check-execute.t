@@ -1,5 +1,6 @@
 #require test-repo execbit
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "`dirname "$TESTDIR"`"
 
 look for python scripts without the execute bit

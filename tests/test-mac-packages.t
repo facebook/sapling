@@ -1,4 +1,7 @@
 #require test-repo slow osx osxpackaging
+
+  $ . "$TESTDIR/helpers-testrepo.sh"
+
   $ OUTPUTDIR=`pwd`
   $ export OUTPUTDIR
   $ KEEPMPKG=yes

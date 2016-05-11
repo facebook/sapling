@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ cd "$TESTDIR"/..
 
   $ hg files 'set:(**.py)' | sed 's|\\|/|g' | xargs python contrib/check-py3-compat.py

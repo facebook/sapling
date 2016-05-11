@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ check_code="$TESTDIR"/../contrib/check-code.py
   $ cd "$TESTDIR"/..
 

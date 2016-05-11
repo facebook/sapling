@@ -2,10 +2,7 @@
 
 Enable obsolescence to avoid the warning issue when obsmarker are found
 
-  $ cat >> $HGRCPATH << EOF
-  > [experimental]
-  > evolution=createmarkers
-  > EOF
+  $ . "$TESTDIR/helpers-testrepo.sh"
 
 Go back in the hg repo
 

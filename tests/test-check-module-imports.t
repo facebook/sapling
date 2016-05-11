@@ -1,5 +1,6 @@
 #require test-repo
 
+  $ . "$TESTDIR/helpers-testrepo.sh"
   $ import_checker="$TESTDIR"/../contrib/import-checker.py
 
 Run the doctests from the import checker, and make sure
