@@ -27,6 +27,10 @@ import os
 import re
 import sys
 try:
+    xrange
+except NameError:
+    xrange = range
+try:
     import re2
 except ImportError:
     re2 = None
