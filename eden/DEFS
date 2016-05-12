@@ -1,0 +1,4 @@
+# This file contains macros that are shared across Eden.
+
+def is_facebook_internal():
+    return read_config('codebase', 'mode') != 'public'

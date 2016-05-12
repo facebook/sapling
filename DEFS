@@ -1,0 +1,101 @@
+# Copyright (c) 2016, Facebook, Inc.
+# All rights reserved.
+#
+# This source code is licensed under the BSD-style license found in the
+# LICENSE file in the root directory of this source tree. An additional grant
+# of patent rights can be found in the PATENTS file in the same directory.
+
+# This file creates an adapter between some internal Facebook-isms and the
+# public version of Buck. Over time, this adapter should be unnecesary.
+
+def cpp_library(
+    name,
+    srcs=None,
+    headers=None,
+    deps=None,
+    external_deps=None,
+):
+    # TODO: Handle external_deps.
+    cxx_library(
+        name=name,
+        srcs=srcs,
+        headers=headers,
+        deps=normalize_deps(deps),
+        visibility=[
+            'PUBLIC',
+        ],
+    )
+
+
+def cpp_binary(
+    name,
+    output_subdir=None,
+    srcs=None,
+    deps=None,
+):
+    # TODO: Handle output_subdir.
+    cxx_binary(
+        name=name,
+        srcs=srcs,
+        deps=normalize_deps(deps),
+    )
+
+
+def cpp_unittest(
+    name,
+    srcs=None,
+    deps=None,
+    external_deps=None,
+):
+    # TODO: Handle external_deps.
+    cxx_test(
+        name=name,
+        srcs=srcs,
+        deps=normalize_deps(deps),
+    )
+
+
+original_python_binary = python_binary
+def python_binary(
+    name,
+    py_version=None,
+    srcs=None,
+    gen_srcs=None,
+    main_module=None,
+    deps=None,
+):
+    # TODO: Handle py_version and gen_srcs.
+    original_python_binary(
+        name=name,
+        srcs=srcs,
+        main_module=main_module,
+        deps=normalize_deps(deps),
+        visibility=[
+            'PUBLIC',
+        ],
+    )
+
+
+def cpp_python_extension(
+    name,
+    base_module=None,
+    srcs=None,
+    cython_args=None,
+    compiler_flags=None,
+    deps=None,
+):
+    # TODO: Decide how to implement this. It is designed to use Cython.
+    pass
+
+
+def normalize_deps(deps):
+    if deps is None:
+        return []
+    return map(normalize_dep, deps)
+
+
+def normalize_dep(dep):
+    if dep.startswith('@/'):
+        return '/' + dep[1:]
+    else:
+        return dep

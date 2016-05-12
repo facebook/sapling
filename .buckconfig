@@ -1,0 +1,12 @@
+[alias]
+  eden = //eden/fs/cli:cli
+
+[buildfile]
+  name = TARGETS
+  includes = //DEFS
+
+# This is a nonstandard .buckconfig option. This is used with read_config().
+[codebase]
+  mode = public
+
+# TODO: Add a [thrift] section with the necessary tools in the toolchain.

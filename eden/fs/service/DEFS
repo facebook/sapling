@@ -1,0 +1,38 @@
+def create_eden_fs_rules(suffix, subdir, server_srcs, server_deps):
+    cpp_binary(
+        name = "edenfs" + suffix,
+        output_subdir = subdir,
+        srcs = [
+            "main.cpp",
+        ],
+        deps = [
+            ":server" + suffix,
+            "@/eden/fs/inodes:inodes",
+            "@/eden/fs/overlay:overlay",
+        ],
+    )
+
+    cpp_library(
+        name = "server" + suffix,
+        output_subdir = subdir,
+        headers = [
+            "EdenServer.h",
+            "EdenServiceHandler.h",
+        ],
+        srcs = [
+            "EdenServer.cpp",
+            "EdenServiceHandler.cpp",
+        ] + server_srcs,
+        deps = [
+            ":thrift-cpp2",
+            "@/common/fb303/cpp:fb303",
+            "@/eden/fuse:fusell",
+            "@/eden/fs/inodes:inodes",
+            "@/folly/experimental:experimental",
+            "@/folly/init:init",
+            "@/thrift/lib/cpp2:server",
+        ] + server_deps,
+        external_deps = [
+          ("boost", None, "boost_filesystem"),
+        ],
+    )
