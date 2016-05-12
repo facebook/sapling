@@ -268,11 +268,8 @@ class manifestcache(object):
             return r
 
         # On disk cache lookup
-        try:
-            with open(self.filecachepath(key)) as f:
-                r = self.load(f.read())
-        except EnvironmentError:
-            return None
+        realfpath = self.filecachepath(key)
+        r = self.load(realfpath)
 
         # In memory cache update
         if r:
@@ -289,11 +286,17 @@ class manifestcache(object):
             self.ui.debug("skipped %s, already cached\n" % key)
         else:
             self.ui.debug("caching revision %s\n" % key)
-            fh = util.atomictempfile(self.filecachepath(key), mode="w+")
+
+            realfpath = self.filecachepath(key)
+            tmpfpath = util.mktempcopy(realfpath, True)
             try:
-                fh.write(self.dump(manifest))
+                self.dump(tmpfpath, manifest)
+                util.rename(tmpfpath, realfpath)
             finally:
-                fh.close()
+                try:
+                    os.unlink(tmpfpath)
+                except OSError:
+                    pass
 
     def prune(self, limit):
         # TODO logic to prune old entries
@@ -312,11 +315,18 @@ class flatmanifestcache(manifestcache):
     def keyprefix(self):
         return "flat"
 
-    def load(self, data):
-        return manifest.manifestdict(data)
+    def load(self, fpath):
+        try:
+            with open(fpath, "r") as f:
+                fdata = f.read()
+        except EnvironmentError:
+            return None
+        else:
+            return manifest.manifestdict(fdata)
 
-    def dump(self, manifest):
-        return manifest.text()
+    def dump(self, fpath, manifest):
+        with open(fpath, "w+") as f:
+            f.write(manifest.text())
 
 
 class fastmanifestcache(manifestcache):
@@ -330,11 +340,19 @@ class fastmanifestcache(manifestcache):
     def keyprefix(self):
         return "fast"
 
-    def load(self, data):
-        raise NotImplementedError("TODO integrate with @ttung's code")
+    def load(self, fpath):
+        try:
+            fm = fastmanifest_wrapper.fastManifest.load(fpath)
+        except EnvironmentError:
+            return None
+        else:
+            return fastmanifestdict(fm)
 
-    def dump(self, manifest):
-        raise NotImplementedError("TODO integrate with @ttung's code")
+    def dump(self, fpath, manifest):
+        # TODO: is this already a hybridmanifest/fastmanifest?  if so, we may be
+        # able to skip a frivolous conversion step.
+        fm = fastmanifest_wrapper.fastManifest(manifest.text())
+        fm.save(fpath)
 
 
 class manifestfactory(object):
