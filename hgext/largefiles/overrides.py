@@ -19,7 +19,7 @@ from mercurial import (
     cmdutil,
     error,
     hg,
-    match as match_,
+    match as matchmod,
     pathutil,
     registrar,
     revset,
@@ -113,13 +113,13 @@ def addlargefiles(ui, repo, isaddremove, matcher, **opts):
     if lfutil.islfilesrepo(repo):
         lfpats = ui.configlist(lfutil.longname, 'patterns', default=[])
         if lfpats:
-            lfmatcher = match_.match(repo.root, '', list(lfpats))
+            lfmatcher = matchmod.match(repo.root, '', list(lfpats))
 
     lfnames = []
     m = matcher
 
     wctx = repo[None]
-    for f in repo.walk(match_.badmatch(m, lambda x, y: None)):
+    for f in repo.walk(matchmod.badmatch(m, lambda x, y: None)):
         exact = m.exact(f)
         lfile = lfutil.standin(f) in wctx
         nfile = f in wctx
@@ -321,7 +321,7 @@ def overridelog(orig, ui, repo, *pats, **opts):
             if pat.startswith('set:'):
                 return pat
 
-            kindpat = match_._patsplit(pat, None)
+            kindpat = matchmod._patsplit(pat, None)
 
             if kindpat[0] is not None:
                 return kindpat[0] + ':' + tostandin(kindpat[1])
@@ -640,7 +640,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
             # The patterns were previously mangled to add the standin
             # directory; we need to remove that now
             for pat in pats:
-                if match_.patkind(pat) is None and lfutil.shortname in pat:
+                if matchmod.patkind(pat) is None and lfutil.shortname in pat:
                     newpats.append(pat.replace(lfutil.shortname, ''))
                 else:
                     newpats.append(pat)
@@ -658,7 +658,7 @@ def overridecopy(orig, ui, repo, pats, opts, rename=False):
         oldmatch = installmatchfn(overridematch)
         listpats = []
         for pat in pats:
-            if match_.patkind(pat) is not None:
+            if matchmod.patkind(pat) is not None:
                 listpats.append(pat)
             else:
                 listpats.append(makestandin(pat))
@@ -991,7 +991,7 @@ def overridearchive(orig, repo, dest, node, kind, decode=True, matchfn=None,
     if subrepos:
         for subpath in sorted(ctx.substate):
             sub = ctx.workingsub(subpath)
-            submatch = match_.subdirmatcher(subpath, matchfn)
+            submatch = matchmod.subdirmatcher(subpath, matchfn)
             sub._repo.lfstatus = True
             sub.archive(archiver, prefix, submatch)
 
@@ -1039,7 +1039,7 @@ def hgsubrepoarchive(orig, repo, archiver, prefix, match=None):
 
     for subpath in sorted(ctx.substate):
         sub = ctx.workingsub(subpath)
-        submatch = match_.subdirmatcher(subpath, match)
+        submatch = matchmod.subdirmatcher(subpath, match)
         sub._repo.lfstatus = True
         sub.archive(archiver, prefix + repo._path + '/', submatch)
 
@@ -1204,7 +1204,7 @@ def scmutiladdremove(orig, repo, matcher, prefix, opts=None, dry_run=None,
         return orig(repo, matcher, prefix, opts, dry_run, similarity)
     # Get the list of missing largefiles so we can remove them
     lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-    unsure, s = lfdirstate.status(match_.always(repo.root, repo.getcwd()), [],
+    unsure, s = lfdirstate.status(matchmod.always(repo.root, repo.getcwd()), [],
                                   False, False, False)
 
     # Call into the normal remove code, but the removing of the standin, we want
@@ -1389,7 +1389,7 @@ def mergeupdate(orig, repo, node, branchmerge, force,
         # (*1) deprecated, but used internally (e.g: "rebase --collapse")
 
         lfdirstate = lfutil.openlfdirstate(repo.ui, repo)
-        unsure, s = lfdirstate.status(match_.always(repo.root,
+        unsure, s = lfdirstate.status(matchmod.always(repo.root,
                                                     repo.getcwd()),
                                       [], False, False, False)
         pctx = repo['.']
