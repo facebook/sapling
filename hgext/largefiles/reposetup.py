@@ -16,7 +16,7 @@ from mercurial.i18n import _
 from mercurial import (
     error,
     localrepo,
-    match as match_,
+    match as matchmod,
     scmutil,
 )
 
@@ -103,7 +103,7 @@ def reposetup(ui, repo):
             parentworking = working and ctx1 == self['.']
 
             if match is None:
-                match = match_.always(self.root, self.getcwd())
+                match = matchmod.always(self.root, self.getcwd())
 
             wlock = None
             try:
