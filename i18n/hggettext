@@ -20,7 +20,11 @@ Use xgettext like normal to extract strings marked as translatable and
 join the message cataloges to get the final catalog.
 """
 
-import os, sys, inspect
+from __future__ import absolute_import
+
+import inspect
+import os
+import sys
 
 
 def escape(s):
