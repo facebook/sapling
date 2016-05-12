@@ -415,7 +415,7 @@ class Translator(nodes.NodeVisitor):
         else:
             self._docinfo[name] = node.astext()
         self._docinfo_keys.append(name)
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def depart_docinfo_item(self, node):
         pass
@@ -469,7 +469,7 @@ class Translator(nodes.NodeVisitor):
 
     def visit_citation_reference(self, node):
         self.body.append('['+node.astext()+']')
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_classifier(self, node):
         pass
@@ -489,7 +489,7 @@ class Translator(nodes.NodeVisitor):
     def visit_comment(self, node,
                       sub=re.compile('-(?=-)').sub):
         self.body.append(self.comment(node.astext()))
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_contact(self, node):
         self.visit_docinfo_item(node, 'contact')
@@ -643,7 +643,7 @@ class Translator(nodes.NodeVisitor):
             name_normalized = self._field_name.lower().replace(" ","_")
             self._docinfo_names[name_normalized] = self._field_name
             self.visit_docinfo_item(node, name_normalized)
-            raise nodes.SkipNode
+            raise nodes.SkipNode()
 
     def depart_field_body(self, node):
         pass
@@ -657,7 +657,7 @@ class Translator(nodes.NodeVisitor):
     def visit_field_name(self, node):
         if self._in_docinfo:
             self._field_name = node.astext()
-            raise nodes.SkipNode
+            raise nodes.SkipNode()
         else:
             self.body.append(self.defs['field_name'][0])
 
@@ -693,7 +693,7 @@ class Translator(nodes.NodeVisitor):
 
     def visit_footnote_reference(self, node):
         self.body.append('['+self.deunicode(node.astext())+']')
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def depart_footnote_reference(self, node):
         pass
@@ -705,7 +705,7 @@ class Translator(nodes.NodeVisitor):
         pass
 
     def visit_header(self, node):
-        raise NotImplementedError, node.astext()
+        raise NotImplementedError(node.astext())
 
     def depart_header(self, node):
         pass
@@ -742,7 +742,7 @@ class Translator(nodes.NodeVisitor):
         if 'uri' in node.attributes:
             text.append(node.attributes['uri'])
         self.body.append('[image: %s]\n' % ('/'.join(text)))
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_important(self, node):
         self.visit_admonition(node, 'important')
@@ -753,7 +753,7 @@ class Translator(nodes.NodeVisitor):
         # footnote and citation
         if (isinstance(node.parent, nodes.footnote)
             or isinstance(node.parent, nodes.citation)):
-            raise nodes.SkipNode
+            raise nodes.SkipNode()
         self.document.reporter.warning('"unsupported "label"',
                 base_node=node)
         self.body.append('[')
@@ -814,7 +814,7 @@ class Translator(nodes.NodeVisitor):
         self.body.append(self.defs['literal_block'][1])
 
     def visit_meta(self, node):
-        raise NotImplementedError, node.astext()
+        raise NotImplementedError(node.astext())
 
     def depart_meta(self, node):
         pass
@@ -924,7 +924,7 @@ class Translator(nodes.NodeVisitor):
         if node.get('format') == 'manpage':
             self.body.append(node.astext() + "\n")
         # Keep non-manpage raw text out of output:
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_reference(self, node):
         """E.g. link or email address."""
@@ -963,7 +963,7 @@ class Translator(nodes.NodeVisitor):
 
     def visit_substitution_definition(self, node):
         """Internal only."""
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_substitution_reference(self, node):
         self.document.reporter.warning('"substitution_reference" not supported',
@@ -1009,7 +1009,7 @@ class Translator(nodes.NodeVisitor):
 
     def visit_target(self, node):
         # targets are in-document hyper targets, without any use for man-pages.
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_tbody(self, node):
         pass
@@ -1053,7 +1053,7 @@ class Translator(nodes.NodeVisitor):
             self._docinfo['title'] = node.astext()
             # document title for .TH
             self._docinfo['title_upper'] = node.astext().upper()
-            raise nodes.SkipNode
+            raise nodes.SkipNode()
         elif self.section_level == 1:
             self.body.append('.SH ')
             for n in node.traverse(nodes.Text):
