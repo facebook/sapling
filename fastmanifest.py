@@ -46,16 +46,19 @@ and flat manifest, asynchronously and synchronously.
 TODO handle asynchronous save
 TODO size limit handling
 """
+import array
 import os
-import fastmanifest_wrapper
 
 from mercurial import cmdutil
 from mercurial import extensions
 from mercurial import manifest
+from mercurial import mdiff
 from mercurial import revset
 from mercurial import revlog
 from mercurial import scmutil
 from mercurial import util
+
+import fastmanifest_wrapper
 
 CACHE_SUBDIR = "manifestcache"
 cmdtable = {}
@@ -153,11 +156,15 @@ class hybridmanifest(object):
         # Get the manifest most suited for the operations (flat or cached)
         # TODO return fastmanifest when suitable
         if self.debugfastmanifest:
+            if self.__cachedmanifest:
+                return self.__cachedmanifest
+
             flatmanifest = self._flatmanifest().text()
             fm = fastmanifest_wrapper.fastManifest(flatmanifest)
-
-            return fastmanifestdict(fm)
-        return self._flatmanifest()
+            self.__cachedmanifest = fastmanifestdict(fm)
+            return self.__cachedmanifest
+        r = self._flatmanifest()
+        return r
 
     # Proxy all the manifest methods to the flatmanifest except magic methods
     def __getattr__(self, name):
@@ -460,6 +467,9 @@ class fastmanifestdict(object):
     def iterkeys(self):
         return self._fm.iterkeys()
 
+    def iterentries(self):
+        return self._fm.iterentries()
+
     def keys(self):
         return list(self.iterkeys())
 
@@ -530,14 +540,14 @@ class fastmanifestdict(object):
             return self.copy()
 
         if self._filesfastpath(match):
-            m = manifestdict()
+            m = fastmanifestdict()
             lm = self._fm
             for fn in match.files():
                 if fn in lm:
                     m._fm[fn] = lm[fn]
             return m
 
-        m = manifestdict()
+        m = fastmanifestdict()
         m._fm = self._fm.filtercopy(match)
         return m
 
@@ -574,7 +584,7 @@ class fastmanifestdict(object):
             return default
 
     def copy(self):
-        c = manifestdict()
+        c = fastmanifestdict()
         c._fm = self._fm.copy()
         return c
 
@@ -609,7 +619,7 @@ class fastmanifestdict(object):
             # each line and creates the deltas
             for f, todelete in changes:
                 # bs will either be the index of the item or the insert point
-                start, end = _msearch(addbuf, f, start)
+                start, end = manifest._msearch(addbuf, f, start)
                 if not todelete:
                     h, fl = self._fm[f]
                     l = "%s\0%s%s\n" % (f, revlog.hex(h), fl)
@@ -634,7 +644,7 @@ class fastmanifestdict(object):
             if dstart is not None:
                 delta.append([dstart, dend, "".join(dline)])
             # apply the delta to the base, and get a delta for addrevision
-            deltatext, arraytext = _addlistdelta(base, delta)
+            deltatext, arraytext = manifest._addlistdelta(base, delta)
         else:
             # For large changes, it's much cheaper to just build the text and
             # diff it.
