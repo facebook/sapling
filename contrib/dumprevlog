@@ -2,8 +2,14 @@
 # Dump revlogs as raw data stream
 # $ find .hg/store/ -name "*.i" | xargs dumprevlog > repo.dump
 
+from __future__ import absolute_import
+
 import sys
-from mercurial import revlog, node, util
+from mercurial import (
+    node,
+    revlog,
+    util,
+)
 
 for fp in (sys.stdin, sys.stdout, sys.stderr):
     util.setbinary(fp)
