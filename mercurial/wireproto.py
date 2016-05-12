@@ -231,17 +231,19 @@ class wirepeer(peer.peerrepository):
                             for k, v in argsdict.iteritems())
             cmds.append('%s %s' % (op, args))
         rsp = self._callstream("batch", cmds=';'.join(cmds))
-        # TODO this response parsing is probably suboptimal for large
-        # batches with large responses.
-        work = rsp.read(1024)
-        chunk = work
+        chunk = rsp.read(1024)
+        work = [chunk]
         while chunk:
-            while ';' in work:
-                one, work = work.split(';', 1)
+            while ';' not in chunk and chunk:
+                chunk = rsp.read(1024)
+                work.append(chunk)
+            merged = ''.join(work)
+            while ';' in merged:
+                one, merged = merged.split(';', 1)
                 yield unescapearg(one)
             chunk = rsp.read(1024)
-            work += chunk
-        yield unescapearg(work)
+            work = [merged, chunk]
+        yield unescapearg(''.join(work))
 
     def _submitone(self, op, args):
         return self._call(op, **args)
