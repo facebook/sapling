@@ -838,6 +838,41 @@ strip backup content
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD
   
+Check that the phase cache is properly invalidated after a strip with bookmark.
+
+  $ cat > ../stripstalephasecache.py << EOF
+  > from mercurial import extensions, localrepo
+  > def transactioncallback(orig, repo, desc, *args, **kwargs):
+  >     def test(transaction):
+  >         # observe cache inconsistency
+  >         try:
+  >             [repo.changelog.node(r) for r in repo.revs("not public()")]
+  >         except IndexError:
+  >             repo.ui.status("Index error!\n")
+  >     transaction = orig(repo, desc, *args, **kwargs)
+  >     # warm up the phase cache
+  >     list(repo.revs("not public()"))
+  >     if desc != 'strip':
+  >          transaction.addpostclose("phase invalidation test", test)
+  >     return transaction
+  > def extsetup(ui):
+  >     extensions.wrapfunction(localrepo.localrepository, "transaction",
+  >                             transactioncallback)
+  > EOF
+  $ hg up -C 2
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ echo k > k
+  $ hg add k
+  $ hg commit -m commitK
+  $ echo l > l
+  $ hg add l
+  $ hg commit -m commitL
+  $ hg book -r tip blah
+  $ hg strip ".^" --config extensions.crash=$TESTTMP/stripstalephasecache.py
+  0 files updated, 0 files merged, 2 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/issue4736/.hg/strip-backup/8f0b4384875c-4fa10deb-backup.hg (glob)
+  $ hg up -C 1
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 Error during post-close callback of the strip transaction
 (They should be gracefully handled and reported)

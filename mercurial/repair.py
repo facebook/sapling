@@ -194,6 +194,7 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             if not repo.ui.verbose:
                 repo.ui.popbuffer()
             f.close()
+        repo._phasecache.invalidate()
 
         for m in updatebm:
             bm[m] = repo[newbmtarget].node()
