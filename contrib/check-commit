@@ -15,7 +15,11 @@
 #
 # See also: https://mercurial-scm.org/wiki/ContributingChanges
 
-import re, sys, os
+from __future__ import absolute_import
+
+import os
+import re
+import sys
 
 commitheader = r"^(?:# [^\n]*\n)*"
 afterheader = commitheader + r"(?!#)"
