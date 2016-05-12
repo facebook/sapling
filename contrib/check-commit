@@ -15,7 +15,7 @@
 #
 # See also: https://mercurial-scm.org/wiki/ContributingChanges
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import os
 import re
@@ -73,9 +73,9 @@ def checkcommit(commit, node=None):
                     break
                 if not printed:
                     printed = True
-                    print "node: %s" % node
-                print "%d: %s" % (n, msg)
-                print " %s" % nonempty(l, last)[:-1]
+                    print("node: %s" % node)
+                print("%d: %s" % (n, msg))
+                print(" %s" % nonempty(l, last)[:-1])
                 if "BYPASS" not in os.environ:
                     exitcode = 1
                 del hits[0]
