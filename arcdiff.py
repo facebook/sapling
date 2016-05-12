@@ -26,46 +26,22 @@ def extsetup(ui):
     options.append(('', 'since-last-arc-diff', None,
         _('show changes since last `arc diff`')))
 
-def _callconduit(ui, command, params):
+def _differentialhash(ui, repo, phabrev):
+    client = conduit.Client()
     try:
-        return conduit.call_conduit(command, params)
+        client.apply_arcconfig(arcconfig.load_for_path(repo.root))
+
+        diffid = diffprops.getcurrentdiffidforrev(client, phabrev)
+        if diffid is None:
+            return None
+
+        localcommits = diffprops.getlocalcommitfordiffid(client, diffid)
+        return localcommits.get('commit', None) if localcommits else None
     except conduit.ClientError as e:
         ui.warn(_('Error calling conduit: %s\n') % str(e))
         return None
     except arcconfig.ArcConfigError as e:
         raise error.Abort(str(e))
-
-def _getlastdiff(ui, phabrev):
-    res = _callconduit(ui, 'differential.query', {'ids': [phabrev]})
-    if res is None:
-        return None
-
-    info = res[0]
-    if info is None:
-        return None
-
-    diffs = info.get('diffs', [])
-    if not diffs:
-        return None
-
-    return max(diffs)
-
-def _differentialhash(ui, phabrev):
-    id = _getlastdiff(ui, phabrev)
-    if id is None:
-        return None
-
-    res = _callconduit(ui, 'differential.getdiffproperties', {
-                       'diff_id': id,
-                       'names': ['local:commits']})
-    if not res:
-        return None
-
-    localcommits = res.get('local:commits', {})
-    if not localcommits:
-        return None
-
-    return list(localcommits.keys())[0]
 
 def _diff(orig, ui, repo, *pats, **opts):
     if not opts.get('since_last_arc_diff'):
@@ -78,7 +54,7 @@ def _diff(orig, ui, repo, *pats, **opts):
         mess = _('local commit is not associated with a differential revision')
         raise error.Abort(mess)
 
-    rev = _differentialhash(ui, phabrev)
+    rev = _differentialhash(ui, repo, phabrev)
     if rev is None:
         mess = _('unable to determine previous commit hash')
         raise error.Abort(mess)
