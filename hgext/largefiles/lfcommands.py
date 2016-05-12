@@ -22,7 +22,7 @@ from mercurial import (
     error,
     hg,
     lock,
-    match as match_,
+    match as matchmod,
     node,
     scmutil,
     util,
@@ -110,7 +110,7 @@ def lfconvert(ui, src, dest, *pats, **opts):
             if not pats:
                 pats = ui.configlist(lfutil.longname, 'patterns', default=[])
             if pats:
-                matcher = match_.match(rsrc.root, '', list(pats))
+                matcher = matchmod.match(rsrc.root, '', list(pats))
             else:
                 matcher = None
 
