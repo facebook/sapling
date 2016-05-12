@@ -31,9 +31,9 @@ Check diagnosis, debugging information
   $ cat > $TESTTMP/summary.py << EOM
   > import sys
   > def summary(cached,accessed):
-  >     accessed = open(accessed).readlines()[0]
+  >     accessed = [line.strip() for line in open(accessed).readlines()]
   >     cached = open(cached).readlines()[0]
-  >     accessedset = set(accessed.strip().split(' '))
+  >     accessedset = set(accessed)
   >     cachedset = set(cached.strip().split(' '))
   >     print '================================================='
   >     print 'CACHE MISS %s' % sorted(accessedset - cachedset)
@@ -66,7 +66,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['-1']
+  CACHE HIT ['-1', '0']
   =================================================
 
   $ echo "c" > a
@@ -75,7 +75,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['1']
+  CACHE HIT ['-1', '1']
   =================================================
 
 2b) Diff
@@ -85,7 +85,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['1']
+  CACHE HIT ['1', '2']
   =================================================
 
   $ savecachedrevs
@@ -93,7 +93,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['0']
+  CACHE HIT ['0', '1']
   =================================================
 
   $ savecachedrevs
@@ -109,7 +109,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['0']
+  CACHE HIT ['0', '2']
   =================================================
 
   $ savecachedrevs
@@ -117,7 +117,7 @@ Check diagnosis, debugging information
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['0']
+  CACHE HIT ['0', '2']
   =================================================
 
 2e) Rebase
@@ -143,10 +143,11 @@ Check diagnosis, debugging information
   o  0 1f0dee641bb7258c56bd60e93edfa2405381c41e add a
   
 
+  $ savecachedrevs
   $ printaccessedrevs
   =================================================
   CACHE MISS []
-  CACHE HIT ['2']
+  CACHE HIT ['-1', '2', '3', '4', '5']
   =================================================
   $ hg rebase -r 5:: -d 4 --config extensions.rebase=
   rebasing 5:5234b99c4f1d "add e"
@@ -154,8 +155,8 @@ Check diagnosis, debugging information
   saved backup bundle to $TESTTMP/accesspattern/.hg/strip-backup/5234b99c4f1d-c2e049ad-backup.hg (glob)
   $ printaccessedrevs
   =================================================
-  CACHE MISS ['6']
-  CACHE HIT []
+  CACHE MISS ['7', '8']
+  CACHE HIT ['-1', '2', '4', '5', '6']
   =================================================
 
   $ cd ..
