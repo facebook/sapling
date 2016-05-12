@@ -25,7 +25,7 @@ _extensions = {}
 _aftercallbacks = {}
 _order = []
 _builtin = set(['hbisect', 'bookmarks', 'parentrevspec', 'progress', 'interhg',
-                'inotify'])
+                'inotify', 'hgcia'])
 
 def extensions(ui=None):
     if ui:

@@ -260,7 +260,6 @@ Test extension help:
        extdiff       command to allow external programs to compare revisions
        factotum      http authentication with factotum
        gpg           commands to sign and verify changesets
-       hgcia         hooks for integrating with the CIA.vc notification service
        hgk           browse the repository in a graphical way
        highlight     syntax highlighting for hgweb (requires Pygments)
        histedit      interactive history editing
