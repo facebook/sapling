@@ -4,11 +4,12 @@ if all features are there, non-zero otherwise. If a feature name is
 prefixed with "no-", the absence of feature is tested.
 """
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-import optparse
-import os, sys
 import hghave
+import optparse
+import os
+import sys
 
 checks = hghave.checks
 
