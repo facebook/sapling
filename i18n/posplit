@@ -5,9 +5,11 @@
 # license: MIT/X11/Expat
 #
 
+from __future__ import absolute_import
+
+import polib
 import re
 import sys
-import polib
 
 def addentry(po, entry, cache):
     e = cache.get(entry.msgid)
