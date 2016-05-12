@@ -141,8 +141,8 @@ def _preloadrevs(repo):
                 try:
                     node = getnode(r)
                     nodemap[node] = r
-                except IndexError:
-                    # Rev no longer exists
+                except (IndexError, ValueError):
+                    # Rev no longer exists or rev is out of range
                     pass
         except EnvironmentError:
             # No permission to read? No big deal
