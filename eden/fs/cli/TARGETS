@@ -1,0 +1,50 @@
+include_defs('//eden/DEFS')
+
+if is_facebook_internal():
+    edenfs_target = '@/eden/fs/service:edenfs'
+else:
+    edenfs_target = '@/eden/fs/service:edenfs-oss'
+
+python_binary(
+  name = 'cli',
+  py_version = "<3",
+  srcs = glob(['*.py'], excludes = ['__init__.py']),
+  gen_srcs = {
+    edenfs_target: 'eden-server',
+  },
+  main_module = 'eden/fs/cli/main',
+  deps = [
+    ':glue',
+    '@/eden/fs/importer/git:git',
+    '@/eden/fs/inodes:inodes',
+    '@/eden/fs/service:thrift-py',
+    '@/libfb/py:parutil',
+  ],
+)
+
+python_library(
+  name = 'glue',
+  srcs = [
+    '__init__.py',
+  ],
+  base_module = 'glue',
+  deps = [
+    ':_glue',
+  ],
+)
+
+cpp_python_extension(
+  name = '_glue',
+  base_module = 'glue',
+  srcs = [
+    '_glue.pyx',
+  ],
+  cython_args = [
+    '--cplus',
+    '-3',
+  ],
+  compiler_flags=['-fno-strict-aliasing'],
+  deps = [
+    '@/eden/fs/importer/git:git',
+  ],
+)

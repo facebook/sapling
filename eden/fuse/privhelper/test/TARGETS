@@ -1,0 +1,11 @@
+cpp_unittest(
+    name = "privhelper_test",
+    srcs = [
+        "PrivHelperTest.cpp",
+        "PrivHelperTestServer.cpp",
+    ],
+    deps = [
+      "@/eden/fuse/privhelper:privhelper",
+      "@/folly/experimental:test_util",
+    ],
+)

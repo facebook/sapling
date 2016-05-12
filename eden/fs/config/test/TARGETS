@@ -1,0 +1,12 @@
+cpp_unittest(
+  name = 'test',
+  srcs = glob(['*Test.cpp']),
+  deps = [
+    '@/eden/fs/config:config',
+    '@/eden/utils:utils',
+  ],
+  external_deps = [
+    ('boost', 'any'),
+    'gtest',
+  ],
+)

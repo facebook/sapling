@@ -1,0 +1,9 @@
+cpp_library(
+    name = "privhelper",
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
+    deps = [
+        "@/folly/io:iobuf",
+        "@/folly:folly",
+    ],
+)

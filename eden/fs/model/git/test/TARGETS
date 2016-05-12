@@ -1,0 +1,15 @@
+cpp_unittest(
+  name = 'test',
+  srcs = glob(['*Test.cpp']),
+  deps = [
+    '@/eden/fs/model:model',
+    '@/eden/fs/model/git:git',
+    '@/folly:folly',
+    '@/crypto/lib/cpp:fbcrypto-base',
+  ],
+  external_deps = [
+    'glog',
+    'gmock',
+    'gtest',
+  ],
+)

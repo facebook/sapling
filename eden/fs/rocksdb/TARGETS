@@ -1,0 +1,11 @@
+cpp_library(
+  name = 'rocksdb',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/folly:folly',
+  ],
+  external_deps = [
+    'rocksdb',
+  ],
+)

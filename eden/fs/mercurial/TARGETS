@@ -1,0 +1,9 @@
+cpp_library(
+    name="mercurial",
+    srcs=glob(['*.cpp']),
+    headers=glob(['*.h']),
+    deps=[
+        "@/folly:folly",
+        "@/eden/fuse:fusell",
+    ],
+)

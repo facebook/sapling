@@ -1,0 +1,10 @@
+cpp_unittest(
+  name = 'test',
+  srcs = glob(['*Test.cpp']),
+  deps = [
+    '@/eden/fs/model:model',
+  ],
+  external_deps = [
+    'gtest',
+  ],
+)

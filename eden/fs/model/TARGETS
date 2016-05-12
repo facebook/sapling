@@ -1,0 +1,12 @@
+cpp_library(
+  name = 'model',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/folly:folly',
+    '@/eden/utils:utils',
+  ],
+  external_deps = [
+    ('boost', 'any'),
+  ],
+)

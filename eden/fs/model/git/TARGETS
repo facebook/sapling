@@ -1,0 +1,12 @@
+cpp_library(
+  name = 'git',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/folly:folly',
+    '@/eden/fs/model:model',
+  ],
+  external_deps = [
+    ('libgit2', None, 'git2'),
+  ],
+)

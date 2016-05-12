@@ -1,0 +1,19 @@
+cpp_library(
+    name = "utils",
+    srcs = glob(['*.cpp'], excludes=['**/*Test.cpp']),
+    headers = glob(['*.h']),
+    deps = [
+        "@/folly:evicting_cache_map",
+        "@/folly:folly",
+        "@/folly/futures:futures",
+        "@/folly:subprocess",
+    ],
+)
+
+cpp_unittest(
+    name = "test_utils",
+    srcs = glob(['**/*Test.cpp']),
+    deps = [
+        ':utils'
+    ],
+)

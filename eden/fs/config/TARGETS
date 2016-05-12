@@ -1,0 +1,9 @@
+cpp_library(
+  name = 'config',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/eden/utils:utils',
+    '@/folly:folly',
+  ],
+)

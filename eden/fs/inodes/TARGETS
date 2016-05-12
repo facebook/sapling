@@ -1,0 +1,15 @@
+cpp_library(
+  name = 'inodes',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/folly:folly',
+    '@/eden/fs/model:model',
+    '@/eden/fs/overlay:overlay',
+    '@/eden/fs/store:store',
+    '@/eden/fuse:fusell',
+  ],
+  external_deps = [
+    ('boost', 'any'),
+  ],
+)

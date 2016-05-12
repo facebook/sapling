@@ -1,0 +1,63 @@
+include_defs('//eden/DEFS')
+include_defs('//eden/fs/service/DEFS')
+
+create_eden_fs_rules(
+  suffix = '-oss',
+  subdir = 'out.oss',
+  server_srcs = ['oss/EdenServer.cpp'],
+  server_deps = [],
+)
+
+thrift_library(
+  name = 'thrift',
+  thrift_args = ['--strict'],
+  thrift_srcs = {
+    'eden.thrift': ['EdenService'],
+  },
+  py_base_module = 'facebook',
+  languages = ['cpp2', 'java', 'py'],
+  deps = ['@/common/fb303/if:fb303'],
+)
+
+if is_facebook_internal():
+    include_defs('//eden/fs/service/facebook/DEFS')
+    create_eden_fs_rules(
+        suffix = '',
+        subdir = 'out.fb',
+        server_srcs = ['facebook/EdenServer.cpp'],
+        server_deps = ['@/common/services/cpp:cpp'],
+    )
+
+# JAVA BINDINGS FOR THRIFT ENDPOINT
+#
+# There are two JAR files that we expect Java clients to use:
+# 1. A JAR that defines Eden's Thrift API.
+# 2. A JAR that contains the general Java library for Thrift.
+#
+# For 1, when eden.thrift changes, run:
+#
+#     buck build //eden/fs/service:thrift#java
+#
+# Copy the resulting JAR (`buck --show-output //eden/fs/service:thrift#java`) to
+# the project where you are using Eden in Java.
+#
+# For 2, you should only have to build this once:
+#
+#    buck build //eden/fs/service:java-thrift-dependencies
+#
+# Copy the resulting JAR
+# (`buck --show-output //eden/fs/service:java-thrift-dependencies`) to any
+# project where you are using Thrift in Java. In theory, if the Java bindings
+# for Thrift change, you will have to rebuild this, but it's unclear whether
+# that code sees much activity these days. To be safe, you could always update
+# this JAR when you update the Eden JAR.
+
+# This java_binary() exists as a simple way to get //thrift/lib/java/src:thrift
+# and all of its transitive dependencies into one JAR file.
+java_binary(
+  name = 'java-thrift-dependencies',
+  deps = [
+    '//common/fb303/if:fb303#java',
+    '//thrift/lib/java/src:thrift',
+  ],
+)

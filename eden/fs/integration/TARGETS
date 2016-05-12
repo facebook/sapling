@@ -1,0 +1,12 @@
+python_unittest(
+    name='integration',
+    py_version="<3",
+    srcs=glob(['*.py']),
+    gen_srcs = {
+        '@/eden/fs/cli:cli': 'eden-cli',
+    },
+    deps=[
+      '@/libfb/py:parutil',
+      '@/eden/fs/cli:cli',
+    ],
+)

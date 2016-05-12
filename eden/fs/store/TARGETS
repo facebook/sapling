@@ -1,0 +1,14 @@
+cpp_library(
+  name = 'store',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/eden/fs/rocksdb:rocksdb',
+    '@/eden/fs/model:model',
+    '@/eden/fs/model/git:git',
+    '@/folly:folly',
+  ],
+  external_deps = [
+    'rocksdb',
+  ],
+)

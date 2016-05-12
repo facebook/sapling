@@ -1,0 +1,21 @@
+cpp_library(
+  name = 'overlay',
+  srcs = glob(['*.cpp']),
+  headers = glob(['*.h']),
+  deps = [
+    '@/folly:folly',
+    '@/eden/utils:utils',
+  ],
+  external_deps = [
+    ('boost', 'any'),
+  ],
+)
+
+cpp_unittest(
+    name = "test_overlay",
+    srcs = glob(['test/*Test.cpp']),
+    deps = [
+        ':overlay',
+        '@/folly/experimental:test_util',
+    ],
+)
