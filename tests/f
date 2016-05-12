@@ -23,7 +23,14 @@ This can be used instead of tools like:
   md5sum.py
 """
 
-import sys, os, errno, re, glob, optparse
+from __future__ import absolute_import
+
+import errno
+import glob
+import optparse
+import os
+import re
+import sys
 
 def visit(opts, filenames, outfile):
     """Process filenames in the way specified in opts, writing output to
