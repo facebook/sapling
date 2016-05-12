@@ -20,7 +20,7 @@ Use xgettext like normal to extract strings marked as translatable and
 join the message cataloges to get the final catalog.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import inspect
 import os
@@ -99,7 +99,7 @@ def docstrings(path):
     if mod.__doc__:
         src = open(path).read()
         lineno = 1 + offset(src, mod.__doc__, path, 7)
-        print poentry(path, lineno, mod.__doc__)
+        print(poentry(path, lineno, mod.__doc__))
 
     functions = list(getattr(mod, 'i18nfunctions', []))
     functions = [(f, True) for f in functions]
@@ -119,12 +119,12 @@ def docstrings(path):
             if rstrip:
                 doc = doc.rstrip()
             lineno += offset(src, doc, name, 1)
-            print poentry(path, lineno, doc)
+            print(poentry(path, lineno, doc))
 
 
 def rawtext(path):
     src = open(path).read()
-    print poentry(path, 1, src)
+    print(poentry(path, 1, src))
 
 
 if __name__ == "__main__":
