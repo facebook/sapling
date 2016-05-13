@@ -530,6 +530,17 @@ class cg1packer(object):
     def fileheader(self, fname):
         return chunkheader(len(fname)) + fname
 
+    # Extracted both for clarity and for overriding in extensions.
+    def _sortgroup(self, revlog, nodelist, lookup):
+        """Sort nodes for change group and turn them into revnums."""
+        # for generaldelta revlogs, we linearize the revs; this will both be
+        # much quicker and generate a much smaller bundle
+        if (revlog._generaldelta and self._reorder is None) or self._reorder:
+            dag = dagutil.revlogdag(revlog)
+            return dag.linearize(set(revlog.rev(n) for n in nodelist))
+        else:
+            return sorted([revlog.rev(n) for n in nodelist])
+
     def group(self, nodelist, revlog, lookup, units=None):
         """Calculate a delta group, yielding a sequence of changegroup chunks
         (strings).
@@ -549,14 +560,7 @@ class cg1packer(object):
             yield self.close()
             return
 
-        # for generaldelta revlogs, we linearize the revs; this will both be
-        # much quicker and generate a much smaller bundle
-        if (revlog._generaldelta and self._reorder is None) or self._reorder:
-            dag = dagutil.revlogdag(revlog)
-            revs = set(revlog.rev(n) for n in nodelist)
-            revs = dag.linearize(revs)
-        else:
-            revs = sorted([revlog.rev(n) for n in nodelist])
+        revs = self._sortgroup(revlog, nodelist, lookup)
 
         # add the parent of the first rev
         p = revlog.parentrevs(revs[0])[0]
