@@ -355,6 +355,11 @@ class RevMap(dict):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.iteritems()), reverse=True)
 
+    def revhashes(self, revnum):
+        for key, value in self.iteritems():
+            if key[0] == revnum:
+                yield value
+
     def clear(self):
         self._write()
         dict.clear(self)
