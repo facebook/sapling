@@ -32,14 +32,14 @@ ClientConfig::ClientConfig(
       mountPath_(mountPath),
       bindMounts_(std::move(bindMounts)) {}
 
-std::string ClientConfig::getSnapshotID() const {
+Hash ClientConfig::getSnapshotID() const {
   // Read the snapshot.
   auto snapshotFile = clientDirectory_ + kSnapshotFile;
   std::string snapshotFileContents;
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
   // Make sure to remove any leading or trailing whitespace.
   auto snapshotID = folly::trimWhitespace(snapshotFileContents);
-  return snapshotID.str();
+  return Hash{snapshotID};
 }
 
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(

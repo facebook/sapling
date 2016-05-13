@@ -7,15 +7,16 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include <boost/filesystem.hpp>
 #include <folly/FileUtil.h>
 #include <gtest/gtest.h>
-#include <boost/filesystem.hpp>
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/utils/PathFuncs.h"
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::BindMount;
 using facebook::eden::ClientConfig;
+using facebook::eden::Hash;
 using facebook::eden::RelativePath;
 
 namespace {
@@ -30,7 +31,7 @@ class ClientConfigTest : public ::testing::Test {
     boost::filesystem::create_directories(configDir_);
 
     auto snapshotPath = configDir_ / "SNAPSHOT";
-    auto snapshot = "faceb00c\n";
+    auto snapshot = "1234567812345678123456781234567812345678\n";
     folly::writeFile(folly::StringPiece{snapshot}, snapshotPath.c_str());
 
     auto configPath = configDir_ / "config.json";
@@ -54,7 +55,9 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
   auto config =
       ClientConfig::loadFromClientDirectory(AbsolutePath{configDir_.string()});
 
-  EXPECT_EQ("faceb00c", config->getSnapshotID());
+  EXPECT_EQ(
+      Hash{"1234567812345678123456781234567812345678"},
+      config->getSnapshotID());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;
@@ -78,7 +81,9 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
   auto config =
       ClientConfig::loadFromClientDirectory(AbsolutePath{configDir_.string()});
 
-  EXPECT_EQ("faceb00c", config->getSnapshotID());
+  EXPECT_EQ(
+      Hash{"1234567812345678123456781234567812345678"},
+      config->getSnapshotID());
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 
   std::vector<BindMount> expectedBindMounts;

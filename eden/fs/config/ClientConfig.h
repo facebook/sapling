@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include "eden/fs/model/Hash.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -34,7 +35,7 @@ class ClientConfig {
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
       AbsolutePathPiece clientDirectory);
 
-  std::string getSnapshotID() const;
+  Hash getSnapshotID() const;
 
   const AbsolutePath& getMountPath() const {
     return mountPath_;
