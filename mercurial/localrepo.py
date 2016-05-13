@@ -1042,13 +1042,9 @@ class localrepository(object):
                 # transaction running
                 repo.dirstate.write(None)
             else:
-                # prevent in-memory changes from being written out at
-                # the end of outer wlock scope or so
-                repo.dirstate.invalidate()
-
                 # discard all changes (including ones already written
                 # out) in this transaction
-                repo.vfs.rename('journal.dirstate', 'dirstate')
+                repo.dirstate.restorebackup(None, prefix='journal.')
 
                 repo.invalidate(clearfilecache=True)
 
@@ -1190,7 +1186,7 @@ class localrepository(object):
             # prevent dirstateguard from overwriting already restored one
             dsguard.close()
 
-            self.vfs.rename('undo.dirstate', 'dirstate')
+            self.dirstate.restorebackup(None, prefix='undo.')
             try:
                 branch = self.vfs.read('undo.branch')
                 self.dirstate.setbranch(encoding.tolocal(branch))
@@ -1199,7 +1195,6 @@ class localrepository(object):
                           'current branch is still \'%s\'\n')
                         % self.dirstate.branch())
 
-            self.dirstate.invalidate()
             parents = tuple([p.rev() for p in self[None].parents()])
             if len(parents) > 1:
                 ui.status(_('working directory now based on '
