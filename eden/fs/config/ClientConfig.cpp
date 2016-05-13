@@ -23,6 +23,7 @@ namespace eden {
 const RelativePathPiece kConfigFile{"config.json"};
 const RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const RelativePathPiece kBindMountsDir{"bind-mounts"};
+const RelativePathPiece kOverlayDir{"local"};
 
 ClientConfig::ClientConfig(
     AbsolutePathPiece clientDirectory,
@@ -40,6 +41,10 @@ Hash ClientConfig::getSnapshotID() const {
   // Make sure to remove any leading or trailing whitespace.
   auto snapshotID = folly::trimWhitespace(snapshotFileContents);
   return Hash{snapshotID};
+}
+
+AbsolutePath ClientConfig::getOverlayPath() const {
+  return clientDirectory_ + kOverlayDir;
 }
 
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(

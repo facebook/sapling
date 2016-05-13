@@ -12,10 +12,12 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include "EdenServer.h"
+#include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fuse/MountPoint.h"
+#include "eden/utils/PathFuncs.h"
 
 using std::string;
 
@@ -30,18 +32,15 @@ facebook::fb303::cpp2::fb_status EdenServiceHandler::getStatus() {
 }
 
 void EdenServiceHandler::mountImpl(const MountInfo& info) {
-  // Read the snapshot ID from the snapshot file.
-  // Note there may be trailing whitespace (generally a newline).
-  string snapshotPath = info.edenClientPath + "/SNAPSHOT";
-  std::string snapshotInHex;
-  folly::readFile(snapshotPath.c_str(), snapshotInHex, 2 * Hash::RAW_SIZE);
-  Hash snapshotID(snapshotInHex);
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePathPiece{info.edenClientPath});
+  auto snapshotID = config->getSnapshotID();
 
   auto mountPoint =
       std::make_shared<fusell::MountPoint>(AbsolutePathPiece{info.mountPoint});
 
-  string overlayPath = info.edenClientPath + "/local";
-  auto overlay = std::make_shared<Overlay>(AbsolutePathPiece{overlayPath});
+  auto overlayPath = config->getOverlayPath();
+  auto overlay = std::make_shared<Overlay>(overlayPath);
   auto objectStore = server_->getLocalStore();
 
   // Create the inode for the root of the tree using the hash contained
@@ -55,6 +54,8 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       overlay);
   mountPoint->setRootInode(rootInode);
 
+  // TODO(mbolin): Use the result of config.getBindMounts() to perform the
+  // appropriate bind mounts for the client.
   server_->mount(std::move(mountPoint));
 }
 

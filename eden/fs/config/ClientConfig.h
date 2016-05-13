@@ -41,6 +41,9 @@ class ClientConfig {
     return mountPath_;
   }
 
+  /** @return Path to the directory where overlay information is stored. */
+  AbsolutePath getOverlayPath() const;
+
   const std::vector<BindMount>& getBindMounts() const {
     return bindMounts_;
   }
