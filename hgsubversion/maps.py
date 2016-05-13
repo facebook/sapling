@@ -391,6 +391,10 @@ class RevMap(dict):
             raise hgutil.Abort('revmap too new -- please upgrade')
         return f
 
+    @classmethod
+    def exists(cls, meta):
+        return os.path.exists(meta.revmap_file)
+
     @util.gcdisable
     def _load(self):
         lastpulled = self.meta.lastpulled
