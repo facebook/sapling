@@ -19,7 +19,7 @@ where we need to shore things up are:
 * The reinterpretations of build macros in `DEFS`.
 * A process for including third-party dependencies (presumably via Git submodules) and wiring up the
 `external_deps` argument in the build macros to point to them.
-* Providing to toolchain needed to power the [undocumented] `thrift_library()` rule in Buck.
+* Providing the toolchain needed to power the [undocumented] `thrift_library()` rule in Buck.
 
 The goal is to get Eden building on both Linux and OS X, though Linux support is expected to come
 first.
