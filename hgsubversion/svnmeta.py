@@ -348,6 +348,10 @@ class SVNMeta(object):
             self._revmap = maps.RevMap(self)
         return self._revmap
 
+    @property
+    def revmapexists(self):
+        return maps.RevMap.exists(self)
+
     def fixdate(self, date):
         if date is not None:
             date = date.replace('T', ' ').replace('Z', '').split('.')[0]
