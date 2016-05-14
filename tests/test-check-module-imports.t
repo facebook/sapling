@@ -11,6 +11,7 @@ it's working correctly.
 Run additional tests for the import checker
 
   $ mkdir testpackage
+  $ touch testpackage/__init__.py
 
   $ cat > testpackage/multiple.py << EOF
   > from __future__ import absolute_import
