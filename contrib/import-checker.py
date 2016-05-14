@@ -11,8 +11,9 @@ import sys
 # Import a minimal set of stdlib modules needed for list_stdlib_modules()
 # to work when run from a virtualenv.  The modules were chosen empirically
 # so that the return value matches the return value without virtualenv.
-import BaseHTTPServer
-import zlib
+if True: # disable lexical sorting checks
+    import BaseHTTPServer
+    import zlib
 
 # Whitelist of modules that symbols can be directly imported from.
 allowsymbolimports = (
