@@ -155,8 +155,12 @@ these may expose other cycles.
 Known-bad files are excluded by -X as some of them would produce unstable
 outputs, which should be fixed later.
 
-  $ hg locate 'mercurial/**.py' 'hgext/**.py' 'tests/**.py' \
+  $ hg locate '**.py' \
   > 'tests/**.t' \
+  > -X contrib/debugshell.py \
+  > -X contrib/win32/hgwebdir_wsgi.py \
+  > -X doc/gendoc.py \
+  > -X doc/hgmanpage.py \
   > -X tests/test-hgweb-auth.py \
   > -X tests/hypothesishelpers.py \
   > -X tests/test-ctxmanager.py \
