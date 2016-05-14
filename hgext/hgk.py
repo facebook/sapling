@@ -37,6 +37,13 @@ vdiff on hovered and selected revisions.
 from __future__ import absolute_import
 
 import os
+
+from mercurial.i18n import _
+from mercurial.node import (
+    nullid,
+    nullrev,
+    short,
+)
 from mercurial import (
     cmdutil,
     commands,
@@ -44,12 +51,6 @@ from mercurial import (
     patch,
     scmutil,
 )
-from mercurial.node import (
-    nullid,
-    nullrev,
-    short,
-)
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

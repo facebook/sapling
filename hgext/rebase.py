@@ -18,6 +18,14 @@ from __future__ import absolute_import
 
 import errno
 import os
+
+from mercurial.i18n import _
+from mercurial.node import (
+    hex,
+    nullid,
+    nullrev,
+    short,
+)
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -39,13 +47,6 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.node import (
-    hex,
-    nullid,
-    nullrev,
-    short,
-)
-from mercurial.i18n import _
 
 release = lock.release
 templateopts = commands.templateopts

@@ -89,8 +89,8 @@ import os
 import re
 import tempfile
 
-from mercurial.hgweb import webcommands
 from mercurial.i18n import _
+from mercurial.hgweb import webcommands
 
 from mercurial import (
     cmdutil,

@@ -9,11 +9,11 @@ from __future__ import absolute_import
 import marshal
 import re
 
+from mercurial.i18n import _
 from mercurial import (
     error,
     util,
 )
-from mercurial.i18n import _
 
 from . import common
 

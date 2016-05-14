@@ -95,6 +95,7 @@ import os
 import stat
 import sys
 
+from mercurial.i18n import _
 from mercurial import (
     context,
     extensions,
@@ -105,7 +106,6 @@ from mercurial import (
     util,
 )
 from mercurial import match as matchmod
-from mercurial.i18n import _
 
 from . import (
     state,

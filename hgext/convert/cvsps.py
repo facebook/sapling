@@ -10,11 +10,11 @@ import cPickle as pickle
 import os
 import re
 
+from mercurial.i18n import _
 from mercurial import (
     hook,
     util,
 )
-from mercurial.i18n import _
 
 class logentry(object):
     '''Class logentry has the following attributes:

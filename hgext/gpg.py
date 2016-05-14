@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import binascii
 import os
 import tempfile
+
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
@@ -18,7 +20,6 @@ from mercurial import (
     node as hgnode,
     util,
 )
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

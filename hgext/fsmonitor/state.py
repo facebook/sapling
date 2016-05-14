@@ -12,8 +12,8 @@ import os
 import socket
 import struct
 
-from mercurial import pathutil
 from mercurial.i18n import _
+from mercurial import pathutil
 
 _version = 4
 _versionformat = ">I"

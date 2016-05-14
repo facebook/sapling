@@ -25,6 +25,8 @@ from __future__ import absolute_import
 import collections
 import errno
 import itertools
+
+from mercurial.i18n import _
 from mercurial import (
     bundle2,
     bundlerepo,
@@ -45,7 +47,6 @@ from mercurial import (
     templatefilters,
     util,
 )
-from mercurial.i18n import _
 
 from . import (
     rebase,

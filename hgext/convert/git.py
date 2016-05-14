@@ -7,12 +7,13 @@
 from __future__ import absolute_import
 
 import os
+
+from mercurial.i18n import _
 from mercurial import (
     config,
     error,
     node as nodemod,
 )
-from mercurial.i18n import _
 
 from . import (
     common,

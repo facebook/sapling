@@ -49,11 +49,11 @@ from __future__ import absolute_import
 import os
 import sys
 
+from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
 )
-from mercurial.i18n import _
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

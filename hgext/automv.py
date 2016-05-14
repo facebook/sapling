@@ -26,6 +26,7 @@ The threshold at which a file is considered a move can be set with the
 
 from __future__ import absolute_import
 
+from mercurial.i18n import _
 from mercurial import (
     commands,
     copies,
@@ -34,7 +35,6 @@ from mercurial import (
     scmutil,
     similar
 )
-from mercurial.i18n import _
 
 def extsetup(ui):
     entry = extensions.wrapcommand(

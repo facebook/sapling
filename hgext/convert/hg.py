@@ -22,6 +22,7 @@ import os
 import re
 import time
 
+from mercurial.i18n import _
 from mercurial import (
     bookmarks,
     context,
@@ -37,7 +38,6 @@ from mercurial import (
 )
 stringio = util.stringio
 
-from mercurial.i18n import _
 from . import common
 mapfile = common.mapfile
 NoRepo = common.NoRepo

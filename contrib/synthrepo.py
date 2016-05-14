@@ -45,6 +45,13 @@ import os
 import random
 import sys
 import time
+
+from mercurial.i18n import _
+from mercurial.node import (
+    nullid,
+    nullrev,
+    short,
+)
 from mercurial import (
     cmdutil,
     context,
@@ -53,12 +60,6 @@ from mercurial import (
     patch,
     scmutil,
     util,
-)
-from mercurial.i18n import _
-from mercurial.node import (
-    nullid,
-    nullrev,
-    short,
 )
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for

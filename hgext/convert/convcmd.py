@@ -10,13 +10,13 @@ import os
 import shlex
 import shutil
 
+from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
     hg,
     util,
 )
-from mercurial.i18n import _
 
 from . import (
     bzr,

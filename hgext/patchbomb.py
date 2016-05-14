@@ -71,6 +71,7 @@ import os
 import socket
 import tempfile
 
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
@@ -83,7 +84,6 @@ from mercurial import (
     util,
 )
 stringio = util.stringio
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

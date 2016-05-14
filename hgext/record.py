@@ -12,13 +12,13 @@ The feature provided by this extension has been moved into core Mercurial as
 
 from __future__ import absolute_import
 
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
     error,
     extensions,
 )
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

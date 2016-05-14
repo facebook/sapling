@@ -10,6 +10,7 @@ import sys
 import tempfile
 import xml.dom.minidom
 
+from mercurial.i18n import _
 from mercurial import (
     encoding,
     error,
@@ -17,7 +18,6 @@ from mercurial import (
     strutil,
     util,
 )
-from mercurial.i18n import _
 
 from . import common
 

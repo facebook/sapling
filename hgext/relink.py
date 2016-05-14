@@ -11,13 +11,13 @@ from __future__ import absolute_import
 import os
 import stat
 
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     error,
     hg,
     util,
 )
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

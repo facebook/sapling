@@ -9,12 +9,12 @@ import struct
 import subprocess
 import sys
 
-from mercurial import (
-    parsers,
-)
 from mercurial.node import (
     nullid,
     nullrev,
+)
+from mercurial import (
+    parsers,
 )
 
 # original python implementation

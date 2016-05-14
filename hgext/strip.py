@@ -5,6 +5,7 @@ repository. See the command help for details.
 """
 from __future__ import absolute_import
 
+from mercurial.i18n import _
 from mercurial import (
     bookmarks as bookmarksmod,
     cmdutil,
@@ -17,7 +18,6 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
 nullid = nodemod.nullid
 release = lockmod.release
 

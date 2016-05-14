@@ -14,12 +14,12 @@ import os
 import re
 import subprocess
 
+from mercurial.i18n import _
 from mercurial import (
     error,
     phases,
     util,
 )
-from mercurial.i18n import _
 
 propertycache = util.propertycache
 

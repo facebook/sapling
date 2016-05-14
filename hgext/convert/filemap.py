@@ -7,10 +7,11 @@ from __future__ import absolute_import
 
 import posixpath
 import shlex
+
+from mercurial.i18n import _
 from mercurial import (
     error,
 )
-from mercurial.i18n import _
 from . import common
 SKIPREV = common.SKIPREV
 

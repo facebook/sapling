@@ -175,6 +175,8 @@ import errno
 import os
 import pickle
 import sys
+
+from mercurial.i18n import _
 from mercurial import (
     bundle2,
     cmdutil,
@@ -194,7 +196,6 @@ from mercurial import (
     scmutil,
     util,
 )
-from mercurial.i18n import _
 
 release = lock.release
 cmdtable = {}

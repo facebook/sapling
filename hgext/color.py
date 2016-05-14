@@ -156,6 +156,8 @@ If ``pagermode`` is not defined, the ``mode`` will be used.
 from __future__ import absolute_import
 
 import os
+
+from mercurial.i18n import _
 from mercurial import (
     cmdutil,
     commands,
@@ -165,7 +167,6 @@ from mercurial import (
     ui as uimod,
     util,
 )
-from mercurial.i18n import _
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
