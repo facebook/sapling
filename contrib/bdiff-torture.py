@@ -1,7 +1,9 @@
 # Randomized torture test generation for bdiff
 
 from __future__ import absolute_import, print_function
-import random, sys
+import random
+import sys
+
 from mercurial import (
     bdiff,
     mpatch,
