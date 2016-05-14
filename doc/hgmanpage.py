@@ -57,7 +57,6 @@ try:
     import roman
 except ImportError:
     from docutils.utils import roman
-import inspect
 
 FIELD_LIST_INDENT = 7
 DEFINITION_LIST_INDENT = 7
