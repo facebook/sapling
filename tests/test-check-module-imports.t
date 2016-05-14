@@ -114,7 +114,16 @@ Run additional tests for the import checker
   > from testpackage.unsorted import foo
   > EOF
 
-  $ python "$import_checker" testpackage/*.py testpackage/subpackage/*.py
+  $ mkdir testpackage2
+  $ touch testpackage2/__init__.py
+
+  $ cat > testpackage2/latesymbolimport.py << EOF
+  > from __future__ import absolute_import
+  > from testpackage import unsorted
+  > from mercurial.node import hex
+  > EOF
+
+  $ python "$import_checker" testpackage*/*.py testpackage/subpackage/*.py
   testpackage/importalias.py:2: ui module must be "as" aliased to uimod
   testpackage/importfromalias.py:2: ui from testpackage must be "as" aliased to uimod
   testpackage/importfromrelative.py:2: import should be relative: testpackage.unsorted
@@ -132,6 +141,7 @@ Run additional tests for the import checker
   testpackage/subpackage/localimport.py:8: import should be relative: testpackage.subpackage.levelpriority
   testpackage/symbolimport.py:2: direct symbol import foo from testpackage.unsorted
   testpackage/unsorted.py:3: imports not lexically sorted: os < sys
+  testpackage2/latesymbolimport.py:3: symbol import follows non-symbol import: mercurial.node
   [1]
 
   $ cd "$TESTDIR"/..

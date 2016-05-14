@@ -370,7 +370,7 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
     * Symbols can only be imported from specific modules (see
       `allowsymbolimports`). For other modules, first import the module then
       assign the symbol to a module-level variable. In addition, these imports
-      must be performed before other relative imports. This rule only
+      must be performed before other local imports. This rule only
       applies to import statements outside of any blocks.
     * Relative imports from the standard library are not allowed.
     * Certain modules must be aliased to alternate names to avoid aliasing
@@ -381,8 +381,8 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
 
     # Whether a local/non-stdlib import has been performed.
     seenlocal = None
-    # Whether a relative, non-symbol import has been seen.
-    seennonsymbolrelative = False
+    # Whether a local/non-stdlib, non-symbol import has been seen.
+    seennonsymbollocal = False
     # The last name to be imported (for sorting).
     lastname = None
     # Relative import levels encountered so far.
@@ -468,13 +468,14 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
                     yield msg('direct symbol import %s from %s',
                               ', '.join(symbols), fullname)
 
-                if symbols and seennonsymbolrelative:
+                if symbols and seennonsymbollocal:
                     yield msg('symbol import follows non-symbol import: %s',
                               fullname)
+            if not symbols and fullname not in stdlib_modules:
+                seennonsymbollocal = True
 
             if not node.module:
                 assert node.level
-                seennonsymbolrelative = True
 
                 # Only allow 1 group per level.
                 if (node.level in seenlevels
