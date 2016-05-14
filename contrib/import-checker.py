@@ -456,15 +456,14 @@ def verify_modern_convention(module, root, localmods, root_col_offset=0):
 
             # Direct symbol import is only allowed from certain modules and
             # must occur before non-symbol imports.
+            found = fromlocal(node.module, node.level)
+            if found and found[2]:  # node.module is a package
+                prefix = found[0] + '.'
+                symbols = [n.name for n in node.names
+                           if not fromlocal(prefix + n.name)]
+            else:
+                symbols = [n.name for n in node.names]
             if node.module and node.col_offset == root_col_offset:
-                found = fromlocal(node.module, node.level)
-                if found and found[2]:  # node.module is a package
-                    prefix = found[0] + '.'
-                    symbols = [n.name for n in node.names
-                               if not fromlocal(prefix + n.name)]
-                else:
-                    symbols = [n.name for n in node.names]
-
                 if symbols and fullname not in allowsymbolimports:
                     yield msg('direct symbol import %s from %s',
                               ', '.join(symbols), fullname)
