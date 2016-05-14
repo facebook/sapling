@@ -1834,6 +1834,15 @@ def roots(repo, subset, x):
         return True
     return subset & s.filter(filter, condrepr='<roots>')
 
+_sortkeyfuncs = {
+    'rev': lambda c: c.rev(),
+    'branch': lambda c: c.branch(),
+    'desc': lambda c: c.description(),
+    'user': lambda c: c.user(),
+    'author': lambda c: c.user(),
+    'date': lambda c: c.date()[0],
+}
+
 @predicate('sort(set[, [-]key...])', safe=True)
 def sort(repo, subset, x):
     """Sort set by keys. The default sort order is ascending, specify a key
@@ -1872,17 +1881,9 @@ def sort(repo, subset, x):
         reverse = (k[0] == '-')
         if reverse:
             k = k[1:]
-        if k == 'rev':
-            ctxs.sort(key=lambda c: c.rev(), reverse=reverse)
-        elif k == 'branch':
-            ctxs.sort(key=lambda c: c.branch(), reverse=reverse)
-        elif k == 'desc':
-            ctxs.sort(key=lambda c: c.description(), reverse=reverse)
-        elif k in 'user author':
-            ctxs.sort(key=lambda c: c.user(), reverse=reverse)
-        elif k == 'date':
-            ctxs.sort(key=lambda c: c.date()[0], reverse=reverse)
-        else:
+        try:
+            ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
+        except KeyError:
             raise error.ParseError(_("unknown sort key %r") % fk)
     return baseset([c.rev() for c in ctxs])
 
