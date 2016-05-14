@@ -1868,28 +1868,22 @@ def sort(repo, subset, x):
     # sort() is guaranteed to be stable
     ctxs = [repo[r] for r in revs]
     for k in reversed(keys):
+        fk = k
+        reverse = (k[0] == '-')
+        if reverse:
+            k = k[1:]
         if k == 'rev':
-            ctxs.sort(key=lambda c: c.rev())
-        elif k == '-rev':
-            ctxs.sort(key=lambda c: c.rev(), reverse=True)
+            ctxs.sort(key=lambda c: c.rev(), reverse=reverse)
         elif k == 'branch':
-            ctxs.sort(key=lambda c: c.branch())
-        elif k == '-branch':
-            ctxs.sort(key=lambda c: c.branch(), reverse=True)
+            ctxs.sort(key=lambda c: c.branch(), reverse=reverse)
         elif k == 'desc':
-            ctxs.sort(key=lambda c: c.description())
-        elif k == '-desc':
-            ctxs.sort(key=lambda c: c.description(), reverse=True)
+            ctxs.sort(key=lambda c: c.description(), reverse=reverse)
         elif k in 'user author':
-            ctxs.sort(key=lambda c: c.user())
-        elif k in '-user -author':
-            ctxs.sort(key=lambda c: c.user(), reverse=True)
+            ctxs.sort(key=lambda c: c.user(), reverse=reverse)
         elif k == 'date':
-            ctxs.sort(key=lambda c: c.date()[0])
-        elif k == '-date':
-            ctxs.sort(key=lambda c: c.date()[0], reverse=True)
+            ctxs.sort(key=lambda c: c.date()[0], reverse=reverse)
         else:
-            raise error.ParseError(_("unknown sort key %r") % k)
+            raise error.ParseError(_("unknown sort key %r") % fk)
     return baseset([c.rev() for c in ctxs])
 
 @predicate('subrepo([pattern])')

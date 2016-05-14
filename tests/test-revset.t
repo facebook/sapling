@@ -962,6 +962,12 @@ test sorting two sorted collections in different orders backwards
   6
   2
 
+test invalid sort keys
+
+  $ log 'sort(all(), -invalid)'
+  hg: parse error: unknown sort key '-invalid'
+  [255]
+
   $ cd ..
 
 test sorting by multiple keys including variable-length strings
