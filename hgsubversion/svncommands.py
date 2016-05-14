@@ -64,8 +64,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
 
     youngest = 0
     startrev = 0
-    sofar = []
     branchinfo = {}
+    revmap = meta.revmap
     if partial:
         try:
             # we can't use meta.lastpulled here because we are bootstraping the
@@ -75,9 +75,8 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             youngestpath = os.path.join(meta.metapath, 'lastpulled')
             if os.path.exists(youngestpath):
                 youngest = util.load(youngestpath)
-                sofar = list(maps.RevMap.readmapfile(meta.revmap_file))
-                if sofar and len(sofar[-1].split(' ', 2)) > 1:
-                    lasthash = sofar[-1].split(' ', 2)[1]
+                lasthash = revmap.lasthash
+                if len(revmap) > 0 and lasthash:
                     startrev = repo[lasthash].rev() + 1
                     branchinfo = util.load(meta.branch_info_file)
                     foundpartialinfo = True
@@ -91,9 +90,9 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
         except AttributeError:
             ui.status('no metadata available -- doing a full rebuild\n')
 
-    revmap = open(meta.revmap_file, 'w')
-    revmap.write('%d\n' % maps.RevMap.VERSION)
-    revmap.writelines(sofar)
+    if not partial:
+        revmap.clear()
+
     last_rev = -1
     if not partial and os.path.exists(meta.tagfile):
         os.unlink(meta.tagfile)
@@ -140,6 +139,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     meta.lastpulled = youngest
     ui.progress('prepare', None, total=numrevs)
 
+    revmapbuf = []
     for rev in xrange(startrev, len(repo)):
         ui.progress('rebuild', rev-startrev, total=numrevs)
         try:
@@ -226,7 +226,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             continue
 
         branch = meta.layoutobj.localname(commitpath)
-        revmap.write('%s %s %s\n' % (revision, ctx.hex(), branch or ''))
+        revmapbuf.append((revision, branch, ctx.node()))
 
         revision = int(revision)
         if revision > last_rev:
@@ -276,6 +276,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                   int(parentrev),
                                   revision)
 
+    revmap.batchset(revmapbuf)
     ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info
