@@ -10,41 +10,32 @@
 
 from __future__ import absolute_import, print_function
 import math
+import optparse  # cannot use argparse, python 2.7 only
 import os
 import re
+import subprocess
 import sys
-from subprocess import (
-    CalledProcessError,
-    check_call,
-    PIPE,
-    Popen,
-    STDOUT,
-)
-# cannot use argparse, python 2.7 only
-from optparse import (
-    OptionParser,
-)
 
 DEFAULTVARIANTS = ['plain', 'min', 'max', 'first', 'last',
                    'reverse', 'reverse+first', 'reverse+last',
                    'sort', 'sort+first', 'sort+last']
 
 def check_output(*args, **kwargs):
-    kwargs.setdefault('stderr', PIPE)
-    kwargs.setdefault('stdout', PIPE)
-    proc = Popen(*args, **kwargs)
+    kwargs.setdefault('stderr', subprocess.PIPE)
+    kwargs.setdefault('stdout', subprocess.PIPE)
+    proc = subprocess.Popen(*args, **kwargs)
     output, error = proc.communicate()
     if proc.returncode != 0:
-        raise CalledProcessError(proc.returncode, ' '.join(args[0]))
+        raise subprocess.CalledProcessError(proc.returncode, ' '.join(args[0]))
     return output
 
 def update(rev):
     """update the repo to a revision"""
     try:
-        check_call(['hg', 'update', '--quiet', '--check', str(rev)])
+        subprocess.check_call(['hg', 'update', '--quiet', '--check', str(rev)])
         check_output(['make', 'local'],
                      stderr=None)  # suppress output except for error/warning
-    except CalledProcessError as exc:
+    except subprocess.CalledProcessError as exc:
         print('update to revision %s failed, aborting'%rev, file=sys.stderr)
         sys.exit(exc.returncode)
 
@@ -60,7 +51,7 @@ def hg(cmd, repo=None):
     fullcmd += ['--config',
                 'extensions.perf=' + os.path.join(contribdir, 'perf.py')]
     fullcmd += cmd
-    return check_output(fullcmd, stderr=STDOUT)
+    return check_output(fullcmd, stderr=subprocess.STDOUT)
 
 def perf(revset, target=None, contexts=False):
     """run benchmark for this very revset"""
@@ -70,7 +61,7 @@ def perf(revset, target=None, contexts=False):
             args.append('--contexts')
         output = hg(args, repo=target)
         return parseoutput(output)
-    except CalledProcessError as exc:
+    except subprocess.CalledProcessError as exc:
         print('abort: cannot run revset benchmark: %s'%exc.cmd, file=sys.stderr)
         if getattr(exc, 'output', None) is None: # no output before 2.7
             print('(no output)', file=sys.stderr)
@@ -103,9 +94,9 @@ def printrevision(rev):
     """print data about a revision"""
     sys.stdout.write("Revision ")
     sys.stdout.flush()
-    check_call(['hg', 'log', '--rev', str(rev), '--template',
-                '{if(tags, " ({tags})")} '
-                '{rev}:{node|short}: {desc|firstline}\n'])
+    subprocess.check_call(['hg', 'log', '--rev', str(rev), '--template',
+                           '{if(tags, " ({tags})")} '
+                           '{rev}:{node|short}: {desc|firstline}\n'])
 
 def idxwidth(nbidx):
     """return the max width of number used for index
@@ -215,7 +206,7 @@ def getrevs(spec):
     """get the list of rev matched by a revset"""
     try:
         out = check_output(['hg', 'log', '--template={rev}\n', '--rev', spec])
-    except CalledProcessError as exc:
+    except subprocess.CalledProcessError as exc:
         print("abort, can't get revision from %s"%spec, file=sys.stderr)
         sys.exit(exc.returncode)
     return [r for r in out.split() if r]
@@ -234,8 +225,8 @@ summary output is provided. Use it to demonstrate speed improvements or pin
 point regressions. Revsets to run are specified in a file (or from stdin), one
 revsets per line. Line starting with '#' will be ignored, allowing insertion of
 comments."""
-parser = OptionParser(usage="usage: %prog [options] <revs>",
-                      description=helptext)
+parser = optparse.OptionParser(usage="usage: %prog [options] <revs>",
+                               description=helptext)
 parser.add_option("-f", "--file",
                   help="read revset from FILE (stdin if omitted)",
                   metavar="FILE")
