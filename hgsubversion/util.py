@@ -320,16 +320,11 @@ def revset_fromsvn(repo, subset, x):
     rev = repo.changelog.rev
     bin = node.bin
     meta = repo.svnmeta(skiperrorcheck=True)
-    try:
-        svnrevs = set(rev(bin(l.split(' ', 2)[1]))
-                      for l in maps.RevMap.readmapfile(meta.revmap_file,
-                                                       missingok=False))
-        return filter(svnrevs.__contains__, subset)
-    except IOError, err:
-        if err.errno != errno.ENOENT:
-            raise
+    if not meta.revmapexists:
         raise hgutil.Abort("svn metadata is missing - "
                            "run 'hg svn rebuildmeta' to reconstruct it")
+    svnrevs = set(rev(h) for h in meta.revmap.hashes().keys())
+    return filter(svnrevs.__contains__, subset)
 
 def revset_svnrev(repo, subset, x):
     '''``svnrev(number)``
@@ -344,22 +339,16 @@ def revset_svnrev(repo, subset, x):
     except ValueError:
         raise error.ParseError("the argument to svnrev() must be a number")
 
-    rev = rev + ' '
-    revs = []
     meta = repo.svnmeta(skiperrorcheck=True)
-    try:
-        for l in maps.RevMap.readmapfile(meta.revmap_file, missingok=False):
-            if l.startswith(rev):
-                n = l.split(' ', 2)[1]
-                r = repo[node.bin(n)].rev()
-                if r in subset:
-                    revs.append(r)
-        return revs
-    except IOError, err:
-        if err.errno != errno.ENOENT:
-            raise
+    if not meta.revmapexists:
         raise hgutil.Abort("svn metadata is missing - "
                            "run 'hg svn rebuildmeta' to reconstruct it")
+    revs = []
+    for n in meta.revmap.revhashes(revnum):
+        r = repo[n].rev()
+        if r in subset:
+            revs.append(r)
+    return revs
 
 revsets = {
     'fromsvn': revset_fromsvn,
