@@ -551,12 +551,7 @@ class SVNMeta(object):
         """
         if (number, branch) in self.revmap:
             return number, branch
-        real_num = 0
-        for num, br in self.revmap.iterkeys():
-            if br != branch:
-                continue
-            if num <= number and num > real_num:
-                real_num = num
+        real_num = self.revmap.branchmaxrevnum(branch, number)
         if branch in self.branches:
             parent_branch = self.branches[branch][0]
             parent_branch_rev = self.branches[branch][1]
