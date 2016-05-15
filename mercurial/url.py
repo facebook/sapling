@@ -356,7 +356,7 @@ if has_https:
             self.sock = sslutil.wrapsocket(
                 self.sock, self.key_file, self.cert_file, serverhostname=host,
                 **sslutil.sslkwargs(self.ui, host))
-            sslutil.validator(self.ui, host)(self.sock)
+            sslutil.validatesocket(self.sock)
 
     class httpshandler(keepalive.KeepAliveHandler, urlreq.httpshandler):
         def __init__(self, ui):

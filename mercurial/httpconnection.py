@@ -284,6 +284,6 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
 
         con = HTTPConnection(host, port, use_ssl=True,
                              ssl_wrap_socket=sslutil.wrapsocket,
-                             ssl_validator=sslutil.validator(self.ui, host),
+                             ssl_validator=sslutil.validatesocket,
                              **kwargs)
         return con

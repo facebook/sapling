@@ -139,7 +139,7 @@ def _smtp(ui):
         s.ehlo()
     if (starttls or smtps) and verifycert:
         ui.note(_('(verifying remote certificate)\n'))
-        sslutil.validator(ui, mailhost)(s.sock, verifycert == 'strict')
+        sslutil.validatesocket(s.sock, verifycert == 'strict')
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
     if username and not password:

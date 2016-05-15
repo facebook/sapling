@@ -291,77 +291,77 @@ def sslkwargs(ui, host):
 
     return kws
 
-class validator(object):
-    def __init__(self, ui=None, host=None):
-        pass
+def validatesocket(sock, strict=False):
+    """Validate a socket meets security requiremnets.
 
-    def __call__(self, sock, strict=False):
-        host = sock._hgstate['hostname']
-        ui = sock._hgstate['ui']
+    The passed socket must have been created with ``wrapsocket()``.
+    """
+    host = sock._hgstate['hostname']
+    ui = sock._hgstate['ui']
 
-        if not sock.cipher(): # work around http://bugs.python.org/issue13721
-            raise error.Abort(_('%s ssl connection error') % host)
-        try:
-            peercert = sock.getpeercert(True)
-            peercert2 = sock.getpeercert()
-        except AttributeError:
-            raise error.Abort(_('%s ssl connection error') % host)
+    if not sock.cipher(): # work around http://bugs.python.org/issue13721
+        raise error.Abort(_('%s ssl connection error') % host)
+    try:
+        peercert = sock.getpeercert(True)
+        peercert2 = sock.getpeercert()
+    except AttributeError:
+        raise error.Abort(_('%s ssl connection error') % host)
 
-        if not peercert:
-            raise error.Abort(_('%s certificate error: '
-                               'no certificate received') % host)
+    if not peercert:
+        raise error.Abort(_('%s certificate error: '
+                           'no certificate received') % host)
 
-        # If a certificate fingerprint is pinned, use it and only it to
-        # validate the remote cert.
-        hostfingerprints = ui.configlist('hostfingerprints', host)
-        peerfingerprint = util.sha1(peercert).hexdigest()
-        nicefingerprint = ":".join([peerfingerprint[x:x + 2]
-            for x in xrange(0, len(peerfingerprint), 2)])
-        if hostfingerprints:
-            fingerprintmatch = False
-            for hostfingerprint in hostfingerprints:
-                if peerfingerprint.lower() == \
-                        hostfingerprint.replace(':', '').lower():
-                    fingerprintmatch = True
-                    break
-            if not fingerprintmatch:
-                raise error.Abort(_('certificate for %s has unexpected '
-                                   'fingerprint %s') % (host, nicefingerprint),
-                                 hint=_('check hostfingerprint configuration'))
-            ui.debug('%s certificate matched fingerprint %s\n' %
-                     (host, nicefingerprint))
-            return
+    # If a certificate fingerprint is pinned, use it and only it to
+    # validate the remote cert.
+    hostfingerprints = ui.configlist('hostfingerprints', host)
+    peerfingerprint = util.sha1(peercert).hexdigest()
+    nicefingerprint = ":".join([peerfingerprint[x:x + 2]
+        for x in xrange(0, len(peerfingerprint), 2)])
+    if hostfingerprints:
+        fingerprintmatch = False
+        for hostfingerprint in hostfingerprints:
+            if peerfingerprint.lower() == \
+                    hostfingerprint.replace(':', '').lower():
+                fingerprintmatch = True
+                break
+        if not fingerprintmatch:
+            raise error.Abort(_('certificate for %s has unexpected '
+                               'fingerprint %s') % (host, nicefingerprint),
+                             hint=_('check hostfingerprint configuration'))
+        ui.debug('%s certificate matched fingerprint %s\n' %
+                 (host, nicefingerprint))
+        return
 
-        # If insecure connections were explicitly requested via --insecure,
-        # print a warning and do no verification.
-        #
-        # It may seem odd that this is checked *after* host fingerprint pinning.
-        # This is for backwards compatibility (for now). The message is also
-        # the same as below for BC.
-        if ui.insecureconnections:
-            ui.warn(_('warning: %s certificate with fingerprint %s not '
-                      'verified (check hostfingerprints or web.cacerts '
-                      'config setting)\n') %
+    # If insecure connections were explicitly requested via --insecure,
+    # print a warning and do no verification.
+    #
+    # It may seem odd that this is checked *after* host fingerprint pinning.
+    # This is for backwards compatibility (for now). The message is also
+    # the same as below for BC.
+    if ui.insecureconnections:
+        ui.warn(_('warning: %s certificate with fingerprint %s not '
+                  'verified (check hostfingerprints or web.cacerts '
+                  'config setting)\n') %
+                (host, nicefingerprint))
+        return
+
+    if not sock._hgstate['caloaded']:
+        if strict:
+            raise error.Abort(_('%s certificate with fingerprint %s not '
+                                'verified') % (host, nicefingerprint),
+                              hint=_('check hostfingerprints or '
+                                     'web.cacerts config setting'))
+        else:
+            ui.warn(_('warning: %s certificate with fingerprint %s '
+                      'not verified (check hostfingerprints or '
+                      'web.cacerts config setting)\n') %
                     (host, nicefingerprint))
-            return
 
-        if not sock._hgstate['caloaded']:
-            if strict:
-                raise error.Abort(_('%s certificate with fingerprint %s not '
-                                    'verified') % (host, nicefingerprint),
-                                  hint=_('check hostfingerprints or '
-                                         'web.cacerts config setting'))
-            else:
-                ui.warn(_('warning: %s certificate with fingerprint %s '
-                          'not verified (check hostfingerprints or '
-                          'web.cacerts config setting)\n') %
-                        (host, nicefingerprint))
+        return
 
-            return
-
-        msg = _verifycert(peercert2, host)
-        if msg:
-            raise error.Abort(_('%s certificate error: %s') % (host, msg),
-                             hint=_('configure hostfingerprint %s or use '
-                                    '--insecure to connect insecurely') %
-                                  nicefingerprint)
+    msg = _verifycert(peercert2, host)
+    if msg:
+        raise error.Abort(_('%s certificate error: %s') % (host, msg),
+                         hint=_('configure hostfingerprint %s or use '
+                                '--insecure to connect insecurely') %
+                              nicefingerprint)
