@@ -173,6 +173,8 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
 
     sslsocket._hgstate = {
         'caloaded': caloaded,
+        'hostname': serverhostname,
+        'ui': ui,
     }
 
     return sslsocket
@@ -290,12 +292,12 @@ def sslkwargs(ui, host):
     return kws
 
 class validator(object):
-    def __init__(self, ui, host):
-        self.ui = ui
-        self.host = host
+    def __init__(self, ui=None, host=None):
+        pass
 
     def __call__(self, sock, strict=False):
-        host = self.host
+        host = sock._hgstate['hostname']
+        ui = sock._hgstate['ui']
 
         if not sock.cipher(): # work around http://bugs.python.org/issue13721
             raise error.Abort(_('%s ssl connection error') % host)
@@ -311,7 +313,7 @@ class validator(object):
 
         # If a certificate fingerprint is pinned, use it and only it to
         # validate the remote cert.
-        hostfingerprints = self.ui.configlist('hostfingerprints', host)
+        hostfingerprints = ui.configlist('hostfingerprints', host)
         peerfingerprint = util.sha1(peercert).hexdigest()
         nicefingerprint = ":".join([peerfingerprint[x:x + 2]
             for x in xrange(0, len(peerfingerprint), 2)])
@@ -326,8 +328,8 @@ class validator(object):
                 raise error.Abort(_('certificate for %s has unexpected '
                                    'fingerprint %s') % (host, nicefingerprint),
                                  hint=_('check hostfingerprint configuration'))
-            self.ui.debug('%s certificate matched fingerprint %s\n' %
-                          (host, nicefingerprint))
+            ui.debug('%s certificate matched fingerprint %s\n' %
+                     (host, nicefingerprint))
             return
 
         # If insecure connections were explicitly requested via --insecure,
@@ -336,11 +338,11 @@ class validator(object):
         # It may seem odd that this is checked *after* host fingerprint pinning.
         # This is for backwards compatibility (for now). The message is also
         # the same as below for BC.
-        if self.ui.insecureconnections:
-            self.ui.warn(_('warning: %s certificate with fingerprint %s not '
-                           'verified (check hostfingerprints or web.cacerts '
-                           'config setting)\n') %
-                         (host, nicefingerprint))
+        if ui.insecureconnections:
+            ui.warn(_('warning: %s certificate with fingerprint %s not '
+                      'verified (check hostfingerprints or web.cacerts '
+                      'config setting)\n') %
+                    (host, nicefingerprint))
             return
 
         if not sock._hgstate['caloaded']:
@@ -350,10 +352,10 @@ class validator(object):
                                   hint=_('check hostfingerprints or '
                                          'web.cacerts config setting'))
             else:
-                self.ui.warn(_('warning: %s certificate with fingerprint %s '
-                               'not verified (check hostfingerprints or '
-                               'web.cacerts config setting)\n') %
-                             (host, nicefingerprint))
+                ui.warn(_('warning: %s certificate with fingerprint %s '
+                          'not verified (check hostfingerprints or '
+                          'web.cacerts config setting)\n') %
+                        (host, nicefingerprint))
 
             return
 
