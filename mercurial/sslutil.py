@@ -299,8 +299,6 @@ def validatesocket(sock, strict=False):
     host = sock._hgstate['hostname']
     ui = sock._hgstate['ui']
 
-    if not sock.cipher(): # work around http://bugs.python.org/issue13721
-        raise error.Abort(_('%s ssl connection error') % host)
     try:
         peercert = sock.getpeercert(True)
         peercert2 = sock.getpeercert()
