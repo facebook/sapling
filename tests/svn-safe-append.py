@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
+
 __doc__ = """Same as `echo a >> b`, but ensures a changed mtime of b.
 Without this svn will not detect workspace changes."""
 
-import sys, os
+import os
+import sys
 
 text = sys.argv[1]
 fname = sys.argv[2]
