@@ -171,7 +171,9 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
     if not sslsocket.cipher():
         raise error.Abort(_('ssl connection failed'))
 
-    sslsocket._hgcaloaded = caloaded
+    sslsocket._hgstate = {
+        'caloaded': caloaded,
+    }
 
     return sslsocket
 
@@ -341,7 +343,7 @@ class validator(object):
                          (host, nicefingerprint))
             return
 
-        if not sock._hgcaloaded:
+        if not sock._hgstate['caloaded']:
             if strict:
                 raise error.Abort(_('%s certificate with fingerprint %s not '
                                     'verified') % (host, nicefingerprint),
