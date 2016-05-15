@@ -663,7 +663,7 @@ def sources(f, modname):
     the input file.
     """
     py = False
-    if f.endswith('.py'):
+    if not f.endswith('.t'):
         with open(f) as src:
             yield src.read(), modname, f, 0
             py = True
