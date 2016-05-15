@@ -49,6 +49,7 @@ def _loadaddon():
     sys.path.insert(0, path)
     try:
         import hghaveaddon
+        assert hghaveaddon  # silence pyflakes
     except BaseException as inst:
         sys.stderr.write('failed to import hghaveaddon.py from %r: %s\n'
                          % (path, inst))
