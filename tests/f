@@ -25,7 +25,6 @@ This can be used instead of tools like:
 
 from __future__ import absolute_import
 
-import errno
 import glob
 import optparse
 import os
