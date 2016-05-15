@@ -1,9 +1,13 @@
-import os
-import glob
-import unittest
-import silenttestrunner
+from __future__ import absolute_import
 
-from mercurial.util import atomictempfile
+import glob
+import os
+import unittest
+
+from mercurial import (
+    util,
+)
+atomictempfile = util.atomictempfile
 
 class testatomictempfile(unittest.TestCase):
     def test1_simple(self):
@@ -39,4 +43,5 @@ class testatomictempfile(unittest.TestCase):
         self.assertRaises(TypeError, atomictempfile)
 
 if __name__ == '__main__':
+    import silenttestrunner
     silenttestrunner.main(__name__)
