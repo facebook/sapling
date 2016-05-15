@@ -26,6 +26,7 @@ This can be used instead of tools like:
 from __future__ import absolute_import
 
 import glob
+import hashlib
 import optparse
 import os
 import re
@@ -80,17 +81,11 @@ def visit(opts, filenames, outfile):
                 else:
                     facts.append('older than %s' % opts.newer)
         if opts.md5 and content is not None:
-            try:
-                from hashlib import md5
-            except ImportError:
-                from md5 import md5
-            facts.append('md5=%s' % md5(content).hexdigest()[:opts.bytes])
+            h = hashlib.md5(content)
+            facts.append('md5=%s' % h.hexdigest()[:opts.bytes])
         if opts.sha1 and content is not None:
-            try:
-                from hashlib import sha1
-            except ImportError:
-                from sha import sha as sha1
-            facts.append('sha1=%s' % sha1(content).hexdigest()[:opts.bytes])
+            h = hashlib.sha1(content)
+            facts.append('sha1=%s' % h.hexdigest()[:opts.bytes])
         if isstdin:
             outfile.write(', '.join(facts) + '\n')
         elif facts:
