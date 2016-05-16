@@ -131,11 +131,8 @@ class historypack(object):
     def getmissing(self, keys):
         missing = []
         for name, node in keys:
-            section = self._findsection(name)
-            if not section:
-                missing.append((name, node))
-                continue
             try:
+                section = self._findsection(name)
                 value = self._findnode(section, node)
             except KeyError:
                 missing.append((name, node))

@@ -186,6 +186,10 @@ class histpacktests(unittest.TestCase):
                                    (filename, fakenode)])
         self.assertEquals(missing, [(filename, fakenode)])
 
+        # Test getmissing on a non-existant filename
+        missing = pack.getmissing([("bar", fakenode)])
+        self.assertEquals(missing, [("bar", fakenode)])
+
     def testAddThrows(self):
         pack = self.createPack()
 
