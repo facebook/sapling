@@ -11,8 +11,8 @@ INDEXENTRYLENGTH = 36
 NODELENGTH = 20
 
 # (node, p1, p2, linknode)
-PACKFORMAT = "!20s20s20s20s"
-PACKENTRYLENGTH = 80
+PACKFORMAT = "!20s20s20s20sH"
+PACKENTRYLENGTH = 82
 
 FILENAMESIZE = 2
 OFFSETSIZE = 4
@@ -44,6 +44,7 @@ ANC_NODE = 0
 ANC_P1NODE = 1
 ANC_P2NODE = 2
 ANC_LINKNODE = 3
+ANC_COPYFROM = 4
 
 class historypackstore(object):
     def __init__(self, path):
@@ -86,7 +87,7 @@ class historypackstore(object):
 
         raise KeyError((name, node))
 
-    def add(self, filename, node, p1, p2, linknode):
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
                            % (filename, hex(node)))
 
@@ -146,7 +147,7 @@ class historypack(object):
         """Returns as many ancestors as we're aware of.
 
         return value: {
-           node: (p1, p2, linknode),
+           node: (p1, p2, linknode, copyfrom),
            ...
         }
         """
@@ -154,35 +155,54 @@ class historypack(object):
         ancestors = set((node,))
         data = self._data[offset:offset + size]
         results = {}
-        for o in range(0, len(data), PACKENTRYLENGTH):
+        o = 0
+        while o < len(data):
             entry = struct.unpack(PACKFORMAT, data[o:o + PACKENTRYLENGTH])
+            o += PACKENTRYLENGTH
+            copyfrom = None
+            copyfromlen = entry[ANC_COPYFROM]
+            if copyfromlen != 0:
+                copyfrom = data[o:o + copyfromlen]
+                o += copyfromlen
+
             if entry[ANC_NODE] in ancestors:
                 ancestors.add(entry[ANC_P1NODE])
                 ancestors.add(entry[ANC_P2NODE])
                 result = (entry[ANC_P1NODE],
                           entry[ANC_P2NODE],
                           entry[ANC_LINKNODE],
-                          # Add a fake None for the copyfrom entry for now
-                          # TODO: remove copyfrom from getancestor api
-                          None)
+                          copyfrom)
                 results[entry[ANC_NODE]] = result
 
         if not results:
             raise KeyError((name, node))
         return results
 
-    def add(self, filename, node, p1, p2, linknode):
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypack (%s:%s)" %
                            (filename, hex(node)))
 
     def _findnode(self, section, node):
         name, offset, size = section
         data = self._data
-        for i in range(offset, offset + size, PACKENTRYLENGTH):
+        o = offset
+        while o < offset + size:
             entry = struct.unpack(PACKFORMAT,
-                                  data[i:i + PACKENTRYLENGTH])
+                                  data[o:o + PACKENTRYLENGTH])
+            o += PACKENTRYLENGTH
+
             if entry[0] == node:
-                return entry
+                copyfrom = None
+                copyfromlen = entry[ANC_COPYFROM]
+                if copyfromlen != 0:
+                    copyfrom = data[o:o + copyfromlen]
+
+                return (entry[ANC_P1NODE],
+                        entry[ANC_P2NODE],
+                        entry[ANC_LINKNODE],
+                        copyfrom)
+
+            o += entry[ANC_COPYFROM]
 
         raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
 
@@ -276,10 +296,11 @@ class historypack(object):
                                                 OFFSETSIZE])[0]
             offset += OFFSETSIZE
 
-            assert (offset + 80 * revcount <= self.datasize)
             for i in xrange(revcount):
-                node = data[offset:offset + 20]
-                offset += 80
+                entry = struct.unpack(PACKFORMAT, data[offset:offset +
+                                                              PACKENTRYLENGTH])
+                node = entry[ANC_NODE]
+                offset += PACKENTRYLENGTH + entry[ANC_COPYFROM]
                 yield (filename, node)
 
 class mutablehistorypack(object):
@@ -305,9 +326,13 @@ class mutablehistorypack(object):
                    <p1node: 20 byte>
                    <p2node: 20 byte>
                    <linknode: 20 byte>
+                   <copyfromlen: 2 byte>
+                   <copyfrom>
 
         The revisions within each filesection are stored in topological order
-        (newest first).
+        (newest first). If a given entry has a parent from another file (a copy)
+        then p1node is the node from the other file, and copyfrom is the
+        filepath of the other file.
 
     .histidx
         The index file provides a mapping from filename to the file section in
@@ -378,7 +403,7 @@ class mutablehistorypack(object):
             except Exception:
                 pass
 
-    def add(self, filename, node, p1, p2, linknode):
+    def add(self, filename, node, p1, p2, linknode, copyfrom):
         if filename != self.currentfile:
             if filename in self.pastfiles:
                 raise RuntimeError("cannot add file node after another file's "
@@ -389,7 +414,10 @@ class mutablehistorypack(object):
             self.currentfile = filename
             self.currententries = []
 
-        self.currententries.append((node, p1, p2, linknode))
+        copyfrom = copyfrom or ''
+        copyfromlen = struct.pack('!H', len(copyfrom))
+        self.currententries.append((node, p1, p2, linknode, copyfromlen,
+                                    copyfrom))
 
     def _writependingsection(self):
         filename = self.currentfile
@@ -404,7 +432,7 @@ class mutablehistorypack(object):
         sectionlen = FILENAMESIZE + len(filename) + 4
 
         # Write the file section content
-        rawdata = ''.join('%s%s%s%s' % e for e in self.currententries)
+        rawdata = ''.join('%s%s%s%s%s%s' % e for e in self.currententries)
         sectionlen += len(rawdata)
 
         self.writeraw(rawdata)

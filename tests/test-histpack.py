@@ -41,14 +41,14 @@ class histpacktests(unittest.TestCase):
         """
         if revisions is None:
             revisions = [("filename", self.getFakeHash(), nullid, nullid,
-                          self.getFakeHash())]
+                          self.getFakeHash(), None)]
 
         packdir = self.makeTempDir()
         opener = scmutil.vfs(packdir)
         packer = mutablehistorypack(opener)
 
-        for filename, node, p1, p2, linknode in revisions:
-            packer.add(filename, node, p1, p2, linknode)
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            packer.add(filename, node, p1, p2, linknode, copyfrom)
 
         path = packer.close()
         return historypack(path)
@@ -62,7 +62,7 @@ class histpacktests(unittest.TestCase):
         p2 = self.getFakeHash()
         linknode = self.getFakeHash()
 
-        revisions = [(filename, node, p1, p2, linknode)]
+        revisions = [(filename, node, p1, p2, linknode, None)]
         pack = self.createPack(revisions)
 
         actual = pack.getancestors(filename, node)[node]
@@ -81,15 +81,16 @@ class histpacktests(unittest.TestCase):
             p1 = self.getFakeHash()
             p2 = self.getFakeHash()
             linknode = self.getFakeHash()
-            revisions.append((filename, node, p1, p2, linknode))
+            revisions.append((filename, node, p1, p2, linknode, None))
 
         pack = self.createPack(revisions)
 
-        for filename, node, p1, p2, linknode in revisions:
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
             actual = pack.getancestors(filename, node)[node]
             self.assertEquals(p1, actual[0])
             self.assertEquals(p2, actual[1])
             self.assertEquals(linknode, actual[2])
+            self.assertEquals(copyfrom, actual[3])
 
     def testAddAncestorChain(self):
         """Test putting multiple revisions in into a pack and read the ancestor
@@ -100,7 +101,7 @@ class histpacktests(unittest.TestCase):
         lastnode = nullid
         for i in range(10):
             node = self.getFakeHash()
-            revisions.append((filename, node, lastnode, nullid, nullid))
+            revisions.append((filename, node, lastnode, nullid, nullid, None))
             lastnode = node
 
         # revisions must be added in topological order, newest first
@@ -109,12 +110,12 @@ class histpacktests(unittest.TestCase):
 
         # Test that the chain has all the entries
         ancestors = pack.getancestors(revisions[0][0], revisions[0][1])
-        for filename, node, p1, p2, linknode in revisions:
-            ap1, ap2, alinknode, copyfrom = ancestors[node]
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            ap1, ap2, alinknode, acopyfrom = ancestors[node]
             self.assertEquals(ap1, p1)
             self.assertEquals(ap2, p2)
             self.assertEquals(alinknode, linknode)
-            self.assertTrue(copyfrom is None)
+            self.assertEquals(acopyfrom, copyfrom)
 
     def testPackMany(self):
         """Pack many related and unrelated ancestors.
@@ -135,7 +136,7 @@ class histpacktests(unittest.TestCase):
                 if len(entries) > 0:
                     p1 = entries[random.randint(0, len(entries) - 1)]
                 entries.append(node)
-                revisions.append((filename, node, p1, p2, linknode))
+                revisions.append((filename, node, p1, p2, linknode, None))
                 allentries[(filename, node)] = (p1, p2, linknode)
                 if p1 == nullid:
                     ancestorcounts[(filename, node)] = 1
@@ -169,7 +170,7 @@ class histpacktests(unittest.TestCase):
             p1 = self.getFakeHash()
             p2 = self.getFakeHash()
             linknode = self.getFakeHash()
-            revisions.append((filename, node, p1, p2, linknode))
+            revisions.append((filename, node, p1, p2, linknode, None))
 
         pack = self.createPack(revisions)
 
@@ -189,7 +190,7 @@ class histpacktests(unittest.TestCase):
         pack = self.createPack()
 
         try:
-            pack.add('filename', nullid, nullid, nullid, nullid)
+            pack.add('filename', nullid, nullid, nullid, nullid, None)
             self.assertTrue(False, "historypack.add should throw")
         except RuntimeError:
             pass

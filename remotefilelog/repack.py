@@ -149,9 +149,8 @@ class repacker(object):
 
                 if copyfrom:
                     dontprocess.add(p1)
-                    p1 = nullid
 
-                target.add(filename, node, p1, p2, linknode)
+                target.add(filename, node, p1, p2, linknode, copyfrom)
 
                 if node in entries:
                     entries[node].historyrepacked = True

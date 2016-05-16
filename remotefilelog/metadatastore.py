@@ -13,7 +13,7 @@ class unionmetadatastore(object):
         """Returns as many ancestors as we're aware of.
 
         return value: {
-           node: (p1, p2, linknode),
+           node: (p1, p2, linknode, copyfrom),
            ...
         }
         """
@@ -76,7 +76,7 @@ class remotefilelogmetadatastore(basestore.basestore):
         """Returns as many ancestors as we're aware of.
 
         return value: {
-           node: (p1, p2, linknode),
+           node: (p1, p2, linknode, copyfrom),
            ...
         }
         """
