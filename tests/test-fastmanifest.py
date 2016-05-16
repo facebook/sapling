@@ -4,6 +4,7 @@ import os
 import sys
 
 from mercurial import manifest
+from mercurial import scmutil
 from mercurial import util
 
 class HybridManifest(unittest.TestCase):
@@ -13,7 +14,8 @@ class HybridManifest(unittest.TestCase):
        hybridmanifest implement it, this test validates that all magic methods
        of manifestdict are implemented by hybridmanifest to avoid breakage in
        prod"""
-    hd = fastmanifest.hybridmanifest(None, None)
+    vfs = scmutil.vfs('')
+    hd = fastmanifest.hybridmanifest(None, vfs)
     ismagic = lambda x: x.startswith("__") and x.endswith("__")
     magicmethods = [k for k, v in  manifest.manifestdict.__dict__.items()
                       if util.safehasattr(v, '__call__') and ismagic(k)]
