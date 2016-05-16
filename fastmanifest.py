@@ -109,8 +109,7 @@ class hybridmanifest(object):
         self.opener = opener
         self.node = node
 
-        if self.node:
-            self.node = revlog.hex(self.node)
+        self.cachekey = revlog.hex(self.node) if self.node is not None else None
 
         self.fastcache = fastmanifestcache.getinstance(opener, self.ui)
         self.debugfastmanifest = (self.ui.configbool("fastmanifest",
@@ -138,18 +137,18 @@ class hybridmanifest(object):
     def _cachedmanifest(self):
         if not self.__cachedmanifest:
             # Cache lookup
-            if (self.node and self.fastcache
-               and self.fastcache.contains(self.node)):
-                self.__cachedmanifest = self.fastcache.get(self.node)
+            if (self.cachekey is not None and
+                self.fastcache.contains(self.cachekey)):
+                self.__cachedmanifest = self.fastcache.get(self.cachekey)
                 if self.__cachedmanifest:
                     self.ui.debug("cache hit for fastmanifest %s\n"
-                                  % self.node)
+                                  % self.cachekey)
                     return self.__cachedmanifest
         return None
 
     def _incache(self):
-        if self.fastcache and self.node:
-            return self.fastcache.contains(self.node)
+        if self.cachekey:
+            return self.fastcache.contains(self.cachekey)
         return False
 
     def _manifest(self, operation):
