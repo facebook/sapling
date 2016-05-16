@@ -457,6 +457,9 @@ class fastmanifestdict(object):
     def iterentries(self):
         return self._fm.iterentries()
 
+    def iteritems(self):
+        return (x[:2] for x in self._fm.iterentries())
+
     def keys(self):
         return list(self.iterkeys())
 
@@ -573,12 +576,6 @@ class fastmanifestdict(object):
     def copy(self):
         c = fastmanifestdict(self._fm.copy())
         return c
-
-    def iteritems(self):
-        return (x[:2] for x in self._fm.iterentries())
-
-    def iterentries(self):
-        return self._fm.iterentries()
 
     def text(self, usemanifestv2=False):
         if usemanifestv2:
