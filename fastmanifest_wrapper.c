@@ -338,18 +338,15 @@ static void fastmanifest_diff_callback(
   fastmanifest_diff_context_t *diff_context =
       (fastmanifest_diff_context_t *) context;
   PyObject *key, *outer = NULL, *py_left, *py_right;
-  bool decLeftReference, decRightReference;
 
   if (left_present) {
     py_left = hashflags(left_checksum, left_checksum_sz, left_flags);
-    decLeftReference = true;
   } else {
     py_left = diff_context->emptyTuple;
   }
 
   if (right_present) {
     py_right = hashflags(right_checksum, right_checksum_sz, right_flags);
-    decRightReference = true;
   } else {
     py_right = diff_context->emptyTuple;
   }
@@ -367,17 +364,6 @@ static void fastmanifest_diff_callback(
     goto cleanup;
   }
 
-  // decrement references.
-  if (decLeftReference) {
-    Py_DECREF(py_left);
-    py_left = NULL;
-  }
-  if (decRightReference) {
-    Py_DECREF(py_right);
-    py_right = NULL;
-  }
-
-
   if (PyDict_SetItem(diff_context->result, key, outer) != 0) {
     diff_context->error_occurred = true;
   }
@@ -385,8 +371,12 @@ static void fastmanifest_diff_callback(
 cleanup:
   Py_XDECREF(outer);
   Py_XDECREF(key);
-  Py_XDECREF(py_left);
-  Py_XDECREF(py_right);
+  if (left_present) {
+    Py_XDECREF(py_left);
+  }
+  if (right_present) {
+    Py_XDECREF(py_right);
+  }
 }
 
 static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
@@ -407,7 +397,7 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
     goto nomem;
   }
   emptyTuple = PyTuple_Pack(2, Py_None, es);
-  Py_DECREF(es);
+  Py_CLEAR(es);
   if (!emptyTuple) {
     goto nomem;
   }
@@ -423,7 +413,6 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
       &fastmanifest_diff_callback, &context);
 
   Py_CLEAR(emptyTuple);
-  Py_CLEAR(es);
 
   switch (diff_result) {
     case DIFF_OK:
