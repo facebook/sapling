@@ -363,7 +363,7 @@ def _cachemanifest(ui, repo, revs, sync, limit):
 
     for rev in revs:
         manifest = repo[rev].manifest()
-        nodehex = manifest.node
+        nodehex = revlog.hex(manifest.node)
         cache.put(nodehex, manifest)
 
     if limit:
