@@ -166,21 +166,20 @@ class hybridmanifest(object):
 
     def _manifest(self, operation):
         # Get the manifest most suited for the operations (flat or cached)
-        # TODO return fastmanifest when suitable
-        if self.debugfastmanifest:
-            if self.__cachedmanifest:
-                return self.__cachedmanifest
-
-            flatmanifest = self._flatmanifest().text()
-            fm = fastmanifest_wrapper.fastManifest(flatmanifest)
-            self.__cachedmanifest = fastmanifestdict(fm)
-            return self.__cachedmanifest
-
+        # TODO: return fastmanifest when suitable
         c = self._cachedmanifest()
         if c is not None:
             return c
 
         r = self._flatmanifest()
+
+        if self.debugfastmanifest:
+            # in debug mode, we always convert into a fastmanifest.
+            fm = fastmanifest_wrapper.fastManifest(r.text())
+            self.__cachedmanifest = fastmanifestdict(fm)
+            self.incache = True
+            return self.__cachedmanifest
+
         return r
 
     # Proxy all the manifest methods to the flatmanifest except magic methods
