@@ -117,6 +117,8 @@ class hybridmanifest(object):
                                   if self.ui is not None
                                   else False)
 
+        self.incache = True if self.__cachedmanifest is not None else None
+
     def _flatmanifest(self):
         if self.__flatmanifest is None:
             if self.loadflat is not None:
@@ -135,19 +137,23 @@ class hybridmanifest(object):
         return self.__flatmanifest
 
     def _cachedmanifest(self):
-        if not self.__cachedmanifest:
+        if self.incache is None:
             # Cache lookup
             if (self.cachekey is not None and
                 self.fastcache.contains(self.cachekey)):
                 self.__cachedmanifest = self.fastcache.get(self.cachekey)
-                if self.__cachedmanifest:
-                    self.ui.debug("cache hit for fastmanifest %s\n"
-                                  % self.cachekey)
-                    return self.__cachedmanifest
-        return None
+
+            self.incache = self.__cachedmanifest is not None
+
+            self.ui.debug("cache %s for fastmanifest %s\n"
+                          % ("hit" if self.incache else "miss", self.cachekey))
+
+        return self.__cachedmanifest
 
     def _incache(self):
-        if self.cachekey:
+        if self.incache:
+            return True
+        elif self.cachekey:
             return self.fastcache.contains(self.cachekey)
         return False
 
@@ -162,6 +168,11 @@ class hybridmanifest(object):
             fm = fastmanifest_wrapper.fastManifest(flatmanifest)
             self.__cachedmanifest = fastmanifestdict(fm)
             return self.__cachedmanifest
+
+        c = self._cachedmanifest()
+        if c is not None:
+            return c
+
         r = self._flatmanifest()
         return r
 
@@ -219,25 +230,23 @@ class hybridmanifest(object):
         _m1, _m2 = None, None
 
         if isinstance(m2, hybridmanifest):
-            self.ui.debug("other side is hybrid manifest\n")
+            self.ui.debug("diff: other side is hybrid manifest\n")
             # CACHE HIT
             if self._incache() and m2._incache():
                 _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
                 if not _m1 or not _m2:
-                    self.ui.debug("fallback to regular diff\n")
+                    self.ui.debug("diff: unable to load one or "
+                                  "more manifests\n")
                     _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
-                else:
-                    self.ui.debug("fastmanifest diff\n")
-
             # CACHE MISS
             else:
-                self.ui.debug("fallback to regular diff\n")
+                self.ui.debug("diff: cache miss\n")
                 _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
         else:
             # This happens when diffing against a new manifest (like rev -1)
-            self.ui.debug("fallback to regular diff\n")
+            self.ui.debug("diff: other side not hybrid manifest\n")
             _m1, _m2 = self._flatmanifest(), m2
 
         assert type(_m1) == type(_m2)
