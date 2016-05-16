@@ -668,8 +668,8 @@ def ascii(ui, state, type, char, text, coldata):
             return -num <= i if num < 0 else (len(lines) - i) <= num
         for i, line in enumerate(lines):
             line[:] = [c[-1] if _drawgp(c, i) else parent for c in line]
-        edgemap = dict(
-            (e, c if len(c) < 2 else parent) for e, c in edgemap.items())
+        edgemap.update(
+            (e, (c if len(c) < 2 else parent)) for e, c in edgemap.items())
 
     # print lines
     indentation_level = max(ncols, ncols + coldiff)
