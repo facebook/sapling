@@ -97,7 +97,7 @@ class remotebatch(peer.batcher):
             batchablefn = getattr(mtd, 'batchable', None)
             if batchablefn is not None:
                 batchable = batchablefn(mtd.im_self, *args, **opts)
-                encargsorres, encresref = batchable.next()
+                encargsorres, encresref = next(batchable)
                 if encresref:
                     req.append((name, encargsorres,))
                     rsp.append((batchable, encresref, resref,))
@@ -115,7 +115,7 @@ class remotebatch(peer.batcher):
         for encres, r in zip(encresults, rsp):
             batchable, encresref, resref = r
             encresref.set(encres)
-            resref.set(batchable.next())
+            resref.set(next(batchable))
 
 class remoteiterbatcher(peer.iterbatcher):
     def __init__(self, remote):
@@ -138,7 +138,7 @@ class remoteiterbatcher(peer.iterbatcher):
         for name, args, opts, resref in self.calls:
             mtd = getattr(self._remote, name)
             batchable = mtd.batchable(mtd.im_self, *args, **opts)
-            encargsorres, encresref = batchable.next()
+            encargsorres, encresref = next(batchable)
             assert encresref
             req.append((name, encargsorres))
             rsp.append((batchable, encresref))
@@ -150,7 +150,7 @@ class remoteiterbatcher(peer.iterbatcher):
         for (batchable, encresref), encres in itertools.izip(
                 self._rsp, self._resultiter):
             encresref.set(encres)
-            yield batchable.next()
+            yield next(batchable)
 
 # Forward a couple of names from peer to make wireproto interactions
 # slightly more sensible.

@@ -291,7 +291,7 @@ class lazyancestors(object):
     def __nonzero__(self):
         """False if the set is empty, True otherwise."""
         try:
-            iter(self).next()
+            next(iter(self))
             return True
         except StopIteration:
             return False

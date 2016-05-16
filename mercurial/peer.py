@@ -98,12 +98,12 @@ def batchable(f):
     '''
     def plain(*args, **opts):
         batchable = f(*args, **opts)
-        encargsorres, encresref = batchable.next()
+        encargsorres, encresref = next(batchable)
         if not encresref:
             return encargsorres # a local result in this case
         self = args[0]
         encresref.set(self._submitone(f.func_name, encargsorres))
-        return batchable.next()
+        return next(batchable)
     setattr(plain, 'batchable', f)
     return plain
 

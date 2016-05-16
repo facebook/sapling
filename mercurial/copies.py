@@ -484,16 +484,16 @@ def checkcopies(ctx, f, m1, m2, ca, limit, diverge, copy, fullcopy):
             f1r, f2r = f1.linkrev(), f2.linkrev()
 
             if f1r is None:
-                f1 = g1.next()
+                f1 = next(g1)
             if f2r is None:
-                f2 = g2.next()
+                f2 = next(g2)
 
             while True:
                 f1r, f2r = f1.linkrev(), f2.linkrev()
                 if f1r > f2r:
-                    f1 = g1.next()
+                    f1 = next(g1)
                 elif f2r > f1r:
-                    f2 = g2.next()
+                    f2 = next(g2)
                 elif f1 == f2:
                     return f1 # a match
                 elif f1r == f2r or f1r < limit or f2r < limit:

@@ -2821,9 +2821,9 @@ def _iterordered(ascending, iter1, iter2):
         # Consume both iterators in an ordered way until one is empty
         while True:
             if val1 is None:
-                val1 = iter1.next()
+                val1 = next(iter1)
             if val2 is None:
-                val2 = iter2.next()
+                val2 = next(iter2)
             n = choice(val1, val2)
             yield n
             if val1 == n:

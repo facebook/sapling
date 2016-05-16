@@ -793,7 +793,7 @@ class Translator(nodes.NodeVisitor):
     def visit_list_item(self, node):
         # man 7 man argues to use ".IP" instead of ".TP"
         self.body.append('.IP %s %d\n' % (
-                self._list_char[-1].next(),
+                next(self._list_char[-1]),
                 self._list_char[-1].get_width(),))
 
     def depart_list_item(self, node):

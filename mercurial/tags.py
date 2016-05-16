@@ -292,7 +292,7 @@ def _readtagcache(ui, repo):
     cachehash = None
     if cachefile:
         try:
-            validline = cachelines.next()
+            validline = next(cachelines)
             validline = validline.split()
             cacherev = int(validline[0])
             cachenode = bin(validline[1])

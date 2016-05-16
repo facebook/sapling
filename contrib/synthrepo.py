@@ -507,7 +507,7 @@ def renamedirs(dirs, words):
             head = rename(head)
         else:
             head = ''
-        renamed = os.path.join(head, wordgen.next())
+        renamed = os.path.join(head, next(wordgen))
         replacements[dirpath] = renamed
         return renamed
     result = []

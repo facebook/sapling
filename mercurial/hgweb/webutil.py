@@ -75,7 +75,7 @@ class revnav(object):
     def _first(self):
         """return the minimum non-filtered changeset or None"""
         try:
-            return iter(self._revlog).next()
+            return next(iter(self._revlog))
         except StopIteration:
             return None
 
@@ -247,7 +247,7 @@ def branchentries(repo, stripecount, limit=0):
             else:
                 status = 'open'
             yield {
-                'parity': parity.next(),
+                'parity': next(parity),
                 'branch': ctx.branch(),
                 'status': status,
                 'node': ctx.hex(),
@@ -369,7 +369,7 @@ def changesetentry(web, req, tmpl, ctx):
         template = f in ctx and 'filenodelink' or 'filenolink'
         files.append(tmpl(template,
                           node=ctx.hex(), file=f, blockno=blockno + 1,
-                          parity=parity.next()))
+                          parity=next(parity)))
 
     basectx = basechangectx(web.repo, req)
     if basectx is None:
@@ -450,15 +450,15 @@ def diffs(repo, tmpl, ctx, basectx, files, parity, style):
     block = []
     for chunk in patch.diff(repo, node1, node2, m, opts=diffopts):
         if chunk.startswith('diff') and block:
-            blockno = blockcount.next()
-            yield tmpl('diffblock', parity=parity.next(), blockno=blockno,
+            blockno = next(blockcount)
+            yield tmpl('diffblock', parity=next(parity), blockno=blockno,
                        lines=prettyprintlines(''.join(block), blockno))
             block = []
         if chunk.startswith('diff') and style != 'raw':
             chunk = ''.join(chunk.splitlines(True)[1:])
         block.append(chunk)
-    blockno = blockcount.next()
-    yield tmpl('diffblock', parity=parity.next(), blockno=blockno,
+    blockno = next(blockcount)
+    yield tmpl('diffblock', parity=next(parity), blockno=blockno,
                lines=prettyprintlines(''.join(block), blockno))
 
 def compare(tmpl, context, leftlines, rightlines):
@@ -521,14 +521,14 @@ def diffstatgen(ctx, basectx):
 def diffsummary(statgen):
     '''Return a short summary of the diff.'''
 
-    stats, maxname, maxtotal, addtotal, removetotal, binary = statgen.next()
+    stats, maxname, maxtotal, addtotal, removetotal, binary = next(statgen)
     return _(' %d files changed, %d insertions(+), %d deletions(-)\n') % (
              len(stats), addtotal, removetotal)
 
 def diffstat(tmpl, ctx, statgen, parity):
     '''Return a diffstat template for each file in the diff.'''
 
-    stats, maxname, maxtotal, addtotal, removetotal, binary = statgen.next()
+    stats, maxname, maxtotal, addtotal, removetotal, binary = next(statgen)
     files = ctx.files()
 
     def pct(i):
@@ -543,7 +543,7 @@ def diffstat(tmpl, ctx, statgen, parity):
         fileno += 1
         yield tmpl(template, node=ctx.hex(), file=filename, fileno=fileno,
                    total=total, addpct=pct(adds), removepct=pct(removes),
-                   parity=parity.next())
+                   parity=next(parity))
 
 class sessionvars(object):
     def __init__(self, vars, start='?'):
