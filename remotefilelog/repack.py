@@ -52,12 +52,6 @@ class repacker(object):
             # Order the nodes children first, so we can produce reverse deltas
             orderednodes = reversed(self._toposort(ancestors))
 
-            # getancestors() will return the ancestry of a commit, even across
-            # renames. We currently don't support producing deltas across
-            # renames, so we use dontprocess to store when an ancestory
-            # traverses across a rename, so we can avoid processing those.
-            dontprocess = set()
-
             # Compute deltas and write to the pack
             deltabases = defaultdict(lambda: nullid)
             nodes = set(nodes)
@@ -66,28 +60,25 @@ class repacker(object):
                 # the files we have.
                 if node not in nodes:
                     continue
+
                 # Find delta base
                 # TODO: allow delta'ing against most recent descendant instead
                 # of immediate child
                 deltabase = deltabases[node]
 
+                # Use available ancestor information to inform our delta choices
+                p1, p2, linknode, copyfrom = ancestors[node]
+
+                # The presence of copyfrom means we're at a point where the
+                # file was copied from elsewhere. So don't attempt to do any
+                # deltas with the other file.
+                if copyfrom:
+                    p1 = nullid
+
                 # Record this child as the delta base for its parents.
                 # This may be non optimal, since the parents may have many
                 # children, and this will only choose the last one.
                 # TODO: record all children and try all deltas to find best
-                p1, p2, linknode, copyfrom = ancestors[node]
-
-                if node in dontprocess:
-                    if p1 != nullid:
-                        dontprocess.add(p1)
-                    if p2 != nullid:
-                        dontprocess.add(p2)
-                    continue
-
-                if copyfrom:
-                    dontprocess.add(p1)
-                    p1 = nullid
-
                 if p1 != nullid:
                     deltabases[p1] = node
                 if p2 != nullid:
