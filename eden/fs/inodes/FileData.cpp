@@ -28,6 +28,9 @@ FileData::FileData(
 fusell::BufVec FileData::read(size_t size, off_t off) {
   std::unique_lock<std::mutex> lock(mutex_);
 
+  // Temporary, pending the changes in a following diff
+  CHECK(blob_);
+
   auto buf = blob_->getContents();
   folly::io::Cursor cursor(&buf);
 

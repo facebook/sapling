@@ -11,10 +11,13 @@
 
 #include "FileData.h"
 #include "TreeEntryFileHandle.h"
+#include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fuse/passthru/PassThruInodes.h"
 
 using folly::Future;
 using folly::StringPiece;
+using folly::checkUnixError;
 using std::string;
 using std::vector;
 
@@ -31,7 +34,13 @@ TreeEntryFileInode::TreeEntryFileInode(
 
 folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   fusell::Dispatcher::Attr attr;
-  CHECK_NOTNULL(entry_);
+
+  if (!entry_) {
+    // stat() the overlay file.
+    checkUnixError(stat(getLocalPath().c_str(), &attr.st));
+    attr.st.st_ino = ino_;
+    return attr;
+  }
 
   attr.st.st_ino = ino_;
   switch (entry_->getFileType()) {
@@ -65,7 +74,28 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
 }
 
 folly::Future<std::string> TreeEntryFileInode::readlink() {
-  CHECK_NOTNULL(entry_);
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  if (!entry_) {
+    struct stat st;
+    auto localPath = getLocalPath();
+
+    // Figure out how much space we need to hold the symlink target.
+    checkUnixError(lstat(localPath.c_str(), &st));
+
+    // Allocate a string of the appropriate size.
+    std::string buf;
+    buf.resize(st.st_size, 0 /* filled with zeroes */);
+
+    // Read the link into the string buffer.
+    auto res = ::readlink(
+        localPath.c_str(), &buf[0], buf.size() + 1 /* for nul terminator */);
+    checkUnixError(res);
+    CHECK_EQ(st.st_size, res) << "symlink size TOCTOU";
+
+    return buf;
+  }
+
   switch (entry_->getFileType()) {
     case FileType::SYMLINK: {
       auto blob = parentInode_->getStore()->getBlob(entry_->getHash());
@@ -96,9 +126,20 @@ void TreeEntryFileInode::fileHandleDidClose() {
   }
 }
 
+AbsolutePath TreeEntryFileInode::getLocalPath() const {
+  return parentInode_->getOverlay()->getLocalDir() +
+      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId());
+}
+
 folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
     const struct fuse_file_info& fi) {
-  CHECK_NOTNULL(entry_);
+  if (!entry_) {
+    auto localPath = getLocalPath();
+    auto fd = ::open(localPath.c_str(), fi.flags);
+    checkUnixError(fd);
+    return new fusell::PassThruFileHandle(fd, ino_);
+  }
+
   switch (entry_->getFileType()) {
     case FileType::REGULAR_FILE: {
       if ((fi.flags & (O_RDWR | O_WRONLY)) != 0) {

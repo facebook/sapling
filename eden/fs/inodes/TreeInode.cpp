@@ -8,7 +8,6 @@
  *
  */
 #include "TreeInode.h"
-#include "OverlayFileInode.h"
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/overlay/Overlay.h"
@@ -71,15 +70,16 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     }
 
     auto node = fusell::InodeNameManager::get()->getNodeByName(ino_, namepiece);
-    auto localPath = overlay_->getLocalDir() + myname + namepiece;
 
     if (iter->second == dtype_t::Dir) {
       return std::make_shared<TreeInode>(
           mount_, ino_, node->getNodeId(), store_, overlay_);
     }
 
-    return std::make_shared<OverlayFileInode>(
-        mount_, ino_, node->getNodeId(), overlay_);
+    return std::make_shared<TreeEntryFileInode>(
+        node->getNodeId(),
+        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        nullptr);
   }
 
   if (!tree_ || overlay_contents.isOpaque) {
@@ -151,8 +151,10 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
       [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
         fusell::DirInode::CreateResult result;
 
-        result.inode = std::make_shared<OverlayFileInode>(
-            mount_, ino_, node->getNodeId(), overlay_);
+        result.inode = std::make_shared<TreeEntryFileInode>(
+            node->getNodeId(),
+            std::static_pointer_cast<TreeInode>(shared_from_this()),
+            nullptr);
 
         result.file = std::move(handle);
         result.attr = attr;

@@ -44,6 +44,9 @@ class TreeEntryFileInode : public fusell::FileInode {
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();
 
+  /// Compute the path to the overlay file for this item.
+  AbsolutePath getLocalPath() const;
+
   fuse_ino_t ino_;
   // We hold the ref on the parentInode so that entry_ remains
   // valid while we're both alive
