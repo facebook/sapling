@@ -94,7 +94,8 @@ class remotemetadatastore(object):
         self._shared = shared
 
     def getancestors(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))])
+        self._fileservice.prefetch([(name, hex(node))], fetchdata=False,
+                                   fetchhistory=True)
         return self._shared.getancestors(name, node)
 
     def add(self, name, node, data):

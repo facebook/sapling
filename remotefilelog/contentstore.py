@@ -132,7 +132,7 @@ class remotecontentstore(object):
         self._shared = shared
 
     def get(self, name, node):
-        self._fileservice.prefetch([(name, hex(node))])
+        self._fileservice.prefetch([(name, hex(node))], fetchdata=True)
         return self._shared.get(name, node)
 
     def getdeltachain(self, name, node):

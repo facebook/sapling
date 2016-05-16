@@ -185,7 +185,14 @@ def wraprepo(repo):
             cachecontent, remotecontent, writestore=localcontent)
     repo.metadatastore = unionmetadatastore(packmetadatastore, localmetadata,
                 cachemetadata, remotemetadata, writestore=localmetadata)
-    repo.fileservice.setstore(repo.contentstore, cachecontent)
+
+    fileservicedatawrite = cachecontent
+    fileservicehistorywrite = cachecontent
+    if repo.ui.configbool('remotefilelog', 'fetchpacks'):
+        fileservicedatawrite = packcontentstore
+        fileservicehistorywrite = packmetadatastore
+    repo.fileservice.setstore(repo.contentstore, repo.metadatastore,
+                              fileservicedatawrite, fileservicehistorywrite)
 
     # Record which ones are shared stores
     repo.shareddatastores = [packcontentstore, cachecontent, remotecontent]

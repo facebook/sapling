@@ -207,15 +207,14 @@ class fileserverclient(object):
 
         self.debugoutput = ui.configbool("remotefilelog", "debug")
 
-        self.contentstore = None
-        self.writestore = None
-
         self.remotecache = cacheconnection()
         self.remoteserver = None
 
-    def setstore(self, store, writestore):
-        self.contentstore = store
-        self.writestore = writestore
+    def setstore(self, datastore, historystore, writedata, writehistory):
+        self.datastore = datastore
+        self.historystore = historystore
+        self.writedata = writedata
+        self.writehistory = writehistory
 
     def _connect(self):
         fallbackpath = self.repo.fallbackpath
@@ -240,7 +239,7 @@ class fileserverclient(object):
         if not self.remotecache.connected:
             self.connect()
         cache = self.remotecache
-        writestore = self.writestore
+        writedata = self.writedata
 
         if self.ui.configbool('remotefilelog', 'fetchpacks'):
             self.requestpack(fileids)
@@ -341,7 +340,7 @@ class fileserverclient(object):
             self.ui.progress(_downloading, None)
 
             # mark ourselves as a user of this cache
-            writestore.markrepo(self.repo.path)
+            writedata.markrepo(self.repo.path)
         finally:
             os.umask(oldumask)
 
@@ -359,7 +358,7 @@ class fileserverclient(object):
                                         "only received %s of %s bytes") %
                                       (len(data), size))
 
-        self.writestore.addremotefilelognode(filename, bin(node),
+        self.writedata.addremotefilelognode(filename, bin(node),
                                              lz4.decompress(data))
 
     def requestpack(self, fileids):
@@ -444,7 +443,7 @@ class fileserverclient(object):
 
     def connect(self):
         if self.cacheprocess:
-            cmd = "%s %s" % (self.cacheprocess, self.writestore._path)
+            cmd = "%s %s" % (self.cacheprocess, self.writedata._path)
             self.remotecache.connect(cmd)
         else:
             # If no cache process is specified, we fake one that always
@@ -490,11 +489,11 @@ class fileserverclient(object):
             self.remoteserver.cleanup()
             self.remoteserver = None
 
-    def prefetch(self, fileids, force=False):
+    def prefetch(self, fileids, force=False, fetchdata=True,
+                 fetchhistory=False):
         """downloads the given file versions to the cache
         """
         repo = self.repo
-        storepath = repo.svfs.vfs.base
         reponame = repo.name
         idstocheck = []
         for file, id in fileids:
@@ -508,10 +507,17 @@ class fileserverclient(object):
 
             idstocheck.append((file, bin(id)))
 
-        store = self.contentstore
+        datastore = self.datastore
+        historystore = self.historystore
         if force:
-            store = self.writestore
-        missingids = store.getmissing(idstocheck)
+            datastore = self.writedata
+            historystore = self.writehistory
+
+        missingids = set()
+        if fetchdata:
+            missingids.update(datastore.getmissing(idstocheck))
+        if fetchhistory:
+            missingids.update(historystore.getmissing(idstocheck))
 
         if missingids:
             global fetches, fetched, fetchcost
