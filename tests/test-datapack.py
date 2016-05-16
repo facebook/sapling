@@ -9,7 +9,13 @@ import unittest
 
 import silenttestrunner
 
-from remotefilelog.datapack import datapack, mutabledatapack
+from remotefilelog.datapack import (
+    datapack,
+    mutabledatapack,
+    SMALLFANOUTCUTOFF,
+    SMALLFANOUTPREFIX,
+    LARGEFANOUTPREFIX,
+)
 from remotefilelog.datapack import datapackstore
 
 from mercurial import scmutil, util
@@ -57,6 +63,7 @@ class datapacktests(unittest.TestCase):
 
         revisions = [(filename, node, nullid, content)]
         pack = self.createPack(revisions)
+        self.assertEquals(pack.params.fanoutprefix, SMALLFANOUTPREFIX)
 
         chain = pack.getdeltachain(filename, node)
         self.assertEquals(content, chain[0][4])
@@ -181,6 +188,26 @@ class datapacktests(unittest.TestCase):
         pack = self.createPack(revisions)
         chain = pack.getdeltachain("filename", fakenode)
         self.assertEquals(len(chain), 1)
+
+    def testLargePack(self):
+        """Test creating and reading from a large pack with over X entries.
+        This causes it to use a 2^16 fanout table instead."""
+        revisions = []
+        blobs = {}
+        total = SMALLFANOUTCUTOFF + 1
+        for i in xrange(total):
+            filename = "filename-%s" % i
+            content = filename
+            node = self.getHash(content)
+            blobs[(filename, node)] = content
+            revisions.append((filename, node, nullid, content))
+
+        pack = self.createPack(revisions)
+        self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
+
+        for (filename, node), content in blobs.iteritems():
+            actualcontent = pack.getdeltachain(filename, node)[0][4]
+            self.assertEquals(actualcontent, content)
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):

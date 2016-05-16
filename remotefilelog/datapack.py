@@ -14,23 +14,26 @@ NODELENGTH = 20
 # The fanout prefix is the number of bytes that can be addressed by the fanout
 # table. Example: a fanout prefix of 1 means we use the first byte of a hash to
 # look in the fanout table (which will be 2^8 entries long).
-FANOUTPREFIX = 2
-# The struct pack format for fanout table location (i.e. the format that
-# converts the node prefix into an integer location in the fanout table).
-FANOUTSTRUCT = '!H'
-# The number of fanout table entries
-FANOUTCOUNT = 2**(FANOUTPREFIX * 8)
-# The total bytes used by the fanout table
-FANOUTSIZE = FANOUTCOUNT * 4
+SMALLFANOUTPREFIX = 1
+LARGEFANOUTPREFIX = 2
 
 # The datapack version supported by this implementation. This will need to be
 # rev'd whenever the byte format changes. Ex: changing the fanout prefix,
 # changing any of the int sizes, changing the delta algorithm, etc.
 VERSION = 0
-VERSIONSIZE = 1
+PACKVERSIONSIZE = 1
+INDEXVERSIONSIZE = 2
 
-FANOUTSTART = VERSIONSIZE
-INDEXSTART = FANOUTSTART + FANOUTSIZE
+FANOUTSTART = INDEXVERSIONSIZE
+
+# The number of entries in the index at which point we switch to a large fanout.
+# It is chosen to balance the linear scan through a sparse fanout, with the
+# size of the bisect in actual index.
+# 2^16 / 8 was chosen because it trades off (1 step fanout scan + 5 step
+# bisect) with (8 step fanout scan + 1 step bisect)
+# 5 step bisect = log(2^16 / 8 / 255)  # fanout
+# 10 step fanout scan = 2^16 / (2^16 / 8)  # fanout space divided by entries
+SMALLFANOUTCUTOFF = 2**16 / 8
 
 # The indicator value in the index for a fulltext entry.
 FULLTEXTINDEXMARK = -1
@@ -112,18 +115,25 @@ class datapack(object):
         self._data = mmap.mmap(self.datafp.fileno(), 0,
                                 access=mmap.ACCESS_READ)
 
-        version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
+        version = struct.unpack('!B', self._data[:PACKVERSIONSIZE])[0]
         if version != VERSION:
             raise RuntimeError("unsupported datapack version '%s'" %
                                version)
-        version = struct.unpack('!B', self._index[:VERSIONSIZE])[0]
+
+        version, config = struct.unpack('!BB', self._index[:INDEXVERSIONSIZE])
         if version != VERSION:
             raise RuntimeError("unsupported datapack index version '%s'" %
                                version)
 
-        rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
+        if 0b10000000 & config:
+            self.params = indexparams(LARGEFANOUTPREFIX)
+        else:
+            self.params = indexparams(SMALLFANOUTPREFIX)
+
+        params = self.params
+        rawfanout = self._index[FANOUTSTART:FANOUTSTART + params.fanoutsize]
         self._fanouttable = []
-        for i in xrange(0, FANOUTCOUNT):
+        for i in xrange(0, params.fanoutcount):
             loc = i * 4
             fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
             self._fanouttable.append(fanoutentry)
@@ -146,12 +156,14 @@ class datapack(object):
         if value is None:
             raise KeyError((name, node))
 
+        params = self.params
+
         # Precompute chains
         chain = [value]
         deltabaseoffset = value[1]
         while (deltabaseoffset != FULLTEXTINDEXMARK
                and deltabaseoffset != NOBASEINDEXMARK):
-            loc = INDEXSTART + deltabaseoffset
+            loc = params.indexstart + deltabaseoffset
             value = struct.unpack(INDEXFORMAT, self._index[loc:loc +
                                                            INDEXENTRYLENGTH])
             deltabaseoffset = value[1]
@@ -189,14 +201,16 @@ class datapack(object):
         raise RuntimeError("cannot add to datapack (%s:%s)" % (name, node))
 
     def _find(self, node):
-        fanoutkey = struct.unpack(FANOUTSTRUCT, node[:FANOUTPREFIX])[0]
+        params = self.params
+        fanoutkey = struct.unpack(params.fanoutstruct,
+                                  node[:params.fanoutprefix])[0]
         fanout = self._fanouttable
 
-        start = fanout[fanoutkey] + INDEXSTART
+        start = fanout[fanoutkey] + params.indexstart
         # Scan forward to find the first non-same entry, which is the upper
         # bound.
-        for i in xrange(fanoutkey + 1, FANOUTCOUNT):
-            end = fanout[i] + INDEXSTART
+        for i in xrange(fanoutkey + 1, params.fanoutcount):
+            end = fanout[i] + params.indexstart
             if end != start:
                 break
         else:
@@ -213,7 +227,7 @@ class datapack(object):
         else:
             while start < end - INDEXENTRYLENGTH:
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - INDEXSTART) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - params.indexstart) % INDEXENTRYLENGTH)
                 midnode = index[mid:mid + NODELENGTH]
                 if midnode == node:
                     entry = index[mid:mid + INDEXENTRYLENGTH]
@@ -422,7 +436,13 @@ class mutabledatapack(object):
                          in self.entries.iteritems())
         rawindex = ''
 
-        fanouttable = [EMPTYFANOUT] * FANOUTCOUNT
+        largefanout = len(entries) > SMALLFANOUTCUTOFF
+        if largefanout:
+            params = indexparams(LARGEFANOUTPREFIX)
+        else:
+            params = indexparams(SMALLFANOUTPREFIX)
+
+        fanouttable = [EMPTYFANOUT] * params.fanoutcount
 
         # Precompute the location of each entry
         locations = {}
@@ -434,7 +454,8 @@ class mutabledatapack(object):
             count += 1
 
             # Must use [0] on the unpack result since it's always a tuple.
-            fanoutkey = struct.unpack(FANOUTSTRUCT, node[:FANOUTPREFIX])[0]
+            fanoutkey = struct.unpack(params.fanoutstruct,
+                                      node[:params.fanoutprefix])[0]
             if fanouttable[fanoutkey] == EMPTYFANOUT:
                 fanouttable[fanoutkey] = location
 
@@ -457,7 +478,42 @@ class mutabledatapack(object):
             last = offset
             rawfanouttable += struct.pack('!I', offset)
 
-        self.idxfp.write(struct.pack('!B', VERSION))
+        self._writeheader(params)
         self.idxfp.write(rawfanouttable)
         self.idxfp.write(rawindex)
         self.idxfp.close()
+
+    def _writeheader(self, indexparams):
+        # Index header
+        #    <version: 1 byte>
+        #    <large fanout: 1 bit> # 1 means 2^16, 0 means 2^8
+        #    <unused: 7 bit> # future use (compression, delta format, etc)
+        config = 0
+        if indexparams.fanoutprefix == LARGEFANOUTPREFIX:
+            config = 0b10000000
+        self.idxfp.write(struct.pack('!BB', VERSION, config))
+
+class indexparams(object):
+    __slots__ = ('fanoutprefix', 'fanoutstruct', 'fanoutcount', 'fanoutsize',
+                 'indexstart')
+
+    def __init__(self, prefixsize):
+        self.fanoutprefix = prefixsize
+
+        # The struct pack format for fanout table location (i.e. the format that
+        # converts the node prefix into an integer location in the fanout
+        # table).
+        if prefixsize == SMALLFANOUTPREFIX:
+            self.fanoutstruct = '!B'
+        elif prefixsize == LARGEFANOUTPREFIX:
+            self.fanoutstruct = '!H'
+        else:
+            raise ValueError("invalid fanout prefix size: %s" % prefixsize)
+
+        # The number of fanout table entries
+        self.fanoutcount = 2**(prefixsize * 8)
+
+        # The total bytes used by the fanout table
+        self.fanoutsize = self.fanoutcount * 4
+
+        self.indexstart = FANOUTSTART + self.fanoutsize
