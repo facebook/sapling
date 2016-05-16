@@ -2824,11 +2824,11 @@ def _iterordered(ascending, iter1, iter2):
                 val1 = iter1.next()
             if val2 is None:
                 val2 = iter2.next()
-            next = choice(val1, val2)
-            yield next
-            if val1 == next:
+            n = choice(val1, val2)
+            yield n
+            if val1 == n:
                 val1 = None
-            if val2 == next:
+            if val2 == n:
                 val2 = None
     except StopIteration:
         # Flush any remaining values and consume the other one
