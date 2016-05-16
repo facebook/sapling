@@ -530,15 +530,15 @@ class fastmanifestdict(object):
             return self.copy()
 
         if self._filesfastpath(match):
-            m = fastmanifestdict()
-            lm = self._fm
+            nfm = fastmanifest_wrapper.fastManifest()
             for fn in match.files():
-                if fn in lm:
-                    m._fm[fn] = lm[fn]
+                if fn in self._fm:
+                    nfm[fn] = self._fm[fn]
+            m = fastmanifestdict(nfm)
             return m
 
-        m = fastmanifestdict()
-        m._fm = self._fm.filtercopy(match)
+        nfm = self._fm.filtercopy(match)
+        m = fastmanifestdict(nfm)
         return m
 
     def diff(self, m2, clean=False):
