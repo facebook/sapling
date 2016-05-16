@@ -253,7 +253,14 @@ class hybridmanifest(object):
         return _m1.diff(_m2, *args, **kwargs)
 
 
-class manifestcache(object):
+class fastmanifestcache(object):
+    _instance = None
+    @classmethod
+    def getinstance(cls, opener, ui):
+        if not cls._instance:
+            cls._instance = fastmanifestcache(opener, ui)
+        return cls._instance
+
     def __init__(self, opener, ui):
         self.opener = opener
         self.ui = ui
@@ -264,13 +271,21 @@ class manifestcache(object):
             os.makedirs(self.cachepath)
 
     def keyprefix(self):
-        raise NotImplementedError("abstract method, should be overriden")
+        return "fast"
 
-    def load(self, data):
-        raise NotImplementedError("abstract method, should be overriden")
+    def load(self, fpath):
+        try:
+            fm = fastmanifest_wrapper.fastManifest.load(fpath)
+        except EnvironmentError:
+            return None
+        else:
+            return fastmanifestdict(fm)
 
-    def dump(self, manifest):
-        raise NotImplementedError("abstract method, should be overriden")
+    def dump(self, fpath, manifest):
+        # TODO: is this already a hybridmanifest/fastmanifest?  if so, we may be
+        # able to skip a frivolous conversion step.
+        fm = fastmanifest_wrapper.fastManifest(manifest.text())
+        fm.save(fpath)
 
     def inmemorycachekey(self, key):
         return (self.keyprefix(), key)
@@ -319,33 +334,6 @@ class manifestcache(object):
     def prune(self, limit):
         # TODO logic to prune old entries
         pass
-
-# fastmanifestcache should be a singleton.
-class fastmanifestcache(manifestcache):
-    _instance = None
-    @classmethod
-    def getinstance(cls, opener, ui):
-        if not cls._instance:
-            cls._instance = fastmanifestcache(opener, ui)
-        return cls._instance
-
-    def keyprefix(self):
-        return "fast"
-
-    def load(self, fpath):
-        try:
-            fm = fastmanifest_wrapper.fastManifest.load(fpath)
-        except EnvironmentError:
-            return None
-        else:
-            return fastmanifestdict(fm)
-
-    def dump(self, fpath, manifest):
-        # TODO: is this already a hybridmanifest/fastmanifest?  if so, we may be
-        # able to skip a frivolous conversion step.
-        fm = fastmanifest_wrapper.fastManifest(manifest.text())
-        fm.save(fpath)
-
 
 class manifestfactory(object):
     def __init__(self, ui):
