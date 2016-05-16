@@ -574,8 +574,7 @@ class fastmanifestdict(object):
             return default
 
     def copy(self):
-        c = fastmanifestdict()
-        c._fm = self._fm.copy()
+        c = fastmanifestdict(self._fm.copy())
         return c
 
     def iteritems(self):
