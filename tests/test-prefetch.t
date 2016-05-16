@@ -171,3 +171,28 @@
   $ clearcache
   $ hg addremove -s 50 > /dev/null
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
+
+# Prefetch packs
+  $ hgcloneshallow ssh://user@dummy/master packprefetch
+  streaming all changes
+  2 files to transfer, 528 bytes of data
+  transferred 528 bytes in 0.0 seconds (*/sec) (glob)
+  searching for changes
+  no changes found
+  updating to branch default
+  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd packprefetch
+  $ clearcache
+  $ hg prefetch -r . --config remotefilelog.fetchpacks=True
+  3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ find $TESTTMP/hgcache -type f
+  $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.dataidx
+  $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.datapack
+  $TESTTMP/hgcache/master/packs/bc793de8656fc1534908d4d69fd4448c1cb00e91.histidx
+  $TESTTMP/hgcache/master/packs/bc793de8656fc1534908d4d69fd4448c1cb00e91.histpack
+  $ hg cat -r . x
+  x2
+  $ hg cat -r . y
+  y
+  $ hg cat -r . z
+  z

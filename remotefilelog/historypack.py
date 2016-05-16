@@ -3,7 +3,7 @@ from collections import defaultdict, deque
 from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import shallowutil
+import constants, shallowutil
 
 # (filename hash, offset, size)
 INDEXFORMAT = '!20sQQ'
@@ -14,7 +14,6 @@ NODELENGTH = 20
 PACKFORMAT = "!20s20s20s20sH"
 PACKENTRYLENGTH = 82
 
-FILENAMESIZE = 2
 OFFSETSIZE = 4
 
 # The fanout prefix is the number of bytes that can be addressed by the fanout
@@ -248,8 +247,8 @@ class historypack(object):
 
         filenamehash, offset, size = struct.unpack(INDEXFORMAT, entry)
         filenamelength = struct.unpack('!H', self._data[offset:offset +
-                                                        FILENAMESIZE])[0]
-        offset += FILENAMESIZE
+                                                    constants.FILENAMESIZE])[0]
+        offset += constants.FILENAMESIZE
 
         actualname = self._data[offset:offset + filenamelength]
         offset += filenamelength
@@ -262,7 +261,8 @@ class historypack(object):
                                                   OFFSETSIZE])[0]
         offset += OFFSETSIZE
 
-        return (name, offset, size - FILENAMESIZE - filenamelength - OFFSETSIZE)
+        return (name, offset, size - constants.FILENAMESIZE - filenamelength
+                              - OFFSETSIZE)
 
     def markledger(self, ledger):
         for filename, node in self._iterkeys():
@@ -286,9 +286,9 @@ class historypack(object):
         while offset < self.datasize:
             # <2 byte len> + <filename>
             filenamelen = struct.unpack('!H', data[offset:offset +
-                                                   FILENAMESIZE])[0]
+                                                   constants.FILENAMESIZE])[0]
             assert (filenamelen > 0)
-            offset += FILENAMESIZE
+            offset += constants.FILENAMESIZE
             filename = data[offset:offset + filenamelen]
             offset += filenamelen
 
@@ -429,7 +429,7 @@ class mutablehistorypack(object):
             filename,
             struct.pack('!I', len(self.currententries)),
         ))
-        sectionlen = FILENAMESIZE + len(filename) + 4
+        sectionlen = constants.FILENAMESIZE + len(filename) + 4
 
         # Write the file section content
         rawdata = ''.join('%s%s%s%s%s%s' % e for e in self.currententries)

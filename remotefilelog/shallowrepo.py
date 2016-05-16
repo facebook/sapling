@@ -10,6 +10,7 @@ from mercurial.i18n import _
 from mercurial import localrepo, context, util, match, scmutil
 from mercurial.extensions import wrapfunction
 import remotefilelog, remotefilectx, fileserverclient, shallowbundle, os
+import shallowutil
 from contentstore import remotefilelogcontentstore, unioncontentstore
 from contentstore import remotecontentstore
 from metadatastore import remotefilelogmetadatastore, unionmetadatastore
@@ -175,7 +176,7 @@ def wraprepo(repo):
                                          cachemetadata)
 
     # Instantiate pack stores
-    packpath = os.path.join(cachepath, repo.name, 'packs')
+    packpath = shallowutil.getpackpath(repo)
     packcontentstore = datapackstore(packpath)
     packmetadatastore = historypackstore(packpath)
 

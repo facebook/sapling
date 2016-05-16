@@ -5,8 +5,9 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, platform, os, subprocess, sys, tempfile
+import errno, platform, os, struct, subprocess, sys, tempfile
 from mercurial import filelog, util
+from mercurial.i18n import _
 
 def interposeclass(container, classname):
     '''Interpose a class into the hierarchies of all loaded subclasses. This
@@ -44,6 +45,10 @@ def getcachekey(reponame, file, id):
 def getlocalkey(file, id):
     pathhash = util.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
+
+def getpackpath(repo):
+    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    return os.path.join(cachepath, repo.name, 'packs')
 
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
@@ -215,3 +220,16 @@ else:
             # mission accomplished, this child needs to exit and not
             # continue the hg process here.
             os._exit(0)
+
+def readexactly(stream, n):
+    '''read n bytes from stream.read and abort if less was available'''
+    s = stream.read(n)
+    if len(s) < n:
+        raise error.Abort(_("stream ended unexpectedly"
+                           " (got %d bytes, expected %d)")
+                          % (len(s), n))
+    return s
+
+def readunpack(stream, fmt):
+    data = readexactly(stream, struct.calcsize(fmt))
+    return struct.unpack(fmt, data)

@@ -11,8 +11,9 @@ from mercurial.extensions import wrapfunction
 from mercurial.hgweb import protocol as httpprotocol
 from mercurial.node import bin, hex, nullid, nullrev
 from mercurial.i18n import _
-import shallowrepo
-import errno, stat, os, lz4, time
+import constants, shallowrepo, shallowutil
+import errno, stat, os, lz4, struct, time, sys
+from shallowutil import readexactly, readunpack
 
 try:
     from mercurial import streamclone
@@ -61,6 +62,7 @@ def onetimesetup(ui):
     # support file content requests
     wireproto.commands['getfiles'] = (getfiles, '')
     wireproto.commands['getfile'] = (getfile, 'file node')
+    wireproto.commands['getpackv1'] = (getpack, '*')
 
     class streamstate(object):
         match = None
@@ -351,3 +353,128 @@ def gcserver(ui, repo):
                 os.remove(filepath)
 
     ui.progress(_removing, None)
+
+def getpack(repo, proto, args):
+    """A server api for requesting a pack of file information.
+    """
+    if shallowrepo.requirement in repo.requirements:
+        raise error.Abort(_('cannot fetch remote files from shallow repo'))
+    if not isinstance(proto, sshserver.sshserver):
+        raise error.Abort(_('cannot fetch remote files over non-ssh protocol'))
+
+    def streamer():
+        """Request format:
+
+        [<filerequest>,...]\0\0
+        filerequest = <filename len: 2 byte><filename><count: 4 byte>
+                      [<node: 20 byte>,...]
+
+        Response format:
+        [<fileresponse>,...]
+        fileresponse = <filename len: 2 byte><filename><history><deltas>
+        history = <count: 4 byte>[<history entry>,...]
+        historyentry = <node: 20 byte><p1: 20 byte><p2: 20 byte>
+                       <linknode: 20 byte><copyfrom len: 2 byte><copyfrom>
+        deltas = [<delta entry>,...]
+        deltaentry = <node: 20 byte><deltabase: 20 byte>
+                     <delta len: 8 byte><delta>
+        """
+        files = _receivepackrequest(proto.fin)
+
+        # Sort the files by name, so we provide deterministic results
+        for filename, nodes in sorted(files.iteritems()):
+            fl = repo.file(filename)
+
+            rawfilenamelen = struct.pack(constants.FILENAMESTRUCT,
+                                         len(filename))
+            yield '%s%s' % (rawfilenamelen, filename)
+
+            # Compute history
+            history = []
+            for rev in fl.ancestors(list(fl.rev(n) for n in nodes),
+                                    inclusive=True):
+                x, x, x, x, linkrev, p1, p2, node = fl.index[rev]
+                copyfrom = ''
+                p1node = fl.node(p1)
+                p2node = fl.node(p2)
+                linknode = repo.changelog.node(linkrev)
+                history.append((node, p1node, p2node, linknode, copyfrom))
+
+            # Serialize and send history
+            historylen = struct.pack('!I', len(history))
+            rawhistory = ''
+            for entry in history:
+                copyfrom = entry[4]
+                copyfromlen = len(copyfrom)
+                tup = entry[:-1] + (copyfromlen,)
+                rawhistory += struct.pack('!20s20s20s20sH', *tup)
+                if copyfrom:
+                    rawhistory += copyfrom
+
+            yield '%s%s' % (historylen, rawhistory)
+
+            # Scan and send deltas
+            chain = _getdeltachain(fl, nodes, -1)
+            yield struct.pack('!I', len(chain))
+
+            for node, deltabase, delta in chain:
+                deltalen = struct.pack('!Q', len(delta))
+                yield '%s%s%s%s' % (node, deltabase, deltalen, delta)
+
+        yield '\0\0'
+        proto.fout.flush()
+
+    return wireproto.streamres(streamer())
+
+def _receivepackrequest(stream):
+    files = {}
+    while True:
+        filenamelen = readunpack(stream, constants.FILENAMESTRUCT)[0]
+        if filenamelen == 0:
+            break
+
+        filename = readexactly(stream, filenamelen)
+
+        nodecount = readunpack(stream, constants.PACKREQUESTCOUNTSTRUCT)[0]
+
+        # Read N nodes
+        nodes = readexactly(stream, constants.NODESIZE * nodecount)
+        nodes = set(nodes[i:i + constants.NODESIZE] for i in
+                    xrange(0, len(nodes), constants.NODESIZE))
+
+        files[filename] = nodes
+
+    return files
+
+def _getdeltachain(fl, nodes, stophint):
+    chain = []
+
+    seen = set()
+    for node in nodes:
+        startrev = fl.rev(node)
+        cur = startrev
+        while True:
+            if cur in seen:
+                break
+            start, length, size, base, linkrev, p1, p2, node = fl.index[cur]
+            if linkrev < stophint and cur != startrev:
+                break
+
+            fulltext = False
+            if stophint == -1 or base == nullrev or base == cur:
+                # Fulltext
+                delta = fl.revision(cur)
+                base = nullrev
+            else:
+                delta = fl._chunk(cur)
+
+            basenode = fl.node(base)
+            chain.append((node, basenode, delta))
+            seen.add(cur)
+
+            if base == nullrev:
+                break
+            cur = base
+
+    chain.reverse()
+    return chain
