@@ -40,6 +40,9 @@ logopts = [
 
 def uisetup(ui):
     tweakorder()
+    # if we want to replace command's docstring (not just add stuff to it),
+    # we need to do it in uisetup, not extsetup
+    commands.table['^annotate|blame'][0].__doc__ = blame.__doc__
 
 def extsetup(ui):
     entry = wrapcommand(commands.table, 'update', update)
@@ -48,9 +51,7 @@ def extsetup(ui):
     options.insert(3, ('n', 'nocheck', None,
         _('update even with outstanding changes')))
 
-    entry = wrapcommand(commands.table, 'annotate', blame)
-    options = entry[1]
-    options.append(('p', 'phabdiff', None, _('list phabricator diff')))
+    wrapblame()
 
     entry = wrapcommand(commands.table, 'commit', commitcmd)
     options = entry[1]
@@ -277,7 +278,41 @@ def update(orig, ui, repo, node=None, rev=None, **kwargs):
 
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
+def wrapblame():
+    entry = wrapcommand(commands.table, 'annotate', blame)
+    options = entry[1]
+    options.append(('p', 'phabdiff', None, _('list phabricator diff id')))
+
+    # revision number is no longer default
+    nind = next((i for i, o in enumerate(options) if o[0] == 'n'), -1)
+    if nind != -1:
+        options[nind] = ('n', 'number', None, _('list the revision number'))
+    # changeset is default now
+    cind = next((i for i, o in enumerate(options) if o[0] == 'c'), -1)
+    if cind != -1:
+        options[cind] = ('c', 'changeset', None,
+                         _('list the changeset (default)'))
+
 def blame(orig, ui, repo, *pats, **opts):
+    """show changeset information by line for each file
+
+    List changes in files, showing the changeset responsible for
+    each line.
+
+    This command is useful for discovering when a change was made and
+    by whom.
+
+    If you include -n, changeset gets replaced by revision id, unless
+    you also include -c, in which case both are shown. -p on the other
+    hand always adds Phabricator Diff Id, not replacing anything with it.
+
+    Without the -a/--text option, annotate will avoid processing files
+    it detects as binary. With -a, annotate will annotate the file
+    anyway, although the results will probably be neither useful
+    nor desirable.
+
+    Returns 0 on success.
+    """
     def phabdiff(context, mapping, args):
         """Fetch the Phab Diff Id from the node in mapping"""
         res = ' ' * 8
@@ -308,7 +343,11 @@ def blame(orig, ui, repo, *pats, **opts):
         # user expressed explicit desire to see revisions
         # padding is really big here, but hopefully people
         # don't want to see revisions too much
-        tmpl = "{pad(rev, 9)}:"
+        revtmpl = "{pad(rev, 9)}:"
+        if opts.get('changeset'):
+            tmpl += revtmpl
+        else:
+            tmpl = revtmpl
     if opts.get('phabdiff'):
         del opts['phabdiff']
         tmpl += "{pad(blame_phabdiffid(), 8)}:"
