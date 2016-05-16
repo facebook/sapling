@@ -84,13 +84,13 @@ def purge(ui, repo, *dirs, **opts):
     list of files that this program would delete, use the --print
     option.
     '''
-    act = not opts['print']
+    act = not opts.get('print')
     eol = '\n'
-    if opts['print0']:
+    if opts.get('print0'):
         eol = '\0'
         act = False # --print0 implies --print
-    removefiles = opts['files']
-    removedirs = opts['dirs']
+    removefiles = opts.get('files')
+    removedirs = opts.get('dirs')
     if not removefiles and not removedirs:
         removefiles = True
         removedirs = True
@@ -101,7 +101,7 @@ def purge(ui, repo, *dirs, **opts):
                 remove_func(repo.wjoin(name))
             except OSError:
                 m = _('%s cannot be removed') % name
-                if opts['abort_on_err']:
+                if opts.get('abort_on_err'):
                     raise error.Abort(m)
                 ui.warn(_('warning: %s\n') % m)
         else:
@@ -111,7 +111,7 @@ def purge(ui, repo, *dirs, **opts):
     if removedirs:
         directories = []
         match.explicitdir = match.traversedir = directories.append
-    status = repo.status(match=match, ignored=opts['all'], unknown=True)
+    status = repo.status(match=match, ignored=opts.get('all'), unknown=True)
 
     if removefiles:
         for f in sorted(status.unknown + status.ignored):
