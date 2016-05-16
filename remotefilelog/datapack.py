@@ -3,7 +3,7 @@ from collections import defaultdict
 from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import shallowutil
+import constants, shallowutil
 
 # Index entry format is: <node><delta offset><pack data offset><pack data size>
 # See the mutabledatapack doccomment for more details.
@@ -230,12 +230,12 @@ class datapack(object):
         return struct.unpack(INDEXFORMAT, entry)
 
     def markledger(self, ledger):
-        for filename, node in self._iterkeys():
+        for filename, node in self:
             ledger.markdataentry(self, filename, node)
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])
-        allkeys = set(self._iterkeys())
+        allkeys = set(self)
         repackedkeys = set((e.filename, e.node) for e in entries if
                            e.datarepacked)
 
@@ -244,7 +244,11 @@ class datapack(object):
                 util.unlinkpath(self.indexpath, ignoremissing=True)
                 util.unlinkpath(self.packpath, ignoremissing=True)
 
-    def _iterkeys(self):
+    def __iter__(self):
+        for f, n, x, x in self.iterentries():
+            yield f, n
+
+    def iterentries(self):
         # Start at 1 to skip the header
         offset = 1
         data = self._data
@@ -255,16 +259,19 @@ class datapack(object):
             filename = data[offset:offset + filenamelen]
             offset += filenamelen
 
-            # <20 byte node> + <20 byte deltabase>
-            node = data[offset:offset + 20]
-            offset += 40
+            # <20 byte node>
+            node = data[offset:offset + constants.NODESIZE]
+            offset += constants.NODESIZE
+            # <20 byte deltabase>
+            deltabase = data[offset:offset + constants.NODESIZE]
+            offset += constants.NODESIZE
 
             # <8 byte len> + <delta>
             rawdeltalen = data[offset:offset + 8]
             deltalen = struct.unpack('!Q', rawdeltalen)[0]
             offset += 8 + deltalen
 
-            yield (filename, node)
+            yield (filename, node, deltabase, deltalen)
 
 class mutabledatapack(object):
     """A class for constructing and serializing a datapack file and index.

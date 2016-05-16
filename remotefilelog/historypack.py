@@ -265,12 +265,12 @@ class historypack(object):
                               - OFFSETSIZE)
 
     def markledger(self, ledger):
-        for filename, node in self._iterkeys():
+        for filename, node in self:
             ledger.markhistoryentry(self, filename, node)
 
     def cleanup(self, ledger):
         entries = ledger.sources.get(self, [])
-        allkeys = set(self._iterkeys())
+        allkeys = set(self)
         repackedkeys = set((e.filename, e.node) for e in entries if
                            e.historyrepacked)
 
@@ -279,7 +279,11 @@ class historypack(object):
                 util.unlinkpath(self.indexpath, ignoremissing=True)
                 util.unlinkpath(self.packpath, ignoremissing=True)
 
-    def _iterkeys(self):
+    def __iter__(self):
+        for f, n, x, x, x, x in self.iterentries():
+            yield f, n
+
+    def iterentries(self):
         # Start at 1 to skip the header
         offset = 1
         data = self._data
@@ -299,9 +303,13 @@ class historypack(object):
             for i in xrange(revcount):
                 entry = struct.unpack(PACKFORMAT, data[offset:offset +
                                                               PACKENTRYLENGTH])
-                node = entry[ANC_NODE]
-                offset += PACKENTRYLENGTH + entry[ANC_COPYFROM]
-                yield (filename, node)
+                offset += PACKENTRYLENGTH
+
+                copyfrom = data[offset:offset + entry[ANC_COPYFROM]]
+                offset += entry[ANC_COPYFROM]
+
+                yield (filename, entry[ANC_NODE], entry[ANC_P1NODE],
+                        entry[ANC_P2NODE], entry[ANC_LINKNODE], copyfrom)
 
 class mutablehistorypack(object):
     """A class for constructing and serializing a histpack file and index.
