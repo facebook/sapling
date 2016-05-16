@@ -34,6 +34,7 @@ INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 # The indicator value in the index for a fulltext entry.
 FULLTEXTINDEXMARK = -1
+NOBASEINDEXMARK = -2
 
 # Constant that indicates a fanout table entry hasn't been filled in. (This does
 # not get serialized)
@@ -148,7 +149,8 @@ class datapack(object):
         # Precompute chains
         chain = [value]
         deltabaseoffset = value[1]
-        while deltabaseoffset != -1:
+        while (deltabaseoffset != FULLTEXTINDEXMARK
+               and deltabaseoffset != NOBASEINDEXMARK):
             loc = INDEXSTART + deltabaseoffset
             value = struct.unpack(INDEXFORMAT, self._index[loc:loc +
                                                            INDEXENTRYLENGTH])
@@ -435,7 +437,7 @@ class mutabledatapack(object):
             else:
                 # Instead of storing the deltabase node in the index, let's
                 # store a pointer directly to the index entry for the deltabase.
-                deltabaselocation = locations[deltabase]
+                deltabaselocation = locations.get(deltabase, NOBASEINDEXMARK)
 
             entry = struct.pack(INDEXFORMAT, node, deltabaselocation, offset,
                                 size)

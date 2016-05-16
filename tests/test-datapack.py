@@ -32,7 +32,7 @@ class datapacktests(unittest.TestCase):
         return util.sha1(content).digest()
 
     def getFakeHash(self):
-        return bin('1' * 40)
+        return ''.join(chr(random.randint(0, 255)) for _ in range(20))
 
     def createPack(self, revisions=None):
         if revisions is None:
@@ -174,6 +174,13 @@ class datapacktests(unittest.TestCase):
             self.assertTrue(False, "bad version number should have thrown")
         except RuntimeError:
             pass
+
+    def testMissingDeltabase(self):
+        fakenode = self.getFakeHash()
+        revisions = [("filename", fakenode, self.getFakeHash(), "content")]
+        pack = self.createPack(revisions)
+        chain = pack.getdeltachain("filename", fakenode)
+        self.assertEquals(len(chain), 1)
 
     # perf test off by default since it's slow
     def _testIndexPerf(self):
