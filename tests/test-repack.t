@@ -123,6 +123,24 @@
   $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.dataidx
   $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack
 
+# Test debug commands
+
+  $ hg debugdatapack $TESTTMP/hgcache/master/packs/92a06d8b76a23b6e6150cf877ea75ed993e0b2d8
+  
+  x
+  Node          Delta Base    Delta Length
+  1bb2e6237e03  000000000000  13
+  d4a3ed9310e5  1bb2e6237e03  17
+  aee31534993a  d4a3ed9310e5  17
+  $ hg debughistorypack $TESTTMP/hgcache/master/packs/3bebfba849e7aed8e598b92b296aeaff4784393b
+  
+  x
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  1bb2e6237e03  d4a3ed9310e5  000000000000  0b03bbc9e1e7  
+  d4a3ed9310e5  aee31534993a  000000000000  421535db10b6  
+  aee31534993a  1406e7411862  000000000000  a89d614e2364  
+  1406e7411862  000000000000  000000000000  b292c1e3311f  
+
 # Test copy tracing from a pack
   $ cd ../master
   $ hg mv x y

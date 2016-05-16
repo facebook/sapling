@@ -754,6 +754,16 @@ def debugremotefilelog(ui, *args, **opts):
 def verifyremotefilelog(ui, *args, **opts):
     return debugcommands.verifyremotefilelog(ui, *args, **opts)
 
+@command('debugdatapack', [
+    ], _('hg debugdatapack <path>'), norepo=True)
+def debugremotefilelog(ui, path, *args, **opts):
+    return debugcommands.debugdatapack(ui, path, *args, **opts)
+
+@command('debughistorypack', [
+    ], _('hg debughistorypack <path>'), norepo=True)
+def debughistorypack(ui, path, *args, **opts):
+    return debugcommands.debughistorypack(ui, path, *args, **opts)
+
 @command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
     ] + commands.walkopts, _('hg prefetch [OPTIONS] [FILE...]'))

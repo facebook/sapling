@@ -8,7 +8,7 @@
 from mercurial import util, filelog, revlog
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
-import shallowrepo
+import datapack, historypack, shallowrepo
 import os, lz4
 
 def debugremotefilelog(ui, *args, **opts):
@@ -190,3 +190,35 @@ def parsefileblob(path, decompress):
         start = divider + 1
 
     return size, firstnode, mapping
+
+def debugdatapack(ui, path, *args, **kwargs):
+    dpack = datapack.datapack(path)
+
+    lastfilename = None
+    for filename, node, deltabase, deltalen in dpack.iterentries():
+        if filename != lastfilename:
+            ui.write("\n%s\n" % filename)
+            ui.write("%s%s%s\n" % (
+                "Node".ljust(14),
+                "Delta Base".ljust(14),
+                "Delta Length".ljust(6)))
+            lastfilename = filename
+        ui.write("%s  %s  %s\n" % (short(node), short(deltabase), deltalen))
+
+def debughistorypack(ui, path, *args, **kwargs):
+    hpack = historypack.historypack(path)
+
+    lastfilename = None
+    for entry in hpack.iterentries():
+        filename, node, p1node, p2node, linknode, copyfrom = entry
+        if filename != lastfilename:
+            ui.write("\n%s\n" % filename)
+            ui.write("%s%s%s%s%s\n" % (
+                "Node".ljust(14),
+                "P1 Node".ljust(14),
+                "P2 Node".ljust(14),
+                "Link Node".ljust(14),
+                "Copy From"))
+            lastfilename = filename
+        ui.write("%s  %s  %s  %s  %s\n" % (short(node), short(p1node),
+            short(p2node), short(linknode), copyfrom))
