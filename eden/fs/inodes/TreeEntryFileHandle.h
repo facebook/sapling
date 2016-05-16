@@ -14,12 +14,15 @@ namespace facebook {
 namespace eden {
 
 class Blob;
+class FileData;
 class LocalStore;
 class TreeEntryFileInode;
 
 class TreeEntryFileHandle : public fusell::FileHandle {
  public:
-  explicit TreeEntryFileHandle(std::shared_ptr<TreeEntryFileInode> inode);
+  explicit TreeEntryFileHandle(
+      std::shared_ptr<TreeEntryFileInode> inode,
+      std::shared_ptr<FileData> data);
   ~TreeEntryFileHandle();
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -37,6 +40,7 @@ class TreeEntryFileHandle : public fusell::FileHandle {
 
  private:
   std::shared_ptr<TreeEntryFileInode> inode_;
+  std::shared_ptr<FileData> data_;
 };
 }
 }

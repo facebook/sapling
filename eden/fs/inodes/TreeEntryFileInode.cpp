@@ -9,6 +9,7 @@
  */
 #include "TreeEntryFileInode.h"
 
+#include "FileData.h"
 #include "TreeEntryFileHandle.h"
 #include "eden/fs/store/LocalStore.h"
 
@@ -78,21 +79,20 @@ folly::Future<std::string> TreeEntryFileInode::readlink() {
   }
 }
 
-void TreeEntryFileInode::prepOpenState() {
+std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
   std::unique_lock<std::mutex> lock(mutex_);
-
-  if (openCount_ == 0 && entry_) {
-    // load the buffer from storage.
-    blob_ = parentInode_->getStore()->getBlob(entry_->getHash());
+  if (!data_) {
+    data_ =
+        std::make_shared<FileData>(mutex_, parentInode_->getStore(), entry_);
   }
-
-  ++openCount_;
+  return data_;
 }
 
 void TreeEntryFileInode::fileHandleDidClose() {
   std::unique_lock<std::mutex> lock(mutex_);
-  if (--openCount_ == 0) {
-    blob_.reset();
+  if (data_.unique()) {
+    // We're the only remaining user, no need to keep it around
+    data_.reset();
   }
 }
 
@@ -106,13 +106,15 @@ folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
         folly::throwSystemErrorExplicit(EROFS);
       }
 
-      prepOpenState();
-      SCOPE_FAIL {
+      auto data = getOrLoadData();
+      SCOPE_EXIT {
+        data.reset();
         fileHandleDidClose();
       };
 
       return new TreeEntryFileHandle(
-          std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()));
+          std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
+          data);
     }
     case FileType::SYMLINK:
       // man 2 open says:  ELOOP ... or O_NOFOLLOW was specified but pathname

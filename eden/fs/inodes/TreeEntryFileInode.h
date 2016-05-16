@@ -17,6 +17,7 @@ namespace eden {
 
 class TreeEntryFileHandle;
 class Blob;
+class FileData;
 
 class TreeEntryFileInode : public fusell::FileInode {
  public:
@@ -35,9 +36,10 @@ class TreeEntryFileInode : public fusell::FileInode {
 
   const TreeEntry* getEntry() const;
 
+  /// Ensure that underlying storage information is loaded
+  std::shared_ptr<FileData> getOrLoadData();
+
  private:
-  /// Ensure that blob_ is loaded (if appropriate) and bump openCount_
-  void prepOpenState();
 
   /// Called as part of shutting down an open handle.
   void fileHandleDidClose();
@@ -47,12 +49,12 @@ class TreeEntryFileInode : public fusell::FileInode {
   // valid while we're both alive
   std::shared_ptr<TreeInode> parentInode_;
   const TreeEntry* entry_;
-  /// how many open handles reference this inode
-  size_t openCount_{0};
-  /// if backed by tree, the data from the tree, else nullptr.
-  // only valid if openCount_ > 0, else nullptr.
-  std::unique_ptr<Blob> blob_;
+
+  std::shared_ptr<FileData> data_;
   /// for managing consistency, especially when materializing.
+  // The corresponding FileData instance tracked by data_ above
+  // keeps a (non-owning) reference on this mutex and has methods
+  // that will acquire this mutex.
   std::mutex mutex_;
 
   friend class TreeEntryFileHandle;

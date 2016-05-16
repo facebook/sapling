@@ -9,19 +9,24 @@
  */
 #include "TreeEntryFileHandle.h"
 
+#include "FileData.h"
 #include "TreeEntryFileInode.h"
 #include "eden/fs/store/LocalStore.h"
 
-#include <folly/io/Cursor.h>
 
 namespace facebook {
 namespace eden {
 
 TreeEntryFileHandle::TreeEntryFileHandle(
-    std::shared_ptr<TreeEntryFileInode> inode)
-    : inode_(inode) {}
+    std::shared_ptr<TreeEntryFileInode> inode,
+    std::shared_ptr<FileData> data)
+    : inode_(inode), data_(data) {}
 
 TreeEntryFileHandle::~TreeEntryFileHandle() {
+  // Must reset the data point prior to calling fileHandleDidClose,
+  // otherwise it will see a use count that is too high and won't
+  // reclaim resources soon enough.
+  data_.reset();
   inode_->fileHandleDidClose();
 }
 
@@ -46,21 +51,7 @@ bool TreeEntryFileHandle::isSeekable() const {
 folly::Future<fusell::BufVec> TreeEntryFileHandle::read(
     size_t size,
     off_t off) {
-  std::unique_lock<std::mutex> lock(inode_->mutex_);
-
-  auto buf = inode_->blob_->getContents();
-  folly::io::Cursor cursor(&buf);
-
-  if (!cursor.canAdvance(off)) {
-    // Seek beyond EOF.  Return an empty result.
-    return fusell::BufVec(folly::IOBuf::wrapBuffer("", 0));
-  }
-
-  cursor.skip(off);
-
-  std::unique_ptr<folly::IOBuf> result;
-  cursor.cloneAtMost(result, size);
-  return fusell::BufVec(std::move(result));
+  return data_->read(size, off);
 }
 
 folly::Future<size_t> TreeEntryFileHandle::write(fusell::BufVec&&, off_t) {
