@@ -117,6 +117,27 @@ void test_convert_bidirectionally() {
       memcmp(input, to_result.flat_manifest, to_result.flat_manifest_sz) == 0);
 }
 
+// this was exposed in #11145050
+void test_remove_after_convert_from_flat() {
+  convert_from_flat_result_t convert_result = convert_from_flat(
+      "", 0);
+
+  ASSERT(convert_result.code == CONVERT_FROM_FLAT_OK);
+
+  tree_t *tree = convert_result.tree;
+
+  add_to_tree_t toadd[] = {
+      {STRPLUSLEN("abc"), 12345, 5},
+  };
+
+  add_to_tree(tree, toadd, sizeof(toadd) / sizeof(add_to_tree_t));
+  remove_path(tree, STRPLUSLEN("abc"));
+
+  convert_to_flat_result_t to_result = convert_to_flat(tree);
+  ASSERT(to_result.code == CONVERT_TO_FLAT_OK);
+  ASSERT(to_result.flat_manifest_sz == 0);
+}
+
 void test_empty_convert_to_flat() {
   tree_t *empty_tree = alloc_tree();
   convert_to_flat_result_t to_result = convert_to_flat(empty_tree);
@@ -127,6 +148,7 @@ int main(int argc, char *argv[]) {
   test_simple_convert();
   test_convert_tree();
   test_convert_bidirectionally();
+  test_remove_after_convert_from_flat();
   test_empty_convert_to_flat();
 
   return 0;

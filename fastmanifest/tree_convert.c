@@ -437,6 +437,7 @@ static convert_from_flat_result_t convert_from_flat_helper(
         CONVERT_FROM_FLAT_OOM, NULL};
   }
 
+  close_result.node->type = TYPE_ROOT;
   add_child(state->tree->shadow_root, close_result.node);
 
   return (convert_from_flat_result_t) {
