@@ -148,8 +148,10 @@ void Overlay::makeDirs(RelativePathPiece path) {
   }
 
   auto dirPath = localDir_ + path;
-  folly::checkUnixError(
-      mkdir(dirPath.value().c_str(), 0700), "mkdir: ", dirPath);
+  auto res = mkdir(dirPath.value().c_str(), 0700);
+  if (res == -1 && errno != EEXIST) {
+    folly::throwSystemError("mkdir: ", dirPath);
+  }
 }
 
 RelativePath Overlay::computeWhiteoutName(RelativePathPiece path) {

@@ -29,6 +29,11 @@ class FileData {
       const TreeEntry* entry);
 
   fusell::BufVec read(size_t size, off_t off);
+  size_t write(fusell::BufVec&& buf, off_t off);
+  size_t write(folly::StringPiece data, off_t off);
+  struct stat stat();
+  void flush(uint64_t lock_owner);
+  void fsync(bool datasync);
 
   /// Materialize the file data.
   // open_flags has the same meaning as the flags parameter to

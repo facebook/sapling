@@ -12,11 +12,14 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 
 namespace facebook {
 namespace eden {
+
+using folly::checkUnixError;
 
 FileData::FileData(
     std::mutex& mutex,
@@ -25,11 +28,77 @@ FileData::FileData(
     const TreeEntry* entry)
     : mutex_(mutex), store_(store), overlay_(overlay), entry_(entry) {}
 
+struct stat FileData::stat() {
+  struct stat st;
+
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  if (file_) {
+    // stat() the overlay file.
+    checkUnixError(fstat(file_.fd(), &st));
+    return st;
+  }
+
+  CHECK(blob_);
+  CHECK_NOTNULL(entry_);
+
+  switch (entry_->getFileType()) {
+    case FileType::SYMLINK:
+      st.st_mode = S_IFLNK;
+      break;
+    case FileType::REGULAR_FILE:
+      st.st_mode = S_IFREG;
+      break;
+    default:
+      folly::throwSystemErrorExplicit(
+          EINVAL,
+          "TreeEntry has an invalid file type: ",
+          entry_->getFileType());
+  }
+
+  // Bit 1 is the executable flag.  Flesh out all the permission bits based on
+  // the executable bit being set or not.
+  if (entry_->getOwnerPermissions() & 1) {
+    st.st_mode |= 0755;
+  } else {
+    st.st_mode |= 0644;
+  }
+
+  auto buf = blob_->getContents();
+  st.st_size = buf.computeChainDataLength();
+
+  return st;
+}
+
+void FileData::flush(uint64_t /* lock_owner */) {
+  // We have no write buffers, so there is nothing for us to flush
+}
+
+void FileData::fsync(bool datasync) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (!file_) {
+    // If we don't have an overlay file then we have nothing to sync
+    return;
+  }
+
+  auto res =
+#ifndef __APPLE__
+      datasync ? ::fdatasync(file_.fd()) :
+#endif
+               ::fsync(file_.fd());
+  checkUnixError(res);
+}
+
 fusell::BufVec FileData::read(size_t size, off_t off) {
   std::unique_lock<std::mutex> lock(mutex_);
 
-  // Temporary, pending the changes in a following diff
-  CHECK(blob_);
+  if (file_) {
+    auto buf = folly::IOBuf::createCombined(size);
+    auto res = ::pread(file_.fd(), buf->writableBuffer(), size, off);
+    checkUnixError(res);
+    buf->append(res);
+    return fusell::BufVec(std::move(buf));
+  }
 
   auto buf = blob_->getContents();
   folly::io::Cursor cursor(&buf);
@@ -44,6 +113,30 @@ fusell::BufVec FileData::read(size_t size, off_t off) {
   std::unique_ptr<folly::IOBuf> result;
   cursor.cloneAtMost(result, size);
   return fusell::BufVec(std::move(result));
+}
+
+size_t FileData::write(fusell::BufVec&& buf, off_t off) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (!file_) {
+    // Not open for write
+    folly::throwSystemErrorExplicit(EINVAL);
+  }
+
+  auto vec = buf.getIov();
+  auto xfer = ::pwritev(file_.fd(), vec.data(), vec.size(), off);
+  checkUnixError(xfer);
+  return xfer;
+}
+
+size_t FileData::write(folly::StringPiece data, off_t off) {
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (!file_) {
+    // Not open for write
+    folly::throwSystemErrorExplicit(EINVAL);
+  }
+  auto xfer = ::pwrite(file_.fd(), data.data(), data.size(), off);
+  checkUnixError(xfer);
+  return xfer;
 }
 
 void FileData::materialize(int open_flags, RelativePathPiece path) {
@@ -129,7 +222,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
     file_ = std::move(file);
   } else if (file_ && (open_flags & O_TRUNC) != 0) {
     // truncating a file that we already have open
-    folly::checkUnixError(ftruncate(file_.fd(), 0));
+    checkUnixError(ftruncate(file_.fd(), 0));
   }
 }
 }

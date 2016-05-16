@@ -33,43 +33,19 @@ TreeEntryFileInode::TreeEntryFileInode(
     : fusell::FileInode(ino), parentInode_(parentInode), entry_(entry) {}
 
 folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
+  auto data = getOrLoadData();
+
+  // Future optimization opportunity: right now, if we have not already
+  // materialized the data from the entry_, we have to materialize it
+  // from the store.  If we augmented our metadata we could avoid this,
+  // and this would speed up operations like `ls`.
+  data->materialize(
+      O_RDONLY,
+      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
+
   fusell::Dispatcher::Attr attr;
-
-  if (!entry_) {
-    // stat() the overlay file.
-    checkUnixError(stat(getLocalPath().c_str(), &attr.st));
-    attr.st.st_ino = ino_;
-    return attr;
-  }
-
+  attr.st = data->stat();
   attr.st.st_ino = ino_;
-  switch (entry_->getFileType()) {
-    case FileType::SYMLINK:
-      attr.st.st_mode = S_IFLNK;
-      break;
-    case FileType::REGULAR_FILE:
-      attr.st.st_mode = S_IFREG;
-      break;
-    default:
-      folly::throwSystemErrorExplicit(
-          EINVAL,
-          "TreeEntry has an invalid file type: ",
-          entry_->getFileType());
-  }
-
-  // Bit 1 is the executable flag.  Flesh out all the permission bits based on
-  // the executable bit being set or not.
-  if (entry_->getOwnerPermissions() & 1) {
-    attr.st.st_mode |= 0755;
-  } else {
-    attr.st.st_mode |= 0644;
-  }
-
-  // We don't know the size unless we fetch the data :-/
-  auto blob = parentInode_->getStore()->getBlob(entry_->getHash());
-  auto buf = blob->getContents();
-  attr.st.st_size = buf.computeChainDataLength();
-
   return attr;
 }
 
@@ -143,11 +119,6 @@ folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
 
   switch (entry_->getFileType()) {
     case FileType::REGULAR_FILE: {
-      if ((fi.flags & (O_RDWR | O_WRONLY)) != 0) {
-        // Don't allow writes.
-        folly::throwSystemErrorExplicit(EROFS);
-      }
-
       auto data = getOrLoadData();
       SCOPE_EXIT {
         data.reset();

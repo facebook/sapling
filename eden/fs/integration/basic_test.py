@@ -81,3 +81,25 @@ class BasicTest(testcase.EdenTestCase):
         st = os.lstat(filename)
         self.assertEqual(st.st_size, 8)
         self.assertTrue(stat.S_ISREG(st.st_mode))
+
+    def test_overwrite(self):
+        eden = self.init_git_eden()
+
+        hello = os.path.join(eden.mount_path, 'hello')
+        with open(hello, 'w') as f:
+            f.write('replaced\n')
+
+        st = os.lstat(hello)
+        self.assertEqual(st.st_size, len('replaced\n'))
+
+    def test_materialize(self):
+        eden = self.init_git_eden()
+
+        hello = os.path.join(eden.mount_path, 'hello')
+        # Opening for write should materialize the file with the same
+        # contents that we expect
+        with open(hello, 'r+') as f:
+            self.assertEqual('hola\n', f.read())
+
+        st = os.lstat(hello)
+        self.assertEqual(st.st_size, len('hola\n'))

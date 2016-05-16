@@ -55,23 +55,25 @@ folly::Future<fusell::BufVec> TreeEntryFileHandle::read(
   return data_->read(size, off);
 }
 
-folly::Future<size_t> TreeEntryFileHandle::write(fusell::BufVec&&, off_t) {
-  // man 2 write: EBADF  fd is not open for writing.
-  folly::throwSystemErrorExplicit(EBADF);
+folly::Future<size_t> TreeEntryFileHandle::write(
+    fusell::BufVec&& buf,
+    off_t off) {
+  return data_->write(std::move(buf), off);
 }
 
-folly::Future<size_t> TreeEntryFileHandle::write(folly::StringPiece, off_t) {
-  // man 2 write: EBADF  fd is not open for writing.
-  folly::throwSystemErrorExplicit(EBADF);
+folly::Future<size_t> TreeEntryFileHandle::write(
+    folly::StringPiece str,
+    off_t off) {
+  return data_->write(str, off);
 }
 
-folly::Future<folly::Unit> TreeEntryFileHandle::flush(uint64_t) {
-  // We're read only, so there is nothing to flush.
+folly::Future<folly::Unit> TreeEntryFileHandle::flush(uint64_t lock_owner) {
+  data_->flush(lock_owner);
   return folly::Unit{};
 }
 
-folly::Future<folly::Unit> TreeEntryFileHandle::fsync(bool) {
-  // We're read only, so there is nothing to sync.
+folly::Future<folly::Unit> TreeEntryFileHandle::fsync(bool datasync) {
+  data_->fsync(datasync);
   return folly::Unit{};
 }
 }
