@@ -97,11 +97,9 @@ class hybridmanifest(object):
     For the moment, behaves like a lazymanifest since cachedmanifest is not
     yet available.
     """
-    def __init__(self, loadflat, ui, flatcache=None, fastcache=None,
-                 node=None):
+    def __init__(self, loadflat, ui, fastcache=None, node=None):
         self.loadflat = loadflat
         self.__flatmanifest = None
-        self.flatcache = flatcache
         self.__cachedmanifest = None
         self.fastcache = fastcache
         self.node = node
@@ -116,18 +114,7 @@ class hybridmanifest(object):
 
     def _flatmanifest(self):
         if not self.__flatmanifest:
-            # Cache lookup
-            if (self.node and self.flatcache
-               and self.flatcache.contains(self.node)):
-                self.__flatmanifest = self.flatcache.get(self.node)
-                if self.__flatmanifest:
-                    self.ui.debug("cache hit for flatmanifest %s\n"
-                                  % self.node)
-                    return self.__flatmanifest
-            if self.node:
-                self.ui.debug("cache miss for flatmanifest %s\n" % self.node)
-
-            # Disk lookup
+            # Load the manifest and cache it.
             self.__flatmanifest = self.loadflat()
             if isinstance(self.__flatmanifest, hybridmanifest):
                 # See comment in extsetup to see why we have to do that
@@ -148,8 +135,8 @@ class hybridmanifest(object):
         return None
 
     def _incache(self):
-        if self.flatcache and self.node:
-            return self.flatcache.contains(self.node)
+        if self.fastcache and self.node:
+            return self.fastcache.contains(self.node)
         return False
 
     def _manifest(self, operation):
@@ -192,7 +179,6 @@ class hybridmanifest(object):
 
     def copy(self):
         return hybridmanifest(loadflat=lambda: self._flatmanifest().copy(),
-                              flatcache=self.flatcache,
                               fastcache=self.fastcache,
                               node=self.node,
                               ui=self.ui)
@@ -200,7 +186,6 @@ class hybridmanifest(object):
     def matches(self, *args, **kwargs):
         newload = lambda: self._flatmanifest().matches(*args, **kwargs)
         return hybridmanifest(loadflat=newload,
-                              flatcache=self.flatcache,
                               fastcache=self.fastcache,
                               ui=self.ui)
 
@@ -302,33 +287,7 @@ class manifestcache(object):
         # TODO logic to prune old entries
         pass
 
-# flatmanifestcache and fastmanifestcache are singletons
-
-class flatmanifestcache(manifestcache):
-    _instance = None
-    @classmethod
-    def getinstance(cls, opener, ui):
-        if not cls._instance:
-            cls._instance = flatmanifestcache(opener, ui)
-        return cls._instance
-
-    def keyprefix(self):
-        return "flat"
-
-    def load(self, fpath):
-        try:
-            with open(fpath, "r") as f:
-                fdata = f.read()
-        except EnvironmentError:
-            return None
-        else:
-            return manifest.manifestdict(fdata)
-
-    def dump(self, fpath, manifest):
-        with open(fpath, "w+") as f:
-            f.write(manifest.text())
-
-
+# fastmanifestcache should be a singleton.
 class fastmanifestcache(manifestcache):
     _instance = None
     @classmethod
@@ -362,30 +321,23 @@ class manifestfactory(object):
     def newmanifest(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
         fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
-        flatcache = flatmanifestcache.getinstance(args[0].opener, self.ui)
         return hybridmanifest(loadflat=loadfn,
                               ui=self.ui,
-                              flatcache=flatcache,
                               fastcache=fastcache)
 
     def read(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
         fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
-        flatcache = flatmanifestcache.getinstance(args[0].opener, self.ui)
         return hybridmanifest(loadflat=loadfn,
                               ui=self.ui,
-                              flatcache=flatcache,
                               fastcache=fastcache,
                               node=args[1])
 
 
-def _cachemanifest(ui, repo, revs, flat, sync, limit):
-    ui.debug(("caching rev: %s , synchronous(%s), flat(%s)\n")
-             % (revs, sync, flat))
-    if flat:
-        cache = flatmanifestcache.getinstance(repo.store.opener, ui)
-    else:
-        cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+def _cachemanifest(ui, repo, revs, sync, limit):
+    ui.debug(("caching rev: %s, synchronous(%s)\n")
+             % (revs, sync))
+    cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
     for rev in revs:
         manifest = repo[rev].manifest()
@@ -398,13 +350,11 @@ def _cachemanifest(ui, repo, revs, flat, sync, limit):
 
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
-    ('f', 'flat', False, 'cache flat manifests instead of fast manifests', ''),
     ('a', 'all', False, 'cache all relevant revisions', ''),
     ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
     ('s', 'synchronous', False, 'wait for completion to return', '')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
-    flat = opts["flat"]
     sync = opts["synchronous"]
     limit = opts["limit"]
     if opts["all"]:
@@ -413,7 +363,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         revs = scmutil.revrange(repo, opts["rev"])
     else:
         revs = []
-    _cachemanifest(ui, repo, revs, flat, sync, limit)
+    _cachemanifest(ui, repo, revs, sync, limit)
 
 
 def extsetup(ui):
