@@ -117,10 +117,17 @@ void test_convert_bidirectionally() {
       memcmp(input, to_result.flat_manifest, to_result.flat_manifest_sz) == 0);
 }
 
+void test_empty_convert_to_flat() {
+  tree_t *empty_tree = alloc_tree();
+  convert_to_flat_result_t to_result = convert_to_flat(empty_tree);
+  ASSERT(to_result.flat_manifest_sz == 0);
+}
+
 int main(int argc, char *argv[]) {
   test_simple_convert();
   test_convert_tree();
   test_convert_bidirectionally();
+  test_empty_convert_to_flat();
 
   return 0;
 }

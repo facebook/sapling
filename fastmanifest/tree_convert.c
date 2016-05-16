@@ -446,7 +446,7 @@ static convert_from_flat_result_t convert_from_flat_helper(
 static convert_to_flat_code_t convert_to_flat_iterator(
     to_flat_state_t *state,
     const node_t *node) {
-  assert(node->type == TYPE_IMPLICIT);
+  assert(node->type == TYPE_IMPLICIT || node->type == TYPE_ROOT);
 
   for (uint32_t ix = 0; ix < node->num_children; ix++) {
     node_t *child = get_child_by_index(node, ix);
