@@ -152,8 +152,7 @@ void PrivHelperConn::sendMsg(const Message* msg, int fd) {
     cmsg->cmsg_level = SOL_SOCKET;
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(cmsgPayloadSize);
-    auto fdptr = reinterpret_cast<int*>(CMSG_DATA(cmsg));
-    *fdptr = fd;
+    memcpy(CMSG_DATA(cmsg), &fd, sizeof(fd));
 
     mh.msg_controllen = cmsg->cmsg_len;
   }
@@ -248,7 +247,8 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
     // Technically the buffer could contain a full array of FDs here,
     // but our code only ever sends a single one at a time, so we don't
     // bother to check for an array of more than one.
-    int fd = *reinterpret_cast<const int*>(CMSG_DATA(cmsg));
+    int fd;
+    memcpy(&fd, CMSG_DATA(cmsg), sizeof(fd));
     recvdFile = folly::File(fd, true);
 
     // We could potentially break here, but continue around the loop just in
