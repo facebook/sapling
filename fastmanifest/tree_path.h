@@ -29,20 +29,24 @@ typedef struct _tree_add_child_result_t {
 } tree_add_child_result_t;
 
 typedef enum {
-  // walks the tree.  if the path cannot be found, exit with
-  // `FIND_PATH_NOT_FOUND`.
-      BASIC_WALK,
+  // walks the tree and searches for a leaf node.  if the path cannot be found,
+  // exit with `FIND_PATH_NOT_FOUND`.
+  BASIC_WALK,
+
+  // walks the tree and searches for any node (including implicit nodes).  if
+  // the path cannot be found, exit with `FIND_PATH_NOT_FOUND`.
+  BASIC_WALK_ALLOW_IMPLICIT_NODES,
 
   // walks the tree.  if the intermediate paths cannot be found, create them.
   // if a leaf node exists where an intermediate path node needs to be
   // created, then return `FIND_PATH_CONFLICT`.
-      CREATE_IF_MISSING,
+  CREATE_IF_MISSING,
 
   // walks the tree.  if the path cannot be found, exit with
   // `FIND_PATH_NOT_FOUND`.  if the operation is successful, then check
   // intermediate nodes to ensure that they still have children.  any nodes
   // that do not should be removed.
-      REMOVE_EMPTY_IMPLICIT_NODES,
+  REMOVE_EMPTY_IMPLICIT_NODES,
 } find_path_operation_type;
 typedef enum {
   FIND_PATH_OK,

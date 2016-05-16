@@ -295,6 +295,8 @@ static process_path_result_t process_path(
     if (path[path_scan_index] != '/') {
       continue;
     }
+    size_t path_len =
+        path_scan_index + 1 /* to include the / */ - current_path_start;
 
     bool open_new_folder = true;
 
@@ -303,7 +305,7 @@ static process_path_result_t process_path(
     if (open_folder_index + 1 < state->open_folder_count) {
       if (folder_name_compare(
           &path[current_path_start],
-          path_scan_index - current_path_start,
+          path_len,
           &state->folders[open_folder_index + 1]) == 0) {
         // we found the folder we needed, so we can just reuse it.
         open_new_folder = false;
@@ -332,7 +334,7 @@ static process_path_result_t process_path(
       // link the name in.  remember, we don't own the memory!!
       folder->in_use = true;
       folder->subfolder_name = &path[current_path_start];
-      folder->subfolder_name_sz = (path_scan_index - current_path_start);
+      folder->subfolder_name_sz = path_len;
     }
 
     // path starts after the /
@@ -502,8 +504,7 @@ static convert_to_flat_code_t convert_to_flat_iterator(
       size_t previous_dirpath_build_buffer_idx =
           state->dirpath_build_buffer_idx;
 
-      size_t space_needed = child->name_sz +
-                            1 /* '/' character */;
+      size_t space_needed = child->name_sz;
 
       if (CONVERT_EXPAND_TO_FIT(
               &state->dirpath_build_buffer,
@@ -517,9 +518,6 @@ static convert_to_flat_code_t convert_to_flat_iterator(
       memcpy(&state->dirpath_build_buffer[state->dirpath_build_buffer_idx],
           child->name, child->name_sz);
       state->dirpath_build_buffer_idx += child->name_sz;
-
-      state->dirpath_build_buffer[state->dirpath_build_buffer_idx] = '/';
-      state->dirpath_build_buffer_idx++;
 
       convert_to_flat_iterator(state, child);
 

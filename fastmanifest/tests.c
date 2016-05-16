@@ -55,7 +55,7 @@ get_path_unfiltered_result_t get_path_unfiltered(
           shadow_root,
           real_root,
           path, path_sz,
-          BASIC_WALK,
+          BASIC_WALK_ALLOW_IMPLICIT_NODES,
           &changes,
           get_path_unfiltered_callback,
           &metadata);

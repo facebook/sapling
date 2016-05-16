@@ -65,15 +65,15 @@ static void test_updates_reset_checksums() {
       checksum, SHA1_BYTES, 0) == ADD_UPDATE_PATH_OK);
 
   path_checksum_t dirs_to_check_after_add[] = {
-      {"abc",                   true},
-      {"ab",                    false},
-      {"ab/defg",               false},
-      {"ab/defg/h",             false},
-      {"ab/defg/h/i",           true},
-      {"ab/defg/h/i/jkl",       true},
-      {"ab/defg/h/i/jkl/mn",    true},
-      {"ab/defg/h/i/jkl/mn/op", true},
-      {"ab/defg/h/ij",          true},
+      {"abc",                    true},
+      {"ab/",                    false},
+      {"ab/defg/",               false},
+      {"ab/defg/h/",             false},
+      {"ab/defg/h/i/",           true},
+      {"ab/defg/h/i/jkl/",       true},
+      {"ab/defg/h/i/jkl/mn/",    true},
+      {"ab/defg/h/i/jkl/mn/op/", true},
+      {"ab/defg/h/ij/",          true},
   };
   size_t num_dirs = sizeof(dirs_to_check_after_add) /
                     sizeof(*dirs_to_check_after_add);
@@ -96,15 +96,15 @@ static void test_updates_reset_checksums() {
          REMOVE_PATH_OK);
 
   path_checksum_t dirs_to_check_after_remove[] = {
-      {"abc",                   true},
-      {"ab",                    false},
-      {"ab/defg",               false},
-      {"ab/defg/h",             false},
-      {"ab/defg/h/i",           false},
-      {"ab/defg/h/i/jkl",       false},
-      {"ab/defg/h/i/jkl/mn",    false},
-      {"ab/defg/h/i/jkl/mn/op", false},
-      {"ab/defg/h/ij",          true},
+      {"abc",                    true},
+      {"ab/",                    false},
+      {"ab/defg/",               false},
+      {"ab/defg/h/",             false},
+      {"ab/defg/h/i/",           false},
+      {"ab/defg/h/i/jkl/",       false},
+      {"ab/defg/h/i/jkl/mn/",    false},
+      {"ab/defg/h/i/jkl/mn/op/", false},
+      {"ab/defg/h/ij/",          true},
   };
   num_dirs = sizeof(dirs_to_check_after_remove) /
              sizeof(*dirs_to_check_after_remove);

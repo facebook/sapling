@@ -85,7 +85,7 @@ void tree_add_0_cousin_once_removed() {
   node_t *root_second_child = get_child_by_index(real_root, 1);
   ASSERT(root_second_child->num_children == 1);
   ASSERT(root_second_child->type == TYPE_IMPLICIT);
-  ASSERT(name_compare("abc", 3, root_second_child) == 0);
+  ASSERT(name_compare("abc/", 4, root_second_child) == 0);
 }
 
 /**
@@ -149,32 +149,6 @@ void tree_add_bushy_branch() {
 
   ASSERT(tree->compacted == false);
   ASSERT(tree->num_leaf_nodes == 27);
-}
-
-/**
- * Initializes a tree, adds a node (N0), and then adds a second node (N1) that
- * would require a directory be created where N0 is.
- */
-void tree_add_conflict() {
-  tree_t *tree = alloc_tree();
-  uint8_t checksum[SHA1_BYTES];
-
-  for (int ix = 0; ix < SHA1_BYTES; ix++) {
-    checksum[ix] = (uint8_t) ix;
-  }
-
-  add_update_path_result_t result =
-      add_or_update_path(tree, STRPLUSLEN("abc/def"),
-          checksum, SHA1_BYTES, 0);
-  ASSERT(result == ADD_UPDATE_PATH_OK);
-  ASSERT(tree->compacted == false);
-  ASSERT(tree->num_leaf_nodes == 1);
-
-  result = add_or_update_path(tree, STRPLUSLEN("abc/def/ghi"),
-      checksum, SHA1_BYTES, 0);
-  ASSERT(result == ADD_UPDATE_PATH_CONFLICT);
-  ASSERT(tree->compacted == false);
-  ASSERT(tree->num_leaf_nodes == 1);
 }
 
 /**
@@ -363,7 +337,6 @@ int main(int argc, char *argv[]) {
   tree_add_0_cousin_once_removed();
   tree_add_long_skinny_branch();
   tree_add_bushy_branch();
-  tree_add_conflict();
   tree_get_empty();
   tree_add_get_simple();
   tree_add_get_implicit_node();

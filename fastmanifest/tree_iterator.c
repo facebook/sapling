@@ -95,7 +95,7 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
             &iterator->path,
             &iterator->path_idx,
             &iterator->path_sz,
-            candidate->name_sz + 1
+            candidate->name_sz
         );
 
         memcpy(&iterator->path[iterator->path_idx],
@@ -107,15 +107,6 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
       // required.  remember where we are so we can continue.
       if (candidate->type == TYPE_LEAF) {
         return ITERATOR_FOUND;
-      }
-
-      // if it's an implicit node, and we want to construct paths, we need to
-      // add a '/' to the constructed path.
-      if (iterator->construct_paths &&
-          candidate->type == TYPE_IMPLICIT) {
-        // tack on a '/' to the path.
-        iterator->path[iterator->path_idx] = '/';
-        iterator->path_idx++;
       }
 
       // has to either be TYPE_IMPLICIT or TYPE_ROOT at this point.  set up

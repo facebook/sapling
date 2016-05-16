@@ -13,16 +13,16 @@
 
 /**
  * Given a path, return the size of the string that would yield just the
- * first component of the path.  The path must be valid according to
- * `valid_path`.
+ * first component of the path, including the path separator.  The path must be
+ * valid according to `valid_path`.
  *
- * first_component('abc/def') => 'abc'
+ * first_component('abc/def') => 'abc/'
  * first_component('abc') => ''
  */
 static size_t first_component(const char *path, size_t path_sz) {
   for (size_t off = 0; off < path_sz; off++) {
     if (path[off] == '/') {
-      return off;
+      return off + 1;
     }
   }
 
@@ -157,7 +157,9 @@ find_path_result_t find_path(
     void *context) {
   size_t first_component_sz = first_component(path, path_sz);
   find_path_result_t result;
-  if (first_component_sz == 0) {
+  if (first_component_sz == 0 ||
+      (operation_type == BASIC_WALK_ALLOW_IMPLICIT_NODES &&
+       first_component_sz == path_sz)) {
     // found it!  apply the magic function.
     find_path_callback_result_t callback_result = callback(tree,
         root_parent, root,
@@ -210,8 +212,8 @@ find_path_result_t find_path(
         tree,
         root,
         child,
-        path + first_component_sz + 1,
-        path_sz - first_component_sz - 1,
+        path + first_component_sz,
+        path_sz - first_component_sz,
         operation_type,
         changes,
         callback,

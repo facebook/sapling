@@ -113,7 +113,7 @@ consider_children_result_t consider_children(
           &diff_context->path_build_buffer,
           &diff_context->path_build_buffer_idx,
           &diff_context->path_build_buffer_sz,
-          1 + name_sz) == false) {
+          name_sz) == false) {
     return CONSIDER_PROCESSED_OOM;
   }
 
@@ -126,11 +126,6 @@ consider_children_result_t consider_children(
       (right_candidate != NULL && right_candidate->type == TYPE_IMPLICIT)) {
     // if one is a directory node, either the other one is NULL or
     // also a directory node.  in that case, descend into the subdirectory.
-
-    // add the slash.
-    diff_context->path_build_buffer[
-        diff_context->path_build_buffer_idx] = '/';
-    diff_context->path_build_buffer_idx++;
 
     diff_result_t result =
         diff_tree_helper(left_candidate, right_candidate, diff_context);
