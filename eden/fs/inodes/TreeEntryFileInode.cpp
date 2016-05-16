@@ -112,9 +112,10 @@ folly::Future<std::string> TreeEntryFileInode::readlink() {
 std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!data_) {
-    data_ =
-        std::make_shared<FileData>(mutex_, parentInode_->getStore(), entry_);
+    data_ = std::make_shared<FileData>(
+        mutex_, parentInode_->getStore(), parentInode_->getOverlay(), entry_);
   }
+
   return data_;
 }
 
@@ -152,10 +153,14 @@ folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
         data.reset();
         fileHandleDidClose();
       };
+      data->materialize(
+          fi.flags,
+          fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
 
       return new TreeEntryFileHandle(
           std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
-          data);
+          data,
+          fi.flags);
     }
     case FileType::SYMLINK:
       // man 2 open says:  ELOOP ... or O_NOFOLLOW was specified but pathname

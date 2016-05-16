@@ -19,8 +19,9 @@ namespace eden {
 
 TreeEntryFileHandle::TreeEntryFileHandle(
     std::shared_ptr<TreeEntryFileInode> inode,
-    std::shared_ptr<FileData> data)
-    : inode_(inode), data_(data) {}
+    std::shared_ptr<FileData> data,
+    int flags)
+    : inode_(inode), data_(data), openFlags_(flags) {}
 
 TreeEntryFileHandle::~TreeEntryFileHandle() {
   // Must reset the data point prior to calling fileHandleDidClose,

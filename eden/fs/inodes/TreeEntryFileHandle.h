@@ -22,7 +22,8 @@ class TreeEntryFileHandle : public fusell::FileHandle {
  public:
   explicit TreeEntryFileHandle(
       std::shared_ptr<TreeEntryFileInode> inode,
-      std::shared_ptr<FileData> data);
+      std::shared_ptr<FileData> data,
+      int flags);
   ~TreeEntryFileHandle();
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
@@ -41,6 +42,7 @@ class TreeEntryFileHandle : public fusell::FileHandle {
  private:
   std::shared_ptr<TreeEntryFileInode> inode_;
   std::shared_ptr<FileData> data_;
+  int openFlags_;
 };
 }
 }
