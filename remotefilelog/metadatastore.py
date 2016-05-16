@@ -9,11 +9,6 @@ class unionmetadatastore(object):
         self.stores = args
         self.writestore = kwargs.get('writestore')
 
-    def getparents(self, name, node):
-        """Returns the immediate parents of the node."""
-        ancestors = self.getancestors(name, node)
-        return ancestors[node][:2]
-
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
 
@@ -61,10 +56,6 @@ class unionmetadatastore(object):
 
         raise error.LookupError(node, name, _('no valid file history'))
 
-    def getlinknode(self, name, node):
-        ancestors = self.getancestors(name, node)
-        return ancestors[node][3]
-
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
                            "contentstore")
@@ -81,11 +72,6 @@ class unionmetadatastore(object):
             store.markledger(ledger)
 
 class remotefilelogmetadatastore(basestore.basestore):
-    def getparents(self, name, node):
-        """Returns the immediate parents of the node."""
-        ancestors = self.getancestors(name, node)
-        return ancestors[node][:2]
-
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
 
@@ -97,10 +83,6 @@ class remotefilelogmetadatastore(basestore.basestore):
         data = self._getdata(name, node)
         ancestors = shallowutil.ancestormap(data)
         return ancestors
-
-    def getlinknode(self, name, node):
-        ancestors = self.getancestors(name, node)
-        return ancestors[node][3]
 
     def add(self, name, node, parents, linknode):
         raise RuntimeError("cannot add metadata only to remotefilelog "
@@ -120,12 +102,6 @@ class remotemetadatastore(object):
 
     def getmissing(self, keys):
         return keys
-
-    def getparents(self, name, node):
-        raise NotImplemented()
-
-    def getlinknode(self, name, node):
-        raise NotImplemented()
 
     def markledger(self, ledger):
         pass

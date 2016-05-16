@@ -74,28 +74,10 @@ class historypackstore(object):
 
         return missing
 
-    def getparents(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getparents(name, node)
-            except KeyError as ex:
-                pass
-
-        raise KeyError((name, node))
-
     def getancestors(self, name, node):
         for pack in self.packs:
             try:
                 return pack.getancestors(name, node)
-            except KeyError as ex:
-                pass
-
-        raise KeyError((name, node))
-
-    def getlinknode(self, name, node):
-        for pack in self.packs:
-            try:
-                return pack.getlinknode(name, node)
             except KeyError as ex:
                 pass
 
@@ -157,11 +139,6 @@ class historypack(object):
 
         return missing
 
-    def getparents(self, name, node):
-        section = self._findsection(name)
-        node, p1, p2, linknode = self._findnode(section, node)
-        return p1, p2
-
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
 
@@ -190,11 +167,6 @@ class historypack(object):
         if not results:
             raise KeyError((name, node))
         return results
-
-    def getlinknode(self, name, node):
-        section = self._findsection(name)
-        node, p1, p2, linknode = self._findnode(section, node)
-        return linknode
 
     def add(self, filename, node, p1, p2, linknode):
         raise RuntimeError("cannot add to historypack (%s:%s)" %

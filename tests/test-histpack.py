@@ -65,12 +65,10 @@ class histpacktests(unittest.TestCase):
         revisions = [(filename, node, p1, p2, linknode)]
         pack = self.createPack(revisions)
 
-        actualp1, actualp2 = pack.getparents(filename, node)
-        self.assertEquals(p1, actualp1)
-        self.assertEquals(p2, actualp2)
-
-        actuallinknode = pack.getlinknode(filename, node)
-        self.assertEquals(linknode, actuallinknode)
+        actual = pack.getancestors(filename, node)[node]
+        self.assertEquals(p1, actual[0])
+        self.assertEquals(p2, actual[1])
+        self.assertEquals(linknode, actual[2])
 
     def testAddMultiple(self):
         """Test putting multiple unrelated revisions into a pack and reading
@@ -88,12 +86,10 @@ class histpacktests(unittest.TestCase):
         pack = self.createPack(revisions)
 
         for filename, node, p1, p2, linknode in revisions:
-            actualp1, actualp2 = pack.getparents(filename, node)
-            self.assertEquals(p1, actualp1)
-            self.assertEquals(p2, actualp2)
-
-            actuallinknode = pack.getlinknode(filename, node)
-            self.assertEquals(linknode, actuallinknode)
+            actual = pack.getancestors(filename, node)[node]
+            self.assertEquals(p1, actual[0])
+            self.assertEquals(p2, actual[1])
+            self.assertEquals(linknode, actual[2])
 
     def testAddAncestorChain(self):
         """Test putting multiple revisions in into a pack and read the ancestor
