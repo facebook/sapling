@@ -163,8 +163,19 @@ static int fastmanifest_init(fastmanifest *self, PyObject *args) {
   PyObject *pydata = NULL;
   char *data;
   ssize_t len;
-  if (!PyArg_ParseTuple(args, "S", &pydata)) {
+
+  if (!PyArg_ParseTuple(args, "|S", &pydata)) {
     return -1;
+  }
+
+  if (pydata == NULL) {
+    // no string.  initialize it to an empty tree.
+    self->tree = alloc_tree();
+    if (self->tree == NULL) {
+      PyErr_NoMemory();
+      return -1;
+    }
+    return 0;
   }
   int err = PyString_AsStringAndSize(pydata, &data, &len);
   if (err == -1)
