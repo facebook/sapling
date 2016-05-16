@@ -14,6 +14,9 @@ NODELENGTH = 20
 PACKFORMAT = "!20s20s20s20s"
 PACKENTRYLENGTH = 80
 
+FILENAMESIZE = 2
+OFFSETSIZE = 4
+
 # The fanout prefix is the number of bytes that can be addressed by the fanout
 # table. Example: a fanout prefix of 1 means we use the first byte of a hash to
 # look in the fanout table (which will be 2^8 entries long).
@@ -224,8 +227,9 @@ class historypack(object):
                 raise KeyError(name)
 
         filenamehash, offset, size = struct.unpack(INDEXFORMAT, entry)
-        filenamelength = struct.unpack('!H', self._data[offset:offset + 2])[0]
-        offset += 2
+        filenamelength = struct.unpack('!H', self._data[offset:offset +
+                                                        FILENAMESIZE])[0]
+        offset += FILENAMESIZE
 
         actualname = self._data[offset:offset + filenamelength]
         offset += filenamelength
@@ -234,10 +238,11 @@ class historypack(object):
             raise KeyError("found file name %s when looking for %s" %
                            (actualname, name))
 
-        revcount = struct.unpack('!I', self._data[offset:offset + 4])[0]
-        offset += 4
+        revcount = struct.unpack('!I', self._data[offset:offset +
+                                                  OFFSETSIZE])[0]
+        offset += OFFSETSIZE
 
-        return (name, offset, revcount * PACKENTRYLENGTH)
+        return (name, offset, size - FILENAMESIZE - filenamelength - OFFSETSIZE)
 
     def markledger(self, ledger):
         for filename, node in self._iterkeys():
@@ -260,14 +265,16 @@ class historypack(object):
         data = self._data
         while offset < self.datasize:
             # <2 byte len> + <filename>
-            filenamelen = struct.unpack('!H', data[offset:offset + 2])[0]
+            filenamelen = struct.unpack('!H', data[offset:offset +
+                                                   FILENAMESIZE])[0]
             assert (filenamelen > 0)
-            offset += 2
+            offset += FILENAMESIZE
             filename = data[offset:offset + filenamelen]
             offset += filenamelen
 
-            revcount = struct.unpack('!I', data[offset:offset + 4])[0]
-            offset += 4
+            revcount = struct.unpack('!I', data[offset:offset +
+                                                OFFSETSIZE])[0]
+            offset += OFFSETSIZE
 
             assert (offset + 80 * revcount <= self.datasize)
             for i in xrange(revcount):
@@ -386,12 +393,7 @@ class mutablehistorypack(object):
 
     def _writependingsection(self):
         filename = self.currentfile
-        self.pastfiles[filename] = (
-            self.packfp.tell(),
-            # Length of the section = filename len (2) + length of
-            # filename + entry count (4) + entries (80 each)
-            2 + len(filename) + 4 + (len(self.currententries) * 80),
-        )
+        sectionstart = self.packfp.tell()
 
         # Write the file section header
         self.writeraw("%s%s%s" % (
@@ -399,10 +401,15 @@ class mutablehistorypack(object):
             filename,
             struct.pack('!I', len(self.currententries)),
         ))
+        sectionlen = FILENAMESIZE + len(filename) + 4
 
         # Write the file section content
         rawdata = ''.join('%s%s%s%s' % e for e in self.currententries)
+        sectionlen += len(rawdata)
+
         self.writeraw(rawdata)
+
+        self.pastfiles[filename] = (sectionstart, sectionlen)
 
     def writeraw(self, data):
         self.packfp.write(data)
