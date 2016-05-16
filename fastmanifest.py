@@ -90,17 +90,21 @@ class hybridmanifest(object):
     """
     Hybrid manifest that behaves like a lazy manifest.
 
-    Initialized with:
-    - loadflat a function to load a flat manifest from disk
-    - cache an object with mapping method to work with fast manifest from disk
-
-    For the moment, behaves like a lazymanifest since cachedmanifest is not
-    yet available.
+    Initialized with one of the three:
+    - flat      an existing flat manifest
+    - fast      an existing fast manifest
+    - loadflat  a function to load a flat manifest from disk
     """
-    def __init__(self, loadflat, ui, fastcache=None, node=None):
+    def __init__(self, ui, flat=None, fast=None, loadflat=None,
+                 fastcache=None, node=None):
+        self.__flatmanifest = flat
+        self.__cachedmanifest = fast
         self.loadflat = loadflat
-        self.__flatmanifest = None
-        self.__cachedmanifest = None
+
+        assert (self.__flatmanifest is not None or
+                self.__cachedmanifest is None or
+                self.loadflat is None)
+
         self.fastcache = fastcache
         self.node = node
         self.ui = ui
@@ -113,12 +117,19 @@ class hybridmanifest(object):
             self.node = revlog.hex(self.node)
 
     def _flatmanifest(self):
-        if not self.__flatmanifest:
-            # Load the manifest and cache it.
-            self.__flatmanifest = self.loadflat()
-            if isinstance(self.__flatmanifest, hybridmanifest):
-                # See comment in extsetup to see why we have to do that
-                self.__flatmanifest = self.__flatmanifest._flatmanifest()
+        if self.__flatmanifest is None:
+            if self.loadflat is not None:
+                # Load the manifest and cache it.
+                self.__flatmanifest = self.loadflat()
+
+                if isinstance(self.__flatmanifest, hybridmanifest):
+                    # See comment in extsetup to see why we have to do that
+                    self.__flatmanifest = self.__flatmanifest._flatmanifest()
+            elif self.__cachedmanifest is not None:
+                # build a flat manifest from the text of the fastmanifest.
+                self.__flatmanifest = manifest.manifestdict(
+                    self.__cachedmanifest.text())
+
             assert isinstance(self.__flatmanifest, manifest.manifestdict)
         return self.__flatmanifest
 
@@ -178,16 +189,32 @@ class hybridmanifest(object):
         return self._manifest('__len__').__len__()
 
     def copy(self):
-        return hybridmanifest(loadflat=lambda: self._flatmanifest().copy(),
-                              fastcache=self.fastcache,
-                              node=self.node,
-                              ui=self.ui)
+        copy = self._manifest('copy').copy()
+        if isinstance(copy, hybridmanifest):
+            return copy
+        elif isinstance(copy, fastmanifestdict):
+            return hybridmanifest(self.ui, fast=copy,
+                                  fastcache=self.fastcache,
+                                  node=self.node)
+        elif isinstance(copy, manifest.manifestdict):
+            return hybridmanifest(self.ui, flat=copy,
+                                  fastcache=self.fastcache,
+                                  node=self.node)
+        else:
+            raise ValueError("unknown manifest type {0}".format(type(copy)))
 
     def matches(self, *args, **kwargs):
-        newload = lambda: self._flatmanifest().matches(*args, **kwargs)
-        return hybridmanifest(loadflat=newload,
-                              fastcache=self.fastcache,
-                              ui=self.ui)
+        matches = self._manifest('matches').matches(*args, **kwargs)
+        if isinstance(matches, hybridmanifest):
+            return matches
+        elif isinstance(matches, fastmanifestdict):
+            return hybridmanifest(self.ui, fast=matches,
+                                  fastcache=self.fastcache)
+        elif isinstance(matches, manifest.manifestdict):
+            return hybridmanifest(self.ui, flat=matches,
+                                  fastcache=self.fastcache)
+        else:
+            raise ValueError("unknown manifest type {0}".format(type(matches)))
 
     def diff(self, m2, *args, **kwargs):
         self.ui.debug("performing diff\n")
@@ -321,15 +348,15 @@ class manifestfactory(object):
     def newmanifest(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
         fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
-        return hybridmanifest(loadflat=loadfn,
-                              ui=self.ui,
+        return hybridmanifest(self.ui,
+                              loadflat=loadfn,
                               fastcache=fastcache)
 
     def read(self, orig, *args, **kwargs):
         loadfn = lambda: orig(*args, **kwargs)
         fastcache = fastmanifestcache.getinstance(args[0].opener, self.ui)
-        return hybridmanifest(loadflat=loadfn,
-                              ui=self.ui,
+        return hybridmanifest(self.ui,
+                              loadflat=loadfn,
                               fastcache=fastcache,
                               node=args[1])
 
