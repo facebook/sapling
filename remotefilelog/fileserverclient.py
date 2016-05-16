@@ -372,6 +372,9 @@ class fileserverclient(object):
 
         groupedfiles = self._sendpackrequest(remote, fileids)
 
+        i = 0
+        self.ui.progress(_downloading, i, total=len(groupedfiles))
+
         packpath = shallowutil.getpackpath(self.repo)
         util.makedirs(packpath)
         opener = scmutil.vfs(packpath)
@@ -380,12 +383,16 @@ class fileserverclient(object):
         with datapack.mutabledatapack(opener) as dpack:
             with historypack.mutablehistorypack(opener) as hpack:
                 for filename in self.readfiles(remote):
+                    i += 1
+                    self.ui.progress(_downloading, i, total=len(groupedfiles))
                     for value in self.readhistory(remote):
                         node, p1, p2, linknode, copyfrom = value
                         hpack.add(filename, node, p1, p2, linknode, copyfrom)
 
                     for node, deltabase, delta in self.readdeltas(remote):
                         dpack.add(filename, node, deltabase, delta)
+
+        self.ui.progress(_downloading, None)
 
     def _sendpackrequest(self, remote, fileids):
         """Formats and writes the given fileids to the remote as part of a
