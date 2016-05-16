@@ -195,9 +195,8 @@ def wraprepo(repo):
                               fileservicedatawrite, fileservicehistorywrite)
 
     # Record which ones are shared stores
-    repo.shareddatastores = [packcontentstore, cachecontent, remotecontent]
-    repo.sharedhistorystores = [packmetadatastore, cachemetadata,
-                                remotemetadata]
+    repo.shareddatastores = [packcontentstore, cachecontent]
+    repo.sharedhistorystores = [packmetadatastore, cachemetadata]
 
     repo.includepattern = repo.ui.configlist("remotefilelog", "includepattern",
                                              None)

@@ -44,13 +44,21 @@ class repacker(object):
         for filename, entries in sorted(byfile.iteritems()):
             ancestors = {}
             nodes = list(node for node in entries.iterkeys())
+            nohistory = []
             for node in nodes:
                 if node in ancestors:
                     continue
-                ancestors.update(self.history.getancestors(filename, node))
+                try:
+                    ancestors.update(self.history.getancestors(filename, node))
+                except KeyError:
+                    # Since we're packing data entries, we may not have the
+                    # corresponding history entries for them. It's not a big
+                    # deal, but the entries won't be delta'd perfectly.
+                    nohistory.append(node)
 
             # Order the nodes children first, so we can produce reverse deltas
-            orderednodes = reversed(self._toposort(ancestors))
+            orderednodes = list(reversed(self._toposort(ancestors)))
+            orderednodes.extend(sorted(nohistory))
 
             # Compute deltas and write to the pack
             deltabases = defaultdict(lambda: nullid)
@@ -67,22 +75,24 @@ class repacker(object):
                 deltabase = deltabases[node]
 
                 # Use available ancestor information to inform our delta choices
-                p1, p2, linknode, copyfrom = ancestors[node]
+                ancestorinfo = ancestors.get(node)
+                if ancestorinfo:
+                    p1, p2, linknode, copyfrom = ancestorinfo
 
-                # The presence of copyfrom means we're at a point where the
-                # file was copied from elsewhere. So don't attempt to do any
-                # deltas with the other file.
-                if copyfrom:
-                    p1 = nullid
+                    # The presence of copyfrom means we're at a point where the
+                    # file was copied from elsewhere. So don't attempt to do any
+                    # deltas with the other file.
+                    if copyfrom:
+                        p1 = nullid
 
-                # Record this child as the delta base for its parents.
-                # This may be non optimal, since the parents may have many
-                # children, and this will only choose the last one.
-                # TODO: record all children and try all deltas to find best
-                if p1 != nullid:
-                    deltabases[p1] = node
-                if p2 != nullid:
-                    deltabases[p2] = node
+                    # Record this child as the delta base for its parents.
+                    # This may be non optimal, since the parents may have many
+                    # children, and this will only choose the last one.
+                    # TODO: record all children and try all deltas to find best
+                    if p1 != nullid:
+                        deltabases[p1] = node
+                    if p2 != nullid:
+                        deltabases[p2] = node
 
                 # Compute delta
                 # TODO: reuse existing deltas if it matches our deltabase
