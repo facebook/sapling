@@ -41,7 +41,7 @@ def _unifiedheaderinit(self, *args, **kw):
     kw['continuation_ws'] = ' '
     _oldheaderinit(self, *args, **kw)
 
-email.Header.Header.__dict__['__init__'] = _unifiedheaderinit
+setattr(email.header.Header, '__init__', _unifiedheaderinit)
 
 class STARTTLS(smtplib.SMTP):
     '''Derived class to verify the peer certificate for STARTTLS.
