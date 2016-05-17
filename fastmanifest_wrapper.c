@@ -114,12 +114,7 @@ static remove_path_result_t ifastmanifest_delitem(
 /* Fastmanifest: CPython helpers */
 
 static bool fastmanifest_is_valid_manifest_key(PyObject *key) {
-  if (PyString_Check(key)) {
-    return true;
-  } else {
-    PyErr_Format(PyExc_TypeError, "Manifest keys must be strings.");
-    return false;
-  }
+  return PyString_Check(key);
 }
 
 static bool fastmanifest_is_valid_manifest_value(PyObject *value) {
@@ -486,6 +481,7 @@ static Py_ssize_t fastmanifest_size(fastmanifest *self) {
 
 static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key) {
   if (!fastmanifest_is_valid_manifest_key(key)) {
+    PyErr_Format(PyExc_TypeError, "Manifest keys must be strings.");
     return NULL;
   }
 
@@ -531,6 +527,7 @@ static int fastmanifest_setitem(fastmanifest *self, PyObject *key,
   int err;
   /* Decode path */
   if (!fastmanifest_is_valid_manifest_key(key)) {
+    PyErr_Format(PyExc_TypeError, "Manifest keys must be strings.");
     return -1;
   }
   err = PyString_AsStringAndSize(key, &path, &plen);
