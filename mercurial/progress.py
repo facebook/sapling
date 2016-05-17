@@ -163,7 +163,7 @@ class progbar(object):
         sys.stderr.flush()
 
     def clear(self):
-        if not shouldprint(self.ui):
+        if not self.printed or not self.lastprint or not shouldprint(self.ui):
             return
         sys.stderr.write('\r%s\r' % (' ' * self.width()))
         if self.printed:

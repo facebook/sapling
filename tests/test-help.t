@@ -1539,6 +1539,78 @@ Test section lookup
       files         List of strings. All files modified, added, or removed by
                     this changeset.
 
+Test section lookup by translated message
+
+str.lower() instead of encoding.lower(str) on translated message might
+make message meaningless, because some encoding uses 0x41(A) - 0x5a(Z)
+as the second or later byte of multi-byte character.
+
+For example, "\x8bL\x98^" (translation of "record" in ja_JP.cp932)
+contains 0x4c (L). str.lower() replaces 0x4c(L) by 0x6c(l) and this
+replacement makes message meaningless.
+
+This tests that section lookup by translated string isn't broken by
+such str.lower().
+
+  $ python <<EOF
+  > def escape(s):
+  >     return ''.join('\u%x' % ord(uc) for uc in s.decode('cp932'))
+  > # translation of "record" in ja_JP.cp932
+  > upper = "\x8bL\x98^"
+  > # str.lower()-ed section name should be treated as different one
+  > lower = "\x8bl\x98^"
+  > with open('ambiguous.py', 'w') as fp:
+  >     fp.write("""# ambiguous section names in ja_JP.cp932
+  > u'''summary of extension
+  > 
+  > %s
+  > ----
+  > 
+  > Upper name should show only this message
+  > 
+  > %s
+  > ----
+  > 
+  > Lower name should show only this message
+  > 
+  > subsequent section
+  > ------------------
+  > 
+  > This should be hidden at "hg help ambiguous" with section name.
+  > '''
+  > """ % (escape(upper), escape(lower)))
+  > EOF
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > ambiguous = ./ambiguous.py
+  > EOF
+
+  $ python <<EOF | sh
+  > upper = "\x8bL\x98^"
+  > print "hg --encoding cp932 help -e ambiguous.%s" % upper
+  > EOF
+  \x8bL\x98^ (esc)
+  ----
+  
+  Upper name should show only this message
+  
+
+  $ python <<EOF | sh
+  > lower = "\x8bl\x98^"
+  > print "hg --encoding cp932 help -e ambiguous.%s" % lower
+  > EOF
+  \x8bl\x98^ (esc)
+  ----
+  
+  Lower name should show only this message
+  
+
+  $ cat >> $HGRCPATH <<EOF
+  > [extensions]
+  > ambiguous = !
+  > EOF
+
 Test dynamic list of merge tools only shows up once
   $ hg help merge-tools
   Merge Tools

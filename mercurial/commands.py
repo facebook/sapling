@@ -4590,7 +4590,7 @@ def help_(ui, name=None, **opts):
     subtopic = None
     if name and '.' in name:
         name, section = name.split('.', 1)
-        section = section.lower()
+        section = encoding.lower(section)
         if '.' in section:
             subtopic, section = section.split('.', 1)
         else:

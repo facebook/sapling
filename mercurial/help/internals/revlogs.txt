@@ -1,5 +1,5 @@
-Revisions Logs
-==============
+Revlogs
+=======
 
 Revision logs - or *revlogs* - are an append only data structure for
 storing discrete entries, or *revisions*. They are the primary storage

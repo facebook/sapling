@@ -214,8 +214,6 @@ Check that deep archiving works
   \r (no-eol) (esc)
   deleting [===========================================>] 2/2\r (no-eol) (esc)
                                                               \r (no-eol) (esc)
-  \r (no-eol) (esc)
-                                                              \r (no-eol) (esc)
   removing sub1/sub2/folder/test.txt (glob)
   removing sub1/sub2/test.txt (glob)
   $ hg status -S
