@@ -64,6 +64,11 @@ CACHE_SUBDIR = "manifestcache"
 cmdtable = {}
 command = cmdutil.command(cmdtable)
 
+def silent_debug(*args, **kwargs):
+    """Replacement for ui.debug that silently swallows the arguments.
+    Typically enabled when running the mercurial test suite by setting:
+    --extra-config-opt=fastmanifest.silent=True"""
+    pass
 
 class manifestaccesslogger(object):
     """Class to log manifest access and confirm our assumptions"""
@@ -119,10 +124,8 @@ class hybridmanifest(object):
 
         self.incache = True if self.__cachedmanifest is not None else None
 
-        def silent(*args, **kwargs):
-            pass
-        if self.ui.configbool("fastmanifest", "silent"):
-            self.debug = silent
+        if self.ui is None or self.ui.configbool("fastmanifest", "silent"):
+            self.debug = silent_debug
         else:
             self.debug = self.ui.debug
 
@@ -275,6 +278,10 @@ class fastmanifestcache(object):
         self.cachepath = os.path.join(base, CACHE_SUBDIR)
         if not os.path.exists(self.cachepath):
             os.makedirs(self.cachepath)
+        if self.ui is None or self.ui.configbool("fastmanifest", "silent"):
+            self.debug = silent_debug
+        else:
+            self.debug = self.ui.debug
 
     def keyprefix(self):
         return "fast"
