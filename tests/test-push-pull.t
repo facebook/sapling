@@ -74,7 +74,6 @@ the server supports our custom getfiles method.
 
   $ hg strip -r 1
   saved backup bundle to $TESTTMP/shallow2/.hg/strip-backup/d34c38483be9-89d325c9-backup.hg (glob)
-  $ clearcache
   $ hg pull ssh://user@dummy/$TESTTMP/shallow --config remotefilelog.cachepath=${CACHEDIR}2
   pulling from ssh://user@dummy/$TESTTMP/shallow
   searching for changes
@@ -83,7 +82,7 @@ the server supports our custom getfiles method.
   adding file changes
   added 3 changesets with 3 changes to 3 files
   (run 'hg update' to get a working copy)
-  4 files fetched over 1 fetches - (4 misses, 0.00% hit ratio) over *s (glob)
+  2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob)
 
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
