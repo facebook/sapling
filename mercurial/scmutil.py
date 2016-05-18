@@ -502,7 +502,7 @@ class vfs(abstractvfs):
         os.chmod(name, self.createmode & 0o666)
 
     def __call__(self, path, mode="r", text=False, atomictemp=False,
-                 notindexed=False, backgroundclose=False):
+                 notindexed=False, backgroundclose=False, checkambig=False):
         '''Open ``path`` file, which is relative to vfs root.
 
         Newly created directories are marked as "not to be indexed by
@@ -521,6 +521,8 @@ class vfs(abstractvfs):
            closing a file on a background thread and reopening it. (If the
            file were opened multiple times, there could be unflushed data
            because the original file handle hasn't been flushed/closed yet.)
+
+        ``checkambig`` is passed to atomictempfile (valid only for writing).
         '''
         if self._audit:
             r = util.checkosfilename(path)
@@ -540,7 +542,8 @@ class vfs(abstractvfs):
             if basename:
                 if atomictemp:
                     util.makedirs(dirname, self.createmode, notindexed)
-                    return util.atomictempfile(f, mode, self.createmode)
+                    return util.atomictempfile(f, mode, self.createmode,
+                                               checkambig=checkambig)
                 try:
                     if 'w' in mode:
                         util.unlink(f)
