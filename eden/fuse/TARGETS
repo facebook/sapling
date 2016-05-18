@@ -1,7 +1,7 @@
 cpp_library(
     name = "fusell",
-    srcs = glob(["*.cpp", "passthru/*.cpp"]),
-    headers = glob(["*.h", "passthru/*.h"]),
+    srcs = glob(["*.cpp"]),
+    headers = glob(["*.h"]),
     deps = [
         "@/folly:folly",
         "@/wangle:wangle",
