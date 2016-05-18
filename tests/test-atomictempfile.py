@@ -42,6 +42,46 @@ class testatomictempfile(unittest.TestCase):
     def test3_oops(self):
         self.assertRaises(TypeError, atomictempfile)
 
+    # checkambig=True avoids ambiguity of timestamp
+    def test4_checkambig(self):
+        def atomicwrite(checkambig):
+            f = atomictempfile('foo', checkambig=checkambig)
+            f.write('FOO')
+            f.close()
+
+        # try some times, because reproduction of ambiguity depends on
+        # "filesystem time"
+        for i in xrange(5):
+            atomicwrite(False)
+            oldstat = os.stat('foo')
+            if oldstat.st_ctime != oldstat.st_mtime:
+                # subsequent changing never causes ambiguity
+                continue
+
+            repetition = 3
+
+            # repeat atomic write with checkambig=True, to examine
+            # whether st_mtime is advanced multiple times as expecetd
+            for j in xrange(repetition):
+                atomicwrite(True)
+            newstat = os.stat('foo')
+            if oldstat.st_ctime != newstat.st_ctime:
+                # timestamp ambiguity was naturally avoided while repetition
+                continue
+
+            # st_mtime should be advanced "repetition" times, because
+            # all atomicwrite() occured at same time (in sec)
+            self.assertTrue(newstat.st_mtime ==
+                            ((oldstat.st_mtime + repetition) & 0x7fffffff))
+            # no more examination is needed, if assumption above is true
+            break
+        else:
+            # This platform seems too slow to examine anti-ambiguity
+            # of file timestamp (or test happened to be executed at
+            # bad timing). Exit silently in this case, because running
+            # on other faster platforms can detect problems
+            pass
+
 if __name__ == '__main__':
     import silenttestrunner
     silenttestrunner.main(__name__)

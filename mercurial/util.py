@@ -1453,11 +1453,12 @@ class atomictempfile(object):
     visible. If the object is destroyed without being closed, all your
     writes are discarded.
     '''
-    def __init__(self, name, mode='w+b', createmode=None):
+    def __init__(self, name, mode='w+b', createmode=None, checkambig=False):
         self.__name = name      # permanent name
         self._tempname = mktempcopy(name, emptyok=('w' in mode),
                                     createmode=createmode)
         self._fp = posixfile(self._tempname, mode)
+        self._checkambig = checkambig
 
         # delegated methods
         self.write = self._fp.write
@@ -1468,7 +1469,17 @@ class atomictempfile(object):
     def close(self):
         if not self._fp.closed:
             self._fp.close()
-            rename(self._tempname, localpath(self.__name))
+            filename = localpath(self.__name)
+            oldstat = self._checkambig and filestat(filename)
+            if oldstat and oldstat.stat:
+                rename(self._tempname, filename)
+                newstat = filestat(filename)
+                if newstat.isambig(oldstat):
+                    # stat of changed file is ambiguous to original one
+                    advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                    os.utime(filename, (advanced, advanced))
+            else:
+                rename(self._tempname, filename)
 
     def discard(self):
         if not self._fp.closed:
