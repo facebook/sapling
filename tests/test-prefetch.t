@@ -185,7 +185,7 @@
   $ clearcache
   $ hg prefetch -r . --config remotefilelog.fetchpacks=True
   3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
-  $ find $TESTTMP/hgcache -type f
+  $ find $TESTTMP/hgcache -type f | sort
   $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.dataidx
   $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.datapack
   $TESTTMP/hgcache/master/packs/bc793de8656fc1534908d4d69fd4448c1cb00e91.histidx

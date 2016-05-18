@@ -32,24 +32,24 @@
   $ lastweek=`python -c 'import datetime,time; print datetime.datetime.fromtimestamp(time.time() - (86400 * 7)).strftime("%y%m%d%H%M")'`
   $ find $CACHEDIR -type f -exec touch -t $lastweek {} \;
 
-  $ find $CACHEDIR -type f
-  $TESTTMP/hgcache/repos (glob)
-  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/1406e74118627694268417491f018a4a883152f0 (glob)
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/repos (glob)
   $ hg gc
   finished: removed 1 of 2 files (0.00 GB to 0.00 GB)
-  $ find $CACHEDIR -type f
-  $TESTTMP/hgcache/repos
+  $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $TESTTMP/hgcache/repos
 
 # gc server cache
 
-  $ find master/.hg/remotefilelogcache -type f
-  master/.hg/remotefilelogcache/x/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
+  $ find master/.hg/remotefilelogcache -type f | sort
   master/.hg/remotefilelogcache/x/1406e74118627694268417491f018a4a883152f0 (glob)
+  master/.hg/remotefilelogcache/x/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
   $ hg gc master
   finished: removed 0 of 1 files (0.00 GB to 0.00 GB)
-  $ find master/.hg/remotefilelogcache -type f
+  $ find master/.hg/remotefilelogcache -type f | sort
   master/.hg/remotefilelogcache/x/48023ec064c1d522f0d792a5a912bb1bf7859a4a (glob)
 
   $ cp $CACHEDIR/repos $CACHEDIR/repos.bak
