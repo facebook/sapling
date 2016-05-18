@@ -13,7 +13,6 @@
 #include "TreeEntryFileHandle.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fuse/passthru/PassThruInodes.h"
 
 using folly::Future;
 using folly::StringPiece;
@@ -110,39 +109,19 @@ AbsolutePath TreeEntryFileInode::getLocalPath() const {
 
 folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
     const struct fuse_file_info& fi) {
-  if (!entry_) {
-    auto localPath = getLocalPath();
-    auto fd = ::open(localPath.c_str(), fi.flags);
-    checkUnixError(fd);
-    return new fusell::PassThruFileHandle(fd, ino_);
-  }
+  auto data = getOrLoadData();
+  SCOPE_EXIT {
+    data.reset();
+    fileHandleDidClose();
+  };
+  data->materialize(
+      fi.flags,
+      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
 
-  switch (entry_->getFileType()) {
-    case FileType::REGULAR_FILE: {
-      auto data = getOrLoadData();
-      SCOPE_EXIT {
-        data.reset();
-        fileHandleDidClose();
-      };
-      data->materialize(
-          fi.flags,
-          fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
-
-      return new TreeEntryFileHandle(
-          std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
-          data,
-          fi.flags);
-    }
-    case FileType::SYMLINK:
-      // man 2 open says:  ELOOP ... or O_NOFOLLOW was specified but pathname
-      // was a symbolic link.
-      // We shouldn't really be able to get here in any case.
-      folly::throwSystemErrorExplicit(ELOOP);
-    default:
-      // We really really should never be able to get here.
-      folly::throwSystemErrorExplicit(
-          EIO, "impossible filetype ", entry_->getFileType());
-  }
+  return new TreeEntryFileHandle(
+      std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
+      data,
+      fi.flags);
 }
 
 Future<vector<string>> TreeEntryFileInode::listxattr() {

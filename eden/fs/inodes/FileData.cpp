@@ -169,7 +169,9 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
   if (!file_) {
     try {
       // Test whether an overlay file exists by trying to open it.
-      file_ = overlay_->openFile(path, O_RDWR, 0600);
+      // O_NOFOLLOW because it never makes sense for the kernel to ask
+      // a fuse server to open a file that is a symlink to something else.
+      file_ = overlay_->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
       // since we have a pre-existing overlay file, we don't need the blob.
       need_blob = false;
     } catch (const std::system_error& err) {

@@ -12,7 +12,6 @@
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fuse/passthru/PassThruInodes.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -137,31 +136,45 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
 
   // Ask the overlay manager to create it.
   auto file = overlay_->openFile(targetname, O_CREAT | flags, mode);
+  // Discard the file handle and allow the FileData class to open it again.
+  // We'll need to figure out something nicer than this in a follow-on diff
+  // to make sure that O_EXCL|O_CREAT is working correctly.
+  file.close();
 
   // Generate an inode number for this new entry.
   auto node = fusell::InodeNameManager::get()->getNodeByName(ino_, name);
 
-  auto handle = std::make_unique<fusell::PassThruFileHandle>(
-      file.release(), node->getNodeId());
+  // build a corresponding TreeEntryFileInode
+  auto inode = std::make_shared<TreeEntryFileInode>(
+      node->getNodeId(),
+      std::static_pointer_cast<TreeInode>(shared_from_this()),
+      nullptr);
 
-  // Populate metadata.
-  auto handle_ptr =
-      handle.get(); // need to get this before move handle into the lambda.
-  return handle_ptr->getattr().then(
-      [ =, handle = std::move(handle) ](fusell::Dispatcher::Attr attr) mutable {
-        fusell::DirInode::CreateResult result;
+  fuse_file_info fi;
+  memset(&fi, 0, sizeof(fi));
 
-        result.inode = std::make_shared<TreeEntryFileInode>(
-            node->getNodeId(),
-            std::static_pointer_cast<TreeInode>(shared_from_this()),
-            nullptr);
+  // The kernel wants an open operation to return the inode,
+  // the file handle and some attribute information.
+  // Let's open a file handle now.
+  return inode->open(fi).then([=](fusell::FileHandle* handle_ptr) {
+    // Capture the handle into a unique_ptr so that we can ensure caleanup.
+    // This will be removed when we remove the naked pointers in a followup.
+    std::unique_ptr<fusell::FileHandle> handle(handle_ptr);
 
-        result.file = std::move(handle);
-        result.attr = attr;
-        result.node = node;
+    // Now that we have the file handle, let's look up the attributes.
+    return handle_ptr->getattr().then([ =, handle = std::move(handle) ](
+        fusell::Dispatcher::Attr attr) mutable {
+      fusell::DirInode::CreateResult result;
 
-        return result;
-      });
+      // Return all of the results back to the kernel.
+      result.inode = inode;
+      result.file = std::move(handle);
+      result.attr = attr;
+      result.node = node;
+
+      return result;
+    });
+  });
 }
 
 std::shared_ptr<LocalStore> TreeInode::getStore() const {
