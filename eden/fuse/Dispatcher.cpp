@@ -428,8 +428,9 @@ static void disp_link(fuse_req_t req,
           .CATCH_ERRORS());
 }
 
-folly::Future<FileHandle*> Dispatcher::open(fuse_ino_t ino,
-                                            const struct fuse_file_info& fi) {
+folly::Future<std::unique_ptr<FileHandle>> Dispatcher::open(
+    fuse_ino_t ino,
+    const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
 }
 
@@ -437,28 +438,37 @@ static void disp_open(fuse_req_t req,
                       fuse_ino_t ino,
                       struct fuse_file_info* fi) {
   auto& request = RequestData::create(req);
-  request.setRequestFuture(startRequest()
-                               .then([ =, &request, fi = *fi ] {
-                                 return request.getDispatcher()->open(ino, fi);
-                               })
-                               .then([ req, orig_info = *fi ](FileHandle * fh) {
-                                 if (fh == nullptr) {
-                                   throw std::runtime_error(
-                                       "Dispatcher::open failed to set fh");
-                                 }
-                                 fuse_file_info fi = orig_info;
-                                 fi.fh = reinterpret_cast<uint64_t>(fh);
-                                 fi.direct_io = fh->usesDirectIO();
-                                 fi.keep_cache = fh->preserveCache();
+  request.setRequestFuture(
+      startRequest()
+          .then([ =, &request, fi = *fi ] {
+            return request.getDispatcher()->open(ino, fi);
+          })
+          .then([ req, orig_info = *fi ](std::unique_ptr<FileHandle> fh) {
+            if (!fh) {
+              throw std::runtime_error("Dispatcher::open failed to set fh");
+            }
+            fuse_file_info fi = orig_info;
+            fi.fh = reinterpret_cast<uint64_t>(fh.get());
+            fi.direct_io = fh->usesDirectIO();
+            fi.keep_cache = fh->preserveCache();
 #if FUSE_MINOR_VERSION >= 8
-                                 fi.nonseekable = !fh->isSeekable();
+            fi.nonseekable = !fh->isSeekable();
 #endif
-                                 if (!RequestData::get().replyOpen(fi)) {
-                                   // Was interrupted, tidy up
-                                   fh->release().then([fh] { delete fh; });
-                                 }
-                               })
-                               .CATCH_ERRORS());
+            if (!RequestData::get().replyOpen(fi)) {
+              // Was interrupted, tidy up.
+              fh->releasefile().then([fh = std::move(fh)]() mutable {
+                // This reset() is going to happen when fh falls out of scope,
+                // we're just being clear that we want to extend the lifetime
+                // until after the FileHandle::releasefile has finished.
+                fh.reset();
+              });
+            } else {
+              // The kernel now owns the pointer and it is no longer tracked
+              // as a unique_ptr reference.
+              fh.release();
+            }
+          })
+          .CATCH_ERRORS());
 }
 
 static void disp_read(fuse_req_t req,
@@ -518,7 +528,7 @@ static void disp_release(fuse_req_t req,
   request.setRequestFuture(startRequest()
                                .then([ =, &request, fi = *fi ] {
                                  auto fh = getFileHandle(fi.fh);
-                                 return fh->release().then([fh]() {
+                                 return fh->releasefile().then([fh]() {
                                    delete fh;
                                    RequestData::get().replyError(0);
                                  });
@@ -540,8 +550,9 @@ static void disp_fsync(fuse_req_t req,
                                .CATCH_ERRORS());
 }
 
-folly::Future<DirHandle*> Dispatcher::opendir(fuse_ino_t ino,
-                                              const struct fuse_file_info& fi) {
+folly::Future<std::unique_ptr<DirHandle>> Dispatcher::opendir(
+    fuse_ino_t ino,
+    const struct fuse_file_info& fi) {
   FUSELL_NOT_IMPL();
 }
 
@@ -554,15 +565,24 @@ static void disp_opendir(fuse_req_t req,
           .then([ =, &request, fi = *fi ] {
             return request.getDispatcher()->opendir(ino, fi);
           })
-          .then([orig_info = *fi](DirHandle * dh) {
-            if (dh == nullptr) {
+          .then([orig_info = *fi](std::unique_ptr<DirHandle> dh) {
+            if (!dh) {
               throw std::runtime_error("Dispatcher::opendir failed to set dh");
             }
             fuse_file_info fi = orig_info;
-            fi.fh = reinterpret_cast<uint64_t>(dh);
+            fi.fh = reinterpret_cast<uint64_t>(dh.get());
             if (!RequestData::get().replyOpen(fi)) {
               // Was interrupted, tidy up
-              dh->releasedir().then([dh] { delete dh; });
+              dh->releasedir().then([dh = std::move(dh)]() mutable {
+                // This reset() is going to happen when dh falls out of scope,
+                // we're just being clear that we want to extend the lifetime
+                // until after the DirHandle::release() has finished.
+                dh.reset();
+              });
+            } else {
+              // The kernel now owns the pointer and it is no longer tracked
+              // as a unique_ptr reference.
+              dh.release();
             }
           })
           .CATCH_ERRORS());
@@ -808,7 +828,7 @@ static void disp_create(fuse_req_t req,
           })
           .then([orig_info = *fi](Dispatcher::Create info) {
             fuse_file_info fi = orig_info;
-            fi.fh = reinterpret_cast<uint64_t>(info.fh);
+            fi.fh = reinterpret_cast<uint64_t>(info.fh.get());
             fi.direct_io = info.fh->usesDirectIO();
             fi.keep_cache = info.fh->preserveCache();
 #if FUSE_MINOR_VERSION >= 8
@@ -816,7 +836,16 @@ static void disp_create(fuse_req_t req,
 #endif
             if (!RequestData::get().replyCreate(info.entry, fi)) {
               // Interrupted, tidy up
-              info.fh->release().then([fh = info.fh] { delete fh; });
+              info.fh->releasefile().then([fh = std::move(info.fh)]() mutable {
+                // This reset() is going to happen when fh falls out of scope,
+                // we're just being clear that we want to extend the lifetime
+                // until after the FileHandle::releasefile has finished.
+                fh.reset();
+              });
+            } else {
+              // The kernel now owns the file handle and it is no longer
+              // tracked as a unique_ptr reference.
+              info.fh.release();
             }
           })
           .CATCH_ERRORS());

@@ -107,7 +107,7 @@ AbsolutePath TreeEntryFileInode::getLocalPath() const {
       fusell::InodeNameManager::get()->resolvePathToNode(getNodeId());
 }
 
-folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
+folly::Future<std::unique_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
     const struct fuse_file_info& fi) {
   auto data = getOrLoadData();
   SCOPE_EXIT {
@@ -118,7 +118,7 @@ folly::Future<fusell::FileHandle*> TreeEntryFileInode::open(
       fi.flags,
       fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
 
-  return new TreeEntryFileHandle(
+  return std::make_unique<TreeEntryFileHandle>(
       std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),
       data,
       fi.flags);

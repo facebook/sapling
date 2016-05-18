@@ -15,6 +15,8 @@
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
 #include "Channel.h"
+#include "DirHandle.h"
+#include "FileHandle.h"
 #include "Inodes.h"
 #include "MountPoint.h"
 
@@ -233,8 +235,9 @@ folly::Future<Dispatcher::Attr> InodeDispatcher::getattr(fuse_ino_t ino) {
   return getInode(ino)->getattr();
 }
 
-folly::Future<DirHandle*> InodeDispatcher::opendir(
-    fuse_ino_t ino, const struct fuse_file_info& fi) {
+folly::Future<std::unique_ptr<DirHandle>> InodeDispatcher::opendir(
+    fuse_ino_t ino,
+    const struct fuse_file_info& fi) {
   return getDirInode(ino)->opendir(fi);
 }
 
@@ -317,8 +320,9 @@ folly::Future<folly::Unit> InodeDispatcher::forget(fuse_ino_t ino,
   return Unit{};
 }
 
-folly::Future<FileHandle*> InodeDispatcher::open(
-    fuse_ino_t ino, const struct fuse_file_info& fi) {
+folly::Future<std::unique_ptr<FileHandle>> InodeDispatcher::open(
+    fuse_ino_t ino,
+    const struct fuse_file_info& fi) {
   auto f = getFileInode(ino);
   return f->open(fi);
 }
@@ -335,7 +339,7 @@ folly::Future<Dispatcher::Create> InodeDispatcher::create(
 
         Dispatcher::Create result;
         result.entry = computeEntryParam(created.attr, created.node);
-        result.fh = created.file.release();
+        result.fh = std::move(created.file);
         return result;
       });
 }

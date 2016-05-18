@@ -92,7 +92,7 @@ class FileHandle : public FileHandleBase {
    * not returned to close() or munmap() which triggered the
    * release.
    */
-  virtual folly::Future<folly::Unit> release();
+  virtual folly::Future<folly::Unit> releasefile();
 
   /**
    * Synchronize file contents

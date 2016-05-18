@@ -28,7 +28,7 @@ class TreeEntryFileInode : public fusell::FileInode {
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<std::string> readlink() override;
-  folly::Future<fusell::FileHandle*> open(
+  folly::Future<std::unique_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi) override;
 
   folly::Future<std::vector<std::string>> listxattr() override;

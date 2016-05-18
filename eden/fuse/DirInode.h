@@ -37,7 +37,8 @@ class DirInode : public InodeBase {
       PathComponentPiece name,
       std::shared_ptr<DirInode> newparent,
       PathComponentPiece newname);
-  virtual folly::Future<DirHandle*> opendir(const struct fuse_file_info& fi);
+  virtual folly::Future<std::unique_ptr<DirHandle>> opendir(
+      const struct fuse_file_info& fi);
   virtual folly::Future<struct statvfs> statfs();
 
   /** Holds the results of a create operation.

@@ -20,7 +20,8 @@ class FileInode : public InodeBase {
   explicit FileInode(fuse_ino_t ino);
   // See Dispatcher::readlink
   virtual folly::Future<std::string> readlink();
-  virtual folly::Future<FileHandle*> open(const struct fuse_file_info& fi);
+  virtual folly::Future<std::unique_ptr<FileHandle>> open(
+      const struct fuse_file_info& fi);
   virtual folly::Future<uint64_t> bmap(size_t blocksize, uint64_t idx);
 };
 }

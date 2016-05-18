@@ -231,8 +231,9 @@ class Dispatcher {
    * @param ino the inode number
    * @param fi file information
    */
-  virtual folly::Future<FileHandle*> open(fuse_ino_t ino,
-                                          const struct fuse_file_info& fi);
+  virtual folly::Future<std::unique_ptr<FileHandle>> open(
+      fuse_ino_t ino,
+      const struct fuse_file_info& fi);
 
   /**
    * Open a directory
@@ -250,8 +251,9 @@ class Dispatcher {
    * @param ino the inode number
    * @param fi file information
    */
-  virtual folly::Future<DirHandle*> opendir(fuse_ino_t ino,
-                                            const struct fuse_file_info& fi);
+  virtual folly::Future<std::unique_ptr<DirHandle>> opendir(
+      fuse_ino_t ino,
+      const struct fuse_file_info& fi);
 
   /**
    * Get file system statistics
@@ -305,7 +307,7 @@ class Dispatcher {
 
   struct Create {
     fuse_entry_param entry;
-    FileHandle* fh;
+    std::unique_ptr<FileHandle> fh;
   };
 
   /**
