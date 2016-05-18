@@ -12,6 +12,7 @@
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fuse/RequestData.h"
 #include "eden/utils/PathFuncs.h"
 
 namespace facebook {
@@ -171,6 +172,22 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
       return result;
     });
   });
+}
+
+folly::Future<fuse_entry_param> TreeInode::mkdir(
+    PathComponentPiece name,
+    mode_t mode) {
+  // Figure out the relative path to this inode.
+  auto myname = fusell::InodeNameManager::get()->resolvePathToNode(ino_);
+
+  // Compute the effective name of the node they want to create.
+  auto targetName = myname + name;
+
+  // Will throw if we can't make the dir.
+  overlay_->makeDir(targetName, mode);
+
+  // Look up the inode for this new dir and return its entry info.
+  return fusell::RequestData::get().getDispatcher()->lookup(getNodeId(), name);
 }
 
 std::shared_ptr<LocalStore> TreeInode::getStore() const {

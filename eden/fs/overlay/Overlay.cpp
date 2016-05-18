@@ -100,6 +100,17 @@ Overlay::DirContents Overlay::readDir(RelativePathPiece path) {
       // Report the un-decorated named
       name.advance(kWhiteout.size());
     }
+
+    if (d_type == dtype_t::Unknown) {
+      // We depend on knowing whether the node is a dir or not in
+      // the common case, so we have no choice but to dig a bit deeper
+      // and figure out the type of this entry.
+      struct stat st;
+      auto file_path = dirPath + PathComponentPiece(name);
+      folly::checkUnixError(lstat(file_path.c_str(), &st));
+      d_type = mode_to_dtype(st.st_mode);
+    }
+
     contents.entries.emplace(std::make_pair(PathComponent(name), d_type));
   }
 

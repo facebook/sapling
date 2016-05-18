@@ -9,6 +9,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
+import errno
 import os
 import stat
 from eden.fs.integration import testcase
@@ -103,3 +104,42 @@ class BasicTest(testcase.EdenTestCase):
 
         st = os.lstat(hello)
         self.assertEqual(st.st_size, len('hola\n'))
+
+    def test_mkdir(self):
+        eden = self.init_git_eden()
+
+        # Can't create a directory inside a file that is in the store
+        with self.assertRaises(OSError) as context:
+            os.mkdir(os.path.join(eden.mount_path, 'hello', 'world'))
+        self.assertEqual(context.exception.errno, errno.ENOTDIR)
+
+        # Can't create a directory when a file of that name already exists
+        with self.assertRaises(OSError) as context:
+            os.mkdir(os.path.join(eden.mount_path, 'hello'))
+        self.assertEqual(context.exception.errno, errno.EEXIST)
+
+        # Can't create a directory when a directory of that name already exists
+        with self.assertRaises(OSError) as context:
+            os.mkdir(os.path.join(eden.mount_path, 'adir'))
+        self.assertEqual(context.exception.errno, errno.EEXIST)
+
+        buckout = os.path.join(eden.mount_path, 'buck-out')
+        os.mkdir(buckout)
+        st = os.lstat(buckout)
+        self.assertTrue(stat.S_ISDIR(st.st_mode))
+
+        entries = sorted(os.listdir(eden.mount_path))
+        self.assertEqual(['adir', 'buck-out', 'hello', 'slink'], entries)
+
+        # Prove that we can recursively build out a directory tree
+        deep_name = os.path.join(buckout, 'foo', 'bar', 'baz')
+        os.makedirs(deep_name)
+        st = os.lstat(deep_name)
+        self.assertTrue(stat.S_ISDIR(st.st_mode))
+
+        # And that we can create a file in there too
+        deep_file = os.path.join(deep_name, 'file')
+        with open(deep_file, 'w') as f:
+            f.write('w00t')
+        st = os.lstat(deep_file)
+        self.assertTrue(stat.S_ISREG(st.st_mode))
