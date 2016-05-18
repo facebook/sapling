@@ -1010,10 +1010,14 @@ def checksignature(func):
 
     return check
 
-def copyfile(src, dest, hardlink=False, copystat=False):
+def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like
     atime/mtime'''
+    assert not (copystat and checkambig)
+    oldstat = None
     if os.path.lexists(dest):
+        if checkambig:
+            oldstat = checkambig and filestat(dest)
         unlink(dest)
     # hardlinks are problematic on CIFS, quietly ignore this flag
     # until we find a way to work around it cleanly (issue4546)
@@ -1035,6 +1039,12 @@ def copyfile(src, dest, hardlink=False, copystat=False):
                 shutil.copystat(src, dest)
             else:
                 shutil.copymode(src, dest)
+                if oldstat and oldstat.stat:
+                    newstat = filestat(dest)
+                    if newstat.isambig(oldstat):
+                        # stat of copied file is ambiguous to original one
+                        advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                        os.utime(dest, (advanced, advanced))
         except shutil.Error as inst:
             raise Abort(str(inst))
 
