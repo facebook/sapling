@@ -1381,6 +1381,69 @@ def mktempcopy(name, emptyok=False, createmode=None):
         raise
     return temp
 
+class filestat(object):
+    """help to exactly detect change of a file
+
+    'stat' attribute is result of 'os.stat()' if specified 'path'
+    exists. Otherwise, it is None. This can avoid preparative
+    'exists()' examination on client side of this class.
+    """
+    def __init__(self, path):
+        try:
+            self.stat = os.stat(path)
+        except OSError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            self.stat = None
+
+    __hash__ = object.__hash__
+
+    def __eq__(self, old):
+        try:
+            # if ambiguity between stat of new and old file is
+            # avoided, comparision of size, ctime and mtime is enough
+            # to exactly detect change of a file regardless of platform
+            return (self.stat.st_size == old.stat.st_size and
+                    self.stat.st_ctime == old.stat.st_ctime and
+                    self.stat.st_mtime == old.stat.st_mtime)
+        except AttributeError:
+            return False
+
+    def isambig(self, old):
+        """Examine whether new (= self) stat is ambiguous against old one
+
+        "S[N]" below means stat of a file at N-th change:
+
+        - S[n-1].ctime  < S[n].ctime: can detect change of a file
+        - S[n-1].ctime == S[n].ctime
+          - S[n-1].ctime  < S[n].mtime: means natural advancing (*1)
+          - S[n-1].ctime == S[n].mtime: is ambiguous (*2)
+          - S[n-1].ctime  > S[n].mtime: never occurs naturally (don't care)
+        - S[n-1].ctime  > S[n].ctime: never occurs naturally (don't care)
+
+        Case (*2) above means that a file was changed twice or more at
+        same time in sec (= S[n-1].ctime), and comparison of timestamp
+        is ambiguous.
+
+        Base idea to avoid such ambiguity is "advance mtime 1 sec, if
+        timestamp is ambiguous".
+
+        But advancing mtime only in case (*2) doesn't work as
+        expected, because naturally advanced S[n].mtime in case (*1)
+        might be equal to manually advanced S[n-1 or earlier].mtime.
+
+        Therefore, all "S[n-1].ctime == S[n].ctime" cases should be
+        treated as ambiguous regardless of mtime, to avoid overlooking
+        by confliction between such mtime.
+
+        Advancing mtime "if isambig(oldstat)" ensures "S[n-1].mtime !=
+        S[n].mtime", even if size of a file isn't changed.
+        """
+        try:
+            return (self.stat.st_ctime == old.stat.st_ctime)
+        except AttributeError:
+            return False
+
 class atomictempfile(object):
     '''writable file object that atomically updates a file
 
