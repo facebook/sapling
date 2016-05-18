@@ -377,8 +377,18 @@ class abstractvfs(object):
     def readlock(self, path):
         return util.readlock(self.join(path))
 
-    def rename(self, src, dst):
-        return util.rename(self.join(src), self.join(dst))
+    def rename(self, src, dst, checkambig=False):
+        dstpath = self.join(dst)
+        oldstat = checkambig and util.filestat(dstpath)
+        if oldstat and oldstat.stat:
+            ret = util.rename(self.join(src), dstpath)
+            newstat = util.filestat(dstpath)
+            if newstat.isambig(oldstat):
+                # stat of renamed file is ambiguous to original one
+                advanced = (oldstat.stat.st_mtime + 1) & 0x7fffffff
+                os.utime(dstpath, (advanced, advanced))
+            return ret
+        return util.rename(self.join(src), dstpath)
 
     def readlink(self, path):
         return os.readlink(self.join(path))
