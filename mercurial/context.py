@@ -930,16 +930,20 @@ class basefilectx(object):
         this returns fixed value(False is used) as linenumber,
         if "linenumber" parameter is "False".'''
 
+        def lines(text):
+            if text.endswith("\n"):
+                return text.count("\n")
+            return text.count("\n") + 1
+
         if linenumber is None:
             def decorate(text, rev):
-                return ([rev] * len(text.splitlines()), text)
+                return ([rev] * lines(text), text)
         elif linenumber:
             def decorate(text, rev):
-                size = len(text.splitlines())
-                return ([(rev, i) for i in xrange(1, size + 1)], text)
+                return ([(rev, i) for i in xrange(1, lines(text) + 1)], text)
         else:
             def decorate(text, rev):
-                return ([(rev, False)] * len(text.splitlines()), text)
+                return ([(rev, False)] * lines(text), text)
 
         def pair(parent, child):
             blocks = mdiff.allblocks(parent[1], child[1], opts=diffopts,
