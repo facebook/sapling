@@ -168,9 +168,11 @@ def create_parser():
     init_parser = subparsers.add_parser(
         'init', help='Create a new Eden client.')
     init_parser.add_argument(
-        '--repo', help='Path to the repository to import.')
+        '--repo', help='Path to the repository to import.',
+        required=True)
     init_parser.add_argument(
-        '--mount', '-m', help='Path where the client should be mounted.')
+        '--mount', '-m', help='Path where the client should be mounted.',
+        required=True)
     init_parser.add_argument(
         '--with-buck', '-b', action='store_true',
         help='Client should create a bind mount for buck-out/.')
