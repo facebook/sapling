@@ -143,6 +143,7 @@ Check diagnosis, debugging information
   o  0 1f0dee641bb7258c56bd60e93edfa2405381c41e add a
   
 
+
   $ savecachedrevs
   $ printaccessedrevs
   =================================================
@@ -212,5 +213,25 @@ Check diagnosis, debugging information
   @@ -0,0 +1,1 @@
   +e
 
-  $ cd ..
+Test the --pruneall command to prune all the cached manifests
+  $ hg debugcachemanifest --pruneall --debug
+  caching rev: [], synchronous(False)
+  removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
 
+  $ hg diff -c . --debug --nodate
+  cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  performing diff
+  diff: other side is hybrid manifest
+  diff: cache miss
+  diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
+  --- /dev/null
+  +++ b/e
+  @@ -0,0 +1,1 @@
+  +e
+
+  $ cd ..

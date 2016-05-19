@@ -349,6 +349,13 @@ class fastmanifestcache(object):
         # TODO logic to prune old entries
         pass
 
+    def pruneall(self):
+        todelete = [f for f in os.listdir(self.cachepath)
+                      if f.startswith(self.keyprefix())]
+        for f in todelete:
+            self.debug("removing cached manifest %s\n" % f)
+            os.unlink(os.path.join(self.cachepath, f))
+
 class manifestfactory(object):
     def __init__(self, ui):
         self.ui = ui
@@ -367,10 +374,13 @@ class manifestfactory(object):
                               node=args[1])
 
 
-def _cachemanifest(ui, repo, revs, sync, limit):
+def _cachemanifest(ui, repo, revs, sync, limit, pruneall):
     ui.debug(("caching rev: %s, synchronous(%s)\n")
              % (revs, sync))
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+    if pruneall:
+        cache.pruneall()
+        return
 
     for rev in revs:
         manifest = repo[rev].manifest()
@@ -381,22 +391,25 @@ def _cachemanifest(ui, repo, revs, sync, limit):
         cache.prune(limit)
 
 
+
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
     ('a', 'all', False, 'cache all relevant revisions', ''),
     ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
+    ('p', 'pruneall', False, 'prune all the entries'),
     ('s', 'synchronous', False, 'wait for completion to return', '')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
     sync = opts["synchronous"]
     limit = opts["limit"]
+    pruneall = opts["pruneall"]
     if opts["all"]:
         revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
     elif opts["rev"]:
         revs = scmutil.revrange(repo, opts["rev"])
     else:
         revs = []
-    _cachemanifest(ui, repo, revs, sync, limit)
+    _cachemanifest(ui, repo, revs, sync, limit, pruneall)
 
 
 def extsetup(ui):
