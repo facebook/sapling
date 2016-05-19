@@ -345,14 +345,17 @@ class fastmanifestcache(object):
                 except OSError:
                     pass
 
+    def __iter__(self):
+        for f in os.listdir(self.cachepath):
+            if f.startswith(self.keyprefix()):
+                yield f
+
     def prune(self, limit):
         # TODO logic to prune old entries
         pass
 
     def pruneall(self):
-        todelete = [f for f in os.listdir(self.cachepath)
-                      if f.startswith(self.keyprefix())]
-        for f in todelete:
+        for f in self:
             self.debug("removing cached manifest %s\n" % f)
             os.unlink(os.path.join(self.cachepath, f))
 
