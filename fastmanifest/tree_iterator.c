@@ -54,6 +54,7 @@ fail:
 typedef enum {
   ITERATOR_FOUND,
   ITERATOR_NOT_FOUND,
+  ITERATOR_OOM,
   ITERATOR_ERROR,
 } iterator_progress_t;
 
@@ -80,16 +81,14 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
       if (iterator->construct_paths &&
           candidate->type != TYPE_ROOT) {
         // if it's not a root node, we need to slap on the name.
-        PATH_EXPAND_TO_FIT(
+        if (PATH_APPEND(
             &iterator->path,
             &iterator->path_idx,
             &iterator->path_sz,
-            candidate->name_sz
-        );
-
-        memcpy(&iterator->path[iterator->path_idx],
-            candidate->name, candidate->name_sz);
-        iterator->path_idx += candidate->name_sz;
+            candidate->name,
+            candidate->name_sz) == false) {
+          return ITERATOR_OOM;
+        }
       }
 
       // if it's a leaf node, we have the name already added to the path if

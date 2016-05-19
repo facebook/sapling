@@ -496,20 +496,14 @@ static convert_to_flat_code_t convert_to_flat_iterator(
       size_t previous_dirpath_build_buffer_idx =
           state->dirpath_build_buffer_idx;
 
-      size_t space_needed = child->name_sz;
-
-      if (PATH_EXPAND_TO_FIT(
+      if (PATH_APPEND(
               &state->dirpath_build_buffer,
               &state->dirpath_build_buffer_idx,
               &state->dirpath_build_buffer_sz,
-              space_needed) == false) {
+              child->name,
+              child->name_sz) == false) {
         return CONVERT_TO_FLAT_OOM;
       }
-
-      // copy the dirpath over to the output buffer.
-      memcpy(&state->dirpath_build_buffer[state->dirpath_build_buffer_idx],
-          child->name, child->name_sz);
-      state->dirpath_build_buffer_idx += child->name_sz;
 
       convert_to_flat_iterator(state, child);
 

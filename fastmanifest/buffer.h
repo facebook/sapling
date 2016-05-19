@@ -18,8 +18,8 @@
 #define PATH_BUFFER_MINIMUM_GROWTH  65536
 #define PATH_BUFFER_MAXIMUM_GROWTH  (1024 * 1024)
 
-#define PATH_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)       \
-  expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
+#define PATH_APPEND(buffer, buffer_idx, buffer_sz, input, input_sz)       \
+  buffer_append(buffer, buffer_idx, buffer_sz, input, input_sz,           \
       PATH_BUFFER_GROWTH_FACTOR,                                          \
       PATH_BUFFER_MINIMUM_GROWTH,                                         \
       PATH_BUFFER_MAXIMUM_GROWTH)
