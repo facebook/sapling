@@ -149,7 +149,9 @@ def _getfilesbatch(
             b.getfile(file_, node)
         b.submit()
         for m, r in itertools.izip(missed, b.results()):
-            receivemissing(io.BytesIO('%d\n%s' % (len(r), r)), m)
+            file_ = idmap[m]
+            node = m[-40:]
+            receivemissing(io.BytesIO('%d\n%s' % (len(r), r)), file_, node)
             progresstick()
         return
     while missed:

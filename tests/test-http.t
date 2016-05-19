@@ -77,6 +77,21 @@ contents not being visible to the current user.
   
   1\x00cannot fetch remote files from shallow repo (no-eol) (esc)
 
-Both error logs should be empty:
+Clones should work with httppostargs turned on
+
+  $ cd master
+  $ hg --config experimental.httppostargs=1 serve -p $HGPORT2 -d --pid-file=../hg3.pid -E ../error3.log
+
+  $ cd ..
+  $ cat hg3.pid >> $DAEMON_PIDS
+
+Clear filenode cache so we can test fetching with a modified batch size
+  $ rm -r $TESTTMP/hgcache
+
+  $ hgcloneshallow http://localhost:$HGPORT2/ shallow-postargs -q
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob)
+
+All error logs should be empty:
   $ cat error.log
   $ cat error2.log
+  $ cat error3.log
