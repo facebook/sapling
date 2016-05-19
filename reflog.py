@@ -51,7 +51,7 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
 
 def extsetup(ui):
     wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
-    wrapfunction(dirstate.dirstate, 'write', recorddirstateparents)
+    wrapfunction(dirstate.dirstate, '_writedirstate', recorddirstateparents)
     wrapfunction(dispatch, 'runcommand', runcommand)
 
     try:
@@ -109,7 +109,7 @@ def recordremotebookmarks(orig, repo, remotepath, branches=None,
 
     return orig(repo, remotepath, branches, bookmarks)
 
-def recorddirstateparents(orig, self, tr=False):
+def recorddirstateparents(orig, self, dirstatefp):
     """Records all dirstate parent changes to the reflog."""
     oldparents = [nullid, nullid]
     try:
@@ -133,7 +133,7 @@ def recorddirstateparents(orig, self, tr=False):
             newhashes.append(parents[1])
         self.reflogrepo.reflog.addentry(workingcopyparenttype, '.', oldhashes,
             newhashes)
-    return orig(self, tr=tr)
+    return orig(self, dirstatefp)
 
 @command('reflog',
     [('', 'all', None, 'show history for all refs'),
