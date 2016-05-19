@@ -11,6 +11,7 @@ from mercurial import bookmarks, dispatch, dirstate
 from mercurial.extensions import wrapcommand, wrapfunction, find
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
+from extutil import wrapfilecache
 import errno, os, getpass, time, sys
 
 cmdtable = {}
@@ -24,26 +25,6 @@ workingcopyparenttype = 'workingcopyparent'
 remotebookmarktype = 'remotebookmark'
 
 currentcommand = []
-
-def wrapfilecache(cls, propname, wrapper):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    origcls = cls
-    assert callable(wrapper)
-    while cls is not object:
-        if propname in cls.__dict__:
-            origfn = cls.__dict__[propname].func
-            assert callable(origfn)
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-            cls.__dict__[propname].func = wrap
-            break
-        cls = cls.__bases__[0]
-
-    if cls is object:
-        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
-                             propname))
 
 def runcommand(orig, lui, repo, cmd, fullargs, *args):
     currentcommand[:] = fullargs

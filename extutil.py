@@ -34,3 +34,23 @@ def replaceclass(container, classname):
         setattr(container, classname, cls)
         return cls
     return wrap
+
+def wrapfilecache(cls, propname, wrapper):
+    """Wraps a filecache property. These can't be wrapped using the normal
+    wrapfunction. This should eventually go into upstream Mercurial.
+    """
+    origcls = cls
+    assert callable(wrapper)
+    while cls is not object:
+        if propname in cls.__dict__:
+            origfn = cls.__dict__[propname].func
+            assert callable(origfn)
+            def wrap(*args, **kwargs):
+                return wrapper(origfn, *args, **kwargs)
+            cls.__dict__[propname].func = wrap
+            break
+        cls = cls.__bases__[0]
+
+    if cls is object:
+        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
+                             propname))
