@@ -391,68 +391,6 @@ def _cachemanifest(ui, repo, revs, sync, limit, pruneall):
         cache.prune(limit)
 
 
-
-@command('^debugcachemanifest', [
-    ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
-    ('a', 'all', False, 'cache all relevant revisions', ''),
-    ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
-    ('p', 'pruneall', False, 'prune all the entries'),
-    ('s', 'synchronous', False, 'wait for completion to return', '')],
-    'hg debugcachemanifest')
-def debugcachemanifest(ui, repo, *pats, **opts):
-    sync = opts["synchronous"]
-    limit = opts["limit"]
-    pruneall = opts["pruneall"]
-    if opts["all"]:
-        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-    elif opts["rev"]:
-        revs = scmutil.revrange(repo, opts["rev"])
-    else:
-        revs = []
-    _cachemanifest(ui, repo, revs, sync, limit, pruneall)
-
-
-def extsetup(ui):
-    logfile = ui.config("fastmanifest", "logfile", "")
-    factory = manifestfactory(ui)
-    if logfile:
-        logger = manifestaccesslogger(logfile)
-        extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
-    # Wraps all the function creating a manifestdict
-    # We have to do that because the logic to create manifest can take
-    # 7 different codepaths and we want to retain the node information
-    # that comes at the top level:
-    #
-    # read -> _newmanifest ---------------------------> manifestdict
-    #
-    # readshallowfast -> readshallow -----------------> manifestdict
-    #    \                    \------> _newmanifest --> manifestdict
-    #    --> readshallowdelta ------------------------> manifestdict
-    #         \->readdelta    -------> _newmanifest --> manifestdict
-    #             \->slowreaddelta --> _newmanifest --> manifestdict
-    #
-    # othermethods -----------------------------------> manifestdict
-    #
-    # We can have hybridmanifest that wraps one hybridmanifest in some
-    # codepath. We resolve to the correct flatmanifest when asked in the
-    # _flatmanifest method
-    #
-    # The recursion level is at most 2 because we wrap the two top level
-    # functions and _newmanifest (wrapped only for the case of -1)
-
-    extensions.wrapfunction(manifest.manifest, '_newmanifest',
-                            factory.newmanifest)
-    extensions.wrapfunction(manifest.manifest, 'read', factory.read)
-    try:
-        extensions.wrapfunction(manifest.manifest, 'readshallowfast',
-                                factory.read)
-    except AttributeError:
-        # The function didn't use to be defined in previous versions of hg
-        pass
-
-    revset.symbols['fastmanifesttocache'] = fastmanifesttocache
-    revset.safesymbols.add('fastmanifesttocache')
-
 class fastmanifestdict(object):
     def __init__(self, fm):
         self._fm = fm
@@ -666,3 +604,64 @@ class fastmanifestdict(object):
             deltatext = mdiff.textdiff(base, arraytext)
 
         return arraytext, deltatext
+
+@command('^debugcachemanifest', [
+    ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
+    ('a', 'all', False, 'cache all relevant revisions', ''),
+    ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
+    ('p', 'pruneall', False, 'prune all the entries'),
+    ('s', 'synchronous', False, 'wait for completion to return', '')],
+    'hg debugcachemanifest')
+def debugcachemanifest(ui, repo, *pats, **opts):
+    sync = opts["synchronous"]
+    limit = opts["limit"]
+    pruneall = opts["pruneall"]
+    if opts["all"]:
+        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    elif opts["rev"]:
+        revs = scmutil.revrange(repo, opts["rev"])
+    else:
+        revs = []
+    _cachemanifest(ui, repo, revs, sync, limit, pruneall)
+
+def extsetup(ui):
+    logfile = ui.config("fastmanifest", "logfile", "")
+    factory = manifestfactory(ui)
+    if logfile:
+        logger = manifestaccesslogger(logfile)
+        extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
+    # Wraps all the function creating a manifestdict
+    # We have to do that because the logic to create manifest can take
+    # 7 different codepaths and we want to retain the node information
+    # that comes at the top level:
+    #
+    # read -> _newmanifest ---------------------------> manifestdict
+    #
+    # readshallowfast -> readshallow -----------------> manifestdict
+    #    \                    \------> _newmanifest --> manifestdict
+    #    --> readshallowdelta ------------------------> manifestdict
+    #         \->readdelta    -------> _newmanifest --> manifestdict
+    #             \->slowreaddelta --> _newmanifest --> manifestdict
+    #
+    # othermethods -----------------------------------> manifestdict
+    #
+    # We can have hybridmanifest that wraps one hybridmanifest in some
+    # codepath. We resolve to the correct flatmanifest when asked in the
+    # _flatmanifest method
+    #
+    # The recursion level is at most 2 because we wrap the two top level
+    # functions and _newmanifest (wrapped only for the case of -1)
+
+    extensions.wrapfunction(manifest.manifest, '_newmanifest',
+                            factory.newmanifest)
+    extensions.wrapfunction(manifest.manifest, 'read', factory.read)
+    try:
+        extensions.wrapfunction(manifest.manifest, 'readshallowfast',
+                                factory.read)
+    except AttributeError:
+        # The function didn't use to be defined in previous versions of hg
+        pass
+
+    revset.symbols['fastmanifesttocache'] = fastmanifesttocache
+    revset.safesymbols.add('fastmanifesttocache')
+
