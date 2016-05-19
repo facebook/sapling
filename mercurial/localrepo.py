@@ -1404,6 +1404,8 @@ class localrepository(object):
             node = fctx.filenode()
             if node in [fparent1, fparent2]:
                 self.ui.debug('reusing %s filelog entry\n' % fname)
+                if manifest1.flags(fname) != fctx.flags():
+                    changelist.append(fname)
                 return node
 
         flog = self.file(fname)
