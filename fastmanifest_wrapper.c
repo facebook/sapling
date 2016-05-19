@@ -303,6 +303,69 @@ static fastmanifest *fastmanifest_copy(fastmanifest *self) {
   return copy;
 }
 
+typedef struct {
+  PyObject *matchfn;
+  bool filter_error_occurred;
+} filter_copy_context_t;
+
+bool filter_callback(char *path, size_t path_sz, void *callback_context) {
+  filter_copy_context_t *context = (filter_copy_context_t *) callback_context;
+
+  PyObject *arglist = NULL, *result = NULL;
+  arglist = Py_BuildValue("(s#)", path, (int) path_sz);
+  if (!arglist) {
+    context->filter_error_occurred = true;
+    return false;
+  }
+
+  result = PyObject_CallObject(context->matchfn, arglist);
+  Py_DECREF(arglist);
+  if (!result) {
+    context->filter_error_occurred = true;
+    return false;
+  }
+
+  bool bool_result = PyObject_IsTrue(result);
+  Py_DECREF(result);
+  return bool_result;
+}
+
+static fastmanifest *fastmanifest_filtercopy(
+    fastmanifest *self,
+    PyObject *matchfn) {
+  fastmanifest *py_copy = PyObject_New(fastmanifest, &fastmanifestType);
+  tree_t *copy = NULL;
+  if (py_copy) {
+    filter_copy_context_t context;
+
+    context.matchfn = matchfn;
+    context.filter_error_occurred = false;
+
+    copy = filter_copy(self->tree, filter_callback, &context);
+
+    if (copy == NULL) {
+      goto cleanup;
+    }
+
+    py_copy->tree = copy;
+    return py_copy;
+  }
+
+cleanup:
+  if (copy != NULL) {
+    destroy_tree(copy);
+  }
+
+  if (py_copy != NULL) {
+    Py_DECREF(py_copy);
+  }
+
+
+  PyErr_NoMemory();
+
+  return NULL;
+}
+
 static PyObject *hashflags(
     const uint8_t *checksum,
     const uint8_t checksum_sz,
@@ -648,6 +711,8 @@ static PyMethodDef fastmanifest_methods[] = {
    "Iterate over (path, nodeid, flags) tuples in this fastmanifest."},
   {"copy", (PyCFunction)fastmanifest_copy, METH_NOARGS,
    "Make a copy of this fastmanifest."},
+  {"filtercopy", (PyCFunction)fastmanifest_filtercopy, METH_O,
+   "Make a copy of this manifest filtered by matchfn."},
   {"save", (PyCFunction)fastmanifest_save, METH_VARARGS,
    "Save a fastmanifest to a file"},
   {"load", (PyCFunction)fastmanifest_load, METH_VARARGS | METH_CLASS,
