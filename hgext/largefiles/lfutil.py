@@ -20,7 +20,7 @@ from mercurial import (
     dirstate,
     error,
     httpconnection,
-    match as match_,
+    match as matchmod,
     node,
     scmutil,
     util,
@@ -161,7 +161,7 @@ def openlfdirstate(ui, repo, create=True):
 
 def lfdirstatestatus(lfdirstate, repo):
     wctx = repo['.']
-    match = match_.always(repo.root, repo.getcwd())
+    match = matchmod.always(repo.root, repo.getcwd())
     unsure, s = lfdirstate.status(match, [], False, False, False)
     modified, clean = s.modified, s.clean
     for lfile in unsure:
@@ -542,7 +542,7 @@ def updatestandinsbymatch(repo, match):
         # otherwise to update all standins if the largefiles are
         # large.
         lfdirstate = openlfdirstate(ui, repo)
-        dirtymatch = match_.always(repo.root, repo.getcwd())
+        dirtymatch = matchmod.always(repo.root, repo.getcwd())
         unsure, s = lfdirstate.status(dirtymatch, [], False, False,
                                       False)
         modifiedfiles = unsure + s.modified + s.added + s.removed
