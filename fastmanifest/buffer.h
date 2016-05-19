@@ -10,6 +10,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 // a common usage pattern for this module is to store a path.  the path can
 // be of any length, theoretically, so we have to support expansion.
