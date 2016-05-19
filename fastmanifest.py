@@ -451,6 +451,10 @@ class fastmanifestdict(object):
         return len(self._fm)
 
     def __setitem__(self, key, node):
+        if len(node) == 22:
+            # sometimes we set the 22nd byte.  this is not preserved by
+            # lazymanifest or manifest::_lazymanifest.
+            node = node[:21]
         self._fm[key] = node, self.flags(key, '')
 
     def __contains__(self, key):
