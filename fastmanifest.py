@@ -152,6 +152,11 @@ class hybridmanifest(object):
             if (self.cachekey is not None and
                 self.fastcache.contains(self.cachekey)):
                 self.__cachedmanifest = self.fastcache.get(self.cachekey)
+            elif self.debugfastmanifest:
+                # in debug mode, we always convert into a fastmanifest.
+                r = self._flatmanifest()
+                fm = fastmanifest_wrapper.fastManifest(r.text())
+                self.__cachedmanifest = fastmanifestdict(fm)
 
             self.incache = self.__cachedmanifest is not None
 
@@ -161,7 +166,7 @@ class hybridmanifest(object):
         return self.__cachedmanifest
 
     def _incache(self):
-        if self.incache:
+        if self.incache or self.debugfastmanifest:
             return True
         elif self.cachekey:
             return self.fastcache.contains(self.cachekey)
@@ -175,13 +180,6 @@ class hybridmanifest(object):
             return c
 
         r = self._flatmanifest()
-
-        if self.debugfastmanifest:
-            # in debug mode, we always convert into a fastmanifest.
-            fm = fastmanifest_wrapper.fastManifest(r.text())
-            self.__cachedmanifest = fastmanifestdict(fm)
-            self.incache = True
-            return self.__cachedmanifest
 
         return r
 
