@@ -91,6 +91,8 @@ static convert_from_flat_code_t ifastmanifest_init(
   if (from_result.code == CONVERT_FROM_FLAT_OK) {
     tree_t *tree = from_result.tree;
     self->tree = tree;
+  } else {
+    self->tree = NULL;
   }
 
   return from_result.code;
