@@ -152,6 +152,9 @@ class hybridmanifest(object):
             if (self.cachekey is not None and
                 self.fastcache.contains(self.cachekey)):
                 self.__cachedmanifest = self.fastcache.get(self.cachekey)
+            elif self.node == revlog.nullid:
+                fm = fastmanifest_wrapper.fastManifest()
+                self.__cachedmanifest = fastmanifestdict(fm)
             elif self.debugfastmanifest:
                 # in debug mode, we always convert into a fastmanifest.
                 r = self._flatmanifest()
@@ -243,7 +246,7 @@ class hybridmanifest(object):
                 _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
-                if not _m1 or not _m2:
+                if _m1 is None or _m2 is None:
                     self.debug("diff: unable to load one or "
                                "more manifests\n")
                     _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
