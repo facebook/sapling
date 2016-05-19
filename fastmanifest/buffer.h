@@ -11,6 +11,19 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+// a common usage pattern for this module is to store a path.  the path can
+// be of any length, theoretically, so we have to support expansion.
+#define DEFAULT_PATH_BUFFER_SZ      16384
+#define PATH_BUFFER_GROWTH_FACTOR   1.2
+#define PATH_BUFFER_MINIMUM_GROWTH  65536
+#define PATH_BUFFER_MAXIMUM_GROWTH  (1024 * 1024)
+
+#define PATH_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)       \
+  expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
+      PATH_BUFFER_GROWTH_FACTOR,                                          \
+      PATH_BUFFER_MINIMUM_GROWTH,                                         \
+      PATH_BUFFER_MAXIMUM_GROWTH)
+
 static inline bool expand_to_fit(
     char **buffer, size_t *buffer_idx, size_t *buffer_sz,
     size_t input_sz,

@@ -14,17 +14,6 @@
 
 #define DEFAULT_PATH_RECORDS_SZ      1024
 
-#define DEFAULT_PATH_BUFFER_SZ      16384
-#define PATH_BUFFER_GROWTH_FACTOR   1.2
-#define PATH_BUFFER_MINIMUM_GROWTH  65536
-#define PATH_BUFFER_MAXIMUM_GROWTH  (1024 * 1024)
-
-#define ITERATE_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)    \
-  expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
-      PATH_BUFFER_GROWTH_FACTOR,                                          \
-      PATH_BUFFER_MINIMUM_GROWTH,                                         \
-      PATH_BUFFER_MAXIMUM_GROWTH)
-
 iterator_t *create_iterator(const tree_t *tree, bool construct_paths) {
   iterator_t *result = malloc(sizeof(iterator_t));
   path_record_t *path_records = malloc(sizeof(path_record_t) *
@@ -91,7 +80,7 @@ static iterator_progress_t iterator_find_next(iterator_t *iterator) {
       if (iterator->construct_paths &&
           candidate->type != TYPE_ROOT) {
         // if it's not a root node, we need to slap on the name.
-        ITERATE_EXPAND_TO_FIT(
+        PATH_EXPAND_TO_FIT(
             &iterator->path,
             &iterator->path_idx,
             &iterator->path_sz,
