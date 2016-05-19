@@ -14,17 +14,9 @@
 #define MAX_FOLDER_DEPTH            1024
 #define DEFAULT_CHILDREN_CAPACITY   4096
 
-#define DEFAULT_BUILD_BUFFER_SZ     16384
 #define BUFFER_GROWTH_FACTOR        1.2
 #define BUFFER_MINIMUM_GROWTH       1048576
 #define BUFFER_MAXIMUM_GROWTH       (32 * 1024 * 1024)
-
-#define CONVERT_BUFFER_APPEND(buffer, buffer_idx, buffer_sz, \
-    input, input_sz)                                                      \
-  buffer_append(buffer, buffer_idx, buffer_sz, input, input_sz,           \
-      BUFFER_GROWTH_FACTOR,                                               \
-      BUFFER_MINIMUM_GROWTH,                                              \
-      BUFFER_MAXIMUM_GROWTH)
 
 #define CONVERT_EXPAND_TO_FIT(buffer, buffer_idx, buffer_sz, input_sz)    \
   expand_to_fit(buffer, buffer_idx, buffer_sz, input_sz,                  \
@@ -506,7 +498,7 @@ static convert_to_flat_code_t convert_to_flat_iterator(
 
       size_t space_needed = child->name_sz;
 
-      if (CONVERT_EXPAND_TO_FIT(
+      if (PATH_EXPAND_TO_FIT(
               &state->dirpath_build_buffer,
               &state->dirpath_build_buffer_idx,
               &state->dirpath_build_buffer_sz,
@@ -568,9 +560,9 @@ convert_from_flat_result_t convert_from_flat(
 
 convert_to_flat_result_t convert_to_flat(tree_t *tree) {
   to_flat_state_t state;
-  state.dirpath_build_buffer = malloc(DEFAULT_BUILD_BUFFER_SZ);
+  state.dirpath_build_buffer = malloc(DEFAULT_PATH_BUFFER_SZ);
   state.dirpath_build_buffer_idx = 0;
-  state.dirpath_build_buffer_sz = DEFAULT_BUILD_BUFFER_SZ;
+  state.dirpath_build_buffer_sz = DEFAULT_PATH_BUFFER_SZ;
 
   // guestimate as to how much space we need.  this could probably be
   // fine-tuned a bit.
