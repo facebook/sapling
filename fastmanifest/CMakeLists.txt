@@ -63,7 +63,7 @@ target_link_libraries(tree_test bsearch fastmanifest)
 add_executable(tree_convert_test tree_convert_test.c ${TEST_FILES})
 target_link_libraries(tree_convert_test bsearch fastmanifest)
 
-add_executable(tree_copy_test tree_copy_test.c)
+add_executable(tree_copy_test tree_copy_test.c ${TEST_FILES})
 target_link_libraries(tree_copy_test bsearch fastmanifest)
 
 add_executable(tree_diff_test tree_diff_test.c)

@@ -65,6 +65,11 @@ extern void destroy_tree(tree_t *tree);
 
 extern tree_t *copy_tree(const tree_t *src);
 
+extern tree_t *filter_copy(
+    const tree_t *src,
+    bool (*filter)(char *path, size_t path_sz, void *callback_context),
+    void *callback_context);
+
 extern get_path_result_t get_path(
     tree_t *const tree,
     const char *path,
