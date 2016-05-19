@@ -586,6 +586,15 @@ def statuscmd(orig, ui, repo, *pats, **opts):
     """
     if opts.get('root_relative'):
         del opts['root_relative']
+        if pats:
+            # Ugh. So, if people pass a pattern and --root-relative,
+            # they will get pattern behavior and not any root-relative paths,
+            # because that's how hg status works. It's non-trivial to fixup
+            # either all the patterns or all the output, so we just raise
+            # an exception instead.
+            message = _('--root-relative not supported with patterns')
+            hint = _('run from the repo root instead')
+            raise error.Abort(message, hint=hint)
     elif os.environ.get('HGPLAIN'): # don't break automation
         pass
     # Here's an ugly hack! If users are passing "re:" to make status relative,
