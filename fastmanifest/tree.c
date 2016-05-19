@@ -105,6 +105,9 @@ static void destroy_tree_helper(tree_t *tree, node_t *node) {
 }
 
 void destroy_tree(tree_t *tree) {
+  if (tree == NULL) {
+    return;
+  }
   if (tree->compacted == false) {
     destroy_tree_helper(tree, tree->shadow_root);
   } else {
