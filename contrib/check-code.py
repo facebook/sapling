@@ -474,7 +474,6 @@ def _preparepats():
         filters = c[3]
         for i, flt in enumerate(filters):
             filters[i] = re.compile(flt[0]), flt[1]
-_preparepats()
 
 class norepeatlogger(object):
     def __init__(self):
@@ -643,6 +642,8 @@ def main():
         check = glob.glob("*")
     else:
         check = args
+
+    _preparepats()
 
     ret = 0
     for f in check:
