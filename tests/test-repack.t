@@ -194,9 +194,13 @@ Single pack - repack does nothing
   1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
   * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  * 90 * 29e5896bfbe67389c4f98b18c18d54706b80fafb.histpack (glob)
   $ hg repack --incremental
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
   * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  * 90 * 29e5896bfbe67389c4f98b18c18d54706b80fafb.histpack (glob)
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
   $ hg prefetch -r 1
@@ -210,16 +214,25 @@ Single pack - repack does nothing
   * 65 * 6c499d21350d79f92fd556b4b7a902569d88e3c9.datapack (glob)
   * 61 * 817d294043bd21a3de01f807721971abe45219ce.datapack (glob)
   * 63 * ff45add45ab3f59c4f75efc6a087d86c821219d6.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  *  90 * 29e5896bfbe67389c4f98b18c18d54706b80fafb.histpack (glob)
+  * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
+  * 254 * 3ed57673383638cd7c2c873a5a00a1f40f26b0b8.histpack (glob)
+  * 172 * bc0153a5326a2f0bcae9f659ad3376c04350119f.histpack (glob)
   $ hg repack --incremental
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
-  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
   *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  * 201 * 92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
 
 1 gen3 pack, 1 gen0 pack - does nothing
   $ hg repack --incremental
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
-  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
   *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  * 201 * 92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
 
 Pull should run background repack
   $ clearcache
@@ -236,6 +249,12 @@ Pull should run background repack
   * 65 * 6c499d21350d79f92fd556b4b7a902569d88e3c9.datapack (glob)
   * 61 * 817d294043bd21a3de01f807721971abe45219ce.datapack (glob)
   * 63 * ff45add45ab3f59c4f75efc6a087d86c821219d6.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  *  90 * 29e5896bfbe67389c4f98b18c18d54706b80fafb.histpack (glob)
+  * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
+  * 254 * 3ed57673383638cd7c2c873a5a00a1f40f26b0b8.histpack (glob)
+  * 172 * bc0153a5326a2f0bcae9f659ad3376c04350119f.histpack (glob)
+
   $ hg pull
   pulling from ssh://user@dummy/master
   searching for changes
@@ -244,5 +263,7 @@ Pull should run background repack
   $ sleep 0.5
   $ hg debugwaitonrepack >/dev/null 2>&1
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
-  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
   *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  * 201 * 92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
+  * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)

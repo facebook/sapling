@@ -34,7 +34,10 @@ def incrementalrepack(repo):
     datapacks = _computeincrementaldatapack(repo.ui, files)
     fullpaths = list(os.path.join(packpath, p) for p in datapacks)
     datapacks = list(datapack.datapack(p) for p in fullpaths)
-    historypacks = _computeincrementalhistorypack(files)
+
+    historypacks = _computeincrementalhistorypack(repo.ui, files)
+    fullpaths = list(os.path.join(packpath, p) for p in historypacks)
+    historypacks = list(historypack.historypack(p) for p in fullpaths)
 
     datasource = contentstore.unioncontentstore(*datapacks)
     historysource = metadatastore.unionmetadatastore(*historypacks)
@@ -62,6 +65,21 @@ def _computeincrementaldatapack(ui, files):
 
     return _computeincrementalpack(ui, files, generations, datapack.PACKSUFFIX,
             datapack.INDEXSUFFIX, gencountlimit, repacksizelimit)
+
+def _computeincrementalhistorypack(ui, files):
+    generations = ui.configlist("remotefilelog", "history.generations",
+                                ['100MB'])
+    generations = list(sorted((util.sizetoint(s) for s in generations),
+                                reverse=True))
+    generations.append(0)
+
+    gencountlimit = ui.configint('remotefilelog', 'history.gencountlimit', 2)
+    repacksizelimit = ui.configbytes('remotefilelog', 'history.repacksizelimit',
+                                     '100MB')
+
+    return _computeincrementalpack(ui, files, generations,
+            historypack.PACKSUFFIX, historypack.INDEXSUFFIX, gencountlimit,
+            repacksizelimit)
 
 def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
                             gencountlimit, repacksizelimit):
@@ -112,16 +130,13 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
             else:
                 break
 
-        if packs:
+        if len(packs) > 1:
             return packs
 
     # If there aren't small ones to repack, repack the two largest ones.
     if len(generations[0]) > 1:
         return generations[0]
 
-    return []
-
-def _computeincrementalhistorypack(files):
     return []
 
 def _runrepack(repo, data, history):
