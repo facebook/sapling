@@ -172,6 +172,8 @@
   $ hg addremove -s 50 > /dev/null
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob)
 
+  $ cd ..
+
 # Prefetch packs
   $ hgcloneshallow ssh://user@dummy/master packprefetch
   streaming all changes
@@ -182,8 +184,12 @@
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd packprefetch
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > fetchpacks=True
+  > EOF
   $ clearcache
-  $ hg prefetch -r . --config remotefilelog.fetchpacks=True
+  $ hg prefetch -r .
   3 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
   $ find $TESTTMP/hgcache -type f | sort
   $TESTTMP/hgcache/master/packs/8c654541e4f20141a894bbfe428e36fc92202e39.dataidx
@@ -196,3 +202,17 @@
   y
   $ hg cat -r . z
   z
+
+# Prefetch packs that include renames
+  $ cd ../master
+  $ hg mv z z2
+  $ hg commit -m 'move z -> z2'
+  $ cd ../packprefetch
+  $ hg pull -q
+  (running background incremental repack)
+  $ hg prefetch -r tip
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg up tip -q
+  $ hg log -f z2 -T '{desc}\n'
+  move z -> z2
+  x

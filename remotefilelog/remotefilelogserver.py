@@ -398,6 +398,12 @@ def getpack(repo, proto, args):
                 p1node = fl.node(p1)
                 p2node = fl.node(p2)
                 linknode = repo.changelog.node(linkrev)
+                if p1node == nullid:
+                    copydata = fl.renamed(node)
+                    if copydata:
+                        copyfrom, copynode = copydata
+                        p1node = copynode
+
                 history.append((node, p1node, p2node, linknode, copyfrom))
 
             # Serialize and send history
@@ -447,6 +453,14 @@ def _receivepackrequest(stream):
     return files
 
 def _getdeltachain(fl, nodes, stophint):
+    """Produces a chain of deltas that includes each of the given nodes.
+
+    `stophint` - The changeset rev number to stop at. If it's set to >= 0, we
+    will return not only the deltas for the requested nodes, but also all
+    necessary deltas in their delta chains, as long as the deltas have link revs
+    >= the stophint. This allows us to return an approximately minimal delta
+    chain when the user performs a pull. If `stophint` is set to -1, all nodes
+    will return full texts.  """
     chain = []
 
     seen = set()
@@ -460,10 +474,14 @@ def _getdeltachain(fl, nodes, stophint):
             if linkrev < stophint and cur != startrev:
                 break
 
-            fulltext = False
-            if stophint == -1 or base == nullrev or base == cur:
-                # Fulltext
-                delta = fl.revision(cur)
+            # Return a full text if:
+            # - the caller requested it (via stophint == -1)
+            # - the revlog chain has ended (via base==null or base==node)
+            # - p1 is null. In some situations this can mean it's a copy, so
+            # we need to use fl.read() to remove the copymetadata.
+            if (stophint == -1 or base == nullrev or base == cur
+                or p1 == nullrev):
+                delta = fl.read(cur)
                 base = nullrev
             else:
                 delta = fl._chunk(cur)
