@@ -115,6 +115,7 @@
   $TESTTMP/hgcache/master/packs/3ed57673383638cd7c2c873a5a00a1f40f26b0b8.histpack
   $TESTTMP/hgcache/repos
   $ hg repack --background
+  (running background repack)
   $ sleep 2
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/3bebfba849e7aed8e598b92b296aeaff4784393b.histidx

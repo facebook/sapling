@@ -797,27 +797,7 @@ def prefetch(ui, repo, *pats, **opts):
     ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     if opts.get('background'):
-        cmd = ' '.join(map(util.shellquote, util.hgcmd() + ['-R', repo.origroot,
-                                                            'repack']))
-        shallowutil.runshellcommand(cmd, os.environ)
+        repackmod.backgroundrepack(repo)
         return
 
-    cachepath = repo.ui.config("remotefilelog", "cachepath")
-    packpath = os.path.join(cachepath, repo.name, 'packs')
-    util.makedirs(packpath)
-
-    datasource = contentstore.unioncontentstore(*repo.shareddatastores)
-    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores)
-
-    repacker = repackmod.repacker(repo, datasource, historysource)
-
-    opener = scmutil.vfs(packpath)
-    # Packs should be write-once files, so set them to read-only.
-    opener.createmode = 0o444
-    with datapack.mutabledatapack(opener) as dpack:
-        with historypack.mutablehistorypack(opener) as hpack:
-            try:
-                repacker.run(dpack, hpack)
-            except error.LockHeld:
-                raise error.Abort(_("skipping repack - another repack is "
-                                    "already running"))
+    repackmod.fullrepack(repo)

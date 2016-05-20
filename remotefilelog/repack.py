@@ -1,9 +1,39 @@
 import os
 from collections import defaultdict
-from mercurial import mdiff, util
+from mercurial import error, mdiff, osutil, scmutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import shallowutil
+import datapack, historypack, contentstore, metadatastore, shallowutil
+
+def backgroundrepack(repo):
+    cmd = util.hgcmd() + ['-R', repo.origroot, 'repack']
+    cmd = ' '.join(map(util.shellquote, cmd))
+    repo.ui.warn("(running background repack)\n")
+    shallowutil.runshellcommand(cmd, os.environ)
+
+def fullrepack(repo):
+    datasource = contentstore.unioncontentstore(*repo.shareddatastores)
+    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores)
+
+    _runrepack(repo, datasource, historysource)
+
+def _runrepack(repo, data, history):
+    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    packpath = os.path.join(cachepath, repo.name, 'packs')
+    util.makedirs(packpath)
+
+    packer = repacker(repo, data, history)
+
+    opener = scmutil.vfs(packpath)
+    # Packs should be write-once files, so set them to read-only.
+    opener.createmode = 0o444
+    with datapack.mutabledatapack(opener) as dpack:
+        with historypack.mutablehistorypack(opener) as hpack:
+            try:
+                packer.run(dpack, hpack)
+            except error.LockHeld:
+                raise error.Abort(_("skipping repack - another repack is "
+                                    "already running"))
 
 class repacker(object):
     """Class for orchestrating the repack of data and history information into a
