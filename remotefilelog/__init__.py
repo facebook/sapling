@@ -540,7 +540,11 @@ def gc(ui, *args, **opts):
         cachepaths.add(systemcache)
 
     # get repo client and server cache
-    repopaths = [ui.environ['PWD']]
+    repopaths = []
+    pwd = ui.environ.get('PWD')
+    if pwd:
+        repopaths.append(pwd)
+
     repopaths.extend(args)
     repos = []
     for repopath in repopaths:
