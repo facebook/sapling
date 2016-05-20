@@ -11,12 +11,14 @@ import silenttestrunner
 
 from remotefilelog.datapack import (
     datapack,
+    datapackstore,
     mutabledatapack,
+)
+from remotefilelog.basepack import (
     SMALLFANOUTCUTOFF,
     SMALLFANOUTPREFIX,
     LARGEFANOUTPREFIX,
 )
-from remotefilelog.datapack import datapackstore
 
 from mercurial import scmutil, util
 from mercurial.node import hex, bin, nullid
