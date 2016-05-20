@@ -24,7 +24,7 @@ class basestore(object):
         self._path = path
         self._reponame = reponame
         self._shared = shared
-        self._uid = os.getuid()
+        self._uid = os.getuid() if os.name != 'nt' else None
 
         self._validatecachelog = self.ui.config("remotefilelog",
                                                 "validatecachelog")
