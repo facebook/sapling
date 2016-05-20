@@ -121,6 +121,8 @@ def writefile(path, content, readonly=False):
                 raise
 
     fd, temp = tempfile.mkstemp(prefix='.%s-' % filename, dir=dirname)
+    os.close(fd)
+
     try:
         f = util.posixfile(temp, 'wb')
         f.write(content)
