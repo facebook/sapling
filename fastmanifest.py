@@ -290,6 +290,8 @@ class fastmanifestcache(object):
     def load(self, fpath):
         try:
             fm = fastmanifest_wrapper.fastManifest.load(fpath)
+            # touch on access to make this cache a LRU cache
+            os.utime(fpath, None)
         except EnvironmentError:
             return None
         else:
