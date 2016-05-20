@@ -622,7 +622,7 @@ def checkfile(f, logfunc=_defaultlogger.log, maxerr=None, warnings=False,
 
     return result
 
-if __name__ == "__main__":
+def main():
     parser = optparse.OptionParser("%prog [options] [files]")
     parser.add_option("-w", "--warnings", action="store_true",
                       help="include warning-level checks")
@@ -650,4 +650,7 @@ if __name__ == "__main__":
                          blame=options.blame, debug=options.debug,
                          lineno=options.lineno):
             ret = 1
-    sys.exit(ret)
+    return ret
+
+if __name__ == "__main__":
+    sys.exit(main())
