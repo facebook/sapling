@@ -57,6 +57,11 @@ from mercurial import revset
 from mercurial import revlog
 from mercurial import scmutil
 from mercurial import util
+from mercurial import bookmarks
+from mercurial import dirstate
+from mercurial import localrepo
+
+from extutil import wrapfilecache
 
 import fastmanifest_wrapper
 
@@ -632,6 +637,24 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         revs = []
     _cachemanifest(ui, repo, revs, sync, limit, pruneall)
 
+def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
+    repo = self._repo
+    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    _cachemanifest(repo.ui, repo, revs, True, None, False)
+    return orig(self, *args, **kwargs)
+
+def triggercacheondirstatechange(orig, self, *args, **kwargs):
+    if util.safehasattr(self, "_fastmanifestrepo"):
+        repo = self._fastmanifestrepo
+        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+        _cachemanifest(repo.ui, repo, revs, True, None, False)
+    return orig(self, *args, **kwargs)
+
+def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
+    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    _cachemanifest(repo.ui, repo, revs, True, None, False)
+    return orig(self, *args, **kwargs)
+
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
     factory = manifestfactory(ui)
@@ -673,3 +696,24 @@ def extsetup(ui):
     revset.symbols['fastmanifesttocache'] = fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
 
+    if ui.config("fastmanifest", "cacheonchange", False):
+        # Trigger to enable caching of relevant manifests
+        extensions.wrapfunction(bookmarks.bmstore, '_write',
+                                triggercacheonbookmarkchange)
+        extensions.wrapfunction(dirstate.dirstate, 'write',
+                                 triggercacheondirstatechange)
+        try:
+            remotenames = extensions.find('remotenames')
+        except KeyError:
+            pass
+        else:
+            if remotenames:
+                extensions.wrapfunction(remotenames, 'saveremotenames',
+                                        triggercacheonremotenameschange)
+
+        def wrapdirstate(orig, self):
+            dirstate = orig(self)
+            dirstate._fastmanifestrepo = self
+            return dirstate
+        wrapfilecache(localrepo.localrepository, 'dirstate',
+                                 wrapdirstate)
