@@ -393,9 +393,9 @@ class manifestfactory(object):
                               node=args[1])
 
 
-def _cachemanifest(ui, repo, revs, sync, limit, pruneall, displaylist):
-    ui.debug(("caching rev: %s, synchronous(%s), pruneall(%s), list(%s)\n")
-             % (revs, sync, pruneall, displaylist))
+def _cachemanifest(ui, repo, revs, background, limit, pruneall, displaylist):
+    ui.debug(("caching rev: %s, background(%s), pruneall(%s), list(%s)\n")
+             % (revs, background, pruneall, displaylist))
 
     # We can either prune, display or cache
     if displaylist and pruneall:
@@ -650,11 +650,12 @@ class fastmanifestdict(object):
     ('a', 'all', False, 'cache all relevant revisions', ''),
     ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
     ('p', 'pruneall', False, 'prune all the entries'),
-    ('s', 'synchronous', False, 'wait for completion to return', ''),
+    ('b', 'background', False,
+     'return imediately and process in the background', ''),
     ('e', 'list', False, 'list the content of the cache and its size','')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
-    sync = opts["synchronous"]
+    background = opts["background"]
     limit = opts["limit"]
     pruneall = opts["pruneall"]
     displaylist = opts['list']
@@ -664,7 +665,8 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         revs = scmutil.revrange(repo, opts["rev"])
     else:
         revs = []
-    _cachemanifest(ui, repo, revs, sync, limit, pruneall, displaylist)
+    _cachemanifest(ui, repo, revs, background, limit, pruneall,
+                   displaylist)
 
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     repo = self._repo

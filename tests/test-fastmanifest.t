@@ -190,7 +190,7 @@ Check diagnosis, debugging information
   +e
 
   $ hg debugcachemanifest -a --debug
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ []>>, synchronous(False), pruneall(False), list(False)
+  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ []>>, background(False), pruneall(False), list(False)
   caching revision a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   cache miss for fastmanifest a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   caching revision a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
@@ -215,7 +215,7 @@ Check diagnosis, debugging information
 
 Test the --pruneall command to prune all the cached manifests
   $ hg debugcachemanifest --pruneall --debug
-  caching rev: [], synchronous(False), pruneall(True), list(False)
+  caching rev: [], background(False), pruneall(True), list(False)
   removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
@@ -241,19 +241,19 @@ Test the --pruneall command to prune all the cached manifests
   $ hg update -c .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --debug foo
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, synchronous(True), pruneall(False), list(False)
+  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, background(True), pruneall(False), list(False)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, synchronous(True), pruneall(False), list(False)
+  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, background(True), pruneall(False), list(False)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, synchronous(True), pruneall(False), list(False)
+  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, background(True), pruneall(False), list(False)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
@@ -271,14 +271,14 @@ Test the --pruneall command to prune all the cached manifests
   +e
 
   $ hg debugcachemanifest --all --debug
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, synchronous(False), pruneall(False), list(False)
+  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, background(False), pruneall(False), list(False)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
   $ hg debugcachemanifest --debug --list
-  caching rev: [], synchronous(False), pruneall(False), list(True)
+  caching rev: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
