@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, platform, os, struct, subprocess, sys, tempfile
+import errno, platform, os, stat, struct, subprocess, sys, tempfile
 from mercurial import filelog, util
 from mercurial.i18n import _
 
@@ -145,6 +145,13 @@ def writefile(path, content, readonly=False):
         except OSError:
             pass
         raise
+
+def unlinkfile(filepath):
+    if os.name == 'nt':
+        # On Windows, os.unlink cannnot delete readonly files
+        os.chmod(filepath, stat.S_IWUSR)
+
+    os.unlink(filepath)
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find

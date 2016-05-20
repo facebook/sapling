@@ -1,4 +1,4 @@
-import errno, os, shutil, stat, time
+import errno, os, shutil, time
 import shallowutil
 from mercurial import error, util
 from mercurial.i18n import _
@@ -205,7 +205,7 @@ class basestore(object):
                 # newfilename can be read-only and shutil.copy will fail.
                 # Delete newfilename to avoid it
                 if os.path.exists(newfilename):
-                    os.unlink(newfilename)
+                    shallowutil.unlinkfile(newfilename)
                 shutil.copy(filepath, newfilename)
 
             shallowutil.writefile(filepath, data, readonly=True)
@@ -227,8 +227,8 @@ class basestore(object):
         with open(repospath, 'a') as reposfile:
             reposfile.write(os.path.dirname(path) + "\n")
 
-        stat = os.stat(repospath)
-        if stat.st_uid == self._uid:
+        repospathstat = os.stat(repospath)
+        if repospathstat.st_uid == self._uid:
             os.chmod(repospath, 0o0664)
 
     def _validatekey(self, path, action):
@@ -299,7 +299,7 @@ class basestore(object):
                 key = os.path.relpath(path, cachepath)
                 count += 1
                 try:
-                    stat = os.stat(path)
+                    pathstat = os.stat(path)
                 except OSError as e:
                     # errno.ENOENT = no such file or directory
                     if e.errno != errno.ENOENT:
@@ -308,14 +308,14 @@ class basestore(object):
                     ui.warn(msg % path)
                     continue
 
-                originalsize += stat.st_size
+                originalsize += pathstat.st_size
 
-                if key in keepkeys or stat.st_atime > limit:
-                    queue.put((stat.st_atime, path, stat))
-                    size += stat.st_size
+                if key in keepkeys or pathstat.st_atime > limit:
+                    queue.put((pathstat.st_atime, path, pathstat))
+                    size += pathstat.st_size
                 else:
                     try:
-                        os.remove(path)
+                        shallowutil.unlinkfile(path)
                     except OSError as e:
                         # errno.ENOENT = no such file or directory
                         if e.errno != errno.ENOENT:
@@ -335,18 +335,18 @@ class basestore(object):
             while queue and size > limit and size > 0:
                 ui.progress(_truncating, removedexcess, unit="bytes",
                             total=excess)
-                atime, oldpath, stat = queue.get()
+                atime, oldpath, oldpathstat = queue.get()
                 try:
-                    os.remove(oldpath)
+                    shallowutil.unlinkfile(oldpath)
                 except OSError as e:
                     # errno.ENOENT = no such file or directory
                     if e.errno != errno.ENOENT:
                         raise
                     msg = _("warning: file %s was removed by another process\n")
                     ui.warn(msg % oldpath)
-                size -= stat.st_size
+                size -= oldpathstat.st_size
                 removed += 1
-                removedexcess += stat.st_size
+                removedexcess += oldpathstat.st_size
         ui.progress(_truncating, None)
 
         ui.status(_("finished: removed %s of %s files (%0.2f GB to %0.2f GB)\n")
