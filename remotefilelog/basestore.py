@@ -226,7 +226,7 @@ class basestore(object):
             os.chmod(repospath, 0o0664)
 
     def _validatekey(self, path, action):
-        with open(path, 'r') as f:
+        with open(path, 'rb') as f:
             data = f.read()
 
         if self._validatedata(data, path):

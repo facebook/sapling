@@ -98,7 +98,7 @@ def ancestormap(raw):
     return mapping
 
 def readfile(path):
-    f = open(path, "r")
+    f = open(path, 'rb')
     try:
         result = f.read()
 
@@ -122,7 +122,7 @@ def writefile(path, content, readonly=False):
 
     fd, temp = tempfile.mkstemp(prefix='.%s-' % filename, dir=dirname)
     try:
-        f = util.posixfile(temp, 'w')
+        f = util.posixfile(temp, 'wb')
         f.write(content)
         f.close()
 
