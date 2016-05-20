@@ -178,3 +178,44 @@
   x
   x
   x
+
+Incremental repack
+  $ rm -rf $CACHEDIR/master/packs/*
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > data.generations=60
+  >   150
+  > fetchpacks=True
+  > EOF
+
+Single pack - repack does nothing
+  $ hg prefetch -r 0
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  $ hg repack --incremental
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+
+3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
+  $ hg prefetch -r 1
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg prefetch -r 2
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg prefetch -r 3
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  * 65 * 6c499d21350d79f92fd556b4b7a902569d88e3c9.datapack (glob)
+  * 61 * 817d294043bd21a3de01f807721971abe45219ce.datapack (glob)
+  * 63 * ff45add45ab3f59c4f75efc6a087d86c821219d6.datapack (glob)
+  $ hg repack --incremental
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
+  *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+
+1 gen3 pack, 1 gen0 pack - does nothing
+  $ hg repack --incremental
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
+  *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)

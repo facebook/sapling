@@ -794,10 +794,14 @@ def prefetch(ui, repo, *pats, **opts):
 
 @command('repack', [
      ('', 'background', None, _('run in a background process'), None),
+     ('', 'incremental', None, _('do an incremental repack'), None),
     ], _('hg repack [OPTIONS]'))
 def repack(ui, repo, *pats, **opts):
     if opts.get('background'):
-        repackmod.backgroundrepack(repo)
+        repackmod.backgroundrepack(repo, incremental=opts.get('incremental'))
         return
 
-    repackmod.fullrepack(repo)
+    if opts.get('incremental'):
+        repackmod.incrementalrepack(repo)
+    else:
+        repackmod.fullrepack(repo)

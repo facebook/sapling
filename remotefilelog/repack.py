@@ -5,8 +5,10 @@ from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
 import datapack, historypack, contentstore, metadatastore, shallowutil
 
-def backgroundrepack(repo):
+def backgroundrepack(repo, incremental=True):
     cmd = util.hgcmd() + ['-R', repo.origroot, 'repack']
+    if incremental:
+        cmd.append('--incremental')
     cmd = ' '.join(map(util.shellquote, cmd))
     repo.ui.warn("(running background repack)\n")
     shallowutil.runshellcommand(cmd, os.environ)
@@ -16,6 +18,108 @@ def fullrepack(repo):
     historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores)
 
     _runrepack(repo, datasource, historysource)
+
+def incrementalrepack(repo):
+    """This repacks the repo by looking at the distribution of pack files in the
+    repo and performing the most minimal repack to keep the repo in good shape.
+    """
+
+    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    packpath = os.path.join(cachepath, repo.name, 'packs')
+    files = osutil.listdir(packpath, stat=True)
+
+    datapacks = _computeincrementaldatapack(repo.ui, files)
+    fullpaths = list(os.path.join(packpath, p) for p in datapacks)
+    datapacks = list(datapack.datapack(p) for p in fullpaths)
+    historypacks = _computeincrementalhistorypack(files)
+
+    datasource = contentstore.unioncontentstore(*datapacks)
+    historysource = metadatastore.unionmetadatastore(*historypacks)
+
+    _runrepack(repo, datasource, historysource)
+
+def _computeincrementaldatapack(ui, files):
+    """Given a set of pack files and a set of generation size limits, this
+    function computes the list of files that should be packed as part of an
+    incremental repack.
+
+    It tries to strike a balance between keeping incremental repacks cheap (i.e.
+    packing small things when possible, and rolling the packs up to the big ones
+    over time).
+    """
+    generations = ui.configlist("remotefilelog", "data.generations",
+                                ['1GB', '100MB', '1MB'])
+    generations = list(sorted((util.sizetoint(s) for s in generations),
+                                reverse=True))
+    generations.append(0)
+
+    gencountlimit = ui.configint('remotefilelog', 'data.gencountlimit', 2)
+    repacksizelimit = ui.configbytes('remotefilelog', 'data.repacksizelimit',
+                                     '100MB')
+
+    return _computeincrementalpack(ui, files, generations, datapack.PACKSUFFIX,
+            datapack.INDEXSUFFIX, gencountlimit, repacksizelimit)
+
+def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
+                            gencountlimit, repacksizelimit):
+    # Group the packs by generation (i.e. by size)
+    generations = []
+    for i in xrange(len(limits)):
+        generations.append([])
+    sizes = {}
+    fileset = set(fn for fn, mode, stat in files)
+    for filename, mode, stat in files:
+        if not filename.endswith(packsuffix):
+            continue
+
+        prefix = filename[:-len(packsuffix)]
+
+        # Don't process a pack if it doesn't have an index.
+        if (prefix + indexsuffix) not in fileset:
+            continue
+
+        size = stat.st_size
+        sizes[prefix] = size
+        for i, limit in enumerate(limits):
+            if size > limit:
+                generations[i].append(prefix)
+                break
+
+    # Find the largest generation with more than 2 packs and repack it.
+    for i, limit in enumerate(limits):
+        if len(generations[i]) > gencountlimit:
+            # Generally we only want to repack 2 things at once, but if the
+            # whole generation is small, let's just do it all!
+            count = 2
+            if sum(sizes[n] for n in generations[i]) < repacksizelimit:
+                count = len(generations[i])
+            return sorted(generations[i], key=lambda x: sizes[x])[:count]
+
+    # If no generation has more than 2 packs, repack as many as fit into the
+    # limit
+    small = set().union(*generations[1:])
+    if len(small) > 1:
+        total = 0
+        packs = []
+        for pack in sorted(small, key=lambda x: sizes[x]):
+            size = sizes[pack]
+            if total + size < repacksizelimit:
+                packs.append(pack)
+                total += size
+            else:
+                break
+
+        if packs:
+            return packs
+
+    # If there aren't small ones to repack, repack the two largest ones.
+    if len(generations[0]) > 1:
+        return generations[0]
+
+    return []
+
+def _computeincrementalhistorypack(files):
+    return []
 
 def _runrepack(repo, data, history):
     cachepath = repo.ui.config("remotefilelog", "cachepath")
