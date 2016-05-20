@@ -8,6 +8,8 @@
  *
  */
 #include "TreeInode.h"
+
+#include "EdenMount.h"
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/overlay/Overlay.h"
@@ -19,32 +21,18 @@ namespace facebook {
 namespace eden {
 
 TreeInode::TreeInode(
+    EdenMount* mount,
     std::unique_ptr<Tree>&& tree,
-    fusell::MountPoint* mountPoint,
     fuse_ino_t parent,
-    fuse_ino_t ino,
-    std::shared_ptr<LocalStore> store,
-    std::shared_ptr<Overlay> overlay)
+    fuse_ino_t ino)
     : DirInode(ino),
+      mount_(mount),
       tree_(std::move(tree)),
-      mount_(mountPoint),
       parent_(parent),
-      ino_(ino),
-      store_(std::move(store)),
-      overlay_(std::move(overlay)) {}
+      ino_(ino) {}
 
-TreeInode::TreeInode(
-    fusell::MountPoint* mountPoint,
-    fuse_ino_t parent,
-    fuse_ino_t ino,
-    std::shared_ptr<LocalStore> store,
-    std::shared_ptr<Overlay> overlay)
-    : DirInode(ino),
-      mount_(mountPoint),
-      parent_(parent),
-      ino_(ino),
-      store_(std::move(store)),
-      overlay_(std::move(overlay)) {}
+TreeInode::TreeInode(EdenMount* mount, fuse_ino_t parent, fuse_ino_t ino)
+    : DirInode(ino), mount_(mount), parent_(parent), ino_(ino) {}
 
 TreeInode::~TreeInode() {}
 
@@ -60,7 +48,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
 folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
   auto myname = fusell::InodeNameManager::get()->resolvePathToNode(ino_);
-  auto overlay_contents = overlay_->readDir(myname);
+  auto overlay_contents = getOverlay()->readDir(myname);
 
   const auto& iter = overlay_contents.entries.find(namepiece.copy());
   if (iter != overlay_contents.entries.end()) {
@@ -72,8 +60,7 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     auto node = fusell::InodeNameManager::get()->getNodeByName(ino_, namepiece);
 
     if (iter->second == dtype_t::Dir) {
-      return std::make_shared<TreeInode>(
-          mount_, ino_, node->getNodeId(), store_, overlay_);
+      return std::make_shared<TreeInode>(mount_, ino_, node->getNodeId());
     }
 
     return std::make_shared<TreeEntryFileInode>(
@@ -93,9 +80,9 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
           fusell::InodeNameManager::get()->getNodeByName(ino_, namepiece);
 
       if (ent.getFileType() == FileType::DIRECTORY) {
-        auto tree = store_->getTree(ent.getHash());
+        auto tree = getStore()->getTree(ent.getHash());
         return std::make_shared<TreeInode>(
-            std::move(tree), mount_, ino_, node->getNodeId(), store_, overlay_);
+            mount_, std::move(tree), ino_, node->getNodeId());
       }
 
       return std::make_shared<TreeEntryFileInode>(
@@ -136,7 +123,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   auto targetname = myname + name;
 
   // Ask the overlay manager to create it.
-  auto file = overlay_->openFile(targetname, O_CREAT | flags, mode);
+  auto file = getOverlay()->openFile(targetname, O_CREAT | flags, mode);
   // Discard the file handle and allow the FileData class to open it again.
   // We'll need to figure out something nicer than this in a follow-on diff
   // to make sure that O_EXCL|O_CREAT is working correctly.
@@ -184,24 +171,25 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
   auto targetName = myname + name;
 
   // Will throw if we can't make the dir.
-  overlay_->makeDir(targetName, mode);
+  getOverlay()->makeDir(targetName, mode);
 
   // Look up the inode for this new dir and return its entry info.
   return fusell::RequestData::get().getDispatcher()->lookup(getNodeId(), name);
 }
 
-std::shared_ptr<LocalStore> TreeInode::getStore() const {
-  return store_;
+EdenMount* TreeInode::getMount() const {
+  return mount_;
 }
 
-std::shared_ptr<Overlay> TreeInode::getOverlay() const {
-  return overlay_;
+const std::shared_ptr<LocalStore>& TreeInode::getStore() const {
+  return mount_->getLocalStore();
 }
 
-void TreeInode::performCheckout(
-    const std::string& hash,
-    fusell::InodeDispatcher* dispatcher,
-    std::shared_ptr<fusell::MountPoint> mountPoint) {
+const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {
+  return mount_->getOverlay();
+}
+
+void TreeInode::performCheckout(const Hash& hash) {
   throw std::runtime_error("not yet implemented");
 }
 }

@@ -18,6 +18,7 @@
 #include <boost/filesystem/path.hpp>
 
 #include "EdenServiceHandler.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fuse/MountPoint.h"
 
@@ -40,7 +41,6 @@ DEFINE_int32(
     "Minimum response compression size");
 
 using apache::thrift::ThriftServer;
-using facebook::eden::fusell::MountPoint;
 using folly::StringPiece;
 using std::string;
 
@@ -72,12 +72,12 @@ void EdenServer::run() {
   runThriftServer();
 }
 
-void EdenServer::mount(std::shared_ptr<fusell::MountPoint> mountPoint) {
+void EdenServer::mount(std::shared_ptr<EdenMount> edenMount) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
-  auto mountPath = mountPoint->getPath().stringPiece();
+  auto mountPath = edenMount->getPath().stringPiece();
   SYNCHRONIZED(mp, mountPoints_) {
-    auto ret = mp.emplace(mountPath, mountPoint);
+    auto ret = mp.emplace(mountPath, edenMount);
     if (!ret.second) {
       // This mount point already exists.
       throw EdenError(folly::to<string>(
@@ -85,11 +85,9 @@ void EdenServer::mount(std::shared_ptr<fusell::MountPoint> mountPoint) {
     }
   }
 
-  auto onFinish = [this, mountPoint]() {
-    this->mountFinished(mountPoint.get());
-  };
+  auto onFinish = [this, edenMount]() { this->mountFinished(edenMount.get()); };
   try {
-    mountPoint->start(FLAGS_debug, onFinish);
+    edenMount->getMountPoint()->start(FLAGS_debug, onFinish);
   } catch (...) {
     // If we fail to start the mount point, call mountFinished()
     // to make sure it gets removed from mountPoints_.
@@ -97,13 +95,13 @@ void EdenServer::mount(std::shared_ptr<fusell::MountPoint> mountPoint) {
     // Note that we can't perform this clean-up using SCOPE_FAIL() for now, due
     // to a bug in some versions of gcc:
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62258
-    this->mountFinished(mountPoint.get());
+    this->mountFinished(edenMount.get());
     throw;
   }
 }
 
-void EdenServer::mountFinished(fusell::MountPoint* mountPoint) {
-  auto mountPath = mountPoint->getPath().stringPiece();
+void EdenServer::mountFinished(EdenMount* edenMount) {
+  auto mountPath = edenMount->getPath().stringPiece();
   LOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   SYNCHRONIZED(mp, mountPoints_) {
     auto numErased = mp.erase(mountPath);
@@ -115,8 +113,8 @@ void EdenServer::unmount(StringPiece mountPath) {
   // TODO
 }
 
-EdenServer::MountPointList EdenServer::getMountPoints() const {
-  MountPointList results;
+EdenServer::MountList EdenServer::getMountPoints() const {
+  MountList results;
   SYNCHRONIZED(mp, mountPoints_) {
     for (const auto& entry : mp) {
       results.emplace_back(entry.second);
@@ -125,8 +123,7 @@ EdenServer::MountPointList EdenServer::getMountPoints() const {
   return results;
 }
 
-std::shared_ptr<fusell::MountPoint> EdenServer::getMountPoint(
-    StringPiece mountPath) const {
+std::shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
   SYNCHRONIZED(mp, mountPoints_) {
     auto it = mp.find(mountPath);
     if (it == mp.end()) {

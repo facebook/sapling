@@ -13,6 +13,7 @@
 #include <folly/String.h>
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
@@ -42,21 +43,21 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
   auto overlayPath = config->getOverlayPath();
   auto overlay = std::make_shared<Overlay>(overlayPath);
   auto objectStore = server_->getLocalStore();
+  auto edenMount =
+      std::make_shared<EdenMount>(mountPoint, objectStore, overlay);
 
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
   auto rootInode = std::make_shared<TreeInode>(
+      edenMount.get(),
       objectStore->getTree(snapshotID),
-      mountPoint.get(),
       FUSE_ROOT_ID,
-      FUSE_ROOT_ID,
-      objectStore,
-      overlay);
+      FUSE_ROOT_ID);
   mountPoint->setRootInode(rootInode);
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
-  server_->mount(std::move(mountPoint));
+  server_->mount(std::move(edenMount));
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
@@ -70,9 +71,9 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
-  for (const auto& mountPoint : server_->getMountPoints()) {
+  for (const auto& edenMount : server_->getMountPoints()) {
     MountInfo info;
-    info.mountPoint = mountPoint->getPath().stringPiece().str();
+    info.mountPoint = edenMount->getPath().stringPiece().str();
     // TODO: Fill in info.edenClientPath.
     // I'll add that in a future diff, once we have a custom MountPoint
     // subclass that isn't in the low-level fusell namespace.
@@ -83,19 +84,21 @@ void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
 void EdenServiceHandler::checkOutRevision(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash) {
+  Hash hashObj(*hash);
   AbsolutePathPiece mountPointForClient(*mountPoint);
 
-  auto mount = server_->getMountPoint(*mountPoint);
-  if (!mount) {
+  auto edenMount = server_->getMount(*mountPoint);
+  if (!edenMount) {
     throw EdenError("requested mount point is not known to this eden instance");
   }
 
+  auto mount = edenMount->getMountPoint();
   auto dispatcher = mount->getDispatcher();
   auto root = std::dynamic_pointer_cast<TreeInode>(
       dispatcher->getDirInode(FUSE_ROOT_ID));
   CHECK_NOTNULL(root.get());
 
-  root->performCheckout(*hash, dispatcher, mount);
+  root->performCheckout(hashObj);
 }
 }
 } // facebook::eden

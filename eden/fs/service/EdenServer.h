@@ -22,17 +22,11 @@ namespace thrift {
 class ThriftServer;
 }
 }
-namespace facebook {
-namespace eden {
-namespace fusell {
-class MountPoint;
-}
-}
-}
 
 namespace facebook {
 namespace eden {
 
+class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
 
@@ -45,16 +39,15 @@ class LocalStore;
  */
 class EdenServer {
  public:
-  using MountPointList = std::vector<std::shared_ptr<fusell::MountPoint>>;
-  using MountPointMap =
-      folly::StringKeyedMap<std::shared_ptr<fusell::MountPoint>>;
+  using MountList = std::vector<std::shared_ptr<EdenMount>>;
+  using MountMap = folly::StringKeyedMap<std::shared_ptr<EdenMount>>;
 
   EdenServer(folly::StringPiece edenDir, folly::StringPiece rocksPath);
   virtual ~EdenServer();
 
   void run();
 
-  void mount(std::shared_ptr<fusell::MountPoint> mountPoint);
+  void mount(std::shared_ptr<EdenMount> edenMount);
   void unmount(folly::StringPiece mountPath);
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
@@ -64,9 +57,8 @@ class EdenServer {
     return server_;
   }
 
-  MountPointList getMountPoints() const;
-  std::shared_ptr<fusell::MountPoint> getMountPoint(
-      folly::StringPiece mountPath) const;
+  MountList getMountPoints() const;
+  std::shared_ptr<EdenMount> getMount(folly::StringPiece mountPath) const;
 
   std::shared_ptr<LocalStore> getLocalStore() const {
     return localStore_;
@@ -82,8 +74,8 @@ class EdenServer {
   void acquireEdenLock();
   void prepareThriftAddress();
 
-  // Called when a MountPoint has been unmounted and has stopped.
-  void mountFinished(fusell::MountPoint* mountPoint);
+  // Called when a mount has been unmounted and has stopped.
+  void mountFinished(EdenMount* mountPoint);
 
   std::string edenDir_;
   std::string rocksPath_;
@@ -92,7 +84,7 @@ class EdenServer {
   folly::File lockFile_;
 
   std::shared_ptr<LocalStore> localStore_;
-  folly::Synchronized<MountPointMap> mountPoints_;
+  folly::Synchronized<MountMap> mountPoints_;
 };
 }
 } // facebook::eden

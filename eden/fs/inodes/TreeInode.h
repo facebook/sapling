@@ -14,31 +14,22 @@
 namespace facebook {
 namespace eden {
 
+class EdenMount;
+class Hash;
 class LocalStore;
 class Overlay;
-
-namespace fusell {
-class MountPoint;
-}
 
 // Represents a Tree instance in a form that FUSE can consume
 class TreeInode : public fusell::DirInode {
  public:
   TreeInode(
+      EdenMount* mount,
       std::unique_ptr<Tree>&& tree,
-      fusell::MountPoint* mountPoint,
       fuse_ino_t parent,
-      fuse_ino_t ino,
-      std::shared_ptr<LocalStore> store,
-      std::shared_ptr<Overlay> overlay);
+      fuse_ino_t ino);
 
   /// Construct an inode that only has backing in the Overlay area
-  TreeInode(
-      fusell::MountPoint* mountPoint,
-      fuse_ino_t parent,
-      fuse_ino_t ino,
-      std::shared_ptr<LocalStore> store,
-      std::shared_ptr<Overlay> overlay);
+  TreeInode(EdenMount* mount, fuse_ino_t parent, fuse_ino_t ino);
 
   ~TreeInode();
 
@@ -51,8 +42,9 @@ class TreeInode : public fusell::DirInode {
   const Tree* getTree() const;
   fuse_ino_t getParent() const;
   fuse_ino_t getInode() const;
-  std::shared_ptr<LocalStore> getStore() const;
-  std::shared_ptr<Overlay> getOverlay() const;
+  EdenMount* getMount() const;
+  const std::shared_ptr<LocalStore>& getStore() const;
+  const std::shared_ptr<Overlay>& getOverlay() const;
   folly::Future<fusell::DirInode::CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags) override;
 
@@ -64,18 +56,19 @@ class TreeInode : public fusell::DirInode {
    * return the usual results and the appropriate information must
    * be passed down from the thrift server itself.
    */
-  void performCheckout(
-      const std::string& hash,
-      fusell::InodeDispatcher* dispatcher,
-      std::shared_ptr<fusell::MountPoint> mountPoint);
+  void performCheckout(const Hash& hash);
 
  private:
+  // The EdenMount object that this inode belongs to.
+  // We store this as a raw pointer since the TreeInode is part of the mount
+  // point.  The EdenMount should always exist longer than any inodes it
+  // contains.  (Storing a shared_ptr to the EdenMount would introduce circular
+  // references which are undesirable.)
+  EdenMount* const mount_{nullptr};
+
   std::unique_ptr<Tree> tree_;
-  fusell::MountPoint* const mount_{nullptr};
   fuse_ino_t parent_;
   fuse_ino_t ino_;
-  std::shared_ptr<LocalStore> store_;
-  std::shared_ptr<Overlay> overlay_;
 };
 }
 }
