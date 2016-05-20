@@ -152,4 +152,6 @@ Check perf.py for historical portability
 
   $ cd "$TESTDIR/.."
 
-  $ "$TESTDIR"/check-perf-code.py contrib/perf.py
+  $ (hg files -r 1.2 glob:mercurial/*.c glob:mercurial/*.py;
+  >  hg files -r tip glob:mercurial/*.c glob:mercurial/*.py) |
+  > "$TESTDIR"/check-perf-code.py contrib/perf.py
