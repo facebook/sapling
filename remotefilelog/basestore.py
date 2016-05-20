@@ -1,8 +1,11 @@
-import errno, grp, os, shutil, time
+import errno, os, shutil, stat, time
 import shallowutil
-from mercurial import util
+from mercurial import error, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
+
+if os.name != 'nt':
+    import grp
 
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
@@ -40,6 +43,9 @@ class basestore(object):
 
                     groupname = self.ui.config("remotefilelog", "cachegroup")
                     if groupname:
+                        if os.name == 'nt':
+                            raise error.Abort(_('cachegroup option not'
+                                                ' supported on Windows'))
                         gid = grp.getgrnam(groupname).gr_gid
                         if gid:
                             os.chown(path, os.getuid(), gid)

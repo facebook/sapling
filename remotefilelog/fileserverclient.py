@@ -9,12 +9,15 @@ from mercurial.i18n import _
 from mercurial.node import hex, bin
 from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
 from mercurial import scmutil
-import os, socket, lz4, time, grp, io, struct
+import os, socket, lz4, time, io, struct
 import errno
 import itertools
 
 import constants, datapack, historypack, shallowutil
 from shallowutil import readexactly, readunpack
+
+if os.name != 'nt':
+    import grp
 
 # Statistics for debugging
 fetchcost = 0
