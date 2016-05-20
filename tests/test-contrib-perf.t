@@ -148,3 +148,8 @@ perfstatus
   $ hg perfwalk
   $ hg perfparents
 
+Check perf.py for historical portability
+
+  $ cd "$TESTDIR/.."
+
+  $ "$TESTDIR"/check-perf-code.py contrib/perf.py
