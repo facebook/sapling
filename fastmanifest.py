@@ -357,7 +357,10 @@ class fastmanifestcache(object):
     def pruneall(self):
         for f in self:
             self.debug("removing cached manifest %s\n" % f)
-            os.unlink(os.path.join(self.cachepath, f))
+            try:
+                os.unlink(os.path.join(self.cachepath, f))
+            except EnvironmentError:
+                pass
 
 class manifestfactory(object):
     def __init__(self, ui):
