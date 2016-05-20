@@ -25,7 +25,6 @@ import random
 import sys
 import time
 from mercurial import (
-    branchmap,
     cmdutil,
     commands,
     copies,
@@ -33,12 +32,29 @@ from mercurial import (
     extensions,
     mdiff,
     merge,
-    obsolete,
-    repoview,
     revlog,
-    scmutil,
     util,
 )
+
+# for "historical portability":
+# try to import modules separately (in dict order), and ignore
+# failure, because these aren't available with early Mercurial
+try:
+    from mercurial import branchmap # since 2.5 (or bcee63733aad)
+except ImportError:
+    pass
+try:
+    from mercurial import obsolete # since 2.3 (or ad0d6c2b3279)
+except ImportError:
+    pass
+try:
+    from mercurial import repoview # since 2.5 (or 3a6ddacb7198)
+except ImportError:
+    pass
+try:
+    from mercurial import scmutil # since 1.9 (or 8b252e826c68)
+except ImportError:
+    pass
 
 # for "historical portability":
 # define util.safehasattr forcibly, because util.safehasattr has been
