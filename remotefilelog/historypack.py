@@ -456,6 +456,13 @@ class mutablehistorypack(object):
         self.packfp.close()
         self.writeindex()
 
+        if len(self.pastfiles) == 0:
+            # Empty pack
+            self.opener.unlink(self.historypackpath)
+            self.opener.unlink(self.historyidxpath)
+            self._closed = True
+            return None
+
         self.opener.rename(self.historypackpath, sha + PACKSUFFIX)
         self.opener.rename(self.historyidxpath, sha + INDEXSUFFIX)
 

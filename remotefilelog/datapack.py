@@ -422,6 +422,13 @@ class mutabledatapack(object):
         self.packfp.close()
         self.writeindex()
 
+        if len(self.entries) == 0:
+            # Empty pack
+            self.opener.unlink(self.datapackpath)
+            self.opener.unlink(self.dataidxpath)
+            self._closed = True
+            return None
+
         self.opener.rename(self.datapackpath, sha + PACKSUFFIX)
         self.opener.rename(self.dataidxpath, sha + INDEXSUFFIX)
 
