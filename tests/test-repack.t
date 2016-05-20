@@ -97,7 +97,7 @@
   $ hg repack
   abort: skipping repack - another repack is already running
   [255]
-  $ sleep 3
+  $ hg debugwaitonrepack >/dev/null 2>&1
 
 # Run repack in the background
   $ cd ../master
@@ -116,7 +116,8 @@
   $TESTTMP/hgcache/repos
   $ hg repack --background
   (running background repack)
-  $ sleep 2
+  $ sleep 0.5
+  $ hg debugwaitonrepack >/dev/null 2>&1
   $ find $CACHEDIR -type f | sort
   $TESTTMP/hgcache/master/packs/3bebfba849e7aed8e598b92b296aeaff4784393b.histidx
   $TESTTMP/hgcache/master/packs/3bebfba849e7aed8e598b92b296aeaff4784393b.histpack
@@ -216,6 +217,32 @@ Single pack - repack does nothing
 
 1 gen3 pack, 1 gen0 pack - does nothing
   $ hg repack --incremental
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
+  *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+
+Pull should run background repack
+  $ clearcache
+  $ hg prefetch -r 0
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg prefetch -r 1
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg prefetch -r 2
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ hg prefetch -r 3
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
+  * 59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)
+  * 65 * 6c499d21350d79f92fd556b4b7a902569d88e3c9.datapack (glob)
+  * 61 * 817d294043bd21a3de01f807721971abe45219ce.datapack (glob)
+  * 63 * ff45add45ab3f59c4f75efc6a087d86c821219d6.datapack (glob)
+  $ hg pull
+  pulling from ssh://user@dummy/master
+  searching for changes
+  no changes found
+  (running background incremental repack)
+  $ sleep 0.5
+  $ hg debugwaitonrepack >/dev/null 2>&1
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep datapack
   * 187 * 57c055c5fdb210af42d8bec1b19fffa278aeaff2.datapack (glob)
   *  59 * 5b7dec902026f0cddb0ef8acb62f27b5698494d4.datapack (glob)

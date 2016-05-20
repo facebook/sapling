@@ -224,3 +224,8 @@ def debughistorypack(ui, path, *args, **kwargs):
             lastfilename = filename
         ui.write("%s  %s  %s  %s  %s\n" % (short(node), short(p1node),
             short(p2node), short(linknode), copyfrom))
+
+def debugwaitonrepack(repo):
+    with repo._lock(repo.svfs, "repacklock", True, None,
+                         None, _('repacking %s') % repo.origroot):
+        pass

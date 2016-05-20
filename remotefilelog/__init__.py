@@ -681,6 +681,8 @@ def pull(orig, ui, repo, *pats, **opts):
             base = repo['.'].rev()
             repo.prefetch(revs, base=base)
 
+    if repo.ui.configbool('remotefilelog', 'fetchpacks'):
+        repackmod.backgroundrepack(repo, incremental=True)
     return result
 
 def exchangepull(orig, repo, remote, *args, **kwargs):
@@ -767,6 +769,11 @@ def debugremotefilelog(ui, path, *args, **opts):
     ], _('hg debughistorypack <path>'), norepo=True)
 def debughistorypack(ui, path, *args, **opts):
     return debugcommands.debughistorypack(ui, path, *args, **opts)
+
+@command('debugwaitonrepack', [
+    ], _('hg debugwaitonrepack'))
+def debugwaitonrepack(ui, repo, *args, **opts):
+    return debugcommands.debugwaitonrepack(repo)
 
 @command('prefetch', [
     ('r', 'rev', [], _('prefetch the specified revisions'), _('REV')),
