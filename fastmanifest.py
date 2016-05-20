@@ -155,7 +155,7 @@ class hybridmanifest(object):
         if self.incache is None:
             # Cache lookup
             if (self.cachekey is not None and
-                self.fastcache.contains(self.cachekey)):
+                self.fastcache.containsnode(self.cachekey)):
                 self.__cachedmanifest = self.fastcache.get(self.cachekey)
             elif self.node == revlog.nullid:
                 fm = fastmanifest_wrapper.fastManifest()
@@ -177,7 +177,7 @@ class hybridmanifest(object):
         if self.incache or self.debugfastmanifest:
             return True
         elif self.cachekey:
-            return self.fastcache.contains(self.cachekey)
+            return self.fastcache.containsnode(self.cachekey)
         return False
 
     def _manifest(self, operation):
@@ -308,21 +308,21 @@ class fastmanifestcache(object):
         fm = fastmanifest_wrapper.fastManifest(manifest.text())
         fm.save(fpath)
 
-    def inmemorycachekey(self, key):
-        return (self.keyprefix(), key)
+    def inmemorycachekey(self, hexnode):
+        return (self.keyprefix(), hexnode)
 
-    def filecachepath(self, key):
-        return os.path.join(self.cachepath, self.keyprefix() + key)
+    def filecachepath(self, hexnode):
+        return os.path.join(self.cachepath, self.keyprefix() + hexnode)
 
-    def get(self, key):
+    def get(self, hexnode):
         # In memory cache lookup
-        ident = self.inmemorycachekey(key)
+        ident = self.inmemorycachekey(hexnode)
         r = self.inmemorycache.get(ident, None)
         if r:
             return r
 
         # On disk cache lookup
-        realfpath = self.filecachepath(key)
+        realfpath = self.filecachepath(hexnode)
         r = self.load(realfpath)
 
         # In memory cache update
@@ -330,18 +330,18 @@ class fastmanifestcache(object):
             self.inmemorycache[ident] = r
         return r
 
-    def contains(self, key):
-        if self.inmemorycachekey(key) in self.inmemorycache:
+    def containsnode(self, hexnode):
+        if self.inmemorycachekey(hexnode) in self.inmemorycache:
             return True
-        return os.path.exists(self.filecachepath(key))
+        return os.path.exists(self.filecachepath(hexnode))
 
-    def put(self, key, manifest):
-        if self.contains(key):
-            self.debug("skipped %s, already cached\n" % key)
+    def put(self, hexnode, manifest):
+        if self.containsnode(hexnode):
+            self.debug("skipped %s, already cached\n" % hexnode)
         else:
-            self.debug("caching revision %s\n" % key)
+            self.debug("caching revision %s\n" % hexnode)
 
-            realfpath = self.filecachepath(key)
+            realfpath = self.filecachepath(hexnode)
             tmpfpath = util.mktempcopy(realfpath, True)
             try:
                 self.dump(tmpfpath, manifest)
@@ -420,9 +420,12 @@ def _cachemanifest(ui, repo, revs, sync, limit, pruneall, displaylist):
         return
 
     for rev in revs:
+        mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
+        if cache.containsnode(mannode):
+            ui.debug("skipped %s, already cached (fast path)\n" % mannode)
+            continue
         manifest = repo[rev].manifest()
-        nodehex = revlog.hex(manifest.node)
-        cache.put(nodehex, manifest)
+        cache.put(mannode, manifest)
 
     if limit:
         cache.prune(limit)
