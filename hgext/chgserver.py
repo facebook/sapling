@@ -587,13 +587,13 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
             bakwdfd = os.open('.', os.O_DIRECTORY)
             os.chdir(dirname)
         self.socket.bind(basename)
-        self._socketstat = os.stat(basename)
-        # rename will replace the old socket file if exists atomically. the
-        # old server will detect ownership change and exit.
-        util.rename(basename, self.server_address)
         if bakwdfd:
             os.fchdir(bakwdfd)
             os.close(bakwdfd)
+        self._socketstat = os.stat(tempaddress)
+        # rename will replace the old socket file if exists atomically. the
+        # old server will detect ownership change and exit.
+        util.rename(tempaddress, self.server_address)
 
     def issocketowner(self):
         try:
