@@ -334,10 +334,9 @@ class pipeservice(object):
 class _requesthandler(socketserver.StreamRequestHandler):
     def handle(self):
         ui = self.server.ui
-        repo = self.server.repo
         sv = None
         try:
-            sv = server(ui, repo, self.rfile, self.wfile)
+            sv = self._createcmdserver()
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -358,6 +357,11 @@ class _requesthandler(socketserver.StreamRequestHandler):
                 cerr = channeledoutput(self.wfile, 'e')
             traceback.print_exc(file=cerr)
             raise
+
+    def _createcmdserver(self):
+        ui = self.server.ui
+        repo = self.server.repo
+        return server(ui, repo, self.rfile, self.wfile)
 
 class unixservice(object):
     """

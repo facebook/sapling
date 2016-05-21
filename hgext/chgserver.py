@@ -545,11 +545,9 @@ class _requesthandler(socketserver.StreamRequestHandler):
         # same state inherited from parent.
         random.seed()
         ui = self.server.ui
-        repo = self.server.repo
         sv = None
         try:
-            sv = chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
-                              self.server.hashstate, self.server.baseaddress)
+            sv = self._createcmdserver()
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -575,6 +573,12 @@ class _requesthandler(socketserver.StreamRequestHandler):
         finally:
             # trigger __del__ since ForkingMixIn uses os._exit
             gc.collect()
+
+    def _createcmdserver(self):
+        ui = self.server.ui
+        repo = self.server.repo
+        return chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
+                            self.server.hashstate, self.server.baseaddress)
 
 def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
