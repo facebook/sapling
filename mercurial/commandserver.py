@@ -343,51 +343,50 @@ class pipeservice(object):
             _restoreio(ui, fin, fout)
 
 def _serverequest(ui, repo, conn, createcmdserver):
-    if True:  # TODO: unindent
-        # use a different process group from the master process, making this
-        # process pass kernel "is_current_pgrp_orphaned" check so signals like
-        # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
-        os.setpgid(0, 0)
-        # change random state otherwise forked request handlers would have a
-        # same state inherited from parent.
-        random.seed()
+    # use a different process group from the master process, making this
+    # process pass kernel "is_current_pgrp_orphaned" check so signals like
+    # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
+    os.setpgid(0, 0)
+    # change random state otherwise forked request handlers would have a
+    # same state inherited from parent.
+    random.seed()
 
-        fin = conn.makefile('rb')
-        fout = conn.makefile('wb')
-        sv = None
+    fin = conn.makefile('rb')
+    fout = conn.makefile('wb')
+    sv = None
+    try:
+        sv = createcmdserver(repo, conn, fin, fout)
         try:
-            sv = createcmdserver(repo, conn, fin, fout)
-            try:
-                sv.serve()
-            # handle exceptions that may be raised by command server. most of
-            # known exceptions are caught by dispatch.
-            except error.Abort as inst:
-                ui.warn(_('abort: %s\n') % inst)
-            except IOError as inst:
-                if inst.errno != errno.EPIPE:
-                    raise
-            except KeyboardInterrupt:
-                pass
-            finally:
-                sv.cleanup()
-        except: # re-raises
-            # also write traceback to error channel. otherwise client cannot
-            # see it because it is written to server's stderr by default.
-            if sv:
-                cerr = sv.cerr
-            else:
-                cerr = channeledoutput(fout, 'e')
-            traceback.print_exc(file=cerr)
-            raise
+            sv.serve()
+        # handle exceptions that may be raised by command server. most of
+        # known exceptions are caught by dispatch.
+        except error.Abort as inst:
+            ui.warn(_('abort: %s\n') % inst)
+        except IOError as inst:
+            if inst.errno != errno.EPIPE:
+                raise
+        except KeyboardInterrupt:
+            pass
         finally:
-            fin.close()
-            try:
-                fout.close()  # implicit flush() may cause another EPIPE
-            except IOError as inst:
-                if inst.errno != errno.EPIPE:
-                    raise
-            # trigger __del__ since ForkingMixIn uses os._exit
-            gc.collect()
+            sv.cleanup()
+    except: # re-raises
+        # also write traceback to error channel. otherwise client cannot
+        # see it because it is written to server's stderr by default.
+        if sv:
+            cerr = sv.cerr
+        else:
+            cerr = channeledoutput(fout, 'e')
+        traceback.print_exc(file=cerr)
+        raise
+    finally:
+        fin.close()
+        try:
+            fout.close()  # implicit flush() may cause another EPIPE
+        except IOError as inst:
+            if inst.errno != errno.EPIPE:
+                raise
+        # trigger __del__ since ForkingMixIn uses os._exit
+        gc.collect()
 
 class unixservicehandler(object):
     """Set of pluggable operations for unix-mode services

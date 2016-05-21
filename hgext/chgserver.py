@@ -581,13 +581,12 @@ class chgunixservicehandler(object):
         pass
 
     def shouldexit(self):
-        if True:  # TODO: unindent
-            if not self.issocketowner():
-                _log('%s is not owned, exiting.\n' % self.address)
-                return True
-            if time.time() - self.lastactive > self.idletimeout:
-                _log('being idle too long. exiting.\n')
-                return True
+        if not self.issocketowner():
+            _log('%s is not owned, exiting.\n' % self.address)
+            return True
+        if time.time() - self.lastactive > self.idletimeout:
+            _log('being idle too long. exiting.\n')
+            return True
         return False
 
     def newconnection(self):
