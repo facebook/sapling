@@ -353,6 +353,7 @@ class chgcmdserver(commandserver.server):
             self.capabilities['validate'] = chgcmdserver.validate
 
     def cleanup(self):
+        super(chgcmdserver, self).cleanup()
         # dispatch._runcatch() does not flush outputs if exception is not
         # handled by dispatch._dispatch()
         self.ui.flush()

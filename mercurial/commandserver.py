@@ -179,6 +179,10 @@ class server(object):
 
         self.client = fin
 
+    def cleanup(self):
+        """release and restore resources taken during server session"""
+        pass
+
     def _read(self, size):
         if not size:
             return ''
@@ -329,6 +333,7 @@ class pipeservice(object):
             sv = server(ui, self.repo, fin, fout)
             return sv.serve()
         finally:
+            sv.cleanup()
             _restoreio(ui, fin, fout)
 
 class _requesthandler(socketserver.StreamRequestHandler):
@@ -348,6 +353,8 @@ class _requesthandler(socketserver.StreamRequestHandler):
                     raise
             except KeyboardInterrupt:
                 pass
+            finally:
+                sv.cleanup()
         except: # re-raises
             # also write traceback to error channel. otherwise client cannot
             # see it because it is written to server's stderr by default.
