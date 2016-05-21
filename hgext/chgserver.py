@@ -582,10 +582,10 @@ class chgunixservicehandler(object):
 
     def shouldexit(self):
         if not self.issocketowner():
-            _log('%s is not owned, exiting.\n' % self.address)
+            self.ui.debug('%s is not owned, exiting.\n' % self.address)
             return True
         if time.time() - self.lastactive > self.idletimeout:
-            _log('being idle too long. exiting.\n')
+            self.ui.debug('being idle too long. exiting.\n')
             return True
         return False
 
