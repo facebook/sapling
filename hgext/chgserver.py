@@ -41,18 +41,15 @@ Config
 from __future__ import absolute_import
 
 import errno
-import gc
 import hashlib
 import inspect
 import os
-import random
 import re
 import signal
 import struct
 import sys
 import threading
 import time
-import traceback
 
 from mercurial.i18n import _
 
@@ -535,46 +532,7 @@ class chgcmdserver(commandserver.server):
                          'setenv': setenv,
                          'setumask': setumask})
 
-# copied from mercurial/commandserver.py
-class _requesthandler(socketserver.StreamRequestHandler):
-    def handle(self):
-        # use a different process group from the master process, making this
-        # process pass kernel "is_current_pgrp_orphaned" check so signals like
-        # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
-        os.setpgid(0, 0)
-        # change random state otherwise forked request handlers would have a
-        # same state inherited from parent.
-        random.seed()
-        ui = self.server.ui
-        sv = None
-        try:
-            sv = self._createcmdserver()
-            try:
-                sv.serve()
-            # handle exceptions that may be raised by command server. most of
-            # known exceptions are caught by dispatch.
-            except error.Abort as inst:
-                ui.warn(_('abort: %s\n') % inst)
-            except IOError as inst:
-                if inst.errno != errno.EPIPE:
-                    raise
-            except KeyboardInterrupt:
-                pass
-            finally:
-                sv.cleanup()
-        except: # re-raises
-            # also write traceback to error channel. otherwise client cannot
-            # see it because it is written to server's stderr by default.
-            if sv:
-                cerr = sv.cerr
-            else:
-                cerr = commandserver.channeledoutput(self.wfile, 'e')
-            traceback.print_exc(file=cerr)
-            raise
-        finally:
-            # trigger __del__ since ForkingMixIn uses os._exit
-            gc.collect()
-
+class _requesthandler(commandserver._requesthandler):
     def _createcmdserver(self):
         ui = self.server.ui
         repo = self.server.repo

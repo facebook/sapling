@@ -8,7 +8,9 @@
 from __future__ import absolute_import
 
 import errno
+import gc
 import os
+import random
 import struct
 import sys
 import traceback
@@ -338,6 +340,13 @@ class pipeservice(object):
 
 class _requesthandler(socketserver.StreamRequestHandler):
     def handle(self):
+        # use a different process group from the master process, making this
+        # process pass kernel "is_current_pgrp_orphaned" check so signals like
+        # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
+        os.setpgid(0, 0)
+        # change random state otherwise forked request handlers would have a
+        # same state inherited from parent.
+        random.seed()
         ui = self.server.ui
         sv = None
         try:
@@ -364,6 +373,9 @@ class _requesthandler(socketserver.StreamRequestHandler):
                 cerr = channeledoutput(self.wfile, 'e')
             traceback.print_exc(file=cerr)
             raise
+        finally:
+            # trigger __del__ since ForkingMixIn uses os._exit
+            gc.collect()
 
     def _createcmdserver(self):
         ui = self.server.ui
