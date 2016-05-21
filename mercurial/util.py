@@ -70,6 +70,7 @@ else:
 
 _ = i18n._
 
+bindunixsocket = platform.bindunixsocket
 cachestat = platform.cachestat
 checkexec = platform.checkexec
 checklink = platform.checklink

@@ -598,3 +598,18 @@ def readpipe(pipe):
         return ''.join(chunks)
     finally:
         fcntl.fcntl(pipe, fcntl.F_SETFL, oldflags)
+
+def bindunixsocket(sock, path):
+    """Bind the UNIX domain socket to the specified path"""
+    # use relative path instead of full path at bind() if possible, since
+    # AF_UNIX path has very small length limit (107 chars) on common
+    # platforms (see sys/un.h)
+    dirname, basename = os.path.split(path)
+    bakwdfd = None
+    if dirname:
+        bakwdfd = os.open('.', os.O_DIRECTORY)
+        os.chdir(dirname)
+    sock.bind(basename)
+    if bakwdfd:
+        os.fchdir(bakwdfd)
+        os.close(bakwdfd)

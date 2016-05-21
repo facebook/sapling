@@ -471,3 +471,6 @@ def readpipe(pipe):
         chunks.append(s)
 
     return ''.join(chunks)
+
+def bindunixsocket(sock, path):
+    raise NotImplementedError('unsupported platform')
