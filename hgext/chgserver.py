@@ -542,8 +542,8 @@ class chgunixservicehandler(object):
 
     def __init__(self, ui):
         self.ui = ui
-        self.idletimeout = ui.configint('chgserver', 'idletimeout', 3600)
-        self.lastactive = time.time()
+        self._idletimeout = ui.configint('chgserver', 'idletimeout', 3600)
+        self._lastactive = time.time()
 
     def bindsocket(self, sock, address):
         self._inithashstate(address)
@@ -552,57 +552,57 @@ class chgunixservicehandler(object):
         self._createsymlink()
 
     def _inithashstate(self, address):
-        self.baseaddress = address
+        self._baseaddress = address
         if self.ui.configbool('chgserver', 'skiphash', False):
-            self.hashstate = None
-            self.address = address
+            self._hashstate = None
+            self._realaddress = address
             return
-        self.hashstate = hashstate.fromui(self.ui)
-        self.address = _hashaddress(address, self.hashstate.confighash)
+        self._hashstate = hashstate.fromui(self.ui)
+        self._realaddress = _hashaddress(address, self._hashstate.confighash)
 
     def _checkextensions(self):
-        if not self.hashstate:
+        if not self._hashstate:
             return
         if extensions.notloaded():
             # one or more extensions failed to load. mtimehash becomes
             # meaningless because we do not know the paths of those extensions.
             # set mtimehash to an illegal hash value to invalidate the server.
-            self.hashstate.mtimehash = ''
+            self._hashstate.mtimehash = ''
 
     def _bind(self, sock):
         # use a unique temp address so we can stat the file and do ownership
         # check later
-        tempaddress = _tempaddress(self.address)
+        tempaddress = _tempaddress(self._realaddress)
         util.bindunixsocket(sock, tempaddress)
         self._socketstat = os.stat(tempaddress)
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
-        util.rename(tempaddress, self.address)
+        util.rename(tempaddress, self._realaddress)
 
     def _createsymlink(self):
-        if self.baseaddress == self.address:
+        if self._baseaddress == self._realaddress:
             return
-        tempaddress = _tempaddress(self.baseaddress)
-        os.symlink(os.path.basename(self.address), tempaddress)
-        util.rename(tempaddress, self.baseaddress)
+        tempaddress = _tempaddress(self._baseaddress)
+        os.symlink(os.path.basename(self._realaddress), tempaddress)
+        util.rename(tempaddress, self._baseaddress)
 
-    def issocketowner(self):
+    def _issocketowner(self):
         try:
-            stat = os.stat(self.address)
+            stat = os.stat(self._realaddress)
             return (stat.st_ino == self._socketstat.st_ino and
                     stat.st_mtime == self._socketstat.st_mtime)
         except OSError:
             return False
 
     def unlinksocket(self, address):
-        if not self.issocketowner():
+        if not self._issocketowner():
             return
         # it is possible to have a race condition here that we may
         # remove another server's socket file. but that's okay
         # since that server will detect and exit automatically and
         # the client will start a new server on demand.
         try:
-            os.unlink(self.address)
+            os.unlink(self._realaddress)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
@@ -612,20 +612,20 @@ class chgunixservicehandler(object):
         pass
 
     def shouldexit(self):
-        if not self.issocketowner():
-            self.ui.debug('%s is not owned, exiting.\n' % self.address)
+        if not self._issocketowner():
+            self.ui.debug('%s is not owned, exiting.\n' % self._realaddress)
             return True
-        if time.time() - self.lastactive > self.idletimeout:
+        if time.time() - self._lastactive > self._idletimeout:
             self.ui.debug('being idle too long. exiting.\n')
             return True
         return False
 
     def newconnection(self):
-        self.lastactive = time.time()
+        self._lastactive = time.time()
 
     def createcmdserver(self, repo, conn, fin, fout):
         return chgcmdserver(self.ui, repo, fin, fout, conn,
-                            self.hashstate, self.baseaddress)
+                            self._hashstate, self._baseaddress)
 
 def chgunixservice(ui, repo, opts):
     if repo:
