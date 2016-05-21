@@ -357,6 +357,12 @@ class fastmanifestcache(object):
             if f.startswith(self.keyprefix()):
                 yield f
 
+    def entrysize(self, f):
+        try:
+            return os.path.getsize(os.path.join(self.cachepath, f))
+        except EnvironmentError:
+            return None
+
     def prune(self, limit):
         # TODO logic to prune old entries
         pass
@@ -387,12 +393,30 @@ class manifestfactory(object):
                               node=args[1])
 
 
-def _cachemanifest(ui, repo, revs, sync, limit, pruneall):
-    ui.debug(("caching rev: %s, synchronous(%s)\n")
-             % (revs, sync))
+def _cachemanifest(ui, repo, revs, sync, limit, pruneall, displaylist):
+    ui.debug(("caching rev: %s, synchronous(%s), pruneall(%s), list(%s)\n")
+             % (revs, sync, pruneall, displaylist))
+
+    # We can either prune, display or cache
+    if displaylist and pruneall:
+        raise error.Abort("can only use --pruneall or --list not both")
+
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+
     if pruneall:
         cache.pruneall()
+        return
+
+    if displaylist:
+        totalsize = 0
+        for entry in cache:
+            entrysize = cache.entrysize(entry)
+            if not entrysize:
+                # Entry was deleted by another process
+                continue
+            totalsize += entrysize
+            ui.status(("%s (size %s)\n" % (entry, util.bytecount(entrysize))))
+        ui.status(("cache size is: %s\n" % util.bytecount(totalsize)))
         return
 
     for rev in revs:
@@ -623,36 +647,38 @@ class fastmanifestdict(object):
     ('a', 'all', False, 'cache all relevant revisions', ''),
     ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
     ('p', 'pruneall', False, 'prune all the entries'),
-    ('s', 'synchronous', False, 'wait for completion to return', '')],
+    ('s', 'synchronous', False, 'wait for completion to return', ''),
+    ('e', 'list', False, 'list the content of the cache and its size','')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
     sync = opts["synchronous"]
     limit = opts["limit"]
     pruneall = opts["pruneall"]
+    displaylist = opts['list']
     if opts["all"]:
         revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
     elif opts["rev"]:
         revs = scmutil.revrange(repo, opts["rev"])
     else:
         revs = []
-    _cachemanifest(ui, repo, revs, sync, limit, pruneall)
+    _cachemanifest(ui, repo, revs, sync, limit, pruneall, displaylist)
 
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     repo = self._repo
     revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-    _cachemanifest(repo.ui, repo, revs, True, None, False)
+    _cachemanifest(repo.ui, repo, revs, True, None, False, False)
     return orig(self, *args, **kwargs)
 
 def triggercacheondirstatechange(orig, self, *args, **kwargs):
     if util.safehasattr(self, "_fastmanifestrepo"):
         repo = self._fastmanifestrepo
         revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-        _cachemanifest(repo.ui, repo, revs, True, None, False)
+        _cachemanifest(repo.ui, repo, revs, True, None, False, False)
     return orig(self, *args, **kwargs)
 
 def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
     revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-    _cachemanifest(repo.ui, repo, revs, True, None, False)
+    _cachemanifest(repo.ui, repo, revs, True, None, False, False)
     return orig(self, *args, **kwargs)
 
 def extsetup(ui):
