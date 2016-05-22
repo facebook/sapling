@@ -532,17 +532,60 @@ class chgcmdserver(commandserver.server):
                          'setenv': setenv,
                          'setumask': setumask})
 
-class _requesthandler(commandserver._requesthandler):
-    def _createcmdserver(self, repo, conn, fin, fout):
-        ui = self.server.ui
-        return chgcmdserver(ui, repo, fin, fout, conn,
-                            self.server.hashstate, self.server.baseaddress)
-
 def _tempaddress(address):
     return '%s.%d.tmp' % (address, os.getpid())
 
 def _hashaddress(address, hashstr):
     return '%s-%s' % (address, hashstr)
+
+class chgunixservice(commandserver.unixservice):
+    def __init__(self, ui, repo, opts):
+        super(chgunixservice, self).__init__(ui, repo=None, opts=opts)
+        if repo:
+            # one chgserver can serve multiple repos. drop repo infomation
+            self.ui.setconfig('bundle', 'mainreporoot', '', 'repo')
+
+    def init(self):
+        self._inithashstate()
+        self._checkextensions()
+        class cls(AutoExitMixIn, socketserver.ForkingMixIn,
+                  socketserver.UnixStreamServer):
+            ui = self.ui
+            repo = self.repo
+            hashstate = self.hashstate
+            baseaddress = self.baseaddress
+        self.server = cls(self.address, _requesthandler)
+        self.server.idletimeout = self.ui.configint(
+            'chgserver', 'idletimeout', self.server.idletimeout)
+        self.server.startautoexitthread()
+        self._createsymlink()
+
+    def _inithashstate(self):
+        self.baseaddress = self.address
+        if self.ui.configbool('chgserver', 'skiphash', False):
+            self.hashstate = None
+            return
+        self.hashstate = hashstate.fromui(self.ui)
+        self.address = _hashaddress(self.address, self.hashstate.confighash)
+
+    def _checkextensions(self):
+        if not self.hashstate:
+            return
+        if extensions.notloaded():
+            # one or more extensions failed to load. mtimehash becomes
+            # meaningless because we do not know the paths of those extensions.
+            # set mtimehash to an illegal hash value to invalidate the server.
+            self.hashstate.mtimehash = ''
+
+    def _createsymlink(self):
+        if self.baseaddress == self.address:
+            return
+        tempaddress = _tempaddress(self.baseaddress)
+        os.symlink(os.path.basename(self.address), tempaddress)
+        util.rename(tempaddress, self.baseaddress)
+
+    def _cleanup(self):
+        self.server.unlinksocketfile()
 
 class AutoExitMixIn:  # use old-style to comply with SocketServer design
     lastactive = time.time()
@@ -604,54 +647,11 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
             if exc.errno != errno.ENOENT:
                 raise
 
-class chgunixservice(commandserver.unixservice):
-    def __init__(self, ui, repo, opts):
-        super(chgunixservice, self).__init__(ui, repo=None, opts=opts)
-        if repo:
-            # one chgserver can serve multiple repos. drop repo infomation
-            self.ui.setconfig('bundle', 'mainreporoot', '', 'repo')
-
-    def init(self):
-        self._inithashstate()
-        self._checkextensions()
-        class cls(AutoExitMixIn, socketserver.ForkingMixIn,
-                  socketserver.UnixStreamServer):
-            ui = self.ui
-            repo = self.repo
-            hashstate = self.hashstate
-            baseaddress = self.baseaddress
-        self.server = cls(self.address, _requesthandler)
-        self.server.idletimeout = self.ui.configint(
-            'chgserver', 'idletimeout', self.server.idletimeout)
-        self.server.startautoexitthread()
-        self._createsymlink()
-
-    def _inithashstate(self):
-        self.baseaddress = self.address
-        if self.ui.configbool('chgserver', 'skiphash', False):
-            self.hashstate = None
-            return
-        self.hashstate = hashstate.fromui(self.ui)
-        self.address = _hashaddress(self.address, self.hashstate.confighash)
-
-    def _checkextensions(self):
-        if not self.hashstate:
-            return
-        if extensions.notloaded():
-            # one or more extensions failed to load. mtimehash becomes
-            # meaningless because we do not know the paths of those extensions.
-            # set mtimehash to an illegal hash value to invalidate the server.
-            self.hashstate.mtimehash = ''
-
-    def _createsymlink(self):
-        if self.baseaddress == self.address:
-            return
-        tempaddress = _tempaddress(self.baseaddress)
-        os.symlink(os.path.basename(self.address), tempaddress)
-        util.rename(tempaddress, self.baseaddress)
-
-    def _cleanup(self):
-        self.server.unlinksocketfile()
+class _requesthandler(commandserver._requesthandler):
+    def _createcmdserver(self, repo, conn, fin, fout):
+        ui = self.server.ui
+        return chgcmdserver(ui, repo, fin, fout, conn,
+                            self.server.hashstate, self.server.baseaddress)
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
