@@ -538,13 +538,7 @@ def _tempaddress(address):
 def _hashaddress(address, hashstr):
     return '%s-%s' % (address, hashstr)
 
-class chgunixservice(commandserver.unixservice):
-    def __init__(self, ui, repo, opts):
-        super(chgunixservice, self).__init__(ui, repo=None, opts=opts)
-        if repo:
-            # one chgserver can serve multiple repos. drop repo infomation
-            self.ui.setconfig('bundle', 'mainreporoot', '', 'repo')
-
+class _chgunixservice(commandserver.unixservice):
     def init(self):
         self._inithashstate()
         self._checkextensions()
@@ -652,6 +646,12 @@ class _requesthandler(commandserver._requesthandler):
         ui = self.server.ui
         return chgcmdserver(ui, repo, fin, fout, conn,
                             self.server.hashstate, self.server.baseaddress)
+
+def chgunixservice(ui, repo, opts):
+    if repo:
+        # one chgserver can serve multiple repos. drop repo infomation
+        ui.setconfig('bundle', 'mainreporoot', '', 'repo')
+    return _chgunixservice(ui, repo=None, opts=opts)
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
