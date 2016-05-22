@@ -48,7 +48,6 @@ import re
 import signal
 import struct
 import sys
-import threading
 import time
 
 from mercurial.i18n import _
@@ -63,8 +62,6 @@ from mercurial import (
     osutil,
     util,
 )
-
-socketserver = util.socketserver
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -538,20 +535,21 @@ def _tempaddress(address):
 def _hashaddress(address, hashstr):
     return '%s-%s' % (address, hashstr)
 
-class _chgunixservice(commandserver.unixservice):
-    def init(self):
+class chgunixservicehandler(object):
+    """Set of operations for chg services"""
+
+    pollinterval = 1  # [sec]
+
+    def __init__(self, ui):
+        self.ui = ui
+        self.idletimeout = ui.configint('chgserver', 'idletimeout', 3600)
+        self.lastactive = time.time()
+
+    def bindsocket(self, sock, address):
+        self.address = address
         self._inithashstate()
         self._checkextensions()
-        class cls(AutoExitMixIn, socketserver.ForkingMixIn,
-                  socketserver.UnixStreamServer):
-            ui = self.ui
-            repo = self.repo
-            hashstate = self.hashstate
-            baseaddress = self.baseaddress
-        self.server = cls(self.address, _requesthandler)
-        self.server.idletimeout = self.ui.configint(
-            'chgserver', 'idletimeout', self.server.idletimeout)
-        self.server.startautoexitthread()
+        self._bind(sock)
         self._createsymlink()
 
     def _inithashstate(self):
@@ -578,57 +576,42 @@ class _chgunixservice(commandserver.unixservice):
         os.symlink(os.path.basename(self.address), tempaddress)
         util.rename(tempaddress, self.baseaddress)
 
-    def _cleanup(self):
-        self.server.unlinksocketfile()
+    def printbanner(self, address):
+        # no "listening at" message should be printed to simulate hg behavior
+        pass
 
-class AutoExitMixIn:  # use old-style to comply with SocketServer design
-    lastactive = time.time()
-    idletimeout = 3600  # default 1 hour
-
-    def startautoexitthread(self):
-        # note: the auto-exit check here is cheap enough to not use a thread,
-        # be done in serve_forever. however SocketServer is hook-unfriendly,
-        # you simply cannot hook serve_forever without copying a lot of code.
-        # besides, serve_forever's docstring suggests using thread.
-        thread = threading.Thread(target=self._autoexitloop)
-        thread.daemon = True
-        thread.start()
-
-    def _autoexitloop(self, interval=1):
-        while True:
-            time.sleep(interval)
+    def shouldexit(self):
+        if True:  # TODO: unindent
             if not self.issocketowner():
-                _log('%s is not owned, exiting.\n' % self.server_address)
-                break
+                _log('%s is not owned, exiting.\n' % self.address)
+                return True
             if time.time() - self.lastactive > self.idletimeout:
                 _log('being idle too long. exiting.\n')
-                break
-        self.shutdown()
+                return True
+        return False
 
-    def process_request(self, request, address):
+    def newconnection(self):
         self.lastactive = time.time()
-        return socketserver.ForkingMixIn.process_request(
-            self, request, address)
 
-    def server_bind(self):
+    def _bind(self, sock):
         # use a unique temp address so we can stat the file and do ownership
         # check later
-        tempaddress = _tempaddress(self.server_address)
-        util.bindunixsocket(self.socket, tempaddress)
+        tempaddress = _tempaddress(self.address)
+        util.bindunixsocket(sock, tempaddress)
         self._socketstat = os.stat(tempaddress)
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
-        util.rename(tempaddress, self.server_address)
+        util.rename(tempaddress, self.address)
 
     def issocketowner(self):
         try:
-            stat = os.stat(self.server_address)
+            stat = os.stat(self.address)
             return (stat.st_ino == self._socketstat.st_ino and
                     stat.st_mtime == self._socketstat.st_mtime)
         except OSError:
             return False
 
-    def unlinksocketfile(self):
+    def unlinksocket(self, address):
         if not self.issocketowner():
             return
         # it is possible to have a race condition here that we may
@@ -636,22 +619,21 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
         # since that server will detect and exit automatically and
         # the client will start a new server on demand.
         try:
-            os.unlink(self.server_address)
+            os.unlink(self.address)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
 
-class _requesthandler(commandserver._requesthandler):
-    def _createcmdserver(self, repo, conn, fin, fout):
-        ui = self.server.ui
-        return chgcmdserver(ui, repo, fin, fout, conn,
-                            self.server.hashstate, self.server.baseaddress)
+    def createcmdserver(self, repo, conn, fin, fout):
+        return chgcmdserver(self.ui, repo, fin, fout, conn,
+                            self.hashstate, self.baseaddress)
 
 def chgunixservice(ui, repo, opts):
     if repo:
         # one chgserver can serve multiple repos. drop repo infomation
         ui.setconfig('bundle', 'mainreporoot', '', 'repo')
-    return _chgunixservice(ui, repo=None, opts=opts)
+    h = chgunixservicehandler(ui)
+    return commandserver.unixforkingservice(ui, repo=None, opts=opts, handler=h)
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
