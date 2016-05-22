@@ -25,8 +25,6 @@ from . import (
     util,
 )
 
-socketserver = util.socketserver
-
 logfile = None
 
 def log(*args):
@@ -423,48 +421,19 @@ class unixservicehandler(object):
         serves for the current connection"""
         return server(self.ui, repo, fin, fout)
 
-class _requesthandler(socketserver.BaseRequestHandler):
-    def handle(self):
-        _serverequest(self.server.ui, self.server.repo, self.request,
-                      self._createcmdserver)
-
-    def _createcmdserver(self, repo, conn, fin, fout):
-        ui = self.server.ui
-        return server(ui, repo, fin, fout)
-
-class unixservice(object):
+class unixforkingservice(object):
     """
     Listens on unix domain socket and forks server per connection
     """
-    def __init__(self, ui, repo, opts):
+
+    def __init__(self, ui, repo, opts, handler=None):
         self.ui = ui
         self.repo = repo
         self.address = opts['address']
-        if not util.safehasattr(socketserver, 'UnixStreamServer'):
+        if not util.safehasattr(socket, 'AF_UNIX'):
             raise error.Abort(_('unsupported platform'))
         if not self.address:
             raise error.Abort(_('no socket path specified with --address'))
-
-    def init(self):
-        class cls(socketserver.ForkingMixIn, socketserver.UnixStreamServer):
-            ui = self.ui
-            repo = self.repo
-        self.server = cls(self.address, _requesthandler)
-        self.ui.status(_('listening at %s\n') % self.address)
-        self.ui.flush()  # avoid buffering of status message
-
-    def _cleanup(self):
-        os.unlink(self.address)
-
-    def run(self):
-        try:
-            self.server.serve_forever()
-        finally:
-            self._cleanup()
-
-class unixforkingservice(unixservice):
-    def __init__(self, ui, repo, opts, handler=None):
-        super(unixforkingservice, self).__init__(ui, repo, opts)
         self._servicehandler = handler or unixservicehandler(ui)
         self._sock = None
         self._oldsigchldhandler = None
