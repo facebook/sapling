@@ -403,11 +403,14 @@ class unixservice(object):
         self.ui.status(_('listening at %s\n') % self.address)
         self.ui.flush()  # avoid buffering of status message
 
+    def _cleanup(self):
+        os.unlink(self.address)
+
     def run(self):
         try:
             self.server.serve_forever()
         finally:
-            os.unlink(self.address)
+            self._cleanup()
 
 _servicemap = {
     'pipe': pipeservice,

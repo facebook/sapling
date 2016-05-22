@@ -651,11 +651,8 @@ class chgunixservice(commandserver.unixservice):
         os.symlink(os.path.basename(self.address), tempaddress)
         util.rename(tempaddress, self.baseaddress)
 
-    def run(self):
-        try:
-            self.server.serve_forever()
-        finally:
-            self.server.unlinksocketfile()
+    def _cleanup(self):
+        self.server.unlinksocketfile()
 
 def uisetup(ui):
     commandserver._servicemap['chgunix'] = chgunixservice
