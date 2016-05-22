@@ -338,7 +338,7 @@ class pipeservice(object):
             sv.cleanup()
             _restoreio(ui, fin, fout)
 
-class _requesthandler(socketserver.StreamRequestHandler):
+class _requesthandler(socketserver.BaseRequestHandler):
     def handle(self):
         # use a different process group from the master process, making this
         # process pass kernel "is_current_pgrp_orphaned" check so signals like
@@ -348,9 +348,13 @@ class _requesthandler(socketserver.StreamRequestHandler):
         # same state inherited from parent.
         random.seed()
         ui = self.server.ui
+
+        conn = self.request
+        fin = conn.makefile('rb')
+        fout = conn.makefile('wb')
         sv = None
         try:
-            sv = self._createcmdserver()
+            sv = self._createcmdserver(conn, fin, fout)
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -370,17 +374,23 @@ class _requesthandler(socketserver.StreamRequestHandler):
             if sv:
                 cerr = sv.cerr
             else:
-                cerr = channeledoutput(self.wfile, 'e')
+                cerr = channeledoutput(fout, 'e')
             traceback.print_exc(file=cerr)
             raise
         finally:
+            fin.close()
+            try:
+                fout.close()  # implicit flush() may cause another EPIPE
+            except IOError as inst:
+                if inst.errno != errno.EPIPE:
+                    raise
             # trigger __del__ since ForkingMixIn uses os._exit
             gc.collect()
 
-    def _createcmdserver(self):
+    def _createcmdserver(self, conn, fin, fout):
         ui = self.server.ui
         repo = self.server.repo
-        return server(ui, repo, self.rfile, self.wfile)
+        return server(ui, repo, fin, fout)
 
 class unixservice(object):
     """

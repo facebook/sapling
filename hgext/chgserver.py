@@ -533,10 +533,10 @@ class chgcmdserver(commandserver.server):
                          'setumask': setumask})
 
 class _requesthandler(commandserver._requesthandler):
-    def _createcmdserver(self):
+    def _createcmdserver(self, conn, fin, fout):
         ui = self.server.ui
         repo = self.server.repo
-        return chgcmdserver(ui, repo, self.rfile, self.wfile, self.connection,
+        return chgcmdserver(ui, repo, fin, fout, conn,
                             self.server.hashstate, self.server.baseaddress)
 
 def _tempaddress(address):
