@@ -546,19 +546,19 @@ class chgunixservicehandler(object):
         self.lastactive = time.time()
 
     def bindsocket(self, sock, address):
-        self.address = address
-        self._inithashstate()
+        self._inithashstate(address)
         self._checkextensions()
         self._bind(sock)
         self._createsymlink()
 
-    def _inithashstate(self):
-        self.baseaddress = self.address
+    def _inithashstate(self, address):
+        self.baseaddress = address
         if self.ui.configbool('chgserver', 'skiphash', False):
             self.hashstate = None
+            self.address = address
             return
         self.hashstate = hashstate.fromui(self.ui)
-        self.address = _hashaddress(self.address, self.hashstate.confighash)
+        self.address = _hashaddress(address, self.hashstate.confighash)
 
     def _checkextensions(self):
         if not self.hashstate:
