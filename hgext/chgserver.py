@@ -533,9 +533,8 @@ class chgcmdserver(commandserver.server):
                          'setumask': setumask})
 
 class _requesthandler(commandserver._requesthandler):
-    def _createcmdserver(self, conn, fin, fout):
+    def _createcmdserver(self, repo, conn, fin, fout):
         ui = self.server.ui
-        repo = self.server.repo
         return chgcmdserver(ui, repo, fin, fout, conn,
                             self.server.hashstate, self.server.baseaddress)
 

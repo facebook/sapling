@@ -338,8 +338,8 @@ class pipeservice(object):
             sv.cleanup()
             _restoreio(ui, fin, fout)
 
-class _requesthandler(socketserver.BaseRequestHandler):
-    def handle(self):
+def _serverequest(ui, repo, conn, createcmdserver):
+    if True:  # TODO: unindent
         # use a different process group from the master process, making this
         # process pass kernel "is_current_pgrp_orphaned" check so signals like
         # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
@@ -347,14 +347,12 @@ class _requesthandler(socketserver.BaseRequestHandler):
         # change random state otherwise forked request handlers would have a
         # same state inherited from parent.
         random.seed()
-        ui = self.server.ui
 
-        conn = self.request
         fin = conn.makefile('rb')
         fout = conn.makefile('wb')
         sv = None
         try:
-            sv = self._createcmdserver(conn, fin, fout)
+            sv = createcmdserver(repo, conn, fin, fout)
             try:
                 sv.serve()
             # handle exceptions that may be raised by command server. most of
@@ -387,9 +385,13 @@ class _requesthandler(socketserver.BaseRequestHandler):
             # trigger __del__ since ForkingMixIn uses os._exit
             gc.collect()
 
-    def _createcmdserver(self, conn, fin, fout):
+class _requesthandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        _serverequest(self.server.ui, self.server.repo, self.request,
+                      self._createcmdserver)
+
+    def _createcmdserver(self, repo, conn, fin, fout):
         ui = self.server.ui
-        repo = self.server.repo
         return server(ui, repo, fin, fout)
 
 class unixservice(object):
