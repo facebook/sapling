@@ -342,7 +342,7 @@ class pipeservice(object):
             sv.cleanup()
             _restoreio(ui, fin, fout)
 
-def _serverequest(ui, repo, conn, createcmdserver):
+def _initworkerprocess():
     # use a different process group from the master process, making this
     # process pass kernel "is_current_pgrp_orphaned" check so signals like
     # SIGTSTP, SIGTTIN, SIGTTOU are not ignored.
@@ -351,6 +351,7 @@ def _serverequest(ui, repo, conn, createcmdserver):
     # same state inherited from parent.
     random.seed()
 
+def _serverequest(ui, repo, conn, createcmdserver):
     fin = conn.makefile('rb')
     fout = conn.makefile('wb')
     sv = None
@@ -385,8 +386,6 @@ def _serverequest(ui, repo, conn, createcmdserver):
         except IOError as inst:
             if inst.errno != errno.EPIPE:
                 raise
-        # trigger __del__ since ForkingMixIn uses os._exit
-        gc.collect()
 
 class unixservicehandler(object):
     """Set of pluggable operations for unix-mode services
@@ -517,8 +516,12 @@ class unixforkingservice(object):
 
     def _serveworker(self, conn):
         signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
+        _initworkerprocess()
         h = self._servicehandler
-        _serverequest(self.ui, self.repo, conn, h.createcmdserver)
+        try:
+            _serverequest(self.ui, self.repo, conn, h.createcmdserver)
+        finally:
+            gc.collect()  # trigger __del__ since worker process uses os._exit
 
 _servicemap = {
     'pipe': pipeservice,
