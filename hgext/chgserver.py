@@ -569,29 +569,6 @@ class chgunixservicehandler(object):
             # set mtimehash to an illegal hash value to invalidate the server.
             self.hashstate.mtimehash = ''
 
-    def _createsymlink(self):
-        if self.baseaddress == self.address:
-            return
-        tempaddress = _tempaddress(self.baseaddress)
-        os.symlink(os.path.basename(self.address), tempaddress)
-        util.rename(tempaddress, self.baseaddress)
-
-    def printbanner(self, address):
-        # no "listening at" message should be printed to simulate hg behavior
-        pass
-
-    def shouldexit(self):
-        if not self.issocketowner():
-            self.ui.debug('%s is not owned, exiting.\n' % self.address)
-            return True
-        if time.time() - self.lastactive > self.idletimeout:
-            self.ui.debug('being idle too long. exiting.\n')
-            return True
-        return False
-
-    def newconnection(self):
-        self.lastactive = time.time()
-
     def _bind(self, sock):
         # use a unique temp address so we can stat the file and do ownership
         # check later
@@ -601,6 +578,13 @@ class chgunixservicehandler(object):
         # rename will replace the old socket file if exists atomically. the
         # old server will detect ownership change and exit.
         util.rename(tempaddress, self.address)
+
+    def _createsymlink(self):
+        if self.baseaddress == self.address:
+            return
+        tempaddress = _tempaddress(self.baseaddress)
+        os.symlink(os.path.basename(self.address), tempaddress)
+        util.rename(tempaddress, self.baseaddress)
 
     def issocketowner(self):
         try:
@@ -622,6 +606,22 @@ class chgunixservicehandler(object):
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise
+
+    def printbanner(self, address):
+        # no "listening at" message should be printed to simulate hg behavior
+        pass
+
+    def shouldexit(self):
+        if not self.issocketowner():
+            self.ui.debug('%s is not owned, exiting.\n' % self.address)
+            return True
+        if time.time() - self.lastactive > self.idletimeout:
+            self.ui.debug('being idle too long. exiting.\n')
+            return True
+        return False
+
+    def newconnection(self):
+        self.lastactive = time.time()
 
     def createcmdserver(self, repo, conn, fin, fout):
         return chgcmdserver(self.ui, repo, fin, fout, conn,
