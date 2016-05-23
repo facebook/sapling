@@ -392,6 +392,7 @@ typedef struct _fastmanifest_diff_context_t {
   PyObject *result;
   PyObject *emptyTuple;
   bool error_occurred;
+  bool listclean;
 } fastmanifest_diff_context_t;
 
 static void fastmanifest_diff_callback(
@@ -408,31 +409,43 @@ static void fastmanifest_diff_callback(
     void *context) {
   fastmanifest_diff_context_t *diff_context =
       (fastmanifest_diff_context_t *) context;
-  PyObject *key, *outer = NULL, *py_left, *py_right;
-
-  if (left_present) {
-    py_left = hashflags(left_checksum, left_checksum_sz, left_flags);
-  } else {
-    py_left = diff_context->emptyTuple;
-  }
-
-  if (right_present) {
-    py_right = hashflags(right_checksum, right_checksum_sz, right_flags);
-  } else {
-    py_right = diff_context->emptyTuple;
-  }
+  PyObject *key, *outer = NULL, *py_left = NULL, *py_right = NULL;
 
   key = PyString_FromStringAndSize(path, path_sz);
-
-  if (!key || !py_left || !py_right) {
+  if (!key) {
     diff_context->error_occurred = true;
     goto cleanup;
   }
 
-  outer = PyTuple_Pack(2, py_left, py_right);
-  if (outer == NULL) {
-    diff_context->error_occurred = true;
-    goto cleanup;
+  if (left_present &&
+      right_present &&
+      left_flags == right_flags &&
+      left_checksum_sz == right_checksum_sz &&
+      memcmp(left_checksum, right_checksum, left_checksum_sz) == 0) {
+    outer = Py_None;
+  } else {
+    if (left_present) {
+      py_left = hashflags(left_checksum, left_checksum_sz, left_flags);
+    } else {
+      py_left = diff_context->emptyTuple;
+    }
+
+    if (right_present) {
+      py_right = hashflags(right_checksum, right_checksum_sz, right_flags);
+    } else {
+      py_right = diff_context->emptyTuple;
+    }
+
+    if (!py_left || !py_right) {
+      diff_context->error_occurred = true;
+      goto cleanup;
+    }
+
+    outer = PyTuple_Pack(2, py_left, py_right);
+    if (outer == NULL) {
+      diff_context->error_occurred = true;
+      goto cleanup;
+    }
   }
 
   if (PyDict_SetItem(diff_context->result, key, outer) != 0) {
@@ -453,7 +466,6 @@ cleanup:
 static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
   fastmanifest *other;
   PyObject *pyclean = NULL;
-  bool listclean;
   PyObject *emptyTuple = NULL, *ret = NULL;
   PyObject *es;
   fastmanifest_diff_context_t context;
@@ -462,7 +474,7 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
   if (!PyArg_ParseTuple(args, "O!|O", &fastmanifestType, &other, &pyclean)) {
     return NULL;
   }
-  listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
+  context.listclean = (!pyclean) ? false : PyObject_IsTrue(pyclean);
   es = PyString_FromString("");
   if (!es) {
     goto nomem;
@@ -480,8 +492,11 @@ static PyObject *fastmanifest_diff(fastmanifest *self, PyObject *args) {
   context.result = ret;
   context.emptyTuple = emptyTuple;
 
-  diff_result_t diff_result = diff_trees(self->tree, other->tree, listclean,
-      &fastmanifest_diff_callback, &context);
+  diff_result_t diff_result = diff_trees(
+      self->tree, other->tree,
+      context.listclean,
+      &fastmanifest_diff_callback,
+      &context);
 
   Py_CLEAR(emptyTuple);
 
