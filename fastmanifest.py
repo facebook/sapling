@@ -43,8 +43,6 @@ is not normally accessible to manifests.
 `debugcachemanifest` is a command calling `_cachemanifest`, a function to add
 manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
-TODO handle asynchronous save
-TODO size limit handling
 """
 import array
 import os
@@ -365,8 +363,40 @@ class fastmanifestcache(object):
             return None
 
     def prune(self, limit):
-        # TODO logic to prune old entries
-        pass
+        # Get the list of entries and mtime first to avoid race condition
+        entries = []
+        for entry in self:
+            try:
+                path = os.path.join(self.cachepath, entry)
+                entries.append((entry, os.path.getmtime(path),
+                                      os.path.getsize(path)))
+            except EnvironmentError:
+                pass
+
+        # Do nothing, we don't exceed the limit
+        if limit.bytes() > sum([e[2] for e in entries]):
+            self.debug("nothing to do, cache size < limit\n")
+            return
+        # [most recently accessed, second most recently accessed ...]
+        entriesbyage = sorted(entries, key=lambda x:-x[1])
+
+        # We traverse the list of entries from the newest to the oldest
+        # and once we hit the limit of what we can keep, we stop and
+        # trim what is above the limit
+        sizetokeep = 0
+        startindextodiscard = 0
+        for i, entry in enumerate(entriesbyage):
+            if sizetokeep + entry[2] > limit.bytes():
+                startindextodiscard = i
+                break
+            sizetokeep += entry[2]
+
+        for entry in entriesbyage[startindextodiscard:]:
+            try:
+                self.debug("removing cached manifest %s\n" % entry[0])
+                os.unlink(os.path.join(self.cachepath, entry[0]))
+            except EnvironmentError:
+                pass
 
     def pruneall(self):
         for f in self:
@@ -410,6 +440,15 @@ def daemonize(ui, repo):
     if pid > 0:
         sys.exit(0)
 
+class fixedcachelimit(object):
+    """A fix cache limit expressed as a number of bytes"""
+    def __init__(self, bytes):
+        self._bytes = bytes
+
+    def bytes(self):
+        return self._bytes
+
+
 def _cachemanifestpruneall(ui, repo, background):
     if background:
         daemonize(ui, repo)
@@ -441,7 +480,7 @@ def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
         manifest = repo[rev].manifest()
         cache.put(mannode, manifest)
 
-    if limit:
+    if limit is not None:
         cache.prune(limit)
 
 class fastmanifestdict(object):
@@ -661,7 +700,7 @@ class fastmanifestdict(object):
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
     ('a', 'all', False, 'cache all relevant revisions', ''),
-    ('l', 'limit', False, 'limit size of total rev in bytes', 'BYTES'),
+    ('l', 'limit', -1, 'limit size of total rev in bytes', 'BYTES'),
     ('p', 'pruneall', False, 'prune all the entries'),
     ('b', 'background', False,
      'return imediately and process in the background', ''),
@@ -669,7 +708,11 @@ class fastmanifestdict(object):
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
     background = opts["background"]
-    limit = opts["limit"]
+    if opts["limit"] == -1 :
+        limit = None
+    else:
+        limit = fixedcachelimit(opts["limit"])
+
     pruneall = opts["pruneall"]
     displaylist = opts['list']
     if opts["all"]:
@@ -693,7 +736,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         _cachemanifestlist(ui, repo)
         return
 
-    if revs:
+    if revs or limit:
         _cachemanifestfillandtrim(ui, repo, revs, limit, background)
 
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
