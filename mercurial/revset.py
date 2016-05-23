@@ -1847,14 +1847,16 @@ def sort(repo, subset, x):
     - ``user`` for user name (``author`` can be used as an alias),
     - ``date`` for the commit date
     """
-    # i18n: "sort" is a keyword
-    l = getargs(x, 1, 2, _("sort requires one or two arguments"))
-    keys = "rev"
-    if len(l) == 2:
+    args = getargsdict(x, 'sort', 'set keys')
+    if 'set' not in args:
         # i18n: "sort" is a keyword
-        keys = getstring(l[1], _("sort spec must be a string"))
+        raise error.ParseError(_('sort requires one or two arguments'))
+    keys = "rev"
+    if 'keys' in args:
+        # i18n: "sort" is a keyword
+        keys = getstring(args['keys'], _("sort spec must be a string"))
 
-    s = l[0]
+    s = args['set']
     keys = keys.split()
     revs = getset(repo, subset, s)
     if keys == ["rev"]:
