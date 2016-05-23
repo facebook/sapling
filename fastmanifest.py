@@ -48,17 +48,9 @@ import array
 import os
 import sys
 
-from mercurial import cmdutil
-from mercurial import extensions
-from mercurial import manifest
-from mercurial import mdiff
-from mercurial import revset
-from mercurial import revlog
-from mercurial import scmutil
-from mercurial import util
-from mercurial import bookmarks
-from mercurial import dirstate
-from mercurial import localrepo
+from mercurial import bookmarks, cmdutil, dirstate, error, extensions
+from mercurial import localrepo, manifest, mdiff, revlog, revset
+from mercurial import scmutil, util
 
 from extutil import wrapfilecache
 
@@ -725,7 +717,7 @@ class fastmanifestdict(object):
 
     def text(self, usemanifestv2=False):
         if usemanifestv2:
-            return _textv2(self._fm.iterentries())
+            return manifest._textv2(self._fm.iterentries())
         else:
             # use (probably) native version for v1
             return self._fm.text()
@@ -756,7 +748,7 @@ class fastmanifestdict(object):
                     if start == end:
                         # item we want to delete was not found, error out
                         raise AssertionError(
-                                _("failed to remove %s from manifest") % f)
+                                (("failed to remove %s from manifest") % f))
                     l = ""
                 if dstart is not None and dstart <= start and dend >= start:
                     if dend < end:
@@ -840,7 +832,7 @@ def triggercacheondirstatechange(orig, self, *args, **kwargs):
 def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
     revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
     _cachemanifestfillandtrim(repo.ui, repo, revs, None, False)
-    return orig(self, *args, **kwargs)
+    return orig(repo, *args, **kwargs)
 
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
