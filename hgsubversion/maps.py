@@ -357,7 +357,7 @@ class RevMap(dict):
 
     @property
     def lasthash(self):
-        lines = list(self.readmapfile(self.meta.revmap_file))
+        lines = list(self._readmapfile())
         if not lines:
             return None
         return bin(lines[-1].split(' ', 2)[1])
@@ -385,16 +385,16 @@ class RevMap(dict):
                         for revnum, br, binhash in items))
         f.close()
 
-    @classmethod
-    def readmapfile(cls, path, missingok=True):
+    def _readmapfile(self):
+        path = self.meta.revmap_file
         try:
             f = open(path)
         except IOError, err:
-            if not missingok or err.errno != errno.ENOENT:
+            if err.errno != errno.ENOENT:
                 raise
             return iter([])
         ver = int(f.readline())
-        if ver != cls.VERSION:
+        if ver != self.VERSION:
             raise hgutil.Abort('revmap too new -- please upgrade')
         return f
 
@@ -407,7 +407,7 @@ class RevMap(dict):
         lastpulled = self.meta.lastpulled
         firstpulled = self.meta.firstpulled
         setitem = dict.__setitem__
-        for l in self.readmapfile(self.meta.revmap_file):
+        for l in self._readmapfile():
             revnum, ha, branch = l.split(' ', 2)
             if branch == '\n':
                 branch = None
