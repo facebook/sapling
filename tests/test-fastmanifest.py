@@ -23,6 +23,14 @@ class HybridManifest(unittest.TestCase):
         assert util.safehasattr(hd, method),\
             "%s missing in hybrid manifest" % method
 
+  def test_cachelimit(self):
+    cachealloc = fastmanifest.systemawarecachelimit.cacheallocation
+    GB = fastmanifest.GB
+    MB = fastmanifest.MB
+    assert cachealloc(0) == 0
+    assert cachealloc(120 * GB) == 6 * GB
+    assert abs(cachealloc(28 * GB) - 5.6 * GB) < 5 * MB
+
 if __name__ == "__main__":
     sys.path.insert(0, os.path.join(os.environ["TESTDIR"], ".."))
     import fastmanifest

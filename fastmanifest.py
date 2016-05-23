@@ -449,6 +449,91 @@ class fixedcachelimit(object):
         return self._bytes
 
 
+GB = 1024**3
+MB = 1024**2
+DEFAULT_LOWGROWTH_TRESHOLDGB = 20
+DEFAULT_MAXCACHESIZEGB = 6
+DEFAULT_LOWGROWTH_SLOPE = 0.1
+DEFAULT_HIGHGROWTHSLOPE = 0.2
+
+class systemawarecachelimit(object):
+    """A limit that will be tighter as the free disk space reduces"""
+    def __init__(self, repo):
+        # Probe the system root partition to know what is available
+        st = os.statvfs(repo.root)
+        self.free = st.f_bavail * st.f_frsize
+        self.total = st.f_blocks * st.f_frsize
+        # Read parameters from config
+        self.lowgrowththresholdgb = repo.ui.config("fastmanifest",
+                                                   "lowgrowththresholdgb",
+                                                   DEFAULT_LOWGROWTH_TRESHOLDGB)
+        self.lowgrowslope = repo.ui.config("fastmanifest",
+                                           "lowgrowthslope",
+                                           DEFAULT_LOWGROWTH_SLOPE)
+        self.maxcachesizegb = repo.ui.config("fastmanifest",
+                                             "maxcachesizegb",
+                                             DEFAULT_MAXCACHESIZEGB)
+        self.highgrowthslope = repo.ui.config("fastmanifest",
+                                              "highgrowthslope",
+                                              DEFAULT_HIGHGROWTHSLOPE)
+        try:
+            self.lowgrowththresholdgb = float(self.lowgrowththresholdgb)
+            self.lowgrowslope = float(self.lowgrowslope)
+            self.maxcachesizegb = float(self.maxcachesize)
+            self.highgrowthslope = float(self.highgrowthslope)
+        except ValueError:
+            self.lowgrowththresholdgb = DEFAULT_LOWGROWTH_TRESHOLDGB
+            self.lowgrowslope = DEFAULT_LOWGROWTH_SLOPE
+            self.maxcachesizegb = DEFAULT_MAXCACHESIZEGB
+            self.highgrowthslope = DEFAULT_HIGHGROWTHSLOPE
+
+    def bytes(self):
+        return systemawarecachelimit.cacheallocation(
+                               self.free,
+                               lowgrowththresholdgb=self.lowgrowththresholdgb,
+                               highgrowthslope=self.highgrowthslope,
+                               maxcachesizegb=self.maxcachesizegb,
+                               lowgrowthslope=self.lowgrowthslope)
+
+    @staticmethod
+    def cacheallocation(freespace,
+                        lowgrowththresholdgb=DEFAULT_LOWGROWTH_TRESHOLDGB,
+                        lowgrowslope=DEFAULT_LOWGROWTH_SLOPE,
+                        maxcachesizegb=DEFAULT_MAXCACHESIZEGB,
+                        highgrowthslope=DEFAULT_HIGHGROWTHSLOPE):
+        """Given the free space available in bytes, return the size of the cache
+
+        When disk space is limited (less than lowgrowththreshold), we increase
+        the cache size linearly: lowgrowthslope * freespace. Over
+        lowgrowththreshold, we increase the cache size linearly but faster:
+        highgrowthslope * freespace until we hit maxcachesize.
+
+        These values are configurable, default values are:
+
+        [fastmanifest]
+        lowgrowththresholdgb = 20
+        lowgrowthslope = 0.1
+        highgrowthslope = 0.2
+        maxcachesizegb = 6
+
+        ^ Cache Size
+        |
+        |      /-------------------  <- maxcachesize
+        |     |
+        |    /  <- slope is highgrowthslope
+        |   | <- lowgrowththreshold
+        |  /
+        | /   <- slope is lowgrowslope
+        |/
+        -------------------------> Free Space
+        """
+
+        if freespace < lowgrowththresholdgb * GB:
+            return min(maxcachesizegb * GB, lowgrowslope * freespace)
+        else:
+            return min(maxcachesizegb * GB, highgrowthslope * freespace)
+
+
 def _cachemanifestpruneall(ui, repo, background):
     if background:
         daemonize(ui, repo)
