@@ -345,7 +345,7 @@ class fastmanifestcache(object):
                     pass
 
     def __iter__(self):
-        for f in os.listdir(self.cachepath):
+        for f in sorted(os.listdir(self.cachepath)):
             if f.startswith(self.keyprefix()):
                 yield f
 
