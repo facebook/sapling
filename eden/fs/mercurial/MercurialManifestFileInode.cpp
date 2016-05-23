@@ -45,12 +45,10 @@ folly::Future<std::string> MercurialManifestFileInode::readlink() {
   return repo_->getManifest().catFile(path_);
 }
 
-folly::Future<fusell::FileHandle*> MercurialManifestFileInode::open(
-    const struct fuse_file_info&) {
+folly::Future<std::unique_ptr<fusell::FileHandle>>
+MercurialManifestFileInode::open(const struct fuse_file_info&) {
   return repo_->getManifest().catFile(path_).then([=](std::string&& content) {
-    // Note: raw pointer because the FUSE kernel module controls our
-    // lifetime.
-    return new MercurialManifestFileHandle(
+    return std::make_unique<MercurialManifestFileHandle>(
         shared_from_this(), std::move(content));
   });
 }

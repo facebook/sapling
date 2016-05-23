@@ -39,10 +39,11 @@ Future<fusell::Dispatcher::Attr> MercurialManifestDirInode::getattr() {
       });
 }
 
-Future<fusell::DirHandle*> MercurialManifestDirInode::opendir(
+Future<std::unique_ptr<fusell::DirHandle>> MercurialManifestDirInode::opendir(
     const struct fuse_file_info&) {
   repo_->getManifest().prefetchFileInfoForDir(path_);
-  return new MercurialManifestDirHandle(parent_, ino_, repo_, path_);
+  return std::make_unique<MercurialManifestDirHandle>(
+      parent_, ino_, repo_, path_);
 }
 
 Future<std::shared_ptr<fusell::InodeBase>>

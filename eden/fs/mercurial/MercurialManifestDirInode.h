@@ -28,7 +28,7 @@ class MercurialManifestDirInode : public fusell::DirInode {
       RelativePathPiece path);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
-  folly::Future<fusell::DirHandle*> opendir(
+  folly::Future<std::unique_ptr<fusell::DirHandle>> opendir(
       const struct fuse_file_info& fi) override;
   folly::Future<std::shared_ptr<fusell::InodeBase>> getChildByName(
       PathComponentPiece namepiece) override;
