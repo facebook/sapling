@@ -5,6 +5,7 @@
 // no-check-code
 
 #include <stdlib.h>
+#include <sys/types.h>
 
 #include "buffer.h"
 #include "convert.h"
