@@ -189,19 +189,24 @@ Check diagnosis, debugging information
   @@ -0,0 +1,1 @@
   +e
 
-  $ hg debugcachemanifest -a --debug
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ []>>, background(False), pruneall(False), list(False)
-  caching revision a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  cache miss for fastmanifest a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  caching revision a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  cache miss for fastmanifest a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  caching revision e3738bf5439958f89499a656982023aba57b076e
-  cache miss for fastmanifest e3738bf5439958f89499a656982023aba57b076e
-  caching revision f064a7f8e3e138341587096641d86e9d23cd9778
-  cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  caching revision 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-
+Stress test to see if all these can work concurrently, if this test fails
+there is a concurrency issue to address
+  $ hg debugcachemanifest -a --background >/dev/null
+  $ hg debugcachemanifest --pruneall --background >/dev/null
+  $ hg debugcachemanifest --pruneall --background >/dev/null
+  $ hg debugcachemanifest -a --background >/dev/null
+  $ sleep 1
+  $ hg debugcachemanifest -a --background
+  $ hg debugcachemanifest -a --background
+  $ hg debugcachemanifest -a --background
+  $ sleep 1
+  $ hg debugcachemanifest --list
+  fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
+  fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
+  cache size is: 1.13 KB
   $ hg diff -c . --debug --nodate
   cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9

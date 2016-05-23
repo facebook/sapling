@@ -48,6 +48,7 @@ TODO size limit handling
 """
 import array
 import os
+import sys
 
 from mercurial import cmdutil
 from mercurial import extensions
@@ -392,7 +393,26 @@ class manifestfactory(object):
                               loadflat=loadfn,
                               node=args[1])
 
+def daemonize(ui, repo):
+    sys.stdout.flush()
+    sys.stderr.flush()
+    ui.fout.flush()
+    ui.ferr.flush()
+    ui.fin = sys.stdin = open(os.devnull, "r")
+    ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
+    repo.ui = ui
+
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+    os.setsid()
+    pid = os.fork()
+    if pid > 0:
+        sys.exit(0)
+
 def _cachemanifestpruneall(ui, repo, background):
+    if background:
+        daemonize(ui, repo)
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
     cache.pruneall()
 
@@ -409,6 +429,8 @@ def _cachemanifestlist(ui, repo):
     ui.status(("cache size is: %s\n" % util.bytecount(totalsize)))
 
 def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
+    if background:
+        daemonize(ui, repo)
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
     for rev in revs:
