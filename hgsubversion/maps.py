@@ -355,6 +355,13 @@ class RevMap(dict):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
         return sorted(filter(check, self.iteritems()), reverse=True)
 
+    @property
+    def lasthash(self):
+        lines = list(self.readmapfile(self.meta.revmap_file))
+        if not lines:
+            return None
+        return bin(lines[-1].split(' ', 2)[1])
+
     def revhashes(self, revnum):
         for key, value in self.iteritems():
             if key[0] == revnum:
