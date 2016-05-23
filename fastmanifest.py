@@ -371,7 +371,7 @@ class fastmanifestcache(object):
             self.debug("nothing to do, cache size < limit\n")
             return
         # [most recently accessed, second most recently accessed ...]
-        entriesbyage = sorted(entries, key=lambda x:-x[1])
+        entriesbyage = sorted(entries, key=lambda x:(-x[1],x[0]))
 
         # We traverse the list of entries from the newest to the oldest
         # and once we hit the limit of what we can keep, we stop and

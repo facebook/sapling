@@ -280,6 +280,16 @@ Test the --pruneall command to prune all the cached manifests
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+
+Make the entries of the cache be in a deterministic order accross platforms
+to make the test deterministic:
+
+  $ BASETIME=1464039920
+  $ for file in `ls ".hg/store/manifestcache/" | sort ` ; do
+  >   touch -am $BASETIME $file
+  >   BASETIME=`expr $BASETIME + 10`
+  > done
+
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
@@ -297,30 +307,31 @@ Check that trimming to a limit higher than what is cached does nothing
 Trim the cache to at most 1kb
   $ hg debugcachemanifest --debug --limit=1024
   caching rev: [], background(False), pruneall(False), list(False)
-  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  cache size is: 1.00 KB
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
+  cache size is: 880 bytes
 
 Trim the cache to at most 512 bytes
   $ hg debugcachemanifest --debug --limit=512
   caching rev: [], background(False), pruneall(False), list(False)
-  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  cache size is: 328 bytes
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
+  cache size is: 464 bytes
 
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
   caching rev: [], background(False), pruneall(False), list(False)
   removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
@@ -338,10 +349,10 @@ Check that trimming the cache to 0 byte works
   $ hg debugcachemanifest --debug --limit=0
   caching rev: [], background(False), pruneall(False), list(False)
   removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
