@@ -37,14 +37,14 @@ class TestPullFallback(test_util.TestBase):
 
         # Passing stupid=True doesn't seem to be working - force it
         repo.ui.setconfig('hgsubversion', 'stupid', "true")
-        state = repo.parents()
+        state = repo[None].parents()
 
         calls, replaced = _monkey_patch(to_patch)
 
         try:
             self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
             commands.pull(self.repo.ui, repo, update=True)
-            self.failIfEqual(state, repo.parents())
+            self.failIfEqual(state, repo[None].parents())
             self.assertTrue('tip' in repo[None].tags())
             self.assertEqual(expected_calls, calls)
 

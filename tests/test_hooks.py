@@ -17,7 +17,7 @@ class TestHooks(test_util.TestBase):
 
     def test_updatemetahook(self):
         repo, repo_path = self._loadupdate('single_rev.svndump')
-        state = repo.parents()
+        state = repo[None].parents()
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, self.repo)
 

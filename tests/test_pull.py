@@ -20,37 +20,37 @@ class TestPull(test_util.TestBase):
 
     def test_nochanges(self):
         self._loadupdate('single_rev.svndump')
-        state = self.repo.parents()
+        state = self.repo[None].parents()
         commands.pull(self.repo.ui, self.repo)
-        self.assertEqual(state, self.repo.parents())
+        self.assertEqual(state, self.repo[None].parents())
 
     def test_onerevision_noupdate(self):
         repo, repo_path = self._loadupdate('single_rev.svndump')
-        state = repo.parents()
+        state = repo[None].parents()
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo)
-        self.assertEqual(state, repo.parents())
+        self.assertEqual(state, repo[None].parents())
         self.assertTrue('tip' not in repo['.'].tags())
 
     def test_onerevision_doupdate(self):
         repo, repo_path = self._loadupdate('single_rev.svndump')
-        state = repo.parents()
+        state = repo[None].parents()
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed'})
         commands.pull(self.repo.ui, repo, update=True)
-        self.failIfEqual(state, repo.parents())
+        self.failIfEqual(state, repo[None].parents())
         self.assertTrue('tip' in repo['.'].tags())
 
     def test_onerevision_divergent(self):
         repo, repo_path = self._loadupdate('single_rev.svndump')
         self.commitchanges((('alpha', 'alpha', 'Changed another way'),))
-        state = repo.parents()
+        state = repo[None].parents()
         self.add_svn_rev(repo_path, {'trunk/alpha': 'Changed one way'})
         try:
             commands.pull(self.repo.ui, repo, update=True)
         except hgutil.Abort:
             # hg < 1.9 raised when crossing branches
             pass
-        self.assertEqual(state, repo.parents())
+        self.assertEqual(state, repo[None].parents())
         self.assertTrue('tip' not in repo['.'].tags())
         self.assertEqual(len(repo.heads()), 2)
 
