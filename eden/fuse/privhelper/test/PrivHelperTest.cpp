@@ -7,9 +7,9 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+#include "PrivHelperTestServer.h"
 #include "eden/fuse/privhelper/PrivHelper.h"
 #include "eden/fuse/privhelper/PrivHelperConn.h"
-#include "eden/fuse/privhelper/test/PrivHelperTestServer.h"
 
 #include <folly/Exception.h>
 #include <folly/File.h>
