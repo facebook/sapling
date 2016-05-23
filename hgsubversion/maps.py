@@ -384,8 +384,8 @@ class RevMap(dict):
 
         items is an array of (rev num, branch, binary hash)
 
-        For performance reason, meta.lastpulled and meta.firstpulled
-        are not updated.
+        For performance reason, internal in-memory state is not updated.
+        To get an up-to-date RevMap, reconstruct the object.
         '''
         f = open(self.meta.revmap_file, 'a')
         f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
