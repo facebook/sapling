@@ -49,10 +49,11 @@ Check diagnosis, debugging information
   $ mkdir accesspattern
   $ cd accesspattern
   $ hg init
-  $ cat >> .hg/hgrc << EOF
+  $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fastmanifest=
   > [fastmanifest]
+  > randomorder=False
   > logfile=$TESTTMP/logfile
   > EOF
 

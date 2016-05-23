@@ -46,6 +46,7 @@ and flat manifest, asynchronously and synchronously.
 """
 import array
 import os
+import random
 import sys
 
 from mercurial import bookmarks, cmdutil, dirstate, error, extensions
@@ -548,6 +549,10 @@ def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
     if background:
         daemonize(ui, repo)
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+
+    if ui.configbool("fastmanifest", "randomorder", True):
+        revs = list(revs)
+        random.shuffle(revs)
 
     for rev in revs:
         mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
