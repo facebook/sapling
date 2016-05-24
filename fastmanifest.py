@@ -420,22 +420,24 @@ class manifestfactory(object):
                               loadflat=loadfn,
                               node=args[1])
 
-def daemonize(ui, repo):
-    sys.stdout.flush()
-    sys.stderr.flush()
-    ui.fout.flush()
-    ui.ferr.flush()
+# Returns true if we're the original process, returns false if we're the child
+# process.
+def fork_worker(ui, repo):
+    pid = os.fork()
+    if pid > 0:
+        return True
+
+    # we're not closing the prior descriptors because that would cause a flush,
+    # and we don't want that.
     ui.fin = sys.stdin = open(os.devnull, "r")
     ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
     repo.ui = ui
-
-    pid = os.fork()
-    if pid > 0:
-        sys.exit(0)
     os.setsid()
     pid = os.fork()
     if pid > 0:
-        sys.exit(0)
+        os._exit(0)
+
+    return False
 
 class fixedcachelimit(object):
     """A fix cache limit expressed as a number of bytes"""
@@ -549,7 +551,8 @@ def _cachemanifestlist(ui, repo):
 
 def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
     if background:
-        daemonize(ui, repo)
+        if fork_worker(ui, repo):
+            return
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
     if ui.configbool("fastmanifest", "randomorder", True):
@@ -566,6 +569,9 @@ def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
 
     if limit is not None:
         cache.prune(limit)
+
+    if background:
+        os._exit(0)
 
 class fastmanifestdict(object):
     def __init__(self, fm):
