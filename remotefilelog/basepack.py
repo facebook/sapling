@@ -1,4 +1,4 @@
-import errno, os, struct
+import errno, mmap, os, struct
 from mercurial import osutil, util
 
 import constants
@@ -69,6 +69,63 @@ class basepackstore(object):
     def markledger(self, ledger):
         for pack in self.packs:
             pack.markledger(ledger)
+
+class basepack(object):
+    def __init__(self, path):
+        self.path = path
+        self.packpath = path + self.PACKSUFFIX
+        self.indexpath = path + self.INDEXSUFFIX
+        # TODO: use an opener/vfs to access these paths
+        self.indexfp = open(self.indexpath, 'rb')
+        self.datafp = open(self.packpath, 'rb')
+
+        self.indexsize = os.stat(self.indexpath).st_size
+        self.datasize = os.stat(self.packpath).st_size
+
+        # memory-map the file, size 0 means whole file
+        self._index = mmap.mmap(self.indexfp.fileno(), 0,
+                                access=mmap.ACCESS_READ)
+        self._data = mmap.mmap(self.datafp.fileno(), 0,
+                                access=mmap.ACCESS_READ)
+
+        version = struct.unpack('!B', self._data[:PACKVERSIONSIZE])[0]
+        if version != VERSION:
+            raise RuntimeError("unsupported pack version '%s'" %
+                               version)
+
+        version, config = struct.unpack('!BB',
+                                    self._index[:INDEXVERSIONSIZE])
+        if version != VERSION:
+            raise RuntimeError("unsupported pack index version '%s'" %
+                               version)
+
+        if 0b10000000 & config:
+            self.params = indexparams(LARGEFANOUTPREFIX)
+        else:
+            self.params = indexparams(SMALLFANOUTPREFIX)
+
+        params = self.params
+        rawfanout = self._index[FANOUTSTART:FANOUTSTART + params.fanoutsize]
+        self._fanouttable = []
+        for i in xrange(0, params.fanoutcount):
+            loc = i * 4
+            fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
+            self._fanouttable.append(fanoutentry)
+
+    def getmissing(self, keys):
+        raise NotImplemented()
+
+    def markledger(self, ledger):
+        raise NotImplemented()
+
+    def cleanup(self, ledger):
+        raise NotImplemented()
+
+    def __iter__(self):
+        raise NotImplemented()
+
+    def iterentries(self):
+        raise NotImplemented()
 
 class mutablebasepack(object):
     def __init__(self, opener):

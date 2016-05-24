@@ -45,45 +45,9 @@ class historypackstore(basepack.basepackstore):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
                            % (filename, hex(node)))
 
-class historypack(object):
-    def __init__(self, path):
-        self.path = path
-        self.packpath = path + PACKSUFFIX
-        self.indexpath = path + INDEXSUFFIX
-        self.indexfp = open(self.indexpath, 'rb')
-        self.datafp = open(self.packpath, 'rb')
-
-        self.indexsize = os.stat(self.indexpath).st_size
-        self.datasize = os.stat(self.packpath).st_size
-
-        # memory-map the file, size 0 means whole file
-        self._index = mmap.mmap(self.indexfp.fileno(), 0,
-                                access=mmap.ACCESS_READ)
-        self._data = mmap.mmap(self.datafp.fileno(), 0,
-                                access=mmap.ACCESS_READ)
-
-        version = struct.unpack('!B', self._data[:basepack.PACKVERSIONSIZE])[0]
-        if version != basepack.VERSION:
-            raise RuntimeError("unsupported histpack version '%s'" %
-                               version)
-        version, config = struct.unpack('!BB',
-                                    self._index[:basepack.INDEXVERSIONSIZE])
-        if version != basepack.VERSION:
-            raise RuntimeError("unsupported histpack index version '%s'" %
-                               version)
-
-        if 0b10000000 & config:
-            self.params = basepack.indexparams(basepack.LARGEFANOUTPREFIX)
-        else:
-            self.params = basepack.indexparams(basepack.SMALLFANOUTPREFIX)
-
-        rawfanout = self._index[basepack.FANOUTSTART:basepack.FANOUTSTART +
-                                                     self.params.fanoutsize]
-        self._fanouttable = []
-        for i in xrange(0, self.params.fanoutcount):
-            loc = i * 4
-            fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
-            self._fanouttable.append(fanoutentry)
+class historypack(basepack.basepack):
+    INDEXSUFFIX = INDEXSUFFIX
+    PACKSUFFIX = PACKSUFFIX
 
     def getmissing(self, keys):
         missing = []
