@@ -18,37 +18,12 @@ NOBASEINDEXMARK = -2
 INDEXSUFFIX = '.dataidx'
 PACKSUFFIX = '.datapack'
 
-class datapackstore(object):
-    def __init__(self, path):
-        self.packs = []
-        suffixlen = len(INDEXSUFFIX)
+class datapackstore(basepack.basepackstore):
+    INDEXSUFFIX = INDEXSUFFIX
+    PACKSUFFIX = PACKSUFFIX
 
-        files = []
-        filenames = set()
-        try:
-            for filename, size, stat in osutil.listdir(path, stat=True):
-                files.append((stat.st_mtime, filename))
-                filenames.add(filename)
-        except OSError as ex:
-            if ex.errno != errno.ENOENT:
-                raise
-
-        # Put most recent pack files first since they contain the most recent
-        # info.
-        files = sorted(files, reverse=True)
-        for mtime, filename in files:
-            packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
-            if (filename[-suffixlen:] == INDEXSUFFIX
-                and packfilename in filenames):
-                packpath = os.path.join(path, filename)
-                self.packs.append(datapack(packpath[:-suffixlen]))
-
-    def getmissing(self, keys):
-        missing = keys
-        for pack in self.packs:
-            missing = pack.getmissing(missing)
-
-        return missing
+    def getpack(self, path):
+        return datapack(path)
 
     def get(self, name, node):
         raise RuntimeError("must use getdeltachain with datapackstore")
@@ -64,10 +39,6 @@ class datapackstore(object):
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapackstore")
-
-    def markledger(self, ledger):
-        for pack in self.packs:
-            pack.markledger(ledger)
 
 class datapack(object):
     def __init__(self, path):

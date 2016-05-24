@@ -25,37 +25,12 @@ ANC_P2NODE = 2
 ANC_LINKNODE = 3
 ANC_COPYFROM = 4
 
-class historypackstore(object):
-    def __init__(self, path):
-        self.packs = []
-        suffixlen = len(INDEXSUFFIX)
+class historypackstore(basepack.basepackstore):
+    INDEXSUFFIX = INDEXSUFFIX
+    PACKSUFFIX = PACKSUFFIX
 
-        files = []
-        filenames = set()
-        try:
-            for filename, size, stat in osutil.listdir(path, stat=True):
-                files.append((stat.st_mtime, filename))
-                filenames.add(filename)
-        except OSError as ex:
-            if ex.errno != errno.ENOENT:
-                raise
-
-        # Put most recent pack files first since they contain the most recent
-        # info.
-        files = sorted(files, reverse=True)
-        for mtime, filename in files:
-            packfilename = '%s%s' % (filename[:-suffixlen], PACKSUFFIX)
-            if (filename[-suffixlen:] == INDEXSUFFIX
-                and packfilename in filenames):
-                packpath = os.path.join(path, filename)
-                self.packs.append(historypack(packpath[:-suffixlen]))
-
-    def getmissing(self, keys):
-        missing = keys
-        for pack in self.packs:
-            missing = pack.getmissing(missing)
-
-        return missing
+    def getpack(self, path):
+        return historypack(path)
 
     def getancestors(self, name, node):
         for pack in self.packs:
@@ -69,10 +44,6 @@ class historypackstore(object):
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         raise RuntimeError("cannot add to historypackstore (%s:%s)"
                            % (filename, hex(node)))
-
-    def markledger(self, ledger):
-        for pack in self.packs:
-            pack.markledger(ledger)
 
 class historypack(object):
     def __init__(self, path):

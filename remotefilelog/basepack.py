@@ -1,5 +1,5 @@
-import os, struct
-from mercurial import util
+import errno, os, struct
+from mercurial import osutil, util
 
 import constants
 
@@ -30,6 +30,45 @@ LARGEFANOUTPREFIX = 2
 # 5 step bisect = log(2^16 / 8 / 255)  # fanout
 # 10 step fanout scan = 2^16 / (2^16 / 8)  # fanout space divided by entries
 SMALLFANOUTCUTOFF = 2**16 / 8
+
+class basepackstore(object):
+    def __init__(self, path):
+        self.packs = []
+        suffixlen = len(self.INDEXSUFFIX)
+
+        files = []
+        filenames = set()
+        try:
+            for filename, size, stat in osutil.listdir(path, stat=True):
+                files.append((stat.st_mtime, filename))
+                filenames.add(filename)
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+
+        # Put most recent pack files first since they contain the most recent
+        # info.
+        files = sorted(files, reverse=True)
+        for mtime, filename in files:
+            packfilename = '%s%s' % (filename[:-suffixlen], self.PACKSUFFIX)
+            if (filename[-suffixlen:] == self.INDEXSUFFIX
+                and packfilename in filenames):
+                packpath = os.path.join(path, filename)
+                self.packs.append(self.getpack(packpath[:-suffixlen]))
+
+    def getpack(self, path):
+        raise NotImplemented()
+
+    def getmissing(self, keys):
+        missing = keys
+        for pack in self.packs:
+            missing = pack.getmissing(missing)
+
+        return missing
+
+    def markledger(self, ledger):
+        for pack in self.packs:
+            pack.markledger(ledger)
 
 class mutablebasepack(object):
     def __init__(self, opener):
