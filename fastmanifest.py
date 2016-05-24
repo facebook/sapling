@@ -369,7 +369,6 @@ class fastmanifestcache(object):
                                       os.path.getsize(path)))
             except EnvironmentError:
                 pass
-
         # Do nothing, we don't exceed the limit
         if limit.bytes() > sum([e[2] for e in entries]):
             self.debug("nothing to do, cache size < limit\n")
