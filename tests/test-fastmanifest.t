@@ -243,6 +243,8 @@ Test the --pruneall command to prune all the cached manifests
   $ cat >> .hg/hgrc << EOF
   > [fastmanifest]
   > cacheonchange=True
+  > cacheonchangebackground=False
+  > cacheonchangesystemlimit=False
   > EOF
   $ hg update -c .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved

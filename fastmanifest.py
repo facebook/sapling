@@ -828,22 +828,36 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     if revs or limit:
         _cachemanifestfillandtrim(ui, repo, revs, limit, background)
 
+def _cacheonchangeconfig(repo):
+    """return revs, bg, limit suitable for caching fastmanifest on change"""
+    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    bg = repo.ui.configbool("fastmanifest",
+                            "cacheonchangebackground",
+                            True)
+    systemlimit = repo.ui.configbool("fastmanifest",
+                                     "cacheonchangesystemlimit",
+                                     True)
+    limit = None
+    if systemlimit:
+        limit = systemawarecachelimit(repo)
+    return revs, bg, limit
+
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     repo = self._repo
-    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-    _cachemanifestfillandtrim(repo.ui, repo, revs, None, False)
+    revs, bg, limit = _cacheonchangeconfig(repo)
+    _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
     return orig(self, *args, **kwargs)
 
 def triggercacheondirstatechange(orig, self, *args, **kwargs):
     if util.safehasattr(self, "_fastmanifestrepo"):
         repo = self._fastmanifestrepo
-        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-        _cachemanifestfillandtrim(repo.ui, repo, revs, None, False)
+        revs, bg, limit = _cacheonchangeconfig(repo)
+        _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
     return orig(self, *args, **kwargs)
 
 def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
-    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
-    _cachemanifestfillandtrim(repo.ui, repo, revs, None, False)
+    revs, bg, limit = _cacheonchangeconfig(repo)
+    _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
     return orig(repo, *args, **kwargs)
 
 def extsetup(ui):
@@ -887,7 +901,7 @@ def extsetup(ui):
     revset.symbols['fastmanifesttocache'] = fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
 
-    if ui.config("fastmanifest", "cacheonchange", False):
+    if ui.configbool("fastmanifest", "cacheonchange", False):
         # Trigger to enable caching of relevant manifests
         extensions.wrapfunction(bookmarks.bmstore, '_write',
                                 triggercacheonbookmarkchange)
