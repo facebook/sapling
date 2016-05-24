@@ -208,6 +208,7 @@ there is a concurrency issue to address
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 1.13 KB
+  number of entries is: 5
   $ hg diff -c . --debug --nodate
   cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
@@ -303,6 +304,7 @@ to make the test deterministic:
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 1.13 KB
+  number of entries is: 5
 
 Check that trimming to a limit higher than what is cached does nothing
   $ hg debugcachemanifest --debug --limit=2048
@@ -320,6 +322,7 @@ Trim the cache to at most 1kb
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 832 bytes
+  number of entries is: 4
 
 Trim the cache to at most 512 bytes
   $ hg debugcachemanifest --debug --limit=512
@@ -331,6 +334,7 @@ Trim the cache to at most 512 bytes
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 512 bytes
+  number of entries is: 2
 
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
@@ -340,6 +344,7 @@ Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
+  number of entries is: 0
 
 Check that trimming the cache to 0 byte works
   $ hg debugcachemanifest -a
@@ -360,6 +365,7 @@ Make the results deterministic
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 1.13 KB
+  number of entries is: 5
   $ hg debugcachemanifest --debug --limit=0
   caching rev: [], background(False), pruneall(False), list(False)
   removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
@@ -370,6 +376,7 @@ Make the results deterministic
   $ hg debugcachemanifest --debug --list
   caching rev: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
+  number of entries is: 0
 
 
 
