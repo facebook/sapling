@@ -465,7 +465,7 @@ class systemawarecachelimit(object):
         self.lowgrowththresholdgb = repo.ui.config("fastmanifest",
                                                    "lowgrowththresholdgb",
                                                    DEFAULT_LOWGROWTH_TRESHOLDGB)
-        self.lowgrowslope = repo.ui.config("fastmanifest",
+        self.lowgrowthslope = repo.ui.config("fastmanifest",
                                            "lowgrowthslope",
                                            DEFAULT_LOWGROWTH_SLOPE)
         self.maxcachesizegb = repo.ui.config("fastmanifest",
@@ -476,12 +476,12 @@ class systemawarecachelimit(object):
                                               DEFAULT_HIGHGROWTHSLOPE)
         try:
             self.lowgrowththresholdgb = float(self.lowgrowththresholdgb)
-            self.lowgrowslope = float(self.lowgrowslope)
+            self.lowgrowthslope = float(self.lowgrowthslope)
             self.maxcachesizegb = float(self.maxcachesizegb)
             self.highgrowthslope = float(self.highgrowthslope)
         except ValueError:
             self.lowgrowththresholdgb = DEFAULT_LOWGROWTH_TRESHOLDGB
-            self.lowgrowslope = DEFAULT_LOWGROWTH_SLOPE
+            self.lowgrowthslope = DEFAULT_LOWGROWTH_SLOPE
             self.maxcachesizegb = DEFAULT_MAXCACHESIZEGB
             self.highgrowthslope = DEFAULT_HIGHGROWTHSLOPE
 
@@ -496,7 +496,7 @@ class systemawarecachelimit(object):
     @staticmethod
     def cacheallocation(freespace,
                         lowgrowththresholdgb=DEFAULT_LOWGROWTH_TRESHOLDGB,
-                        lowgrowslope=DEFAULT_LOWGROWTH_SLOPE,
+                        lowgrowthslope=DEFAULT_LOWGROWTH_SLOPE,
                         maxcachesizegb=DEFAULT_MAXCACHESIZEGB,
                         highgrowthslope=DEFAULT_HIGHGROWTHSLOPE):
         """Given the free space available in bytes, return the size of the cache
@@ -527,7 +527,7 @@ class systemawarecachelimit(object):
         """
 
         if freespace < lowgrowththresholdgb * GB:
-            return min(maxcachesizegb * GB, lowgrowslope * freespace)
+            return min(maxcachesizegb * GB, lowgrowthslope * freespace)
         else:
             return min(maxcachesizegb * GB, highgrowthslope * freespace)
 
