@@ -3,7 +3,7 @@ from collections import defaultdict, deque
 from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
 from mercurial.i18n import _
-import constants, shallowutil
+import basepack, constants, shallowutil
 
 # (filename hash, offset, size)
 INDEXFORMAT = '!20sQQ'
@@ -16,28 +16,8 @@ PACKENTRYLENGTH = 82
 
 OFFSETSIZE = 4
 
-# The fanout prefix is the number of bytes that can be addressed by the fanout
-# table. Example: a fanout prefix of 1 means we use the first byte of a hash to
-# look in the fanout table (which will be 2^8 entries long).
-FANOUTPREFIX = 2
-# The struct pack format for fanout table location (i.e. the format that
-# converts the node prefix into an integer location in the fanout table).
-FANOUTSTRUCT = '!H'
-# The number of fanout table entries
-FANOUTCOUNT = 2**(FANOUTPREFIX * 8)
-# The total bytes used by the fanout table
-FANOUTENTRYSTRUCT = '!I'
-FANOUTENTRYSIZE = 4
-FANOUTSIZE = FANOUTCOUNT * FANOUTENTRYSIZE
-
 INDEXSUFFIX = '.histidx'
 PACKSUFFIX = '.histpack'
-
-VERSION = 0
-VERSIONSIZE = 1
-
-FANOUTSTART = VERSIONSIZE
-INDEXSTART = FANOUTSTART + FANOUTSIZE
 
 ANC_NODE = 0
 ANC_P1NODE = 1
@@ -111,21 +91,27 @@ class historypack(object):
         self._data = mmap.mmap(self.datafp.fileno(), 0,
                                 access=mmap.ACCESS_READ)
 
-        version = struct.unpack('!B', self._data[:VERSIONSIZE])[0]
-        if version != VERSION:
+        version = struct.unpack('!B', self._data[:basepack.PACKVERSIONSIZE])[0]
+        if version != basepack.VERSION:
             raise RuntimeError("unsupported histpack version '%s'" %
                                version)
-        version = struct.unpack('!B', self._index[:VERSIONSIZE])[0]
-        if version != VERSION:
+        version, config = struct.unpack('!BB',
+                                    self._index[:basepack.INDEXVERSIONSIZE])
+        if version != basepack.VERSION:
             raise RuntimeError("unsupported histpack index version '%s'" %
                                version)
 
-        rawfanout = self._index[FANOUTSTART:FANOUTSTART + FANOUTSIZE]
+        if 0b10000000 & config:
+            self.params = basepack.indexparams(basepack.LARGEFANOUTPREFIX)
+        else:
+            self.params = basepack.indexparams(basepack.SMALLFANOUTPREFIX)
+
+        rawfanout = self._index[basepack.FANOUTSTART:basepack.FANOUTSTART +
+                                                     self.params.fanoutsize]
         self._fanouttable = []
-        for i in range(0, FANOUTCOUNT):
-            loc = i * FANOUTENTRYSIZE
-            fanoutentry = struct.unpack(FANOUTENTRYSTRUCT,
-                    rawfanout[loc:loc + FANOUTENTRYSIZE])[0]
+        for i in xrange(0, self.params.fanoutcount):
+            loc = i * 4
+            fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
             self._fanouttable.append(fanoutentry)
 
     def getmissing(self, keys):
@@ -203,13 +189,15 @@ class historypack(object):
         raise KeyError("unable to find history for %s:%s" % (name, hex(node)))
 
     def _findsection(self, name):
+        params = self.params
         namehash = util.sha1(name).digest()
-        fanoutkey = struct.unpack(FANOUTSTRUCT, namehash[:FANOUTPREFIX])[0]
+        fanoutkey = struct.unpack(params.fanoutstruct,
+                                  namehash[:params.fanoutprefix])[0]
         fanout = self._fanouttable
 
-        start = fanout[fanoutkey] + INDEXSTART
-        for i in xrange(fanoutkey + 1, FANOUTCOUNT):
-            end = fanout[i] + INDEXSTART
+        start = fanout[fanoutkey] + params.indexstart
+        for i in xrange(fanoutkey + 1, params.fanoutcount):
+            end = fanout[i] + params.indexstart
             if end != start:
                 break
         else:
@@ -228,7 +216,7 @@ class historypack(object):
             while start < end - INDEXENTRYLENGTH:
                 iteration += 1
                 mid = start  + (end - start) / 2
-                mid = mid - ((mid - INDEXSTART) % INDEXENTRYLENGTH)
+                mid = mid - ((mid - params.indexstart) % INDEXENTRYLENGTH)
                 midnode = self._index[mid:mid + NODELENGTH]
                 if midnode == namehash:
                     entry = self._index[mid:mid + INDEXENTRYLENGTH]
@@ -308,7 +296,7 @@ class historypack(object):
                 yield (filename, entry[ANC_NODE], entry[ANC_P1NODE],
                         entry[ANC_P2NODE], entry[ANC_LINKNODE], copyfrom)
 
-class mutablehistorypack(object):
+class mutablehistorypack(basepack.mutablebasepack):
     """A class for constructing and serializing a histpack file and index.
 
     A history pack is a pair of files that contain the revision history for
@@ -366,47 +354,15 @@ class mutablehistorypack(object):
                      <pack file section offset: 8 byte unsigned int>
                      <pack file section size: 8 byte unsigned int>
     """
+    INDEXSUFFIX = INDEXSUFFIX
+    PACKSUFFIX = PACKSUFFIX
+    INDEXENTRYLENGTH = INDEXENTRYLENGTH
+
     def __init__(self, opener):
-        self.opener = opener
-        self.entries = []
-        self.packfp, self.historypackpath = opener.mkstemp(
-                suffix=PACKSUFFIX + '-tmp')
-        self.idxfp, self.historyidxpath = opener.mkstemp(
-                suffix=INDEXSUFFIX + '-tmp')
-        self.packfp = os.fdopen(self.packfp, 'w+')
-        self.idxfp = os.fdopen(self.idxfp, 'w+')
-        self.sha = util.sha1()
-        self._closed = False
-
-        # The opener provides no way of doing permission fixup on files created
-        # via mkstemp, so we must fix it ourselves. We can probably fix this
-        # upstream in vfs.mkstemp so we don't need to use the private method.
-        opener._fixfilemode(opener.join(self.historypackpath))
-        opener._fixfilemode(opener.join(self.historyidxpath))
-
-        # Write header
-        # TODO: make it extensible
-        version = struct.pack('!B', VERSION) # unsigned 1 byte int
-        self.writeraw(version)
-
+        super(mutablehistorypack, self).__init__(opener)
         self.pastfiles = {}
         self.currentfile = None
         self.currententries = []
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_type is None:
-            if not self._closed:
-                self.close()
-        else:
-            # Unclean exit
-            try:
-                self.opener.unlink(self.historypackpath)
-                self.opener.unlink(self.historyidxpath)
-            except Exception:
-                pass
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
         if filename != self.currentfile:
@@ -443,62 +399,22 @@ class mutablehistorypack(object):
         self.writeraw(rawdata)
 
         self.pastfiles[filename] = (sectionstart, sectionlen)
-
-    def writeraw(self, data):
-        self.packfp.write(data)
-        self.sha.update(data)
+        node = util.sha1(filename).digest()
+        self.entries[node] = node
 
     def close(self, ledger=None):
         if self.currentfile:
             self._writependingsection()
 
-        sha = self.sha.hexdigest()
-        self.packfp.close()
-        self.writeindex()
+        return super(mutablehistorypack, self).close(ledger=ledger)
 
-        if len(self.pastfiles) == 0:
-            # Empty pack
-            self.opener.unlink(self.historypackpath)
-            self.opener.unlink(self.historyidxpath)
-            self._closed = True
-            return None
-
-        self.opener.rename(self.historypackpath, sha + PACKSUFFIX)
-        self.opener.rename(self.historyidxpath, sha + INDEXSUFFIX)
-
-        self._closed = True
-        result = self.opener.join(sha)
-        if ledger:
-            ledger.addcreated(result)
-        return result
-
-    def writeindex(self):
-        files = ((util.sha1(node).digest(), offset, size)
-                for node, (offset, size) in self.pastfiles.iteritems())
+    def createindex(self, nodelocations):
+        files = ((util.sha1(filename).digest(), offset, size)
+                for filename, (offset, size) in self.pastfiles.iteritems())
         files = sorted(files)
+
         rawindex = ""
-
-        fanouttable = [-1] * FANOUTCOUNT
-
-        count = 0
         for namehash, offset, size in files:
-            location = count * INDEXENTRYLENGTH
-            count += 1
-
-            fanoutkey = struct.unpack(FANOUTSTRUCT, namehash[:FANOUTPREFIX])[0]
-            if fanouttable[fanoutkey] == -1:
-                fanouttable[fanoutkey] = location
-
             rawindex += struct.pack(INDEXFORMAT, namehash, offset, size)
 
-        rawfanouttable = ''
-        last = 0
-        for offset in fanouttable:
-            offset = offset if offset != -1 else last
-            last = offset
-            rawfanouttable += struct.pack(FANOUTENTRYSTRUCT, offset)
-
-        self.idxfp.write(struct.pack('!B', VERSION))
-        self.idxfp.write(rawfanouttable)
-        self.idxfp.write(rawindex)
-        self.idxfp.close()
+        return rawindex

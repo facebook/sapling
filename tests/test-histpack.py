@@ -14,6 +14,12 @@ from remotefilelog.historypack import historypackstore
 from mercurial import scmutil, util
 from mercurial.node import hex, bin, nullid
 
+from remotefilelog.basepack import (
+    SMALLFANOUTCUTOFF,
+    SMALLFANOUTPREFIX,
+    LARGEFANOUTPREFIX,
+)
+
 class histpacktests(unittest.TestCase):
     def setUp(self):
         self.tempdirs = []
@@ -214,6 +220,28 @@ class histpacktests(unittest.TestCase):
         except RuntimeError:
             pass
 
+    def testLargePack(self):
+        """Test creating and reading from a large pack with over X entries.
+        This causes it to use a 2^16 fanout table instead."""
+        total = SMALLFANOUTCUTOFF + 1
+        revisions = []
+        for i in xrange(total):
+            filename = "foo-%s" % i
+            node = self.getFakeHash()
+            p1 = self.getFakeHash()
+            p2 = self.getFakeHash()
+            linknode = self.getFakeHash()
+            revisions.append((filename, node, p1, p2, linknode, None))
+
+        pack = self.createPack(revisions)
+        self.assertEquals(pack.params.fanoutprefix, LARGEFANOUTPREFIX)
+
+        for filename, node, p1, p2, linknode, copyfrom in revisions:
+            actual = pack.getancestors(filename, node)[node]
+            self.assertEquals(p1, actual[0])
+            self.assertEquals(p2, actual[1])
+            self.assertEquals(linknode, actual[2])
+            self.assertEquals(copyfrom, actual[3])
 # TODO:
 # histpack store:
 # - getmissing
