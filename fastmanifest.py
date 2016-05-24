@@ -87,10 +87,9 @@ def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache"""
     # need to call set(..) because we want to actually materialize the revset
     # instead of returning a smartset.
+    query = "(not public() & not hidden()) + bookmark()"
     return subset & set(
-        scmutil.revrange(repo,
-                         ["(not public() & not hidden()) + bookmark()"]))
-
+        scmutil.revrange(repo,["%s + parents(%s)" %(query, query)]))
 
 class hybridmanifest(object):
     """
