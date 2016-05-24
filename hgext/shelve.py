@@ -226,28 +226,10 @@ def cleanupoldbackups(repo):
 def _aborttransaction(repo):
     '''Abort current transaction for shelve/unshelve, but keep dirstate
     '''
-    backupname = 'dirstate.shelve'
-    dirstatebackup = None
-    try:
-        # create backup of (un)shelved dirstate, because aborting transaction
-        # should restore dirstate to one at the beginning of the
-        # transaction, which doesn't include the result of (un)shelving
-        fp = repo.vfs.open(backupname, "w")
-        dirstatebackup = backupname
-        # clearing _dirty/_dirtypl of dirstate by _writedirstate below
-        # is unintentional. but it doesn't cause problem in this case,
-        # because no code path refers them until transaction is aborted.
-        repo.dirstate._writedirstate(fp) # write in-memory changes forcibly
-
-        tr = repo.currenttransaction()
-        tr.abort()
-
-        # restore to backuped dirstate
-        repo.vfs.rename(dirstatebackup, 'dirstate')
-        dirstatebackup = None
-    finally:
-        if dirstatebackup:
-            repo.vfs.unlink(dirstatebackup)
+    tr = repo.currenttransaction()
+    repo.dirstate.savebackup(tr, suffix='.shelve')
+    tr.abort()
+    repo.dirstate.restorebackup(None, suffix='.shelve')
 
 def createcmd(ui, repo, pats, opts):
     """subcommand that creates a new shelve"""
