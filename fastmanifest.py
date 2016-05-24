@@ -527,9 +527,7 @@ class systemawarecachelimit(object):
             return min(maxcachesizegb * GB, highgrowthslope * freespace)
 
 
-def _cachemanifestpruneall(ui, repo, background):
-    if background:
-        daemonize(ui, repo)
+def _cachemanifestpruneall(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
     cache.pruneall()
 
@@ -811,7 +809,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         raise error.Abort("can only use --pruneall or --list not both")
 
     if pruneall:
-        _cachemanifestpruneall(ui, repo, background)
+        _cachemanifestpruneall(ui, repo)
         return
 
     if displaylist:
