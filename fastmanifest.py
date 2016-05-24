@@ -85,7 +85,11 @@ class manifestaccesslogger(object):
 
 def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache"""
-    return scmutil.revrange(repo, ["not public() + bookmark()"])
+    # need to call set(..) because we want to actually materialize the revset
+    # instead of returning a smartset.
+    return subset & set(
+        scmutil.revrange(repo,
+                         ["(not public() & not hidden()) + bookmark()"]))
 
 
 class hybridmanifest(object):

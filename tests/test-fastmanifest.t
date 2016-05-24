@@ -279,7 +279,7 @@ Test the --pruneall command to prune all the cached manifests
   +e
 
   $ hg debugcachemanifest --all --debug
-  caching rev: <addset <baseset+ [0, 1, 2, 3, 4]>, <baseset+ [4]>>, background(False), pruneall(False), list(False)
+  caching rev: <baseset+ [0, 1, 2, 3, 4]>, background(False), pruneall(False), list(False)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
