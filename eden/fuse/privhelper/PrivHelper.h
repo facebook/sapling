@@ -73,6 +73,15 @@ void dropPrivileges();
  * itself will just pick the right values.
  */
 folly::File privilegedFuseMount(folly::StringPiece mountPath);
+
+/*
+ * @param clientPath Absolute path (that should be under
+ *     .eden/clients/<client-name>/bind-mounts/) where the "real" storage is.
+ * @param mountPath Absolute path where the bind mount should be applied.
+ */
+void privilegedBindMount(
+    folly::StringPiece clientPath,
+    folly::StringPiece mountPath);
 }
 }
 } // facebook::eden::fusell

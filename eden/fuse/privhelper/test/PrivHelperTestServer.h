@@ -24,12 +24,7 @@ namespace fusell {
  */
 class PrivHelperTestServer : public PrivHelperServer {
  public:
-  explicit PrivHelperTestServer(folly::StringPiece tmpDir);
-
-  /*
-   * Get the path to the test file representing the given mount point.
-   */
-  std::string getMountPath(folly::StringPiece mountPath) const;
+  PrivHelperTestServer();
 
   /*
    * Check if the given mount point is mounted.
@@ -39,11 +34,24 @@ class PrivHelperTestServer : public PrivHelperServer {
    */
   bool isMounted(folly::StringPiece mountPath) const;
 
+  /**
+   * Check if the given path is bind mounted.
+   */
+  bool isBindMounted(folly::StringPiece mountPath) const;
+
  private:
   folly::File fuseMount(const char* mountPath) override;
   void fuseUnmount(const char* mountPath) override;
+  std::string getPathToMountMarker(folly::StringPiece mountPath) const;
 
-  std::string tmpDir_;
+  void bindMount(const char* clientPath, const char* mountPath) override;
+  void bindUnmount(const char* mountPath) override;
+  std::string getPathToBindMountMarker(folly::StringPiece mountPath) const;
+
+  /** @return true if the marker file exists with the specified contents. */
+  bool checkIfMarkerFileHasContents(
+      const std::string pathToMarkerFile,
+      const std::string contents) const;
 };
 }
 }

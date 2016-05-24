@@ -57,7 +57,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the
   // appropriate bind mounts for the client.
-  server_->mount(std::move(edenMount));
+  server_->mount(std::move(edenMount), std::move(config));
 }
 
 void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {

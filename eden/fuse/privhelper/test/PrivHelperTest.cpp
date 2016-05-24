@@ -11,8 +11,10 @@
 #include "eden/fuse/privhelper/PrivHelper.h"
 #include "eden/fuse/privhelper/PrivHelperConn.h"
 
+#include <boost/filesystem.hpp>
 #include <folly/Exception.h>
 #include <folly/File.h>
+#include <folly/FileUtil.h>
 #include <folly/Range.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/io/IOBuf.h>
@@ -206,8 +208,8 @@ TEST(PrivHelper, SerializeError) {
 
   // Try parsing it as a mount response
   try {
-    PrivHelperConn::parseMountResponse(&msg);
-    FAIL() << "expected parseMountResponse() to throw";
+    PrivHelperConn::parseEmptyResponse(&msg);
+    FAIL() << "expected parseEmptyResponse() to throw";
   } catch (const std::system_error& ex) {
     EXPECT_EQ(std::system_category(), ex.code().category());
     EXPECT_EQ(ENOENT, ex.code().value());
@@ -218,7 +220,23 @@ TEST(PrivHelper, SerializeError) {
 
 TEST(PrivHelper, ServerShutdownTest) {
   TemporaryDirectory tmpDir;
-  PrivHelperTestServer server(tmpDir.path().string());
+  PrivHelperTestServer server;
+
+  auto fooDir = tmpDir.path() / "foo";
+  create_directory(fooDir);
+  auto foo = fooDir.string();
+
+  // Note we do not create this directory explicitly because we want to verify
+  // that privilegedBindMount takes care of this for us.
+  auto mountedBuckOut = tmpDir.path() / "foo" / "buck-out";
+
+  auto barDir = tmpDir.path() / "bar";
+  create_directory(barDir);
+  auto bar = barDir.string();
+
+  auto otherDir = (tmpDir.path() / "other");
+  create_directory(barDir);
+  auto other = otherDir.string();
 
   {
     startPrivHelper(&server, getuid(), getgid());
@@ -227,17 +245,27 @@ TEST(PrivHelper, ServerShutdownTest) {
     };
 
     // Create a few mount points
-    auto foo = privilegedFuseMount("foo");
-    auto bar = privilegedFuseMount("bar");
-    EXPECT_TRUE(server.isMounted("foo"));
-    EXPECT_TRUE(server.isMounted("bar"));
-    EXPECT_FALSE(server.isMounted("other"));
+    privilegedFuseMount(foo);
+    privilegedFuseMount(bar);
+    EXPECT_TRUE(server.isMounted(foo));
+    EXPECT_TRUE(server.isMounted(bar));
+    EXPECT_FALSE(server.isMounted(other));
+
+    // Create a bind mount.
+    EXPECT_FALSE(boost::filesystem::exists(mountedBuckOut));
+    TemporaryDirectory realBuckOut;
+    privilegedBindMount(realBuckOut.path().c_str(), mountedBuckOut.c_str());
+    EXPECT_TRUE(server.isBindMounted(mountedBuckOut.c_str()));
+    EXPECT_TRUE(boost::filesystem::exists(mountedBuckOut))
+        << "privilegedBindMount() should create the bind mount directory for "
+           "the caller.";
 
     // The privhelper will exit at the end of this scope
   }
 
   // Make sure things get umounted when the privhelper quits
-  EXPECT_FALSE(server.isMounted("foo"));
-  EXPECT_FALSE(server.isMounted("bar"));
-  EXPECT_FALSE(server.isMounted("other"));
+  EXPECT_FALSE(server.isMounted(foo));
+  EXPECT_FALSE(server.isBindMounted(mountedBuckOut.string()));
+  EXPECT_FALSE(server.isMounted(bar));
+  EXPECT_FALSE(server.isMounted(other));
 }

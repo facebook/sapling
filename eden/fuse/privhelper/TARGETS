@@ -6,4 +6,7 @@ cpp_library(
         "@/folly/io:iobuf",
         "@/folly:folly",
     ],
+    external_deps = [
+        ("boost", None, "boost_filesystem"),
+    ],
 )

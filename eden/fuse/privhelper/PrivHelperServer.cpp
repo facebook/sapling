@@ -9,6 +9,7 @@
  */
 #include "PrivHelperServer.h"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/File.h>
@@ -19,6 +20,7 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/vfs.h>
 #include <unistd.h>
 #include <set>
 
@@ -87,6 +89,14 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   return fuseDev;
 }
 
+void PrivHelperServer::bindMount(
+    const char* clientPath,
+    const char* mountPath) {
+  int rc = mount(
+      clientPath, mountPath, /* type */ nullptr, MS_BIND, /* data */ nullptr);
+  checkUnixError(rc, "failed to mount");
+}
+
 void PrivHelperServer::fuseUnmount(const char* mountPath) {
   auto rc = umount2(mountPath, UMOUNT_NOFOLLOW);
   if (rc != 0) {
@@ -109,7 +119,7 @@ void PrivHelperServer::processMountMsg(PrivHelperConn::Message* msg) {
   try {
     fuseDev = fuseMount(mountPath.c_str());
     mountPoints_.insert(mountPath);
-    conn_.serializeMountResponse(msg);
+    conn_.serializeEmptyResponse(msg);
   } catch (const std::exception& ex) {
     // Note that we re-use the request message buffer for the response data
     conn_.serializeErrorResponse(msg, ex);
@@ -121,13 +131,50 @@ void PrivHelperServer::processMountMsg(PrivHelperConn::Message* msg) {
   conn_.sendMsg(msg, fuseDev.fd());
 }
 
+void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
+  string clientPath;
+  string mountPath;
+  conn_.parseBindMountRequest(msg, clientPath, mountPath);
+
+  // Figure out which FUSE mount the mountPath belongs to.
+  // (Alternatively, we could just make this part of the Message.)
+  string key;
+  for (const auto& mountPoint : mountPoints_) {
+    if (boost::starts_with(mountPath, mountPoint + "/")) {
+      key = mountPoint;
+      break;
+    }
+  }
+  if (key.empty()) {
+    throw std::domain_error(
+        folly::to<string>("No FUSE mount found for ", mountPath));
+  }
+
+  try {
+    bindMount(clientPath.c_str(), mountPath.c_str());
+    bindMountPoints_.insert({key, mountPath});
+    conn_.serializeEmptyResponse(msg);
+  } catch (const std::exception& ex) {
+    // Note that we re-use the request message buffer for the response data
+    conn_.serializeErrorResponse(msg, ex);
+    conn_.sendMsg(msg);
+    return;
+  }
+
+  // Note that we re-use the request message buffer for the response data
+  conn_.sendMsg(msg);
+}
+
 void PrivHelperServer::messageLoop() {
   PrivHelperConn::Message msg;
 
   while (1) {
     conn_.recvMsg(&msg, nullptr);
-    if (msg.msgType == PrivHelperConn::REQ_MOUNT) {
+    auto msgType = msg.msgType;
+    if (msgType == PrivHelperConn::REQ_MOUNT_FUSE) {
       processMountMsg(&msg);
+    } else if (msgType == PrivHelperConn::REQ_MOUNT_BIND) {
+      processBindMountMsg(&msg);
     } else {
       // This shouldn't ever happen unless we have a bug.
       // Crash if it does occur.  (We could send back an error message and
@@ -139,10 +186,45 @@ void PrivHelperServer::messageLoop() {
 }
 
 void PrivHelperServer::cleanupMountPoints() {
-  for (const auto& mp : mountPoints_) {
-    fuseUnmount(mp.c_str());
+  int numBindMountsRemoved = 0;
+  for (const auto& mountPoint : mountPoints_) {
+    // Clean up the bind mounts for a FUSE mount before the FUSE mount itself.
+    auto range = bindMountPoints_.equal_range(mountPoint);
+    for (auto it = range.first; it != range.second; ++it) {
+      auto bindMount = it->second;
+      auto path = bindMount.c_str();
+      bindUnmount(bindMount.c_str());
+      numBindMountsRemoved++;
+    }
+
+    // This appears to fail sometimes with "Device or resource busy" if a
+    // terminal is still open with the mountPoint as the working directory.
+    fuseUnmount(mountPoint.c_str());
   }
+
+  CHECK_EQ(bindMountPoints_.size(), numBindMountsRemoved)
+      << "All bind mounts should have been removed.";
+  bindMountPoints_.clear();
   mountPoints_.clear();
+}
+
+void PrivHelperServer::bindUnmount(const char* mountPath) {
+  fuseUnmount(mountPath);
+
+  // Empirically, the unmount may not be complete when umount2() returns.
+  // To work around this, we repeatedly invoke statfs on the bind mount
+  // until it fails, demonstrating that it has finished unmounting.
+  struct statfs st;
+  int rc;
+  while (true) {
+    // This should have a non-zero exit code once the path is unmounted.
+    rc = statfs(mountPath, &st);
+    if (rc == 0) {
+      sched_yield();
+    } else {
+      break;
+    }
+  }
 }
 
 void PrivHelperServer::run() {

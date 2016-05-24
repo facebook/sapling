@@ -39,8 +39,9 @@ class PrivHelperConn {
   enum MsgType : uint32_t {
     MSG_TYPE_NONE = 0,
     RESP_ERROR = 1,
-    REQ_MOUNT = 2,
-    RESP_MOUNT = 3,
+    RESP_EMPTY = 2,
+    REQ_MOUNT_FUSE = 3,
+    REQ_MOUNT_BIND = 4,
   };
 
   struct Message {
@@ -123,10 +124,22 @@ class PrivHelperConn {
       folly::StringPiece mountPoint);
   static void parseMountRequest(Message* msg, std::string& mountPoint);
 
-  static void serializeMountResponse(Message* msg);
-  // Parse a mount response.
-  // Will throw an exception if this is actually an error response.
-  static void parseMountResponse(const Message* msg);
+  static void serializeBindMountRequest(
+      Message* msg,
+      folly::StringPiece clientPath,
+      folly::StringPiece mountPath);
+  static void parseBindMountRequest(
+      Message* msg,
+      std::string& clientPath,
+      std::string& mountPath);
+
+  static void serializeEmptyResponse(Message* msg);
+
+  /**
+   * Parse a response that is expected to be empty.
+   * Will throw an exception if this is actually an error response.
+   */
+  static void parseEmptyResponse(const Message* msg);
 
   static void serializeErrorResponse(Message* msg, const std::exception& ex);
   static void serializeErrorResponse(

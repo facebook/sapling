@@ -157,9 +157,19 @@ folly::File privilegedFuseMount(folly::StringPiece mountPath) {
 
   folly::File file;
   gPrivHelper->sendAndRecv(&msg, &file);
-  PrivHelperConn::parseMountResponse(&msg);
+  PrivHelperConn::parseEmptyResponse(&msg);
   CHECK(file) << "no file descriptor received in privhelper mount response";
   return file;
+}
+
+void privilegedBindMount(
+    folly::StringPiece clientPath,
+    folly::StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeBindMountRequest(&msg, clientPath, mountPath);
+
+  gPrivHelper->sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
 }
 }
 }

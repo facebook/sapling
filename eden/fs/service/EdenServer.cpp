@@ -9,18 +9,21 @@
  */
 #include "EdenServer.h"
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <folly/SocketAddress.h>
 #include <folly/String.h>
 #include <gflags/gflags.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
-#include <boost/filesystem/path.hpp>
 
 #include "EdenServiceHandler.h"
+#include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fuse/MountPoint.h"
+#include "eden/fuse/privhelper/PrivHelper.h"
 
 DEFINE_bool(debug, false, "run fuse in debug mode");
 
@@ -72,7 +75,9 @@ void EdenServer::run() {
   runThriftServer();
 }
 
-void EdenServer::mount(std::shared_ptr<EdenMount> edenMount) {
+void EdenServer::mount(
+    std::shared_ptr<EdenMount> edenMount,
+    std::unique_ptr<ClientConfig> config) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
@@ -97,6 +102,26 @@ void EdenServer::mount(std::shared_ptr<EdenMount> edenMount) {
     // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=62258
     this->mountFinished(edenMount.get());
     throw;
+  }
+
+  // Perform all of the bind mounts associated with the client.
+  for (auto bindMount : config->getBindMounts()) {
+    auto pathInMountDir = bindMount.pathInMountDir;
+    try {
+      // If pathInMountDir does not exist, then it must be created before the
+      // bind mount is performed.
+      boost::system::error_code errorCode;
+      boost::filesystem::path mountDir = pathInMountDir.c_str();
+      boost::filesystem::create_directories(mountDir, errorCode);
+
+      fusell::privilegedBindMount(
+          bindMount.pathInClientDir.c_str(), pathInMountDir.c_str());
+    } catch (...) {
+      // Consider recording all failed bind mounts in a way that can be
+      // communicated back to the caller in a structured way.
+      LOG(ERROR) << "Failed to perform bind mount for "
+                 << pathInMountDir.stringPiece() << ".";
+    }
   }
 }
 

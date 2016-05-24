@@ -13,6 +13,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include "PrivHelperConn.h"
 
 namespace folly {
@@ -46,10 +47,14 @@ class PrivHelperServer {
   void messageLoop();
   void cleanupMountPoints();
   void processMountMsg(PrivHelperConn::Message* msg);
+  void processBindMountMsg(PrivHelperConn::Message* msg);
 
   // These methods are virtual so we can override them during unit tests
   virtual folly::File fuseMount(const char* mountPath);
   virtual void fuseUnmount(const char* mountPath);
+  // Both clientPath and mountPath must be existing directories.
+  virtual void bindMount(const char* clientPath, const char* mountPath);
+  virtual void bindUnmount(const char* mountPath);
 
   PrivHelperConn conn_;
   uid_t uid_{std::numeric_limits<uid_t>::max()};
@@ -58,6 +63,7 @@ class PrivHelperServer {
   // The privhelper server only has a single thread,
   // so we don't need to lock the following state
   std::set<std::string> mountPoints_;
+  std::unordered_multimap<std::string, std::string> bindMountPoints_;
 };
 }
 }

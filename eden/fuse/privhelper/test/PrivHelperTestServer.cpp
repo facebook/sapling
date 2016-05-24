@@ -9,45 +9,88 @@
  */
 #include "PrivHelperTestServer.h"
 
+#include <boost/filesystem.hpp>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <system_error>
 
 using folly::File;
 using folly::StringPiece;
+using std::string;
 
 namespace facebook {
 namespace eden {
 namespace fusell {
 
-PrivHelperTestServer::PrivHelperTestServer(StringPiece tmpDir)
-    : tmpDir_(tmpDir.str()) {}
+PrivHelperTestServer::PrivHelperTestServer() {}
+
+// FUSE mounts.
 
 File PrivHelperTestServer::fuseMount(const char* mountPath) {
-  // Just open a new file inside our temporary directory,
-  // and write "mounted" into it.
-  File f(getMountPath(mountPath).c_str(), O_RDWR | O_CREAT | O_TRUNC);
+  // Create a single file named "mounted" and write "mounted" into it.
+  auto pathToNewFile = getPathToMountMarker(mountPath);
+  File f(pathToNewFile, O_RDWR | O_CREAT | O_TRUNC);
   StringPiece data{"mounted"};
   folly::writeFull(f.fd(), data.data(), data.size());
   return f;
 }
 
 void PrivHelperTestServer::fuseUnmount(const char* mountPath) {
-  // Replace the file contents with "unmounted"
-  File f(getMountPath(mountPath).c_str(), O_RDWR | O_CREAT | O_TRUNC);
-  StringPiece data{"unmounted"};
-  folly::writeFull(f.fd(), data.data(), data.size());
-}
-
-std::string PrivHelperTestServer::getMountPath(StringPiece mountPath) const {
-  return tmpDir_ + "/" + mountPath.str();
+  // Replace the file contents with "unmounted".
+  folly::writeFile(
+      StringPiece{"unmounted"}, getPathToMountMarker(mountPath).c_str());
 }
 
 bool PrivHelperTestServer::isMounted(folly::StringPiece mountPath) const {
+  return checkIfMarkerFileHasContents(
+      getPathToMountMarker(mountPath), "mounted");
+}
+
+string PrivHelperTestServer::getPathToMountMarker(StringPiece mountPath) const {
+  return mountPath.str() + "/mounted";
+}
+
+// Bind mounts.
+
+void PrivHelperTestServer::bindMount(
+    const char* clientPath,
+    const char* mountPath) {
+  // Create a single file named "bind-mounted" and write "bind-mounted" into it.
+
+  // Normally, the caller to the PrivHelper (in practice, EdenServer) is
+  // responsible for creating the directory before requesting the bind mount.
+  boost::filesystem::create_directories(mountPath);
+
+  auto fileInMountPath = getPathToBindMountMarker(mountPath);
+  folly::writeFile(StringPiece{"bind-mounted"}, fileInMountPath.c_str());
+}
+
+void PrivHelperTestServer::bindUnmount(const char* mountPath) {
+  // Replace the file contents with "bind-unmounted".
+  folly::writeFile(
+      StringPiece{"bind-unmounted"},
+      getPathToBindMountMarker(mountPath).c_str());
+}
+
+bool PrivHelperTestServer::isBindMounted(folly::StringPiece mountPath) const {
+  return checkIfMarkerFileHasContents(
+      getPathToBindMountMarker(mountPath), "bind-mounted");
+}
+
+string PrivHelperTestServer::getPathToBindMountMarker(
+    StringPiece mountPath) const {
+  return mountPath.str() + "/bind-mounted";
+}
+
+// General helpers.
+
+bool PrivHelperTestServer::checkIfMarkerFileHasContents(
+    const string pathToMarkerFile,
+    const string contents) const {
   try {
-    std::string data;
-    folly::readFile(getMountPath(mountPath).c_str(), data, 256);
-    return data == "mounted";
+    string data;
+    folly::readFile(pathToMarkerFile.c_str(), data, 256);
+    return data == contents;
   } catch (const std::system_error& ex) {
     if (ex.code().category() == std::system_category() &&
         ex.code().value() == ENOENT) {

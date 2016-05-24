@@ -264,7 +264,7 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
 void PrivHelperConn::serializeMountRequest(
     Message* msg,
     StringPiece mountPoint) {
-  msg->msgType = REQ_MOUNT;
+  msg->msgType = REQ_MOUNT_FUSE;
   IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
   buf.clear(); // Mark all the buffer space as unused
   Appender a{&buf, 0};
@@ -276,7 +276,7 @@ void PrivHelperConn::serializeMountRequest(
 }
 
 void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
-  CHECK_EQ(msg->msgType, REQ_MOUNT);
+  CHECK_EQ(msg->msgType, REQ_MOUNT_FUSE);
   CHECK_LE(msg->dataSize, sizeof(msg->data));
 
   IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
@@ -286,18 +286,52 @@ void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
   mountPoint = c.readFixedString(size);
 }
 
-void PrivHelperConn::serializeMountResponse(Message* msg) {
-  msg->msgType = RESP_MOUNT;
+void PrivHelperConn::serializeEmptyResponse(Message* msg) {
+  msg->msgType = RESP_EMPTY;
   msg->dataSize = 0;
 }
 
-void PrivHelperConn::parseMountResponse(const Message* msg) {
+void PrivHelperConn::parseEmptyResponse(const Message* msg) {
   if (msg->msgType == RESP_ERROR) {
     rethrowErrorResponse(msg);
-  } else if (msg->msgType != RESP_MOUNT) {
+  } else if (msg->msgType != RESP_EMPTY) {
     throw std::runtime_error(
         folly::to<string>("unexpected response type: ", msg->msgType));
   }
+}
+
+void PrivHelperConn::serializeBindMountRequest(
+    Message* msg,
+    folly::StringPiece clientPath,
+    folly::StringPiece mountPath) {
+  msg->msgType = REQ_MOUNT_BIND;
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
+  buf.clear(); // Mark all the buffer space as unused
+  Appender a{&buf, 0};
+
+  a.writeBE<uint32_t>(clientPath.size());
+  a.push(ByteRange(clientPath));
+
+  a.writeBE<uint32_t>(mountPath.size());
+  a.push(ByteRange(mountPath));
+
+  msg->dataSize = buf.length();
+}
+
+void PrivHelperConn::parseBindMountRequest(
+    Message* msg,
+    std::string& clientPath,
+    std::string& mountPath) {
+  CHECK_EQ(msg->msgType, REQ_MOUNT_BIND);
+  CHECK_LE(msg->dataSize, sizeof(msg->data));
+
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
+  Cursor c{&buf};
+
+  auto clientPathSize = c.readBE<uint32_t>();
+  clientPath = c.readFixedString(clientPathSize);
+  auto mountPathSize = c.readBE<uint32_t>();
+  mountPath = c.readFixedString(mountPathSize);
 }
 
 void PrivHelperConn::serializeErrorResponse(

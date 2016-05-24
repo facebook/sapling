@@ -26,6 +26,7 @@ class ThriftServer;
 namespace facebook {
 namespace eden {
 
+class ClientConfig;
 class EdenMount;
 class EdenServiceHandler;
 class LocalStore;
@@ -47,7 +48,10 @@ class EdenServer {
 
   void run();
 
-  void mount(std::shared_ptr<EdenMount> edenMount);
+  void mount(
+      std::shared_ptr<EdenMount> edenMount,
+      std::unique_ptr<ClientConfig> config);
+
   void unmount(folly::StringPiece mountPath);
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
