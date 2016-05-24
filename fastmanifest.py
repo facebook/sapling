@@ -477,7 +477,7 @@ class systemawarecachelimit(object):
         try:
             self.lowgrowththresholdgb = float(self.lowgrowththresholdgb)
             self.lowgrowslope = float(self.lowgrowslope)
-            self.maxcachesizegb = float(self.maxcachesize)
+            self.maxcachesizegb = float(self.maxcachesizegb)
             self.highgrowthslope = float(self.highgrowthslope)
         except ValueError:
             self.lowgrowththresholdgb = DEFAULT_LOWGROWTH_TRESHOLDGB
