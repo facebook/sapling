@@ -48,6 +48,7 @@ import array
 import os
 import random
 import sys
+import time
 
 from mercurial import bookmarks, cmdutil, dirstate, error, extensions
 from mercurial import localrepo, manifest, mdiff, revlog, revset
@@ -308,6 +309,14 @@ class fastmanifestcache(object):
 
     def filecachepath(self, hexnode):
         return os.path.join(self.cachepath, self.keyprefix() + hexnode)
+
+    def refresh(self, hexnode, delay=0):
+        filetime = time.time() - delay
+        path = self.filecachepath(hexnode)
+        try:
+            os.utime(path, (filetime, filetime))
+        except EnvironmentError:
+            pass
 
     def get(self, hexnode):
         # In memory cache lookup
