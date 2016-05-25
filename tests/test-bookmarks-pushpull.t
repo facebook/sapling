@@ -690,7 +690,7 @@ pushing a new bookmark on a new head does not require -f if -B is specified
   $ echo c5 > f2
   $ hg ci -Am5
   created new head
-  $ hg push -B W
+  $ hg push -B .
   pushing to http://localhost:$HGPORT/
   searching for changes
   remote: adding changesets

@@ -240,15 +240,16 @@ def _oldheadssummary(repo, remoteheads, outgoing, inc=False):
 
 def _nowarnheads(pushop):
     # Compute newly pushed bookmarks. We don't warn about bookmarked heads.
-
-    # internal config: bookmarks.pushing
-    newbookmarks = pushop.ui.configlist('bookmarks', 'pushing')
-
     repo = pushop.repo.unfiltered()
     remote = pushop.remote
     localbookmarks = repo._bookmarks
     remotebookmarks = remote.listkeys('bookmarks')
     bookmarkedheads = set()
+
+    # internal config: bookmarks.pushing
+    newbookmarks = [localbookmarks.expandname(b)
+                    for b in pushop.ui.configlist('bookmarks', 'pushing')]
+
     for bm in localbookmarks:
         rnode = remotebookmarks.get(bm)
         if rnode and rnode in repo:

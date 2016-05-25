@@ -1156,3 +1156,21 @@ directory)
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      88     -1       3 34a4d536c0c0 000000000000 000000000000
 
+Test if amend preserves executable bit changes
+  $ chmod +x newdirname/commonfile.py
+  $ hg ci -m chmod
+  $ hg ci --amend -m "chmod amended"
+  $ hg ci --amend -m "chmod amended second time"
+  $ hg log -p --git -r .
+  changeset:   8:b1326f52dddf
+  branch:      newdirname
+  tag:         tip
+  parent:      5:7fd235f7cb2f
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     chmod amended second time
+  
+  diff --git a/newdirname/commonfile.py b/newdirname/commonfile.py
+  old mode 100644
+  new mode 100755
+  
