@@ -359,6 +359,21 @@ class fastmanifestcache(object):
         except EnvironmentError:
             return None
 
+    def totalsize(self, silent=True):
+        totalsize = 0
+        numentries = 0
+        for entry in self:
+            entrysize = self.entrysize(entry)
+            if entrysize == -1:
+                # Entry was deleted by another process
+                continue
+            totalsize += entrysize
+            numentries += 1
+            if not silent:
+                msg = "%s (size %s)\n" % (entry, util.bytecount(entrysize))
+                self.ui.status((msg))
+        return totalsize, numentries
+
     def prune(self, limit):
         # Get the list of entries and mtime first to avoid race condition
         entries = []
@@ -538,18 +553,9 @@ def _cachemanifestpruneall(ui, repo):
 
 def _cachemanifestlist(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
-    totalsize = 0
-    numvalidentries = 0
-    for entry in cache:
-        entrysize = cache.entrysize(entry)
-        if entrysize == -1:
-            # Entry was deleted by another process
-            continue
-        numvalidentries += 1
-        totalsize += entrysize
-        ui.status(("%s (size %s)\n" % (entry, util.bytecount(entrysize))))
-    ui.status(("cache size is: %s\n" % util.bytecount(totalsize)))
-    ui.status(("number of entries is: %s\n" % numvalidentries))
+    total, numentries = cache.totalsize(silent=False)
+    ui.status(("cache size is: %s\n" % util.bytecount(total)))
+    ui.status(("number of entries is: %s\n" % numentries))
 
 def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
     if background:
