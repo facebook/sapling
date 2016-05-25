@@ -582,6 +582,8 @@ class dirstate(object):
             del self._map[f]
             if f in self._nonnormalset:
                 self._nonnormalset.remove(f)
+            if f in self._copymap:
+                del self._copymap[f]
 
     def _discoverpath(self, path, normed, ignoremissing, exists, storemap):
         if exists is None:
