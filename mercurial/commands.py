@@ -2521,15 +2521,16 @@ def debugignore(ui, repo, *files, **opts):
                             break
             if ignored:
                 if ignored == nf:
-                    ui.write("%s is ignored\n" % f)
+                    ui.write(_("%s is ignored\n") % f)
                 else:
-                    ui.write("%s is ignored because of containing folder %s\n"
+                    ui.write(_("%s is ignored because of "
+                               "containing folder %s\n")
                              % (f, ignored))
                 ignorefile, lineno, line = ignoredata
-                ui.write("(ignore rule in %s, line %d: '%s')\n"
+                ui.write(_("(ignore rule in %s, line %d: '%s')\n")
                          % (ignorefile, lineno, line))
             else:
-                ui.write("%s is not ignored\n" % f)
+                ui.write(_("%s is not ignored\n") % f)
 
 @command('debugindex', debugrevlogopts +
     [('f', 'format', 0, _('revlog format'), _('FORMAT'))],
