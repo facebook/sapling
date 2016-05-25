@@ -411,19 +411,21 @@ class fastmanifestcache(object):
             sizetokeep += entry[2]
 
         for entry in entriesbyage[startindextodiscard:]:
-            try:
-                self.debug("removing cached manifest %s\n" % entry[0])
-                os.unlink(os.path.join(self.cachepath, entry[0]))
-            except EnvironmentError:
-                pass
+            self.pruneentrybyfname(entry[0])
+
+    def pruneentrybyfname(self, fname):
+        self.debug("removing cached manifest %s\n" % fname)
+        try:
+            os.unlink(os.path.join(self.cachepath, fname))
+        except EnvironmentError:
+            pass
+
+    def pruneentry(self, hexnode):
+        self.pruneentrybyfname(self.filecachepath(hexnode))
 
     def pruneall(self):
         for f in self:
-            self.debug("removing cached manifest %s\n" % f)
-            try:
-                os.unlink(os.path.join(self.cachepath, f))
-            except EnvironmentError:
-                pass
+            self.pruneentrybyfname(f)
 
 class manifestfactory(object):
     def __init__(self, ui):
