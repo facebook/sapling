@@ -9,9 +9,11 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import argparse
+import errno
 import glue
 import json
 import os
+import subprocess
 import sys
 
 from . import config as config_mod
@@ -68,31 +70,82 @@ def do_info(args):
     sys.stdout.write('\n')
 
 
+def _is_git_dir(path):
+    return (os.path.isdir(os.path.join(path, 'objects')) and
+            os.path.isdir(os.path.join(path, 'refs')) and
+            os.path.exists(os.path.join(path, 'HEAD')))
+
+
+def _get_git_dir(path):
+    path = os.path.realpath(path)
+    if path.endswith('.git') and _is_git_dir(path):
+        return path
+
+    git_subdir = os.path.join(path, '.git')
+    if _is_git_dir(git_subdir):
+        return git_subdir
+
+    return None
+
+
+def _get_hg_dir(path):
+    hg_dir = os.path.join(os.path.realpath(path), '.hg')
+    if not os.path.exists(os.path.join(hg_dir, 'hgrc')):
+        return None
+
+    # Check to see if this is a shared working directory from another
+    # repository
+    try:
+        with open(os.path.join(hg_dir, 'sharedpath'), 'r') as f:
+            hg_dir = f.readline().rstrip('\n')
+    except EnvironmentError as ex:
+        if ex.errno != errno.ENOENT:
+            raise
+        return None
+
+    if not os.path.isdir(os.path.join(hg_dir, 'store')):
+        return None
+
+    return hg_dir
+
+
+def _get_hg_commit(repo):
+    env = os.environ.copy()
+    env['HGPLAIN'] = '1'
+    cmd = ['hg', '--cwd', repo, 'log', '-T{node}\\n', '-r.']
+    out = subprocess.check_output(cmd, env=env)
+    return out.strip()
+
+
 def do_init(args):
     args.mount = normalize_path_arg(args.mount)
     args.repo = normalize_path_arg(args.repo)
 
     config = create_config(args)
     db = config.get_or_create_path_to_rocks_db()
-    # For now, we just assume Git.
-    git = args.repo
+
+    # Check to see if we can figure out the repository type
     snapshot_id = None
-    if git:
-        # Make sure git is an absolute path that ends in "/.git".
-        git = os.path.normpath(git)
-        if os.path.basename(git) != '.git':
-            git = os.path.join(git, '.git')
+    git_dir = _get_git_dir(args.repo)
+    if git_dir is not None:
+        snapshot_id = glue.do_git_import(git_dir, db)
+        config.create_client(args.name, args.mount, snapshot_id,
+                             repo_type='git',
+                             repo_source=git_dir,
+                             with_buck=args.with_buck)
+        return
 
-        snapshot_id = glue.do_git_import(git, db)
+    hg_dir = _get_hg_dir(args.repo)
+    if hg_dir is not None:
+        snapshot_id = _get_hg_commit(args.repo)
+        config.create_client(args.name, args.mount, snapshot_id,
+                             repo_type='hg',
+                             repo_source=hg_dir,
+                             with_buck=args.with_buck)
+        return
 
-    name = args.name
-    config.create_client(name, snapshot_id, args.mount, args.with_buck,
-                         original_git_source=git)
-
-    # Currently, we require the user to run `eden mount` as a separate command
-    # because we frequently need the user to run `eden init` as themselves, but
-    # run `eden mount` via sudo. This avoids unfortunate situations, such as the
-    # RocksDB being owned by root instead of the user.
+    raise Exception('{} does not look like a git or hg repository'.format(
+        args.repo))
 
 
 def do_list(args):

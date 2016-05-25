@@ -100,8 +100,9 @@ class Config:
             ['client-dir', client_dir],
         ])
 
-    def create_client(self, name, snapshot_id, mount_point, with_buck=False,
-                      original_git_source=None):
+    def create_client(self, name, mount_point, snapshot_id,
+                      repo_type, repo_source,
+                      with_buck=False):
         '''
         Creates a new client directory with the config.yaml and SNAPSHOT files.
         '''
@@ -118,6 +119,10 @@ class Config:
         os.makedirs(bind_mounts_dir)
 
         if with_buck:
+            # TODO: This eventually needs to be more configurable.
+            # Some of our repositories need multiple buck-out directories
+            # in various subdirectories, rather than a single buck-out
+            # directory at the root.
             bind_mount_name = 'buck-out'
             bind_mounts[bind_mount_name] = 'buck-out'
             os.makedirs(os.path.join(bind_mounts_dir, bind_mount_name))
@@ -125,7 +130,8 @@ class Config:
         config_data = {
             'bind-mounts': bind_mounts,
             'mount': mount_point,
-            'original_git_source': original_git_source,
+            'repo_type': repo_type,
+            'repo_source': repo_source,
         }
         with open(client_config, 'w') as f:
             json.dump(config_data, f, indent=2, sort_keys=True)
