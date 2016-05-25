@@ -140,7 +140,8 @@ string LocalStore::_get(const char* key, size_t size) const {
 string LocalStore::_get(Slice key) const {
   string value;
   auto status = db_.get()->Get(ReadOptions(), key, &value);
-  RocksException::check(status, "get ", key.ToString(), " failed");
+  RocksException::check(
+      status, "get ", key.ToString(/* hex */ true), " failed");
   return value;
 }
 }
