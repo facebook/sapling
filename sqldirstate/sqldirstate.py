@@ -328,7 +328,10 @@ def makedirstate(cls):
             return self._map.nonnormalentries()
 
         def invalidate(self):
-            self._sqlconn.rollback()
+            # Transaction will be rolled back on the next open of the file.
+            # The close is faster in the case where we replace  the whole
+            # db file as we don't need to rollback in such case.
+            self._sqlconn.close()
             for a in ("_branch", "_pl", "_ignore", "_nonnormalset"):
                 if a in self.__dict__:
                     delattr(self, a)
