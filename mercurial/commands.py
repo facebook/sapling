@@ -4410,7 +4410,7 @@ def grep(ui, repo, pattern, *pats, **opts):
             if not opts.get('files_with_matches'):
                 ui.write(sep, label='grep.sep')
                 if not opts.get('text') and binary():
-                    ui.write(" Binary file matches")
+                    ui.write(_(" Binary file matches"))
                 else:
                     for s, label in l:
                         ui.write(s, label=label)
