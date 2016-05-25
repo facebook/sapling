@@ -18,6 +18,7 @@ test-commandserver.t
 test-help.t
 # zeroconf
 test-paths.t
+test-bundle.t
 
 # tests changing hgrc after initinializing repos
 # and failing because of the not met requirements.
@@ -33,13 +34,11 @@ test-eol.t
 test-phases-exchange.t
 test-issue3084.t
 
-# Legit failures:
-# bundlerepos don't work yet.
-#  test-bundle.t
-#  test-shelve.t
-#  test-import.t
-# the wd parent is wrong
-#  test-obsolete.t
+# those tests are running hg commands in hooks
+# and we don't support pending
+test-shelve.t
+test-import.t
+
 # tries to open a sqlite db folr http repo
 #  test-static-http.t
 
