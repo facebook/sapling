@@ -302,7 +302,7 @@ def instance(ui, path, create):
     except error.RepoError as httpexception:
         try:
             r = statichttprepo.instance(ui, "static-" + path, create)
-            ui.note('(falling back to static-http)\n')
+            ui.note(_('(falling back to static-http)\n'))
             return r
         except error.RepoError:
             raise httpexception # use the original http RepoError instead
