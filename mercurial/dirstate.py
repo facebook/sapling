@@ -1230,7 +1230,7 @@ class dirstate(object):
             # end of this transaction
             tr.registertmp(filename, location='plain')
 
-        self._opener.write(prefix + filename + suffix,
+        self._opener.write(prefix + self._filename + suffix,
                            self._opener.tryread(filename))
 
     def restorebackup(self, tr, suffix='', prefix=''):
@@ -1239,9 +1239,10 @@ class dirstate(object):
         # changes of dirstate out after restoring from backup file
         self.invalidate()
         filename = self._actualfilename(tr)
-        self._opener.rename(prefix + filename + suffix, filename)
+        # using self._filename to avoid having "pending" in the backup filename
+        self._opener.rename(prefix + self._filename + suffix, filename)
 
     def clearbackup(self, tr, suffix='', prefix=''):
         '''Clear backup file with suffix'''
-        filename = self._actualfilename(tr)
-        self._opener.unlink(prefix + filename + suffix)
+        # using self._filename to avoid having "pending" in the backup filename
+        self._opener.unlink(prefix + self._filename + suffix)
