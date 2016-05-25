@@ -61,10 +61,12 @@ def wrapnewreporequirements(orig, repo):
         reqs.add('sqldirstate')
     return reqs
 
-cls = localrepo.localrepository
-cls._basesupported.add('sqldirstate')
+def featuresetup(ui, supported):
+    # don't die on seeing a repo with the sqldirstate requirement
+    supported |= set(['sqldirstate'])
 
 def uisetup(ui):
+    localrepo.localrepository.featuresetupfuncs.add(featuresetup)
     wrapfunction(localrepo, 'newreporequirements',
                  wrapnewreporequirements)
     wrapfunction(localrepo.localrepository, '_journalfiles',
