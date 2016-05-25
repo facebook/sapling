@@ -9,7 +9,7 @@ testedwith = 'internal'
 
 from sqldirstate import makedirstate, DBFILE, toflat, tosql
 
-from mercurial import error, cmdutil, localrepo, util
+from mercurial import error, extensions, cmdutil, localrepo, util
 from mercurial.extensions import wrapfunction
 
 
@@ -61,6 +61,14 @@ def wrapnewreporequirements(orig, repo):
         reqs.add('sqldirstate')
     return reqs
 
+def wrapshelveaborttransaction(orig, repo):
+    if repo.ui.configbool('format', 'sqldirstate', True):
+        tr = repo.currenttransaction()
+        repo.dirstate._writesqldirstate()
+        tr.abort()
+    else:
+        return orig(repo)
+
 def featuresetup(ui, supported):
     # don't die on seeing a repo with the sqldirstate requirement
     supported |= set(['sqldirstate'])
@@ -73,6 +81,11 @@ def uisetup(ui):
                  wrapjournalfiles)
     wrapfilecache(localrepo.localrepository, 'dirstate',
                   wrapdirstate)
+    try:
+        shelve = extensions.find('shelve')
+        wrapfunction(shelve, '_aborttransaction', wrapshelveaborttransaction)
+    except KeyError:
+        pass
 
 # debug commands
 cmdtable = {}
