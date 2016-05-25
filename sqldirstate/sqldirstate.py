@@ -42,9 +42,14 @@ def createotherschema(sqlconn):
                     value BLOB NOT NULL)
     ''')
     sqlconn.commit()
-    sqlconn.execute('''INSERT OR REPLACE INTO other (key, value) VALUES
-                 ("schema_version", 1)''')
-    sqlconn.commit()
+    cur = sqlconn.cursor()
+    cur.execute('''SELECT key, value FROM other
+                    WHERE key = "schema_version"''')
+    row = cur.fetchone()
+    if row is None:
+        sqlconn.execute('''INSERT OR REPLACE INTO other (key, value) VALUES
+                    ("schema_version", 1)''')
+        sqlconn.commit()
 
 def dropotherschema(sqlconn):
     cur = sqlconn.cursor()
