@@ -198,7 +198,7 @@ def sigcheck(ui, repo, rev):
         return
 
     # print summary
-    ui.write("%s is signed by:\n" % hgnode.short(rev))
+    ui.write(_("%s is signed by:\n") % hgnode.short(rev))
     for key in keys:
         ui.write(" %s\n" % keystr(ui, key))
 
