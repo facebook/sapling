@@ -363,7 +363,7 @@ class notifier(object):
             s = patch.diffstat(difflines)
             # s may be nil, don't include the header if it is
             if s:
-                self.ui.write('\ndiffstat:\n\n%s' % s)
+                self.ui.write(_('\ndiffstat:\n\n%s') % s)
 
         if maxdiff == 0:
             return
