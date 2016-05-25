@@ -585,7 +585,7 @@ class abstractsubrepo(object):
         return 1
 
     def revert(self, substate, *pats, **opts):
-        self.ui.warn('%s: reverting %s subrepos is unsupported\n' \
+        self.ui.warn(_('%s: reverting %s subrepos is unsupported\n') \
             % (substate[0], substate[2]))
         return []
 
