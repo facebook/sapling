@@ -72,7 +72,7 @@ def uisetup(ui):
     wrapfunction(localrepo.localrepository, '_journalfiles',
                  wrapjournalfiles)
     wrapfilecache(localrepo.localrepository, 'dirstate',
-                  wrapdirstate, DBFILE)
+                  wrapdirstate)
 
 # debug commands
 cmdtable = {}
