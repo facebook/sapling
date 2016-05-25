@@ -34,23 +34,31 @@ if is_facebook_internal():
 # 1. A JAR that defines Eden's Thrift API.
 # 2. A JAR that contains the general Java library for Thrift.
 #
-# For 1, when eden.thrift changes, run:
+# For 1, when eden.thrift changes:
 #
-#     buck build //eden/fs/service:thrift#java
+#     buck build \
+#         --config java.target_level=7 \
+#         --config java.source_level=7 \
+#        //eden/fs/service:thrift#java
 #
-# Copy the resulting JAR (`buck --show-output //eden/fs/service:thrift#java`) to
-# the project where you are using Eden in Java.
+# Copy the resulting JAR
+# (`buck targets --show-output //eden/fs/service:thrift#java`) to the project
+# where you are using Eden in Java. (Note that the Java 7 config options are
+# specified because Buck itself is currently limited to Java 7.)
 #
 # For 2, you should only have to build this once:
 #
-#    buck build //eden/fs/service:java-thrift-dependencies
+#     buck build \
+#         --config java.target_level=7 \
+#         --config java.source_level=7 \
+#        //eden/fs/service:java-thrift-dependencies
 #
 # Copy the resulting JAR
-# (`buck --show-output //eden/fs/service:java-thrift-dependencies`) to any
-# project where you are using Thrift in Java. In theory, if the Java bindings
-# for Thrift change, you will have to rebuild this, but it's unclear whether
-# that code sees much activity these days. To be safe, you could always update
-# this JAR when you update the Eden JAR.
+# (`buck targets --show-output //eden/fs/service:java-thrift-dependencies`) to
+# any project where you are using Thrift in Java. In theory, if the Java
+# bindings for Thrift change, you will have to rebuild this, but it's unclear
+# whether that code sees much activity these days. To be safe, you could always
+# update this JAR when you update the Eden JAR.
 
 # This java_binary() exists as a simple way to get //thrift/lib/java/src:thrift
 # and all of its transitive dependencies into one JAR file.
