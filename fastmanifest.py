@@ -556,11 +556,13 @@ def _cachemanifestlist(ui, repo):
     ui.status(("cache size is: %s\n" % util.bytecount(total)))
     ui.status(("number of entries is: %s\n" % numentries))
 
-def _cachemanifestfillandtrim(ui, repo, revs, limit, background):
+def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
     if background:
         if fork_worker(ui, repo):
             return
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+
+    revs = scmutil.revrange(repo, revset)
 
     if ui.configbool("fastmanifest", "randomorder", True):
         revs = list(revs)
@@ -813,14 +815,14 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     pruneall = opts["pruneall"]
     displaylist = opts['list']
     if opts["all"]:
-        revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+        revset = ["fastmanifesttocache()"]
     elif opts["rev"]:
-        revs = scmutil.revrange(repo, opts["rev"])
+        revset = opts["rev"]
     else:
-        revs = []
+        revset = []
 
-    ui.debug(("caching rev: %s, background(%s), pruneall(%s), list(%s)\n")
-             % (revs, background, pruneall, displaylist))
+    ui.debug(("caching revset: %s, background(%s), pruneall(%s), list(%s)\n")
+             % (revset, background, pruneall, displaylist))
 
     if displaylist and pruneall:
         raise error.Abort("can only use --pruneall or --list not both")
@@ -833,12 +835,12 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         _cachemanifestlist(ui, repo)
         return
 
-    if revs or limit:
-        _cachemanifestfillandtrim(ui, repo, revs, limit, background)
+    if revset or limit:
+        _cachemanifestfillandtrim(ui, repo, revset, limit, background)
 
 def _cacheonchangeconfig(repo):
     """return revs, bg, limit suitable for caching fastmanifest on change"""
-    revs = scmutil.revrange(repo, ["fastmanifesttocache()"])
+    revset = ["fastmanifesttocache()"]
     bg = repo.ui.configbool("fastmanifest",
                             "cacheonchangebackground",
                             True)
@@ -848,24 +850,24 @@ def _cacheonchangeconfig(repo):
     limit = None
     if systemlimit:
         limit = systemawarecachelimit(repo)
-    return revs, bg, limit
+    return revset, bg, limit
 
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     repo = self._repo
-    revs, bg, limit = _cacheonchangeconfig(repo)
-    _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
+    revset, bg, limit = _cacheonchangeconfig(repo)
+    _cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
     return orig(self, *args, **kwargs)
 
 def triggercacheondirstatechange(orig, self, *args, **kwargs):
     if util.safehasattr(self, "_fastmanifestrepo"):
         repo = self._fastmanifestrepo
-        revs, bg, limit = _cacheonchangeconfig(repo)
-        _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
+        revset, bg, limit = _cacheonchangeconfig(repo)
+        _cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
     return orig(self, *args, **kwargs)
 
 def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
-    revs, bg, limit = _cacheonchangeconfig(repo)
-    _cachemanifestfillandtrim(repo.ui, repo, revs, limit, bg)
+    revset, bg, limit = _cacheonchangeconfig(repo)
+    _cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
     return orig(repo, *args, **kwargs)
 
 def extsetup(ui):
