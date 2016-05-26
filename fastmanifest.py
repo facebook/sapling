@@ -10,11 +10,43 @@ manifest comparison. It also contains utilities to investigate manifest access
 patterns.
 
 
-Configuration options:
+Configuration options and default value:
 
 [fastmanifest]
-logfile = "" # Filename, is not empty will log access to any manifest
 
+# If true, disable all logging, used for running the mercurial test suite
+# without changing the output.
+silent = False
+
+# If true, materializes every manifest as a fastmanifest. Used to test that
+# fastmanifest passes the mercurial test suite. This happens in memory only and
+# the on-disk fileformat is still revlog of flat manifest.
+debugcachemanifest = False
+
+# Filename, is not empty will log access to any manifest.
+logfile = ""
+
+# Cache fastmanifest if dirstate, remotenames or bookmarks change.
+cacheonchange = False
+
+# Make cacheonchange(see above) work in the background.
+cacheonchangebackground = True
+
+# Make cacheonchange use systemawarecachelimit.
+cacheonchangesystemlimit = True
+
+# If False, cache entries in a deterministic order, otherwise use a randomorder
+# by batches.
+randomorder = True
+
+# Batch size for the random ordering.
+shufflebatchsize = 5
+
+# Cache properties, see systemawarecachelimit.
+lowgrowththresholdgb = 20
+lowgrowthslope = 0.1
+highgrowthslope = 0.2
+maxcachesizegb = 6
 
 Description:
 
