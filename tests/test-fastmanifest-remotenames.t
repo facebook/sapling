@@ -19,6 +19,7 @@ Check that remotename changes trigger caching
   > fastmanifest=
   > [fastmanifest]
   > cacheonchange=True
+  > cacheonchangebackground=False
   > [remotenames]
   > rename.default=remote
   > EOF
