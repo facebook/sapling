@@ -75,7 +75,7 @@ class unioncontentstore(object):
             except KeyError:
                 pass
 
-        raise error.LookupError(name, hex(node), _('no node'))
+        raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "

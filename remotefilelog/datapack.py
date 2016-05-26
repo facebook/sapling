@@ -32,10 +32,10 @@ class datapackstore(basepack.basepackstore):
         for pack in self.packs:
             try:
                 return pack.getdeltachain(name, node)
-            except KeyError as ex:
+            except KeyError:
                 pass
 
-        raise KeyError((name, node))
+        raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapackstore")
@@ -60,7 +60,7 @@ class datapack(basepack.basepack):
     def getdeltachain(self, name, node):
         value = self._find(node)
         if value is None:
-            raise KeyError((name, node))
+            raise KeyError((name, hex(node)))
 
         params = self.params
 

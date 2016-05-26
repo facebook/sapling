@@ -54,7 +54,7 @@ class unionmetadatastore(object):
             except KeyError:
                 pass
 
-        raise error.LookupError(node, name, _('no valid file history'))
+        raise KeyError((name, node))
 
     def add(self, name, node, data):
         raise RuntimeError("cannot add content only to remotefilelog "
