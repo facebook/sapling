@@ -106,8 +106,49 @@ except AttributeError:
 
             return ssl.wrap_socket(socket, **args)
 
-def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
-               ca_certs=None, serverhostname=None):
+def _determinecertoptions(ui, host):
+    """Determine certificate options for a connections.
+
+    Returns a tuple of (cert_reqs, ca_certs).
+    """
+    # If a host key fingerprint is on file, it is the only thing that matters
+    # and CA certs don't come into play.
+    hostfingerprint = ui.config('hostfingerprints', host)
+    if hostfingerprint:
+        return ssl.CERT_NONE, None
+
+    # The code below sets up CA verification arguments. If --insecure is
+    # used, we don't take CAs into consideration, so return early.
+    if ui.insecureconnections:
+        return ssl.CERT_NONE, None
+
+    cacerts = ui.config('web', 'cacerts')
+
+    # If a value is set in the config, validate against a path and load
+    # and require those certs.
+    if cacerts:
+        cacerts = util.expandpath(cacerts)
+        if not os.path.exists(cacerts):
+            raise error.Abort(_('could not find web.cacerts: %s') % cacerts)
+
+        return ssl.CERT_REQUIRED, cacerts
+
+    # No CAs in config. See if we can load defaults.
+    cacerts = _defaultcacerts()
+
+    # We found an alternate CA bundle to use. Load it.
+    if cacerts:
+        ui.debug('using %s to enable OS X system CA\n' % cacerts)
+        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
+        return ssl.CERT_REQUIRED, cacerts
+
+    # FUTURE this can disappear once wrapsocket() is secure by default.
+    if _canloaddefaultcerts:
+        return ssl.CERT_REQUIRED, None
+
+    return ssl.CERT_NONE, None
+
+def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     """Add SSL/TLS to a socket.
 
     This is a glorified wrapper for ``ssl.wrap_socket()``. It makes sane
@@ -122,6 +163,8 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
     """
     if not serverhostname:
         raise error.Abort('serverhostname argument is required')
+
+    cert_reqs, ca_certs = _determinecertoptions(ui, serverhostname)
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
@@ -243,53 +286,7 @@ def _defaultcacerts():
     return None
 
 def sslkwargs(ui, host):
-    """Determine arguments to pass to wrapsocket().
-
-    ``host`` is the hostname being connected to.
-    """
-    kws = {}
-
-    # If a host key fingerprint is on file, it is the only thing that matters
-    # and CA certs don't come into play.
-    hostfingerprint = ui.config('hostfingerprints', host)
-    if hostfingerprint:
-        return kws
-
-    # The code below sets up CA verification arguments. If --insecure is
-    # used, we don't take CAs into consideration, so return early.
-    if ui.insecureconnections:
-        return kws
-
-    cacerts = ui.config('web', 'cacerts')
-
-    # If a value is set in the config, validate against a path and load
-    # and require those certs.
-    if cacerts:
-        cacerts = util.expandpath(cacerts)
-        if not os.path.exists(cacerts):
-            raise error.Abort(_('could not find web.cacerts: %s') % cacerts)
-
-        kws.update({'ca_certs': cacerts,
-                    'cert_reqs': ssl.CERT_REQUIRED})
-        return kws
-
-    # No CAs in config. See if we can load defaults.
-    cacerts = _defaultcacerts()
-
-    # We found an alternate CA bundle to use. Load it.
-    if cacerts:
-        ui.debug('using %s to enable OS X system CA\n' % cacerts)
-        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
-        kws.update({'ca_certs': cacerts,
-                    'cert_reqs': ssl.CERT_REQUIRED})
-        return kws
-
-    # FUTURE this can disappear once wrapsocket() is secure by default.
-    if _canloaddefaultcerts:
-        kws['cert_reqs'] = ssl.CERT_REQUIRED
-        return kws
-
-    return kws
+    return {}
 
 def validatesocket(sock, strict=False):
     """Validate a socket meets security requiremnets.
