@@ -413,7 +413,7 @@ class histeditaction(object):
             raise error.ParseError(_('unknown changeset %s listed')
                               % ha[:12])
 
-    def torule(self, initial=False):
+    def torule(self):
         """build a histedit rule line for an action
 
         by default lines are in the form:
@@ -1323,7 +1323,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
                 if fword in primaryactions | secondaryactions | tertiaryactions:
                     act.verb = fword
 
-    rules = '\n'.join([act.torule(initial=True) for act in actions])
+    rules = '\n'.join([act.torule() for act in actions])
     rules += '\n\n'
     rules += editcomment
     rules = ui.edit(rules, ui.username(), {'prefix': 'histedit'})
