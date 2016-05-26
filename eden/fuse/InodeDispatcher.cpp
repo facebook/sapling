@@ -26,9 +26,10 @@ using facebook::eden::RelativePath;
 using std::string;
 using std::vector;
 
-DEFINE_int32(inode_reserve,
-             1000000,
-             "pre-size inode hash table for this many entries");
+DEFINE_int32(
+    inode_reserve,
+    1000000,
+    "pre-size inode hash table for this many entries");
 
 DEFINE_bool(
     warm_kernel_on_startup,
@@ -36,12 +37,13 @@ DEFINE_bool(
     "whether to crawl ourselves on startup to warm up the kernel "
     "inode/vnode cache");
 
-DEFINE_int32(warm_kernel_num_threads,
-             32,
-             "how many threads to use when crawling ourselves during warm up.  "
-             "Making this too large without raising the file descriptors "
-             "ulimit can cause serious problems and has diminishing returns on "
-             "crawl performance.");
+DEFINE_int32(
+    warm_kernel_num_threads,
+    32,
+    "how many threads to use when crawling ourselves during warm up.  "
+    "Making this too large without raising the file descriptors "
+    "ulimit can cause serious problems and has diminishing returns on "
+    "crawl performance.");
 
 DEFINE_int32(
     warm_kernel_delay,
@@ -84,9 +86,10 @@ struct Walker : public std::enable_shared_from_this<Walker> {
   explicit Walker(const std::string& rootPath)
       : rootPath(rootPath),
         start(std::chrono::steady_clock::now()),
-        pool(FLAGS_warm_kernel_num_threads,
-             1 /* priorities */,
-             FLAGS_inode_reserve /* max queue size */) {}
+        pool(
+            FLAGS_warm_kernel_num_threads,
+            1 /* priorities */,
+            FLAGS_inode_reserve /* max queue size */) {}
 
   void walk() {
     auto self = shared_from_this();
@@ -125,7 +128,9 @@ struct Walker : public std::enable_shared_from_this<Walker> {
                        << "): " << strerror(errno);
             return;
           }
-          SCOPE_EXIT { closedir(dir); };
+          SCOPE_EXIT {
+            closedir(dir);
+          };
           while (true) {
             auto de = readdir(dir);
             if (!de) {
@@ -183,8 +188,9 @@ void InodeDispatcher::recordInode(std::shared_ptr<InodeBase> inode) {
   DCHECK(ret.second);
 }
 
-std::shared_ptr<InodeBase> InodeDispatcher::getInode(fuse_ino_t ino,
-                                                     bool mustExist) const {
+std::shared_ptr<InodeBase> InodeDispatcher::getInode(
+    fuse_ino_t ino,
+    bool mustExist) const {
   std::shared_lock<SharedMutex> g(lock_);
   const auto& it = inodes_.find(ino);
   if (it == inodes_.end()) {
@@ -206,8 +212,9 @@ std::shared_ptr<InodeBase> InodeDispatcher::lookupInode(fuse_ino_t ino) const {
   return it->second;
 }
 
-std::shared_ptr<DirInode> InodeDispatcher::getDirInode(fuse_ino_t ino,
-                                                       bool mustExist) const {
+std::shared_ptr<DirInode> InodeDispatcher::getDirInode(
+    fuse_ino_t ino,
+    bool mustExist) const {
   auto d = std::dynamic_pointer_cast<DirInode>(getInode(ino));
   if (!d) {
     if (mustExist) {
@@ -218,8 +225,9 @@ std::shared_ptr<DirInode> InodeDispatcher::getDirInode(fuse_ino_t ino,
   return d;
 }
 
-std::shared_ptr<FileInode> InodeDispatcher::getFileInode(fuse_ino_t ino,
-                                                         bool mustExist) const {
+std::shared_ptr<FileInode> InodeDispatcher::getFileInode(
+    fuse_ino_t ino,
+    bool mustExist) const {
   auto f = std::dynamic_pointer_cast<FileInode>(getInode(ino));
   if (!f) {
     if (mustExist) {
@@ -285,15 +293,14 @@ folly::Future<fuse_entry_param> InodeDispatcher::lookup(
       });
 }
 
-folly::Future<Dispatcher::Attr> InodeDispatcher::setattr(fuse_ino_t ino,
-                              const struct stat& attr,
-                              int to_set) {
+folly::Future<Dispatcher::Attr>
+InodeDispatcher::setattr(fuse_ino_t ino, const struct stat& attr, int to_set) {
   return getInode(ino)->setattr(attr, to_set);
 }
 
-folly::Future<folly::Unit> InodeDispatcher::forget(fuse_ino_t ino,
-                                    unsigned long nlookup) {
-
+folly::Future<folly::Unit> InodeDispatcher::forget(
+    fuse_ino_t ino,
+    unsigned long nlookup) {
   {
     std::shared_lock<SharedMutex> g(lock_);
     const auto& it = inodes_.find(ino);
