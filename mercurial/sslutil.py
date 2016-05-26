@@ -247,7 +247,7 @@ def sslkwargs(ui, host):
 
     ``host`` is the hostname being connected to.
     """
-    kws = {'ui': ui}
+    kws = {}
 
     # If a host key fingerprint is on file, it is the only thing that matters
     # and CA certs don't come into play.

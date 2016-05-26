@@ -48,8 +48,9 @@ class STARTTLS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, sslkwargs, host=None, **kwargs):
+    def __init__(self, ui, sslkwargs, host=None, **kwargs):
         smtplib.SMTP.__init__(self, **kwargs)
+        self._ui = ui
         self._sslkwargs = sslkwargs
         self._host = host
 
@@ -60,6 +61,7 @@ class STARTTLS(smtplib.SMTP):
         (resp, reply) = self.docmd("STARTTLS")
         if resp == 220:
             self.sock = sslutil.wrapsocket(self.sock, keyfile, certfile,
+                                           ui=self._ui,
                                            serverhostname=self._host,
                                            **self._sslkwargs)
             self.file = smtplib.SSLFakeFile(self.sock)
@@ -74,13 +76,14 @@ class SMTPS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, sslkwargs, keyfile=None, certfile=None, host=None,
+    def __init__(self, ui, sslkwargs, keyfile=None, certfile=None, host=None,
                  **kwargs):
         self.keyfile = keyfile
         self.certfile = certfile
         smtplib.SMTP.__init__(self, **kwargs)
         self._host = host
         self.default_port = smtplib.SMTP_SSL_PORT
+        self._ui = ui
         self._sslkwargs = sslkwargs
 
     def _get_socket(self, host, port, timeout):
@@ -89,6 +92,7 @@ class SMTPS(smtplib.SMTP):
         new_socket = socket.create_connection((host, port), timeout)
         new_socket = sslutil.wrapsocket(new_socket,
                                         self.keyfile, self.certfile,
+                                        ui=self._ui,
                                         serverhostname=self._host,
                                         **self._sslkwargs)
         self.file = smtplib.SSLFakeFile(new_socket)
@@ -115,13 +119,14 @@ def _smtp(ui):
     if (starttls or smtps) and verifycert:
         sslkwargs = sslutil.sslkwargs(ui, mailhost)
     else:
-        # 'ui' is required by sslutil.wrapsocket() and set by sslkwargs()
-        sslkwargs = {'ui': ui}
+        sslkwargs = {}
+
     if smtps:
         ui.note(_('(using smtps)\n'))
-        s = SMTPS(sslkwargs, local_hostname=local_hostname, host=mailhost)
+        s = SMTPS(ui, sslkwargs, local_hostname=local_hostname, host=mailhost)
     elif starttls:
-        s = STARTTLS(sslkwargs, local_hostname=local_hostname, host=mailhost)
+        s = STARTTLS(ui, sslkwargs, local_hostname=local_hostname,
+                     host=mailhost)
     else:
         s = smtplib.SMTP(local_hostname=local_hostname)
     if smtps:
