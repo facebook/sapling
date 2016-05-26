@@ -54,6 +54,7 @@ Check diagnosis, debugging information
   > fastmanifest=
   > [fastmanifest]
   > randomorder=False
+  > cachecutoffdays=-1
   > logfile=$TESTTMP/logfile
   > EOF
 

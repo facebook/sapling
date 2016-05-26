@@ -48,6 +48,10 @@ lowgrowthslope = 0.1
 highgrowthslope = 0.2
 maxcachesizegb = 6
 
+# Cut off date, revisions older than the cutoff won't be cached, default is
+# 60 days. -1 means no limit.
+cachecutoffdays = 60
+
 Description:
 
 `manifestaccesslogger` logs manifest accessed to a logfile specified with
@@ -121,8 +125,15 @@ def fastmanifesttocache(repo, subset, x):
     # need to call set(..) because we want to actually materialize the revset
     # instead of returning a smartset.
     query = "(not public() & not hidden()) + bookmark()"
+    cutoff = repo.ui.configint("fastmanifest", "cachecutoffdays", 60)
+    if cutoff == -1: # no cutoff
+        datelimit = ""
+    else:
+        datelimit = "and date(-%d)" % cutoff
+
     return subset & set(
-        scmutil.revrange(repo,["%s + parents(%s)" %(query, query)]))
+        scmutil.revrange(repo,["(%s + parents(%s)) %s"
+                         %(query, query, datelimit)]))
 
 class hybridmanifest(object):
     """
