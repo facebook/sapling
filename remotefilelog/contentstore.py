@@ -26,6 +26,11 @@ class unioncontentstore(object):
         self.stores = args
         self.writestore = kwargs.get('writestore')
 
+        # If allowincomplete==True then the union store can return partial
+        # delta chains, otherwise it will throw a KeyError if a full
+        # deltachain can't be found.
+        self.allowincomplete = kwargs.get('allowincomplete', False)
+
     def get(self, name, node):
         """Fetches the full text revision contents of the given name+node pair.
         If the full text doesn't exist, throws a KeyError.
@@ -34,6 +39,10 @@ class unioncontentstore(object):
         up a full chain to produce the full text.
         """
         chain = self.getdeltachain(name, node)
+
+        if chain[-1][ChainIndicies.BASENODE] != nullid:
+            # If we didn't receive a full chain, throw
+            raise KeyError((name, hex(node)))
 
         # The last entry in the chain is a full text, so we start our delta
         # applies with that.
@@ -59,8 +68,14 @@ class unioncontentstore(object):
         chain = self._getpartialchain(name, node)
         while chain[-1][ChainIndicies.BASENODE] != nullid:
             x, x, deltabasename, deltabasenode, x = chain[-1]
-            morechain = self._getpartialchain(deltabasename, deltabasenode)
-            chain.extend(morechain)
+            try:
+                morechain = self._getpartialchain(deltabasename, deltabasenode)
+                chain.extend(morechain)
+            except KeyError:
+                # If we allow incomplete chains, don't throw.
+                if not self.allowincomplete:
+                    raise
+                break
 
         return chain
 
