@@ -13,6 +13,7 @@
 #include <folly/FileUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <openssl/sha.h>
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/utils/XAttr.h"
@@ -72,13 +73,18 @@ struct stat FileData::stat() {
 }
 
 void FileData::flush(uint64_t /* lock_owner */) {
-  // We have no write buffers, so there is nothing for us to flush
+  // We have no write buffers, so there is nothing for us to flush,
+  // but let's take this opportunity to update the sha1 attribute.
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (file_ && !sha1Valid_) {
+    recomputeAndStoreSha1();
+  }
 }
 
 void FileData::fsync(bool datasync) {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!file_) {
-    // If we don't have an overlay file then we have nothing to sync
+    // If we don't have an overlay file then we have nothing to sync.
     return;
   }
 
@@ -88,6 +94,11 @@ void FileData::fsync(bool datasync) {
 #endif
                ::fsync(file_.fd());
   checkUnixError(res);
+
+  // let's take this opportunity to update the sha1 attribute.
+  if (!sha1Valid_) {
+    recomputeAndStoreSha1();
+  }
 }
 
 fusell::BufVec FileData::read(size_t size, off_t off) {
@@ -123,6 +134,7 @@ size_t FileData::write(fusell::BufVec&& buf, off_t off) {
     folly::throwSystemErrorExplicit(EINVAL);
   }
 
+  sha1Valid_ = false;
   auto vec = buf.getIov();
   auto xfer = ::pwritev(file_.fd(), vec.data(), vec.size(), off);
   checkUnixError(xfer);
@@ -135,6 +147,8 @@ size_t FileData::write(folly::StringPiece data, off_t off) {
     // Not open for write
     folly::throwSystemErrorExplicit(EINVAL);
   }
+
+  sha1Valid_ = false;
   auto xfer = ::pwrite(file_.fd(), data.data(), data.size(), off);
   checkUnixError(xfer);
   return xfer;
@@ -175,6 +189,9 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
       file_ = overlay_->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
       // since we have a pre-existing overlay file, we don't need the blob.
       need_blob = false;
+      // A freshly opened file has a valid sha1 attribute (assuming no
+      // outside interference)
+      sha1Valid_ = true;
     } catch (const std::system_error& err) {
       if (err.code().value() != ENOENT) {
         throw;
@@ -217,14 +234,23 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
         folly::throwSystemErrorExplicit(
             wrote == -1 ? err : EIO, "failed to materialize ", path);
       }
+
+      // Copy and apply the sha1 to the new file.  This saves us from
+      // recomputing it again in the case that something opens the file
+      // read/write and closes it without changing it.
+      auto sha1 = store_->getSha1ForBlob(entry_->getHash());
+      fsetxattr(file.fd(), kXattrSha1, sha1->toString());
+      sha1Valid_ = true;
     }
 
     // transfer ownership of the fd to us.  Do this after dealing with any
     // errors during materialization so that our internal state is easier
     // to reason about.
     file_ = std::move(file);
+    sha1Valid_ = false;
   } else if (file_ && (open_flags & O_TRUNC) != 0) {
     // truncating a file that we already have open
+    sha1Valid_ = false;
     checkUnixError(ftruncate(file_.fd(), 0));
   }
 }
@@ -236,12 +262,52 @@ std::string FileData::getSha1() {
 
 std::string FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
   if (file_) {
-    return fgetxattr(file_.fd(), kXattrSha1);
+    std::string shastr;
+    if (sha1Valid_) {
+      shastr = fgetxattr(file_.fd(), kXattrSha1);
+    }
+    if (shastr.empty()) {
+      shastr = recomputeAndStoreSha1();
+    }
+    return shastr;
   }
 
   CHECK_NOTNULL(entry_);
   auto sha1 = store_->getSha1ForBlob(entry_->getHash());
   return sha1->toString();
+}
+
+std::string FileData::recomputeAndStoreSha1() {
+  uint8_t buf[8192];
+  off_t off = 0;
+  SHA_CTX ctx;
+  SHA1_Init(&ctx);
+
+  while (true) {
+    // Using pread here so that we don't move the file position;
+    // the file descriptor is shared between multiple file handles
+    // and while we serialize the requests to FileData, it seems
+    // like a good property of this function to avoid changing that
+    // state.
+    auto len = folly::preadNoInt(file_.fd(), buf, sizeof(buf), off);
+    if (len == 0) {
+      break;
+    }
+    if (len == -1) {
+      folly::throwSystemError();
+    }
+    SHA1_Update(&ctx, buf, len);
+    off += len;
+  }
+
+  uint8_t digest[SHA_DIGEST_LENGTH];
+  SHA1_Final(digest, &ctx);
+  auto sha1 = Hash(folly::ByteRange(digest, sizeof(digest))).toString();
+
+  fsetxattr(file_.fd(), kXattrSha1, sha1);
+  sha1Valid_ = true;
+
+  return sha1;
 }
 }
 }

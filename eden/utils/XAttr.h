@@ -26,5 +26,6 @@ constexpr int kENOATTR =
 constexpr folly::StringPiece kXattrSha1{"user.sha1"};
 
 std::string fgetxattr(int fd, folly::StringPiece name);
+void fsetxattr(int fd, folly::StringPiece name, folly::StringPiece value);
 }
 }

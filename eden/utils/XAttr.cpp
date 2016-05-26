@@ -68,5 +68,22 @@ std::string fgetxattr(int fd, folly::StringPiece name) {
     result.resize(size + 1, 0);
   }
 }
+
+void fsetxattr(int fd, folly::StringPiece name, folly::StringPiece value) {
+  auto namestr = name.str();
+
+  folly::checkUnixError(::fsetxattr(
+      fd,
+      namestr.c_str(),
+      value.data(),
+      value.size()
+#ifdef __APPLE__
+          ,
+      0 // position
+#endif
+      ,
+      0 // allow create and replace
+      ));
+}
 }
 }

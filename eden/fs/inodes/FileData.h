@@ -65,6 +65,13 @@ class FileData {
 
   /// if backed by an overlay file, the open file descriptor
   folly::File file_;
+
+  /// if backed by an overlay file, whether the sha1 xattr is valid
+  bool sha1Valid_{false};
+
+  /// Recompute the SHA1 content hash of the open file_.
+  // The mutex must be owned by the caller.
+  std::string recomputeAndStoreSha1();
 };
 }
 }
