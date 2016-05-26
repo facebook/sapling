@@ -285,9 +285,6 @@ def _defaultcacerts():
 
     return None
 
-def sslkwargs(ui, host):
-    return {}
-
 def validatesocket(sock, strict=False):
     """Validate a socket meets security requiremnets.
 
