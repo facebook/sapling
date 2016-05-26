@@ -11,6 +11,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 from libfb.parutil import get_file_path
 import errno
+from eden.thrift import create_thrift_client
 import os
 import shutil
 import socket
@@ -105,6 +106,9 @@ class EdenClient(object):
 
             time.sleep(0.1)
         raise Exception("edenfs didn't start within timeout of %s" % timeout)
+
+    def get_thrift_client(self):
+        return create_thrift_client(self._config_dir)
 
     def init(
         self,

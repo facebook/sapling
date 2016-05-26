@@ -8,5 +8,6 @@ python_unittest(
     deps=[
       '@/libfb/py:parutil',
       '@/eden/fs/cli:cli',
+      '@/eden/fs/service:py-client',
     ],
 )

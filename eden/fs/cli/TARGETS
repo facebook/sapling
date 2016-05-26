@@ -17,7 +17,7 @@ python_binary(
     ':glue',
     '@/eden/fs/importer/git:git',
     '@/eden/fs/inodes:inodes',
-    '@/eden/fs/service:thrift-py',
+    '@/eden/fs/service:py-client',
     '@/libfb/py:parutil',
   ],
 )

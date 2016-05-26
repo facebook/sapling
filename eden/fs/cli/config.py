@@ -17,26 +17,16 @@ import stat
 import subprocess
 from facebook.eden import EdenService
 import facebook.eden.ttypes as eden_ttypes
-from thrift.protocol.THeaderProtocol import THeaderProtocol
-from thrift.transport.THeaderTransport import THeaderTransport
-from thrift.transport.TSocket import TSocket
-from thrift.transport.TTransport import TTransportException
+from eden.thrift import create_thrift_client
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = 'clients'
 STORAGE_DIR = 'storage'
-SOCKET_PATH = 'socket'
 ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
 
 # These are files in a client directory.
 CONFIG_JSON = 'config.json'
 SNAPSHOT = 'SNAPSHOT'
-
-class EdenNotRunningError(Exception):
-    def __init__(self, eden_dir):
-        msg = 'edenfs daemon does not appear to be running'
-        super(EdenNotRunningError, self).__init__(msg)
-        self.eden_dir = eden_dir
 
 
 class Config:
@@ -62,23 +52,7 @@ class Config:
         return info
 
     def get_thrift_client(self):
-        '''Construct a thrift client to speak to the running eden server
-        instance associated with the specified mount point.
-        '''
-        sock_path = os.path.join(self._config_dir, SOCKET_PATH)
-        sock = TSocket(unix_socket=sock_path)
-        sock.setTimeout(60000)  # in milliseconds
-        transport = THeaderTransport(sock)
-        protocol = THeaderProtocol(transport)
-        client = EdenService.Client(protocol)
-
-        try:
-            transport.open()
-        except TTransportException as ex:
-            if ex.type == TTransportException.NOT_OPEN:
-                raise EdenNotRunningError(self._config_dir)
-
-        return client
+        return create_thrift_client(self._config_dir)
 
     def get_client_info(self, name):
         client_dir = os.path.join(self._get_clients_dir(), name)

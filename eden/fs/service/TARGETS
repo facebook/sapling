@@ -19,6 +19,18 @@ thrift_library(
   deps = ['@/common/fb303/if:fb303'],
 )
 
+python_library(
+  name = 'py-client',
+  srcs = [
+    '__init__.py',
+    'client.py',
+  ],
+  base_module = 'eden.thrift',
+  deps = [
+    '@/eden/fs/service:thrift-py',
+  ],
+)
+
 if is_facebook_internal():
     include_defs('//eden/fs/service/facebook/DEFS')
     create_eden_fs_rules(

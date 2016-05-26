@@ -9,6 +9,7 @@ from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
 
 import argparse
+from eden.thrift import EdenNotRunningError
 import errno
 import glue
 import json
@@ -158,7 +159,7 @@ def do_mount(args):
     config = create_config(args)
     try:
         return config.mount(args.name)
-    except config_mod.EdenNotRunningError as ex:
+    except EdenNotRunningError as ex:
         # TODO: Eventually it would be nice to automatically start the edenfs
         # daemon for the user, and run it in the background.
         print_stderr('error: {}', ex)
