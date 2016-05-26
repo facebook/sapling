@@ -32,9 +32,6 @@ cacheonchange = False
 # Make cacheonchange(see above) work in the background.
 cacheonchangebackground = True
 
-# Make cacheonchange use systemawarecachelimit.
-cacheonchangesystemlimit = True
-
 # If False, cache entries in a deterministic order, otherwise use a randomorder
 # by batches.
 randomorder = True
@@ -978,13 +975,7 @@ def _cacheonchangeconfig(repo):
     bg = repo.ui.configbool("fastmanifest",
                             "cacheonchangebackground",
                             True)
-    systemlimit = repo.ui.configbool("fastmanifest",
-                                     "cacheonchangesystemlimit",
-                                     True)
-    limit = None
-    if systemlimit:
-        limit = systemawarecachelimit(repo)
-    return revset, bg, limit
+    return revset, bg, systemawarecachelimit(repo)
 
 def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     repo = self._repo

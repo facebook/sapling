@@ -246,7 +246,6 @@ Test the --pruneall command to prune all the cached manifests
   > [fastmanifest]
   > cacheonchange=True
   > cacheonchangebackground=False
-  > cacheonchangesystemlimit=False
   > EOF
   $ hg update -c .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -256,16 +255,19 @@ Test the --pruneall command to prune all the cached manifests
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  nothing to do, cache size < limit
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  nothing to do, cache size < limit
   skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
   skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
   skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
   skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  nothing to do, cache size < limit
   $ hg diff -c . --debug --nodate
   cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
