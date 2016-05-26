@@ -423,14 +423,6 @@ class histeditaction(object):
         summary = ''
         if ctx.description():
             summary = ctx.description().splitlines()[0]
-
-        fword = summary.split(' ', 1)[0].lower()
-        # if it doesn't end with the special character '!' just skip this
-        if (self.repo.ui.configbool("experimental", "histedit.autoverb") and
-            initial and fword.endswith('!')):
-            fword = fword[:-1]
-            if fword in primaryactions | secondaryactions | tertiaryactions:
-                self.verb = fword
         line = '%s %s %d %s' % (self.verb, ctx, ctx.rev(), summary)
         # trim to 75 columns by default so it's not stupidly wide in my editor
         # (the 5 more are left for verb)
@@ -1317,6 +1309,20 @@ def ruleeditor(repo, ui, actions, editcomment=""):
 
     rules are in the format [ [act, ctx], ...] like in state.rules
     """
+    if repo.ui.configbool("experimental", "histedit.autoverb"):
+        for act in actions:
+            ctx = repo[act.node]
+            summary = ''
+            if ctx.description():
+                summary = ctx.description().splitlines()[0]
+
+            fword = summary.split(' ', 1)[0].lower()
+            # if it doesn't end with the special character '!' just skip this
+            if fword.endswith('!'):
+                fword = fword[:-1]
+                if fword in primaryactions | secondaryactions | tertiaryactions:
+                    act.verb = fword
+
     rules = '\n'.join([act.torule(initial=True) for act in actions])
     rules += '\n\n'
     rules += editcomment
