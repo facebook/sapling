@@ -96,7 +96,7 @@ from mercurial import scmutil, util
 
 from extutil import wrapfilecache
 
-import fastmanifest_wrapper
+import cfastmanifest
 
 CACHE_SUBDIR = "manifestcache"
 cmdtable = {}
@@ -220,12 +220,12 @@ class hybridmanifest(object):
                 self.fastcache.containsnode(self.cachekey)):
                 self.__cachedmanifest = self.fastcache.get(self.cachekey)
             elif self.node == revlog.nullid:
-                fm = fastmanifest_wrapper.fastManifest()
+                fm = cfastmanifest.fastmanifest()
                 self.__cachedmanifest = fastmanifestdict(fm)
             elif self.debugfastmanifest:
                 # in debug mode, we always convert into a fastmanifest.
                 r = self._flatmanifest()
-                fm = fastmanifest_wrapper.fastManifest(r.text())
+                fm = cfastmanifest.fastmanifest(r.text())
                 self.__cachedmanifest = fastmanifestdict(fm)
 
             self.incache = self.__cachedmanifest is not None
@@ -356,7 +356,7 @@ class fastmanifestcache(object):
 
     def load(self, fpath):
         try:
-            fm = fastmanifest_wrapper.fastManifest.load(fpath)
+            fm = cfastmanifest.fastmanifest.load(fpath)
             # touch on access to make this cache a LRU cache
             os.utime(fpath, None)
         except EnvironmentError:
@@ -367,7 +367,7 @@ class fastmanifestcache(object):
     def dump(self, fpath, manifest):
         # TODO: is this already a hybridmanifest/fastmanifest?  if so, we may be
         # able to skip a frivolous conversion step.
-        fm = fastmanifest_wrapper.fastManifest(manifest.text())
+        fm = cfastmanifest.fastmanifest(manifest.text())
         fm.save(fpath)
 
     def inmemorycachekey(self, hexnode):
@@ -824,7 +824,7 @@ class fastmanifestdict(object):
             return self.copy()
 
         if self._filesfastpath(match):
-            nfm = fastmanifest_wrapper.fastManifest()
+            nfm = cfastmanifest.fastmanifest()
             for fn in match.files():
                 if fn in self._fm:
                     nfm[fn] = self._fm[fn]

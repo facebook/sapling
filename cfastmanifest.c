@@ -1,6 +1,6 @@
 // Copyright 2016-present Facebook. All Rights Reserved.
 //
-// fastmanifest_wrapper.c: CPython interface for fastmanifest
+// cfastmanifest.c: CPython interface for fastmanifest
 //
 // no-check-code
 
@@ -902,7 +902,7 @@ static PyMethodDef methods[] = {
 };
 
 PyMODINIT_FUNC
-initfastmanifest_wrapper(void)
+initcfastmanifest(void)
 {
     PyObject* m;
 
@@ -910,9 +910,9 @@ initfastmanifest_wrapper(void)
     if (PyType_Ready(&fastmanifestType) < 0)
         return;
 
-    m = Py_InitModule3("fastmanifest_wrapper", methods,
+    m = Py_InitModule3("cfastmanifest", methods,
                        "Wrapper around fast_manifest");
 
     Py_INCREF(&fastmanifestType);
-    PyModule_AddObject(m, "fastManifest", (PyObject *)&fastmanifestType);
+    PyModule_AddObject(m, "fastmanifest", (PyObject *)&fastmanifestType);
 }

@@ -58,8 +58,8 @@ setup(
         'upgradegeneraldelta',
     ],
     ext_modules = [
-        Extension('fastmanifest_wrapper',
-                  sources=['fastmanifest_wrapper.c',
+        Extension('cfastmanifest',
+                  sources=['cfastmanifest.c',
                            'cfastmanifest/bsearch.c',
                            'cfastmanifest/buffer.c',
                            'cfastmanifest/checksum.c',
