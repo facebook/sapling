@@ -95,7 +95,6 @@ class InodeNameManager {
   };
   LockedNodeSet resolvePathAsNodes(fuse_ino_t ino) const;
   RelativePath resolvePathToNode(fuse_ino_t ino) const;
-  static std::shared_ptr<InodeNameManager> get();
 
  private:
   mutable folly::SharedMutex lock_;

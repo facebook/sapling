@@ -39,8 +39,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   // from the store.  If we augmented our metadata we could avoid this,
   // and this would speed up operations like `ls`.
   data->materialize(
-      O_RDONLY,
-      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
+      O_RDONLY, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
 
   fusell::Dispatcher::Attr attr;
   attr.st = data->stat();
@@ -104,7 +103,7 @@ void TreeEntryFileInode::fileHandleDidClose() {
 
 AbsolutePath TreeEntryFileInode::getLocalPath() const {
   return parentInode_->getOverlay()->getLocalDir() +
-      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId());
+      parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
 }
 
 folly::Future<std::unique_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
@@ -115,8 +114,7 @@ folly::Future<std::unique_ptr<fusell::FileHandle>> TreeEntryFileInode::open(
     fileHandleDidClose();
   };
   data->materialize(
-      fi.flags,
-      fusell::InodeNameManager::get()->resolvePathToNode(getNodeId()));
+      fi.flags, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
 
   return std::make_unique<TreeEntryFileHandle>(
       std::static_pointer_cast<TreeEntryFileInode>(shared_from_this()),

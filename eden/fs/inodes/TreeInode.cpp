@@ -12,8 +12,10 @@
 #include "EdenMount.h"
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -47,7 +49,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
 
 folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
-  auto myname = fusell::InodeNameManager::get()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(ino_);
   auto overlay_contents = getOverlay()->readDir(myname);
 
   const auto& iter = overlay_contents.entries.find(namepiece.copy());
@@ -57,7 +59,7 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
       folly::throwSystemErrorExplicit(ENOENT);
     }
 
-    auto node = fusell::InodeNameManager::get()->getNodeByName(ino_, namepiece);
+    auto node = getNameMgr()->getNodeByName(ino_, namepiece);
 
     if (iter->second == dtype_t::Dir) {
       return std::make_shared<TreeInode>(mount_, ino_, node->getNodeId());
@@ -76,8 +78,7 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
 
   for (const auto& ent : tree_->getTreeEntries()) {
     if (ent.getName() == namepiece.stringPiece()) {
-      auto node =
-          fusell::InodeNameManager::get()->getNodeByName(ino_, namepiece);
+      auto node = getNameMgr()->getNodeByName(ino_, namepiece);
 
       if (ent.getFileType() == FileType::DIRECTORY) {
         auto tree = getStore()->getTree(ent.getHash());
@@ -117,7 +118,7 @@ folly::Future<std::unique_ptr<fusell::DirHandle>> TreeInode::opendir(
 folly::Future<fusell::DirInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Figure out the relative path to this inode.
-  auto myname = fusell::InodeNameManager::get()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(ino_);
 
   // Compute the effective name of the node they want to create.
   auto targetname = myname + name;
@@ -130,7 +131,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   file.close();
 
   // Generate an inode number for this new entry.
-  auto node = fusell::InodeNameManager::get()->getNodeByName(ino_, name);
+  auto node = getNameMgr()->getNodeByName(ino_, name);
 
   // build a corresponding TreeEntryFileInode
   auto inode = std::make_shared<TreeEntryFileInode>(
@@ -165,7 +166,7 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     PathComponentPiece name,
     mode_t mode) {
   // Figure out the relative path to this inode.
-  auto myname = fusell::InodeNameManager::get()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(ino_);
 
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;
@@ -174,11 +175,16 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
   getOverlay()->makeDir(targetName, mode);
 
   // Look up the inode for this new dir and return its entry info.
-  return fusell::RequestData::get().getDispatcher()->lookup(getNodeId(), name);
+  return getMount()->getMountPoint()->getDispatcher()->lookup(
+      getNodeId(), name);
 }
 
 EdenMount* TreeInode::getMount() const {
   return mount_;
+}
+
+fusell::InodeNameManager* TreeInode::getNameMgr() const {
+  return mount_->getMountPoint()->getNameMgr();
 }
 
 const std::shared_ptr<LocalStore>& TreeInode::getStore() const {

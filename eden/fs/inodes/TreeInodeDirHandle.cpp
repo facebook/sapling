@@ -62,7 +62,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
 
   // Fetch some info now so that we can be more efficient
   // while populating entries.
-  auto myname = fusell::InodeNameManager::get()->resolvePathToNode(dir_inode);
+  auto myname = inode_->getNameMgr()->resolvePathToNode(dir_inode);
   auto overlay_contents = inode_->getOverlay()->readDir(myname);
   auto tree = inode_->getTree();
 
@@ -142,7 +142,7 @@ folly::Future<fusell::DirList> TreeInodeDirHandle::readdir(
       // We defer it from the first pass above in case we have a huge
       // dir and need to paginate through it across several calls into
       // this function.
-      auto node = fusell::InodeNameManager::get()->getNodeByName(
+      auto node = inode_->getNameMgr()->getNodeByName(
           dir_inode, PathComponentPiece(entry.name));
       st.st_ino = node->getNodeId();
     }

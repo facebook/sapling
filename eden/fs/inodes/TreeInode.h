@@ -58,6 +58,8 @@ class TreeInode : public fusell::DirInode {
    */
   void performCheckout(const Hash& hash);
 
+  fusell::InodeNameManager* getNameMgr() const;
+
  private:
   // The EdenMount object that this inode belongs to.
   // We store this as a raw pointer since the TreeInode is part of the mount

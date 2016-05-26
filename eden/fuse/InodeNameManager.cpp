@@ -8,10 +8,10 @@
  *
  */
 #include "InodeNameManager.h"
-#include <shared_mutex>
-#include <folly/Singleton.h>
+#include <folly/Exception.h>
 #include <folly/FBVector.h>
 #include <folly/String.h>
+#include <shared_mutex>
 
 using namespace folly;
 
@@ -22,18 +22,6 @@ DEFINE_int32(namemap_reserve,
 namespace facebook {
 namespace eden {
 namespace fusell {
-
-namespace {
-folly::Singleton<InodeNameManager> nameManagerSingleton;
-}
-
-std::shared_ptr<InodeNameManager> InodeNameManager::get() {
-#ifdef __APPLE__
-  return nameManagerSingleton.get_weak().lock();
-#else
-  return nameManagerSingleton.try_get();
-#endif
-}
 
 InodeNameManager::Node::Node(
     fuse_ino_t parent,

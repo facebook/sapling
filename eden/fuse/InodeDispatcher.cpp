@@ -10,7 +10,6 @@
 #include "InodeDispatcher.h"
 
 #include <dirent.h>
-#include <folly/Singleton.h>
 #include <wangle/concurrent/CPUThreadPoolExecutor.h>
 #include <wangle/concurrent/GlobalExecutor.h>
 #include <shared_mutex>
@@ -259,7 +258,7 @@ folly::Future<fuse_entry_param> InodeDispatcher::lookup(
   auto dir = getDirInode(parent);
 
   // First, see if we already have the Inode loaded
-  auto mgr = InodeNameManager::get();
+  auto mgr = mountPoint_->getNameMgr();
   auto node = mgr->getNodeByName(parent, namepiece, false);
   std::shared_ptr<InodeBase> existing_inode;
 
@@ -369,7 +368,7 @@ folly::Future<folly::Unit> InodeDispatcher::unlink(
     PathComponentPiece name) {
   return getDirInode(parent)->unlink(name).then(
       [ =, name = PathComponent(name) ] {
-        auto mgr = InodeNameManager::get();
+        auto mgr = mountPoint_->getNameMgr();
         mgr->unlink(parent, name);
         return Unit{};
       });
@@ -380,7 +379,7 @@ folly::Future<folly::Unit> InodeDispatcher::rmdir(
     PathComponentPiece name) {
   return getDirInode(parent)->rmdir(name).then(
       [ =, name = PathComponent(name) ] {
-        auto mgr = InodeNameManager::get();
+        auto mgr = mountPoint_->getNameMgr();
         mgr->unlink(parent, name);
         return Unit{};
       });
@@ -401,7 +400,7 @@ folly::Future<folly::Unit> InodeDispatcher::rename(
   return getDirInode(parent)
       ->rename(name, getDirInode(newparent), newname)
       .then([ =, name = name.copy(), newname = newname.copy() ] {
-        auto mgr = InodeNameManager::get();
+        auto mgr = mountPoint_->getNameMgr();
         mgr->rename(parent, name, newparent, newname);
         return Unit{};
       });
@@ -415,7 +414,7 @@ folly::Future<fuse_entry_param> InodeDispatcher::link(
     =,
     name = newname.copy()
   ](fuse_entry_param && entry) {
-    auto mgr = InodeNameManager::get();
+    auto mgr = mountPoint_->getNameMgr();
     mgr->link(ino, entry.generation, newparent, name);
     return entry;
   });
