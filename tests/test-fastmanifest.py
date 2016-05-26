@@ -34,6 +34,12 @@ class HybridManifest(unittest.TestCase):
         assert cachealloc(120 * GB) == 6 * GB
         assert abs(cachealloc(28 * GB) - 5.6 * GB) < 5 * MB
 
+    def test_shufflebybatch(self):
+        data = range(10000)
+        fastmanifest.shufflebybatch(data, 5)
+        assert len(data) == 10000
+        assert data != range(10000)
+
 if __name__ == "__main__":
     sys.path.insert(0, os.path.join(os.environ["TESTDIR"], ".."))
     import fastmanifest

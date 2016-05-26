@@ -581,6 +581,23 @@ def _cachemanifestlist(ui, repo):
     ui.status(("cache size is: %s\n" % util.bytecount(total)))
     ui.status(("number of entries is: %s\n" % numentries))
 
+def shufflebybatch(it, batchsize):
+    """Shuffle by batches to avoid caching process stepping on each other
+    while maintaining an ordering between batches:
+
+    Before:
+    [ BATCH 1 | BATCH 2 | BATCH 3 ...]
+    Where rev # in BATCH 1 > rev # in BATCH 2, etc.
+
+    After:
+    [ SHUFFLED BATCH 1 | SHUFFLED BATCH 2 | SHUFFLED BATCH 3 ...]
+    Where rev # in SHUFFLED BATCH 1 > rev # in SHUFFLED BATCH 2, etc."""
+    for batchstart in range(0, len(it), batchsize):
+        batchend = min(len(it), batchstart + batchsize)
+        batch = it[batchstart:batchend]
+        random.shuffle(batch)
+        it[batchstart:batchend] = batch
+
 def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
     if background:
         if fork_worker(ui, repo):
@@ -593,7 +610,8 @@ def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
         # Make a copy because we want to keep the ordering to assign mtime
         # below
         revs = sortedrevs[:]
-        random.shuffle(revs)
+        batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
+        shufflebybatch(revs, batchsize)
     else:
         revs = sortedrevs
 
