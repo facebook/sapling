@@ -18,7 +18,8 @@ def backgroundrepack(repo, incremental=True):
 
 def fullrepack(repo):
     datasource = contentstore.unioncontentstore(*repo.shareddatastores)
-    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores)
+    historysource = metadatastore.unionmetadatastore(*repo.sharedhistorystores,
+                                                     allowincomplete=True)
 
     _runrepack(repo, datasource, historysource)
 
@@ -40,7 +41,8 @@ def incrementalrepack(repo):
     historypacks = list(historypack.historypack(p) for p in fullpaths)
 
     datasource = contentstore.unioncontentstore(*datapacks)
-    historysource = metadatastore.unionmetadatastore(*historypacks)
+    historysource = metadatastore.unionmetadatastore(*historypacks,
+                                                     allowincomplete=True)
 
     _runrepack(repo, datasource, historysource)
 

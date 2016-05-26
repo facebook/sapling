@@ -9,6 +9,11 @@ class unionmetadatastore(object):
         self.stores = args
         self.writestore = kwargs.get('writestore')
 
+        # If allowincomplete==True then the union store can return partial
+        # ancestor lists, otherwise it will throw a KeyError if a full
+        # history can't be found.
+        self.allowincomplete = kwargs.get('allowincomplete', False)
+
     def getancestors(self, name, node):
         """Returns as many ancestors as we're aware of.
 
@@ -40,9 +45,17 @@ class unionmetadatastore(object):
         missing = [(name, node)]
         while missing:
             curname, curnode = missing.pop()
-            ancestors.update(self._getpartialancestors(curname, curnode))
-            newmissing = traverse(curname, curnode)
-            missing.extend(newmissing)
+            try:
+                ancestors.update(self._getpartialancestors(curname, curnode))
+                newmissing = traverse(curname, curnode)
+                missing.extend(newmissing)
+            except KeyError:
+                # If we allow incomplete histories, don't throw.
+                if not self.allowincomplete:
+                    raise
+                # If the requested name+node doesn't exist, always throw.
+                if (curname, curnode) == (name, node):
+                    raise
 
         # TODO: ancestors should probably be (name, node) -> (value)
         return ancestors
