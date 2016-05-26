@@ -421,7 +421,6 @@ def pull(repo, source, heads=[], force=False, meta=None):
 
         ui = repo.ui
         start = meta.lastpulled
-        origrevcount = len(meta.revmap)
 
         if start <= 0:
             # we are initializing a new repository
