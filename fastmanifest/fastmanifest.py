@@ -205,42 +205,33 @@ DEFAULT_HIGHGROWTHSLOPE = 0.2
 
 class systemawarecachelimit(object):
     """A limit that will be tighter as the free disk space reduces"""
+    def parseconfig(self, repo):
+        configs = {
+            'lowgrowthslope': DEFAULT_LOWGROWTH_SLOPE,
+            'lowgrowththresholdgb': DEFAULT_LOWGROWTH_TRESHOLDGB,
+            'maxcachesizegb': DEFAULT_MAXCACHESIZEGB,
+            'highgrowthslope': DEFAULT_HIGHGROWTHSLOPE
+        }
+        for configkey, default in configs.items():
+            strconfig = repo.ui.config("fastmanifest", configkey, default)
+            try:
+                configs[configkey] = float(strconfig)
+            except ValueError:
+                # Keep default value and print a warning when config is invalid
+                msg = ("Invalid config for fastmanifest.%s, expected a number")
+                repo.ui.warn((msg % strconfig))
+        return configs
+
     def __init__(self, repo):
         # Probe the system root partition to know what is available
         st = os.statvfs(repo.root)
         self.free = st.f_bavail * st.f_frsize
         self.total = st.f_blocks * st.f_frsize
         # Read parameters from config
-        self.lowgrowththresholdgb = repo.ui.config("fastmanifest",
-                                                   "lowgrowththresholdgb",
-                                                   DEFAULT_LOWGROWTH_TRESHOLDGB)
-        self.lowgrowthslope = repo.ui.config("fastmanifest",
-                                           "lowgrowthslope",
-                                           DEFAULT_LOWGROWTH_SLOPE)
-        self.maxcachesizegb = repo.ui.config("fastmanifest",
-                                             "maxcachesizegb",
-                                             DEFAULT_MAXCACHESIZEGB)
-        self.highgrowthslope = repo.ui.config("fastmanifest",
-                                              "highgrowthslope",
-                                              DEFAULT_HIGHGROWTHSLOPE)
-        try:
-            self.lowgrowththresholdgb = float(self.lowgrowththresholdgb)
-            self.lowgrowthslope = float(self.lowgrowthslope)
-            self.maxcachesizegb = float(self.maxcachesizegb)
-            self.highgrowthslope = float(self.highgrowthslope)
-        except ValueError:
-            self.lowgrowththresholdgb = DEFAULT_LOWGROWTH_TRESHOLDGB
-            self.lowgrowthslope = DEFAULT_LOWGROWTH_SLOPE
-            self.maxcachesizegb = DEFAULT_MAXCACHESIZEGB
-            self.highgrowthslope = DEFAULT_HIGHGROWTHSLOPE
+        self.config = self.parseconfig(repo)
 
     def bytes(self):
-        return systemawarecachelimit.cacheallocation(
-                               self.free,
-                               lowgrowththresholdgb=self.lowgrowththresholdgb,
-                               highgrowthslope=self.highgrowthslope,
-                               maxcachesizegb=self.maxcachesizegb,
-                               lowgrowthslope=self.lowgrowthslope)
+        return systemawarecachelimit.cacheallocation(self.free, **self.config)
 
     @staticmethod
     def cacheallocation(freespace,
