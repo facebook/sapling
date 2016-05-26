@@ -678,10 +678,10 @@ def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
     else:
         revs = sortedrevs
 
-    mannodes = {}
+    revstomannodes = {}
     for rev in revs:
         mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
-        mannodes[rev] = mannode
+        revstomannodes[rev] = mannode
         if cache.containsnode(mannode):
             ui.debug("skipped %s, already cached (fast path)\n" % mannode)
             # Account for the fact that we access this manifest
@@ -690,7 +690,7 @@ def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
         manifest = repo[rev].manifest()
         if not cache.put(mannode, manifest, limit):
             # Insertion failed because cache is full
-            del mannodes[rev]
+            del revstomannodes[rev]
             break
 
     # Make the least relevant entries have an artificially older mtime
@@ -701,8 +701,8 @@ def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
     # recent mtime.
     mtimemultiplier = 2
     for offset, rev in enumerate(sortedrevs):
-        if rev in mannodes:
-            hexnode = mannodes[rev]
+        if rev in revstomannodes:
+            hexnode = revstomannodes[rev]
             cache.refresh(hexnode, delay=offset * mtimemultiplier)
         else:
             pass # We didn't have enough space for that rev
