@@ -35,6 +35,11 @@ class FileData {
   void flush(uint64_t lock_owner);
   void fsync(bool datasync);
 
+  /// Returns the sha1 hash of the content.
+  std::string getSha1();
+  /// Returns the sha1 hash of the content, for existing lock holders.
+  std::string getSha1Locked(const std::unique_lock<std::mutex>&);
+
   /// Materialize the file data.
   // open_flags has the same meaning as the flags parameter to
   // open(2).  Materialization depends on the write mode specified

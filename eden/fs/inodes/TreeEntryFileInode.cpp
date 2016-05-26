@@ -13,14 +13,13 @@
 #include "TreeEntryFileHandle.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/utils/XAttr.h"
 
 using folly::Future;
 using folly::StringPiece;
 using folly::checkUnixError;
 using std::string;
 using std::vector;
-
-const string kXattrSha1 = "user.sha1";
 
 namespace facebook {
 namespace eden {
@@ -130,15 +129,51 @@ Future<vector<string>> TreeEntryFileInode::listxattr() {
     return attributes;
   }
 
-  attributes.emplace_back(kXattrSha1);
+  attributes.emplace_back(kXattrSha1.str());
   return attributes;
 }
 
 Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
   // Currently, we only support the xattr for the SHA-1 of a regular file.
-  if (!entry_ || name != kXattrSha1 ||
-      entry_->getFileType() != FileType::REGULAR_FILE) {
-    return "";
+  if (name != kXattrSha1) {
+    folly::throwSystemErrorExplicit(kENOATTR);
+  }
+
+  // Some ugly looking stuff to avoid materializing the file if we haven't
+  // done so already.
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (data_) {
+    // We already have context, ask it to supply the results.
+    return data_->getSha1Locked(lock);
+  }
+
+  // If we have an overlay, look at that.
+  // In the future we'll have a trie to make this seem like a less expensive
+  // operation.  It is cheaper than materializing the file contents just to
+  // query the sha1.
+  try {
+    auto path = parentInode_->getNameMgr()->resolvePathToNode(getNodeId());
+    // The O_NOFOLLOW here prevents us from attempting to read attributes
+    // from a symlink.
+    auto file =
+        parentInode_->getOverlay()->openFile(path, O_RDONLY | O_NOFOLLOW, 0600);
+
+    // Return the property from the existing file.
+    // If it isn't set it means that someone was poking into the overlay and
+    // we'll return the standard kENOATTR back to the caller in that case.
+    return fgetxattr(file.fd(), name);
+  } catch (const std::system_error& err) {
+    if (err.code().value() != ENOENT) {
+      throw;
+    }
+    // Else: doesn't exist in the overlay
+  }
+
+  CHECK_NOTNULL(entry_);
+
+  if (entry_->getFileType() != FileType::REGULAR_FILE) {
+    // We only define a SHA-1 value for regular files
+    folly::throwSystemErrorExplicit(kENOATTR);
   }
 
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic

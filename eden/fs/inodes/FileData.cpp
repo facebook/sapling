@@ -15,6 +15,7 @@
 #include <folly/io/IOBuf.h>
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/utils/XAttr.h"
 
 namespace facebook {
 namespace eden {
@@ -226,6 +227,21 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
     // truncating a file that we already have open
     checkUnixError(ftruncate(file_.fd(), 0));
   }
+}
+
+std::string FileData::getSha1() {
+  std::unique_lock<std::mutex> lock(mutex_);
+  return getSha1Locked(lock);
+}
+
+std::string FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
+  if (file_) {
+    return fgetxattr(file_.fd(), kXattrSha1);
+  }
+
+  CHECK_NOTNULL(entry_);
+  auto sha1 = store_->getSha1ForBlob(entry_->getHash());
+  return sha1->toString();
 }
 }
 }
