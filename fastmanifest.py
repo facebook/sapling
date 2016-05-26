@@ -120,17 +120,7 @@ class manifestaccesslogger(object):
             pass
         return r
 
-
-def fastmanifesttocache(repo, subset, x):
-    """Revset of the interesting revisions to cache. This returns:
-    - Drafts
-    - Revisions with a bookmarks
-    - Revisions with some selected remote bookmarks (master, stable ...)
-    - Their parents (to make diff -c faster)
-    - TODO The base of potential rebase operations
-    - Filtering all of the above to only include recent changes
-    """
-    #Add relevant remotenames to the list of interesting revs
+def _relevantremonamesrevs(repo):
     revs = set()
     remotenames = None
     try:
@@ -146,7 +136,20 @@ def fastmanifesttocache(repo, subset, x):
         for rev, kind, prefix, name in names:
             if name in relevantnames and kind == "bookmarks":
                 revs.add(repo[rev].rev())
+    return revs
 
+def fastmanifesttocache(repo, subset, x):
+    """Revset of the interesting revisions to cache. This returns:
+    - Drafts
+    - Revisions with a bookmarks
+    - Revisions with some selected remote bookmarks (master, stable ...)
+    - Their parents (to make diff -c faster)
+    - TODO The base of potential rebase operations
+    - Filtering all of the above to only include recent changes
+    """
+
+    # Add relevant remotenames to the list of interesting revs
+    revs = _relevantremonamesrevs(repo)
 
     # Add all the other relevant revs
     query = "(not public() & not hidden()) + bookmark()"
