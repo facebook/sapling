@@ -15,6 +15,7 @@ setup(
     keywords='fb hg mercurial',
     license='',
     packages=[
+        'fastmanifest',
         'phabricator',
         'sqldirstate',
     ],
@@ -28,7 +29,6 @@ setup(
         'dirsync',
         'errorredirect',
         'extutil',
-        'fastmanifest',
         'fbamend',
         'fbconduit',
         'fbhistedit',

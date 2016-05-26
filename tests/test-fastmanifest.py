@@ -17,7 +17,7 @@ class HybridManifest(unittest.TestCase):
 
         """
         vfs = scmutil.vfs('')
-        hd = fastmanifest.hybridmanifest(None, vfs)
+        hd = fastmanifest.implementation.hybridmanifest(None, vfs)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
         magicmethods = [k
                         for k, v in manifest.manifestdict.__dict__.items()
