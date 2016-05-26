@@ -78,6 +78,13 @@ class InodeDispatcher : public Dispatcher {
   folly::Future<fuse_entry_param> lookup(
       fuse_ino_t parent,
       PathComponentPiece name) override;
+
+  /**
+   * Similar to lookup(), except this does not require an active FUSE request.
+   */
+  folly::Future<std::shared_ptr<InodeBase>> lookupInodeBase(
+      fuse_ino_t parent,
+      PathComponentPiece name);
   folly::Future<folly::Unit> forget(fuse_ino_t ino,
                                     unsigned long nlookup) override;
   folly::Future<std::unique_ptr<FileHandle>> open(

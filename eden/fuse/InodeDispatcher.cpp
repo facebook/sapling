@@ -263,6 +263,17 @@ fuse_entry_param InodeDispatcher::computeEntryParam(
 folly::Future<fuse_entry_param> InodeDispatcher::lookup(
     fuse_ino_t parent,
     PathComponentPiece namepiece) {
+  auto name = namepiece.copy();
+  auto inode = lookupInodeBase(parent, namepiece).get();
+  return inode->getattr().then([=](Dispatcher::Attr attr) {
+    auto node = mountPoint_->getNameMgr()->getNodeById(inode->getNodeId());
+    return computeEntryParam(attr, node);
+  });
+}
+
+folly::Future<std::shared_ptr<InodeBase>> InodeDispatcher::lookupInodeBase(
+    fuse_ino_t parent,
+    PathComponentPiece namepiece) {
   auto dir = getDirInode(parent);
 
   // First, see if we already have the Inode loaded
@@ -276,8 +287,7 @@ folly::Future<fuse_entry_param> InodeDispatcher::lookup(
 
   return (existing_inode ? makeFuture(existing_inode)
                          : dir->getChildByName(namepiece))
-      .then([ =, name = namepiece.copy() ](
-          std::shared_ptr<InodeBase> inode) mutable {
+      .then([=](std::shared_ptr<InodeBase> inode) mutable {
         if (!inode) {
           throwSystemErrorExplicit(ENOENT);
         }
@@ -287,9 +297,7 @@ folly::Future<fuse_entry_param> InodeDispatcher::lookup(
           recordInode(inode);
         }
 
-        return inode->getattr().then([=](Dispatcher::Attr attr) {
-          return computeEntryParam(attr, node);
-        });
+        return inode;
       });
 }
 
