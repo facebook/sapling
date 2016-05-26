@@ -52,6 +52,10 @@ maxcachesizegb = 6
 # 60 days. -1 means no limit.
 cachecutoffdays = 60
 
+# List of relevant remotenames whose manifest is to be included in the cache.
+# The list is comma or space separated
+relevantremotenames = master
+
 Description:
 
 `manifestaccesslogger` logs manifest accessed to a logfile specified with
@@ -122,8 +126,26 @@ class manifestaccesslogger(object):
 
 def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache"""
-    # need to call set(..) because we want to actually materialize the revset
-    # instead of returning a smartset.
+
+    #Add relevant remotenames to the list of interesting revs
+    revs = set()
+    remotenames = None
+    try:
+        remotenames = extensions.find('remotenames')
+    except KeyError: # remotenames not loaded
+        pass
+    if remotenames is not None:
+        # interesting remotenames to fetch
+        relevantnames = set(repo.ui.configlist("fastmanifest",
+                                               "relevantremotenames",
+                                               ["master"]))
+        names = remotenames.readremotenames(repo)
+        for rev, kind, prefix, name in names:
+            if name in relevantnames and kind == "bookmarks":
+                revs.add(repo[rev].rev())
+
+
+    # Add all the other relevant revs
     query = "(not public() & not hidden()) + bookmark()"
     cutoff = repo.ui.configint("fastmanifest", "cachecutoffdays", 60)
     if cutoff == -1: # no cutoff
@@ -131,9 +153,10 @@ def fastmanifesttocache(repo, subset, x):
     else:
         datelimit = "and date(-%d)" % cutoff
 
-    return subset & set(
-        scmutil.revrange(repo,["(%s + parents(%s)) %s"
-                         %(query, query, datelimit)]))
+    revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
+                %(query, query, datelimit)]))
+
+    return subset & revs
 
 class hybridmanifest(object):
     """
