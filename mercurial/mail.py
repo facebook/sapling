@@ -48,10 +48,9 @@ class STARTTLS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, ui, sslkwargs, host=None, **kwargs):
+    def __init__(self, ui, host=None, **kwargs):
         smtplib.SMTP.__init__(self, **kwargs)
         self._ui = ui
-        self._sslkwargs = sslkwargs
         self._host = host
 
     def starttls(self, keyfile=None, certfile=None):
@@ -62,8 +61,7 @@ class STARTTLS(smtplib.SMTP):
         if resp == 220:
             self.sock = sslutil.wrapsocket(self.sock, keyfile, certfile,
                                            ui=self._ui,
-                                           serverhostname=self._host,
-                                           **self._sslkwargs)
+                                           serverhostname=self._host)
             self.file = smtplib.SSLFakeFile(self.sock)
             self.helo_resp = None
             self.ehlo_resp = None
@@ -76,7 +74,7 @@ class SMTPS(smtplib.SMTP):
 
     This class allows to pass any keyword arguments to SSL socket creation.
     '''
-    def __init__(self, ui, sslkwargs, keyfile=None, certfile=None, host=None,
+    def __init__(self, ui, keyfile=None, certfile=None, host=None,
                  **kwargs):
         self.keyfile = keyfile
         self.certfile = certfile
@@ -84,7 +82,6 @@ class SMTPS(smtplib.SMTP):
         self._host = host
         self.default_port = smtplib.SMTP_SSL_PORT
         self._ui = ui
-        self._sslkwargs = sslkwargs
 
     def _get_socket(self, host, port, timeout):
         if self.debuglevel > 0:
@@ -93,8 +90,7 @@ class SMTPS(smtplib.SMTP):
         new_socket = sslutil.wrapsocket(new_socket,
                                         self.keyfile, self.certfile,
                                         ui=self._ui,
-                                        serverhostname=self._host,
-                                        **self._sslkwargs)
+                                        serverhostname=self._host)
         self.file = smtplib.SSLFakeFile(new_socket)
         return new_socket
 
@@ -116,17 +112,12 @@ def _smtp(ui):
             raise error.Abort(_('invalid smtp.verifycert configuration: %s')
                              % (verifycert))
         verifycert = False
-    if (starttls or smtps) and verifycert:
-        sslkwargs = sslutil.sslkwargs(ui, mailhost)
-    else:
-        sslkwargs = {}
 
     if smtps:
         ui.note(_('(using smtps)\n'))
-        s = SMTPS(ui, sslkwargs, local_hostname=local_hostname, host=mailhost)
+        s = SMTPS(ui, local_hostname=local_hostname, host=mailhost)
     elif starttls:
-        s = STARTTLS(ui, sslkwargs, local_hostname=local_hostname,
-                     host=mailhost)
+        s = STARTTLS(ui, local_hostname=local_hostname, host=mailhost)
     else:
         s = smtplib.SMTP(local_hostname=local_hostname)
     if smtps:
