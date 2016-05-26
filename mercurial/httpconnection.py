@@ -280,8 +280,6 @@ class http2handler(urlreq.httphandler, urlreq.httpshandler):
         kwargs['keyfile'] = keyfile
         kwargs['certfile'] = certfile
 
-        kwargs.update(sslutil.sslkwargs(self.ui, host))
-
         con = HTTPConnection(host, port, use_ssl=True,
                              ssl_wrap_socket=sslutil.wrapsocket,
                              ssl_validator=sslutil.validatesocket,
