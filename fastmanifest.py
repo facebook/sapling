@@ -339,7 +339,14 @@ class fastmanifestcache(object):
             return True
         return os.path.exists(self.filecachepath(hexnode))
 
-    def put(self, hexnode, manifest):
+    def put(self, hexnode, manifest, limit=None):
+        # Is there no more space already?
+        if limit is not None:
+            cachesize = self.totalsize()[0]
+            allowedspace = limit.bytes() - cachesize
+            if allowedspace < 0:
+                return False
+
         if self.containsnode(hexnode):
             self.debug("skipped %s, already cached\n" % hexnode)
         else:
@@ -349,7 +356,14 @@ class fastmanifestcache(object):
             tmpfpath = util.mktempcopy(realfpath, True)
             try:
                 self.dump(tmpfpath, manifest)
+                newsize = os.path.getsize(tmpfpath)
+
+                # Inserting the entry would make the cache overflow
+                if limit is not None and newsize + cachesize > limit.bytes():
+                    return False
+
                 util.rename(tmpfpath, realfpath)
+                return True
             finally:
                 try:
                     os.unlink(tmpfpath)
@@ -573,19 +587,44 @@ def _cachemanifestfillandtrim(ui, repo, revset, limit, background):
             return
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
-    revs = scmutil.revrange(repo, revset)
-
+    computedrevs = scmutil.revrange(repo, revset)
+    sortedrevs = sorted(computedrevs, key=lambda x:-x)
     if ui.configbool("fastmanifest", "randomorder", True):
-        revs = list(revs)
+        # Make a copy because we want to keep the ordering to assign mtime
+        # below
+        revs = sortedrevs[:]
         random.shuffle(revs)
+    else:
+        revs = sortedrevs
 
+    mannodes = {}
     for rev in revs:
         mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
+        mannodes[rev] = mannode
         if cache.containsnode(mannode):
             ui.debug("skipped %s, already cached (fast path)\n" % mannode)
+            # Account for the fact that we access this manifest
+            cache.refresh(mannode)
             continue
         manifest = repo[rev].manifest()
-        cache.put(mannode, manifest)
+        if not cache.put(mannode, manifest, limit):
+            # Insertion failed because cache is full
+            del mannodes[rev]
+            break
+
+    # Make the least relevant entries have an artificially older mtime
+    # than the more relevant ones. We use a resolution of 2 for time to work
+    # accross all platforms and ensure that the order is marked.
+    # Note that we use sortedrevs and not revs because here we don't care about
+    # the shuffling, we just want the most relevant revisions to have more
+    # recent mtime.
+    mtimemultiplier = 2
+    for offset, rev in enumerate(sortedrevs):
+        if rev in mannodes:
+            hexnode = mannodes[rev]
+            cache.refresh(hexnode, delay=offset * mtimemultiplier)
+        else:
+            pass # We didn't have enough space for that rev
 
     if limit is not None:
         cache.prune(limit)
