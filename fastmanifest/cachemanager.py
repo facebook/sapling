@@ -159,7 +159,14 @@ def shufflebybatch(it, batchsize):
         random.shuffle(batch)
         it[batchstart:batchend] = batch
 
+last_pid_fired = None
 def cachemanifestfillandtrim(ui, repo, revset, limit, background):
+    global last_pid_fired
+    if os.getpid() != last_pid_fired:
+        last_pid_fired = os.getpid()
+    else:
+        return
+
     if background:
         if concurrency.fork_worker(ui, repo):
             return
