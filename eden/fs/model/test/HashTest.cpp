@@ -60,8 +60,11 @@ TEST(Hash, testByteRangeConstructor) {
       0xf0,
       0x0d,
   };
-  Hash hash(folly::ByteRange(bytes, Hash::RAW_SIZE));
+  auto byteRange = folly::ByteRange(bytes, Hash::RAW_SIZE);
+  Hash hash(byteRange);
   EXPECT_EQ(hash, testHash);
+  EXPECT_EQ(byteRange, hash.getBytes());
+  EXPECT_EQ(hash.getBytes(), testHash.getBytes());
 }
 
 TEST(Hash, testCopyConstructor) {

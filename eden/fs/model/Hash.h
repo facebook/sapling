@@ -33,7 +33,7 @@ class Hash : boost::totally_ordered<Hash> {
    */
   explicit Hash(folly::StringPiece hex);
 
-  const std::array<uint8_t, RAW_SIZE>& getBytes() const;
+  folly::ByteRange getBytes() const;
 
   /** @return 40-character [lowercase] hex representation of this hash. */
   std::string toString() const;

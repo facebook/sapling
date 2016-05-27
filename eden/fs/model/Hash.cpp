@@ -33,8 +33,8 @@ Hash::Hash(ByteRange bytes) : Hash(byteRangeToArray(bytes)) {}
 
 Hash::Hash(StringPiece hex) : Hash(hexToBytes(hex)) {}
 
-const array<uint8_t, Hash::RAW_SIZE>& Hash::getBytes() const {
-  return bytes_;
+ByteRange Hash::getBytes() const {
+  return ByteRange{bytes_.data(), bytes_.size()};
 }
 
 std::string Hash::toString() const {
