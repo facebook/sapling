@@ -13,6 +13,10 @@ from mercurial import error, extensions, cmdutil, localrepo, util
 from mercurial.extensions import wrapfunction
 
 
+def issqldirstate(repo):
+    return util.safehasattr(repo, 'requirements') and \
+        'sqldirstate' in repo.requirements
+
 def wrapfilecache(cls, propname, wrapper, *paths):
     """Wraps a filecache property. These can't be wrapped using the normal
     wrapfunction. This should eventually go into upstream Mercurial.
@@ -33,8 +37,7 @@ def wrapfilecache(cls, propname, wrapper, *paths):
             _("type '%s' has no property '%s'") % (cls, propname))
 
 def wrapjournalfiles(orig, self):
-    if util.safehasattr(self, 'requirements') and \
-            'sqldirstate' in self.requirements:
+    if issqldirstate(self):
         files = ()
         for vfs, filename in orig(self):
             if filename != 'journal.dirstate':
@@ -49,8 +52,7 @@ def wrapjournalfiles(orig, self):
 
 def wrapdirstate(orig, self):
     ds = orig(self)
-    if util.safehasattr(self, 'requirements') and \
-            'sqldirstate' in self.requirements:
+    if issqldirstate(self):
         ds.__class__ = makedirstate(ds.__class__)
         ds._sqlinit()
     return ds
@@ -62,7 +64,7 @@ def wrapnewreporequirements(orig, repo):
     return reqs
 
 def wrapshelveaborttransaction(orig, repo):
-    if repo.ui.configbool('format', 'sqldirstate', True):
+    if issqldirstate(repo):
         tr = repo.currenttransaction()
         repo.dirstate._writesqldirstate()
         tr.abort()
