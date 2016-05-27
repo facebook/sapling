@@ -9,9 +9,29 @@ import errno
 import os
 import socket
 import stat
+import sys
 import time
 
 from mercurial import error, lock
+
+# Returns true if we're the original process, returns false if we're the child
+# process.
+def fork_worker(ui, repo):
+    pid = os.fork()
+    if pid > 0:
+        return True
+
+    # we're not closing the prior descriptors because that would cause a flush,
+    # and we don't want that.
+    ui.fin = sys.stdin = open(os.devnull, "r")
+    ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
+    repo.ui = ui
+    os.setsid()
+    pid = os.fork()
+    if pid > 0:
+        os._exit(0)
+
+    return False
 
 class looselock(object):
     """A loose lock.  If the lock is held and the lockfile is recent, then we

@@ -83,12 +83,12 @@ and flat manifest, asynchronously and synchronously.
 """
 import os
 import random
-import sys
 
 from mercurial import extensions, revlog, scmutil, util
 
 from extutil import wrapfilecache
 
+import concurrency
 import constants
 from implementation import fastmanifestcache
 
@@ -150,25 +150,6 @@ def fastmanifesttocache(repo, subset, x):
                 %(query, query, datelimit)]))
 
     return subset & revs
-
-# Returns true if we're the original process, returns false if we're the child
-# process.
-def fork_worker(ui, repo):
-    pid = os.fork()
-    if pid > 0:
-        return True
-
-    # we're not closing the prior descriptors because that would cause a flush,
-    # and we don't want that.
-    ui.fin = sys.stdin = open(os.devnull, "r")
-    ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
-    repo.ui = ui
-    os.setsid()
-    pid = os.fork()
-    if pid > 0:
-        os._exit(0)
-
-    return False
 
 class fixedcachelimit(object):
     """A fix cache limit expressed as a number of bytes"""
@@ -283,7 +264,7 @@ def shufflebybatch(it, batchsize):
 
 def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     if background:
-        if fork_worker(ui, repo):
+        if concurrency.fork_worker(ui, repo):
             return
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
