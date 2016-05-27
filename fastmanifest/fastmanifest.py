@@ -151,23 +151,6 @@ def fastmanifesttocache(repo, subset, x):
 
     return subset & revs
 
-class manifestfactory(object):
-    def __init__(self, ui):
-        self.ui = ui
-
-    def newmanifest(self, orig, *args, **kwargs):
-        loadfn = lambda: orig(*args, **kwargs)
-        return hybridmanifest(self.ui,
-                              args[0].opener,
-                              loadflat=loadfn)
-
-    def read(self, orig, *args, **kwargs):
-        loadfn = lambda: orig(*args, **kwargs)
-        return hybridmanifest(self.ui,
-                              args[0].opener,
-                              loadflat=loadfn,
-                              node=args[1])
-
 # Returns true if we're the original process, returns false if we're the child
 # process.
 def fork_worker(ui, repo):
