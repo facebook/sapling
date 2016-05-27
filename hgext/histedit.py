@@ -1269,6 +1269,14 @@ def _newhistedit(ui, repo, state, revs, freeargs, opts):
                                     'histedit')
     state.backupfile = backupfile
 
+def _getsummary(ctx):
+    # a common pattern is to extract the summary but default to the empty
+    # string
+    summary = ctx.description() or ''
+    if summary:
+        summary = summary.splitlines()[0]
+    return summary
+
 def bootstrapcontinue(ui, state, opts):
     repo = state.repo
     if state.actions:
