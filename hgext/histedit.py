@@ -1318,10 +1318,7 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     if repo.ui.configbool("experimental", "histedit.autoverb"):
         for act in actions:
             ctx = repo[act.node]
-            summary = ''
-            if ctx.description():
-                summary = ctx.description().splitlines()[0]
-
+            summary = _getsummary(ctx)
             fword = summary.split(' ', 1)[0].lower()
             # if it doesn't end with the special character '!' just skip this
             if fword.endswith('!'):
