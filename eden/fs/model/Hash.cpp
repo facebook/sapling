@@ -11,10 +11,11 @@
 
 #include <folly/Format.h>
 #include <folly/String.h>
-#include <array>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
+#include <openssl/sha.h>
 #include <string>
 
-using std::array;
 using std::string;
 using folly::ByteRange;
 using folly::StringPiece;
@@ -23,11 +24,11 @@ namespace facebook {
 namespace eden {
 
 namespace {
-array<uint8_t, Hash::RAW_SIZE> hexToBytes(StringPiece hex);
-array<uint8_t, Hash::RAW_SIZE> byteRangeToArray(ByteRange bytes);
+Hash::Storage hexToBytes(StringPiece hex);
+Hash::Storage byteRangeToArray(ByteRange bytes);
 }
 
-Hash::Hash(std::array<uint8_t, Hash::RAW_SIZE> bytes) : bytes_(bytes) {}
+Hash::Hash(Storage bytes) : bytes_(bytes) {}
 
 Hash::Hash(ByteRange bytes) : Hash(byteRangeToArray(bytes)) {}
 
@@ -52,7 +53,7 @@ bool Hash::operator<(const Hash& otherHash) const {
 }
 
 namespace {
-array<uint8_t, Hash::RAW_SIZE> hexToBytes(StringPiece hex) {
+Hash::Storage hexToBytes(StringPiece hex) {
   auto requiredSize = Hash::RAW_SIZE * 2;
   if (hex.size() != requiredSize) {
     throw std::invalid_argument(folly::sformat(
@@ -69,12 +70,12 @@ array<uint8_t, Hash::RAW_SIZE> hexToBytes(StringPiece hex) {
         "{} could not be unhexlified: likely due to invalid characters", hex));
   }
 
-  std::array<uint8_t, Hash::RAW_SIZE> hashBytes;
+  Hash::Storage hashBytes;
   std::copy(bytes.begin(), bytes.end(), hashBytes.data());
   return hashBytes;
 }
 
-array<uint8_t, Hash::RAW_SIZE> byteRangeToArray(ByteRange bytes) {
+Hash::Storage byteRangeToArray(ByteRange bytes) {
   if (bytes.size() != Hash::RAW_SIZE) {
     throw std::invalid_argument(folly::sformat(
         "{} should have size {} but had size {}",
@@ -83,10 +84,35 @@ array<uint8_t, Hash::RAW_SIZE> byteRangeToArray(ByteRange bytes) {
         bytes.size()));
   }
 
-  array<uint8_t, Hash::RAW_SIZE> arr;
+  Hash::Storage arr;
   std::copy(bytes.begin(), bytes.end(), arr.data());
   return arr;
 }
+}
+
+Hash Hash::sha1(const folly::IOBuf* buf) {
+  SHA_CTX shaCtx;
+  SHA1_Init(&shaCtx);
+
+  folly::io::Cursor c(buf);
+  while (true) {
+    ByteRange peeked = c.peekBytes();
+    if (peeked.empty()) {
+      break;
+    }
+    SHA1_Update(&shaCtx, peeked.data(), peeked.size());
+    c.skip(peeked.size());
+  }
+
+  Storage hashBytes;
+  SHA1_Final(hashBytes.data(), &shaCtx);
+  return Hash(hashBytes);
+}
+
+Hash Hash::sha1(ByteRange data) {
+  Storage hashBytes;
+  SHA1(data.data(), data.size(), hashBytes.data());
+  return Hash(hashBytes);
 }
 }
 }

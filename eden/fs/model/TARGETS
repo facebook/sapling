@@ -8,5 +8,6 @@ cpp_library(
   ],
   external_deps = [
     ('boost', 'any'),
+    ('openssl', None, 'ssl'),
   ],
 )

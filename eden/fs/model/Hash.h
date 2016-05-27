@@ -14,6 +14,10 @@
 #include <array>
 #include <boost/operators.hpp>
 
+namespace folly {
+class IOBuf;
+}
+
 namespace facebook {
 namespace eden {
 
@@ -23,8 +27,9 @@ namespace eden {
 class Hash : boost::totally_ordered<Hash> {
  public:
   enum { RAW_SIZE = 20 };
+  using Storage = std::array<uint8_t, RAW_SIZE>;
 
-  explicit Hash(std::array<uint8_t, RAW_SIZE> bytes);
+  explicit Hash(Storage bytes);
 
   explicit Hash(folly::ByteRange bytes);
 
@@ -32,6 +37,16 @@ class Hash : boost::totally_ordered<Hash> {
    * @param hex is a string of 40 hexadecimal characters.
    */
   explicit Hash(folly::StringPiece hex);
+
+  /**
+   * Compute the SHA1 hash of an IOBuf chain.
+   */
+  static Hash sha1(const folly::IOBuf* buf);
+
+  /**
+   * Compute the SHA1 hash of a ByteRange
+   */
+  static Hash sha1(folly::ByteRange data);
 
   folly::ByteRange getBytes() const;
 
@@ -42,7 +57,7 @@ class Hash : boost::totally_ordered<Hash> {
   bool operator<(const Hash&) const;
 
  private:
-  const std::array<uint8_t, RAW_SIZE> bytes_;
+  const Storage bytes_;
 };
 }
 }
