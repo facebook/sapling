@@ -137,14 +137,14 @@ class SVNMeta(object):
             filename = name
         if configname is None:
             configname = name
-        prop = property(lambda x: self._get_cachedconfig(name,
-                                                         filename,
-                                                         configname,
-                                                         default,
-                                                         pre=pre),
-                        lambda x, y: self._set_cachedconfig(y,
-                                                            name,
-                                                            filename))
+        prop = property(lambda x: x._get_cachedconfig(name,
+                                                      filename,
+                                                      configname,
+                                                      default,
+                                                      pre=pre),
+                        lambda x, y: x._set_cachedconfig(y,
+                                                         name,
+                                                         filename))
         setattr(SVNMeta, name, prop)
 
     def layout_from_subversion(self, svn, revision=None):
