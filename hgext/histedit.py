@@ -420,9 +420,7 @@ class histeditaction(object):
         <hash> <rev> <summary>
         """
         ctx = self.repo[self.node]
-        summary = ''
-        if ctx.description():
-            summary = ctx.description().splitlines()[0]
+        summary = _getsummary(ctx)
         line = '%s %s %d %s' % (self.verb, ctx, ctx.rev(), summary)
         # trim to 75 columns by default so it's not stupidly wide in my editor
         # (the 5 more are left for verb)
