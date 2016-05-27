@@ -861,7 +861,7 @@ static PyMethodDef lazymanifest_methods[] = {
 	{"iterkeys", (PyCFunction)lazymanifest_getkeysiter, METH_NOARGS,
 	 "Iterate over file names in this lazymanifest."},
 	{"iterentries", (PyCFunction)lazymanifest_getentriesiter, METH_NOARGS,
-	 "Iterate over (path, nodeid, flags) typles in this lazymanifest."},
+	 "Iterate over (path, nodeid, flags) tuples in this lazymanifest."},
 	{"copy", (PyCFunction)lazymanifest_copy, METH_NOARGS,
 	 "Make a copy of this lazymanifest."},
 	{"filtercopy", (PyCFunction)lazymanifest_filtercopy, METH_O,
