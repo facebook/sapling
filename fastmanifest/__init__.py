@@ -85,6 +85,7 @@ and flat manifest, asynchronously and synchronously.
 from mercurial import bookmarks, cmdutil, dirstate, error, extensions
 from mercurial import localrepo, manifest, revset
 
+import concurrency
 from fastmanifest import *
 from implementation import manifestfactory
 

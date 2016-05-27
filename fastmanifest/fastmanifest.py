@@ -254,7 +254,6 @@ class systemawarecachelimit(object):
         else:
             return min(maxcachesizegb * GB, highgrowthslope * freespace)
 
-
 def cachemanifestpruneall(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
     cache.pruneall()
