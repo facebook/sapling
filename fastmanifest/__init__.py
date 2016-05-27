@@ -89,7 +89,7 @@ from extutil import wrapfilecache
 
 import cachemanager
 import concurrency
-from fastmanifest import *
+import debug
 from implementation import manifestfactory
 
 cmdtable = {}
@@ -109,7 +109,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     if opts["limit"] == -1 :
         limit = None
     else:
-        limit = fixedcachelimit(opts["limit"])
+        limit = debug.fixedcachelimit(opts["limit"])
 
     pruneall = opts["pruneall"]
     displaylist = opts['list']
@@ -142,7 +142,7 @@ def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
     factory = manifestfactory(ui)
     if logfile:
-        logger = manifestaccesslogger(logfile)
+        logger = debug.manifestaccesslogger(logfile)
         extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
     # Wraps all the function creating a manifestdict
     # We have to do that because the logic to create manifest can take
