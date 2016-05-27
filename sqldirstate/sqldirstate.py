@@ -219,8 +219,10 @@ class sqldirs(object):
     """ Reimplementaion of util.dirs which is not resuseable because it's
         replaced by c code if available. Probably with a small upstream
         change we could reuse it """
-    def __init__(self, sqlconn, skip=None, filemap=None):
-        self._dirs = sqldirsdict(sqlconn)
+    def __init__(self, sqlconn, skip=None, filemap=None, dirsdict=None):
+        self._dirs = dirsdict
+        if self._dirs is None:
+            self._dirs = sqldirsdict(sqlconn)
         if filemap:
             for f, s in filemap.iteritems():
                 self.addpath(f)
@@ -250,6 +252,10 @@ class sqldirs(object):
 
     def clear(self):
         self._dirs.clear()
+
+    @property
+    def dirsdict(self):
+        return self._dirs
 
 def makedirstate(cls):
     class sqldirstate(cls):
@@ -448,12 +454,15 @@ def tosql(dirstate):
     copymap = sqlcopymap(sqlconn)
     filefoldmap = sqlfilefoldmap(sqlconn)
     dirfoldmap = sqldirfoldmap(sqlconn)
+    dirsdict = sqldirsdict(sqlconn)
 
-    sqldirs(sqlconn, filemap=dirstate._map)
+    sqldirs(sqlconn, dirsdict=dirstate._map)
     sqlmap.update(dirstate._map)
     copymap.update(dirstate._copymap)
     filefoldmap.update(dirstate._filefoldmap)
     dirfoldmap.update(dirstate._dirfoldmap)
+    dirs = sqldirs(sqlconn, filemap=dirstate._map, dirsdict={})
+    dirsdict.update(dirs.dirsdict)
 
     cur = sqlconn.cursor()
     cur.executemany('''INSERT OR REPLACE INTO
