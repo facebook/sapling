@@ -186,6 +186,35 @@ class hybridmanifest(object):
         assert type(_m1) == type(_m2)
         return _m1.diff(_m2, *args, **kwargs)
 
+    def filesnotin(self, m2, *args, **kwargs):
+        self.debug("performing filesnotin\n")
+        # Find _m1 and _m2 of the same type, to provide the fastest computation
+        _m1, _m2 = None, None
+
+        if isinstance(m2, hybridmanifest):
+            self.debug("filesnotin: other side is hybrid manifest\n")
+            # CACHE HIT
+            if self._incache() and m2._incache():
+                _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
+                # _m1 or _m2 can be None if _incache was True if the cache
+                # got garbage collected in the meantime or entry is corrupted
+                if _m1 is None or _m2 is None:
+                    self.debug("filesnotin: unable to load one or "
+                               "more manifests\n")
+                    _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
+            # CACHE MISS
+            else:
+                self.debug("filesnotin: cache miss\n")
+                _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
+        else:
+            # This happens when filesnotining against a new manifest (like rev
+            # -1)
+            self.debug("filesnotin: other side not hybrid manifest\n")
+            _m1, _m2 = self._flatmanifest(), m2
+
+        assert type(_m1) == type(_m2)
+        return _m1.filesnotin(_m2, *args, **kwargs)
+
 class fastmanifestdict(object):
     def __init__(self, fm):
         self._fm = fm
