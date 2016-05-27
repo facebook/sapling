@@ -34,6 +34,7 @@ from sqlmap import sqlmap
 dirstatetuple = parsers.dirstatetuple
 
 DBFILE = "dirstate.sqlite3"
+FAKEDIRSTATE = "dirstate"
 
 def createotherschema(sqlconn):
     """ The storage for all misc small key value data """
@@ -365,6 +366,9 @@ def makedirstate(cls):
             self._dirty = self._dirtypl = False
             self._nonnormalset = self._map.nonnormalentries()
 
+            if self._ui.configbool('sqldirstate', 'fakedirstate', True):
+                writefakedirstate(self)
+
         def _backupandwrite(self, tr):
             if not self.skipbackups:
                 backuppath = self._opener.join('%s.%s' % (tr.journal, DBFILE))
@@ -415,6 +419,15 @@ def makedirstate(cls):
             return copies
     return sqldirstate
 
+
+def writefakedirstate(dirstate):
+    st = dirstate._opener(FAKEDIRSTATE, "w", atomictemp=True)
+    st.write("".join(dirstate._pl))
+    st.write("\nThis is fake dirstate put here by the sqldirsate.")
+    st.write("\nIt contains only working copy parents info.")
+    st.write("\nThe real dirstate is in dirstate.sqlite3 file.")
+    st.close()
+
 def tosql(dirstate):
     """" converts flat dirstate to sqldirstate
 
@@ -457,6 +470,7 @@ def tosql(dirstate):
                 )
     cur.close()
     sqlconn.commit()
+    writefakedirstate(dirstate)
 
 def toflat(sqldirstate):
     """" converts sqldirstate to flat dirstate

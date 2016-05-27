@@ -7,7 +7,7 @@
 
 testedwith = 'internal'
 
-from sqldirstate import makedirstate, DBFILE, toflat, tosql
+from sqldirstate import makedirstate, DBFILE, toflat, tosql, writefakedirstate
 
 from mercurial import commands, error, extensions, cmdutil, localrepo, util
 from mercurial.i18n import _
@@ -81,8 +81,12 @@ def upgrade(ui, repo):
         tosql(repo.dirstate)
         repo.requirements.add('sqldirstate')
         repo._writerequirements()
-        repo.dirstate._opener.unlink('dirstate')
+        if ui.configbool('sqldirstate', 'fakedirstate', True):
+            writefakedirstate(repo.dirstate)
+        else:
+            repo.dirstate._opener.unlink('dirstate')
         del repo.dirstate
+
     finally:
         wlock.release()
 

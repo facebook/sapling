@@ -33,6 +33,7 @@ Test automatic upgrade on pull
   abort: repository default not found!
   [255]
   $ ls .hg/dirstate*
+  .hg/dirstate
   .hg/dirstate.sqlite3
   $ hg st
   A a/a
