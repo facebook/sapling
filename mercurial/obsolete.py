@@ -1171,7 +1171,7 @@ def _computebumpedset(repo):
                                    ignoreflags=bumpedfix):
             prev = torev(pnode) # unfiltered! but so is phasecache
             if (prev is not None) and (phase(repo, prev) <= public):
-                # we have a public precursors
+                # we have a public precursor
                 bumped.add(rev)
                 break # Next draft!
     return bumped
