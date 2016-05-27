@@ -85,6 +85,9 @@ and flat manifest, asynchronously and synchronously.
 from mercurial import bookmarks, cmdutil, dirstate, error, extensions
 from mercurial import localrepo, manifest, revset
 
+from extutil import wrapfilecache
+
+import cachemanager
 import concurrency
 from fastmanifest import *
 from implementation import manifestfactory
@@ -124,15 +127,16 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         raise error.Abort("can only use --pruneall or --list not both")
 
     if pruneall:
-        cachemanifestpruneall(ui, repo)
+        cachemanager.cachemanifestpruneall(ui, repo)
         return
 
     if displaylist:
-        cachemanifestlist(ui, repo)
+        cachemanager.cachemanifestlist(ui, repo)
         return
 
     if revset or limit:
-        cachemanifestfillandtrim(ui, repo, revset, limit, background)
+        cachemanager.cachemanifestfillandtrim(
+            ui, repo, revset, limit, background)
 
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
@@ -172,23 +176,25 @@ def extsetup(ui):
         # The function didn't use to be defined in previous versions of hg
         pass
 
-    revset.symbols['fastmanifesttocache'] = fastmanifesttocache
+    revset.symbols['fastmanifesttocache'] = cachemanager.fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
 
     if ui.configbool("fastmanifest", "cacheonchange", False):
         # Trigger to enable caching of relevant manifests
         extensions.wrapfunction(bookmarks.bmstore, '_write',
-                                triggercacheonbookmarkchange)
+                                cachemanager.triggercacheonbookmarkchange)
         extensions.wrapfunction(dirstate.dirstate, 'write',
-                                 triggercacheondirstatechange)
+                                cachemanager.triggercacheondirstatechange)
         try:
             remotenames = extensions.find('remotenames')
         except KeyError:
             pass
         else:
             if remotenames:
-                extensions.wrapfunction(remotenames, 'saveremotenames',
-                                        triggercacheonremotenameschange)
+                extensions.wrapfunction(
+                    remotenames,
+                    'saveremotenames',
+                    cachemanager.triggercacheonremotenameschange)
 
         def wrapdirstate(orig, self):
             dirstate = orig(self)

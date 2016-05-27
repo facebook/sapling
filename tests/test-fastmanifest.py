@@ -29,16 +29,17 @@ class HybridManifest(unittest.TestCase):
                         "%s missing in hybrid manifest" % method
 
     def test_cachelimit(self):
-        cachealloc = fastmanifest.systemawarecachelimit.cacheallocation
-        GB = fastmanifest.GB
-        MB = fastmanifest.MB
+        from fastmanifest.cachemanager import _systemawarecachelimit
+        cachealloc = _systemawarecachelimit.cacheallocation
+        GB = fastmanifest.cachemanager.GB
+        MB = fastmanifest.cachemanager.MB
         assert cachealloc(0) == 0
         assert cachealloc(120 * GB) == 6 * GB
         assert abs(cachealloc(28 * GB) - 5.6 * GB) < 5 * MB
 
     def test_shufflebybatch(self):
         data = range(10000)
-        fastmanifest.shufflebybatch(data, 5)
+        fastmanifest.cachemanager.shufflebybatch(data, 5)
         assert len(data) == 10000
         assert data != range(10000)
 
