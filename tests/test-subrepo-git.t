@@ -1135,7 +1135,7 @@ make sure we show changed files, rather than changed subtrees
 test for Git CVE-2016-3068
   $ hg init malicious-subrepository
   $ cd malicious-subrepository
-  $ echo "s = [git]ext::sh -c echo% pwned% >&2" > .hgsub
+  $ echo "s = [git]ext::sh -c echo% pwned% >pwned.txt" > .hgsub
   $ git init s
   Initialized empty Git repository in $TESTTMP/tc/malicious-subrepository/s/.git/
   $ cd s
@@ -1145,23 +1145,27 @@ test for Git CVE-2016-3068
   $ hg add .hgsub
   $ hg commit -m "add subrepo"
   $ cd ..
+  $ rm -f pwned.txt
   $ env -u GIT_ALLOW_PROTOCOL hg clone malicious-subrepository malicious-subrepository-protected
   Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'... (glob)
   fatal: transport 'ext' not allowed
   updating to branch default
-  cloning subrepo s from ext::sh -c echo% pwned% >&2
+  cloning subrepo s from ext::sh -c echo% pwned% >pwned.txt
   abort: git clone error 128 in s (in subrepo s)
   [255]
+  $ test -f pwned.txt && cat pwned.txt || true
 
 whitelisting of ext should be respected (that's the git submodule behaviour)
+  $ rm -f pwned.txt
   $ env GIT_ALLOW_PROTOCOL=ext hg clone malicious-subrepository malicious-subrepository-clone-allowed
   Cloning into '$TESTTMP/tc/malicious-subrepository-clone-allowed/s'... (glob)
-  pwned
   fatal: Could not read from remote repository.
   
   Please make sure you have the correct access rights
   and the repository exists.
   updating to branch default
-  cloning subrepo s from ext::sh -c echo% pwned% >&2
+  cloning subrepo s from ext::sh -c echo% pwned% >pwned.txt
   abort: git clone error 128 in s (in subrepo s)
   [255]
+  $ cat pwned.txt
+  pwned
