@@ -535,14 +535,6 @@ class fastmanifestcache(object):
                 except OSError:
                     pass
 
-    def cache_fastmanifest_inmemory(self, hexnode, fmdict):
-        ident = self.inmemorycachekey(hexnode)
-        r = self.inmemorycache.get(ident, None)
-        if r:
-            return
-
-        self.inmemorycache[ident] = fmdict.copy()
-
     def __iter__(self):
         for f in sorted(os.listdir(self.cachepath)):
             if f.startswith(self.keyprefix()):
@@ -630,42 +622,6 @@ class manifestfactory(object):
                               args[0].opener,
                               loadflat=loadfn,
                               node=args[1])
-
-    def add(self, orig, *args, **kwargs):
-        origself, m, transaction, link, p1, p2, added, removed = args[:8]
-        fastcache = fastmanifestcache.getinstance(origself.opener, self.ui)
-
-        p1hexnode = revlog.hex(p1)
-        if (fastcache.containsnode(p1hexnode) and
-            isinstance(m, hybridmanifest) and
-            m._incache()):
-            # yay, we can satisfy this from the fastmanifest.
-
-            p1manifest = fastcache.get(p1hexnode)
-
-            manifest._checkforbidden(added)
-            # combine the changed lists into one sorted iterator
-            work = heapq.merge([(x, False) for x in added],
-                               [(x, True) for x in removed])
-
-            # TODO: potential for optimization: avoid this silly conversion to a
-            # python array.
-            manifestarray = array.array('c', p1manifest.text())
-
-            arraytext, deltatext = m.fastdelta(manifestarray, work)
-            cachedelta = origself.rev(p1), deltatext
-            text = util.buffer(arraytext)
-            node = origself.addrevision(
-                text, transaction, link, p1, p2, cachedelta)
-            hexnode = revlog.hex(node)
-            fastcache.cache_fastmanifest_inmemory(hexnode,
-                                                  m._cachedmanifest())
-
-            self.ui.debug("[FM] wrote manifest %s\n" % (hexnode,))
-
-            return node
-        else:
-            return orig(*args, **kwargs)
 
 def _silent_debug(*args, **kwargs):
     """Replacement for ui.debug that silently swallows the arguments.
