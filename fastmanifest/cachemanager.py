@@ -181,7 +181,7 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
         revstomannodes[rev] = mannode
         if cache.containsnode(mannode):
-            ui.debug("skipped %s, already cached (fast path)\n" % mannode)
+            ui.debug("[FM] skipped %s, already cached (fast path)\n" % mannode)
             # Account for the fact that we access this manifest
             cache.refresh(mannode)
             continue

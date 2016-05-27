@@ -87,7 +87,7 @@ class hybridmanifest(object):
 
             self.incache = self.__cachedmanifest is not None
 
-            self.debug("cache %s for fastmanifest %s\n"
+            self.debug("[FM] cache %s for fastmanifest %s\n"
                        % ("hit" if self.incache else "miss", self.cachekey))
 
         return self.__cachedmanifest
@@ -159,57 +159,57 @@ class hybridmanifest(object):
             raise ValueError("unknown manifest type {0}".format(type(matches)))
 
     def diff(self, m2, *args, **kwargs):
-        self.debug("performing diff\n")
+        self.debug("[FM] performing diff\n")
         # Find _m1 and _m2 of the same type, to provide the fastest computation
         _m1, _m2 = None, None
 
         if isinstance(m2, hybridmanifest):
-            self.debug("diff: other side is hybrid manifest\n")
+            self.debug("[FM] diff: other side is hybrid manifest\n")
             # CACHE HIT
             if self._incache() and m2._incache():
                 _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
                 if _m1 is None or _m2 is None:
-                    self.debug("diff: unable to load one or "
+                    self.debug("[FM] diff: unable to load one or "
                                "more manifests\n")
                     _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
             # CACHE MISS
             else:
-                self.debug("diff: cache miss\n")
+                self.debug("[FM] diff: cache miss\n")
                 _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
         else:
             # This happens when diffing against a new manifest (like rev -1)
-            self.debug("diff: other side not hybrid manifest\n")
+            self.debug("[FM] diff: other side not hybrid manifest\n")
             _m1, _m2 = self._flatmanifest(), m2
 
         assert type(_m1) == type(_m2)
         return _m1.diff(_m2, *args, **kwargs)
 
     def filesnotin(self, m2, *args, **kwargs):
-        self.debug("performing filesnotin\n")
+        self.debug("[FM] performing filesnotin\n")
         # Find _m1 and _m2 of the same type, to provide the fastest computation
         _m1, _m2 = None, None
 
         if isinstance(m2, hybridmanifest):
-            self.debug("filesnotin: other side is hybrid manifest\n")
+            self.debug("[FM] filesnotin: other side is hybrid manifest\n")
             # CACHE HIT
             if self._incache() and m2._incache():
                 _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
                 if _m1 is None or _m2 is None:
-                    self.debug("filesnotin: unable to load one or "
+                    self.debug("[FM] filesnotin: unable to load one or "
                                "more manifests\n")
                     _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
             # CACHE MISS
             else:
-                self.debug("filesnotin: cache miss\n")
+                self.debug("[FM] filesnotin: cache miss\n")
                 _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
         else:
             # This happens when filesnotining against a new manifest (like rev
             # -1)
-            self.debug("filesnotin: other side not hybrid manifest\n")
+            self.debug("[FM] filesnotin: other side not hybrid manifest\n")
             _m1, _m2 = self._flatmanifest(), m2
 
         assert type(_m1) == type(_m2)
@@ -513,9 +513,9 @@ class fastmanifestcache(object):
                 return False
 
         if self.containsnode(hexnode):
-            self.debug("skipped %s, already cached\n" % hexnode)
+            self.debug("[FM] skipped %s, already cached\n" % hexnode)
         else:
-            self.debug("caching revision %s\n" % hexnode)
+            self.debug("[FM] caching revision %s\n" % hexnode)
 
             realfpath = self.filecachepath(hexnode)
             tmpfpath = util.mktempcopy(realfpath, True)
@@ -581,7 +581,7 @@ class fastmanifestcache(object):
                 pass
         # Do nothing, we don't exceed the limit
         if limit.bytes() > sum([e[2] for e in entries]):
-            self.debug("nothing to do, cache size < limit\n")
+            self.debug("[FM] nothing to do, cache size < limit\n")
             return
         # [most recently accessed, second most recently accessed ...]
         entriesbyage = sorted(entries, key=lambda x:(-x[1],x[0]))
@@ -601,7 +601,7 @@ class fastmanifestcache(object):
             self.pruneentrybyfname(entry[0])
 
     def pruneentrybyfname(self, fname):
-        self.debug("removing cached manifest %s\n" % fname)
+        self.debug("[FM] removing cached manifest %s\n" % fname)
         try:
             os.unlink(os.path.join(self.cachepath, fname))
         except EnvironmentError:

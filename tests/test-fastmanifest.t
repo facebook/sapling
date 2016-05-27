@@ -180,11 +180,11 @@ Check diagnosis, debugging information
   $ mkcommit d
   $ mkcommit e
   $ hg diff -c . --debug --nodate
-  cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  performing diff
-  diff: other side is hybrid manifest
-  diff: cache miss
+  [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] performing diff
+  [FM] diff: other side is hybrid manifest
+  [FM] diff: cache miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -211,10 +211,10 @@ there is a concurrency issue to address
   cache size is: 1.13 KB
   number of entries is: 5
   $ hg diff -c . --debug --nodate
-  cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  performing diff
-  diff: other side is hybrid manifest
+  [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] performing diff
+  [FM] diff: other side is hybrid manifest
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -223,19 +223,19 @@ there is a concurrency issue to address
 
 Test the --pruneall command to prune all the cached manifests
   $ hg debugcachemanifest --pruneall --debug
-  caching revset: [], background(False), pruneall(True), list(False)
-  removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] caching revset: [], background(False), pruneall(True), list(False)
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
 
   $ hg diff -c . --debug --nodate
-  cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  performing diff
-  diff: other side is hybrid manifest
-  diff: cache miss
+  [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] performing diff
+  [FM] diff: other side is hybrid manifest
+  [FM] diff: cache miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -250,29 +250,35 @@ Test the --pruneall command to prune all the cached manifests
   $ hg update -c .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book --debug foo
-  skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
-  skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
-  skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
-  skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
-  nothing to do, cache size < limit
-  skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
-  skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
-  skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
-  skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
-  nothing to do, cache size < limit
-  skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
-  skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
-  skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
-  skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
-  nothing to do, cache size < limit
+  [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] nothing to do, cache size < limit
+  [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] nothing to do, cache size < limit
+  [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] nothing to do, cache size < limit
+  [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] nothing to do, cache size < limit
   $ hg diff -c . --debug --nodate
-  cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  performing diff
-  diff: other side is hybrid manifest
+  [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] performing diff
+  [FM] diff: other side is hybrid manifest
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -281,12 +287,12 @@ Test the --pruneall command to prune all the cached manifests
 
 
   $ hg debugcachemanifest --all --debug
-  caching revset: ['fastmanifesttocache()'], background(False), pruneall(False), list(False)
-  skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
-  skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
-  skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
-  skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
-  skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] caching revset: ['fastmanifesttocache()'], background(False), pruneall(False), list(False)
+  [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
 
 Make the entries of the cache be in a deterministic order accross platforms
 to make the test deterministic:
@@ -300,7 +306,7 @@ to make the test deterministic:
   ...   assert os.path.getmtime(f) == basetime
   ...   basetime+=10
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
@@ -311,15 +317,15 @@ to make the test deterministic:
 
 Check that trimming to a limit higher than what is cached does nothing
   $ hg debugcachemanifest --debug --limit=2048
-  caching revset: [], background(False), pruneall(False), list(False)
-  nothing to do, cache size < limit
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] nothing to do, cache size < limit
 
 Trim the cache to at most 1kb
   $ hg debugcachemanifest --debug --limit=1024
-  caching revset: [], background(False), pruneall(False), list(False)
-  removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
@@ -329,11 +335,11 @@ Trim the cache to at most 1kb
 
 Trim the cache to at most 512 bytes
   $ hg debugcachemanifest --debug --limit=512
-  caching revset: [], background(False), pruneall(False), list(False)
-  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 512 bytes
@@ -341,11 +347,11 @@ Trim the cache to at most 512 bytes
 
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
-  caching revset: [], background(False), pruneall(False), list(False)
-  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
   number of entries is: 0
 
@@ -361,7 +367,7 @@ Make the results deterministic
   ...   assert os.path.getmtime(f) == basetime
   ...   basetime+=10
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
@@ -370,14 +376,14 @@ Make the results deterministic
   cache size is: 1.13 KB
   number of entries is: 5
   $ hg debugcachemanifest --debug --limit=0
-  caching revset: [], background(False), pruneall(False), list(False)
-  removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   $ hg debugcachemanifest --debug --list
-  caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
   number of entries is: 0
 

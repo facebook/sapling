@@ -120,7 +120,8 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     else:
         revset = []
 
-    ui.debug(("caching revset: %s, background(%s), pruneall(%s), list(%s)\n")
+    ui.debug(("[FM] caching revset: %s, background(%s), "
+              "pruneall(%s), list(%s)\n")
              % (revset, background, pruneall, displaylist))
 
     if displaylist and pruneall:
