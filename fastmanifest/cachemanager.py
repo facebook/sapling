@@ -167,50 +167,61 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     else:
         return
 
-    if background:
-        if concurrency.fork_worker(ui, repo):
-            return
-    cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+    lock = concurrency.looselock(repo.vfs, "fastmanifest",
+                                 constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT)
+    # we don't use the with: syntax because we only want to unlock in *one*
+    # process (in this case, the child process).
+    try:
+        lock.lock()
+    except error.LockHeld:
+        return
+    try:
+        if background:
+            if concurrency.fork_worker(ui, repo):
+                return
+        cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
-    computedrevs = scmutil.revrange(repo, revset)
-    sortedrevs = sorted(computedrevs, key=lambda x:-x)
-    if ui.configbool("fastmanifest", "randomorder", True):
-        # Make a copy because we want to keep the ordering to assign mtime
-        # below
-        revs = sortedrevs[:]
-        batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
-        shufflebybatch(revs, batchsize)
-    else:
-        revs = sortedrevs
-
-    revstomannodes = {}
-    for rev in revs:
-        mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
-        revstomannodes[rev] = mannode
-        if cache.containsnode(mannode):
-            ui.debug("[FM] skipped %s, already cached (fast path)\n" % mannode)
-            # Account for the fact that we access this manifest
-            cache.refresh(mannode)
-            continue
-        manifest = repo[rev].manifest()
-        if not cache.put(mannode, manifest, limit):
-            # Insertion failed because cache is full
-            del revstomannodes[rev]
-            break
-
-    # Make the least relevant entries have an artificially older mtime
-    # than the more relevant ones. We use a resolution of 2 for time to work
-    # accross all platforms and ensure that the order is marked.
-    # Note that we use sortedrevs and not revs because here we don't care about
-    # the shuffling, we just want the most relevant revisions to have more
-    # recent mtime.
-    mtimemultiplier = 2
-    for offset, rev in enumerate(sortedrevs):
-        if rev in revstomannodes:
-            hexnode = revstomannodes[rev]
-            cache.refresh(hexnode, delay=offset * mtimemultiplier)
+        computedrevs = scmutil.revrange(repo, revset)
+        sortedrevs = sorted(computedrevs, key=lambda x:-x)
+        if ui.configbool("fastmanifest", "randomorder", True):
+            # Make a copy because we want to keep the ordering to assign mtime
+            # below
+            revs = sortedrevs[:]
+            batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
+            shufflebybatch(revs, batchsize)
         else:
-            pass # We didn't have enough space for that rev
+            revs = sortedrevs
+
+        revstomannodes = {}
+        for rev in revs:
+            mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
+            revstomannodes[rev] = mannode
+            if cache.containsnode(mannode):
+                ui.debug("[FM] skipped %s, already cached (fast path)\n" % mannode)
+                # Account for the fact that we access this manifest
+                cache.refresh(mannode)
+                continue
+            manifest = repo[rev].manifest()
+            if not cache.put(mannode, manifest, limit):
+                # Insertion failed because cache is full
+                del revstomannodes[rev]
+                break
+
+        # Make the least relevant entries have an artificially older mtime
+        # than the more relevant ones. We use a resolution of 2 for time to work
+        # accross all platforms and ensure that the order is marked.
+        # Note that we use sortedrevs and not revs because here we don't care about
+        # the shuffling, we just want the most relevant revisions to have more
+        # recent mtime.
+        mtimemultiplier = 2
+        for offset, rev in enumerate(sortedrevs):
+            if rev in revstomannodes:
+                hexnode = revstomannodes[rev]
+                cache.refresh(hexnode, delay=offset * mtimemultiplier)
+            else:
+                pass # We didn't have enough space for that rev
+    finally:
+        lock.unlock()
 
     if limit is not None:
         cache.prune(limit)
