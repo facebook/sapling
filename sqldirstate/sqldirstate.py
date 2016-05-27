@@ -450,17 +450,10 @@ def tosql(dirstate):
     dirfoldmap = sqldirfoldmap(sqlconn)
 
     sqldirs(sqlconn, filemap=dirstate._map)
-    for name, s in dirstate._map.iteritems():
-        sqlmap[name] = s
-
-    for k, v in dirstate._copymap.iteritems():
-        copymap[k] = v
-
-    for k, v in dirstate._filefoldmap.iteritems():
-        filefoldmap[k] = v
-
-    for k, v in dirstate._dirfoldmap.iteritems():
-        dirfoldmap[k] = v
+    sqlmap.update(dirstate._map)
+    copymap.update(dirstate._copymap)
+    filefoldmap.update(dirstate._filefoldmap)
+    dirfoldmap.update(dirstate._dirfoldmap)
 
     cur = sqlconn.cursor()
     cur.executemany('''INSERT OR REPLACE INTO

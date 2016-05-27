@@ -95,6 +95,26 @@ class sqlmap(collections.MutableMapping):
     def copy(self):
         return dict(self)
 
+    def _update(self, otherdict):
+        tuplelist = [(k,) + self._valuetorow(v)
+                     for k, v in otherdict.iteritems()]
+
+        cur = self._sqlconn.cursor()
+        cur.executemany('''INSERT OR REPLACE INTO
+                  {0} ({1}, {2})
+                  VALUES ({3})'''.format(
+                      self._tablename, self._keyname, self._valuenamesstr,
+                      ', '.join(['?'] * self._numcols)),
+                  tuplelist)
+        cur.close()
+
+    def update(self, *args, **kwargs):
+        assert(len(args) == 1 or kwargs)
+        if args:
+            self._update(args[0])
+        if kwargs:
+            self._update(kwargs)
+
     def keys(self):
         cur = self._sqlconn.cursor()
         cur.execute('''SELECT {1} FROM {0}'''.format(self._tablename,
