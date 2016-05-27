@@ -1,0 +1,26 @@
+Certificates created with:
+ printf '.\n.\n.\n.\n.\nlocalhost\nhg@localhost\n' | \
+ openssl req -newkey rsa:512 -keyout priv.pem -nodes -x509 -days 9000 -out pub.pem
+Can be dumped with:
+ openssl x509 -in pub.pem -text
+
+ - priv.pem
+ - pub.pem
+ - pub-other.pem
+
+pub.pem patched with other notBefore / notAfter:
+
+ - pub-not-yet.pem
+ - pub-expired.pem
+
+Client certificates created with:
+ openssl genrsa -aes128 -passout pass:1234 -out client-key.pem 512
+ openssl rsa -in client-key.pem -passin pass:1234 -out client-key-decrypted.pem
+ printf '.\n.\n.\n.\n.\n.\nhg-client@localhost\n.\n.\n' | \
+ openssl req -new -key client-key.pem -passin pass:1234 -out client-csr.pem
+ openssl x509 -req -days 9000 -in client-csr.pem -CA pub.pem -CAkey priv.pem \
+ -set_serial 01 -out client-cert.pem
+
+ - client-key.pem
+ - client-key-decrypted.pem
+ - client-cert.pem
