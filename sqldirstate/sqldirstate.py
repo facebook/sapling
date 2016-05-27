@@ -416,7 +416,11 @@ def makedirstate(cls):
     return sqldirstate
 
 def tosql(dirstate):
-    # converts a flat dirstate to sqldirstate
+    """" converts flat dirstate to sqldirstate
+
+    note: the sole responsibility of this function is to write the new dirstate
+    it's not touching anything but the DBFILE
+    """
     sqlfilename = dirstate._opener.join(DBFILE)
     try:
         os.unlink(sqlfilename)
@@ -455,6 +459,11 @@ def tosql(dirstate):
     sqlconn.commit()
 
 def toflat(sqldirstate):
+    """" converts sqldirstate to flat dirstate
+
+    note: the sole responsibility of this function is to write the new dirstate
+    it's not touching anything but the dirstate file
+    """
     # converts a sqldirstate to a flat one
     st = sqldirstate._opener("dirstate", "w", atomictemp=True)
     newmap = {}
