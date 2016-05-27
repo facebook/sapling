@@ -1211,6 +1211,7 @@ class dirstate(object):
 
     def savebackup(self, tr, suffix='', prefix=''):
         '''Save current dirstate into backup file with suffix'''
+        assert len(suffix) > 0 or len(prefix) > 0
         filename = self._actualfilename(tr)
 
         # use '_writedirstate' instead of 'write' to write changes certainly,
@@ -1235,6 +1236,7 @@ class dirstate(object):
 
     def restorebackup(self, tr, suffix='', prefix=''):
         '''Restore dirstate by backup file with suffix'''
+        assert len(suffix) > 0 or len(prefix) > 0
         # this "invalidate()" prevents "wlock.release()" from writing
         # changes of dirstate out after restoring from backup file
         self.invalidate()
@@ -1244,5 +1246,6 @@ class dirstate(object):
 
     def clearbackup(self, tr, suffix='', prefix=''):
         '''Clear backup file with suffix'''
+        assert len(suffix) > 0 or len(prefix) > 0
         # using self._filename to avoid having "pending" in the backup filename
         self._opener.unlink(prefix + self._filename + suffix)
