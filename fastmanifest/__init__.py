@@ -18,6 +18,9 @@ Configuration options and default value:
 # without changing the output.
 silent = False
 
+# If true, suppress all logging from worker processes.
+silentworker = True
+
 # If true, materializes every manifest as a fastmanifest. Used to test that
 # fastmanifest passes the mercurial test suite. This happens in memory only and
 # the on-disk fileformat is still revlog of flat manifest.

@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno
+import resource
 import os
 import socket
 import stat
@@ -16,16 +17,31 @@ from mercurial import error, lock
 
 # Returns true if we're the original process, returns false if we're the child
 # process.
+#
+# NOTE: This is extremely platform-specific code.
 def fork_worker(ui, repo):
+    silent_worker = ui.configbool("fastmanifest", "silentworker", True)
+
+    if not silent_worker:
+        # if we don't want a silent worker, then we need to flush any streams so
+        # any buffered content only gets written *once*.
+        sys.stdout.flush()
+        sys.stderr.flush()
+
     pid = os.fork()
     if pid > 0:
         return True
 
-    # we're not closing the prior descriptors because that would cause a flush,
-    # and we don't want that.
-    ui.fin = sys.stdin = open(os.devnull, "r")
-    ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
-    repo.ui = ui
+    if silent_worker:
+        # close all file descriptors.
+        flimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+        os.closerange(0, flimit[0])
+
+        # reopen some new file handles.
+        ui.fin = sys.stdin = open(os.devnull, "r")
+        ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
+        repo.ui = ui
+
     os.setsid()
     pid = os.fork()
     if pid > 0:
