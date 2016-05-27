@@ -9,7 +9,8 @@ testedwith = 'internal'
 
 from sqldirstate import makedirstate, DBFILE, toflat, tosql
 
-from mercurial import error, extensions, cmdutil, localrepo, util
+from mercurial import commands, error, extensions, cmdutil, localrepo, util
+from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 
 
@@ -59,7 +60,7 @@ def wrapdirstate(orig, self):
 
 def wrapnewreporequirements(orig, repo):
     reqs = orig(repo)
-    if repo.ui.configbool('format', 'sqldirstate', True):
+    if repo.ui.configbool('format', 'sqldirstate', False):
         reqs.add('sqldirstate')
     return reqs
 
@@ -98,6 +99,15 @@ def downgrade(ui, repo):
     finally:
         wlock.release()
 
+def wrappull(orig, ui, repo, *args, **kwargs):
+    if ui.configbool('sqldirstate', 'upgrade', False) and \
+            not issqldirstate(repo):
+        ui.status(_('migrating your repo to sqldirstate which will make your '
+                'hg commands faster\n'))
+        upgrade(ui, repo)
+        ui.status(_('done\n'))
+    return orig(ui, repo, *args, **kwargs)
+
 def featuresetup(ui, supported):
     # don't die on seeing a repo with the sqldirstate requirement
     supported |= set(['sqldirstate'])
@@ -115,6 +125,9 @@ def uisetup(ui):
         wrapfunction(shelve, '_aborttransaction', wrapshelveaborttransaction)
     except KeyError:
         pass
+
+def extsetup(ui):
+    extensions.wrapcommand(commands.table, 'pull', wrappull)
 
 # debug commands
 cmdtable = {}
