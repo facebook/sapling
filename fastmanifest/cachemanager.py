@@ -161,6 +161,9 @@ def shufflebybatch(it, batchsize):
 
 last_pid_fired = None
 def cachemanifestfillandtrim(ui, repo, revset, limit, background):
+    # theoretically, we could do this with just a simple "have we run before?"
+    # boolean flag, but this somewhat insulates us against architectural changes
+    # to chg where state is somehow preserved between mercurial invocations.
     global last_pid_fired
     if os.getpid() != last_pid_fired:
         last_pid_fired = os.getpid()
