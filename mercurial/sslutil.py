@@ -117,6 +117,8 @@ def _hostsettings(ui, hostname):
         # Path to file containing concatenated CA certs. Used by
         # SSLContext.load_verify_locations().
         'cafile': None,
+        # Whether the legacy [hostfingerprints] section has data for this host.
+        'legacyfingerprint': False,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
         'verifymode': None,
     }
@@ -140,6 +142,7 @@ def _hostsettings(ui, hostname):
     for fingerprint in ui.configlist('hostfingerprints', hostname, []):
         fingerprint = fingerprint.replace(':', '').lower()
         s['certfingerprints'].append(('sha1', fingerprint))
+        s['legacyfingerprint'] = True
 
     # If a host cert fingerprint is defined, it is the only thing that
     # matters. No need to validate CA certs.
@@ -350,6 +353,11 @@ def validatesocket(sock, strict=False):
     nicefingerprint = ':'.join([peerfingerprints['sha1'][x:x + 2]
         for x in range(0, len(peerfingerprints['sha1']), 2)])
 
+    if settings['legacyfingerprint']:
+        section = 'hostfingerprint'
+    else:
+        section = 'hostsecurity'
+
     if settings['certfingerprints']:
         fingerprintmatch = False
         for hash, fingerprint in settings['certfingerprints']:
@@ -359,7 +367,7 @@ def validatesocket(sock, strict=False):
         if not fingerprintmatch:
             raise error.Abort(_('certificate for %s has unexpected '
                                'fingerprint %s') % (host, nicefingerprint),
-                             hint=_('check hostfingerprint configuration'))
+                             hint=_('check %s configuration') % section)
         ui.debug('%s certificate matched fingerprint %s\n' %
                  (host, nicefingerprint))
         return
@@ -372,28 +380,28 @@ def validatesocket(sock, strict=False):
     # the same as below for BC.
     if ui.insecureconnections:
         ui.warn(_('warning: %s certificate with fingerprint %s not '
-                  'verified (check hostfingerprints or web.cacerts '
+                  'verified (check %s or web.cacerts '
                   'config setting)\n') %
-                (host, nicefingerprint))
+                (host, nicefingerprint, section))
         return
 
     if not sock._hgstate['caloaded']:
         if strict:
             raise error.Abort(_('%s certificate with fingerprint %s not '
                                 'verified') % (host, nicefingerprint),
-                              hint=_('check hostfingerprints or '
-                                     'web.cacerts config setting'))
+                              hint=_('check %s or web.cacerts config '
+                                     'setting') % section)
         else:
             ui.warn(_('warning: %s certificate with fingerprint %s '
-                      'not verified (check hostfingerprints or '
-                      'web.cacerts config setting)\n') %
-                    (host, nicefingerprint))
+                      'not verified (check %s or web.cacerts config '
+                      'setting)\n') %
+                    (host, nicefingerprint, section))
 
         return
 
     msg = _verifycert(peercert2, host)
     if msg:
         raise error.Abort(_('%s certificate error: %s') % (host, msg),
-                         hint=_('configure hostfingerprint %s or use '
+                         hint=_('configure %s %s or use '
                                 '--insecure to connect insecurely') %
-                              nicefingerprint)
+                              (section, nicefingerprint))

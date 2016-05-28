@@ -177,7 +177,7 @@ Apple's OpenSSL. This trick do not work with plain OpenSSL.
 clone via pull
 
   $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLEOSXDUMMYCERT
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   requesting all changes
   adding changesets
   adding manifests
@@ -204,7 +204,7 @@ pull without cacert
   $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull $DISABLEOSXDUMMYCERT
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes
   adding changesets
   adding manifests
@@ -236,7 +236,7 @@ variables in the filename
   no changes found
   $ P=`pwd` hg -R copy-pull pull --insecure
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes
   no changes found
 
@@ -245,11 +245,11 @@ cacert mismatch
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
   pulling from https://127.0.0.1:$HGPORT/
   abort: 127.0.0.1 certificate error: certificate is for localhost
-  (configure hostfingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca or use --insecure to connect insecurely)
+  (configure hostsecurity 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
   pulling from https://127.0.0.1:$HGPORT/
-  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
@@ -258,7 +258,7 @@ cacert mismatch
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem --insecure
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes
   no changes found
 
@@ -316,7 +316,7 @@ Fingerprints
 
   $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
   abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
-  (check hostfingerprint configuration)
+  (check hostsecurity configuration)
   [255]
 
 - fails when cert doesn't match hostname (port is ignored)
@@ -348,7 +348,7 @@ Test unvalidated https through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --insecure --traceback
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostfingerprints or web.cacerts config setting)
+  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes
   no changes found
 
