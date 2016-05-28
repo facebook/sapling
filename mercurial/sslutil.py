@@ -327,13 +327,18 @@ def validatesocket(sock, strict=False):
 
     # If a certificate fingerprint is pinned, use it and only it to
     # validate the remote cert.
-    peerfingerprint = util.sha1(peercert).hexdigest()
-    nicefingerprint = ":".join([peerfingerprint[x:x + 2]
-        for x in xrange(0, len(peerfingerprint), 2)])
+    peerfingerprints = {
+        'sha1': util.sha1(peercert).hexdigest(),
+        'sha256': util.sha256(peercert).hexdigest(),
+        'sha512': util.sha512(peercert).hexdigest(),
+    }
+    nicefingerprint = ':'.join([peerfingerprints['sha1'][x:x + 2]
+        for x in range(0, len(peerfingerprints['sha1']), 2)])
+
     if settings['certfingerprints']:
         fingerprintmatch = False
         for hash, fingerprint in settings['certfingerprints']:
-            if peerfingerprint.lower() == fingerprint:
+            if peerfingerprints[hash].lower() == fingerprint:
                 fingerprintmatch = True
                 break
         if not fingerprintmatch:
