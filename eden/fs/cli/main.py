@@ -168,6 +168,14 @@ def do_mount(args):
         return 1
 
 
+def do_unmount(args):
+    config = create_config(args)
+    try:
+        return config.unmount(args.name)
+    except Exception as ex:
+        print_stderr('error: {}', ex)
+        return 1
+
 def do_checkout(args):
     config = create_config(args)
     try:
@@ -251,6 +259,12 @@ def create_parser():
     daemon_parser.add_argument(
         '--debug', '-d', action='store_true', help='Enable fuse debugging.')
     daemon_parser.set_defaults(func=do_daemon)
+
+    unmount_parser = subparsers.add_parser(
+        'unmount', help='Unmount a specific client')
+    unmount_parser.add_argument(
+        'name', help='Name of client to unmount')
+    unmount_parser.set_defaults(func=do_unmount)
 
     return parser, subparsers
 

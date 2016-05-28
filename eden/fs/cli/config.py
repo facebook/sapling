@@ -147,6 +147,12 @@ class Config:
             # the driver script.
             raise Exception(ex.message)
 
+    def unmount(self, name):
+        info = self.get_client_info(name)
+        mount_point = info['mount']
+        client = self.get_thrift_client()
+        client.unmount(mount_point)
+
     def spawn(self, debug=False, gdb=False):
         '''Note that this method will not exit until the user kills the program.
         '''

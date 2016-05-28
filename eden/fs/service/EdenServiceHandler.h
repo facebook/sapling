@@ -29,6 +29,8 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
 
   void mount(std::unique_ptr<MountInfo> info) override;
 
+  void unmount(std::unique_ptr<std::string> mountPoint) override;
+
   void listMounts(std::vector<MountInfo>& results) override;
 
   void checkOutRevision(

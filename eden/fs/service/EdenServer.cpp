@@ -125,6 +125,10 @@ void EdenServer::mount(
   }
 }
 
+void EdenServer::unmount(StringPiece mountPath) {
+  throw std::runtime_error("Privileged helper not implemented");
+}
+
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   LOG(INFO) << "mount point \"" << mountPath << "\" stopped";
@@ -132,10 +136,6 @@ void EdenServer::mountFinished(EdenMount* edenMount) {
     auto numErased = mp.erase(mountPath);
     CHECK_EQ(numErased, 1);
   }
-}
-
-void EdenServer::unmount(StringPiece mountPath) {
-  // TODO
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {

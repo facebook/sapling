@@ -70,6 +70,16 @@ void EdenServiceHandler::mount(std::unique_ptr<MountInfo> info) {
   }
 }
 
+void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
+  try {
+    server_->unmount(*mountPoint);
+  } catch (const EdenError& ex) {
+    throw;
+  } catch (const std::exception& ex) {
+    throw EdenError(folly::exceptionStr(ex).toStdString());
+  }
+}
+
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
   for (const auto& edenMount : server_->getMountPoints()) {
     MountInfo info;
