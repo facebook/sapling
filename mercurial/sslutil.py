@@ -114,6 +114,9 @@ def _hostsettings(ui, hostname):
     s = {
         # List of 2-tuple of (hash algorithm, hash).
         'certfingerprints': [],
+        # Path to file containing concatenated CA certs. Used by
+        # SSLContext.load_verify_locations().
+        'cafile': None,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
         'verifymode': None,
     }
@@ -132,44 +135,38 @@ def _hostsettings(ui, hostname):
     elif ui.insecureconnections:
         s['verifymode'] = ssl.CERT_NONE
 
-    # TODO assert verifymode is not None once we integrate cacert
-    # checking in this function.
+    # Try to hook up CA certificate validation unless something above
+    # makes it not necessary.
+    if s['verifymode'] is None:
+        # Find global certificates file in config.
+        cafile = ui.config('web', 'cacerts')
+
+        if cafile:
+            cafile = util.expandpath(cafile)
+            if not os.path.exists(cafile):
+                raise error.Abort(_('could not find web.cacerts: %s') % cafile)
+        else:
+            # No global CA certs. See if we can load defaults.
+            cafile = _defaultcacerts()
+            if cafile:
+                ui.debug('using %s to enable OS X system CA\n' % cafile)
+
+        s['cafile'] = cafile
+
+        # Require certificate validation if CA certs are being loaded and
+        # verification hasn't been disabled above.
+        if cafile or _canloaddefaultcerts:
+            s['verifymode'] = ssl.CERT_REQUIRED
+        else:
+            # At this point we don't have a fingerprint, aren't being
+            # explicitly insecure, and can't load CA certs. Connecting
+            # at this point is insecure. But we do it for BC reasons.
+            # TODO abort here to make secure by default.
+            s['verifymode'] = ssl.CERT_NONE
+
+    assert s['verifymode'] is not None
 
     return s
-
-def _determinecertoptions(ui, settings):
-    """Determine certificate options for a connections.
-
-    Returns a tuple of (cert_reqs, ca_certs).
-    """
-    if settings['verifymode'] == ssl.CERT_NONE:
-        return ssl.CERT_NONE, None
-
-    cacerts = ui.config('web', 'cacerts')
-
-    # If a value is set in the config, validate against a path and load
-    # and require those certs.
-    if cacerts:
-        cacerts = util.expandpath(cacerts)
-        if not os.path.exists(cacerts):
-            raise error.Abort(_('could not find web.cacerts: %s') % cacerts)
-
-        return ssl.CERT_REQUIRED, cacerts
-
-    # No CAs in config. See if we can load defaults.
-    cacerts = _defaultcacerts()
-
-    # We found an alternate CA bundle to use. Load it.
-    if cacerts:
-        ui.debug('using %s to enable OS X system CA\n' % cacerts)
-        ui.setconfig('web', 'cacerts', cacerts, 'defaultcacerts')
-        return ssl.CERT_REQUIRED, cacerts
-
-    # FUTURE this can disappear once wrapsocket() is secure by default.
-    if _canloaddefaultcerts:
-        return ssl.CERT_REQUIRED, None
-
-    return ssl.CERT_NONE, None
 
 def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     """Add SSL/TLS to a socket.
@@ -188,7 +185,6 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         raise error.Abort('serverhostname argument is required')
 
     settings = _hostsettings(ui, serverhostname)
-    cert_reqs, ca_certs = _determinecertoptions(ui, settings)
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
@@ -215,7 +211,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
 
     # This still works on our fake SSLContext.
-    sslcontext.verify_mode = cert_reqs
+    sslcontext.verify_mode = settings['verifymode']
 
     if certfile is not None:
         def password():
@@ -223,8 +219,8 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
             return ui.getpass(_('passphrase for %s: ') % f, '')
         sslcontext.load_cert_chain(certfile, keyfile, password)
 
-    if ca_certs is not None:
-        sslcontext.load_verify_locations(cafile=ca_certs)
+    if settings['cafile'] is not None:
+        sslcontext.load_verify_locations(cafile=settings['cafile'])
         caloaded = True
     else:
         # This is a no-op on old Python.
