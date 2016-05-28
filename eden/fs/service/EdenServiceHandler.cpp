@@ -9,18 +9,24 @@
  */
 #include "EdenServiceHandler.h"
 
+#include <boost/polymorphic_cast.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include "EdenServer.h"
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/TreeEntryFileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/utils/PathFuncs.h"
 
+using std::shared_ptr;
 using std::string;
+using std::unique_ptr;
+using folly::StringPiece;
 
 namespace facebook {
 namespace eden {
@@ -109,6 +115,80 @@ void EdenServiceHandler::checkOutRevision(
   CHECK_NOTNULL(root.get());
 
   root->performCheckout(hashObj);
+}
+
+void EdenServiceHandler::getSHA1(
+    string& hashInBytes,
+    unique_ptr<string> mountPoint,
+    unique_ptr<string> path) {
+  if (path.get()->empty()) {
+    throw EdenError("path cannot be the empty string");
+  }
+
+  auto edenMount = server_->getMount(*mountPoint);
+  auto relativePath = RelativePathPiece{*path};
+  auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
+  auto parent = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
+
+  auto it = relativePath.begin();
+  while (true) {
+    shared_ptr<fusell::InodeBase> inodeBase;
+    try {
+      inodeBase =
+          inodeDispatcher
+              ->lookupInodeBase(parent->getNodeId(), it.piece().basename())
+              .get();
+    } catch (const std::system_error& e) {
+      if (e.code().category() == std::system_category() &&
+          e.code().value() == ENOENT) {
+        auto error = EdenError(folly::to<string>(
+            "No such file or directory: ", it.piece().stringPiece()));
+        error.set_errorCode(e.code().value());
+        throw error;
+      }
+      throw;
+    }
+
+    auto inodeNumber = inodeBase->getNodeId();
+    auto currentPiece = it.piece();
+    it++;
+    if (it == relativePath.end()) {
+      // inodeNumber must correspond to the last path component, which we expect
+      // to correspond to a file.
+      std::shared_ptr<fusell::FileInode> fileInode;
+      try {
+        fileInode = inodeDispatcher->getFileInode(inodeNumber);
+      } catch (const std::system_error& e) {
+        if (e.code().category() == std::system_category() &&
+            e.code().value() == EISDIR) {
+          auto error = EdenError(folly::to<string>(
+              "Found a directory instead of a file: ",
+              currentPiece.stringPiece()));
+          error.set_errorCode(e.code().value());
+          throw error;
+        }
+        throw;
+      }
+
+      auto treeEntry =
+          boost::polymorphic_downcast<TreeEntryFileInode*>(fileInode.get());
+
+      if (treeEntry->getEntry()->getFileType() != FileType::REGULAR_FILE) {
+        throw EdenError(folly::to<string>(
+            "Not an ordinary file: ", currentPiece.stringPiece()));
+      }
+
+      // TODO(mbolin): Update this call site when we have a specific API for
+      // getting the SHA-1 from a TreeEntryFileInode that returns a Hash
+      // directly rather than a hex string.
+      string sha1 = treeEntry->getxattr("user.sha1").get();
+      auto hash = Hash(sha1);
+      hashInBytes = StringPiece(hash.getBytes()).str();
+      return;
+    } else {
+      parent = inodeDispatcher->getDirInode(inodeNumber);
+    }
+  }
 }
 }
 } // facebook::eden

@@ -9,5 +9,6 @@ python_unittest(
       '@/libfb/py:parutil',
       '@/eden/fs/cli:cli',
       '@/eden/fs/service:py-client',
+      '@/eden/fs/service:thrift-py',
     ],
 )

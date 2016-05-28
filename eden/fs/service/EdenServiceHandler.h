@@ -37,6 +37,11 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> hash) override;
 
+  void getSHA1(
+      std::string& hashInBytes,
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::string> path) override;
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenServiceHandler(EdenServiceHandler const&) = delete;
