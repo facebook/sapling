@@ -106,6 +106,23 @@ except AttributeError:
 
             return ssl.wrap_socket(socket, **args)
 
+def _hostsettings(ui, hostname):
+    """Obtain security settings for a hostname.
+
+    Returns a dict of settings relevant to that hostname.
+    """
+    s = {
+        # List of 2-tuple of (hash algorithm, hash).
+        'certfingerprints': [],
+    }
+
+    # Fingerprints from [hostfingerprints] are always SHA-1.
+    for fingerprint in ui.configlist('hostfingerprints', hostname, []):
+        fingerprint = fingerprint.replace(':', '').lower()
+        s['certfingerprints'].append(('sha1', fingerprint))
+
+    return s
+
 def _determinecertoptions(ui, host):
     """Determine certificate options for a connections.
 
@@ -217,6 +234,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     sslsocket._hgstate = {
         'caloaded': caloaded,
         'hostname': serverhostname,
+        'settings': _hostsettings(ui, serverhostname),
         'ui': ui,
     }
 
@@ -292,6 +310,7 @@ def validatesocket(sock, strict=False):
     """
     host = sock._hgstate['hostname']
     ui = sock._hgstate['ui']
+    settings = sock._hgstate['settings']
 
     try:
         peercert = sock.getpeercert(True)
@@ -305,15 +324,13 @@ def validatesocket(sock, strict=False):
 
     # If a certificate fingerprint is pinned, use it and only it to
     # validate the remote cert.
-    hostfingerprints = ui.configlist('hostfingerprints', host)
     peerfingerprint = util.sha1(peercert).hexdigest()
     nicefingerprint = ":".join([peerfingerprint[x:x + 2]
         for x in xrange(0, len(peerfingerprint), 2)])
-    if hostfingerprints:
+    if settings['certfingerprints']:
         fingerprintmatch = False
-        for hostfingerprint in hostfingerprints:
-            if peerfingerprint.lower() == \
-                    hostfingerprint.replace(':', '').lower():
+        for hash, fingerprint in settings['certfingerprints']:
+            if peerfingerprint.lower() == fingerprint:
                 fingerprintmatch = True
                 break
         if not fingerprintmatch:
