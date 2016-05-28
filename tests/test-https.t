@@ -282,12 +282,8 @@ Test server cert which no longer is valid
 
 Fingerprints
 
-  $ echo "[hostfingerprints]" >> copy-pull/.hg/hgrc
-  $ echo "localhost = 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca" >> copy-pull/.hg/hgrc
-  $ echo "127.0.0.1 = 914f1aff87249c09b6859b88b1906d30756491ca" >> copy-pull/.hg/hgrc
-
 - works without cacerts
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure --config hostfingerprints.localhost=91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
   5fed3813f7f5
 
 - multiple fingerprints specified and first matches
@@ -306,14 +302,14 @@ Fingerprints
   [255]
 
 - fails when cert doesn't match hostname (port is ignored)
-  $ hg -R copy-pull id https://localhost:$HGPORT1/
+  $ hg -R copy-pull id https://localhost:$HGPORT1/ --config hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca
   abort: certificate for localhost has unexpected fingerprint 28:ff:71:bf:65:31:14:23:ad:62:92:b4:0e:31:99:18:fc:83:e3:9b
   (check hostfingerprint configuration)
   [255]
 
 
 - ignores that certificate doesn't match hostname
-  $ hg -R copy-pull id https://127.0.0.1:$HGPORT/
+  $ hg -R copy-pull id https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=914f1aff87249c09b6859b88b1906d30756491ca
   5fed3813f7f5
 
 HGPORT1 is reused below for tinyproxy tests. Kill that server.
@@ -344,7 +340,7 @@ Test https with cacert and fingerprint through proxy
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=914f1aff87249c09b6859b88b1906d30756491ca
   pulling from https://127.0.0.1:$HGPORT/
   searching for changes
   no changes found
