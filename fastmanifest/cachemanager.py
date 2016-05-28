@@ -197,7 +197,8 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
             mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
             revstomannodes[rev] = mannode
             if cache.containsnode(mannode):
-                ui.debug("[FM] skipped %s, already cached (fast path)\n" % mannode)
+                ui.debug("[FM] skipped %s, already cached (fast path)\n" %
+                         (mannode,))
                 # Account for the fact that we access this manifest
                 cache.refresh(mannode)
                 continue
@@ -210,9 +211,10 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         # Make the least relevant entries have an artificially older mtime
         # than the more relevant ones. We use a resolution of 2 for time to work
         # accross all platforms and ensure that the order is marked.
-        # Note that we use sortedrevs and not revs because here we don't care about
-        # the shuffling, we just want the most relevant revisions to have more
-        # recent mtime.
+        #
+        # Note that we use sortedrevs and not revs because here we don't care
+        # about the shuffling, we just want the most relevant revisions to have
+        # more recent mtime.
         mtimemultiplier = 2
         for offset, rev in enumerate(sortedrevs):
             if rev in revstomannodes:
