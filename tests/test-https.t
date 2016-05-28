@@ -282,21 +282,39 @@ Test server cert which no longer is valid
 
 Fingerprints
 
-- works without cacerts
+- works without cacerts (hostkeyfingerprints)
   $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure --config hostfingerprints.localhost=91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  5fed3813f7f5
+
+- works without cacerts (hostsecurity)
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca
+  5fed3813f7f5
+
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30
   5fed3813f7f5
 
 - multiple fingerprints specified and first matches
   $ hg --config 'hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
+  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
+  5fed3813f7f5
+
 - multiple fingerprints specified and last matches
   $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, 914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/ --insecure
+  5fed3813f7f5
+
+  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/
   5fed3813f7f5
 
 - multiple fingerprints specified and none match
 
   $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
+  abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  (check hostfingerprint configuration)
+  [255]
+
+  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
   abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
   (check hostfingerprint configuration)
   [255]

@@ -976,6 +976,8 @@ is treated as a failure.
 ``hostfingerprints``
 --------------------
 
+(Deprecated. Use ``[hostsecurity]``'s ``fingerprints`` options instead.)
+
 Fingerprints of the certificates of known HTTPS servers.
 
 A HTTPS connection to a server with a fingerprint configured here will
@@ -994,6 +996,39 @@ For example::
     [hostfingerprints]
     hg.intevation.de = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
     hg.intevation.org = fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
+
+``hostsecurity``
+----------------
+
+Used to specify per-host security settings.
+
+Options in this section have the form ``hostname``:``setting``. This allows
+multiple settings to be defined on a per-host basis.
+
+The following per-host settings can be defined.
+
+``fingerprints``
+    A list of hashes of the DER encoded peer/remote certificate. Values have
+    the form ``algorithm``:``fingerprint``. e.g.
+    ``sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2``.
+
+    The following algorithms/prefixes are supported: ``sha1``, ``sha256``,
+    ``sha512``.
+
+    Use of ``sha256`` or ``sha512`` is preferred.
+
+    If a fingerprint is specified, the CA chain is not validated for this
+    host and Mercurial will require the remote certificate to match one
+    of the fingerprints specified. This means if the server updates its
+    certificate, Mercurial will abort until a new fingerprint is defined.
+    This can provide stronger security than traditional CA-based validation
+    at the expense of convenience.
+
+For example::
+
+    [hostsecurity]
+    hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2
+    hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
 
 ``http_proxy``
 --------------

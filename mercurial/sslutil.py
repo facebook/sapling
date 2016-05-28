@@ -121,6 +121,21 @@ def _hostsettings(ui, hostname):
         'verifymode': None,
     }
 
+    # Look for fingerprints in [hostsecurity] section. Value is a list
+    # of <alg>:<fingerprint> strings.
+    fingerprints = ui.configlist('hostsecurity', '%s:fingerprints' % hostname,
+                                 [])
+    for fingerprint in fingerprints:
+        if not (fingerprint.startswith(('sha1:', 'sha256:', 'sha512:'))):
+            raise error.Abort(_('invalid fingerprint for %s: %s') % (
+                                hostname, fingerprint),
+                              hint=_('must begin with "sha1:", "sha256:", '
+                                     'or "sha512:"'))
+
+        alg, fingerprint = fingerprint.split(':', 1)
+        fingerprint = fingerprint.replace(':', '').lower()
+        s['certfingerprints'].append((alg, fingerprint))
+
     # Fingerprints from [hostfingerprints] are always SHA-1.
     for fingerprint in ui.configlist('hostfingerprints', hostname, []):
         fingerprint = fingerprint.replace(':', '').lower()
