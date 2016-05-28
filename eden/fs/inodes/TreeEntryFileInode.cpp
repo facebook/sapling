@@ -11,6 +11,7 @@
 
 #include "FileData.h"
 #include "TreeEntryFileHandle.h"
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/utils/XAttr.h"
@@ -139,6 +140,10 @@ Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
     folly::throwSystemErrorExplicit(kENOATTR);
   }
 
+  return getSHA1().get().toString();
+}
+
+Future<Hash> TreeEntryFileInode::getSHA1() {
   // Some ugly looking stuff to avoid materializing the file if we haven't
   // done so already.
   std::unique_lock<std::mutex> lock(mutex_);
@@ -161,7 +166,7 @@ Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
     // Return the property from the existing file.
     // If it isn't set it means that someone was poking into the overlay and
     // we'll return the standard kENOATTR back to the caller in that case.
-    return fgetxattr(file.fd(), name);
+    return Hash(fgetxattr(file.fd(), kXattrSha1));
   } catch (const std::system_error& err) {
     if (err.code().value() != ENOENT) {
       throw;
@@ -179,8 +184,7 @@ Future<string> TreeEntryFileInode::getxattr(StringPiece name) {
   // TODO(mbolin): Make this more fault-tolerant. Currently, there is no logic
   // to account for the case where we don't have the SHA-1 for the blob, the
   // hash doesn't correspond to a blob, etc.
-  auto sha1 = parentInode_->getStore()->getSha1ForBlob(entry_->getHash());
-  return sha1->toString();
+  return *parentInode_->getStore()->getSha1ForBlob(entry_->getHash()).get();
 }
 
 const TreeEntry* TreeEntryFileInode::getEntry() const {

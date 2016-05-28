@@ -178,11 +178,7 @@ void EdenServiceHandler::getSHA1(
             "Not an ordinary file: ", currentPiece.stringPiece()));
       }
 
-      // TODO(mbolin): Update this call site when we have a specific API for
-      // getting the SHA-1 from a TreeEntryFileInode that returns a Hash
-      // directly rather than a hex string.
-      string sha1 = treeEntry->getxattr("user.sha1").get();
-      auto hash = Hash(sha1);
+      auto hash = treeEntry->getSHA1().get();
       hashInBytes = StringPiece(hash.getBytes()).str();
       return;
     } else {

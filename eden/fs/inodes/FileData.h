@@ -17,6 +17,7 @@ namespace facebook {
 namespace eden {
 
 class Blob;
+class Hash;
 class LocalStore;
 class Overlay;
 
@@ -36,9 +37,9 @@ class FileData {
   void fsync(bool datasync);
 
   /// Returns the sha1 hash of the content.
-  std::string getSha1();
+  Hash getSha1();
   /// Returns the sha1 hash of the content, for existing lock holders.
-  std::string getSha1Locked(const std::unique_lock<std::mutex>&);
+  Hash getSha1Locked(const std::unique_lock<std::mutex>&);
 
   /// Materialize the file data.
   // open_flags has the same meaning as the flags parameter to
@@ -71,7 +72,7 @@ class FileData {
 
   /// Recompute the SHA1 content hash of the open file_.
   // The mutex must be owned by the caller.
-  std::string recomputeAndStoreSha1();
+  Hash recomputeAndStoreSha1();
 };
 }
 }

@@ -18,6 +18,7 @@ namespace eden {
 class TreeEntryFileHandle;
 class Blob;
 class FileData;
+class Hash;
 
 class TreeEntryFileInode : public fusell::FileInode {
  public:
@@ -33,6 +34,7 @@ class TreeEntryFileInode : public fusell::FileInode {
 
   folly::Future<std::vector<std::string>> listxattr() override;
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
+  folly::Future<Hash> getSHA1();
 
   const TreeEntry* getEntry() const;
 

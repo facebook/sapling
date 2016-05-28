@@ -14,6 +14,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/utils/XAttr.h"
@@ -255,29 +256,30 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
   }
 }
 
-std::string FileData::getSha1() {
+Hash FileData::getSha1() {
   std::unique_lock<std::mutex> lock(mutex_);
   return getSha1Locked(lock);
 }
 
-std::string FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
+Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
   if (file_) {
     std::string shastr;
     if (sha1Valid_) {
       shastr = fgetxattr(file_.fd(), kXattrSha1);
     }
     if (shastr.empty()) {
-      shastr = recomputeAndStoreSha1();
+      return recomputeAndStoreSha1();
+    } else {
+      return Hash(shastr);
     }
-    return shastr;
   }
 
   CHECK_NOTNULL(entry_);
   auto sha1 = store_->getSha1ForBlob(entry_->getHash());
-  return sha1->toString();
+  return *sha1.get();
 }
 
-std::string FileData::recomputeAndStoreSha1() {
+Hash FileData::recomputeAndStoreSha1() {
   uint8_t buf[8192];
   off_t off = 0;
   SHA_CTX ctx;
@@ -302,12 +304,13 @@ std::string FileData::recomputeAndStoreSha1() {
 
   uint8_t digest[SHA_DIGEST_LENGTH];
   SHA1_Final(digest, &ctx);
-  auto sha1 = Hash(folly::ByteRange(digest, sizeof(digest))).toString();
+  auto hash = Hash(folly::ByteRange(digest, sizeof(digest)));
+  auto sha1 = hash.toString();
 
   fsetxattr(file_.fd(), kXattrSha1, sha1);
   sha1Valid_ = true;
 
-  return sha1;
+  return hash;
 }
 }
 }
