@@ -114,6 +114,8 @@ def _hostsettings(ui, hostname):
     s = {
         # List of 2-tuple of (hash algorithm, hash).
         'certfingerprints': [],
+        # ssl.CERT_* constant used by SSLContext.verify_mode.
+        'verifymode': None,
     }
 
     # Fingerprints from [hostfingerprints] are always SHA-1.
@@ -121,22 +123,26 @@ def _hostsettings(ui, hostname):
         fingerprint = fingerprint.replace(':', '').lower()
         s['certfingerprints'].append(('sha1', fingerprint))
 
+    # If a host cert fingerprint is defined, it is the only thing that
+    # matters. No need to validate CA certs.
+    if s['certfingerprints']:
+        s['verifymode'] = ssl.CERT_NONE
+
+    # If --insecure is used, don't take CAs into consideration.
+    elif ui.insecureconnections:
+        s['verifymode'] = ssl.CERT_NONE
+
+    # TODO assert verifymode is not None once we integrate cacert
+    # checking in this function.
+
     return s
 
-def _determinecertoptions(ui, host):
+def _determinecertoptions(ui, settings):
     """Determine certificate options for a connections.
 
     Returns a tuple of (cert_reqs, ca_certs).
     """
-    # If a host key fingerprint is on file, it is the only thing that matters
-    # and CA certs don't come into play.
-    hostfingerprint = ui.config('hostfingerprints', host)
-    if hostfingerprint:
-        return ssl.CERT_NONE, None
-
-    # The code below sets up CA verification arguments. If --insecure is
-    # used, we don't take CAs into consideration, so return early.
-    if ui.insecureconnections:
+    if settings['verifymode'] == ssl.CERT_NONE:
         return ssl.CERT_NONE, None
 
     cacerts = ui.config('web', 'cacerts')
@@ -181,7 +187,8 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     if not serverhostname:
         raise error.Abort('serverhostname argument is required')
 
-    cert_reqs, ca_certs = _determinecertoptions(ui, serverhostname)
+    settings = _hostsettings(ui, serverhostname)
+    cert_reqs, ca_certs = _determinecertoptions(ui, settings)
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
     # that both ends support, including TLS protocols. On legacy stacks,
@@ -234,7 +241,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     sslsocket._hgstate = {
         'caloaded': caloaded,
         'hostname': serverhostname,
-        'settings': _hostsettings(ui, serverhostname),
+        'settings': settings,
         'ui': ui,
     }
 
