@@ -29,7 +29,7 @@ debugcachemanifest = False
 # Filename, is not empty will log access to any manifest.
 logfile = ""
 
-# Cache fastmanifest if dirstate, remotenames or bookmarks change.
+# Cache fastmanifest if remotenames or bookmarks change, or on a commit.
 cacheonchange = False
 
 # Make cacheonchange(see above) work in the background.
@@ -85,7 +85,7 @@ manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
 """
 
-from mercurial import bookmarks, cmdutil, dirstate, error, extensions
+from mercurial import bookmarks, cmdutil, error, extensions
 from mercurial import localrepo, manifest, revset
 
 from extutil import wrapfilecache
@@ -187,8 +187,8 @@ def extsetup(ui):
         # Trigger to enable caching of relevant manifests
         extensions.wrapfunction(bookmarks.bmstore, '_write',
                                 cachemanager.triggercacheonbookmarkchange)
-        extensions.wrapfunction(dirstate.dirstate, 'write',
-                                cachemanager.triggercacheondirstatechange)
+        extensions.wrapfunction(localrepo.localrepository, 'commitctx',
+                                cachemanager.triggercommit)
         try:
             remotenames = extensions.find('remotenames')
         except KeyError:
@@ -199,10 +199,3 @@ def extsetup(ui):
                     remotenames,
                     'saveremotenames',
                     cachemanager.triggercacheonremotenameschange)
-
-        def wrapdirstate(orig, self):
-            dirstate = orig(self)
-            dirstate._fastmanifestrepo = self
-            return dirstate
-        wrapfilecache(localrepo.localrepository, 'dirstate',
-                                 wrapdirstate)

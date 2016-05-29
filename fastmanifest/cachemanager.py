@@ -248,12 +248,14 @@ def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
     cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
     return orig(self, *args, **kwargs)
 
-def triggercacheondirstatechange(orig, self, *args, **kwargs):
-    if util.safehasattr(self, "_fastmanifestrepo"):
-        repo = self._fastmanifestrepo
-        revset, bg, limit = _cacheonchangeconfig(repo)
-        cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
-    return orig(self, *args, **kwargs)
+def triggercommit(orig, self, *args, **kwargs):
+    result = orig(self, *args, **kwargs)
+
+    self.ui.debug("commit trigger\n")
+    revset, bg, limit = _cacheonchangeconfig(self)
+    cachemanifestfillandtrim(self.ui, self, revset, limit, bg)
+
+    return result
 
 def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
     revset, bg, limit = _cacheonchangeconfig(repo)

@@ -247,9 +247,9 @@ Test the --pruneall command to prune all the cached manifests
   > cacheonchange=True
   > cacheonchangebackground=False
   > EOF
-  $ hg update -c .
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ mkcommit f
   $ hg book --debug foo
+  [FM] skipped 1853a742c28c3a531336bbb3d677d2e2d8937027, already cached (fast path)
   [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
   [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
@@ -257,19 +257,20 @@ Test the --pruneall command to prune all the cached manifests
   [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
   [FM] nothing to do, cache size < limit
   $ hg diff -c . --debug --nodate
-  [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] cache hit for fastmanifest 1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM] performing diff
   [FM] diff: other side is hybrid manifest
-  diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
+  diff -r 9d206ffc875e1bc304590549be293be36821e66c -r bbc3e467917630e7d77cd77298e1027030972893 f
   --- /dev/null
-  +++ b/e
+  +++ b/f
   @@ -0,0 +1,1 @@
-  +e
+  +f
 
 
   $ hg debugcachemanifest --all --debug
   [FM] caching revset: ['fastmanifesttocache()'], background(False), pruneall(False), list(False)
+  [FM] skipped 1853a742c28c3a531336bbb3d677d2e2d8937027, already cached (fast path)
   [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
   [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
   [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
@@ -289,13 +290,14 @@ to make the test deterministic:
   ...   basetime+=10
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
+  fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
-  cache size is: 1.13 KB
-  number of entries is: 5
+  cache size is: 1.50 KB
+  number of entries is: 6
 
 Check that trimming to a limit higher than what is cached does nothing
   $ hg debugcachemanifest --debug --limit=2048
@@ -306,6 +308,7 @@ Trim the cache to at most 1kb
   $ hg debugcachemanifest --debug --limit=1024
   [FM] caching revset: [], background(False), pruneall(False), list(False)
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
@@ -350,13 +353,14 @@ Make the results deterministic
   ...   basetime+=10
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
+  fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
-  cache size is: 1.13 KB
-  number of entries is: 5
+  cache size is: 1.50 KB
+  number of entries is: 6
   $ hg debugcachemanifest --debug --limit=0
   [FM] caching revset: [], background(False), pruneall(False), list(False)
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
@@ -364,6 +368,7 @@ Make the results deterministic
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
