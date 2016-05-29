@@ -159,17 +159,7 @@ def shufflebybatch(it, batchsize):
         random.shuffle(batch)
         it[batchstart:batchend] = batch
 
-last_pid_fired = None
 def cachemanifestfillandtrim(ui, repo, revset, limit, background):
-    # theoretically, we could do this with just a simple "have we run before?"
-    # boolean flag, but this somewhat insulates us against architectural changes
-    # to chg where state is somehow preserved between mercurial invocations.
-    global last_pid_fired
-    if os.getpid() != last_pid_fired:
-        last_pid_fired = os.getpid()
-    else:
-        return
-
     lock = concurrency.looselock(repo.vfs, "fastmanifest",
                                  constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT)
     # we don't use the with: syntax because we only want to unlock in *one*
@@ -234,30 +224,41 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     if background:
         os._exit(0)
 
-def _cacheonchangeconfig(repo):
-    """return revs, bg, limit suitable for caching fastmanifest on change"""
-    revset = ["fastmanifesttocache()"]
-    bg = repo.ui.configbool("fastmanifest",
-                            "cacheonchangebackground",
-                            True)
-    return revset, bg, _systemawarecachelimit(repo)
+class triggers(object):
+    repos_to_update = set()
 
-def triggercacheonbookmarkchange(orig, self, *args, **kwargs):
-    repo = self._repo
-    revset, bg, limit = _cacheonchangeconfig(repo)
-    cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
-    return orig(self, *args, **kwargs)
+    @staticmethod
+    def _cacheonchangeconfig(repo):
+        """return revs, bg, limit suitable for caching fastmanifest on change"""
+        revset = ["fastmanifesttocache()"]
+        bg = repo.ui.configbool("fastmanifest",
+                                "cacheonchangebackground",
+                                True)
+        return revset, bg, _systemawarecachelimit(repo)
 
-def triggercommit(orig, self, *args, **kwargs):
-    result = orig(self, *args, **kwargs)
+    @staticmethod
+    def runcommandtrigger(orig, *args, **kwargs):
+        result = orig(*args, **kwargs)
 
-    self.ui.debug("commit trigger\n")
-    revset, bg, limit = _cacheonchangeconfig(self)
-    cachemanifestfillandtrim(self.ui, self, revset, limit, bg)
+        for repo in triggers.repos_to_update:
+            revset, bg, limit = triggers._cacheonchangeconfig(repo)
+            cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
 
-    return result
+        return result
 
-def triggercacheonremotenameschange(orig, repo, *args, **kwargs):
-    revset, bg, limit = _cacheonchangeconfig(repo)
-    cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
-    return orig(repo, *args, **kwargs)
+    @staticmethod
+    def onbookmarkchange(orig, self, *args, **kwargs):
+        repo = self._repo
+        triggers.repos_to_update.add(repo)
+        return orig(self, *args, **kwargs)
+
+    @staticmethod
+    def oncommit(orig, self, *args, **kwargs):
+        repo = self
+        triggers.repos_to_update.add(repo)
+        return orig(self, *args, **kwargs)
+
+    @staticmethod
+    def onremotenameschange(orig, repo, *args, **kwargs):
+        triggers.repos_to_update.add(repo)
+        return orig(repo, *args, **kwargs)

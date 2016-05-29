@@ -85,7 +85,7 @@ manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
 """
 
-from mercurial import bookmarks, cmdutil, error, extensions
+from mercurial import bookmarks, cmdutil, dispatch, error, extensions
 from mercurial import localrepo, manifest, revset
 
 from extutil import wrapfilecache
@@ -186,9 +186,9 @@ def extsetup(ui):
     if ui.configbool("fastmanifest", "cacheonchange", False):
         # Trigger to enable caching of relevant manifests
         extensions.wrapfunction(bookmarks.bmstore, '_write',
-                                cachemanager.triggercacheonbookmarkchange)
+                                cachemanager.triggers.onbookmarkchange)
         extensions.wrapfunction(localrepo.localrepository, 'commitctx',
-                                cachemanager.triggercommit)
+                                cachemanager.triggers.oncommit)
         try:
             remotenames = extensions.find('remotenames')
         except KeyError:
@@ -198,4 +198,7 @@ def extsetup(ui):
                 extensions.wrapfunction(
                     remotenames,
                     'saveremotenames',
-                    cachemanager.triggercacheonremotenameschange)
+                    cachemanager.triggers.onremotenameschange)
+
+        extensions.wrapfunction(dispatch, 'runcommand',
+                                cachemanager.triggers.runcommandtrigger)
