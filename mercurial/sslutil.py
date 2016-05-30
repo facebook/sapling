@@ -386,18 +386,15 @@ def validatesocket(sock):
         section = 'hostsecurity'
 
     if settings['certfingerprints']:
-        fingerprintmatch = False
         for hash, fingerprint in settings['certfingerprints']:
             if peerfingerprints[hash].lower() == fingerprint:
-                fingerprintmatch = True
-                break
-        if not fingerprintmatch:
-            raise error.Abort(_('certificate for %s has unexpected '
-                               'fingerprint %s') % (host, legacyfingerprint),
-                              hint=_('check %s configuration') % section)
-        ui.debug('%s certificate matched fingerprint %s\n' %
-                 (host, legacyfingerprint))
-        return
+                ui.debug('%s certificate matched fingerprint %s:%s\n' %
+                         (host, hash, fmtfingerprint(fingerprint)))
+                return
+
+        raise error.Abort(_('certificate for %s has unexpected '
+                            'fingerprint %s') % (host, legacyfingerprint),
+                          hint=_('check %s configuration') % section)
 
     if not sock._hgstate['caloaded']:
         ui.warn(_('warning: %s certificate with fingerprint %s '
