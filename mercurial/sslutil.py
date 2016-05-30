@@ -324,7 +324,7 @@ def _defaultcacerts():
 
     return None
 
-def validatesocket(sock, strict=False):
+def validatesocket(sock):
     """Validate a socket meets security requiremnets.
 
     The passed socket must have been created with ``wrapsocket()``.
@@ -386,17 +386,10 @@ def validatesocket(sock, strict=False):
         return
 
     if not sock._hgstate['caloaded']:
-        if strict:
-            raise error.Abort(_('%s certificate with fingerprint %s not '
-                                'verified') % (host, nicefingerprint),
-                              hint=_('check %s or web.cacerts config '
-                                     'setting') % section)
-        else:
-            ui.warn(_('warning: %s certificate with fingerprint %s '
-                      'not verified (check %s or web.cacerts config '
-                      'setting)\n') %
-                    (host, nicefingerprint, section))
-
+        ui.warn(_('warning: %s certificate with fingerprint %s '
+                  'not verified (check %s or web.cacerts config '
+                  'setting)\n') %
+                (host, nicefingerprint, section))
         return
 
     msg = _verifycert(peercert2, host)
