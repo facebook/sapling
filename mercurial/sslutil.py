@@ -373,8 +373,12 @@ def validatesocket(sock):
         'sha256': util.sha256(peercert).hexdigest(),
         'sha512': util.sha512(peercert).hexdigest(),
     }
-    nicefingerprint = ':'.join([peerfingerprints['sha1'][x:x + 2]
-        for x in range(0, len(peerfingerprints['sha1']), 2)])
+
+    def fmtfingerprint(s):
+        return ':'.join([s[x:x + 2] for x in range(0, len(s), 2)])
+
+    legacyfingerprint = fmtfingerprint(peerfingerprints['sha1'])
+    nicefingerprint = 'sha256:%s' % fmtfingerprint(peerfingerprints['sha256'])
 
     if settings['legacyfingerprint']:
         section = 'hostfingerprint'
@@ -389,10 +393,10 @@ def validatesocket(sock):
                 break
         if not fingerprintmatch:
             raise error.Abort(_('certificate for %s has unexpected '
-                               'fingerprint %s') % (host, nicefingerprint),
-                             hint=_('check %s configuration') % section)
+                               'fingerprint %s') % (host, legacyfingerprint),
+                              hint=_('check %s configuration') % section)
         ui.debug('%s certificate matched fingerprint %s\n' %
-                 (host, nicefingerprint))
+                 (host, legacyfingerprint))
         return
 
     if not sock._hgstate['caloaded']:
