@@ -354,6 +354,18 @@ def validatesocket(sock):
         raise error.Abort(_('%s certificate error: '
                            'no certificate received') % host)
 
+    if settings['disablecertverification']:
+        # We don't print the certificate fingerprint because it shouldn't
+        # be necessary: if the user requested certificate verification be
+        # disabled, they presumably already saw a message about the inability
+        # to verify the certificate and this message would have printed the
+        # fingerprint. So printing the fingerprint here adds little to no
+        # value.
+        ui.warn(_('warning: connection security to %s is disabled per current '
+                  'settings; communication is susceptible to eavesdropping '
+                  'and tampering\n') % host)
+        return
+
     # If a certificate fingerprint is pinned, use it and only it to
     # validate the remote cert.
     peerfingerprints = {
@@ -381,19 +393,6 @@ def validatesocket(sock):
                              hint=_('check %s configuration') % section)
         ui.debug('%s certificate matched fingerprint %s\n' %
                  (host, nicefingerprint))
-        return
-
-    # If insecure connections were explicitly requested, print a warning
-    # and do no verification.
-    #
-    # It may seem odd that this is checked *after* host fingerprint pinning.
-    # This is for backwards compatibility (for now). The message is also
-    # the same as below for BC.
-    if settings['disablecertverification']:
-        ui.warn(_('warning: %s certificate with fingerprint %s not '
-                  'verified (check %s or web.cacerts '
-                  'config setting)\n') %
-                (host, nicefingerprint, section))
         return
 
     if not sock._hgstate['caloaded']:

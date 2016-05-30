@@ -235,7 +235,7 @@ variables in the filename
   no changes found
   $ P=`pwd` hg -R copy-pull pull --insecure
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
   no changes found
 
@@ -248,7 +248,7 @@ cacert mismatch
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
   pulling from https://127.0.0.1:$HGPORT/
-  warning: 127.0.0.1 certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
+  warning: connection security to 127.0.0.1 is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem
@@ -257,7 +257,7 @@ cacert mismatch
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub-other.pem --insecure
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
   no changes found
 
@@ -347,7 +347,7 @@ Test unvalidated https through proxy
 
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull --insecure --traceback
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
   no changes found
 
