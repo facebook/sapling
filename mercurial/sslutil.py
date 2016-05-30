@@ -117,6 +117,8 @@ def _hostsettings(ui, hostname):
         # Path to file containing concatenated CA certs. Used by
         # SSLContext.load_verify_locations().
         'cafile': None,
+        # Whether certificate verification should be disabled.
+        'disablecertverification': False,
         # Whether the legacy [hostfingerprints] section has data for this host.
         'legacyfingerprint': False,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
@@ -151,6 +153,7 @@ def _hostsettings(ui, hostname):
 
     # If --insecure is used, don't take CAs into consideration.
     elif ui.insecureconnections:
+        s['disablecertverification'] = True
         s['verifymode'] = ssl.CERT_NONE
 
     # Try to hook up CA certificate validation unless something above
@@ -372,13 +375,13 @@ def validatesocket(sock):
                  (host, nicefingerprint))
         return
 
-    # If insecure connections were explicitly requested via --insecure,
-    # print a warning and do no verification.
+    # If insecure connections were explicitly requested, print a warning
+    # and do no verification.
     #
     # It may seem odd that this is checked *after* host fingerprint pinning.
     # This is for backwards compatibility (for now). The message is also
     # the same as below for BC.
-    if ui.insecureconnections:
+    if settings['disablecertverification']:
         ui.warn(_('warning: %s certificate with fingerprint %s not '
                   'verified (check %s or web.cacerts '
                   'config setting)\n') %
