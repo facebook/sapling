@@ -708,6 +708,15 @@ class SqliteRevMap(collections.MutableMapping):
         self._db = sqlite3.connect(self._dbpath)
         self._db.text_factory = bytes
 
+        # cache size affects random accessing (e.g. index building)
+        # performance greatly. default is 2MB (2000 KB), we want to have
+        # a big enough cache that can hold the entire map.
+        cachesize = 2000
+        for path, ratio in [(self._filepath, 1.7), (self._dbpath, 1)]:
+            if os.path.exists(path):
+                cachesize += os.stat(path).st_size * ratio // 1000
+        self._db.execute('PRAGMA cache_size=%d' % (-cachesize))
+
         # disable auto-commit. everything is inside a transaction
         self._db.isolation_level = 'DEFERRED'
 
