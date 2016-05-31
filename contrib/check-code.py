@@ -122,7 +122,7 @@ testpats = [
     (r'export .*=', "don't export and assign at once"),
     (r'^source\b', "don't use 'source', use '.'"),
     (r'touch -d', "don't use 'touch -d', use 'touch -t' instead"),
-    (r'ls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
+    (r'\bls +[^|\n-]+ +-', "options to 'ls' must come before filenames"),
     (r'[^>\n]>\s*\$HGRCPATH', "don't overwrite $HGRCPATH, append to it"),
     (r'^stop\(\)', "don't use 'stop' as a shell function name"),
     (r'(\[|\btest\b).*-e ', "don't use 'test -e', use 'test -f'"),
