@@ -47,6 +47,7 @@ class PrivHelperServer {
   void messageLoop();
   void cleanupMountPoints();
   void processMountMsg(PrivHelperConn::Message* msg);
+  void processUnmountMsg(PrivHelperConn::Message* msg);
   void processBindMountMsg(PrivHelperConn::Message* msg);
 
   // These methods are virtual so we can override them during unit tests

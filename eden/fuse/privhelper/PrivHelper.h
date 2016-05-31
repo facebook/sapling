@@ -75,6 +75,12 @@ void dropPrivileges();
 folly::File privilegedFuseMount(folly::StringPiece mountPath);
 
 /*
+ * Ask the priveleged helper process to perform a fuse unmount. Throws an
+ * exception on error.
+ */
+void privilegedFuseUnmount(folly::StringPiece mountPath);
+
+/*
  * @param clientPath Absolute path (that should be under
  *     .eden/clients/<client-name>/bind-mounts/) where the "real" storage is.
  * @param mountPath Absolute path where the bind mount should be applied.

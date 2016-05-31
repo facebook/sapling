@@ -143,3 +143,25 @@ class BasicTest(testcase.EdenTestCase):
             f.write('w00t')
         st = os.lstat(deep_file)
         self.assertTrue(stat.S_ISREG(st.st_mode))
+
+    def test_unmount(self):
+        eden = self.init_git_eden()
+
+        entries = sorted(os.listdir(eden.mount_path))
+        self.assertEqual(['adir', 'hello', 'slink'], entries)
+
+        self.assertTrue(eden.in_proc_mounts())
+
+        eden.unmount_cmd()
+
+        entries = sorted(os.listdir(eden.mount_path))
+        self.assertEqual([], entries)
+
+        self.assertFalse(eden.in_proc_mounts())
+
+        eden.mount_cmd()
+
+        entries = sorted(os.listdir(eden.mount_path))
+        self.assertEqual(['adir', 'hello', 'slink'], entries)
+
+        self.assertTrue(eden.in_proc_mounts())

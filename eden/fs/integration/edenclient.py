@@ -72,7 +72,6 @@ class EdenClient(object):
         rc = self._proc.returncode
         self._proc = None
         return rc
-
     def _create_dirs(self):
         if not self._config_dir:
             self._config_dir = tempfile.mkdtemp(prefix='eden_test.config.')
@@ -153,14 +152,7 @@ class EdenClient(object):
         )
         self._wait_for_thrift(timeout)
 
-        subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
-                'mount',
-                self._client_name
-            ]
-        )
+        self.mount_cmd()
 
     def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
         '''Runs eden mount and passes the specified parameters.
@@ -190,6 +182,11 @@ class EdenClient(object):
         )
         self._wait_for_thrift(timeout)
 
+        self.mount_cmd()
+
+    def mount_cmd(self):
+        '''Executes mount command'''
+
         subprocess.check_call(
             [
                 EDEN_CLI,
@@ -198,6 +195,26 @@ class EdenClient(object):
                 self._client_name
             ]
         )
+
+    def unmount_cmd(self):
+        '''Executes unmount command'''
+        subprocess.check_call(
+            [
+                EDEN_CLI,
+                '--config-dir', self._config_dir,
+                'unmount',
+                self._client_name
+            ]
+        )
+
+    def in_proc_mounts(self):
+        '''Gets all eden mounts found in /proc/mounts, and returns
+        true if this eden instance exists in list.
+        '''
+        with open('/proc/mounts', 'r') as f:
+            mounts = [line.split(' ')[1] for line in f.readlines()
+                      if line.split(' ')[0] == 'edenfs']
+        return self._mount_path in mounts
 
     @property
     def repo_path(self):

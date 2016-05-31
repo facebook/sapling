@@ -42,6 +42,7 @@ class PrivHelperConn {
     RESP_EMPTY = 2,
     REQ_MOUNT_FUSE = 3,
     REQ_MOUNT_BIND = 4,
+    REQ_UNMOUNT_FUSE = 5,
   };
 
   struct Message {
@@ -123,6 +124,11 @@ class PrivHelperConn {
       Message* msg,
       folly::StringPiece mountPoint);
   static void parseMountRequest(Message* msg, std::string& mountPoint);
+
+  static void serializeUnmountRequest(
+      Message* msg,
+      folly::StringPiece mountPoint);
+  static void parseUnmountRequest(Message* msg, std::string& mountPoint);
 
   static void serializeBindMountRequest(
       Message* msg,

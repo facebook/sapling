@@ -131,6 +131,37 @@ void PrivHelperServer::processMountMsg(PrivHelperConn::Message* msg) {
   conn_.sendMsg(msg, fuseDev.fd());
 }
 
+void PrivHelperServer::processUnmountMsg(PrivHelperConn::Message* msg) {
+  string mountPath;
+  conn_.parseUnmountRequest(msg, mountPath);
+
+  auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    throw std::domain_error(
+        folly::to<string>("No FUSE mount found for ", mountPath));
+  }
+
+  auto range = bindMountPoints_.equal_range(mountPath);
+  for (auto it = range.first; it != range.second; ++it) {
+    auto bindMount = it->second;
+    bindUnmount(bindMount.c_str());
+  }
+
+  try {
+    fuseUnmount(mountPath.c_str());
+    mountPoints_.erase(mountPath);
+    conn_.serializeEmptyResponse(msg);
+  } catch (const std::exception& ex) {
+    // Note that we re-use the request message buffer for the response data
+    conn_.serializeErrorResponse(msg, ex);
+    conn_.sendMsg(msg);
+    return;
+  }
+
+  // Note that we re-use the request message buffer for the response data
+  conn_.sendMsg(msg);
+}
+
 void PrivHelperServer::processBindMountMsg(PrivHelperConn::Message* msg) {
   string clientPath;
   string mountPath;
@@ -175,6 +206,8 @@ void PrivHelperServer::messageLoop() {
       processMountMsg(&msg);
     } else if (msgType == PrivHelperConn::REQ_MOUNT_BIND) {
       processBindMountMsg(&msg);
+    } else if (msgType == PrivHelperConn::REQ_UNMOUNT_FUSE) {
+      processUnmountMsg(&msg);
     } else {
       // This shouldn't ever happen unless we have a bug.
       // Crash if it does occur.  (We could send back an error message and

@@ -286,6 +286,31 @@ void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
   mountPoint = c.readFixedString(size);
 }
 
+void PrivHelperConn::serializeUnmountRequest(
+    Message* msg,
+    StringPiece mountPoint) {
+  msg->msgType = REQ_UNMOUNT_FUSE;
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
+  buf.clear();
+  Appender a{&buf, 0};
+
+  a.writeBE<uint32_t>(mountPoint.size());
+  a.push(ByteRange(mountPoint));
+
+  msg->dataSize = buf.length();
+}
+
+void PrivHelperConn::parseUnmountRequest(Message* msg, string& mountPoint) {
+  CHECK_EQ(msg->msgType, REQ_UNMOUNT_FUSE);
+  CHECK_LE(msg->dataSize, sizeof(msg->data));
+
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
+  Cursor c{&buf};
+
+  auto size = c.readBE<uint32_t>();
+  mountPoint = c.readFixedString(size);
+}
+
 void PrivHelperConn::serializeEmptyResponse(Message* msg) {
   msg->msgType = RESP_EMPTY;
   msg->dataSize = 0;

@@ -126,7 +126,13 @@ void EdenServer::mount(
 }
 
 void EdenServer::unmount(StringPiece mountPath) {
-  throw std::runtime_error("Privileged helper not implemented");
+  try {
+    fusell::privilegedFuseUnmount(mountPath);
+  } catch (const std::exception& ex) {
+    LOG(ERROR) << "Failed to perform unmount for \"" << mountPath
+               << "\": " << folly::exceptionStr(ex);
+    throw;
+  }
 }
 
 void EdenServer::mountFinished(EdenMount* edenMount) {

@@ -162,6 +162,14 @@ folly::File privilegedFuseMount(folly::StringPiece mountPath) {
   return file;
 }
 
+void privilegedFuseUnmount(folly::StringPiece mountPath) {
+  PrivHelperConn::Message msg;
+  PrivHelperConn::serializeUnmountRequest(&msg, mountPath);
+
+  gPrivHelper->sendAndRecv(&msg, nullptr);
+  PrivHelperConn::parseEmptyResponse(&msg);
+}
+
 void privilegedBindMount(
     folly::StringPiece clientPath,
     folly::StringPiece mountPath) {
