@@ -51,13 +51,11 @@ def compilere(pat, multiline=False):
     return re.compile(pat)
 
 def repquote(m):
-    fixedmap = {'.': 'p', ':': 'q'}
+    fixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q'}
     def encodechr(i):
         if i > 255:
             return 'u'
         c = chr(i)
-        if c in ' \n':
-            return c
         if c in fixedmap:
             return fixedmap[c]
         if c.isalpha():
