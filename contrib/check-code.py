@@ -51,6 +51,8 @@ def compilere(pat, multiline=False):
     return re.compile(pat)
 
 def repquote(m):
+    # check "rules depending on implementation of repquote()" in each
+    # patterns (especially pypats), before changing this function
     fixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q'}
     def encodechr(i):
         if i > 255:
@@ -244,7 +246,6 @@ pypats = [
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
     (r'.{81}', "line too long"),
-    (r' x+[xpqo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
 #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=',
@@ -311,8 +312,6 @@ pypats = [
     (r'^\s*except\s([^\(,]+|\([^\)]+\))\s*,',
      'legacy exception syntax; use "as" instead of ","'),
     (r':\n(    )*( ){1,3}[^ ]', "must indent 4 spaces"),
-    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
-     "missing _() in ui message (use () to hide false-positives)"),
     (r'release\(.*wlock, .*lock\)', "wrong lock release order"),
     (r'\b__bool__\b', "__bool__ should be __nonzero__ in Python 2"),
     (r'os\.path\.join\(.*, *(""|\'\')\)',
@@ -325,9 +324,15 @@ pypats = [
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
     (r'\.next\(\)', "don't use .next(), use next(...)"),
+
+    # rules depending on implementation of repquote()
+    (r' x+[xpqo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
+    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
+     "missing _() in ui message (use () to hide false-positives)"),
   ],
   # warnings
   [
+    # rules depending on implementation of repquote()
     (r'(^| )pp +xxxxqq[ \n][^\n]', "add two newlines after '.. note::'"),
   ]
 ]
@@ -372,9 +377,13 @@ cpats = [
     (r'^\s*#import\b', "use only #include in standard C code"),
     (r'strcpy\(', "don't use strcpy, use strlcpy or memcpy"),
     (r'strcat\(', "don't use strcat"),
+
+    # rules depending on implementation of repquote()
   ],
   # warnings
-  []
+  [
+    # rules depending on implementation of repquote()
+  ]
 ]
 
 cfilters = [
