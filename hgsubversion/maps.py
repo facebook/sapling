@@ -355,6 +355,9 @@ class RevMap(dict):
         self._filepath = revmap_path
         self._lastpulled_file = lastpulled_path
         self._hashes = None
+        # disable iteration to have a consistent interface with SqliteRevMap
+        # it's less about performance since RevMap needs iteration internally
+        self._allowiter = False
 
         self.firstpulled = 0
         if os.path.isfile(self._filepath):
@@ -364,16 +367,16 @@ class RevMap(dict):
 
     def hashes(self):
         if self._hashes is None:
-            self._hashes = dict((v, k) for (k, v) in self.iteritems())
+            self._hashes = dict((v, k) for (k, v) in self._origiteritems())
         return self._hashes
 
     def branchedits(self, branch, rev):
         check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
-        return sorted(filter(check, self.iteritems()), reverse=True)
+        return sorted(filter(check, self._origiteritems()), reverse=True)
 
     def branchmaxrevnum(self, branch, maxrevnum):
         result = 0
-        for num, br in self.iterkeys():
+        for num, br in self._origiterkeys():
             if br == branch and num <= maxrevnum and num > result:
                 result = num
         return result
@@ -386,7 +389,7 @@ class RevMap(dict):
         return bin(lines[-1].split(' ', 2)[1])
 
     def revhashes(self, revnum):
-        for key, value in self.iteritems():
+        for key, value in self._origiteritems():
             if key[0] == revnum:
                 yield value
 
@@ -458,6 +461,24 @@ class RevMap(dict):
         dict.__setitem__(self, (revnum, branch), ha)
         if self._hashes is not None:
             self._hashes[ha] = (revnum, branch)
+
+    @classmethod
+    def _wrapitermethods(cls):
+        def wrap(orig):
+            def wrapper(self, *args, **kwds):
+                if not self._allowiter:
+                    raise NotImplementedError(
+                        'Iteration methods on RevMap are disabled ' +
+                        'to avoid performance issues on SqliteRevMap')
+                return orig(self, *args, **kwds)
+            return wrapper
+        methodre = re.compile(r'^_*(?:iter|view)?(?:keys|items|values)?_*$')
+        for name in filter(methodre.match, dir(cls)):
+            orig = getattr(cls, name)
+            setattr(cls, '_orig%s' % name, orig)
+            setattr(cls, name, wrap(orig))
+
+RevMap._wrapitermethods()
 
 
 class SqliteRevMap(collections.MutableMapping):

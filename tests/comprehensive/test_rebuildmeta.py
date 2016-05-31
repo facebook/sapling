@@ -145,7 +145,12 @@ def _run_assertions(self, name, single, src, dest, u):
     srcbi = util.load(os.path.join(src.path, 'svn', 'branch_info'))
     destbi = util.load(os.path.join(dest.path, 'svn', 'branch_info'))
     self.assertEqual(sorted(srcbi.keys()), sorted(destbi.keys()))
-    revkeys = svnmeta.SVNMeta(dest).revmap.keys()
+    revmap = svnmeta.SVNMeta(dest).revmap
+    # revmap disables __iter__ intentionally to avoid possible slow code
+    # (not using database index in SqliteRevMap)
+    # we need to fetch all keys so enable it by setting _allowiter
+    revmap._allowiter = True
+    revkeys = revmap.keys()
     for branch in destbi:
         srcinfo = srcbi[branch]
         destinfo = destbi[branch]
