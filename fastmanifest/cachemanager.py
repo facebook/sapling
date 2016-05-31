@@ -8,9 +8,7 @@
 import os
 import random
 
-from mercurial import extensions, revlog, scmutil, util
-
-from extutil import wrapfilecache
+from mercurial import extensions, revlog, scmutil, util, error
 
 import concurrency
 import constants
