@@ -248,3 +248,27 @@ web templates
    > {desc|escape}
    warning: follow desc keyword with either firstline or websub
   [1]
+
+'string join across lines with no space' detection
+
+  $ cat > stringjoin.py <<EOF
+  > foo = (' foo'
+  >        'bar foo.'
+  >        'bar foo:'
+  >        'bar foo@'
+  >        'bar')
+  > EOF
+  $ "$check_code" stringjoin.py
+  stringjoin.py:1:
+   > foo = (' foo'
+   string join across lines with no space
+  stringjoin.py:2:
+   >        'bar foo.'
+   string join across lines with no space
+  stringjoin.py:3:
+   >        'bar foo:'
+   string join across lines with no space
+  stringjoin.py:4:
+   >        'bar foo@'
+   string join across lines with no space
+  [1]

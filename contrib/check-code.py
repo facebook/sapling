@@ -51,22 +51,20 @@ def compilere(pat, multiline=False):
     return re.compile(pat)
 
 def repquote(m):
-    fromc = '.:'
-    tochr = 'pq'
+    fixedmap = {'.': 'p', ':': 'q'}
     def encodechr(i):
         if i > 255:
             return 'u'
         c = chr(i)
         if c in ' \n':
             return c
+        if c in fixedmap:
+            return fixedmap[c]
         if c.isalpha():
             return 'x'
         if c.isdigit():
             return 'n'
-        try:
-            return tochr[fromc.find(c)]
-        except (ValueError, IndexError):
-            return 'o'
+        return 'o'
     t = m.group('text')
     tt = ''.join(encodechr(i) for i in xrange(256))
     t = t.translate(tt)
@@ -248,7 +246,7 @@ pypats = [
     (r'^\s+(\w|\.)+=\w[^,()\n]*$', "missing whitespace in assignment"),
     (r'\w\s=\s\s+\w', "gratuitous whitespace after ="),
     (r'.{81}', "line too long"),
-    (r' x+[xo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
+    (r' x+[xpqo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
     (r'[^\n]\Z', "no trailing newline"),
     (r'(\S[ \t]+|^[ \t]+)\n', "trailing whitespace"),
 #    (r'^\s+[^_ \n][^_. \n]+_[^_\n]+\s*=',
