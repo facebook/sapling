@@ -449,6 +449,13 @@ def tosql(dirstate):
     sqlconn = sqlite3.connect(sqlfilename)
 
     sqlconn.text_factory = str
+
+    # Those two pragmas are dangerous and may corrupt db if interrupted but we
+    # are populating db now so we are not afraid to lose it and we want it to
+    # be fast.
+    sqlconn.execute("PRAGMA synchronous = OFF")
+    sqlconn.execute("PRAGMA journal_mode = OFF")
+
     createotherschema(sqlconn)
     sqlmap = sqldirstatemap(sqlconn)
     copymap = sqlcopymap(sqlconn)
@@ -473,6 +480,9 @@ def tosql(dirstate):
     cur.close()
     sqlconn.commit()
     writefakedirstate(dirstate)
+
+    sqlconn.execute("PRAGMA synchronous = ON")
+    sqlconn.execute("PRAGMA journal_mode = DELETE")
 
 def toflat(sqldirstate):
     """" converts sqldirstate to flat dirstate
