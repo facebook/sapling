@@ -46,24 +46,29 @@ class sqlmap(collections.MutableMapping):
     def _valuenamesstr(self):
         return ', '.join(self._valuenames)
 
+    @property
+    def _querytemplateargs(self):
+        return {'table': self._tablename,
+                'keyname': self._keyname,
+                'valuenames': self._valuenamesstr,
+                'placeholders': ', '.join(['?'] * self._numcols)}
+
     def __setitem__(self, key, item):
         cur = self._sqlconn.cursor()
 
         item = self._valuetorow(item)
 
 
-        cur.execute('''INSERT OR REPLACE INTO
-                  {0} ({1}, {2})
-                  VALUES ({3})'''.format(
-                      self._tablename, self._keyname, self._valuenamesstr,
-                      ', '.join(['?'] * self._numcols)),
-                  (key,) + item)
+        cur.execute('''INSERT OR REPLACE INTO {table} ({keyname}, {valuenames})
+            VALUES ({placeholders})'''.format(**self._querytemplateargs),
+            (key,) + item)
         cur.close()
 
     def __getitem__(self, key):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT {2} FROM {0} WHERE {1}=?'''.format(
-            self._tablename, self._keyname, self._valuenamesstr), (key,))
+        cur.execute('''SELECT {valuenames} FROM {table}
+                    WHERE {keyname}=?'''.format(**self._querytemplateargs),
+                    (key,))
         row = cur.fetchone()
         cur.close()
 
@@ -73,8 +78,8 @@ class sqlmap(collections.MutableMapping):
 
     def __delitem__(self, key):
         cur = self._sqlconn.cursor()
-        cur.execute('''DELETE FROM {0} WHERE {1}=?'''.format(
-            self._tablename, self._keyname), (key,))
+        cur.execute('''DELETE FROM {table} WHERE {keyname}=?'''.format(
+            **self._querytemplateargs), (key,))
 
         if cur.rowcount == 0:
             raise KeyError("key %s not found" % key)
@@ -82,14 +87,15 @@ class sqlmap(collections.MutableMapping):
 
     def __len__(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT COUNT(*) FROM {0}'''.format(self._tablename))
+        cur.execute('''SELECT COUNT(*) FROM {table}'''.format(
+            **self._querytemplateargs))
         res = cur.fetchone()
         cur.close()
         return res[0]
 
     def clear(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''DELETE FROM {0}'''.format(self._tablename))
+        cur.execute('''DELETE FROM {table}'''.format(**self._querytemplateargs))
         cur.close()
 
     def copy(self):
@@ -100,16 +106,13 @@ class sqlmap(collections.MutableMapping):
                      for k, v in otherdict.iteritems()]
 
         cur = self._sqlconn.cursor()
-        cur.executemany('''INSERT OR REPLACE INTO
-                  {0} ({1}, {2})
-                  VALUES ({3})'''.format(
-                      self._tablename, self._keyname, self._valuenamesstr,
-                      ', '.join(['?'] * self._numcols)),
-                  tuplelist)
+        cur.executemany('''INSERT OR REPLACE INTO {table}
+            ({keyname}, {valuenames}) VALUES ({placeholders})'''.format(
+            **self._querytemplateargs), tuplelist)
         cur.close()
 
     def update(self, *args, **kwargs):
-        assert(len(args) == 1 or kwargs)
+        assert len(args) == 1 or kwargs
         if args:
             self._update(args[0])
         if kwargs:
@@ -117,25 +120,24 @@ class sqlmap(collections.MutableMapping):
 
     def keys(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT {1} FROM {0}'''.format(self._tablename,
-                                                     self._keyname))
+        cur.execute('''SELECT {keyname} FROM {table}'''.format(
+            **self._querytemplateargs))
         keys = cur.fetchall()
         cur.close()
         return [k[0] for k in keys]
 
     def __iter__(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT {1} FROM {0}'''.format(self._tablename,
-                                                     self._keyname))
+        cur.execute('''SELECT {keyname} FROM {table}'''.format(
+            **self._querytemplateargs))
         for r in cur:
             yield r[0]
         cur.close()
 
     def iteritems(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT {1}, {2} from {0}'''.format(self._tablename,
-                                                          self._keyname,
-                                                          self._valuenamesstr))
+        cur.execute('''SELECT {keyname}, {valuenames} from {table}'''.format(
+            **self._querytemplateargs))
         for r in cur:
             yield (r[0], self._rowtovalue(r[1:]))
         cur.close()
