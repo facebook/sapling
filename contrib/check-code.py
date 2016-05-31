@@ -53,7 +53,8 @@ def compilere(pat, multiline=False):
 def repquote(m):
     # check "rules depending on implementation of repquote()" in each
     # patterns (especially pypats), before changing this function
-    fixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q'}
+    fixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q',
+                '%': '%', '\\': 'b', '*': 'A', '+': 'P', '-': 'M'}
     def encodechr(i):
         if i > 255:
             return 'u'
@@ -326,7 +327,8 @@ pypats = [
     (r'\.next\(\)', "don't use .next(), use next(...)"),
 
     # rules depending on implementation of repquote()
-    (r' x+[xpqo][\'"]\n\s+[\'"]x', 'string join across lines with no space'),
+    (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',
+     'string join across lines with no space'),
     (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
      "missing _() in ui message (use () to hide false-positives)"),
   ],

@@ -256,6 +256,10 @@ web templates
   >        'bar foo.'
   >        'bar foo:'
   >        'bar foo@'
+  >        'bar foo%'
+  >        'bar foo*'
+  >        'bar foo+'
+  >        'bar foo-'
   >        'bar')
   > EOF
   $ "$check_code" stringjoin.py
@@ -270,5 +274,17 @@ web templates
    string join across lines with no space
   stringjoin.py:4:
    >        'bar foo@'
+   string join across lines with no space
+  stringjoin.py:5:
+   >        'bar foo%'
+   string join across lines with no space
+  stringjoin.py:6:
+   >        'bar foo*'
+   string join across lines with no space
+  stringjoin.py:7:
+   >        'bar foo+'
+   string join across lines with no space
+  stringjoin.py:8:
+   >        'bar foo-'
    string join across lines with no space
   [1]
