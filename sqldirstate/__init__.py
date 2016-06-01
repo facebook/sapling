@@ -56,6 +56,12 @@ def wrapdirstate(orig, self):
     if issqldirstate(self):
         ds.__class__ = makedirstate(ds.__class__)
         ds._sqlinit()
+
+        # this is ugly hack turning off the dirstate invalidation
+        # on dirstate file change while working with sqldirstate repo
+        for currcls in localrepo.localrepository.__mro__:
+            if 'dirstate' in currcls.__dict__:
+                currcls.__dict__['dirstate'].paths = []
     return ds
 
 def wrapnewreporequirements(orig, repo):
@@ -123,7 +129,7 @@ def uisetup(ui):
     wrapfunction(localrepo.localrepository, '_journalfiles',
                  wrapjournalfiles)
     wrapfilecache(localrepo.localrepository, 'dirstate',
-                  wrapdirstate)
+                  wrapdirstate, 'dirstate')
     try:
         shelve = extensions.find('shelve')
         wrapfunction(shelve, '_aborttransaction', wrapshelveaborttransaction)
