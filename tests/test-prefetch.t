@@ -187,6 +187,7 @@
   $ cat >> .hg/hgrc <<EOF
   > [remotefilelog]
   > fetchpacks=True
+  > backgroundrepack=True
   > EOF
   $ clearcache
   $ hg prefetch -r .

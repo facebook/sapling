@@ -30,15 +30,22 @@ def incrementalrepack(repo):
 
     cachepath = repo.ui.config("remotefilelog", "cachepath")
     packpath = os.path.join(cachepath, repo.name, 'packs')
+    if not os.path.exists(packpath):
+        os.makedirs(packpath)
+
     files = osutil.listdir(packpath, stat=True)
 
     datapacks = _computeincrementaldatapack(repo.ui, files)
     fullpaths = list(os.path.join(packpath, p) for p in datapacks)
     datapacks = list(datapack.datapack(p) for p in fullpaths)
+    datapacks.extend(s for s in repo.shareddatastores
+                     if not isinstance(s, datapack.datapackstore))
 
     historypacks = _computeincrementalhistorypack(repo.ui, files)
     fullpaths = list(os.path.join(packpath, p) for p in historypacks)
     historypacks = list(historypack.historypack(p) for p in fullpaths)
+    historypacks.extend(s for s in repo.sharedhistorystores
+                        if not isinstance(s, historypack.historypackstore))
 
     datasource = contentstore.unioncontentstore(*datapacks)
     historysource = metadatastore.unionmetadatastore(*historypacks,

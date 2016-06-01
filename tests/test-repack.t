@@ -235,6 +235,10 @@ Single pack - repack does nothing
   * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
 
 Pull should run background repack
+  $ cat >> .hg/hgrc <<EOF
+  > [remotefilelog]
+  > backgroundrepack=True
+  > EOF
   $ clearcache
   $ hg prefetch -r 0
   1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
