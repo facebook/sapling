@@ -14,3 +14,6 @@ DEFAULT_HIGHGROWTHSLOPE = 0.2
 """How old of a lock do we tolerate before we spawn off a new worker to populate
 the cache."""
 WORKER_SPAWN_LOCK_STEAL_TIMEOUT = 300
+
+# How many entries we keep in the in memory cache?
+DEFAULT_MAX_MEMORY_ENTRIES = 10

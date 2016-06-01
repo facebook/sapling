@@ -35,6 +35,9 @@ cacheonchange = False
 # Make cacheonchange(see above) work in the background.
 cacheonchangebackground = True
 
+# Maximum number of fastmanifest kept in volatile memory
+maxinmemoryentries = 10
+
 # If False, cache entries in a deterministic order, otherwise use a randomorder
 # by batches.
 randomorder = True

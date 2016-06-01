@@ -436,7 +436,6 @@ class fastmanifestcache(object):
     def __init__(self, opener, ui):
         self.opener = opener
         self.ui = ui
-        self.inmemorycache = {}
         base = opener.join(None)
         self.cachepath = os.path.join(base, CACHE_SUBDIR)
         if not os.path.exists(self.cachepath):
@@ -445,6 +444,13 @@ class fastmanifestcache(object):
             self.debug = _silent_debug
         else:
             self.debug = self.ui.debug
+
+        maxinmemoryentries = DEFAULT_MAX_MEMORY_ENTRIES
+        if self.ui is not None:
+            maxinmemoryentries = self.ui.config("fastmanifest",
+                                                "maxinmemoryentries",
+                                                DEFAULT_MAX_MEMORY_ENTRIES)
+        self.inmemorycache = util.lrucachedict(maxinmemoryentries)
 
     def keyprefix(self):
         return "fast"
