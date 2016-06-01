@@ -140,11 +140,14 @@ static bool folder_add_child(
           sizeof(ptrdiff_t) * folder->closed_children_count);
     } else {
       // realloc
-      folder->closed_children = realloc(folder->closed_children, new_capacity);
+      folder->closed_children = realloc(folder->closed_children,
+          sizeof(ptrdiff_t) * new_capacity);
       if (folder->closed_children == NULL) {
         return false;
       }
     }
+
+    folder->closed_children_capacity = new_capacity;
   }
 
   // we need to store the delta between the start of the arena and the child.
