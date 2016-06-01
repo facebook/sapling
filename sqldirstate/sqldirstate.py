@@ -35,6 +35,7 @@ dirstatetuple = parsers.dirstatetuple
 
 DBFILE = "dirstate.sqlite3"
 FAKEDIRSTATE = "dirstate"
+SQLITE_CACHE_SIZE = -100000 # 100MB
 
 def createotherschema(sqlconn):
     """ The storage for all misc small key value data """
@@ -269,6 +270,7 @@ def makedirstate(cls):
             self._sqlfilename = self._opener.join(DBFILE)
             self._sqlconn = sqlite3.connect(self._sqlfilename)
             self._sqlconn.text_factory = str
+            self._sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
             createotherschema(self._sqlconn)
             self._map = sqldirstatemap(self._sqlconn)
             self._dirs = sqldirs(self._sqlconn)
@@ -455,6 +457,7 @@ def tosql(dirstate):
     # be fast.
     sqlconn.execute("PRAGMA synchronous = OFF")
     sqlconn.execute("PRAGMA journal_mode = OFF")
+    sqlconn.execute("PRAGMA cache_size = %d" % SQLITE_CACHE_SIZE)
 
     createotherschema(sqlconn)
     sqlmap = sqldirstatemap(sqlconn)
