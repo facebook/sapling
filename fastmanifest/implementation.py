@@ -41,14 +41,12 @@ class hybridmanifest(object):
         self.cachekey = revlog.hex(self.node) if self.node is not None else None
 
         self.fastcache = fastmanifestcache.getinstance(opener, self.ui)
-        self.debugfastmanifest = (self.ui.configbool("fastmanifest",
-                                                     "debugfastmanifest")
-                                  if self.ui is not None
-                                  else False)
+        self.debugfastmanifest = self.ui.configbool("fastmanifest",
+                                                     "debugfastmanifest", False)
 
         self.incache = True if self.__cachedmanifest is not None else None
 
-        if self.ui is None or self.ui.configbool("fastmanifest", "silent"):
+        if self.ui.configbool("fastmanifest", "silent"):
             self.debug = _silent_debug
         else:
             self.debug = self.ui.debug
@@ -440,16 +438,14 @@ class fastmanifestcache(object):
         self.cachepath = os.path.join(base, CACHE_SUBDIR)
         if not os.path.exists(self.cachepath):
             os.makedirs(self.cachepath)
-        if self.ui is None or self.ui.configbool("fastmanifest", "silent"):
+        if self.ui.configbool("fastmanifest", "silent"):
             self.debug = _silent_debug
         else:
             self.debug = self.ui.debug
 
-        maxinmemoryentries = DEFAULT_MAX_MEMORY_ENTRIES
-        if self.ui is not None:
-            maxinmemoryentries = self.ui.config("fastmanifest",
-                                                "maxinmemoryentries",
-                                                DEFAULT_MAX_MEMORY_ENTRIES)
+        maxinmemoryentries = self.ui.config("fastmanifest",
+                                            "maxinmemoryentries",
+                                            DEFAULT_MAX_MEMORY_ENTRIES)
         self.inmemorycache = util.lrucachedict(maxinmemoryentries)
 
     def keyprefix(self):
