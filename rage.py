@@ -172,6 +172,7 @@ def rage(ui, repo, *pats, **opts):
                 '\n'.join(hgcmd(commands.status).splitlines()[:20]))),
         ('hg blackbox -l40',
             _failsafe(lambda: hgcmd(blackbox.blackbox, limit=40))),
+        ('hg summary', _failsafe(lambda: hgcmd(commands.summary))),
         ('hg config (local)', _failsafe(lambda: '\n'.join(localconfig(ui)))),
         ('hg sparse',
             _failsafe(
