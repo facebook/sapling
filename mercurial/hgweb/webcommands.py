@@ -864,7 +864,6 @@ def annotate(web, req, tmpl):
                                      section='annotate', whitespace=True)
 
     def annotate(**map):
-        last = None
         if util.binary(fctx.data()):
             mt = (mimetypes.guess_type(fctx.path())[0]
                   or 'application/octet-stream')
@@ -874,11 +873,6 @@ def annotate(web, req, tmpl):
             lines = enumerate(fctx.annotate(follow=True, linenumber=True,
                                             diffopts=diffopts))
         for lineno, ((f, targetline), l) in lines:
-            fnode = f.filenode()
-
-            if last != fnode:
-                last = fnode
-
             yield {"parity": next(parity),
                    "node": f.hex(),
                    "rev": f.rev(),
