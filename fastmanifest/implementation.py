@@ -464,8 +464,8 @@ class fastmanifestcache(object):
             return fastmanifestdict(fm)
 
     def dump(self, fpath, manifest):
-        # TODO: is this already a hybridmanifest/fastmanifest?  if so, we may be
-        # able to skip a frivolous conversion step.
+        # We can't skip the conversion step here, if `manifest`
+        # was a fastmanifest we wouldn't be saving it
         fm = cfastmanifest.fastmanifest(manifest.text())
         fm.save(fpath)
 
