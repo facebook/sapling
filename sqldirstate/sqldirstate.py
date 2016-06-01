@@ -348,6 +348,8 @@ def makedirstate(cls):
             self._dirty = False
             self._parentwriters = 0
             self._sqlinit()
+            if util.safehasattr(self, '_fsmonitorstate'):
+                self._fsmonitorstate.invalidate()
 
         def write(self, tr=False):
             # if dirty dump to disk (db transaction commit)
