@@ -1485,7 +1485,23 @@ ordering defined by it.
       <baseset [0, 1]>>>
   2
 
- 'present()' should do nothing other than suppressing an error:
+ because 'present()' does nothing other than suppressing an error, the
+ ordering requirement should be forwarded to the nested expression
+
+  $ try -p optimized 'present(2 + 0 + 1)'
+  * optimized:
+  (func
+    ('symbol', 'present')
+    (func
+      ('symbol', '_list')
+      ('string', '2\x000\x001')
+      define)
+    define)
+  * set:
+  <baseset [2, 0, 1]>
+  2
+  0
+  1
 
   $ try --optimize '2:0 & present(0 + 1 + 2)'
   (and
@@ -1510,15 +1526,16 @@ ordering defined by it.
       (func
         ('symbol', '_list')
         ('string', '0\x001\x002')
-        define)
+        follow)
       follow)
     define)
   * set:
-  <baseset [0, 1, 2]>
-  0
-  1
+  <filteredset
+    <spanset- 0:2>,
+    <baseset [0, 1, 2]>>
   2
- BROKEN: should be '2 1 0'
+  1
+  0
 
  'reverse()' should take effect only if it is the outermost expression:
 

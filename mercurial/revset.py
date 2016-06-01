@@ -2473,7 +2473,13 @@ def _analyze(x, order):
     elif op == 'keyvalue':
         return (op, x[1], _analyze(x[2], order))
     elif op == 'func':
-        return (op, x[1], _analyze(x[2], defineorder), order)
+        f = getsymbol(x[1])
+        d = defineorder
+        if f == 'present':
+            # 'present(set)' is known to return the argument set with no
+            # modification, so forward the current order to its argument
+            d = order
+        return (op, x[1], _analyze(x[2], d), order)
     raise ValueError('invalid operator %r' % op)
 
 def analyze(x, order=defineorder):
