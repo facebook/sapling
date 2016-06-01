@@ -134,29 +134,25 @@ class hybridmanifest(object):
     def __len__(self):
         return self._manifest('__len__').__len__()
 
-    def copy(self):
-        copy = self._manifest('copy').copy()
-        if isinstance(copy, hybridmanifest):
-            return copy
-        elif isinstance(copy, fastmanifestdict):
-            return hybridmanifest(self.ui, self.opener, fast=copy,
+    def _converttohybridmanifest(self, m):
+        if isinstance(m, hybridmanifest):
+            return m
+        elif isinstance(m, fastmanifestdict):
+            return hybridmanifest(self.ui, self.opener, fast=m,
                                   node=self.node)
-        elif isinstance(copy, manifest.manifestdict):
-            return hybridmanifest(self.ui, self.opener, flat=copy,
+        elif isinstance(m, manifest.manifestdict):
+            return hybridmanifest(self.ui, self.opener, flat=m,
                                   node=self.node)
         else:
-            raise ValueError("unknown manifest type {0}".format(type(copy)))
+            raise ValueError("unknown manifest type {0}".format(type(m)))
+
+    def copy(self):
+        copy = self._manifest('copy').copy()
+        return self._converttohybridmanifest(copy)
 
     def matches(self, *args, **kwargs):
         matches = self._manifest('matches').matches(*args, **kwargs)
-        if isinstance(matches, hybridmanifest):
-            return matches
-        elif isinstance(matches, fastmanifestdict):
-            return hybridmanifest(self.ui, self.opener, fast=matches)
-        elif isinstance(matches, manifest.manifestdict):
-            return hybridmanifest(self.ui, self.opener, flat=matches)
-        else:
-            raise ValueError("unknown manifest type {0}".format(type(matches)))
+        return self._converttohybridmanifest(matches)
 
     def diff(self, m2, *args, **kwargs):
         self.debug("[FM] performing diff\n")
