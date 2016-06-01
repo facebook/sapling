@@ -1056,7 +1056,8 @@ class pulloperation(object):
         # revision we try to pull (None is "all")
         self.heads = heads
         # bookmark pulled explicitly
-        self.explicitbookmarks = bookmarks
+        self.explicitbookmarks = [repo._bookmarks.expandname(bookmark)
+                                  for bookmark in bookmarks]
         # do we force pull?
         self.force = force
         # whether a streaming clone was requested

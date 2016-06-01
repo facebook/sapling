@@ -5805,6 +5805,7 @@ def pull(ui, repo, source="default", **opts):
             remotebookmarks = other.listkeys('bookmarks')
             pullopargs['remotebookmarks'] = remotebookmarks
             for b in opts['bookmark']:
+                b = repo._bookmarks.expandname(b)
                 if b not in remotebookmarks:
                     raise error.Abort(_('remote bookmark %s not found!') % b)
                 revs.append(remotebookmarks[b])

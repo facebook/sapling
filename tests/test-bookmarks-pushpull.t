@@ -252,7 +252,10 @@ divergent bookmarks
 
 explicit pull should overwrite the local version (issue4439)
 
-  $ hg pull --config paths.foo=../a foo -B X
+  $ hg update -r X
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark X)
+  $ hg pull --config paths.foo=../a foo -B .
   pulling from $TESTTMP/a (glob)
   no changes found
   divergent bookmark @ stored as @foo
@@ -366,7 +369,10 @@ Update a bookmark right after the initial lookup -B (issue4689)
      X                         1:0d2164f0ce0d
    * Y                         5:35d1ef0a8d1b
      Z                         1:0d2164f0ce0d
-  $ hg pull -B Y
+  $ hg update -r Y
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark Y)
+  $ hg pull -B .
   pulling from http://localhost:$HGPORT/
   searching for changes
   adding changesets
@@ -376,9 +382,9 @@ Update a bookmark right after the initial lookup -B (issue4689)
   updating bookmark Y
   (run 'hg update' to get a working copy)
   $ hg book
-   * @                         1:0d2164f0ce0d
+     @                         1:0d2164f0ce0d
      X                         1:0d2164f0ce0d
-     Y                         5:35d1ef0a8d1b
+   * Y                         5:35d1ef0a8d1b
      Z                         1:0d2164f0ce0d
 
 (done with this section of the test)
