@@ -176,7 +176,7 @@ we are able to load CA certs.
 clone via pull
 
   $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLECACERTS
-  warning: localhost certificate with fingerprint sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 not verified (check hostsecurity or web.cacerts config setting)
+  warning: certificate for localhost not verified (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 or web.cacerts config settings)
   requesting all changes
   adding changesets
   adding manifests
@@ -203,7 +203,7 @@ pull without cacert
   $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull $DISABLECACERTS
   pulling from https://localhost:$HGPORT/
-  warning: localhost certificate with fingerprint sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 not verified (check hostsecurity or web.cacerts config setting)
+  warning: certificate for localhost not verified (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 or web.cacerts config settings)
   searching for changes
   adding changesets
   adding manifests
@@ -244,7 +244,7 @@ cacert mismatch
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/
   pulling from https://127.0.0.1:$HGPORT/
   abort: 127.0.0.1 certificate error: certificate is for localhost
-  (configure hostsecurity sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 or use --insecure to connect insecurely)
+  (set hostsecurity.127.0.0.1:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts=pub.pem https://127.0.0.1:$HGPORT/ --insecure
   pulling from https://127.0.0.1:$HGPORT/

@@ -397,15 +397,15 @@ def validatesocket(sock):
                           hint=_('check %s configuration') % section)
 
     if not sock._hgstate['caloaded']:
-        ui.warn(_('warning: %s certificate with fingerprint %s '
-                  'not verified (check %s or web.cacerts config '
-                  'setting)\n') %
-                (host, nicefingerprint, section))
+        ui.warn(_('warning: certificate for %s not verified '
+                  '(set hostsecurity.%s:certfingerprints=%s or web.cacerts '
+                  'config settings)\n') % (host, host, nicefingerprint))
         return
 
     msg = _verifycert(peercert2, host)
     if msg:
         raise error.Abort(_('%s certificate error: %s') % (host, msg),
-                         hint=_('configure %s %s or use '
-                                '--insecure to connect insecurely') %
-                              (section, nicefingerprint))
+                         hint=_('set hostsecurity.%s:certfingerprints=%s '
+                                'config setting or use --insecure to connect '
+                                'insecurely') %
+                              (host, nicefingerprint))
