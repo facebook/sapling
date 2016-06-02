@@ -730,7 +730,7 @@ class dirstate(object):
                                 self._writedirstate, location='plain')
             return
 
-        st = self._opener(filename, "w", atomictemp=True)
+        st = self._opener(filename, "w", atomictemp=True, checkambig=True)
         self._writedirstate(st)
 
     def _writedirstate(self, st):
@@ -1217,7 +1217,8 @@ class dirstate(object):
         # use '_writedirstate' instead of 'write' to write changes certainly,
         # because the latter omits writing out if transaction is running.
         # output file will be used to create backup of dirstate at this point.
-        self._writedirstate(self._opener(filename, "w", atomictemp=True))
+        self._writedirstate(self._opener(filename, "w", atomictemp=True,
+                                         checkambig=True))
 
         if tr:
             # ensure that subsequent tr.writepending returns True for
