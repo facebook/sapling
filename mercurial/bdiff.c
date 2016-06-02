@@ -148,7 +148,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 static int longest_match(struct line *a, struct line *b, struct pos *pos,
 			 int a1, int a2, int b1, int b2, int *omi, int *omj)
 {
-	int mi = a1, mj = b1, mk = 0, mb = 0, i, j, k, half;
+	int mi = a1, mj = b1, mk = 0, i, j, k, half;
 
 	/* window our search on large regions to better bound
 	   worst-case performance. by choosing a window at the end, we
@@ -195,18 +195,15 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 		mj = mj - mk + 1;
 	}
 
-	/* expand match to include neighboring popular lines */
-	while (mi - mb > a1 && mj - mb > b1 &&
-	       a[mi - mb - 1].e == b[mj - mb - 1].e)
-		mb++;
+	/* expand match to include subsequent popular lines */
 	while (mi + mk < a2 && mj + mk < b2 &&
 	       a[mi + mk].e == b[mj + mk].e)
 		mk++;
 
-	*omi = mi - mb;
-	*omj = mj - mb;
+	*omi = mi;
+	*omj = mj;
 
-	return mk + mb;
+	return mk;
 }
 
 static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,
