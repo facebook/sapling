@@ -117,7 +117,8 @@ class bmstore(dict):
             rbm._writeactive()
 
         with repo.wlock():
-            file_ = repo.vfs('bookmarks', 'w', atomictemp=True)
+            file_ = repo.vfs('bookmarks', 'w', atomictemp=True,
+                             checkambig=True)
             try:
                 self._write(file_)
             except: # re-raises
@@ -131,7 +132,8 @@ class bmstore(dict):
             return
         with self._repo.wlock():
             if self._active is not None:
-                f = self._repo.vfs('bookmarks.current', 'w', atomictemp=True)
+                f = self._repo.vfs('bookmarks.current', 'w', atomictemp=True,
+                                   checkambig=True)
                 try:
                     f.write(encoding.fromlocal(self._active))
                 finally:
