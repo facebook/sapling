@@ -166,10 +166,17 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 		/* loop through all lines match a[i] in b */
 		for (; j >= b1; j = b[j].n) {
 			/* does this extend an earlier match? */
-			if (i > a1 && j > b1 && pos[j - 1].pos == i - 1)
-				k = pos[j - 1].len + 1;
-			else
-				k = 1;
+			for (k = 1; j - k >= b1 && i - k >= a1; k++) {
+				/* reached an earlier match? */
+				if (pos[j - k].pos == i - k) {
+					k += pos[j - k].len;
+					break;
+				}
+				/* previous line mismatch? */
+				if (a[i - k].e != b[j - k].e)
+					break;
+			}
+
 			pos[j].pos = i;
 			pos[j].len = k;
 
