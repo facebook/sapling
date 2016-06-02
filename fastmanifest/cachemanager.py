@@ -64,14 +64,17 @@ MB = 1024**2
 class _systemawarecachelimit(object):
     """A limit that will be tighter as the free disk space reduces"""
     def parseconfig(self, repo):
-        configs = {
-            'lowgrowthslope': constants.DEFAULT_LOWGROWTH_SLOPE,
-            'lowgrowththresholdgb': constants.DEFAULT_LOWGROWTH_TRESHOLDGB,
-            'maxcachesizegb': constants.DEFAULT_MAXCACHESIZEGB,
-            'highgrowthslope': constants.DEFAULT_HIGHGROWTHSLOPE
-        }
-        for configkey, default in configs.items():
-            strconfig = repo.ui.config("fastmanifest", configkey, default)
+        configkeys = set([
+            'lowgrowthslope',
+            'lowgrowththresholdgb',
+            'maxcachesizegb',
+            'highgrowthslope',
+        ])
+        configs = {}
+        for configkey in configkeys:
+            strconfig = repo.ui.config("fastmanifest", configkey)
+            if strconfig is None:
+                continue
             try:
                 configs[configkey] = float(strconfig)
             except ValueError:
