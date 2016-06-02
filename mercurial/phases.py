@@ -251,7 +251,7 @@ class phasecache(object):
     def write(self):
         if not self.dirty:
             return
-        f = self.opener('phaseroots', 'w', atomictemp=True)
+        f = self.opener('phaseroots', 'w', atomictemp=True, checkambig=True)
         try:
             self._write(f)
         finally:
