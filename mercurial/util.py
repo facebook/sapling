@@ -1455,6 +1455,9 @@ class filestat(object):
         except AttributeError:
             return False
 
+    def __ne__(self, other):
+        return not self == other
+
 class atomictempfile(object):
     '''writable file object that atomically updates a file
 
