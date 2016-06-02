@@ -162,21 +162,20 @@ Test server address cannot be reused
 #endif
   $ cd ..
 
-OS X has a dummy CA cert that enables use of the system CA store when using
-Apple's OpenSSL. This trick do not work with plain OpenSSL.
+Our test cert is not signed by a trusted CA. It should fail to verify if
+we are able to load CA certs.
 
-  $ DISABLEOSXDUMMYCERT=
 #if defaultcacerts
   $ hg clone https://localhost:$HGPORT/ copy-pull
   abort: error: *certificate verify failed* (glob)
   [255]
-
-  $ DISABLEOSXDUMMYCERT="--insecure"
 #endif
+
+  $ DISABLECACERTS="--config devel.disableloaddefaultcerts=true"
 
 clone via pull
 
-  $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLEOSXDUMMYCERT
+  $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLECACERTS
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   requesting all changes
   adding changesets
@@ -202,7 +201,7 @@ pull without cacert
   $ cd copy-pull
   $ echo '[hooks]' >> .hg/hgrc
   $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
-  $ hg pull $DISABLEOSXDUMMYCERT
+  $ hg pull $DISABLECACERTS
   pulling from https://localhost:$HGPORT/
   warning: localhost certificate with fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca not verified (check hostsecurity or web.cacerts config setting)
   searching for changes

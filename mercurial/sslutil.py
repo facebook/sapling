@@ -112,6 +112,9 @@ def _hostsettings(ui, hostname):
     Returns a dict of settings relevant to that hostname.
     """
     s = {
+        # Whether we should attempt to load default/available CA certs
+        # if an explicit ``cafile`` is not defined.
+        'allowloaddefaultcerts': True,
         # List of 2-tuple of (hash algorithm, hash).
         'certfingerprints': [],
         # Path to file containing concatenated CA certs. Used by
@@ -156,6 +159,9 @@ def _hostsettings(ui, hostname):
         s['disablecertverification'] = True
         s['verifymode'] = ssl.CERT_NONE
 
+    if ui.configbool('devel', 'disableloaddefaultcerts'):
+        s['allowloaddefaultcerts'] = False
+
     # Try to hook up CA certificate validation unless something above
     # makes it not necessary.
     if s['verifymode'] is None:
@@ -176,7 +182,7 @@ def _hostsettings(ui, hostname):
 
         # Require certificate validation if CA certs are being loaded and
         # verification hasn't been disabled above.
-        if cafile or _canloaddefaultcerts:
+        if cafile or (_canloaddefaultcerts and s['allowloaddefaultcerts']):
             s['verifymode'] = ssl.CERT_REQUIRED
         else:
             # At this point we don't have a fingerprint, aren't being
@@ -243,10 +249,12 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     if settings['cafile'] is not None:
         sslcontext.load_verify_locations(cafile=settings['cafile'])
         caloaded = True
-    else:
+    elif settings['allowloaddefaultcerts']:
         # This is a no-op on old Python.
         sslcontext.load_default_certs()
-        caloaded = _canloaddefaultcerts
+        caloaded = True
+    else:
+        caloaded = False
 
     sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
     # check if wrap_socket failed silently because socket had been
