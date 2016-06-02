@@ -243,7 +243,7 @@ Test tweaked branch command
   $ hg branch --new foo
   marked working directory as branch foo
   (branches are permanent and global, did you want a bookmark?)
-  $ hg branches --config tweakdefaults.branchesmessage='testing'| head -n0
+  $ hg branches --config tweakdefaults.branchesmessage='testing' > /dev/null
   testing
 
 Test tweaked merge command
@@ -312,7 +312,7 @@ Test tweaked tag command
   abort: testing
   [255]
 
-  $ hg tags --config tweakdefaults.tagsmessage='testing' | head -n0
+  $ hg tags --config tweakdefaults.tagsmessage='testing' > /dev/null
   testing
 
 Test graft date when tweakdefaults.graftkeepdate is not set
