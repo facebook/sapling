@@ -367,7 +367,7 @@ class dirstate(object):
 
     def setbranch(self, branch):
         self._branch = encoding.fromlocal(branch)
-        f = self._opener('branch', 'w', atomictemp=True)
+        f = self._opener('branch', 'w', atomictemp=True, checkambig=True)
         try:
             f.write(self._branch + '\n')
             f.close()
