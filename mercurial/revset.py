@@ -2743,9 +2743,16 @@ class filteredset(abstractsmartset):
         return lambda: self._iterfilter(it())
 
     def __nonzero__(self):
-        fast = self.fastasc
-        if fast is None:
-            fast = self.fastdesc
+        fast = None
+        candidates = [self.fastasc if self.isascending() else None,
+                      self.fastdesc if self.isdescending() else None,
+                      self.fastasc,
+                      self.fastdesc]
+        for candidate in candidates:
+            if candidate is not None:
+                fast = candidate
+                break
+
         if fast is not None:
             it = fast()
         else:
