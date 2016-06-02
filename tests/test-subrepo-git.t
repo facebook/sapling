@@ -1135,7 +1135,7 @@ make sure we show changed files, rather than changed subtrees
 test for Git CVE-2016-3068
   $ hg init malicious-subrepository
   $ cd malicious-subrepository
-  $ echo "s = [git]ext::sh -c echo% \$PWNED_MSG% >pwned.txt" > .hgsub
+  $ echo "s = [git]ext::sh -c echo% pwned:% \$PWNED_MSG% >pwned.txt" > .hgsub
   $ git init s
   Initialized empty Git repository in $TESTTMP/tc/malicious-subrepository/s/.git/
   $ cd s
@@ -1152,10 +1152,11 @@ test for Git CVE-2016-3068
   Cloning into '$TESTTMP/tc/malicious-subrepository-protected/s'... (glob)
   fatal: transport 'ext' not allowed
   updating to branch default
-  cloning subrepo s from ext::sh -c echo% $PWNED_MSG% >pwned.txt
+  cloning subrepo s from ext::sh -c echo% pwned:% $PWNED_MSG% >pwned.txt
   abort: git clone error 128 in s (in subrepo s)
   [255]
-  $ test -f pwned.txt && cat pwned.txt || true
+  $ f -Dq pwned.txt
+  pwned.txt: file not found
 
 whitelisting of ext should be respected (that's the git submodule behaviour)
   $ rm -f pwned.txt
@@ -1167,8 +1168,8 @@ whitelisting of ext should be respected (that's the git submodule behaviour)
   Please make sure you have the correct access rights
   and the repository exists.
   updating to branch default
-  cloning subrepo s from ext::sh -c echo% $PWNED_MSG% >pwned.txt
+  cloning subrepo s from ext::sh -c echo% pwned:% $PWNED_MSG% >pwned.txt
   abort: git clone error 128 in s (in subrepo s)
   [255]
-  $ cat pwned.txt
-  you asked for it
+  $ f -Dq pwned.txt
+  pwned: you asked for it
