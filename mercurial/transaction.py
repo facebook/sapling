@@ -310,7 +310,8 @@ class transaction(object):
                         self.registertmp(name, location=location)
                     else:
                         self.addbackup(name, location=location)
-                    files.append(vfs(name, 'w', atomictemp=True))
+                    files.append(vfs(name, 'w', atomictemp=True,
+                                     checkambig=not suffix))
                 genfunc(*files)
             finally:
                 for f in files:
