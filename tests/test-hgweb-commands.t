@@ -1957,6 +1957,8 @@ Static files
   .minusline { color: red; }
   .atline { color: purple; }
   .annotate { font-size: smaller; text-align: right; padding-right: 1em; }
+  tr.thisrev a { color:#999999; text-decoration: none; }
+  tr.thisrev pre { color:#009900; }
   .buttons a {
     background-color: #666;
     padding: 2pt;

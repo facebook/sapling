@@ -331,6 +331,8 @@ td.source {
 td.linenr {
   width: 60px;
 }
+tr.thisrev a { color:#999999; text-decoration: none; }
+tr.thisrev td.source { color:#009900; }
 
 div#powered-by {
   position: absolute;

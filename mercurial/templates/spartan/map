@@ -54,7 +54,7 @@ filelogentry = filelogentry.tmpl
 # is an empty line in the annotated file), which in turn ensures that
 # all table rows have equal height.
 annotateline = '
-  <tr class="parity{parity}">
+  <tr class="parity{parity}{ifeq(node, originalnode, ' thisrev')}">
     <td class="annotate">
       <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
          title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>

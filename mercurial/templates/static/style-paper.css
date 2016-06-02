@@ -208,6 +208,8 @@ h3 {
 .bigtable .annotate { text-align: right; }
 .bigtable td.annotate { font-size: smaller; }
 .bigtable td.source { font-size: inherit; }
+tr.thisrev a { color:#999999; text-decoration: none; }
+tr.thisrev td.source { color:#009900; }
 
 .source, .sourcefirst {
   font-family: monospace;
