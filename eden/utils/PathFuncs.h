@@ -688,6 +688,35 @@ class RelativePathBase : public ComposedPathBase<
         reverse_iterator{p, nullptr});
   }
 
+  /** Return an iterator to the specified parent directory of this path.
+   * If parent is not a parent directory of this path, returns
+   * allPaths().end().
+   *
+   * The resulting iterator will fall within the range
+   * [allPaths.begin(), allPaths.end()]
+   * It can be incremented forwards or backwards until either end of this
+   * range.
+   */
+  iterator findParent(const RelativePathPiece& parent) const {
+    auto parentPiece = parent.stringPiece();
+    if (this->path_.size() <= parentPiece.size()) {
+      return allPaths().end();
+    }
+    if (parentPiece.empty()) {
+      // Note: this returns an iterator to an empty path.
+      return allPaths().begin();
+    }
+    if (this->path_[parentPiece.size()] != '/') {
+      return allPaths().end();
+    }
+    folly::StringPiece prefix{this->path_.data(), parentPiece.size()};
+    if (prefix != parentPiece) {
+      return allPaths().end();
+    }
+    return iterator(
+        this->piece(), this->stringPiece().begin() + parentPiece.size());
+  }
+
   /** Construct from an iterable set of PathComponents.
    * This should match iterators with values from which we can construct
    * PathComponentPiece.
@@ -727,6 +756,20 @@ class RelativePathBase : public ComposedPathBase<
   /// Return true if this is an empty relative path
   bool empty() const {
     return this->path_.empty();
+  }
+
+  /** Return true if this path is a subdirectory of the specified path
+   * Returns false if the two paths refer to the exact same directory.
+   */
+  bool isSubDirOf(const RelativePathPiece& other) const {
+    return this->findParent(other) != allPaths().end();
+  }
+
+  /** Return true if this path is a parent directory of the specified path
+   * Returns false if the two paths refer to the exact same directory.
+   */
+  bool isParentDirOf(const RelativePathPiece& other) const {
+    return other.findParent(*this) != other.allPaths().end();
   }
 };
 

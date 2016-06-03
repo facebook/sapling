@@ -298,3 +298,49 @@ TEST(PathFuncs, basename) {
   EXPECT_EQ("bar", basename(StringPiece("foo/bar")));
   EXPECT_EQ("foo", basename(StringPiece("foo")));
 }
+
+TEST(PathFuncs, isSubDir) {
+  // Helper functions that convert string arguments to RelativePathPiece
+  auto isSubdir = [](StringPiece a, StringPiece b) {
+    return RelativePathPiece(a).isSubDirOf(RelativePathPiece(b));
+  };
+  auto isParent = [](StringPiece a, StringPiece b) {
+    return RelativePathPiece(a).isParentDirOf(RelativePathPiece(b));
+  };
+
+  EXPECT_TRUE(isSubdir("foo/bar/baz", ""));
+  EXPECT_TRUE(isSubdir("foo/bar/baz", "foo"));
+  EXPECT_TRUE(isSubdir("foo/bar/baz", "foo/bar"));
+  EXPECT_FALSE(isSubdir("foo/bar/baz", "foo/bar/baz"));
+  EXPECT_FALSE(isSubdir("foo/bar", "foo/bar/baz"));
+  EXPECT_FALSE(isSubdir("foo/barbaz", "foo/bar"));
+
+  EXPECT_TRUE(isParent("", "foo/bar/baz"));
+  EXPECT_TRUE(isParent("foo", "foo/bar/baz"));
+  EXPECT_TRUE(isParent("foo/bar", "foo/bar/baz"));
+  EXPECT_FALSE(isParent("foo/bar/baz", "foo/bar/baz"));
+  EXPECT_FALSE(isParent("foo/bar", "foo/barbaz"));
+  EXPECT_FALSE(isParent("foo/bar/baz", "foo/bar"));
+}
+
+TEST(PathFuncs, findParent) {
+  RelativePath path("foo/bar/baz");
+
+  auto it = path.findParent(RelativePathPiece("foo"));
+  vector<RelativePathPiece> parents(it, path.allPaths().end());
+  EXPECT_EQ(3, parents.size());
+  EXPECT_EQ(RelativePathPiece("foo"), parents.at(0));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), parents.at(1));
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), parents.at(2));
+
+  it = path.findParent(RelativePathPiece(""));
+  parents = vector<RelativePathPiece>(it, path.allPaths().end());
+  EXPECT_EQ(4, parents.size());
+  EXPECT_EQ(RelativePathPiece(""), parents.at(0));
+  EXPECT_EQ(RelativePathPiece("foo"), parents.at(1));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), parents.at(2));
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), parents.at(3));
+
+  it = path.findParent(RelativePathPiece("foo/bar/baz"));
+  EXPECT_TRUE(it == path.allPaths().end());
+}
