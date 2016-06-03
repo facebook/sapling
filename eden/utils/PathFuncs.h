@@ -370,6 +370,15 @@ class PathComponentBase : public PathBase<
  *
  * You may use the dirname() and basename() methods to focus
  * on the portions of interest.
+ *
+ * Note: ComposedPathIterator doesn't really meet all of the requirements of an
+ * InputIterator (operator*() returns a value rather than a reference, and
+ * operator->() isn't implemented).  Nonetheless we are still using
+ * std::input_iterator_tag here, since there isn't a standard tag for iterators
+ * that meet the generic Iterator requirements (section 24.2.2 of the C++17
+ * standard) but not the InputIterator requirements (section 24.2.3).  If we
+ * don't use input_iterator_tag this breaks other functionality, such as being
+ * able to use ComposedPathIterator as vector constructor arguments.
  */
 template <typename Piece>
 class ComposedPathIterator
@@ -430,13 +439,22 @@ class ComposedPathIterator
     return Piece(folly::StringPiece(path_.begin(), pos_));
   }
 
+  /*
+   * Note: dereferencing a ComposedPathIterator returns a new
+   * ComposedPathPiece, and not a reference to an existing ComposedPathPiece.
+   */
   Piece operator*() const {
     return piece();
   }
 
-  Piece operator->() const {
-    return piece();
-  }
+  /*
+   * TODO: operator->() is not implemented
+   *
+   * Since the operator*() returns a new Piece and not a reference,
+   * operator->() can't really be implemented correctly, as it needs to return
+   * a pointer to some existing object.
+   */
+  // Piece* operator->() const;
 
  protected:
   /// the path we're iterating over.
