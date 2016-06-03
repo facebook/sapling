@@ -9,10 +9,13 @@ changelistentry = '\{
   "node": {node|json},
   "date": {date|json},
   "desc": {desc|utf8|json},
+  "branch": {if(branch, branch%changesetbranch, "default"|json)},
   "bookmarks": [{join(bookmarks%changelistentryname, ", ")}],
   "tags": [{join(tags%changelistentryname, ", ")}],
   "user": {author|utf8|json},
-  "parents": [{join(allparents%changesetparent, ", ")}]
+  "phase": {phase|json},
+  "parents": [{if(allparents, join(allparents%changesetparent, ", "),
+                  join(parent%changesetparent, ", "))}]
   }'
 changelistentryname = '{name|utf8|json}'
 changeset = '\{
@@ -156,7 +159,9 @@ fileannotation = '\{
   "lineno": {lineno|json},
   "revdate": {revdate|json}
   }'
-filelog = '"not yet implemented"'
+filelog = '\{
+  "entries": [{join(entries%changelistentry, ", ")}]
+  }'
 graph = '"not yet implemented"'
 helptopics = '\{
   "topics": [{join(topics%helptopicentry, ", ")}],
