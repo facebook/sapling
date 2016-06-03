@@ -18,7 +18,6 @@ class basestore(object):
         server, for many repos on this machine. False means this store is for
         the local data for one repo.
         """
-        path = util.expandpath(path)
         self.repo = repo
         self.ui = repo.ui
         self._path = path

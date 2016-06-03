@@ -534,9 +534,8 @@ def gc(ui, *args, **opts):
     cachepaths = set()
 
     # get the system client cache
-    systemcache = ui.config("remotefilelog", "cachepath")
+    systemcache = shallowutil.getcachepath(ui, allowempty=True)
     if systemcache:
-        systemcache = util.expandpath(systemcache)
         cachepaths.add(systemcache)
 
     # get repo client and server cache
@@ -552,9 +551,8 @@ def gc(ui, *args, **opts):
             repo = hg.peer(ui, {}, repopath)
             repos.append(repo)
 
-            repocache = repo.ui.config("remotefilelog", "cachepath")
+            repocache = shallowutil.getcachepath(repo.ui, allowempty=True)
             if repocache:
-                repocache = util.expandpath(repocache)
                 cachepaths.add(repocache)
         except error.RepoError:
             pass

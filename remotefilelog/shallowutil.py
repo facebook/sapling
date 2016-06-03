@@ -46,8 +46,18 @@ def getlocalkey(file, id):
     pathhash = util.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
 
+def getcachepath(ui, allowempty=False):
+    cachepath = ui.config("remotefilelog", "cachepath")
+    if not cachepath:
+        if allowempty:
+            return None
+        else:
+            raise error.Abort(_("could not find config option "
+                                "remotefilelog.cachepath"))
+    return util.expandpath(cachepath)
+
 def getpackpath(repo):
-    cachepath = repo.ui.config("remotefilelog", "cachepath")
+    cachepath = getcachepath(repo.ui)
     return os.path.join(cachepath, repo.name, 'packs')
 
 def createrevlogtext(text, copyfrom=None, copyrev=None):

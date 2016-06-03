@@ -271,3 +271,15 @@ Pull should run background repack
   * 201 * 92a06d8b76a23b6e6150cf877ea75ed993e0b2d8.datapack (glob)
   $ ls -l $TESTTMP/hgcache/master/packs/ | grep histpack
   * 336 * 3bebfba849e7aed8e598b92b296aeaff4784393b.histpack (glob)
+
+Test environment variable resolution
+  $ CACHEPATH=$TESTTMP/envcache hg prefetch --config 'remotefilelog.cachepath=$CACHEPATH'
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over 0.12s
+  $ find $TESTTMP/envcache | sort
+  $TESTTMP/envcache
+  $TESTTMP/envcache/master
+  $TESTTMP/envcache/master/packs
+  $TESTTMP/envcache/master/packs/54afbfda203716c1aa2636029ccc0df18165129e.dataidx
+  $TESTTMP/envcache/master/packs/54afbfda203716c1aa2636029ccc0df18165129e.datapack
+  $TESTTMP/envcache/master/packs/f842b0cc2f54b1b5719584b449afdf58b08ab006.histidx
+  $TESTTMP/envcache/master/packs/f842b0cc2f54b1b5719584b449afdf58b08ab006.histpack

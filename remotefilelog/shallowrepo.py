@@ -159,10 +159,7 @@ def wraprepo(repo):
                                                shared=False)
 
     # Instantiate shared cache stores
-    cachepath = repo.ui.config("remotefilelog", "cachepath")
-    if not cachepath:
-        raise error.Abort(_("could not find config option "
-                           "remotefilelog.cachepath"))
+    cachepath = shallowutil.getcachepath(repo.ui)
     cachecontent = remotefilelogcontentstore(repo, cachepath, repo.name,
                                              shared=True)
     cachemetadata = remotefilelogmetadatastore(repo, cachepath, repo.name,

@@ -28,8 +28,7 @@ def incrementalrepack(repo):
     repo and performing the most minimal repack to keep the repo in good shape.
     """
 
-    cachepath = repo.ui.config("remotefilelog", "cachepath")
-    packpath = os.path.join(cachepath, repo.name, 'packs')
+    packpath = shallowutil.getpackpath(repo)
     if not os.path.exists(packpath):
         os.makedirs(packpath)
 
@@ -149,8 +148,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
     return []
 
 def _runrepack(repo, data, history):
-    cachepath = repo.ui.config("remotefilelog", "cachepath")
-    packpath = os.path.join(cachepath, repo.name, 'packs')
+    packpath = shallowutil.getpackpath(repo)
     util.makedirs(packpath)
 
     packer = repacker(repo, data, history)
