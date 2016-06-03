@@ -3301,10 +3301,12 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         else:
             diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
+        operation = _('discard') if node == parent else _('revert')
 
         try:
 
-            chunks, opts = recordfilter(repo.ui, originalchunks)
+            chunks, opts = recordfilter(repo.ui, originalchunks,
+                                        operation=operation)
             if reversehunks:
                 chunks = patch.reversehunks(chunks)
 

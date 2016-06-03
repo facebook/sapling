@@ -64,7 +64,7 @@ Revert interactive tests
    3
    4
    5
-  record change 1/6 to 'f'? [Ynesfdaq?] y
+  revert change 1/6 to 'f'? [Ynesfdaq?] y
   
   @@ -1,5 +2,6 @@
    1
@@ -73,7 +73,7 @@ Revert interactive tests
    4
    5
   +b
-  record change 2/6 to 'f'? [Ynesfdaq?] y
+  revert change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
@@ -86,7 +86,7 @@ Revert interactive tests
    3
    4
    5
-  record change 3/6 to 'folder1/g'? [Ynesfdaq?] y
+  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
   @@ -1,5 +2,6 @@
    1
@@ -95,7 +95,7 @@ Revert interactive tests
    4
    5
   +d
-  record change 4/6 to 'folder1/g'? [Ynesfdaq?] n
+  revert change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
   2 hunks, 2 lines changed
@@ -163,7 +163,7 @@ Test that --interactive lift the need for --all
    3
    4
    5
-  record change 1/6 to 'f'? [Ynesfdaq?] y
+  revert change 1/6 to 'f'? [Ynesfdaq?] y
   
   @@ -1,5 +2,6 @@
    1
@@ -172,7 +172,7 @@ Test that --interactive lift the need for --all
    4
    5
   +b
-  record change 2/6 to 'f'? [Ynesfdaq?] y
+  revert change 2/6 to 'f'? [Ynesfdaq?] y
   
   diff --git a/folder1/g b/folder1/g
   2 hunks, 2 lines changed
@@ -185,7 +185,7 @@ Test that --interactive lift the need for --all
    3
    4
    5
-  record change 3/6 to 'folder1/g'? [Ynesfdaq?] y
+  revert change 3/6 to 'folder1/g'? [Ynesfdaq?] y
   
   @@ -1,5 +2,6 @@
    1
@@ -194,7 +194,7 @@ Test that --interactive lift the need for --all
    4
    5
   +d
-  record change 4/6 to 'folder1/g'? [Ynesfdaq?] n
+  revert change 4/6 to 'folder1/g'? [Ynesfdaq?] n
   
   diff --git a/folder2/h b/folder2/h
   2 hunks, 2 lines changed
@@ -242,7 +242,7 @@ Test that --interactive lift the need for --all
    3
    4
    5
-  record change 1/2 to 'f'? [Ynesfdaq?] y
+  discard change 1/2 to 'f'? [Ynesfdaq?] y
   
   @@ -2,6 +1,5 @@
    1
@@ -251,7 +251,7 @@ Test that --interactive lift the need for --all
    4
    5
   -b
-  record change 2/2 to 'f'? [Ynesfdaq?] n
+  discard change 2/2 to 'f'? [Ynesfdaq?] n
   
   $ hg st
   M f
@@ -303,7 +303,7 @@ Check editing files newly added by a revert
   -1
   +0
   +2
-  record this change to 'k'? [Ynesfdaq?] e
+  discard this change to 'k'? [Ynesfdaq?] e
   
   $ cat k
   42
@@ -350,7 +350,7 @@ Check the experimental config to invert the selection:
    1
    2
    3
-  record change 1/3 to 'folder1/g'? [Ynesfdaq?] y
+  discard change 1/3 to 'folder1/g'? [Ynesfdaq?] y
   
   @@ -2,7 +1,7 @@
    c
@@ -361,13 +361,13 @@ Check the experimental config to invert the selection:
   +4
    5
    d
-  record change 2/3 to 'folder1/g'? [Ynesfdaq?] y
+  discard change 2/3 to 'folder1/g'? [Ynesfdaq?] y
   
   @@ -7,3 +6,2 @@
    5
    d
   -lastline
-  record change 3/3 to 'folder1/g'? [Ynesfdaq?] n
+  discard change 3/3 to 'folder1/g'? [Ynesfdaq?] n
   
   $ hg diff --nodates
   diff -r a3d963a027aa folder1/g
