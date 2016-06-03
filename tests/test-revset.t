@@ -1566,7 +1566,10 @@ we can use patterns when searching for tags
   0
   $ log '4::8 - 8'
   4
-  $ log 'matching(1 or 2 or 3) and (2 or 3 or 1)'
+
+matching() should preserve the order of the input set:
+
+  $ log '(2 or 3 or 1) and matching(1 or 2 or 3)'
   2
   3
   1
