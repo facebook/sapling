@@ -123,7 +123,7 @@ bool Overlay::isWhiteout(RelativePathPiece path) {
   }
 
   // Iterate the various path combinations in path.
-  for (auto candidatePath : path) {
+  for (auto candidatePath : path.paths()) {
     struct stat st;
 
     auto whiteoutPath = localDir_ + candidatePath.dirname() +

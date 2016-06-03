@@ -432,6 +432,27 @@ class ComposedPathIterator
     return tmp;
   }
 
+  ComposedPathIterator& operator--() {
+    if (pos_ == nullptr) {
+      pos_ = path_.end();
+      return *this;
+    }
+
+    CHECK_NE(pos_, path_.begin());
+    --pos_;
+    while (pos_ > path_.begin() && *pos_ != '/') {
+      --pos_;
+    }
+
+    return *this;
+  }
+
+  ComposedPathIterator operator--(int) {
+    ComposedPathIterator tmp(*this);
+    --(*this); // invoke the --iter handler above.
+    return tmp;
+  }
+
   /// Returns the piece for the current iterator position.
   Piece piece() const {
     CHECK_NOTNULL(pos_);
@@ -480,16 +501,11 @@ class RelativePathReverseIterator : public ComposedPathIterator<Piece> {
    */
   RelativePathReverseIterator& operator++() {
     CHECK_NOTNULL(this->pos_);
-    CHECK_NE(this->pos_, this->path_.begin());
-
-    while (this->pos_ != this->path_.begin()) {
-      --this->pos_;
-      if (*this->pos_ == '/') {
-        return *this;
-      }
+    if (this->pos_ == this->path_.begin()) {
+      this->pos_ = nullptr;
+      return *this;
     }
-
-    CHECK_EQ(this->pos_, this->path_.begin()); // terminal position.
+    this->ComposedPathIterator<Piece>::operator--();
     return *this;
   }
 };
@@ -512,22 +528,27 @@ class AbsolutePathReverseIterator : public ComposedPathIterator<Piece> {
    */
   AbsolutePathReverseIterator& operator++() {
     CHECK_NOTNULL(this->pos_);
-    CHECK_NE(this->pos_, this->path_.begin());
-
-    --this->pos_;
-    if (this->pos_ == this->path_.begin()) {
+    // If we were previously pointing to the first character (just the "/"),
+    // we should now advance to the end.
+    if (this->pos_ <= this->path_.begin() + 1) {
       this->pos_ = nullptr;
       return *this;
     }
-
-    while (*this->pos_ != '/') {
-      --this->pos_;
-    }
-    if (this->pos_ == this->path_.begin()) {
-      ++this->pos_;
-    }
-
+    this->ComposedPathIterator<Piece>::operator--();
     return *this;
+  }
+
+  Piece piece() const {
+    CHECK_NOTNULL(this->pos_);
+    // When pos_ is at the beginning of the string, return "/" rather than ""
+    if (this->pos_ == this->path_.begin()) {
+      return Piece(folly::StringPiece(this->path_.begin(), 1));
+    }
+    return this->ComposedPathIterator<Piece>::piece();
+  }
+
+  Piece operator*() const {
+    return piece();
   }
 };
 
@@ -578,10 +599,36 @@ struct RelativePathSanityCheck {
   }
 };
 
+/** A pair of path iterators.
+ * This is used to implement the paths() and allPaths() methods.
+ */
+template <typename Iterator>
+class PathIteratorRange {
+ public:
+  using iterator = Iterator;
+
+  PathIteratorRange(iterator b, iterator e)
+      : begin_(std::move(b)), end_(std::move(e)) {}
+
+  iterator begin() const {
+    return begin_;
+  }
+  iterator end() const {
+    return end_;
+  }
+
+ private:
+  iterator begin_;
+  iterator end_;
+};
+
 /** Represents any number of PathComponents composed together.
  * It is illegal for a RelativePath to begin with an absolute
  * path prefix (`/` on unix, more complex on windows, but we
- * haven't implemented that yet in any case) */
+ * haven't implemented that yet in any case)
+ *
+ * A RelativePath may be the empty string.
+ */
 template <typename Storage>
 class RelativePathBase : public ComposedPathBase<
                              Storage,
@@ -608,24 +655,60 @@ class RelativePathBase : public ComposedPathBase<
   // For iteration
   using iterator = ComposedPathIterator<RelativePathPiece>;
   using reverse_iterator = RelativePathReverseIterator<RelativePathPiece>;
+  using iterator_range = PathIteratorRange<iterator>;
+  using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
 
-  iterator begin() const {
-    // A RelativePath iteration skips the empty initial element.
-    return ++iterator(this->piece());
+  /** Return an iterator range that will yield all parent directories of this
+   * path, and then the path itself.
+   *
+   * For example, iterating the path "foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. "foo"
+   * 2. "foo/bar"
+   * 3. "foo/bar/baz"
+   */
+  iterator_range paths() const {
+    auto p = this->piece();
+    return iterator_range(++iterator{p}, iterator{p, nullptr});
   }
 
-  iterator end() const {
-    return iterator(this->piece(), nullptr);
+  /** Return an iterator range that will yield all parent directories of this
+   * path, and then the path itself.
+   *
+   * This is very similar to paths(), but also includes the empty string
+   * first, to represent the current directory that this path is relative to.
+   *
+   * For example, iterating the path "foo/bar/baz" will yield
+   * this series of Piece elements:
+   *
+   * 1. ""
+   * 2. "foo"
+   * 3. "foo/bar"
+   * 4. "foo/bar/baz"
+   */
+  iterator_range allPaths() const {
+    auto p = this->piece();
+    return iterator_range(iterator{p}, iterator{p, nullptr});
   }
 
-  reverse_iterator rbegin() const {
-    return reverse_iterator(this->piece(), this->stringPiece().end());
+  /** Return a reverse_iterator over all parent directories and this path.
+   */
+  reverse_iterator_range rpaths() const {
+    auto p = this->piece();
+    return reverse_iterator_range(
+        reverse_iterator{p, this->stringPiece().end()},
+        reverse_iterator{p, this->stringPiece().begin()});
   }
 
-  reverse_iterator rend() const {
-    // A RelativePath reverse iteration skips the final empty element,
-    // so arrange to stop when we hit the front of the string.
-    return reverse_iterator(this->piece(), this->stringPiece().begin());
+  /** Return a reverse_iterator over this path and all parent directories,
+   * including the empty path at the end.
+   */
+  reverse_iterator_range rallPaths() const {
+    auto p = this->piece();
+    return reverse_iterator_range(
+        reverse_iterator{p, this->stringPiece().end()},
+        reverse_iterator{p, nullptr});
   }
 
   /** Construct from an iterable set of PathComponents.
@@ -713,24 +796,23 @@ class AbsolutePathBase : public ComposedPathBase<
   // For iteration
   using iterator = ComposedPathIterator<AbsolutePathPiece>;
   using reverse_iterator = AbsolutePathReverseIterator<AbsolutePathPiece>;
+  using iterator_range = PathIteratorRange<iterator>;
+  using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
 
-  iterator begin() const {
+  iterator_range paths() const {
+    auto p = this->piece();
     // The +1 allows us to deal with the case where we're iterating
     // over literally "/".  Without this +1, we would emit "/" twice
     // and we don't want that.
-    return iterator(this->piece(), this->stringPiece().begin() + 1);
+    return iterator_range(
+        iterator{p, this->stringPiece().begin() + 1}, iterator{p, nullptr});
   }
 
-  iterator end() const {
-    return iterator(this->piece(), nullptr);
-  }
-
-  reverse_iterator rbegin() const {
-    return reverse_iterator(this->piece(), this->stringPiece().end());
-  }
-
-  reverse_iterator rend() const {
-    return reverse_iterator(this->piece(), nullptr);
+  reverse_iterator_range rpaths() const {
+    auto p = this->piece();
+    return reverse_iterator_range(
+        reverse_iterator{p, this->stringPiece().end()},
+        reverse_iterator{p, nullptr});
   }
 
   /** Compose an AbsolutePath with a RelativePath */

@@ -15,6 +15,8 @@
 using facebook::eden::dirname;
 using facebook::eden::basename;
 using folly::StringPiece;
+using std::string;
+using std::vector;
 using namespace facebook::eden;
 
 TEST(PathFuncs, StringCompare) {
@@ -27,38 +29,68 @@ TEST(PathFuncs, StringCompare) {
 TEST(PathFuncs, Iterate) {
   RelativePath rel("foo/bar/baz");
 
-  std::vector<RelativePathPiece> components(rel.begin(), rel.end());
-  EXPECT_EQ(3, components.size());
-  EXPECT_EQ(RelativePathPiece("foo"), components.at(0));
-  EXPECT_EQ(RelativePathPiece("foo/bar"), components.at(1));
-  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), components.at(2));
+  std::vector<RelativePathPiece> parents(
+      rel.paths().begin(), rel.paths().end());
+  EXPECT_EQ(3, parents.size());
+  EXPECT_EQ(RelativePathPiece("foo"), parents.at(0));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), parents.at(1));
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), parents.at(2));
+
+  std::vector<RelativePathPiece> allPaths(
+      rel.allPaths().begin(), rel.allPaths().end());
+  EXPECT_EQ(4, allPaths.size());
+  EXPECT_EQ(RelativePathPiece(""), allPaths.at(0));
+  EXPECT_EQ(RelativePathPiece("foo"), allPaths.at(1));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), allPaths.at(2));
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), allPaths.at(3));
 
   // And in reverse.
-  std::vector<RelativePathPiece> rcomponents(rel.rbegin(), rel.rend());
-  EXPECT_EQ(3, rcomponents.size());
-  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), rcomponents.at(0));
-  EXPECT_EQ(RelativePathPiece("foo/bar"), rcomponents.at(1));
-  EXPECT_EQ(RelativePathPiece("foo"), rcomponents.at(2));
+  std::vector<RelativePathPiece> rparents(
+      rel.rpaths().begin(), rel.rpaths().end());
+  EXPECT_EQ(3, rparents.size());
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), rparents.at(0));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), rparents.at(1));
+  EXPECT_EQ(RelativePathPiece("foo"), rparents.at(2));
+
+  std::vector<RelativePathPiece> rallPaths(
+      rel.rallPaths().begin(), rel.rallPaths().end());
+  EXPECT_EQ(4, rallPaths.size());
+  EXPECT_EQ(RelativePathPiece("foo/bar/baz"), rallPaths.at(0));
+  EXPECT_EQ(RelativePathPiece("foo/bar"), rallPaths.at(1));
+  EXPECT_EQ(RelativePathPiece("foo"), rallPaths.at(2));
+  EXPECT_EQ(RelativePathPiece(""), rallPaths.at(3));
 
   // An empty relative path yields no elements.
   RelativePath emptyRel;
-  std::vector<RelativePathPiece> emptyPieces(emptyRel.begin(), emptyRel.end());
-  EXPECT_EQ(0, emptyPieces.size());
+  std::vector<RelativePathPiece> emptyPaths(
+      emptyRel.paths().begin(), emptyRel.paths().end());
+  EXPECT_EQ(0, emptyPaths.size());
+
+  std::vector<RelativePathPiece> allEmptyPaths(
+      emptyRel.allPaths().begin(), emptyRel.allPaths().end());
+  EXPECT_EQ(1, allEmptyPaths.size());
+  EXPECT_EQ(RelativePathPiece(""), allEmptyPaths.at(0));
 
   // An empty relative path yields no elements in reverse either.
-  std::vector<RelativePathPiece> remptyPieces(
-      emptyRel.rbegin(), emptyRel.rend());
-  EXPECT_EQ(0, remptyPieces.size());
+  std::vector<RelativePathPiece> remptyPaths(
+      emptyRel.rpaths().begin(), emptyRel.rpaths().end());
+  EXPECT_EQ(0, remptyPaths.size());
+  std::vector<RelativePathPiece> rallEmptyPaths(
+      emptyRel.rallPaths().begin(), emptyRel.rallPaths().end());
+  EXPECT_EQ(1, rallEmptyPaths.size());
+  EXPECT_EQ(RelativePathPiece(""), rallEmptyPaths.at(0));
 
   AbsolutePath absPath("/foo/bar/baz");
-  std::vector<AbsolutePathPiece> acomps(absPath.begin(), absPath.end());
+  std::vector<AbsolutePathPiece> acomps(
+      absPath.paths().begin(), absPath.paths().end());
   EXPECT_EQ(4, acomps.size());
   EXPECT_EQ(AbsolutePathPiece("/"), acomps.at(0));
   EXPECT_EQ(AbsolutePathPiece("/foo"), acomps.at(1));
   EXPECT_EQ(AbsolutePathPiece("/foo/bar"), acomps.at(2));
   EXPECT_EQ(AbsolutePathPiece("/foo/bar/baz"), acomps.at(3));
 
-  std::vector<AbsolutePathPiece> racomps(absPath.rbegin(), absPath.rend());
+  std::vector<AbsolutePathPiece> racomps(
+      absPath.rpaths().begin(), absPath.rpaths().end());
   EXPECT_EQ(4, racomps.size());
   EXPECT_EQ(AbsolutePathPiece("/foo/bar/baz"), racomps.at(0));
   EXPECT_EQ(AbsolutePathPiece("/foo/bar"), racomps.at(1));
@@ -66,11 +98,13 @@ TEST(PathFuncs, Iterate) {
   EXPECT_EQ(AbsolutePathPiece("/"), racomps.at(3));
 
   AbsolutePath slashAbs("/");
-  std::vector<AbsolutePathPiece> slashPieces(slashAbs.begin(), slashAbs.end());
+  std::vector<AbsolutePathPiece> slashPieces(
+      slashAbs.paths().begin(), slashAbs.paths().end());
   EXPECT_EQ(1, slashPieces.size());
   EXPECT_EQ(AbsolutePathPiece("/"), slashPieces.at(0));
 
-  std::vector<AbsolutePathPiece> rslashPieces(slashAbs.begin(), slashAbs.end());
+  std::vector<AbsolutePathPiece> rslashPieces(
+      slashAbs.rpaths().begin(), slashAbs.rpaths().end());
   EXPECT_EQ(1, rslashPieces.size());
   EXPECT_EQ(AbsolutePathPiece("/"), rslashPieces.at(0));
 }

@@ -130,7 +130,7 @@ void EdenServiceHandler::getSHA1(
   auto inodeDispatcher = edenMount->getMountPoint()->getDispatcher();
   auto parent = inodeDispatcher->getDirInode(FUSE_ROOT_ID);
 
-  auto it = relativePath.begin();
+  auto it = relativePath.paths().begin();
   while (true) {
     shared_ptr<fusell::InodeBase> inodeBase;
     try {
@@ -152,7 +152,7 @@ void EdenServiceHandler::getSHA1(
     auto inodeNumber = inodeBase->getNodeId();
     auto currentPiece = it.piece();
     it++;
-    if (it == relativePath.end()) {
+    if (it == relativePath.paths().end()) {
       // inodeNumber must correspond to the last path component, which we expect
       // to correspond to a file.
       std::shared_ptr<fusell::FileInode> fileInode;
