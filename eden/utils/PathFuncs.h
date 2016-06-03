@@ -22,6 +22,15 @@ folly::StringPiece basename(folly::StringPiece path);
 /** Given a path like "foo/bar/baz" returns "foo/bar" */
 folly::StringPiece dirname(folly::StringPiece path);
 
+/** Path directory separator.
+ *
+ * We always use a forward slash.  On Windows systems we will normalize
+ * path names to alway use forward slash separators instead of backslashes.
+ *
+ * (This is defined as an enum value since we just want a symbolic constant,
+ * and don't want an actual symbol emitted by the compiler.)
+ */
+enum : char { kDirSeparator = '/' };
 
 /* Some helpers for working with path composition.
  * Goals:
@@ -319,7 +328,7 @@ class PathBase :
 /// Asserts that val is a well formed path component
 struct PathComponentSanityCheck {
   void operator()(folly::StringPiece val) const {
-    if (val.find('/') != std::string::npos) {
+    if (val.find(kDirSeparator) != std::string::npos) {
       throw std::domain_error(folly::to<std::string>(
           "attempt to construct a PathComponent from a string containing a "
           "directory separator: ",
@@ -495,7 +504,7 @@ class ComposedPathIterator
     }
 
     ++pos_;
-    while (pos_ < path_.end() && *pos_ != '/') {
+    while (pos_ < path_.end() && *pos_ != kDirSeparator) {
       ++pos_;
     }
   }
@@ -518,7 +527,7 @@ class ComposedPathIterator
     }
 
     --pos_;
-    while (pos_ > stopPos && *pos_ != '/') {
+    while (pos_ > stopPos && *pos_ != kDirSeparator) {
       --pos_;
     }
   }
@@ -564,12 +573,12 @@ class ComposedPathBase
 /// Asserts that val is well formed relative path
 struct RelativePathSanityCheck {
   void operator()(folly::StringPiece val) const {
-    if (val.startsWith('/')) {
+    if (val.startsWith(kDirSeparator)) {
       throw std::domain_error(folly::to<std::string>(
           "attempt to construct a RelativePath from an absolute path string: ",
           val));
     }
-    if (val.endsWith('/')) {
+    if (val.endsWith(kDirSeparator)) {
       throw std::domain_error(folly::to<std::string>(
           "RelativePath must not end with a slash: ", val));
     }
@@ -706,7 +715,7 @@ class RelativePathBase : public ComposedPathBase<
       // Note: this returns an iterator to an empty path.
       return allPaths().begin();
     }
-    if (this->path_[parentPiece.size()] != '/') {
+    if (this->path_[parentPiece.size()] != kDirSeparator) {
       return allPaths().end();
     }
     folly::StringPiece prefix{this->path_.data(), parentPiece.size()};
@@ -776,13 +785,13 @@ class RelativePathBase : public ComposedPathBase<
 /// Asserts that val is well formed absolute path
 struct AbsolutePathSanityCheck {
   void operator()(folly::StringPiece val) const {
-    if (!val.startsWith('/')) {
+    if (!val.startsWith(kDirSeparator)) {
       throw std::domain_error(folly::to<std::string>(
           "attempt to construct an AbsolutePath from a non-absolute string: \"",
           val,
           "\""));
     }
-    if (val.size() > 1 && val.endsWith('/')) {
+    if (val.size() > 1 && val.endsWith(kDirSeparator)) {
       // We do allow "/" though
       throw std::domain_error(folly::to<std::string>(
           "AbsolutePath must not end with a slash: ", val));
