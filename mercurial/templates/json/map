@@ -1,5 +1,20 @@
 mimetype = 'application/json'
-filerevision = '"not yet implemented"'
+filerevision = '\{
+  "node": {node|json},
+  "path": {file|json},
+  "date": {date|json},
+  "desc": {desc|utf8|json},
+  "branch": {if(branch, branch%changesetbranch, "default"|json)},
+  "bookmarks": [{join(bookmarks%changelistentryname, ", ")}],
+  "tags": [{join(tags%changelistentryname, ", ")}],
+  "user": {author|utf8|json},
+  "parents": [{join(parent%changesetparent, ", ")}],
+  "phase": {phase|json},
+  "lines": [{join(text%lineentry, ", ")}]
+  }'
+lineentry = '\{
+  "line": {line|json}
+  }'
 search = '"not yet implemented"'
 # changelog and shortlog are the same web API but with different
 # number of entries.

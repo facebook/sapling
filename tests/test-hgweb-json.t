@@ -111,10 +111,33 @@
 
 file/{revision}/{path} shows file revision
 
-  $ request json-file/06e557f3edf6/foo
+  $ request json-file/78896eb0e102/foo-new
   200 Script output follows
   
-  "not yet implemented"
+  {
+    "bookmarks": [],
+    "branch": "default",
+    "date": [
+      0.0,
+      0
+    ],
+    "desc": "move foo",
+    "lines": [
+      {
+        "line": "bar\n"
+      }
+    ],
+    "node": "78896eb0e102174ce9278438a95e12543e4367a7",
+    "parents": [
+      "f8bbb9024b10f93cdbb8d940337398291d40dea8"
+    ],
+    "path": "foo-new",
+    "phase": "public",
+    "tags": [
+      "tag1"
+    ],
+    "user": "test"
+  }
 
 file/{revision} shows root directory info
 
