@@ -109,6 +109,43 @@ TEST(PathFuncs, Iterate) {
   EXPECT_EQ(AbsolutePathPiece("/"), rslashPieces.at(0));
 }
 
+TEST(PathFuncs, IteratorDecrement) {
+  auto checkDecrement = [](
+      const auto& path,
+      StringPiece function,
+      const auto& range,
+      const vector<string>& expected) {
+    SCOPED_TRACE(folly::to<string>(path, ".", function, "()"));
+    auto iter = range.end();
+    for (const auto& expectedPath : expected) {
+      ASSERT_FALSE(iter == range.begin());
+      --iter;
+      EXPECT_EQ(expectedPath, (*iter).stringPiece());
+    }
+    EXPECT_TRUE(iter == range.begin());
+  };
+
+  RelativePath rel("foo/bar/baz");
+  vector<string> expected = {"foo/bar/baz", "foo/bar", "foo"};
+  checkDecrement(rel, "paths", rel.paths(), expected);
+
+  expected = vector<string>{"foo/bar/baz", "foo/bar", "foo", ""};
+  checkDecrement(rel, "allPaths", rel.allPaths(), expected);
+
+  expected = vector<string>{"foo", "foo/bar", "foo/bar/baz"};
+  checkDecrement(rel, "rpaths", rel.rpaths(), expected);
+
+  expected = vector<string>{"", "foo", "foo/bar", "foo/bar/baz"};
+  checkDecrement(rel, "rallPaths", rel.rallPaths(), expected);
+
+  AbsolutePath abs("/foo/bar/baz");
+  expected = vector<string>{"/foo/bar/baz", "/foo/bar", "/foo", "/"};
+  checkDecrement(abs, "paths", abs.paths(), expected);
+
+  expected = vector<string>{"/", "/foo", "/foo/bar", "/foo/bar/baz"};
+  checkDecrement(abs, "rpaths", abs.rpaths(), expected);
+}
+
 TEST(PathFuncs, InitializeFromIter) {
   // Assert that we can build a vector of path components and convert
   // it to a RelativePath

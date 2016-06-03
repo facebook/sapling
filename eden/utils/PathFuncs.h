@@ -380,7 +380,7 @@ class PathComponentBase : public PathBase<
  * don't use input_iterator_tag this breaks other functionality, such as being
  * able to use ComposedPathIterator as vector constructor arguments.
  */
-template <typename Piece>
+template <typename Piece, bool IsReverse>
 class ComposedPathIterator
     : public std::iterator<std::input_iterator_tag, const Piece> {
  public:
@@ -393,7 +393,7 @@ class ComposedPathIterator
 
   /// Initialize the iterator and point to the start of the path.
   explicit ComposedPathIterator(Piece path)
-      : path_(path.stringPiece()), pos_(path_.begin()) {}
+      : path_(path.stringPiece()), pos_(pathBegin()) {}
 
   /** Initialize the iterator at an arbitrary position. */
   ComposedPathIterator(Piece path, position_type pos)
@@ -411,42 +411,32 @@ class ComposedPathIterator
 
   /// ++iter;
   ComposedPathIterator& operator++() {
-    CHECK_NOTNULL(pos_);
-    if (pos_ == path_.end()) {
-      pos_ = nullptr;
-      return *this;
+    if (IsReverse) {
+      retreat();
+    } else {
+      advance();
     }
-
-    ++pos_;
-    while (pos_ < path_.end() && *pos_ != '/') {
-      ++pos_;
-    }
-
     return *this;
   }
 
-  /// tmp = iter++;
+  /// iter++;
   ComposedPathIterator operator++(int) {
     ComposedPathIterator tmp(*this);
     ++(*this); // invoke the ++iter handler above.
     return tmp;
   }
 
+  /// --iter;
   ComposedPathIterator& operator--() {
-    if (pos_ == nullptr) {
-      pos_ = path_.end();
-      return *this;
+    if (IsReverse) {
+      advance();
+    } else {
+      retreat();
     }
-
-    CHECK_NE(pos_, path_.begin());
-    --pos_;
-    while (pos_ > path_.begin() && *pos_ != '/') {
-      --pos_;
-    }
-
     return *this;
   }
 
+  /// iter--;
   ComposedPathIterator operator--(int) {
     ComposedPathIterator tmp(*this);
     --(*this); // invoke the --iter handler above.
@@ -478,78 +468,65 @@ class ComposedPathIterator
   // Piece* operator->() const;
 
  protected:
+  const char* pathBegin() {
+    if (std::is_same<Piece, AbsolutePathPiece>::value) {
+      // Always start iterators at the initial "/" character, so that
+      // begin() yields "/" instead of the empty string.
+      return path_.begin() + 1;
+    } else {
+      return path_.begin();
+    }
+  }
+
+  // Move the iterator forwards in the path.
+  void advance() {
+    if (IsReverse) {
+      if (pos_ == nullptr) {
+        pos_ = pathBegin();
+        return;
+      }
+      CHECK_NE(pos_, path_.end());
+    } else {
+      CHECK_NOTNULL(pos_);
+      if (pos_ == path_.end()) {
+        pos_ = nullptr;
+        return;
+      }
+    }
+
+    ++pos_;
+    while (pos_ < path_.end() && *pos_ != '/') {
+      ++pos_;
+    }
+  }
+
+  // Move the iterator backwards in the path.
+  void retreat() {
+    auto stopPos = pathBegin();
+    if (IsReverse) {
+      CHECK_NOTNULL(pos_);
+      if (pos_ <= stopPos) {
+        pos_ = nullptr;
+        return;
+      }
+    } else {
+      if (pos_ == nullptr) {
+        pos_ = path_.end();
+        return;
+      }
+      CHECK_NE(pos_, stopPos);
+    }
+
+    --pos_;
+    while (pos_ > stopPos && *pos_ != '/') {
+      --pos_;
+    }
+  }
+
   /// the path we're iterating over.
   folly::StringPiece path_;
   /// our current position within that path.
   position_type pos_;
-};
-
-/** Iterates a composed path in reverse.
- * Iterating in reverse yields the same elements, but in reverse
- * order:
- * 1. "foo/bar/baz"
- * 2. "foo/bar"
- * 3. "foo"
- */
-template <typename Piece>
-class RelativePathReverseIterator : public ComposedPathIterator<Piece> {
- public:
-  using ComposedPathIterator<Piece>::ComposedPathIterator;
-
-  /** ++iter;
-   * Since we are a reverse iterator, incrementing makes us go backwards.
-   */
-  RelativePathReverseIterator& operator++() {
-    CHECK_NOTNULL(this->pos_);
-    if (this->pos_ == this->path_.begin()) {
-      this->pos_ = nullptr;
-      return *this;
-    }
-    this->ComposedPathIterator<Piece>::operator--();
-    return *this;
-  }
-};
-
-/** Iterates a composed path in reverse.
- * Iterating in reverse yields the same elements, but in reverse
- * order:
- * 1. "/foo/bar/baz"
- * 2. "/foo/bar"
- * 3. "/foo"
- * 4. "/"
- */
-template <typename Piece>
-class AbsolutePathReverseIterator : public ComposedPathIterator<Piece> {
- public:
-  using ComposedPathIterator<Piece>::ComposedPathIterator;
-
-  /** ++iter;
-   * Since we are a reverse iterator, incrementing makes us go backwards.
-   */
-  AbsolutePathReverseIterator& operator++() {
-    CHECK_NOTNULL(this->pos_);
-    // If we were previously pointing to the first character (just the "/"),
-    // we should now advance to the end.
-    if (this->pos_ <= this->path_.begin() + 1) {
-      this->pos_ = nullptr;
-      return *this;
-    }
-    this->ComposedPathIterator<Piece>::operator--();
-    return *this;
-  }
-
-  Piece piece() const {
-    CHECK_NOTNULL(this->pos_);
-    // When pos_ is at the beginning of the string, return "/" rather than ""
-    if (this->pos_ == this->path_.begin()) {
-      return Piece(folly::StringPiece(this->path_.begin(), 1));
-    }
-    return this->ComposedPathIterator<Piece>::piece();
-  }
-
-  Piece operator*() const {
-    return piece();
-  }
 };
 
 /** Represents any number of PathComponents composed together.
@@ -653,8 +630,8 @@ class RelativePathBase : public ComposedPathBase<
   RelativePathBase() {}
 
   // For iteration
-  using iterator = ComposedPathIterator<RelativePathPiece>;
-  using reverse_iterator = RelativePathReverseIterator<RelativePathPiece>;
+  using iterator = ComposedPathIterator<RelativePathPiece, false>;
+  using reverse_iterator = ComposedPathIterator<RelativePathPiece, true>;
   using iterator_range = PathIteratorRange<iterator>;
   using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
 
@@ -758,8 +735,9 @@ struct AbsolutePathSanityCheck {
   void operator()(folly::StringPiece val) const {
     if (!val.startsWith('/')) {
       throw std::domain_error(folly::to<std::string>(
-          "attempt to construct an AbsolutePath from a non-absolute string: ",
-          val));
+          "attempt to construct an AbsolutePath from a non-absolute string: \"",
+          val,
+          "\""));
     }
     if (val.size() > 1 && val.endsWith('/')) {
       // We do allow "/" though
@@ -794,8 +772,8 @@ class AbsolutePathBase : public ComposedPathBase<
   AbsolutePathBase() : base_type("/", SkipPathSanityCheck()) {}
 
   // For iteration
-  using iterator = ComposedPathIterator<AbsolutePathPiece>;
-  using reverse_iterator = AbsolutePathReverseIterator<AbsolutePathPiece>;
+  using iterator = ComposedPathIterator<AbsolutePathPiece, false>;
+  using reverse_iterator = ComposedPathIterator<AbsolutePathPiece, true>;
   using iterator_range = PathIteratorRange<iterator>;
   using reverse_iterator_range = PathIteratorRange<reverse_iterator>;
 
@@ -804,8 +782,7 @@ class AbsolutePathBase : public ComposedPathBase<
     // The +1 allows us to deal with the case where we're iterating
     // over literally "/".  Without this +1, we would emit "/" twice
     // and we don't want that.
-    return iterator_range(
-        iterator{p, this->stringPiece().begin() + 1}, iterator{p, nullptr});
+    return iterator_range(iterator{p}, iterator{p, nullptr});
   }
 
   reverse_iterator_range rpaths() const {
