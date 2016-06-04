@@ -3,7 +3,6 @@
 # Copyright(C) 2007 Daniel Holth et al
 from __future__ import absolute_import
 
-import cPickle as pickle
 import os
 import re
 import sys
@@ -21,6 +20,7 @@ from mercurial import (
 
 from . import common
 
+pickle = util.pickle
 stringio = util.stringio
 propertycache = util.propertycache
 urlerr = util.urlerr

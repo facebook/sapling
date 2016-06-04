@@ -173,7 +173,6 @@ from __future__ import absolute_import
 
 import errno
 import os
-import pickle
 import sys
 
 from mercurial.i18n import _
@@ -197,6 +196,7 @@ from mercurial import (
     util,
 )
 
+pickle = util.pickle
 release = lock.release
 cmdtable = {}
 command = cmdutil.command(cmdtable)

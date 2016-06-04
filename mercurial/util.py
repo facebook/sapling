@@ -47,6 +47,7 @@ from . import (
 
 for attr in (
     'empty',
+    'pickle',
     'queue',
     'urlerr',
     # we do import urlreq, but we do it outside the loop

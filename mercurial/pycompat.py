@@ -11,6 +11,12 @@ This contains aliases to hide python version-specific details from the core.
 from __future__ import absolute_import
 
 try:
+    import cPickle as pickle
+    pickle.dumps
+except ImportError:
+    import pickle
+
+try:
     import cStringIO as io
     stringio = io.StringIO
 except ImportError:

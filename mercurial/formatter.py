@@ -7,7 +7,6 @@
 
 from __future__ import absolute_import
 
-import cPickle
 import os
 
 from .i18n import _
@@ -20,7 +19,10 @@ from . import (
     encoding,
     error,
     templater,
+    util,
 )
+
+pickle = util.pickle
 
 class baseformatter(object):
     def __init__(self, ui, topic, opts):
@@ -107,7 +109,7 @@ class pickleformatter(baseformatter):
         self._data.append(self._item)
     def end(self):
         baseformatter.end(self)
-        self._ui.write(cPickle.dumps(self._data))
+        self._ui.write(pickle.dumps(self._data))
 
 def _jsonifyobj(v):
     if isinstance(v, tuple):
