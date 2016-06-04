@@ -377,13 +377,7 @@ def validatesocket(sock):
     def fmtfingerprint(s):
         return ':'.join([s[x:x + 2] for x in range(0, len(s), 2)])
 
-    legacyfingerprint = fmtfingerprint(peerfingerprints['sha1'])
     nicefingerprint = 'sha256:%s' % fmtfingerprint(peerfingerprints['sha256'])
-
-    if settings['legacyfingerprint']:
-        section = 'hostfingerprint'
-    else:
-        section = 'hostsecurity'
 
     if settings['certfingerprints']:
         for hash, fingerprint in settings['certfingerprints']:
@@ -392,8 +386,15 @@ def validatesocket(sock):
                          (host, hash, fmtfingerprint(fingerprint)))
                 return
 
+        # Pinned fingerprint didn't match. This is a fatal error.
+        if settings['legacyfingerprint']:
+            section = 'hostfingerprint'
+            nice = fmtfingerprint(peerfingerprints['sha1'])
+        else:
+            section = 'hostsecurity'
+            nice = '%s:%s' % (hash, fmtfingerprint(peerfingerprints[hash]))
         raise error.Abort(_('certificate for %s has unexpected '
-                            'fingerprint %s') % (host, legacyfingerprint),
+                            'fingerprint %s') % (host, nice),
                           hint=_('check %s configuration') % section)
 
     if not sock._hgstate['caloaded']:
