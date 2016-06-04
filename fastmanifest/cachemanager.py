@@ -7,6 +7,7 @@
 
 import os
 import random
+import sys
 
 from mercurial import extensions, revlog, scmutil, util, error
 
@@ -170,8 +171,10 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     except error.LockHeld:
         return
     try:
+        silent_worker = ui.configbool("fastmanifest", "silentworker", True)
+
         if background:
-            if concurrency.fork_worker(ui, repo):
+            if concurrency.fork_worker(ui, repo, silent_worker):
                 return
         cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
@@ -223,6 +226,11 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         cache.prune(limit)
 
     if background:
+        if not silent_worker:
+            ui.flush()
+            sys.stdout.flush()
+            sys.stderr.flush()
+
         os._exit(0)
 
 class triggers(object):

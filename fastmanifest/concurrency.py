@@ -19,9 +19,7 @@ from mercurial import error, lock
 # process.
 #
 # NOTE: This is extremely platform-specific code.
-def fork_worker(ui, repo):
-    silent_worker = ui.configbool("fastmanifest", "silentworker", True)
-
+def fork_worker(ui, repo, silent_worker):
     if not silent_worker:
         # if we don't want a silent worker, then we need to flush any streams so
         # any buffered content only gets written *once*.
