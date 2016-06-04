@@ -20,7 +20,7 @@ from hgext.convert import convcmd
 from hgext.convert import filemap
 
 import lfutil
-import basestore
+import storefactory
 
 # -- Commands ----------------------------------------------------------
 
@@ -337,7 +337,7 @@ def uploadlfiles(ui, rsrc, rdst, files):
     if not files:
         return
 
-    store = basestore._openstore(rsrc, rdst, put=True)
+    store = storefactory._openstore(rsrc, rdst, put=True)
 
     at = 0
     ui.debug("sending statlfile command for %d largefiles\n" % len(files))
@@ -368,7 +368,7 @@ def verifylfiles(ui, repo, all=False, contents=False):
     else:
         revs = ['.']
 
-    store = basestore._openstore(repo)
+    store = storefactory._openstore(repo)
     return store.verify(revs, contents=contents)
 
 def cachelfiles(ui, repo, node, filelist=None):
@@ -394,7 +394,7 @@ def cachelfiles(ui, repo, node, filelist=None):
             toget.append((lfile, expectedhash))
 
     if toget:
-        store = basestore._openstore(repo)
+        store = storefactory._openstore(repo)
         ret = store.get(toget)
         return ret
 

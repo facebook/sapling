@@ -179,5 +179,3 @@ outputs, which should be fixed later.
   > -X tests/test-hgweb-no-request-uri.t \
   > -X tests/test-hgweb-non-interactive.t \
   > | sed 's-\\-/-g' | python "$import_checker" -
-  Import cycle: hgext.largefiles.basestore -> hgext.largefiles.localstore -> hgext.largefiles.basestore
-  [1]

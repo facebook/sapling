@@ -17,7 +17,7 @@ from mercurial.i18n import _
 
 import lfutil
 import lfcommands
-import basestore
+import storefactory
 
 # -- Utility functions: commonly/repeatedly needed functionality ---------------
 
@@ -1109,7 +1109,7 @@ def _getoutgoings(repo, other, missing, addfunc):
             lfhashes.add(lfhash)
     lfutil.getlfilestoupload(repo, missing, dedup)
     if lfhashes:
-        lfexists = basestore._openstore(repo, other).exists(lfhashes)
+        lfexists = storefactory._openstore(repo, other).exists(lfhashes)
         for fn, lfhash in knowns:
             if not lfexists[lfhash]: # lfhash doesn't exist on "other"
                 addfunc(fn, lfhash)
@@ -1338,7 +1338,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         else:
             hash = lfutil.readstandin(repo, lf, ctx.rev())
             if not lfutil.inusercache(repo.ui, hash):
-                store = basestore._openstore(repo)
+                store = storefactory._openstore(repo)
                 success, missing = store.get([(lf, hash)])
                 if len(success) != 1:
                     raise error.Abort(
