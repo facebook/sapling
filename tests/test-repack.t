@@ -274,7 +274,7 @@ Pull should run background repack
 
 Test environment variable resolution
   $ CACHEPATH=$TESTTMP/envcache hg prefetch --config 'remotefilelog.cachepath=$CACHEPATH'
-  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over 0.12s
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
   $ find $TESTTMP/envcache | sort
   $TESTTMP/envcache
   $TESTTMP/envcache/master
