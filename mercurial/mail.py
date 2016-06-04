@@ -106,13 +106,6 @@ def _smtp(ui):
     mailhost = ui.config('smtp', 'host')
     if not mailhost:
         raise error.Abort(_('smtp.host not configured - cannot send mail'))
-    verifycert = ui.config('smtp', 'verifycert', 'strict')
-    if verifycert not in ['strict', 'loose']:
-        if util.parsebool(verifycert) is not False:
-            raise error.Abort(_('invalid smtp.verifycert configuration: %s')
-                             % (verifycert))
-        verifycert = False
-
     if smtps:
         ui.note(_('(using smtps)\n'))
         s = SMTPS(ui, local_hostname=local_hostname, host=mailhost)
@@ -133,9 +126,9 @@ def _smtp(ui):
         s.ehlo()
         s.starttls()
         s.ehlo()
-    if (starttls or smtps) and verifycert:
+    if starttls or smtps:
         ui.note(_('(verifying remote certificate)\n'))
-        sslutil.validatesocket(s.sock, verifycert == 'strict')
+        sslutil.validatesocket(s.sock)
     username = ui.config('smtp', 'username')
     password = ui.config('smtp', 'password')
     if username and not password:
