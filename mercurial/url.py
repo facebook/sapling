@@ -185,17 +185,6 @@ class httpconnection(keepalive.HTTPConnection):
     # must be able to send big bundle as stream.
     send = _gen_sendfile(keepalive.HTTPConnection.send)
 
-    def connect(self):
-        if has_https and self.realhostport: # use CONNECT proxy
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((self.host, self.port))
-            if _generic_proxytunnel(self):
-                # we do not support client X.509 certificates
-                self.sock = sslutil.wrapsocket(self.sock, None, None, None,
-                                               serverhostname=self.host)
-        else:
-            keepalive.HTTPConnection.connect(self)
-
     def getresponse(self):
         proxyres = getattr(self, 'proxyres', None)
         if proxyres:
