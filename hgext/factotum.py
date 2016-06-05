@@ -102,8 +102,7 @@ def monkeypatch_method(cls):
 
 @monkeypatch_method(passwordmgr)
 def find_user_password(self, realm, authuri):
-    user, passwd = urlreq.httppasswordmgrwithdefaultrealm.find_user_password(
-        self, realm, authuri)
+    user, passwd = self.passwddb.find_user_password(realm, authuri)
     if user and passwd:
         self._writedebug(user, passwd)
         return (user, passwd)

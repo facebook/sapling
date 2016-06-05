@@ -43,7 +43,7 @@ def test(auth, urls=None):
     def _test(uri):
         print('URI:', uri)
         try:
-            pm = url.passwordmgr(ui)
+            pm = url.passwordmgr(ui, urlreq.httppasswordmgrwithdefaultrealm())
             u, authinfo = util.url(uri).authinfo()
             if authinfo is not None:
                 pm.add_password(*authinfo)
