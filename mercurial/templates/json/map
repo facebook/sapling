@@ -96,7 +96,21 @@ branchentry = '\{
   "date": {date|json},
   "status": {status|json}
   }'
-summary = '"not yet implemented"'
+shortlogentry = '{changelistentry}'
+summary = '\{
+  "node": {node|json},
+  "lastchange": {lastchange|json},
+  "bookmarks": [{join(bookmarks%bookmarkentry, ", ")}],
+  "branches": [{join(branches%branchentry, ", ")}],
+  "shortlog": [{join(shortlog%shortlogentry, ", ")}],
+  "tags": [{join(tags%tagentry, ", ")}],
+  "archives": [{join(archives%archiveentry, ", ")}]
+  }'
+archiveentry = '\{
+  "node": {node|json},
+  "extension": {extension|json},
+  "type": {type|json}
+  }'
 filediff = '\{
   "path": {file|json},
   "node": {node|json},

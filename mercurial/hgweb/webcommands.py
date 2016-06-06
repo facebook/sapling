@@ -707,8 +707,8 @@ def summary(web, req, tmpl):
                 parity=next(parity),
                 **webutil.commonentry(web.repo, ctx)))
 
-        l.reverse()
-        yield l
+        for entry in reversed(l):
+            yield entry
 
     tip = web.repo['tip']
     count = len(web.repo)
