@@ -569,9 +569,6 @@ class BranchMap(BaseMap):
     changes on other will now be on default (have no branch name set).
     '''
 
-    def __init__(self, meta):
-        super(BranchMap, self).__init__(meta)
-
 class TagMap(BaseMap):
     '''Facility for controlled renaming of tags. Example:
 
@@ -581,6 +578,3 @@ class TagMap(BaseMap):
         The oldname tag from SVN will be represented as newname in the hg tags;
         the other tag will not be reflected in the hg repository.
     '''
-
-    def __init__(self, meta):
-        super(TagMap, self).__init__(meta)
