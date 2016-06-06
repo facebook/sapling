@@ -160,7 +160,18 @@ class Config:
             p.send_signal(signum)
 
         def kill_child_process_group(signum, stack_frame):
-            os.kill(-p.pid, signum)
+            try:
+                os.kill(-p.pid, signum)
+            except EnvironmentError as ex:
+                # Since the child process is started as root, we sometimes can
+                # get EPERM when trying to kill its process group.  (This can
+                # happen if the privileged helper is still around.)
+                #
+                # Ignore this error, but re-raise all others.  The privileged
+                # helper should die on its own anyway when the main process
+                # goes away.
+                if ex.errno != errno.EPERM:
+                    raise
 
         # Run the eden server.
         eden_bin = _get_path_to_eden_server()
