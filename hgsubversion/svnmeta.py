@@ -351,7 +351,7 @@ class SVNMeta(object):
 
     @property
     def revmapexists(self):
-        return maps.RevMap.exists(self)
+        return os.path.exists(self.revmap_file)
 
     def fixdate(self, date):
         if date is not None:
