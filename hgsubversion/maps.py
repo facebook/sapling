@@ -14,7 +14,6 @@ class BaseMap(dict):
     '''A base class for the different type of mappings: author, branch, and
     tags.'''
     def __init__(self, meta):
-        self.meta = meta
         super(BaseMap, self).__init__()
         self._ui = meta.ui
 
@@ -26,7 +25,7 @@ class BaseMap(dict):
         # 'authormap' for the config option
         self.mapname = self.__class__.__name__.lower()
         self.mapfilename = self.mapname + '_file'
-        self._filepath = self.meta.__getattribute__(self.mapfilename)
+        self._filepath = meta.__getattribute__(self.mapfilename)
         self.load(self._filepath)
 
         # append mappings specified from the commandline
