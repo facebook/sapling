@@ -290,3 +290,21 @@ Test environment variable resolution
   $TESTTMP/envcache/master/packs/54afbfda203716c1aa2636029ccc0df18165129e.datapack
   $TESTTMP/envcache/master/packs/f842b0cc2f54b1b5719584b449afdf58b08ab006.histidx
   $TESTTMP/envcache/master/packs/f842b0cc2f54b1b5719584b449afdf58b08ab006.histpack
+
+Test local remotefilelog blob is correct when based on a pack
+  $ hg prefetch -r .
+  1 files fetched over 1 fetches - (0 misses, 100.00% hit ratio) over * (glob)
+  $ echo >> y
+  $ hg commit -m y2
+  $ hg debugremotefilelog .hg/store/data/95cb0bfd2977c761298d9624e4b4d4c72a39974a/b70860edba4f8242a1d52f2a94679dd23cb76808
+  size: 9 bytes
+  path: .hg/store/data/95cb0bfd2977c761298d9624e4b4d4c72a39974a/b70860edba4f8242a1d52f2a94679dd23cb76808 
+  key: b70860edba4f 
+  
+          node =>           p1            p2      linknode     copyfrom
+  b70860edba4f => 577959738234  000000000000  08d3fbc98c48  
+  577959738234 => 1bb2e6237e03  000000000000  c7faf2fc439a  x
+  1bb2e6237e03 => d4a3ed9310e5  000000000000  0b03bbc9e1e7  
+  d4a3ed9310e5 => aee31534993a  000000000000  421535db10b6  
+  aee31534993a => 1406e7411862  000000000000  a89d614e2364  
+  1406e7411862 => 000000000000  000000000000  b292c1e3311f  
