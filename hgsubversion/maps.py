@@ -13,15 +13,15 @@ import util
 class BaseMap(dict):
     '''A base class for the different type of mappings: author, branch, and
     tags.'''
-    def __init__(self, meta):
+    def __init__(self, ui, filepath):
         super(BaseMap, self).__init__()
-        self._ui = meta.ui
+        self._ui = ui
 
         self._commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
         self.syntaxes = ('re', 'glob')
 
-        self._filepath = meta.__getattribute__(self.defaultfilenameattr())
-        self.load(self._filepath)
+        self._filepath = filepath
+        self.load(filepath)
 
         # Append mappings specified from the commandline. A little
         # magic here: our name in the config mapping is the same as
@@ -208,7 +208,8 @@ class AuthorMap(BaseMap):
         self._defaulthost = defaulthost
         self._defaultauthors = defaultauthors
 
-        super(AuthorMap, self).__init__(meta)
+        super(AuthorMap, self).__init__(
+            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
 
     def _lowercase(self, key):
         '''Determine whether or not to lowercase a str or regex using the
@@ -603,6 +604,9 @@ class BranchMap(BaseMap):
     All changes on the oldname branch will now be on the newname branch; all
     changes on other will now be on default (have no branch name set).
     '''
+    def __init__(self, meta):
+        super(BranchMap, self).__init__(
+            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
 
 class TagMap(BaseMap):
     '''Facility for controlled renaming of tags. Example:
@@ -613,3 +617,6 @@ class TagMap(BaseMap):
         The oldname tag from SVN will be represented as newname in the hg tags;
         the other tag will not be reflected in the hg repository.
     '''
+    def __init__(self, meta):
+        super(TagMap, self).__init__(
+            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
