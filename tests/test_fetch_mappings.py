@@ -92,7 +92,9 @@ class MapTests(test_util.TestBase):
         new = open(os.path.join(repopath, 'authors'), 'w')
         new.write(open(orig).read())
         new.close()
-        test = maps.AuthorMap(self.repo.svnmeta(skiperrorcheck=True))
+        meta = self.repo.svnmeta(skiperrorcheck=True)
+        test = maps.AuthorMap(meta, meta.defaulthost, meta.caseignoreauthors,
+                              meta.mapauthorscmd, meta.defaultauthors)
         fromself = set(test)
         test.load(orig)
         all_tests = set(test)

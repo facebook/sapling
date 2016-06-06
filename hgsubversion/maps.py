@@ -182,7 +182,8 @@ class AuthorMap(BaseMap):
     the userid from Subversion is always compared lowercase.
     '''
 
-    def __init__(self, meta):
+    def __init__(self, meta, defaulthost, caseignoreauthors,
+                 mapauthorscmd, defaultauthors):
         '''Initialise a new AuthorMap.
 
         The ui argument is used to print diagnostic messages.
@@ -190,9 +191,14 @@ class AuthorMap(BaseMap):
         The path argument is the location of the backing store,
         typically .hg/svn/authors.
         '''
-        self.defaulthost = ''
-        if meta.defaulthost:
-            self.defaulthost = '@%s' % meta.defaulthost.lstrip('@')
+        if defaulthost:
+            self.defaulthost = '@%s' % defaulthost.lstrip('@')
+        else:
+            self.defaulthost = ''
+        self._caseignoreauthors = caseignoreauthors
+        self._mapauthorscmd = mapauthorscmd
+        self._defaulthost = defaulthost
+        self._defaultauthors = defaultauthors
 
         super(AuthorMap, self).__init__(meta)
 
@@ -200,7 +206,7 @@ class AuthorMap(BaseMap):
         '''Determine whether or not to lowercase a str or regex using the
         meta.caseignoreauthors.'''
         k = key
-        if self.meta.caseignoreauthors:
+        if self._caseignoreauthors:
             if isinstance(key, str):
                 k = key.lower()
             else:
@@ -230,14 +236,14 @@ class AuthorMap(BaseMap):
             return super(AuthorMap, self).__getitem__(author)
 
         search_author = author
-        if self.meta.caseignoreauthors:
+        if self._caseignoreauthors:
             search_author = author.lower()
 
         result = None
         if search_author in self:
             result = super(AuthorMap, self).__getitem__(search_author)
-        elif self.meta.mapauthorscmd:
-            cmd = self.meta.mapauthorscmd % author
+        elif self._mapauthorscmd:
+            cmd = self._mapauthorscmd % author
             process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
             output, err = process.communicate()
             retcode = process.poll()
@@ -246,7 +252,7 @@ class AuthorMap(BaseMap):
                 raise hgutil.Abort(msg % cmd)
             self[author] = result = output.strip()
         if not result:
-            if self.meta.defaultauthors:
+            if self._defaultauthors:
                 self[author] = result = '%s%s' % (author, self.defaulthost)
                 msg = 'substituting author "%s" for default "%s"\n'
                 self._ui.debug(msg % (author, result))
