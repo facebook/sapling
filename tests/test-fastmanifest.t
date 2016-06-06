@@ -226,6 +226,8 @@ Make the results deterministic
   cache size is: 0 bytes
   number of entries is: 0
 
-
+Use the cache in a commit.
+  $ hg debugcachemanifest -a
+  $ mkcommit g
 
   $ cd ..

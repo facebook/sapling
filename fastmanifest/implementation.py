@@ -484,9 +484,8 @@ class fastmanifestcache(object):
     def get(self, hexnode):
         # In memory cache lookup
         ident = self.inmemorycachekey(hexnode)
-        r = self.inmemorycache.get(ident, None)
-        if r:
-            return r
+        if ident in self.inmemorycache:
+            return self.inmemorycache[ident]
 
         # On disk cache lookup
         realfpath = self.filecachepath(hexnode)
