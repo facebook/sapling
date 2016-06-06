@@ -1,4 +1,4 @@
-import errno, os, shutil, time
+import errno, heapq, os, shutil, time
 import shallowutil
 from mercurial import error, util
 from mercurial.i18n import _
@@ -78,11 +78,14 @@ class basestore(object):
         ui = self.ui
         entries = ledger.sources.get(self, [])
         count = 0
+        directories = set()
         for entry in entries:
             if entry.datarepacked and entry.historyrepacked:
                 ui.progress(_("cleaning up"), count, unit="files",
                             total=len(entries))
                 path = self._getfilepath(entry.filename, entry.node)
+                dirpath = os.path.dirname(path)
+                directories.add((-len(dirpath), dirpath))
                 try:
                     os.remove(path)
                 except OSError as ex:
@@ -91,6 +94,22 @@ class basestore(object):
                         raise
             count += 1
         ui.progress(_("cleaning up"), None)
+
+        # Clean up directories
+        cachepath = shallowutil.getcachepath(ui)
+        dirheap = list(directories)
+        heapq.heapify(dirheap)
+        seen = set([cachepath])
+        while dirheap:
+            length, dirpath = heapq.heappop(dirheap)
+            try:
+                os.rmdir(dirpath)
+                parent = os.path.dirname(dirpath)
+                if parent not in seen:
+                    seen.add(parent)
+                    heapq.heappush(dirheap, (-len(parent), parent))
+            except OSError:
+                pass
 
     # BELOW THIS ARE NON-STANDARD APIS
 

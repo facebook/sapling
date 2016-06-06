@@ -19,13 +19,20 @@
 # Test that repack cleans up the old files and creates new packs
 
   $ cd shallow
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR | sort
+  $TESTTMP/hgcache
+  $TESTTMP/hgcache/master
+  $TESTTMP/hgcache/master/11
+  $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072
   $TESTTMP/hgcache/master/11/f6ad8ec52a2984abaafd7c3b516503785c2072/aee31534993a501858fb6dd96a065671922e7d51
   $TESTTMP/hgcache/repos
 
   $ hg repack
 
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR | sort
+  $TESTTMP/hgcache
+  $TESTTMP/hgcache/master
+  $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.dataidx
   $TESTTMP/hgcache/master/packs/817d294043bd21a3de01f807721971abe45219ce.datapack
   $TESTTMP/hgcache/master/packs/bc0153a5326a2f0bcae9f659ad3376c04350119f.histidx
