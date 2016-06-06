@@ -287,10 +287,10 @@ class Tags(dict):
     """
     VERSION = 2
 
-    def __init__(self, meta, endrev=None):
+    def __init__(self, ui, filepath, endrev=None):
         dict.__init__(self)
-        self._filepath = meta.tagfile
-        self._ui = meta.ui
+        self._filepath = filepath
+        self._ui = ui
         self.endrev = endrev
         if os.path.isfile(self._filepath):
             self._load()
