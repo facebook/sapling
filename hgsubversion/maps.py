@@ -347,9 +347,10 @@ class RevMap(dict):
     def __init__(self, meta):
         dict.__init__(self)
         self.meta = meta
+        self._filepath = meta.revmap_file
         self._hashes = None
 
-        if os.path.isfile(self.meta.revmap_file):
+        if os.path.isfile(self._filepath):
             self._load()
         else:
             self._write()
@@ -395,13 +396,13 @@ class RevMap(dict):
         For performance reason, internal in-memory state is not updated.
         To get an up-to-date RevMap, reconstruct the object.
         '''
-        f = open(self.meta.revmap_file, 'a')
+        f = open(self._filepath, 'a')
         f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
                         for revnum, br, binhash in items))
         f.close()
 
     def _readmapfile(self):
-        path = self.meta.revmap_file
+        path = self._filepath
         try:
             f = open(path)
         except IOError, err:
@@ -438,13 +439,13 @@ class RevMap(dict):
         self.meta.firstpulled = firstpulled
 
     def _write(self):
-        f = open(self.meta.revmap_file, 'w')
+        f = open(self._filepath, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
 
     def __setitem__(self, key, ha):
         revnum, branch = key
-        f = open(self.meta.revmap_file, 'a')
+        f = open(self._filepath, 'a')
         b = branch or ''
         f.write(str(revnum) + ' ' + hex(ha) + ' ' + b + '\n')
         f.close()
