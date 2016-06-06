@@ -34,13 +34,6 @@ class BaseMap(dict):
     def mapname(cls):
         return cls.__name__.lower()
 
-    @classmethod
-    def defaultfilenameattr(cls):
-        # trickery: all subclasses have the same name as their file and config
-        # names, e.g. AuthorMap is meta.authormap_file for the filename and
-        # 'authormap' for the config option
-        return cls.mapname() + '_file'
-
     def _findkey(self, key):
         '''Takes a string and finds the first corresponding key that matches
         via regex'''
