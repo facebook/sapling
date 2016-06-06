@@ -103,7 +103,7 @@ def incoming(orig, ui, repo, origsource='default', **opts):
     meta = repo.svnmeta(svn.uuid, svn.subdir)
 
     ui.status('incoming changes from %s\n' % other.svnurl)
-    svnrevisions = list(svn.revisions(start=meta.lastpulled))
+    svnrevisions = list(svn.revisions(start=meta.revmap.lastpulled))
     if opts.get('newest_first'):
         svnrevisions.reverse()
     # Returns 0 if there are incoming changes, 1 otherwise.
@@ -419,7 +419,7 @@ def pull(repo, source, heads=[], force=False, meta=None):
             meta.branchmap['default'] = meta.branch
 
         ui = repo.ui
-        start = meta.lastpulled
+        start = meta.revmap.lastpulled
 
         if start <= 0:
             # we are initializing a new repository
@@ -512,7 +512,7 @@ def pull(repo, source, heads=[], force=False, meta=None):
         util.swap_out_encoding(old_encoding)
 
     if lastpulled is not None:
-        meta.lastpulled = lastpulled
+        meta.revmap.lastpulled = lastpulled
     revisions = len(meta.revmap) - oldrevisions
 
     if revisions == 0:

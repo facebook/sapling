@@ -136,7 +136,6 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
             else:
                 closed.add(parentctx.rev())
 
-    meta.lastpulled = youngest
     ui.progress('prepare', None, total=numrevs)
 
     revmapbuf = []
@@ -276,7 +275,7 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
                                   int(parentrev),
                                   revision)
 
-    revmap.batchset(revmapbuf)
+    revmap.batchset(revmapbuf, youngest)
     ui.progress('rebuild', None, total=numrevs)
 
     # save off branch info

@@ -27,7 +27,6 @@ class SVNMeta(object):
         self.ui = repo.ui
         self.repo = repo
         self.path = os.path.normpath(repo.join('..'))
-        self.firstpulled = 0
         self.lastdate = '1970-01-01 00:00:00 -0000'
         self.addedtags = {}
         self.deletedtags = {}
@@ -52,7 +51,6 @@ class SVNMeta(object):
         self.subdir = subdir
 
         # generated properties that have a persistent file stored on disk
-        self._gen_cachedconfig('lastpulled', 0, configname=False)
         self._gen_cachedconfig('defaultauthors', True)
         self._gen_cachedconfig('caseignoreauthors', False)
         self._gen_cachedconfig('mapauthorscmd', None)
@@ -70,7 +68,7 @@ class SVNMeta(object):
         """Return a cached value for a config option. If the cache is uninitialized
         then try to read its value from disk. Option can be overridden by the
         commandline.
-            name: property name, e.g. 'lastpulled'
+            name: property name, e.g. 'defaultauthors'
             filename: name of file in .hg/svn
             configname: commandline option name
             default: default value

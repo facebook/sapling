@@ -65,13 +65,13 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
     editor.current.rev = r
     editor.setsvn(svn)
 
-    if firstrun and meta.firstpulled <= 0:
+    if firstrun and meta.revmap.firstpulled <= 0:
         # We know nothing about this project, so fetch everything before
         # trying to apply deltas.
         ui.debug('replay: fetching full revision\n')
         svn.get_revision(r.revnum, editor)
     else:
-        svn.get_replay(r.revnum, editor, meta.firstpulled)
+        svn.get_replay(r.revnum, editor, meta.revmap.firstpulled)
     editor.close()
 
     current = editor.current

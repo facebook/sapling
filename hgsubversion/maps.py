@@ -348,14 +348,34 @@ class RevMap(dict):
 
     def __init__(self, meta):
         dict.__init__(self)
-        self.meta = meta
         self._filepath = meta.revmap_file
+        self._lastpulled_file = os.path.join(meta.metapath, 'lastpulled')
         self._hashes = None
+
+        self.firstpulled = 0
+        if os.path.exists(self._lastpulled_file):
+            with open(self._lastpulled_file) as f:
+                self._lastpulled = int(f.read())
+        else:
+            self._lastpulled = 0
 
         if os.path.isfile(self._filepath):
             self._load()
         else:
             self._write()
+
+    def _writelastpulled(self):
+        with open(self._lastpulled_file, 'w') as f:
+            f.write('%d\n' % self.lastpulled)
+
+    @property
+    def lastpulled(self):
+        return self._lastpulled
+
+    @lastpulled.setter
+    def lastpulled(self, value):
+        self._lastpulled = value
+        self._writelastpulled()
 
     def hashes(self):
         if self._hashes is None:
@@ -390,7 +410,7 @@ class RevMap(dict):
         dict.clear(self)
         self._hashes = None
 
-    def batchset(self, items):
+    def batchset(self, items, lastpulled):
         '''Set items in batches
 
         items is an array of (rev num, branch, binary hash)
@@ -402,6 +422,8 @@ class RevMap(dict):
         f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
                         for revnum, br, binhash in items))
         f.close()
+        with open(self._lastpulled_file, 'w') as f:
+            f.write('%s\n' % lastpulled)
 
     def _readmapfile(self):
         path = self._filepath
@@ -422,8 +444,11 @@ class RevMap(dict):
 
     @util.gcdisable
     def _load(self):
-        lastpulled = self.meta.lastpulled
-        firstpulled = self.meta.firstpulled
+        lastpulled = self.lastpulled
+        firstpulled = self.firstpulled
+        if os.path.exists(self._lastpulled_file):
+            with open(self._lastpulled_file) as f:
+                lastpulled = int(f.read())
         setitem = dict.__setitem__
         for l in self._readmapfile():
             revnum, ha, branch = l.split(' ', 2)
@@ -437,13 +462,15 @@ class RevMap(dict):
             if revnum < firstpulled or not firstpulled:
                 firstpulled = revnum
             setitem(self, (revnum, branch), bin(ha))
-        self.meta.lastpulled = lastpulled
-        self.meta.firstpulled = firstpulled
+        if self.lastpulled != lastpulled:
+            self.lastpulled = lastpulled
+        self.firstpulled = firstpulled
 
     def _write(self):
         f = open(self._filepath, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
+        self._writelastpulled()
 
     def __setitem__(self, key, ha):
         revnum, branch = key
@@ -451,10 +478,10 @@ class RevMap(dict):
         b = branch or ''
         f.write(str(revnum) + ' ' + hex(ha) + ' ' + b + '\n')
         f.close()
-        if revnum > self.meta.lastpulled or not self.meta.lastpulled:
-            self.meta.lastpulled = revnum
-        if revnum < self.meta.firstpulled or not self.meta.firstpulled:
-            self.meta.firstpulled = revnum
+        if revnum > self.lastpulled or not self.lastpulled:
+            self.lastpulled = revnum
+        if revnum < self.firstpulled or not self.firstpulled:
+            self.firstpulled = revnum
         dict.__setitem__(self, (revnum, branch), ha)
         if self._hashes is not None:
             self._hashes[ha] = (revnum, branch)

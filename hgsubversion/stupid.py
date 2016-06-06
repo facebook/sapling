@@ -708,7 +708,7 @@ def convert_rev(ui, meta, svn, r, tbdelta, firstrun):
         # path does not support this case with svn >= 1.7. We can fix
         # it, or we can force the existing fetch_branchrev() path. Do
         # the latter for now.
-        incremental = (meta.firstpulled > 0 and
+        incremental = (meta.revmap.firstpulled > 0 and
                        parentctx.rev() != node.nullrev and
                        not firstrun)
 
