@@ -69,6 +69,7 @@ class remotefilelog(object):
                 visited.add(c)
                 pa1, pa2, ancestorlinknode, pacopyfrom = pancestors[c]
 
+                pacopyfrom = pacopyfrom or ''
                 ancestortext += "%s%s%s%s%s\0" % (
                     c, pa1, pa2, ancestorlinknode, pacopyfrom)
 
