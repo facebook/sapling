@@ -4,6 +4,7 @@ import os, sys, cStringIO, difflib
 import unittest
 
 from mercurial import commands
+from mercurial import error
 from mercurial import hg
 from mercurial import node
 from mercurial import ui
@@ -164,14 +165,12 @@ rename a tag
              'magic2': '\xa3\xa2D\x86aM\xc0v\xb9\xb0\x18\x14\xad\xacwBUi}\xe2',
              })
 
-    def test_old_tag_map_rebuilds(self):
+    def test_old_tag_map_aborts(self):
         repo = self._load_fixture_and_fetch('tag_name_same_as_branch.svndump')
         tm = os.path.join(repo.path, 'svn', 'tagmap')
         open(tm, 'w').write('1\n')
         # force tags to load since it is lazily loaded when needed
-        repo.svnmeta().tags
-        commands.pull(repo.ui, repo)
-        self.assertEqual(open(tm).read().splitlines()[0], '2')
+        self.assertRaises(error.Abort, lambda: repo.svnmeta().tags)
 
     def _debug_print_tags(self, repo, ctx, fp):
         def formatnode(ctx):

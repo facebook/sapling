@@ -3,11 +3,11 @@
 import errno
 import os
 import re
+from mercurial import error
 from mercurial import util as hgutil
 from mercurial.node import bin, hex, nullid
 
 import subprocess
-import svncommands
 import util
 
 class BaseMap(dict):
@@ -281,7 +281,6 @@ class Tags(dict):
 
     def __init__(self, meta, endrev=None):
         dict.__init__(self)
-        self.meta = meta
         self._filepath = meta.tagfile
         self._ui = meta.ui
         self.endrev = endrev
@@ -294,11 +293,8 @@ class Tags(dict):
         f = open(self._filepath)
         ver = int(f.readline())
         if ver < self.VERSION:
-            self._ui.status('tag map outdated, running rebuildmeta...\n')
-            f.close()
-            os.unlink(self._filepath)
-            svncommands.rebuildmeta(self._ui, self.meta.repo, ())
-            return
+            raise error.Abort(
+                'tag map outdated, please run `hg svn rebuildmeta`')
         elif ver != self.VERSION:
             raise hgutil.Abort('tagmap too new -- please upgrade')
         for l in f:
