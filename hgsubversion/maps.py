@@ -20,18 +20,26 @@ class BaseMap(dict):
         self._commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
         self.syntaxes = ('re', 'glob')
 
+        self._filepath = meta.__getattribute__(self.defaultfilenameattr())
+        self.load(self._filepath)
+
+        # Append mappings specified from the commandline. A little
+        # magic here: our name in the config mapping is the same as
+        # the class name lowercased.
+        clmap = util.configpath(self._ui, self.mapname())
+        if clmap:
+            self.load(clmap)
+
+    @classmethod
+    def mapname(cls):
+        return cls.__name__.lower()
+
+    @classmethod
+    def defaultfilenameattr(cls):
         # trickery: all subclasses have the same name as their file and config
         # names, e.g. AuthorMap is meta.authormap_file for the filename and
         # 'authormap' for the config option
-        self.mapname = self.__class__.__name__.lower()
-        self.mapfilename = self.mapname + '_file'
-        self._filepath = meta.__getattribute__(self.mapfilename)
-        self.load(self._filepath)
-
-        # append mappings specified from the commandline
-        clmap = util.configpath(self._ui, self.mapname)
-        if clmap:
-            self.load(clmap)
+        return cls.mapname() + '_file'
 
     def _findkey(self, key):
         '''Takes a string and finds the first corresponding key that matches
@@ -111,7 +119,7 @@ class BaseMap(dict):
         if path != mapfile:
             writing = open(mapfile, 'a')
 
-        self._ui.debug('reading %s from %s\n' % (self.mapname , path))
+        self._ui.debug('reading %s from %s\n' % (self.mapname() , path))
         f = open(path, 'r')
         syntax = ''
         for number, line in enumerate(f):
@@ -147,7 +155,7 @@ class BaseMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in %s %s: %s\n'
-                self._ui.status(msg % (number, self.mapname, path,
+                self._ui.status(msg % (number, self.mapname(), path,
                                            line.rstrip()))
                 continue
 
@@ -161,10 +169,10 @@ class BaseMap(dict):
             src = re.compile(src)
 
             if src not in self:
-                self._ui.debug('adding %s to %s\n' % (src, self.mapname))
+                self._ui.debug('adding %s to %s\n' % (src, self.mapname()))
             elif dst != self[src]:
                 msg = 'overriding %s: "%s" to "%s" (%s)\n'
-                self._ui.status(msg % (self.mapname, self[src], dst, src))
+                self._ui.status(msg % (self.mapname(), self[src], dst, src))
             self[src] = dst
 
         f.close()
