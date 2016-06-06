@@ -33,6 +33,30 @@ def _relevantremonamesrevs(repo):
                 revs.add(repo[rev].rev())
     return revs
 
+def fastmanifestcached(repo, subset, x):
+    """Revset encompassing all revisions whose manifests are cached"""
+    # At the high level, we look at what is cached, and go from manifest nodes
+    # to changelog revs.
+    #
+    # 1) We look at all the cached manifest, from each of them we find the first
+    # changelog rev that introduced each cached manifest thanks to linkrevs.
+    # 2) We compute the minimum of those changelog revs. It is guaranteed that
+    # all the changelog revs whose manifest are cached are above that minimum
+    # rev in the changelog
+    # 3) From this minimum, we inspect all the more recent and visible changelog
+    # revisions and keep track of the one whose manifest is cached.
+    cache = fastmanifestcache.getinstance(repo.store.opener, repo.ui)
+    manifestsbinnodes = set([revlog.bin(u.replace("fast","")) for u in cache])
+    manifestslinkrevs = [repo.manifest.linkrev(repo.manifest.rev(k))
+                         for k in manifestsbinnodes]
+    cachedrevs = set()
+    if manifestslinkrevs:
+        for u in repo.changelog.revs(min(manifestslinkrevs)):
+            revmanifestbin = repo.changelog.changelogrevision(u).manifest
+            if revmanifestbin in manifestsbinnodes:
+                cachedrevs.add(u)
+    return subset & cachedrevs
+
 def fastmanifesttocache(repo, subset, x):
     """Revset of the interesting revisions to cache. This returns:
     - Drafts

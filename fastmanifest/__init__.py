@@ -185,6 +185,8 @@ def extsetup(ui):
 
     revset.symbols['fastmanifesttocache'] = cachemanager.fastmanifesttocache
     revset.safesymbols.add('fastmanifesttocache')
+    revset.symbols['fastmanifestcached'] = cachemanager.fastmanifestcached
+    revset.safesymbols.add('fastmanifestcached')
 
     if ui.configbool("fastmanifest", "cacheonchange", False):
         # Trigger to enable caching of relevant manifests
