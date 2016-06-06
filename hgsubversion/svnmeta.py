@@ -292,8 +292,8 @@ class SVNMeta(object):
     def authors(self):
         if self._authors is None:
             self._authors = maps.AuthorMap(
-                self, self.defaulthost, self.caseignoreauthors,
-                self.mapauthorscmd, self.defaultauthors)
+                self.ui, self.authormap_file, self.defaulthost,
+                self.caseignoreauthors, self.mapauthorscmd, self.defaultauthors)
         return self._authors
 
     @property

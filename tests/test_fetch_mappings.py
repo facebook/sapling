@@ -93,8 +93,9 @@ class MapTests(test_util.TestBase):
         new.write(open(orig).read())
         new.close()
         meta = self.repo.svnmeta(skiperrorcheck=True)
-        test = maps.AuthorMap(meta, meta.defaulthost, meta.caseignoreauthors,
-                              meta.mapauthorscmd, meta.defaultauthors)
+        test = maps.AuthorMap(
+            meta.ui, meta.authormap_file, meta.defaulthost,
+            meta.caseignoreauthors, meta.mapauthorscmd, meta.defaultauthors)
         fromself = set(test)
         test.load(orig)
         all_tests = set(test)

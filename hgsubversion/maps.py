@@ -190,7 +190,7 @@ class AuthorMap(BaseMap):
     the userid from Subversion is always compared lowercase.
     '''
 
-    def __init__(self, meta, defaulthost, caseignoreauthors,
+    def __init__(self, ui, filepath, defaulthost, caseignoreauthors,
                  mapauthorscmd, defaultauthors):
         '''Initialise a new AuthorMap.
 
@@ -208,8 +208,7 @@ class AuthorMap(BaseMap):
         self._defaulthost = defaulthost
         self._defaultauthors = defaultauthors
 
-        super(AuthorMap, self).__init__(
-            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
+        super(AuthorMap, self).__init__(ui, filepath)
 
     def _lowercase(self, key):
         '''Determine whether or not to lowercase a str or regex using the
