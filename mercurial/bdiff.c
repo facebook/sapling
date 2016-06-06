@@ -16,6 +16,7 @@
 #include <limits.h>
 
 #include "util.h"
+#include "bitmanipulation.h"
 
 struct line {
 	int hash, n, e;

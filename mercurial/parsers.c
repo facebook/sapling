@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "util.h"
+#include "bitmanipulation.h"
 
 static char *versionerrortext = "Python minor version mismatch";
 

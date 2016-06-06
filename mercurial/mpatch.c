@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "util.h"
+#include "bitmanipulation.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject *mpatch_Error;

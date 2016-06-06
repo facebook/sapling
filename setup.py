@@ -536,7 +536,9 @@ packages = ['mercurial', 'mercurial.hgweb', 'mercurial.httpclient',
             'hgext.fsmonitor.pywatchman', 'hgext.highlight',
             'hgext.largefiles', 'hgext.zeroconf', 'hgext3rd']
 
-common_depends = ['mercurial/util.h']
+common_depends = ['mercurial/bitmanipulation.h',
+                  'mercurial/compat.h',
+                  'mercurial/util.h']
 
 osutil_ldflags = []
 
