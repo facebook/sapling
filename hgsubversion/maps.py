@@ -16,6 +16,7 @@ class BaseMap(dict):
     def __init__(self, meta):
         self.meta = meta
         super(BaseMap, self).__init__()
+        self._ui = meta.ui
 
         self._commentre = re.compile(r'((^|[^\\])(\\\\)*)#.*')
         self.syntaxes = ('re', 'glob')
@@ -28,7 +29,7 @@ class BaseMap(dict):
         self.load(self.meta.__getattribute__(self.mapfilename))
 
         # append mappings specified from the commandline
-        clmap = util.configpath(self.meta.ui, self.mapname)
+        clmap = util.configpath(self._ui, self.mapname)
         if clmap:
             self.load(clmap)
 
@@ -110,7 +111,7 @@ class BaseMap(dict):
         if path != mapfile:
             writing = open(mapfile, 'a')
 
-        self.meta.ui.debug('reading %s from %s\n' % (self.mapname , path))
+        self._ui.debug('reading %s from %s\n' % (self.mapname , path))
         f = open(path, 'r')
         syntax = ''
         for number, line in enumerate(f):
@@ -146,7 +147,7 @@ class BaseMap(dict):
                 src, dst = line.split('=', 1)
             except (IndexError, ValueError):
                 msg = 'ignoring line %i in %s %s: %s\n'
-                self.meta.ui.status(msg % (number, self.mapname, path,
+                self._ui.status(msg % (number, self.mapname, path,
                                            line.rstrip()))
                 continue
 
@@ -160,10 +161,10 @@ class BaseMap(dict):
             src = re.compile(src)
 
             if src not in self:
-                self.meta.ui.debug('adding %s to %s\n' % (src, self.mapname))
+                self._ui.debug('adding %s to %s\n' % (src, self.mapname))
             elif dst != self[src]:
                 msg = 'overriding %s: "%s" to "%s" (%s)\n'
-                self.meta.ui.status(msg % (self.mapname, self[src], dst, src))
+                self._ui.status(msg % (self.mapname, self[src], dst, src))
             self[src] = dst
 
         f.close()
@@ -248,11 +249,11 @@ class AuthorMap(BaseMap):
             if self.meta.defaultauthors:
                 self[author] = result = '%s%s' % (author, self.defaulthost)
                 msg = 'substituting author "%s" for default "%s"\n'
-                self.meta.ui.debug(msg % (author, result))
+                self._ui.debug(msg % (author, result))
             else:
                 msg = 'author %s has no entry in the author map!'
                 raise hgutil.Abort(msg % author)
-        self.meta.ui.debug('mapping author "%s" to "%s"\n' % (author, result))
+        self._ui.debug('mapping author "%s" to "%s"\n' % (author, result))
         return result
 
     def reverselookup(self, author):
@@ -275,6 +276,7 @@ class Tags(dict):
     def __init__(self, meta, endrev=None):
         dict.__init__(self)
         self.meta = meta
+        self._ui = meta.ui
         self.endrev = endrev
         if os.path.isfile(self.meta.tagfile):
             self._load()
@@ -285,10 +287,10 @@ class Tags(dict):
         f = open(self.meta.tagfile)
         ver = int(f.readline())
         if ver < self.VERSION:
-            self.meta.ui.status('tag map outdated, running rebuildmeta...\n')
+            self._ui.status('tag map outdated, running rebuildmeta...\n')
             f.close()
             os.unlink(self.meta.tagfile)
-            svncommands.rebuildmeta(self.meta.ui, self.meta.repo, ())
+            svncommands.rebuildmeta(self._ui, self.meta.repo, ())
             return
         elif ver != self.VERSION:
             raise hgutil.Abort('tagmap too new -- please upgrade')
@@ -462,6 +464,7 @@ class FileMap(object):
         typically .hg/svn/filemap.
         '''
         self.meta = meta
+        self._ui = meta.ui
         self.include = {}
         self.exclude = {}
         if os.path.isfile(self.meta.filemap_file):
@@ -470,7 +473,7 @@ class FileMap(object):
             self._write()
 
         # append file mapping specified from the commandline
-        clmap = util.configpath(self.meta.ui, 'filemap')
+        clmap = util.configpath(self._ui, 'filemap')
         if clmap:
             self.load(clmap)
 
@@ -512,10 +515,10 @@ class FileMap(object):
         mapping = getattr(self, m)
         if path in mapping:
             msg = 'duplicate %s entry in %s: "%s"\n'
-            self.meta.ui.status(msg % (m, fn, path))
+            self._ui.status(msg % (m, fn, path))
             return
         bits = m.rstrip('e'), path
-        self.meta.ui.debug('%sing %s\n' % bits)
+        self._ui.debug('%sing %s\n' % bits)
         # respect rule order
         mapping[path] = len(self)
         if fn != self.meta.filemap_file:
@@ -524,7 +527,7 @@ class FileMap(object):
             f.close()
 
     def load(self, fn):
-        self.meta.ui.debug('reading file map from %s\n' % fn)
+        self._ui.debug('reading file map from %s\n' % fn)
         f = open(fn, 'r')
         self.load_fd(f, fn)
         f.close()
@@ -540,13 +543,13 @@ class FileMap(object):
                 if cmd in ('include', 'exclude'):
                     self.add(fn, cmd, path)
                     continue
-                self.meta.ui.warn('unknown filemap command %s\n' % cmd)
+                self._ui.warn('unknown filemap command %s\n' % cmd)
             except IndexError:
                 msg = 'ignoring bad line in filemap %s: %s\n'
-                self.meta.ui.warn(msg % (fn, line.rstrip()))
+                self._ui.warn(msg % (fn, line.rstrip()))
 
     def _load(self):
-        self.meta.ui.debug('reading in-repo file map from %s\n' % self.meta.filemap_file)
+        self._ui.debug('reading in-repo file map from %s\n' % self.meta.filemap_file)
         f = open(self.meta.filemap_file)
         ver = int(f.readline())
         if ver != self.VERSION:
