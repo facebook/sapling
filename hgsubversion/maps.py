@@ -26,7 +26,8 @@ class BaseMap(dict):
         # 'authormap' for the config option
         self.mapname = self.__class__.__name__.lower()
         self.mapfilename = self.mapname + '_file'
-        self.load(self.meta.__getattribute__(self.mapfilename))
+        self._filepath = self.meta.__getattribute__(self.mapfilename)
+        self.load(self._filepath)
 
         # append mappings specified from the commandline
         clmap = util.configpath(self._ui, self.mapname)
@@ -107,7 +108,7 @@ class BaseMap(dict):
             return
 
         writing = False
-        mapfile = self.meta.__getattribute__(self.mapfilename)
+        mapfile = self._filepath
         if path != mapfile:
             writing = open(mapfile, 'a')
 
