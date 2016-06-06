@@ -349,10 +349,10 @@ class RevMap(dict):
 
     VERSION = 1
 
-    def __init__(self, meta):
+    def __init__(self, revmap_path, lastpulled_path):
         dict.__init__(self)
-        self._filepath = meta.revmap_file
-        self._lastpulled_file = os.path.join(meta.metapath, 'lastpulled')
+        self._filepath = revmap_path
+        self._lastpulled_file = lastpulled_path
         self._hashes = None
 
         self.firstpulled = 0

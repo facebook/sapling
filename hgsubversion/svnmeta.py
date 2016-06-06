@@ -345,7 +345,8 @@ class SVNMeta(object):
     @property
     def revmap(self):
         if self._revmap is None:
-            self._revmap = maps.RevMap(self)
+            self._revmap = maps.RevMap(
+                self.revmap_file, os.path.join(self.metapath, 'lastpulled'))
         return self._revmap
 
     @property
