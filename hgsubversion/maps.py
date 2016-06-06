@@ -496,11 +496,11 @@ class FileMap(object):
         The path argument is the location of the backing store,
         typically .hg/svn/filemap.
         '''
-        self.meta = meta
+        self._filename = meta.filemap_file
         self._ui = meta.ui
         self.include = {}
         self.exclude = {}
-        if os.path.isfile(self.meta.filemap_file):
+        if os.path.isfile(self._filename):
             self._load()
         else:
             self._write()
@@ -554,8 +554,8 @@ class FileMap(object):
         self._ui.debug('%sing %s\n' % bits)
         # respect rule order
         mapping[path] = len(self)
-        if fn != self.meta.filemap_file:
-            with open(self.meta.filemap_file, 'a') as f:
+        if fn != self._filename:
+            with open(self._filename, 'a') as f:
                 f.write(m + ' ' + path + '\n')
 
     def load(self, fn):
@@ -580,15 +580,15 @@ class FileMap(object):
                 self._ui.warn(msg % (fn, line.rstrip()))
 
     def _load(self):
-        self._ui.debug('reading in-repo file map from %s\n' % self.meta.filemap_file)
-        with open(self.meta.filemap_file) as f:
+        self._ui.debug('reading in-repo file map from %s\n' % self._filename)
+        with open(self._filename) as f:
             ver = int(f.readline())
             if ver != self.VERSION:
                 raise hgutil.Abort('filemap too new -- please upgrade')
-            self.load_fd(f, self.meta.filemap_file)
+            self.load_fd(f, self._filename)
 
     def _write(self):
-        with open(self.meta.filemap_file, 'w') as f:
+        with open(self._filename, 'w') as f:
             f.write('%s\n' % self.VERSION)
 
 class BranchMap(BaseMap):
