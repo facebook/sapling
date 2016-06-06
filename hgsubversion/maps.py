@@ -283,20 +283,21 @@ class Tags(dict):
     def __init__(self, meta, endrev=None):
         dict.__init__(self)
         self.meta = meta
+        self._filepath = meta.tagfile
         self._ui = meta.ui
         self.endrev = endrev
-        if os.path.isfile(self.meta.tagfile):
+        if os.path.isfile(self._filepath):
             self._load()
         else:
             self._write()
 
     def _load(self):
-        f = open(self.meta.tagfile)
+        f = open(self._filepath)
         ver = int(f.readline())
         if ver < self.VERSION:
             self._ui.status('tag map outdated, running rebuildmeta...\n')
             f.close()
-            os.unlink(self.meta.tagfile)
+            os.unlink(self._filepath)
             svncommands.rebuildmeta(self._ui, self.meta.repo, ())
             return
         elif ver != self.VERSION:
@@ -314,7 +315,7 @@ class Tags(dict):
 
     def _write(self):
         assert self.endrev is None
-        f = open(self.meta.tagfile, 'w')
+        f = open(self._filepath, 'w')
         f.write('%s\n' % self.VERSION)
         f.close()
 
@@ -335,7 +336,7 @@ class Tags(dict):
         if not tag:
             raise hgutil.Abort('tag cannot be empty')
         ha, revision = info
-        f = open(self.meta.tagfile, 'a')
+        f = open(self._filepath, 'a')
         f.write('%s %s %s\n' % (hex(ha), revision, tag))
         f.close()
         dict.__setitem__(self, tag, ha)
