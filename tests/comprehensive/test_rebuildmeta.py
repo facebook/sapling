@@ -135,7 +135,8 @@ def _run_assertions(self, name, single, src, dest, u):
                 'old %d new %d, case %r %r %r' % (
                     old, new, name, self.stupid, single))
             continue
-        self.assertEqual(old, new, tf + ' differs')
+        self.assertEqual(
+            old, new, '%s differs old: %r new %r'% (tf, old, new))
         try:
           self.assertEqual(src.branchmap(), dest.branchmap())
         except AttributeError:
