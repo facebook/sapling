@@ -418,10 +418,9 @@ class RevMap(dict):
         For performance reason, internal in-memory state is not updated.
         To get an up-to-date RevMap, reconstruct the object.
         '''
-        f = open(self._filepath, 'a')
-        f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
-                        for revnum, br, binhash in items))
-        f.close()
+        with open(self._filepath, 'a') as f:
+            f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
+                            for revnum, br, binhash in items))
         with open(self._lastpulled_file, 'w') as f:
             f.write('%s\n' % lastpulled)
 
@@ -467,17 +466,15 @@ class RevMap(dict):
         self.firstpulled = firstpulled
 
     def _write(self):
-        f = open(self._filepath, 'w')
-        f.write('%s\n' % self.VERSION)
-        f.close()
+        with open(self._filepath, 'w') as f:
+            f.write('%s\n' % self.VERSION)
         self._writelastpulled()
 
     def __setitem__(self, key, ha):
         revnum, branch = key
-        f = open(self._filepath, 'a')
         b = branch or ''
-        f.write(str(revnum) + ' ' + hex(ha) + ' ' + b + '\n')
-        f.close()
+        with open(self._filepath, 'a') as f:
+            f.write(str(revnum) + ' ' + hex(ha) + ' ' + b + '\n')
         if revnum > self.lastpulled or not self.lastpulled:
             self.lastpulled = revnum
         if revnum < self.firstpulled or not self.firstpulled:
@@ -558,15 +555,13 @@ class FileMap(object):
         # respect rule order
         mapping[path] = len(self)
         if fn != self.meta.filemap_file:
-            f = open(self.meta.filemap_file, 'a')
-            f.write(m + ' ' + path + '\n')
-            f.close()
+            with open(self.meta.filemap_file, 'a') as f:
+                f.write(m + ' ' + path + '\n')
 
     def load(self, fn):
         self._ui.debug('reading file map from %s\n' % fn)
-        f = open(fn, 'r')
-        self.load_fd(f, fn)
-        f.close()
+        with open(fn, 'r') as f:
+            self.load_fd(f, fn)
 
     def load_fd(self, f, fn):
         for line in f:
@@ -586,17 +581,15 @@ class FileMap(object):
 
     def _load(self):
         self._ui.debug('reading in-repo file map from %s\n' % self.meta.filemap_file)
-        f = open(self.meta.filemap_file)
-        ver = int(f.readline())
-        if ver != self.VERSION:
-            raise hgutil.Abort('filemap too new -- please upgrade')
-        self.load_fd(f, self.meta.filemap_file)
-        f.close()
+        with open(self.meta.filemap_file) as f:
+            ver = int(f.readline())
+            if ver != self.VERSION:
+                raise hgutil.Abort('filemap too new -- please upgrade')
+            self.load_fd(f, self.meta.filemap_file)
 
     def _write(self):
-        f = open(self.meta.filemap_file, 'w')
-        f.write('%s\n' % self.VERSION)
-        f.close()
+        with open(self.meta.filemap_file, 'w') as f:
+            f.write('%s\n' % self.VERSION)
 
 class BranchMap(BaseMap):
     '''Facility for controlled renaming of branch names. Example:
