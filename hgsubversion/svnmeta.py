@@ -303,7 +303,7 @@ class SVNMeta(object):
     @property
     def filemap(self):
         if self._filemap is None:
-            self._filemap = maps.FileMap(self)
+            self._filemap = maps.FileMap(self.ui, self.filemap_file)
         return self._filemap
 
     @property

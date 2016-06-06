@@ -491,7 +491,7 @@ class FileMap(object):
 
     VERSION = 1
 
-    def __init__(self, meta):
+    def __init__(self, ui, filepath):
         '''Initialise a new FileMap.
 
         The ui argument is used to print diagnostic messages.
@@ -499,8 +499,8 @@ class FileMap(object):
         The path argument is the location of the backing store,
         typically .hg/svn/filemap.
         '''
-        self._filename = meta.filemap_file
-        self._ui = meta.ui
+        self._filename = filepath
+        self._ui = ui
         self.include = {}
         self.exclude = {}
         if os.path.isfile(self._filename):
