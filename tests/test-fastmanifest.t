@@ -165,17 +165,6 @@ Test the --pruneall command to prune all the cached manifests
   4
   5
 
-Make the entries of the cache be in a deterministic order accross platforms
-to make the test deterministic:
-
-  >>> import os
-  >>> files = sorted(os.listdir(".hg/store/manifestcache/"))
-  >>> basetime = 1464039920
-  >>> for fi in files:
-  ...   f = os.path.join(".hg/store/manifestcache", fi)
-  ...   os.utime(f, (basetime, basetime))
-  ...   assert os.path.getmtime(f) == basetime
-  ...   basetime+=10
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
@@ -195,42 +184,38 @@ Check that trimming to a limit higher than what is cached does nothing
 Trim the cache to at most 1kb
   $ hg debugcachemanifest --debug --limit=1024
   [FM] caching revset: [], background(False), pruneall(False), list(False)
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
-  $ hg debugcachemanifest --debug --list
-  [FM] caching revset: [], background(False), pruneall(False), list(True)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
-  fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
-  cache size is: 832 bytes
-  number of entries is: 4
-  $ hg log -r "fastmanifestcached()" -T '{rev}\n'
-  0
-  1
-  2
-  3
-
-Trim the cache to at most 512 bytes
-  $ hg debugcachemanifest --debug --limit=512
-  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
+  fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
-  cache size is: 512 bytes
-  number of entries is: 2
+  cache size is: 984 bytes
+  number of entries is: 3
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
-  2
   3
+  4
+  5
+
+Trim the cache to at most 512 bytes
+  $ hg debugcachemanifest --debug --limit=512
+  [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  $ hg debugcachemanifest --debug --list
+  [FM] caching revset: [], background(False), pruneall(False), list(True)
+  fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
+  cache size is: 376 bytes
+  number of entries is: 1
+  $ hg log -r "fastmanifestcached()" -T '{rev}\n'
+  5
 
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
   [FM] caching revset: [], background(False), pruneall(False), list(False)
-  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
@@ -238,15 +223,6 @@ Trim the cache to at most 100 bytes
 
 Check that trimming the cache to 0 byte works
   $ hg debugcachemanifest -a
-Make the results deterministic
-  >>> import os
-  >>> files = sorted(os.listdir(".hg/store/manifestcache/"))
-  >>> basetime = 1464039920
-  >>> for fi in files:
-  ...   f = os.path.join(".hg/store/manifestcache", fi)
-  ...   os.utime(f, (basetime, basetime))
-  ...   assert os.path.getmtime(f) == basetime
-  ...   basetime+=10
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
@@ -259,12 +235,12 @@ Make the results deterministic
   number of entries is: 6
   $ hg debugcachemanifest --debug --limit=0
   [FM] caching revset: [], background(False), pruneall(False), list(False)
+  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   cache size is: 0 bytes
