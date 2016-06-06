@@ -129,8 +129,11 @@ def _run_assertions(self, name, single, src, dest, u):
             old, new = util.load(stf, resave=False), util.load(dtf, resave=False)
         if tf == 'lastpulled' and (name,
                                    self.stupid, single) in expect_youngest_skew:
-            self.assertNotEqual(old, new,
-                                'rebuildmeta unexpected match on youngest rev!')
+            self.assertNotEqual(
+                old, new,
+                'rebuildmeta unexpected match on lastpulled: '
+                'old %d new %d, case %r %r %r' % (
+                    old, new, name, self.stupid, single))
             continue
         self.assertEqual(old, new, tf + ' differs')
         try:
