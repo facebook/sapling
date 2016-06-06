@@ -603,9 +603,6 @@ class BranchMap(BaseMap):
     All changes on the oldname branch will now be on the newname branch; all
     changes on other will now be on default (have no branch name set).
     '''
-    def __init__(self, meta):
-        super(BranchMap, self).__init__(
-            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
 
 class TagMap(BaseMap):
     '''Facility for controlled renaming of tags. Example:
