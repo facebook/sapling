@@ -613,6 +613,3 @@ class TagMap(BaseMap):
         The oldname tag from SVN will be represented as newname in the hg tags;
         the other tag will not be reflected in the hg repository.
     '''
-    def __init__(self, meta):
-        super(TagMap, self).__init__(
-            meta.ui, meta.__getattribute__(self.defaultfilenameattr))
