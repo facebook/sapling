@@ -59,7 +59,7 @@ class hgimporter(object):
                 return zl
 
             try:
-                if modulepolicy == 'py':
+                if modulepolicy in policy.policynoc:
                     raise ImportError()
 
                 zl = ziploader('mercurial')
@@ -86,7 +86,7 @@ class hgimporter(object):
         stem = name.split('.')[-1]
 
         try:
-            if modulepolicy == 'py':
+            if modulepolicy in policy.policynoc:
                 raise ImportError()
 
             modinfo = imp.find_module(stem, mercurial.__path__)
