@@ -26,6 +26,7 @@ DEFAULT_CONFIG_DIR = 'local/.eden'
 # Environment variable that can be used instead of specifying --config-dir.
 CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
 
+
 def infer_client_from_cwd(config, clientname):
     if clientname:
         return clientname
@@ -175,6 +176,7 @@ def do_unmount(args):
     except Exception as ex:
         print_stderr('error: {}', ex)
         return 1
+
 
 def do_checkout(args):
     config = create_config(args)

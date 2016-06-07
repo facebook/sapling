@@ -135,9 +135,8 @@ class Config:
         mount_point = info['mount']
         _verify_mount_point(mount_point)
         self._get_or_create_write_dir(name)
-        mount_info = eden_ttypes.MountInfo(
-                mountPoint=mount_point,
-                edenClientPath=info['client-dir'])
+        mount_info = eden_ttypes.MountInfo(mountPoint=mount_point,
+                                           edenClientPath=info['client-dir'])
         client = self.get_thrift_client()
         try:
             client.mount(mount_info)
@@ -256,8 +255,8 @@ def _verify_mount_point(mount_point):
     else:
         raise Exception(
             ('%s must be a directory in order to mount a client at %s. ' +
-            'If this is the correct location, run `mkdir -p %s` to create ' +
-            'the directory.') % (parent_dir, mount_point, parent_dir))
+             'If this is the correct location, run `mkdir -p %s` to create ' +
+             'the directory.') % (parent_dir, mount_point, parent_dir))
 
 
 def _get_path_to_eden_server():
