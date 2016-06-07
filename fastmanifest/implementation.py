@@ -6,7 +6,6 @@
 # GNU General Public License version 2 or any later version.
 
 import array
-import heapq
 import os
 import time
 
@@ -245,6 +244,8 @@ class fastmanifestdict(object):
         return self._fm.iterentries()
 
     def iteritems(self):
+        # TODO: we can improve the speed of this by making it return the
+        # right thing from the native code
         return (x[:2] for x in self._fm.iterentries())
 
     def keys(self):
@@ -608,16 +609,14 @@ class manifestfactory(object):
         self.ui = ui
 
     def newmanifest(self, orig, *args, **kwargs):
-        loadfn = lambda: orig(*args, **kwargs)
         return hybridmanifest(self.ui,
                               args[0].opener,
-                              loadflat=loadfn)
+                              loadflat=lambda: orig(*args, **kwargs))
 
     def read(self, orig, *args, **kwargs):
-        loadfn = lambda: orig(*args, **kwargs)
         return hybridmanifest(self.ui,
                               args[0].opener,
-                              loadflat=loadfn,
+                              loadflat=lambda: orig(*args, **kwargs),
                               node=args[1])
 
 def _silent_debug(*args, **kwargs):

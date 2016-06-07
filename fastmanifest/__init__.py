@@ -89,12 +89,10 @@ and flat manifest, asynchronously and synchronously.
 """
 
 from mercurial import bookmarks, cmdutil, dispatch, error, extensions
-from mercurial import localrepo, manifest, revset
-
-from extutil import wrapfilecache
+from mercurial import localrepo, manifest
+from mercurial import revset as revsetmod
 
 import cachemanager
-import concurrency
 import debug
 from implementation import manifestfactory
 
@@ -183,10 +181,10 @@ def extsetup(ui):
         # The function didn't use to be defined in previous versions of hg
         pass
 
-    revset.symbols['fastmanifesttocache'] = cachemanager.fastmanifesttocache
-    revset.safesymbols.add('fastmanifesttocache')
-    revset.symbols['fastmanifestcached'] = cachemanager.fastmanifestcached
-    revset.safesymbols.add('fastmanifestcached')
+    revsetmod.symbols['fastmanifesttocache'] = cachemanager.fastmanifesttocache
+    revsetmod.safesymbols.add('fastmanifesttocache')
+    revsetmod.symbols['fastmanifestcached'] = cachemanager.fastmanifestcached
+    revsetmod.safesymbols.add('fastmanifestcached')
 
     if ui.configbool("fastmanifest", "cacheonchange", False):
         # Trigger to enable caching of relevant manifests

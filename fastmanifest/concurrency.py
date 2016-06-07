@@ -13,7 +13,7 @@ import stat
 import sys
 import time
 
-from mercurial import error, lock
+from mercurial import error
 
 # Returns true if we're the original process, returns false if we're the child
 # process.
