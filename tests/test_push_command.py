@@ -138,7 +138,7 @@ class PushTests(test_util.TestBase):
         open(os.path.join(repo_path, 'conf', 'svnserve.conf'),
              'w').write('[general]\nanon-access=write\n[sasl]\n')
         self.port = random.randint(socket.IPPORT_USERRESERVED, 65535)
-        self.host = 'localhost'
+        self.host = socket.gethostname()
         args = ['svnserve', '--daemon', '--foreground',
                 '--listen-port=%d' % self.port,
                 '--listen-host=%s' % self.host,
