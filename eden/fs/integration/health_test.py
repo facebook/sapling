@@ -14,7 +14,8 @@ from eden.fs.integration import edenclient, testcase
 
 class HealthTest(testcase.EdenTestCase):
     def test_connected_client_is_healthy(self):
-        client = self.init_git_eden()
+        client = edenclient.EdenClient()
+        client.daemon_cmd()
         self.assertTrue(client.is_healthy())
 
     # TODO(mbolin): Once we have `eden shutdown`, we should also assert that

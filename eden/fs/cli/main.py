@@ -141,7 +141,7 @@ def do_init(args):
     args.repo = normalize_path_arg(args.repo)
 
     config = create_config(args)
-    db = config.get_or_create_path_to_rocks_db()
+    db = _ensure_dot_eden_folder_exists(config)
 
     # Check to see if we can figure out the repository type
     snapshot_id = None
@@ -210,7 +210,20 @@ def do_checkout(args):
 
 def do_daemon(args):
     config = create_config(args)
+    # If this is the first time running the daemon, the ~/.eden directory
+    # structure needs to be set up.
+    _ensure_dot_eden_folder_exists(config)
     return config.spawn(debug=args.debug, gdb=args.gdb)
+
+
+def _ensure_dot_eden_folder_exists(config):
+    '''Creates the ~/.eden folder as specified by --config-dir/$EDEN_CONFIG_DIR.
+    If the ~/.eden folder already exists, it will be left alone.
+
+    Returns the path to the RocksDB.
+    '''
+    db = config.get_or_create_path_to_rocks_db()
+    return db
 
 
 def create_parser():

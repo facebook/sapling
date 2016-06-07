@@ -29,6 +29,8 @@ class EdenClient(object):
     def __init__(self):
         self._proc = None
         self._paths_to_clean = []
+        self._config_dir = None
+        self._mount_path = None
 
     def __enter__(self):
         return self
@@ -72,12 +74,14 @@ class EdenClient(object):
         rc = self._proc.returncode
         self._proc = None
         return rc
+
     def _create_dirs(self):
-        if not self._config_dir:
+        '''Creates and sets _config_dir and _mount_path if not already set.'''
+        if self._config_dir is None:
             self._config_dir = tempfile.mkdtemp(prefix='eden_test.config.')
             self._paths_to_clean.append(self._config_dir)
 
-        if not self._mount_path:
+        if self._mount_path is None:
             self._mount_path = tempfile.mkdtemp(prefix='eden_test.mount.')
             self._paths_to_clean.append(self._mount_path)
 
@@ -143,6 +147,15 @@ class EdenClient(object):
             ]
         )
 
+        self.daemon_cmd(self._config_dir, timeout)
+        self.mount_cmd()
+
+    def daemon_cmd(self, config_dir=None, timeout=10):
+        if config_dir and self._config_dir is None:
+            self._config_dir = config_dir
+        else:
+            self._create_dirs()
+
         self._proc = subprocess.Popen(
             [
                 EDEN_CLI,
@@ -151,8 +164,6 @@ class EdenClient(object):
             ]
         )
         self._wait_for_thrift(timeout)
-
-        self.mount_cmd()
 
     def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
         '''Runs eden mount and passes the specified parameters.
@@ -218,7 +229,7 @@ class EdenClient(object):
 
     def is_healthy(self):
         '''Executes `eden health` and returns True if it exited with code 0.'''
-        if hasattr(self, '_config_dir'):
+        if self._config_dir is not None:
             try:
                 subprocess.check_call(
                     [
