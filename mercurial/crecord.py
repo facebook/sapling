@@ -440,11 +440,8 @@ class uihunk(patchnode):
     def __repr__(self):
         return '<hunk %r@%d>' % (self.filename(), self.fromline)
 
-def filterpatch(ui, chunks, chunkselector, operation=None):
+def filterpatch(ui, chunks, chunkselector):
     """interactively filter patch chunks into applied-only chunks"""
-
-    if operation is None:
-        operation = _('confirm')
     chunks = list(chunks)
     # convert chunks list into structure suitable for displaying/modifying
     # with curses.  create a list of headers only.

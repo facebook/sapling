@@ -83,7 +83,7 @@ def filterchunks(ui, originalhunks, usecurses, testfile, operation=None):
         else:
             recordfn = crecordmod.chunkselector
 
-        return crecordmod.filterpatch(ui, originalhunks, recordfn, operation)
+        return crecordmod.filterpatch(ui, originalhunks, recordfn)
 
     else:
         return patch.filterpatch(ui, originalhunks, operation)
