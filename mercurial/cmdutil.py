@@ -91,9 +91,9 @@ def filterchunks(ui, originalhunks, usecurses, testfile, operation=None):
 def recordfilter(ui, originalhunks, operation=None):
     """ Prompts the user to filter the originalhunks and return a list of
     selected hunks.
-    *operation* is used for ui purposes to indicate the user
-    what kind of filtering they are doing: reverting, committing, shelving, etc.
-    *operation* has to be a translated string.
+    *operation* is used for to build ui messages to indicate the user what
+    kind of filtering they are doing: reverting, committing, shelving, etc.
+    (see patch.filterpatch).
     """
     usecurses = crecordmod.checkcurses(ui)
     testfile = ui.config('experimental', 'crecordtest', None)
@@ -3301,7 +3301,7 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
         else:
             diff = patch.diff(repo, None, ctx.node(), m, opts=diffopts)
         originalchunks = patch.parsepatch(diff)
-        operation = _('discard') if node == parent else _('revert')
+        operation = 'discard' if node == parent else 'revert'
 
         try:
 
