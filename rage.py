@@ -192,6 +192,14 @@ def rage(ui, repo, *pats, **opts):
         ('hg config (all)', _failsafe(lambda: hgcmd(commands.config))),
     ]
 
+    # This is quite slow, so we don't want to do it by default
+    if ui.configbool("rage", "fastmanifestcached", False):
+        detailed.append(
+            ('hg sl -r "fastmanifestcached()"',
+                _failsafe(lambda: hgcmd(smartlog.smartlog,
+                          rev=["fastmanifestcached()"]))),
+        )
+
     msg = '\n'.join(map(format, basic)) + '\n' +\
           '\n'.join(map(lambda x: format(x, False), detailed))
     if _failsafeerrors:
