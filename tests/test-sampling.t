@@ -22,7 +22,8 @@ Create an extension that logs the call to commit
   > def cb(sample):
   >   return len(sample)
   > def _commit(orig, repo, *args, **kwargs):
-  >     repo.ui.log("commit", "new commit", k=1, a={"hi":"ho"})
+  >     repo.ui.log("commit", "match filter", k=1, a={"hi":"ho"})
+  >     repo.ui.log("foo", "does not match filter", k=1, a={"hi":"ho"})
   >     return orig(repo, *args, **kwargs)
   > def extsetup(ui):
   >     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
@@ -30,7 +31,11 @@ Create an extension that logs the call to commit
 
 
 Set up the extension and set a log file
+We whitelist only the 'commit' key, only the events with that key will be
+logged
   $ cat >> $HGRCPATH << EOF
+  > [sampling]
+  > key.commit=commit_table
   > [extensions]
   > sampling=
   > EOF
@@ -49,8 +54,7 @@ Do a couple of commits we expect to log two call to repo.revs for each commit
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     if parsedrecord["event"] == "commit":
-  ...         print parsedrecord["msg"]
-  ...         assert len(parsedrecord["opts"]) == 2
-  [u'new commit']
-  [u'new commit']
+  ...     print parsedrecord["data"]["msg"], parsedrecord["category"]
+  ...     assert len(parsedrecord["data"]) == 3
+  [u'match filter'] commit_table
+  [u'match filter'] commit_table
