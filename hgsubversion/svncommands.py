@@ -65,6 +65,10 @@ def _buildmeta(ui, repo, args, partial=False, skipuuid=False):
     youngest = 0
     startrev = 0
     branchinfo = {}
+
+    if not partial:
+        hgutil.unlinkpath(meta.revmap_file, ignoremissing=True)
+
     revmap = meta.revmap
     if partial:
         try:
