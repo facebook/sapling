@@ -41,6 +41,46 @@ namespace facebook {
 namespace eden {
 namespace fusell {
 
+namespace {
+
+template <typename Func>
+void serializeMessage(
+    PrivHelperConn::Message* msg,
+    PrivHelperConn::MsgType type,
+    const Func& serializeBody) {
+  msg->msgType = type;
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
+  buf.clear();
+  Appender a{&buf, 0};
+
+  serializeBody(a);
+
+  msg->dataSize = buf.length();
+}
+
+template <typename Func>
+void deserializeMessage(
+    PrivHelperConn::Message* msg,
+    const Func& deserializeBody) {
+  CHECK_LE(msg->dataSize, sizeof(msg->data));
+  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
+  Cursor cursor{&buf};
+
+  deserializeBody(cursor);
+}
+
+void serializeString(Appender& a, StringPiece str) {
+  a.writeBE<uint32_t>(str.size());
+  a.push(ByteRange(str));
+}
+
+std::string deserializeString(Cursor& cursor) {
+  auto length = cursor.readBE<uint32_t>();
+  return cursor.readFixedString(length);
+}
+
+} // unnamed namespace
+
 PrivHelperConn::PrivHelperConn() {}
 
 PrivHelperConn::PrivHelperConn(int sock) : socket_(sock) {}
@@ -264,51 +304,31 @@ void PrivHelperConn::recvMsg(Message* msg, folly::File* f) {
 void PrivHelperConn::serializeMountRequest(
     Message* msg,
     StringPiece mountPoint) {
-  msg->msgType = REQ_MOUNT_FUSE;
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
-  buf.clear(); // Mark all the buffer space as unused
-  Appender a{&buf, 0};
-
-  a.writeBE<uint32_t>(mountPoint.size());
-  a.push(ByteRange(mountPoint));
-
-  msg->dataSize = buf.length();
+  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  serializeMessage(msg, REQ_MOUNT_FUSE, serializeBody);
 }
 
 void PrivHelperConn::parseMountRequest(Message* msg, string& mountPoint) {
   CHECK_EQ(msg->msgType, REQ_MOUNT_FUSE);
-  CHECK_LE(msg->dataSize, sizeof(msg->data));
-
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
-  Cursor c{&buf};
-
-  auto size = c.readBE<uint32_t>();
-  mountPoint = c.readFixedString(size);
+  auto parseBody = [&](Cursor& cursor) {
+    mountPoint = deserializeString(cursor);
+  };
+  deserializeMessage(msg, parseBody);
 }
 
 void PrivHelperConn::serializeUnmountRequest(
     Message* msg,
     StringPiece mountPoint) {
-  msg->msgType = REQ_UNMOUNT_FUSE;
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
-  buf.clear();
-  Appender a{&buf, 0};
-
-  a.writeBE<uint32_t>(mountPoint.size());
-  a.push(ByteRange(mountPoint));
-
-  msg->dataSize = buf.length();
+  auto serializeBody = [&](Appender& a) { serializeString(a, mountPoint); };
+  serializeMessage(msg, REQ_UNMOUNT_FUSE, serializeBody);
 }
 
 void PrivHelperConn::parseUnmountRequest(Message* msg, string& mountPoint) {
   CHECK_EQ(msg->msgType, REQ_UNMOUNT_FUSE);
-  CHECK_LE(msg->dataSize, sizeof(msg->data));
-
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
-  Cursor c{&buf};
-
-  auto size = c.readBE<uint32_t>();
-  mountPoint = c.readFixedString(size);
+  auto parseBody = [&](Cursor& cursor) {
+    mountPoint = deserializeString(cursor);
+  };
+  deserializeMessage(msg, parseBody);
 }
 
 void PrivHelperConn::serializeEmptyResponse(Message* msg) {
@@ -329,18 +349,11 @@ void PrivHelperConn::serializeBindMountRequest(
     Message* msg,
     folly::StringPiece clientPath,
     folly::StringPiece mountPath) {
-  msg->msgType = REQ_MOUNT_BIND;
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, sizeof(msg->data)};
-  buf.clear(); // Mark all the buffer space as unused
-  Appender a{&buf, 0};
-
-  a.writeBE<uint32_t>(clientPath.size());
-  a.push(ByteRange(clientPath));
-
-  a.writeBE<uint32_t>(mountPath.size());
-  a.push(ByteRange(mountPath));
-
-  msg->dataSize = buf.length();
+  auto serializeBody = [&](Appender& a) {
+    serializeString(a, mountPath);
+    serializeString(a, clientPath);
+  };
+  serializeMessage(msg, REQ_MOUNT_BIND, serializeBody);
 }
 
 void PrivHelperConn::parseBindMountRequest(
@@ -348,15 +361,11 @@ void PrivHelperConn::parseBindMountRequest(
     std::string& clientPath,
     std::string& mountPath) {
   CHECK_EQ(msg->msgType, REQ_MOUNT_BIND);
-  CHECK_LE(msg->dataSize, sizeof(msg->data));
-
-  IOBuf buf{IOBuf::WRAP_BUFFER, msg->data, msg->dataSize};
-  Cursor c{&buf};
-
-  auto clientPathSize = c.readBE<uint32_t>();
-  clientPath = c.readFixedString(clientPathSize);
-  auto mountPathSize = c.readBE<uint32_t>();
-  mountPath = c.readFixedString(mountPathSize);
+  auto parseBody = [&](Cursor& cursor) {
+    mountPath = deserializeString(cursor);
+    clientPath = deserializeString(cursor);
+  };
+  deserializeMessage(msg, parseBody);
 }
 
 void PrivHelperConn::serializeErrorResponse(
