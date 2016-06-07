@@ -216,6 +216,23 @@ class EdenClient(object):
                       if line.split(' ')[0] == 'edenfs']
         return self._mount_path in mounts
 
+    def is_healthy(self):
+        '''Executes `eden health` and returns True if it exited with code 0.'''
+        if hasattr(self, '_config_dir'):
+            try:
+                subprocess.check_call(
+                    [
+                        EDEN_CLI,
+                        '--config-dir', self._config_dir,
+                        'health',
+                    ]
+                )
+                return True
+            except subprocess.CalledProcessError:
+                return False
+        else:
+            return False
+
     @property
     def repo_path(self):
         return self._repo_path

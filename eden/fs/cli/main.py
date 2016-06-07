@@ -26,6 +26,9 @@ DEFAULT_CONFIG_DIR = 'local/.eden'
 # Environment variable that can be used instead of specifying --config-dir.
 CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
 
+THRIFT_STATUS_STARTING = 1
+THRIFT_STATUS_ALIVE = 2
+
 
 def infer_client_from_cwd(config, clientname):
     if clientname:
@@ -117,6 +120,20 @@ def _get_hg_commit(repo):
     cmd = ['hg', '--cwd', repo, 'log', '-T{node}\\n', '-r.']
     out = subprocess.check_output(cmd, env=env)
     return out.strip()
+
+
+def do_health(args):
+    config = create_config(args)
+    is_healthy = False
+    try:
+        client = config.get_thrift_client()
+        status = client.getStatus()
+        is_healthy = (status == THRIFT_STATUS_STARTING or
+                      status == THRIFT_STATUS_ALIVE)
+    except EdenNotRunningError:
+        pass
+    exit_code = 0 if is_healthy else 1
+    return exit_code
 
 
 def do_init(args):
@@ -214,6 +231,10 @@ def create_parser():
                                  help='Name of the mounted client')
     checkout_parser.add_argument('snapshot', help='Snapshot hash to check out')
     checkout_parser.set_defaults(func=do_checkout)
+
+    health_parser = subparsers.add_parser(
+        'health', help='Check the health of the Eden service')
+    health_parser.set_defaults(func=do_health)
 
     help_parser = subparsers.add_parser(
         'help', help='Display help information about Eden.')
