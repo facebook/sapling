@@ -22,6 +22,7 @@ try:
     from subvertpy import delta
     from subvertpy import properties
     from subvertpy import ra
+    from subvertpy import repos
     import subvertpy
 except ImportError:
     raise ImportError('Subvertpy %d.%d.%d or later required, but not found'
@@ -50,6 +51,18 @@ def version():
     if subversion_version[3]:
         svnvers += '-' + subversion_version[3]
     return (svnvers, 'Subvertpy ' + _versionstr(subvertpy.__version__))
+
+def create_and_load(repopath, dumpfd):
+    ''' create a new repository at repopath and load the given dump into it '''
+    repo = repos.create(repopath)
+
+    nullfd = open(os.devnull, 'w')
+
+    try:
+        repo.load_fs(dumpfd, nullfd, repos.LOAD_UUID_FORCE)
+    finally:
+        dumpfd.close()
+        nullfd.close()
 
 # exported values
 ERR_FS_ALREADY_EXISTS = subvertpy.ERR_FS_ALREADY_EXISTS

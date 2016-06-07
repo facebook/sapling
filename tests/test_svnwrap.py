@@ -11,15 +11,11 @@ class TestBasicRepoLayout(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp('svnwrap_test')
         self.repo_path = '%s/testrepo' % self.tmpdir
-        subprocess.call(['svnadmin', 'create', self.repo_path, ])
-        inp = open(os.path.join(os.path.dirname(__file__), 'fixtures',
-                                'project_root_at_repo_root.svndump'))
-        proc = subprocess.call(['svnadmin', 'load', self.repo_path, ],
-                                stdin=inp,
-                                close_fds=test_util.canCloseFds,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        assert proc == 0
+
+        with open(os.path.join(test_util.FIXTURES,
+                               'project_root_at_repo_root.svndump')) as fp:
+            svnwrap.create_and_load(self.repo_path, fp)
+
         self.repo = svnwrap.SubversionRepo(test_util.fileurl(self.repo_path))
 
     def tearDown(self):

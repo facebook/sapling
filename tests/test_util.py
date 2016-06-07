@@ -47,6 +47,7 @@ except AttributeError:
         except ImportError:
             SkipTest = None
 
+from hgsubversion import svnwrap
 from hgsubversion import util
 from hgsubversion import svnwrap
 
@@ -534,12 +535,8 @@ class TestBase(unittest.TestCase):
         '''
         path = self._makerepopath()
         assert not os.path.exists(path)
-        subprocess.call(['svnadmin', 'create', path,],
-                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        inp = open(os.path.join(FIXTURES, fixture_name))
-        proc = subprocess.Popen(['svnadmin', 'load', path,], stdin=inp,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        proc.communicate()
+        with open(os.path.join(FIXTURES, fixture_name)) as inp:
+            svnwrap.create_and_load(path, inp)
         return path
 
     def load_repo_tarball(self, fixture_name):
@@ -596,7 +593,7 @@ class TestBase(unittest.TestCase):
 
         return hg.repository(testui(), self.wc_path)
 
-    def load_and_fetch(self, fixture_name, *args, **opts):
+    def load(self, fixture_name):
         if fixture_name.endswith('.svndump'):
             repo_path = self.load_svndump(fixture_name)
         elif fixture_name.endswith('tar.gz'):
@@ -604,6 +601,10 @@ class TestBase(unittest.TestCase):
         else:
             assert False, 'Unknown fixture type'
 
+        return repo_path
+
+    def load_and_fetch(self, fixture_name, *args, **opts):
+        repo_path = self.load(fixture_name)
         return self.fetch(repo_path, *args, **opts), repo_path
 
     def _load_fixture_and_fetch(self, *args, **kwargs):

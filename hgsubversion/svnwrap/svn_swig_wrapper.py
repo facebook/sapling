@@ -21,6 +21,7 @@ try:
     from svn import core
     from svn import delta
     from svn import ra
+    from svn import repos
 
     subversion_version = (core.SVN_VER_MAJOR, core.SVN_VER_MINOR,
                           core.SVN_VER_MICRO)
@@ -35,6 +36,21 @@ if subversion_version < required_bindings: # pragma: no cover
 
 def version():
     return '%d.%d.%d' % subversion_version, 'SWIG'
+
+def create_and_load(repopath, dumpfd):
+    ''' create a new repository at repopath and load the given dump into it '''
+    pool = core.Pool()
+    r = repos.svn_repos_create(repopath, '', '', None, None, pool)
+
+    try:
+        repos.svn_repos_load_fs2(r, dumpfd, None,
+                                 repos.svn_repos_load_uuid_force,
+                                 '', False, False, None, pool)
+    finally:
+        dumpfd.close()
+
+        pool.destroy()
+
 
 # exported values
 ERR_FS_ALREADY_EXISTS = core.SVN_ERR_FS_ALREADY_EXISTS
