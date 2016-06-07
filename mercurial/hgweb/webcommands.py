@@ -872,14 +872,19 @@ def annotate(web, req, tmpl):
         else:
             lines = enumerate(fctx.annotate(follow=True, linenumber=True,
                                             diffopts=diffopts))
+        previousrev = None
         for lineno, ((f, targetline), l) in lines:
+            rev = f.rev()
+            blockhead = rev != previousrev or None
+            previousrev = rev
             yield {"parity": next(parity),
                    "node": f.hex(),
-                   "rev": f.rev(),
+                   "rev": rev,
                    "author": f.user(),
                    "desc": f.description(),
                    "extra": f.extra(),
                    "file": f.path(),
+                   "blockhead": blockhead,
                    "targetline": targetline,
                    "line": l,
                    "lineno": lineno + 1,

@@ -93,8 +93,10 @@ fileline = '
 annotateline = '
   <tr id="{lineid}" class="parity{parity}{ifeq(node, originalnode, ' thisrev')}">
     <td class="linenr">
-      <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
-         title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>
+      {if(blockhead,
+          '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
+              title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>',
+          '')}
     </td>
     <td class="lineno">
       <a href="#{lineid}">{linenumber}</a>
