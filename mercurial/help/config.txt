@@ -1024,11 +1024,39 @@ The following per-host settings can be defined.
     This can provide stronger security than traditional CA-based validation
     at the expense of convenience.
 
+    This option takes precedence over ``verifycertsfile``.
+
+``verifycertsfile``
+    Path to file a containing a list of PEM encoded certificates used to
+    verify the server certificate. Environment variables and ``~user``
+    constructs are expanded in the filename.
+
+    The server certificate or the certificate's certificate authority (CA)
+    must match a certificate from this file or certificate verification
+    will fail and connections to the server will be refused.
+
+    If defined, only certificates provided by this file will be used:
+    ``web.cacerts`` and any system/default certificates will not be
+    used.
+
+    This option has no effect if the per-host ``fingerprints`` option
+    is set.
+
+    The format of the file is as follows:
+
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
+        -----BEGIN CERTIFICATE-----
+        ... (certificate in base64 PEM encoding) ...
+        -----END CERTIFICATE-----
+
 For example::
 
     [hostsecurity]
     hg.example.com:fingerprints = sha256:c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2
     hg2.example.com:fingerprints = sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:fc:e2:8d:d9:51:cd:cb:c1:4d:18:6b:b7:44:8d:49:72:57:e6:cd:33
+    foo.example.com:verifycertsfile = /etc/ssl/trusted-ca-certs.pem
 
 ``http_proxy``
 --------------

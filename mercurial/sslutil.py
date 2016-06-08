@@ -162,23 +162,42 @@ def _hostsettings(ui, hostname):
     if ui.configbool('devel', 'disableloaddefaultcerts'):
         s['allowloaddefaultcerts'] = False
 
+    # If both fingerprints and a per-host ca file are specified, issue a warning
+    # because users should not be surprised about what security is or isn't
+    # being performed.
+    cafile = ui.config('hostsecurity', '%s:verifycertsfile' % hostname)
+    if s['certfingerprints'] and cafile:
+        ui.warn(_('(hostsecurity.%s:verifycertsfile ignored when host '
+                  'fingerprints defined; using host fingerprints for '
+                  'verification)\n') % hostname)
+
     # Try to hook up CA certificate validation unless something above
     # makes it not necessary.
     if s['verifymode'] is None:
-        # Find global certificates file in config.
-        cafile = ui.config('web', 'cacerts')
-
+        # Look at per-host ca file first.
         if cafile:
             cafile = util.expandpath(cafile)
             if not os.path.exists(cafile):
-                raise error.Abort(_('could not find web.cacerts: %s') % cafile)
+                raise error.Abort(_('path specified by %s does not exist: %s') %
+                                  ('hostsecurity.%s:verifycertsfile' % hostname,
+                                   cafile))
+            s['cafile'] = cafile
         else:
-            # No global CA certs. See if we can load defaults.
-            cafile = _defaultcacerts()
-            if cafile:
-                ui.debug('using %s to enable OS X system CA\n' % cafile)
+            # Find global certificates file in config.
+            cafile = ui.config('web', 'cacerts')
 
-        s['cafile'] = cafile
+            if cafile:
+                cafile = util.expandpath(cafile)
+                if not os.path.exists(cafile):
+                    raise error.Abort(_('could not find web.cacerts: %s') %
+                                      cafile)
+            else:
+                # No global CA certs. See if we can load defaults.
+                cafile = _defaultcacerts()
+                if cafile:
+                    ui.debug('using %s to enable OS X system CA\n' % cafile)
+
+            s['cafile'] = cafile
 
         # Require certificate validation if CA certs are being loaded and
         # verification hasn't been disabled above.

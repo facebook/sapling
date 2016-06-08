@@ -53,6 +53,54 @@ we are able to load CA certs.
   [255]
 #endif
 
+Specifying a per-host certificate file that doesn't exist will abort
+
+  $ hg --config hostsecurity.localhost:verifycertsfile=/does/not/exist clone https://localhost:$HGPORT/
+  abort: path specified by hostsecurity.localhost:verifycertsfile does not exist: /does/not/exist
+  [255]
+
+A malformed per-host certificate file will raise an error
+
+  $ echo baddata > badca.pem
+  $ hg --config hostsecurity.localhost:verifycertsfile=badca.pem clone https://localhost:$HGPORT/
+  abort: error: unknown error* (glob)
+  [255]
+
+A per-host certificate mismatching the server will fail verification
+
+  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/client-cert.pem" clone https://localhost:$HGPORT/
+  abort: error: *certificate verify failed* (glob)
+  [255]
+
+A per-host certificate matching the server's cert will be accepted
+
+  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/pub.pem" clone -U https://localhost:$HGPORT/ perhostgood1
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 4 changes to 4 files
+
+A per-host certificate with multiple certs and one matching will be accepted
+
+  $ cat "$CERTSDIR/client-cert.pem" "$CERTSDIR/pub.pem" > perhost.pem
+  $ hg --config hostsecurity.localhost:verifycertsfile=perhost.pem clone -U https://localhost:$HGPORT/ perhostgood2
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 4 changes to 4 files
+
+Defining both per-host certificate and a fingerprint will print a warning
+
+  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/pub.pem" --config hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca clone -U https://localhost:$HGPORT/ caandfingerwarning
+  (hostsecurity.localhost:verifycertsfile ignored when host fingerprints defined; using host fingerprints for verification)
+  requesting all changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 4 changes to 4 files
+
   $ DISABLECACERTS="--config devel.disableloaddefaultcerts=true"
 
 clone via pull
