@@ -42,60 +42,42 @@ enum GitModeMask {
 
 std::unique_ptr<Tree> deserializeGitTree(
     const Hash& hash,
-    StringPiece gitTreeObject) {
+    const IOBuf* treeData) {
+  folly::io::Cursor cursor(treeData);
+
   // Find the end of the header and extract the size.
-  constexpr StringPiece prefix("tree ");
-  if (!gitTreeObject.startsWith(prefix)) {
+  if (cursor.readFixedString(5) != "tree ") {
     throw invalid_argument("Contents did not start with expected header.");
   }
-  gitTreeObject.advance(prefix.size());
 
-  auto contentSize = folly::to<unsigned int>(&gitTreeObject);
-  if (gitTreeObject.at(0) != '\0') {
-    throw invalid_argument("Header should be followed by NUL.");
-  }
-  gitTreeObject.advance(1);
-  if (contentSize != gitTreeObject.size()) {
+  // 25 characters is long enough to represent any legitimate length
+  size_t maxSizeLength = 25;
+  auto sizeStr = cursor.readTerminatedString('\0', maxSizeLength);
+  auto contentSize = folly::to<unsigned int>(sizeStr);
+  if (contentSize != cursor.length()) {
     throw invalid_argument("Size in header should match contents");
   }
 
-  // Scan the gitTreeObject string and populate entries, as appropriate.
+  // Scan the data and populate entries, as appropriate.
   vector<TreeEntry> entries;
-  while (gitTreeObject.size() > 0) {
+  while (!cursor.isAtEnd()) {
     // Extract the mode.
-    auto modeEnd = gitTreeObject.find_first_of(' ');
-    if (modeEnd == StringPiece::npos) {
-      throw invalid_argument("Could not find space to delimit end of mode.");
-    }
-
-    auto modeStr = gitTreeObject.subpiece(0, modeEnd);
+    // This should only be 6 or 7 characters.
+    // Stop scanning if we haven't seen a space in 10 characters
+    size_t maxModeLength = 10;
+    auto modeStr = cursor.readTerminatedString(' ', maxModeLength);
     size_t modeEndIndex;
-    auto mode = std::stoi(modeStr.str(), &modeEndIndex, /* base */ 8);
-    if (modeEndIndex != modeEnd) {
+    auto mode = std::stoi(modeStr, &modeEndIndex, /* base */ 8);
+    if (modeEndIndex != modeStr.size()) {
       throw invalid_argument("Did not parse expected number of octal chars.");
     }
-    gitTreeObject.advance(modeEndIndex + 1); // +1 for space delimiter.
 
     // Extract the name.
-    auto nameEndIndex = gitTreeObject.find_first_of('\0');
-    if (nameEndIndex == StringPiece::npos) {
-      throw invalid_argument("Could not find NUL to terminate name.");
-    }
-    auto name = gitTreeObject.subpiece(0, nameEndIndex);
-    gitTreeObject.advance(nameEndIndex + 1); // +1 for NUL delimiter.
+    auto name = cursor.readTerminatedString();
 
     // Extract the hash.
-    if (gitTreeObject.size() < GIT_OID_RAWSZ) {
-      throw invalid_argument(
-          "Tree object does not have enough remaining room for hash.");
-    }
-    array<uint8_t, GIT_OID_RAWSZ> hashBytes;
-    std::copy(
-        gitTreeObject.begin(),
-        gitTreeObject.begin() + GIT_OID_RAWSZ,
-        hashBytes.data());
-    gitTreeObject.advance(GIT_OID_RAWSZ);
-    Hash entryHash(hashBytes);
+    Hash::Storage hashBytes;
+    cursor.pull(hashBytes.data(), hashBytes.size());
 
     // Determine the individual fields from the mode.
     FileType fileType;
@@ -124,10 +106,19 @@ std::unique_ptr<Tree> deserializeGitTree(
           hash.toString()));
     }
 
-    entries.emplace_back(entryHash, name, fileType, ownerPermissions);
+    entries.emplace_back(
+        Hash(hashBytes), std::move(name), fileType, ownerPermissions);
   }
 
   return std::make_unique<Tree>(hash, std::move(entries));
+}
+
+// Convenience wrapper which accepts a ByteRange
+std::unique_ptr<Tree> deserializeGitTree(
+    const Hash& hash,
+    folly::ByteRange treeData) {
+  IOBuf buf(IOBuf::WRAP_BUFFER, treeData);
+  return deserializeGitTree(hash, &buf);
 }
 
 enum size_t {

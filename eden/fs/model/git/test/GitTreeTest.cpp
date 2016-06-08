@@ -18,6 +18,9 @@
 #include "eden/fs/model/git/GitTree.h"
 
 using namespace facebook::eden;
+using folly::StringPiece;
+using folly::IOBuf;
+using folly::io::Appender;
 using std::string;
 
 string toBinaryHash(string hex);
@@ -65,7 +68,7 @@ TEST(GitTree, testDeserialize) {
       string("100644 xdebug.ini\x00", 18),
       toBinaryHash("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
-  auto tree = deserializeGitTree(hash, gitTreeObject);
+  auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(11, tree->getTreeEntries().size());
   EXPECT_EQ(treeHash, CryptoHelper::bin2hex(CryptoHelper::sha1(gitTreeObject)))
       << "SHA-1 of contents should match key";
@@ -124,7 +127,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
       string("120000 contributing.md\x00", 23),
       toBinaryHash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"));
 
-  auto tree = deserializeGitTree(hash, gitTreeObject);
+  auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(5, tree->getTreeEntries().size());
   EXPECT_EQ(treeHash, CryptoHelper::bin2hex(CryptoHelper::sha1(gitTreeObject)))
       << "SHA-1 of contents should match key";
@@ -137,6 +140,74 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, contributing.getType());
   EXPECT_EQ(facebook::eden::FileType::SYMLINK, contributing.getFileType());
   EXPECT_EQ(0b0111, contributing.getOwnerPermissions());
+}
+
+TEST(GitTree, deserializeEmpty) {
+  // Test deserializing the empty tree
+  auto data = StringPiece("tree 0\x00", 7);
+  auto tree = deserializeGitTree(Hash::sha1(data), data);
+  EXPECT_EQ(0, tree->getTreeEntries().size());
+}
+
+TEST(GitTree, testBadDeserialize) {
+  Hash zero("0000000000000000000000000000000000000000");
+  // Partial header
+  EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tre")));
+  EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tree ")));
+  EXPECT_ANY_THROW(deserializeGitTree(zero, StringPiece("tree 123")));
+
+  // Length too long
+  IOBuf buf(IOBuf::CREATE, 1024);
+  auto a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 123"));
+  a.write<uint8_t>(0);
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
+
+  // Truncated after an entry mode
+  buf.clear();
+  a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 6"));
+  a.write<uint8_t>(0);
+  a.push(StringPiece("100644"));
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
+
+  // Truncated with no nul byte after the name
+  buf.clear();
+  a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 22"));
+  a.write<uint8_t>(0);
+  a.push(StringPiece("100644 apm-rest-api.md"));
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
+
+  // Truncated before entry hash
+  buf.clear();
+  a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 23"));
+  a.write<uint8_t>(0);
+  a.push(StringPiece("100644 apm-rest-api.md"));
+  a.write<uint8_t>(0);
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
+
+  // Non-octal digit in the mode
+  buf.clear();
+  a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 43"));
+  a.write<uint8_t>(0);
+  a.push(StringPiece("100694 apm-rest-api.md"));
+  a.write<uint8_t>(0);
+  a.push(Hash("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
+
+  // Trailing nul byte
+  buf.clear();
+  a = Appender(&buf, 1024);
+  a.push(StringPiece("tree 44"));
+  a.write<uint8_t>(0);
+  a.push(StringPiece("100644 apm-rest-api.md"));
+  a.write<uint8_t>(0);
+  a.push(Hash("a3c8e5c25e5523322f0ea490173dbdc1d844aefb").getBytes());
+  a.write<uint8_t>(0);
+  EXPECT_ANY_THROW(deserializeGitTree(zero, &buf));
 }
 
 TEST(GitTree, serializeTree) {
@@ -174,9 +245,7 @@ TEST(GitTree, serializeTree) {
   EXPECT_EQ(Hash("013b7865a6da317bc8d82c7225eb93615f1b1eca"), treeHash);
 
   // Make sure we can deserialize it and get back the expected entries.
-  // TODO: We should just make deserializeGitTree() take an IOBuf,
-  // so we don't have to coalesce the data.
-  auto tree = deserializeGitTree(treeHash, folly::StringPiece(buf.coalesce()));
+  auto tree = deserializeGitTree(treeHash, &buf);
   EXPECT_EQ(5, tree->getTreeEntries().size());
   EXPECT_EQ("README.md", tree->getEntryAt(0).getName());
   EXPECT_EQ("apm-rest-api.md", tree->getEntryAt(1).getName());

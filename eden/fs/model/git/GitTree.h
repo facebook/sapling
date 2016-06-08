@@ -9,7 +9,7 @@
  */
 #pragma once
 
-#include <folly/String.h>
+#include <folly/Range.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 
@@ -26,7 +26,10 @@ class TreeEntry;
  */
 std::unique_ptr<Tree> deserializeGitTree(
     const Hash& hash,
-    folly::StringPiece gitTreeObject);
+    const folly::IOBuf* treeData);
+std::unique_ptr<Tree> deserializeGitTree(
+    const Hash& hash,
+    folly::ByteRange treeData);
 
 /*
  * A class for serializing git tree objects in a streaming fashion.
