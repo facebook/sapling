@@ -8,6 +8,7 @@
 import array
 import os
 import time
+import heapq
 
 from mercurial import manifest, mdiff, revlog, util
 
