@@ -180,6 +180,7 @@ def extsetup(ui):
     except AttributeError:
         # The function didn't use to be defined in previous versions of hg
         pass
+    extensions.wrapfunction(manifest.manifest, 'add', factory.add)
 
     revsetmod.symbols['fastmanifesttocache'] = cachemanager.fastmanifesttocache
     revsetmod.safesymbols.add('fastmanifesttocache')
