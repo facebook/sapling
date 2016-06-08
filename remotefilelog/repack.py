@@ -29,8 +29,7 @@ def incrementalrepack(repo):
     """
 
     packpath = shallowutil.getpackpath(repo)
-    if not os.path.exists(packpath):
-        os.makedirs(packpath)
+    shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     files = osutil.listdir(packpath, stat=True)
 
@@ -149,7 +148,7 @@ def _computeincrementalpack(ui, files, limits, packsuffix, indexsuffix,
 
 def _runrepack(repo, data, history):
     packpath = shallowutil.getpackpath(repo)
-    util.makedirs(packpath)
+    shallowutil.mkstickygroupdir(repo.ui, packpath)
 
     packer = repacker(repo, data, history)
 

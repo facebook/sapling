@@ -9,6 +9,9 @@ import errno, platform, os, stat, struct, subprocess, sys, tempfile
 from mercurial import filelog, util
 from mercurial.i18n import _
 
+if os.name != 'nt':
+    import grp
+
 def interposeclass(container, classname):
     '''Interpose a class into the hierarchies of all loaded subclasses. This
     function is intended for use as a decorator.
@@ -252,3 +255,23 @@ def readexactly(stream, n):
 def readunpack(stream, fmt):
     data = readexactly(stream, struct.calcsize(fmt))
     return struct.unpack(fmt, data)
+
+def mkstickygroupdir(ui, path):
+    """Creates the given directory (if it doesn't exist) and give it a
+    particular group with setgid enabled."""
+    if not os.path.exists(path):
+        oldumask = os.umask(0o002)
+        try:
+            os.makedirs(path)
+
+            groupname = ui.config("remotefilelog", "cachegroup")
+            if groupname:
+                if os.name == 'nt':
+                    raise error.Abort(_('cachegroup option not'
+                                        ' supported on Windows'))
+                gid = grp.getgrnam(groupname).gr_gid
+                if gid:
+                    os.chown(path, os.getuid(), gid)
+                    os.chmod(path, 0o2775)
+        finally:
+            os.umask(oldumask)

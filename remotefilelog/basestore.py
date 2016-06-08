@@ -4,9 +4,6 @@ from mercurial import error, util
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
-if os.name != 'nt':
-    import grp
-
 class basestore(object):
     def __init__(self, repo, path, reponame, shared=False):
         """Creates a remotefilelog store object for the given repo name.
@@ -35,22 +32,7 @@ class basestore(object):
             self._validatecache = False
 
         if shared:
-            if not os.path.exists(path):
-                oldumask = os.umask(0o002)
-                try:
-                    os.makedirs(path)
-
-                    groupname = self.ui.config("remotefilelog", "cachegroup")
-                    if groupname:
-                        if os.name == 'nt':
-                            raise error.Abort(_('cachegroup option not'
-                                                ' supported on Windows'))
-                        gid = grp.getgrnam(groupname).gr_gid
-                        if gid:
-                            os.chown(path, os.getuid(), gid)
-                            os.chmod(path, 0o2775)
-                finally:
-                    os.umask(oldumask)
+            shallowutil.mkstickygroupdir(self.ui, path)
 
     def getmissing(self, keys):
         missing = []

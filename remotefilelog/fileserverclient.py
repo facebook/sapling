@@ -27,19 +27,6 @@ fetchmisses = 0
 
 _downloading = _('downloading')
 
-def makedirs(root, path, owner):
-    try:
-        os.makedirs(path)
-    except OSError as ex:
-        if ex.errno != errno.EEXIST:
-            raise
-
-    while path != root:
-        stat = os.stat(path)
-        if stat.st_uid == owner:
-            os.chmod(path, 0o2775)
-        path = os.path.dirname(path)
-
 def getcachekey(reponame, file, id):
     pathhash = util.sha1(file).hexdigest()
     return os.path.join(reponame, pathhash[:2], pathhash[2:], id)
@@ -380,7 +367,8 @@ class fileserverclient(object):
         self.ui.progress(_downloading, i, total=len(groupedfiles))
 
         packpath = shallowutil.getpackpath(self.repo)
-        util.makedirs(packpath)
+        shallowutil.mkstickygroupdir(self.repo.ui, packpath)
+
         opener = scmutil.vfs(packpath)
         # Packs should be write-once files, so set them to read-only.
         opener.createmode = 0o444
