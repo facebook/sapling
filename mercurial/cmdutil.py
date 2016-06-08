@@ -2147,7 +2147,8 @@ def getgraphlogrevs(repo, pats, opts):
     if opts.get('rev'):
         # User-specified revs might be unsorted, but don't sort before
         # _makelogrevset because it might depend on the order of revs
-        revs.sort(reverse=True)
+        if not revs.isdescending():
+            revs.sort(reverse=True)
     if expr:
         # Revset matchers often operate faster on revisions in changelog
         # order, because most filters deal with the changelog.
