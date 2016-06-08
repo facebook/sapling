@@ -1,0 +1,30 @@
+# Note that we don't have a python_binary() rule for hg_import_helper.py
+# This gets run as a standalone script using the system Python installation,
+# rather than as a PAR file.  It needs to use the system python interpreter
+# in order to find the system's installed mercurial libraries.
+
+TESTER_SRCS = ['tester.cpp']
+
+cpp_library(
+  name = 'hg',
+  headers = glob(['*.h']),
+  srcs = glob(['*.cpp'], excludes = TESTER_SRCS),
+  deps = [
+    '@/eden/fs/model:model',
+    '@/eden/fs/model/git:git',
+    '@/eden/fs/store:store',
+    '@/folly/init:init',
+    '@/folly:subprocess',
+  ],
+  external_deps = [
+    'glog',
+  ]
+)
+
+cpp_binary(
+  name = 'tester',
+  srcs = TESTER_SRCS,
+  deps = [
+    ':hg',
+  ],
+)
