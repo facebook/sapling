@@ -38,6 +38,9 @@ cacheonchangebackground = True
 # Maximum number of fastmanifest kept in volatile memory
 maxinmemoryentries = 10
 
+# Dump metrics after each command, see metrics.py
+debugmetrics = False
+
 # If False, cache entries in a deterministic order, otherwise use a randomorder
 # by batches.
 randomorder = True
@@ -93,6 +96,7 @@ from mercurial import localrepo, manifest
 from mercurial import revset as revsetmod
 
 import cachemanager
+from metrics import metricscollector
 import debug
 from implementation import manifestfactory
 
@@ -143,6 +147,17 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         cachemanager.cachemanifestfillandtrim(
             ui, repo, revset, limit, background)
 
+def _logonexit(orig, ui, repo, cmd, fullargs, *args):
+    r = orig(ui, repo, cmd, fullargs, *args)
+    if repo is not None:
+        # Somehow, the ui object can be different than repo.ui
+        # To mitigate that, if repo.ui != ui we merge the samples collected
+        # on ui and on repo.ui.
+        repocollector = metricscollector.get(repo)
+        uicollector = metricscollector.getfromui(ui)
+        uicollector.mergesamples(repocollector).logsamples()
+    return r
+
 def extsetup(ui):
     logfile = ui.config("fastmanifest", "logfile", "")
     factory = manifestfactory(ui)
@@ -170,7 +185,7 @@ def extsetup(ui):
     #
     # The recursion level is at most 2 because we wrap the two top level
     # functions and _newmanifest (wrapped only for the case of -1)
-
+    extensions.wrapfunction(dispatch, 'runcommand', _logonexit)
     extensions.wrapfunction(manifest.manifest, '_newmanifest',
                             factory.newmanifest)
     extensions.wrapfunction(manifest.manifest, 'read', factory.read)

@@ -13,6 +13,7 @@ from mercurial import extensions, revlog, scmutil, util, error
 
 import concurrency
 import constants
+from metrics import metricscollector
 from implementation import fastmanifestcache
 
 def _relevantremonamesrevs(repo):
@@ -81,6 +82,7 @@ def fastmanifesttocache(repo, subset, x):
     revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
                 %(query, query, datelimit)]))
 
+    metricscollector.get(repo).recordsample("revsetsetsize", size=len(revs))
     return subset & revs
 
 GB = 1024**3
@@ -118,6 +120,7 @@ class _systemawarecachelimit(object):
 
     def bytes(self):
         return _systemawarecachelimit.cacheallocation(self.free, **self.config)
+        return systemawarecachelimit.cacheallocation(self.free, **self.config)
 
     @staticmethod
     def cacheallocation(
@@ -242,12 +245,27 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
                 hexnode = revstomannodes[rev]
                 cache.refresh(hexnode, delay=offset * mtimemultiplier)
             else:
+                metricscollector.get(repo).recordsample("cacheoverflow",
+                                                        hit=True)
                 pass # We didn't have enough space for that rev
     finally:
         lock.unlock()
 
+
     if limit is not None:
         cache.prune(limit)
+
+    total, numentries = cache.totalsize()
+    if limit:
+        if isinstance(limit, _systemawarecachelimit):
+            free = limit.free / 1024**2
+        else:
+            free = -1
+        metricscollector.get(repo).recordsample("ondiskcachestats",
+                                                bytes=total,
+                                                numentries=numentries,
+                                                limit=(limit.bytes() / 1024**2),
+                                                freespace=free)
 
     if background:
         if not silent_worker:
@@ -283,15 +301,18 @@ class triggers(object):
     def onbookmarkchange(orig, self, *args, **kwargs):
         repo = self._repo
         triggers.repos_to_update.add(repo)
+        metricscollector.get(repo).recordsample("trigger", source="bookmark")
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def oncommit(orig, self, *args, **kwargs):
         repo = self
         triggers.repos_to_update.add(repo)
+        metricscollector.get(repo).recordsample("trigger", source="commit")
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def onremotenameschange(orig, repo, *args, **kwargs):
         triggers.repos_to_update.add(repo)
+        metricscollector.get(repo).recordsample("trigger", source="remotenames")
         return orig(repo, *args, **kwargs)
