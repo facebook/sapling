@@ -49,6 +49,7 @@ setup(
         'rage',
         'reflog',
         'reset',
+        'sampling'
         'show',
         'simplecache',
         'smartlog',
