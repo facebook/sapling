@@ -4,6 +4,7 @@ cpp_library(
   headers = glob(['*.h']),
   deps = [
     '@/folly:folly',
+    '@/folly/io:iobuf',
     '@/eden/fs/model:model',
   ],
   external_deps = [

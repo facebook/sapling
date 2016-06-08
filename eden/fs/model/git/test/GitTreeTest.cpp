@@ -17,7 +17,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
 
-using facebook::eden::Hash;
+using namespace facebook::eden;
 using std::string;
 
 string toBinaryHash(string hex);
@@ -137,6 +137,79 @@ TEST(GitTree, testDeserializeWithSymlink) {
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, contributing.getType());
   EXPECT_EQ(facebook::eden::FileType::SYMLINK, contributing.getFileType());
   EXPECT_EQ(0b0111, contributing.getOwnerPermissions());
+}
+
+TEST(GitTree, serializeTree) {
+  GitTreeSerializer serializer;
+  serializer.addEntry(TreeEntry(
+      Hash("c66788d87933862e2111a86304b705dd90bbd427"),
+      "README.md",
+      FileType::REGULAR_FILE,
+      0b110));
+  serializer.addEntry(TreeEntry(
+      Hash("a3c8e5c25e5523322f0ea490173dbdc1d844aefb"),
+      "apm-rest-api.md",
+      FileType::REGULAR_FILE,
+      0b110));
+  serializer.addEntry(TreeEntry(
+      Hash("de0b8287939193ed239834991be65b96cbfc4508"),
+      "build-instructions",
+      FileType::DIRECTORY,
+      0b111));
+  serializer.addEntry(TreeEntry(
+      Hash("4576635ff317960be244b1c4adfe2a6eb2eb024d"),
+      "contributing-to-packages.md",
+      FileType::REGULAR_FILE,
+      0b110));
+  serializer.addEntry(TreeEntry(
+      Hash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"),
+      "contributing.md",
+      FileType::SYMLINK,
+      0b111));
+
+  auto buf = serializer.finalize();
+
+  // Make sure the tree hash is what we expect
+  auto treeHash = Hash::sha1(&buf);
+  EXPECT_EQ(Hash("013b7865a6da317bc8d82c7225eb93615f1b1eca"), treeHash);
+
+  // Make sure we can deserialize it and get back the expected entries.
+  // TODO: We should just make deserializeGitTree() take an IOBuf,
+  // so we don't have to coalesce the data.
+  auto tree = deserializeGitTree(treeHash, folly::StringPiece(buf.coalesce()));
+  EXPECT_EQ(5, tree->getTreeEntries().size());
+  EXPECT_EQ("README.md", tree->getEntryAt(0).getName());
+  EXPECT_EQ("apm-rest-api.md", tree->getEntryAt(1).getName());
+  EXPECT_EQ("build-instructions", tree->getEntryAt(2).getName());
+  EXPECT_EQ("contributing-to-packages.md", tree->getEntryAt(3).getName());
+  EXPECT_EQ("contributing.md", tree->getEntryAt(4).getName());
+}
+
+// Test using GitTreeSerializer after moving it
+TEST(GitTree, moveSerializer) {
+  GitTreeSerializer serializer2;
+
+  {
+    GitTreeSerializer serializer1;
+    serializer1.addEntry(TreeEntry(
+        Hash("3b18e512dba79e4c8300dd08aeb37f8e728b8dad"),
+        "README.md",
+        FileType::REGULAR_FILE,
+        0b110));
+
+    serializer2 = std::move(serializer1);
+  }
+
+  serializer2.addEntry(TreeEntry(
+      Hash("43b71c903ff52b9885bd36f3866324ef60e27b9b"),
+      "eden",
+      FileType::DIRECTORY,
+      0b111));
+
+  // Make sure the tree hash is what we expect
+  auto buf = serializer2.finalize();
+  auto treeHash = Hash::sha1(&buf);
+  EXPECT_EQ(Hash("daa1785514e56d64549d8169ec7dc26803d2f7df"), treeHash);
 }
 
 string toBinaryHash(string hex) {
