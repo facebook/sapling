@@ -112,6 +112,14 @@ from subprocess import call
 
 __all__ = ['start', 'stop', 'reset', 'display', 'profile']
 
+skips = set(["util.py:check", "extensions.py:closure",
+             "color.py:colorcmd", "dispatch.py:checkargs",
+             "dispatch.py:<lambda>", "dispatch.py:_runcatch",
+             "dispatch.py:_dispatch", "dispatch.py:_runcommand",
+             "pager.py:pagecmd", "dispatch.py:run",
+             "dispatch.py:dispatch", "dispatch.py:runcommand",
+             "hg.py:<module>", "evolve.py:warnobserrors",
+         ])
 
 ###########################################################################
 ## Utils
@@ -571,7 +579,12 @@ def display_hotpath(fp, limit=0.05, **kwargs):
                 self.children[site] = child
 
             if len(stack) > 1:
-                child.add(stack[1:])
+                i = 1
+                # Skip boiler plate parts of the stack
+                while i < len(stack) and '%s:%s' % (stack[i].filename(), stack[i].function) in skips:
+                    i += 1
+                if i < len(stack):
+                    child.add(stack[i:])
 
     root = HotNode(None)
     for sample in state.samples:
@@ -581,8 +594,7 @@ def display_hotpath(fp, limit=0.05, **kwargs):
         site = node.site
         visiblechildren = [c for c in node.children.itervalues()
                              if c.count >= (limit * root.count)]
-        if site and (node.count < root.count * 0.98
-                     or len(visiblechildren) > 1):
+        if site:
             indent = depth * 2 - 1
             filename = ''
             function = ''
