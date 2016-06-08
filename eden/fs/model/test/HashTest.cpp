@@ -30,6 +30,10 @@ string testHashHex = folly::to<string>(
 
 Hash testHash(testHashHex);
 
+TEST(Hash, testDefaultConstructor) {
+  EXPECT_EQ("0000000000000000000000000000000000000000", Hash().toString());
+}
+
 TEST(Hash, testByteArrayConstructor) {
   EXPECT_EQ(testHashHex, testHash.toString());
 }
@@ -165,4 +169,15 @@ TEST(Hash, sha1ByteRange) {
   EXPECT_EQ(
       Hash("2a9c28ef61eb536d3bbda64ad95a132554be3d6b"),
       Hash::sha1(ByteRange(data.data(), data.size())));
+}
+
+TEST(Hash, assignment) {
+  Hash h1;
+  Hash h2("0123456789abcdeffedcba987654321076543210");
+  EXPECT_EQ("0000000000000000000000000000000000000000", h1.toString());
+  h1 = h2;
+  EXPECT_EQ("0123456789abcdeffedcba987654321076543210", h1.toString());
+  EXPECT_EQ(h2, h1);
+  h2 = Hash();
+  EXPECT_EQ("0000000000000000000000000000000000000000", h2.toString());
 }

@@ -29,6 +29,11 @@ class Hash : boost::totally_ordered<Hash> {
   enum { RAW_SIZE = 20 };
   using Storage = std::array<uint8_t, RAW_SIZE>;
 
+  /**
+   * Create a 0-initialized hash
+   */
+  Hash();
+
   explicit Hash(Storage bytes);
 
   explicit Hash(folly::ByteRange bytes);
@@ -57,7 +62,7 @@ class Hash : boost::totally_ordered<Hash> {
   bool operator<(const Hash&) const;
 
  private:
-  const Storage bytes_;
+  Storage bytes_;
 };
 }
 }

@@ -28,11 +28,13 @@ Hash::Storage hexToBytes(StringPiece hex);
 Hash::Storage byteRangeToArray(ByteRange bytes);
 }
 
-Hash::Hash(Storage bytes) : bytes_(bytes) {}
+Hash::Hash() : bytes_{{0}} {}
 
-Hash::Hash(ByteRange bytes) : Hash(byteRangeToArray(bytes)) {}
+Hash::Hash(Storage bytes) : bytes_{bytes} {}
 
-Hash::Hash(StringPiece hex) : Hash(hexToBytes(hex)) {}
+Hash::Hash(ByteRange bytes) : Hash{byteRangeToArray(bytes)} {}
+
+Hash::Hash(StringPiece hex) : Hash{hexToBytes(hex)} {}
 
 ByteRange Hash::getBytes() const {
   return ByteRange{bytes_.data(), bytes_.size()};
