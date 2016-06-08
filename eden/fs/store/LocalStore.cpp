@@ -8,6 +8,7 @@
  *
  */
 #include "LocalStore.h"
+
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <array>
@@ -19,16 +20,14 @@
 using facebook::eden::Hash;
 using folly::ByteRange;
 using folly::StringPiece;
-using rocksdb::DB;
-using rocksdb::Options;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
-using rocksdb::Status;
 using rocksdb::WriteBatch;
 using rocksdb::WriteOptions;
-using std::array;
 using std::string;
 using std::unique_ptr;
+
+namespace {
 
 /**
  * For a blob, we write an entry whose key is the same of the blob's with the
@@ -40,19 +39,29 @@ using std::unique_ptr;
  */
 const unsigned char ATTRIBUTE_SHA_1 = 's';
 
-namespace {
-rocksdb::Slice _createSliceForStringPiece(folly::StringPiece str) {
-  return Slice(str.data(), str.size());
+class Sha1Key {
+ public:
+  explicit Sha1Key(const Hash& id) {
+    memcpy(key_.data(), id.getBytes().data(), Hash::RAW_SIZE);
+    key_[Hash::RAW_SIZE] = ATTRIBUTE_SHA_1;
+  }
+
+  ByteRange bytes() const {
+    return ByteRange(key_.data(), key_.size());
+  }
+
+  Slice slice() const {
+    return Slice{reinterpret_cast<const char*>(key_.data()), key_.size()};
+  }
+
+ private:
+  std::array<uint8_t, Hash::RAW_SIZE + 1> key_;
+};
+
+rocksdb::Slice _createSlice(folly::ByteRange bytes) {
+  return Slice(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 }
 
-rocksdb::Slice _createSliceForByteRange(folly::ByteRange str) {
-  return Slice(reinterpret_cast<const char*>(str.data()), str.size());
-}
-
-rocksdb::Slice _createSliceForHash(const Hash& hash) {
-  return Slice(
-      reinterpret_cast<const char*>(hash.getBytes().data()), Hash::RAW_SIZE);
-}
 }
 
 namespace facebook {
@@ -62,7 +71,7 @@ LocalStore::LocalStore(StringPiece pathToRocksDb)
     : db_(createRocksDb(pathToRocksDb)) {}
 
 std::unique_ptr<string> LocalStore::get(const Hash& id) const {
-  return std::make_unique<string>(_get(_createSliceForHash(id)));
+  return std::make_unique<string>(_get(id.getBytes()));
 }
 
 // TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
@@ -84,9 +93,8 @@ std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
 }
 
 std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
-  auto keyAsFbstr = _getSha1KeyForHash(id);
-  auto key = _createSliceForStringPiece(StringPiece{keyAsFbstr});
-  string gitBlobObject = _get(key);
+  Sha1Key key(id);
+  string gitBlobObject = _get(key.bytes());
   if (gitBlobObject.size() != Hash::RAW_SIZE) {
     throw std::invalid_argument(folly::sformat(
         "Database entry for {} was not of size {}. Could not convert to SHA-1.",
@@ -100,48 +108,48 @@ std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
 
 void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1)
     const {
-  auto blobKey = _createSliceForHash(id);
-  auto blobValue = _createSliceForByteRange(blobData);
-
-  auto keyAsFbstr = _getSha1KeyForHash(id);
-  auto sha1Key = _createSliceForStringPiece(StringPiece{keyAsFbstr});
-  auto sha1Value = _createSliceForHash(sha1);
+  Sha1Key sha1Key(id);
 
   // Record both the blob and SHA-1 entries in one RocksDB write operation.
   WriteBatch blobWrites;
-  blobWrites.Put(blobKey, blobValue);
-  blobWrites.Put(sha1Key, sha1Value);
+  blobWrites.Put(_createSlice(id.getBytes()), _createSlice(blobData));
+  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
   auto status = db_->Write(WriteOptions(), &blobWrites);
-  facebook::eden::RocksException::check(
-      status, "put blob ", blobKey.ToString(/* hex */ true), " failed");
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status,
+        "error putting blob ",
+        folly::hexlify(id.getBytes()),
+        " in local store");
+  }
 }
 
 void LocalStore::putTree(const Hash& id, ByteRange treeData) const {
-  auto treeKey = _createSliceForHash(id);
-  auto treeValue = _createSliceForByteRange(treeData);
+  auto treeKey = _createSlice(id.getBytes());
+  auto treeValue = _createSlice(treeData);
   auto status = db_->Put(WriteOptions(), treeKey, treeValue);
-  facebook::eden::RocksException::check(
-      status, "put tree ", treeKey.ToString(/* hex */ true), " failed");
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status,
+        "error putting tree ",
+        folly::hexlify(id.getBytes()),
+        " in local store");
+  }
 }
 
-folly::fbstring LocalStore::_getSha1KeyForHash(const Hash& id) const {
-  auto keySize = Hash::RAW_SIZE + 1;
-  char key[keySize];
-  memcpy(key, id.getBytes().data(), Hash::RAW_SIZE);
-  key[Hash::RAW_SIZE] = ATTRIBUTE_SHA_1;
-  return folly::fbstring(key, keySize);
-}
-
-string LocalStore::_get(const char* key, size_t size) const {
-  auto keyAsSlice = Slice(key, size);
-  return _get(keyAsSlice);
-}
-
-string LocalStore::_get(Slice key) const {
+string LocalStore::_get(ByteRange key) const {
   string value;
-  auto status = db_.get()->Get(ReadOptions(), key, &value);
-  RocksException::check(
-      status, "get ", key.ToString(/* hex */ true), " failed");
+  auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status, "failed to get ", folly::hexlify(key), " from local store");
+  }
   return value;
 }
 }

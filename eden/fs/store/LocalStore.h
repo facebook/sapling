@@ -10,7 +10,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <folly/String.h>
 #include <rocksdb/db.h>
 #include <memory>
 #include <string>
@@ -48,9 +47,8 @@ class LocalStore {
       const;
 
  private:
-  std::string _get(const char* key, size_t size) const;
-  std::string _get(rocksdb::Slice key) const;
-  folly::fbstring _getSha1KeyForHash(const Hash& id) const;
+  std::string _get(folly::ByteRange key) const;
+
   std::unique_ptr<rocksdb::DB> db_;
 };
 }
