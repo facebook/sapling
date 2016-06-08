@@ -108,8 +108,8 @@ PrivHelperConn::~PrivHelperConn() {
 void PrivHelperConn::createConnPair(
     PrivHelperConn& client,
     PrivHelperConn& server) {
-  int sockpair[2];
-  int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair);
+  std::array<int, 2> sockpair;
+  int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair.data());
   checkUnixError(rc, "failed to create socket pair for privhelper");
   SCOPE_FAIL {
     folly::closeNoInt(sockpair[0]);
