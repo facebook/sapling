@@ -365,7 +365,7 @@ if has_https:
             urlreq.httpshandler.__init__(self)
             self.ui = ui
             self.pwmgr = passwordmgr(self.ui,
-                                     urlreq.httppasswordmgrwithdefaultrealm())
+                                     self.ui.httppasswordmgrdb)
 
         def _start_transaction(self, h, req):
             _generic_start_transaction(self, h, req)
@@ -482,7 +482,7 @@ def opener(ui, authinfo=None):
         handlers = [
             httpconnectionmod.http2handler(
                 ui,
-                passwordmgr(ui, urlreq.httppasswordmgrwithdefaultrealm()))
+                passwordmgr(ui, ui.httppasswordmgrdb))
         ]
     else:
         handlers = [httphandler()]
@@ -491,7 +491,7 @@ def opener(ui, authinfo=None):
 
     handlers.append(proxyhandler(ui))
 
-    passmgr = passwordmgr(ui, urlreq.httppasswordmgrwithdefaultrealm())
+    passmgr = passwordmgr(ui, ui.httppasswordmgrdb)
     if authinfo is not None:
         passmgr.add_password(*authinfo)
         user, passwd = authinfo[2:4]

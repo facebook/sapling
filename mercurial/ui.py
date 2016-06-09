@@ -29,6 +29,8 @@ from . import (
     util,
 )
 
+urlreq = util.urlreq
+
 samplehgrcs = {
     'user':
 """# example user config (see "hg help config" for more info)
@@ -124,6 +126,8 @@ class ui(object):
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
             self.fixconfig()
+
+            self.httppasswordmgrdb = src.httppasswordmgrdb
         else:
             self.fout = sys.stdout
             self.ferr = sys.stderr
@@ -135,6 +139,8 @@ class ui(object):
             for f in scmutil.rcpath():
                 self.readconfig(f, trust=True)
 
+            self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
+
     def copy(self):
         return self.__class__(self)
 
@@ -142,6 +148,7 @@ class ui(object):
         """Clear internal state that shouldn't persist across commands"""
         if self._progbar:
             self._progbar.resetstate()  # reset last-print time of progress bar
+        self.httppasswordmgrdb = urlreq.httppasswordmgrwithdefaultrealm()
 
     def formatter(self, topic, opts):
         return formatter.formatter(self, topic, opts)
