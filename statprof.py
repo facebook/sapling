@@ -104,8 +104,7 @@ main thread's work patterns.
 # no-check-code
 from __future__ import division
 
-import os, signal, tempfile, sys, getopt
-
+import json, os, signal, tempfile, sys, getopt
 from collections import defaultdict
 from contextlib import contextmanager
 from subprocess import call
@@ -396,6 +395,7 @@ class DisplayFormats:
     AboutMethod = 2
     Hotpath = 3
     FlameGraph = 4
+    Json = 5
 
 def display(fp=None, format=3, **kwargs):
     '''Print statistics, either to stdout or the given file object.'''
@@ -417,12 +417,15 @@ def display(fp=None, format=3, **kwargs):
         display_hotpath(fp, **kwargs)
     elif format == DisplayFormats.FlameGraph:
         write_to_flame(fp)
+    elif format == DisplayFormats.Json:
+        write_to_json(fp)
     else:
         raise Exception("Invalid display format")
 
-    print >> fp, ('---')
-    print >> fp, ('Sample count: %d' % len(state.samples))
-    print >> fp, ('Total time: %f seconds' % state.accumulated_time)
+    if format != DisplayFormats.Json:
+        print >> fp, ('---')
+        print >> fp, ('Sample count: %d' % len(state.samples))
+        print >> fp, ('Total time: %f seconds' % state.accumulated_time)
 
 def display_by_line(fp):
     '''Print the profiler data with each sample line represented
@@ -656,6 +659,19 @@ def write_to_flame(fp):
 
     os.system("perl ~/flamegraph.pl %s > ~/flamegraph.svg" % path)
     print "Written to ~/flamegraph.svg"
+
+def write_to_json(fp):
+    samples = []
+
+    for sample in state.samples:
+        stack = []
+
+        for frame in sample.stack:
+            stack.append((frame.path, frame.lineno, frame.function))
+
+        samples.append((sample.time, stack))
+
+    print >> fp, json.dumps(samples)
 
 def printusage():
     print """
