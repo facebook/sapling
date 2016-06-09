@@ -14,7 +14,7 @@
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/overlay/Overlay.h"
-#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/RequestData.h"
 #include "eden/utils/PathFuncs.h"
@@ -187,8 +187,8 @@ fusell::InodeNameManager* TreeInode::getNameMgr() const {
   return mount_->getMountPoint()->getNameMgr();
 }
 
-const std::shared_ptr<LocalStore>& TreeInode::getStore() const {
-  return mount_->getLocalStore();
+ObjectStore* TreeInode::getStore() const {
+  return mount_->getObjectStore();
 }
 
 const std::shared_ptr<Overlay>& TreeInode::getOverlay() const {

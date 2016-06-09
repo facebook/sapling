@@ -11,9 +11,10 @@
 
 #include "FileData.h"
 #include "TreeEntryFileHandle.h"
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
-#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/utils/XAttr.h"
 
 using folly::Future;
@@ -86,8 +87,8 @@ folly::Future<std::string> TreeEntryFileInode::readlink() {
 std::shared_ptr<FileData> TreeEntryFileInode::getOrLoadData() {
   std::unique_lock<std::mutex> lock(mutex_);
   if (!data_) {
-    data_ = std::make_shared<FileData>(
-        mutex_, parentInode_->getStore(), parentInode_->getOverlay(), entry_);
+    data_ =
+        std::make_shared<FileData>(mutex_, parentInode_->getMount(), entry_);
   }
 
   return data_;

@@ -14,9 +14,11 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <openssl/sha.h>
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
-#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/utils/XAttr.h"
 
 namespace facebook {
@@ -24,12 +26,8 @@ namespace eden {
 
 using folly::checkUnixError;
 
-FileData::FileData(
-    std::mutex& mutex,
-    std::shared_ptr<LocalStore> store,
-    std::shared_ptr<Overlay> overlay,
-    const TreeEntry* entry)
-    : mutex_(mutex), store_(store), overlay_(overlay), entry_(entry) {}
+FileData::FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry)
+    : mutex_(mutex), mount_(mount), entry_(entry) {}
 
 struct stat FileData::stat() {
   struct stat st;
@@ -175,7 +173,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
     need_file = true;
   }
 
-  if (need_blob && overlay_->isWhiteout(path)) {
+  if (need_blob && mount_->getOverlay()->isWhiteout(path)) {
     // Data was deleted, no need to go to the store to satisfy it.
     need_blob = false;
   }
@@ -187,7 +185,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
       // Test whether an overlay file exists by trying to open it.
       // O_NOFOLLOW because it never makes sense for the kernel to ask
       // a fuse server to open a file that is a symlink to something else.
-      file_ = overlay_->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
+      file_ = mount_->getOverlay()->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
       // since we have a pre-existing overlay file, we don't need the blob.
       need_blob = false;
       // A freshly opened file has a valid sha1 attribute (assuming no
@@ -203,7 +201,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
 
   if (need_blob && !blob_) {
     // Load the blob data.
-    blob_ = store_->getBlob(entry_->getHash());
+    blob_ = mount_->getObjectStore()->getBlob(entry_->getHash());
   }
 
   if (need_file && !file_) {
@@ -220,7 +218,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
     // We need an overlay file and don't yet have one.
     // We always create our internal file handle read/write regardless of
     // the mode that the client is requesting.
-    auto file = overlay_->openFile(path, O_RDWR | O_CREAT, 0600);
+    auto file = mount_->getOverlay()->openFile(path, O_RDWR | O_CREAT, 0600);
 
     // We typically need to populate our newly opened file with the data
     // from the overlay.  The O_TRUNC check above may have set need_blob
@@ -239,7 +237,7 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
       // Copy and apply the sha1 to the new file.  This saves us from
       // recomputing it again in the case that something opens the file
       // read/write and closes it without changing it.
-      auto sha1 = store_->getSha1ForBlob(entry_->getHash());
+      auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->getHash());
       fsetxattr(file.fd(), kXattrSha1, sha1->toString());
       sha1Valid_ = true;
     }
@@ -275,7 +273,7 @@ Hash FileData::getSha1Locked(const std::unique_lock<std::mutex>&) {
   }
 
   CHECK_NOTNULL(entry_);
-  auto sha1 = store_->getSha1ForBlob(entry_->getHash());
+  auto sha1 = mount_->getObjectStore()->getSha1ForBlob(entry_->getHash());
   return *sha1.get();
 }
 

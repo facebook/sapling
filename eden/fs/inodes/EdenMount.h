@@ -18,7 +18,7 @@ namespace fusell {
 class MountPoint;
 }
 
-class LocalStore;
+class ObjectStore;
 class Overlay;
 
 /*
@@ -27,7 +27,7 @@ class Overlay;
  * This contains:
  * - The fusell::MountPoint object which manages our FUSE interactions with the
  *   kernel.
- * - The LocalStore object used for locally caching object data.
+ * - The ObjectStore object used for retreiving/storing object data.
  * - The Overlay object used for storing local changes (that have not been
  *   committed/snapshotted yet).
  */
@@ -35,7 +35,7 @@ class EdenMount {
  public:
   EdenMount(
       std::shared_ptr<fusell::MountPoint> mountPoint,
-      std::shared_ptr<LocalStore> localStore,
+      std::unique_ptr<ObjectStore> objectStore,
       std::shared_ptr<Overlay> overlay);
   virtual ~EdenMount();
 
@@ -55,8 +55,14 @@ class EdenMount {
    */
   const AbsolutePath& getPath() const;
 
-  const std::shared_ptr<LocalStore>& getLocalStore() const {
-    return localStore_;
+  /*
+   * Return the ObjectStore used by this mount point.
+   *
+   * The ObjectStore is guaranteed to be valid for the lifetime of the
+   * EdenMount.
+   */
+  ObjectStore* getObjectStore() const {
+    return objectStore_.get();
   }
 
   const std::shared_ptr<Overlay>& getOverlay() const {
@@ -69,7 +75,7 @@ class EdenMount {
   EdenMount& operator=(EdenMount const&) = delete;
 
   std::shared_ptr<fusell::MountPoint> mountPoint_;
-  std::shared_ptr<LocalStore> localStore_;
+  std::unique_ptr<ObjectStore> objectStore_;
   std::shared_ptr<Overlay> overlay_;
 };
 }

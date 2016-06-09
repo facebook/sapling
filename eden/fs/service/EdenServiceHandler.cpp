@@ -19,13 +19,14 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
-#include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/utils/PathFuncs.h"
 
 using std::shared_ptr;
 using std::string;
 using std::unique_ptr;
+using folly::make_unique;
 using folly::StringPiece;
 
 namespace facebook {
@@ -48,17 +49,15 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
 
   auto overlayPath = config->getOverlayPath();
   auto overlay = std::make_shared<Overlay>(overlayPath);
-  auto objectStore = server_->getLocalStore();
+  auto objectStore = make_unique<ObjectStore>(server_->getLocalStore());
+  auto rootTree = objectStore->getTree(snapshotID);
   auto edenMount =
-      std::make_shared<EdenMount>(mountPoint, objectStore, overlay);
+      std::make_shared<EdenMount>(mountPoint, std::move(objectStore), overlay);
 
   // Create the inode for the root of the tree using the hash contained
   // within the snapshotPath file
   auto rootInode = std::make_shared<TreeInode>(
-      edenMount.get(),
-      objectStore->getTree(snapshotID),
-      FUSE_ROOT_ID,
-      FUSE_ROOT_ID);
+      edenMount.get(), std::move(rootTree), FUSE_ROOT_ID, FUSE_ROOT_ID);
   mountPoint->setRootInode(rootInode);
 
   // TODO(mbolin): Use the result of config.getBindMounts() to perform the

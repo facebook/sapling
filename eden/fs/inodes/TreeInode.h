@@ -16,7 +16,7 @@ namespace eden {
 
 class EdenMount;
 class Hash;
-class LocalStore;
+class ObjectStore;
 class Overlay;
 
 // Represents a Tree instance in a form that FUSE can consume
@@ -42,8 +42,23 @@ class TreeInode : public fusell::DirInode {
   const Tree* getTree() const;
   fuse_ino_t getParent() const;
   fuse_ino_t getInode() const;
+
+  /**
+   * Get the EdenMount that this TreeInode belongs to.
+   *
+   * The EdenMount is guaranteed to remain valid for at least the lifetime of
+   * the TreeInode object.
+   */
   EdenMount* getMount() const;
-  const std::shared_ptr<LocalStore>& getStore() const;
+
+  /**
+   * Get the ObjectStore for this mount point.
+   *
+   * The ObjectStore is guaranteed to remain valid for at least the lifetime of
+   * the TreeInode object.  (The ObjectStore is owned by the EdenMount.)
+   */
+  ObjectStore* getStore() const;
+
   const std::shared_ptr<Overlay>& getOverlay() const;
   folly::Future<fusell::DirInode::CreateResult>
   create(PathComponentPiece name, mode_t mode, int flags) override;

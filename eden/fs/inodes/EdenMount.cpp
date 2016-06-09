@@ -11,22 +11,25 @@
 
 #include <glog/logging.h>
 
+#include "eden/fs/overlay/Overlay.h"
+#include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
 
 using std::shared_ptr;
+using std::unique_ptr;
 
 namespace facebook {
 namespace eden {
 
 EdenMount::EdenMount(
     shared_ptr<fusell::MountPoint> mountPoint,
-    shared_ptr<LocalStore> localStore,
+    unique_ptr<ObjectStore> objectStore,
     shared_ptr<Overlay> overlay)
     : mountPoint_(std::move(mountPoint)),
-      localStore_(std::move(localStore)),
+      objectStore_(std::move(objectStore)),
       overlay_(std::move(overlay)) {
   CHECK_NOTNULL(mountPoint_.get());
-  CHECK_NOTNULL(localStore_.get());
+  CHECK_NOTNULL(objectStore_.get());
   CHECK_NOTNULL(overlay_.get());
 }
 

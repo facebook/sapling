@@ -17,17 +17,22 @@ namespace facebook {
 namespace eden {
 
 class Blob;
+class EdenMount;
 class Hash;
-class LocalStore;
-class Overlay;
 
+/**
+ * FileData stores information about a file contents.
+ *
+ * The data may be lazily loaded from the EdenMount's ObjectStore only when it
+ * is needed.
+ *
+ * FileData objects are tracked via shared_ptr.  TreeEntryFileInode and
+ * TreeEntryFileHandle objects maintain references to them.  FileData objects
+ * should not outlive the EdenMount to which they belong.
+ */
 class FileData {
  public:
-  FileData(
-      std::mutex& mutex,
-      std::shared_ptr<LocalStore> store,
-      std::shared_ptr<Overlay> overlay,
-      const TreeEntry* entry);
+  FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry);
 
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);
@@ -57,8 +62,7 @@ class FileData {
   // Recommended practice in the implementation of methods on this class is to
   // hold a unique_lock as a guard for the duration of the method.
   std::mutex& mutex_;
-  std::shared_ptr<LocalStore> store_;
-  std::shared_ptr<Overlay> overlay_;
+  EdenMount* mount_{nullptr};
   const TreeEntry* entry_;
 
   /// if backed by tree, the data from the tree, else nullptr.
