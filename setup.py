@@ -49,7 +49,7 @@ setup(
         'rage',
         'reflog',
         'reset',
-        'sampling'
+        'sampling',
         'show',
         'simplecache',
         'smartlog',
