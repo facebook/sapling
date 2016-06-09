@@ -99,7 +99,7 @@ if usable:
             self._lz4 = opts and 'lz4revlog' in opts
 
         def compress(self, text):
-            if self._lz4:
+            if util.safehasattr(self, '_lz4') and self._lz4:
                 if not text:
                     return ('', text)
                 l = len(text)
