@@ -101,7 +101,8 @@ std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   if (!result.isValid()) {
     return nullptr;
   }
-  return deserializeGitBlob(id, result.extractValue());
+  auto buf = result.extractIOBuf();
+  return deserializeGitBlob(id, &buf);
 }
 
 std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {

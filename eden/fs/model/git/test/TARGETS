@@ -5,7 +5,6 @@ cpp_unittest(
     '@/eden/fs/model:model',
     '@/eden/fs/model/git:git',
     '@/folly:folly',
-    '@/crypto/lib/cpp:fbcrypto-base',
   ],
   external_deps = [
     'glog',

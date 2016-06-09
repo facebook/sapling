@@ -9,7 +9,11 @@
  */
 #pragma once
 
-#include <folly/String.h>
+#include <folly/Range.h>
+
+namespace folly {
+class IOBuf;
+}
 
 namespace facebook {
 namespace eden {
@@ -23,9 +27,6 @@ class Blob;
  */
 std::unique_ptr<Blob> deserializeGitBlob(
     const Hash& hash,
-    folly::ByteRange gitBlobObject);
-std::unique_ptr<Blob> deserializeGitBlob(
-    const Hash& hash,
-    std::string&& gitBlobObject);
+    const folly::IOBuf* data);
 }
 }

@@ -11,7 +11,6 @@
 #include <git2/oid.h>
 #include <gtest/gtest.h>
 #include <string>
-#include "crypto/lib/cpp/CryptoHelper.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -70,7 +69,7 @@ TEST(GitTree, testDeserialize) {
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(11, tree->getTreeEntries().size());
-  EXPECT_EQ(treeHash, CryptoHelper::bin2hex(CryptoHelper::sha1(gitTreeObject)))
+  EXPECT_EQ(treeHash, Hash::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
@@ -129,7 +128,7 @@ TEST(GitTree, testDeserializeWithSymlink) {
 
   auto tree = deserializeGitTree(hash, StringPiece(gitTreeObject));
   EXPECT_EQ(5, tree->getTreeEntries().size());
-  EXPECT_EQ(treeHash, CryptoHelper::bin2hex(CryptoHelper::sha1(gitTreeObject)))
+  EXPECT_EQ(treeHash, Hash::sha1(StringPiece{gitTreeObject}).toString())
       << "SHA-1 of contents should match key";
 
   // Ordinary, non-executable file.
