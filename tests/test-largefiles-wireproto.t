@@ -380,4 +380,60 @@ available locally.
 
   $ killdaemons.py
 
+largefiles should not ask for password again after succesfull authorization
+
+  $ hg init credentialmain
+  $ cd credentialmain
+  $ echo "aaa" >> a
+  $ hg add --large a
+  $ hg commit -m "a"
+  Invoking status precommit hook
+  A a
+
+Before running server clear the user cache to force clone to download
+a large file from the server rather than to get it from the cache
+
+  $ rm "${USERCACHE}"/*
+
+  $ cd ..
+  $ cat << EOT > userpass.py
+  > import base64
+  > from mercurial.hgweb import common
+  > def perform_authentication(hgweb, req, op):
+  >     auth = req.env.get('HTTP_AUTHORIZATION')
+  >     if not auth:
+  >         raise common.ErrorResponse(common.HTTP_UNAUTHORIZED, 'who',
+  >                 [('WWW-Authenticate', 'Basic Realm="mercurial"')])
+  >     if base64.b64decode(auth.split()[1]).split(':', 1) != ['user', 'pass']:
+  >         raise common.ErrorResponse(common.HTTP_FORBIDDEN, 'no')
+  > def extsetup():
+  >     common.permhooks.insert(0, perform_authentication)
+  > EOT
+  $ hg serve --config extensions.x=userpass.py -R credentialmain \
+  >          -d -p $HGPORT --pid-file hg.pid -A access.log
+  $ cat hg.pid >> $DAEMON_PIDS
+  $ cat << EOF > get_pass.py
+  > import getpass
+  > def newgetpass(arg):
+  >   return "pass"
+  > getpass.getpass = newgetpass
+  > EOF
+  $ hg clone --config ui.interactive=true --config extensions.getpass=get_pass.py \
+  >          http://user@localhost:$HGPORT credentialclone
+  requesting all changes
+  http authorization required for http://localhost:$HGPORT/
+  realm: mercurial
+  user: user
+  password: adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files
+  updating to branch default
+  getting changed largefiles
+  1 largefiles updated, 0 removed
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+
+  $ rm hg.pid access.log
+  $ killdaemons.py
+
 #endif

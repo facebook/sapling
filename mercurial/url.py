@@ -493,8 +493,10 @@ def opener(ui, authinfo=None):
 
     passmgr = passwordmgr(ui, ui.httppasswordmgrdb)
     if authinfo is not None:
-        passmgr.add_password(*authinfo)
-        user, passwd = authinfo[2:4]
+        realm, uris, user, passwd = authinfo
+        saveduser, savedpass = passmgr.find_stored_password(uris[0])
+        if user != saveduser or passwd:
+            passmgr.add_password(realm, uris, user, passwd)
         ui.debug('http auth: user %s, password %s\n' %
                  (user, passwd and '*' * len(passwd) or 'not set'))
 
