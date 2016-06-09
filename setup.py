@@ -55,6 +55,7 @@ setup(
         'smartlog',
         'sparse',
         'statprof',
+        'statprofext',
         'tweakdefaults',
         'upgradegeneraldelta',
     ],
