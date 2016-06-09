@@ -1453,7 +1453,7 @@ def handlecheckheads(op, inpart):
     # Trigger a transaction so that we are guaranteed to have the lock now.
     if op.ui.configbool('experimental', 'bundle2lazylocking'):
         op.gettransaction()
-    if heads != op.repo.heads():
+    if sorted(heads) != sorted(op.repo.heads()):
         raise error.PushRaced('repository changed while pushing - '
                               'please try again')
 

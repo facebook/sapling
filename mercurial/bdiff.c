@@ -148,7 +148,7 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 static int longest_match(struct line *a, struct line *b, struct pos *pos,
 			 int a1, int a2, int b1, int b2, int *omi, int *omj)
 {
-	int mi = a1, mj = b1, mk = 0, mb = 0, i, j, k, half;
+	int mi = a1, mj = b1, mk = 0, i, j, k, half;
 
 	/* window our search on large regions to better bound
 	   worst-case performance. by choosing a window at the end, we
@@ -166,10 +166,17 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 		/* loop through all lines match a[i] in b */
 		for (; j >= b1; j = b[j].n) {
 			/* does this extend an earlier match? */
-			if (i > a1 && j > b1 && pos[j - 1].pos == i - 1)
-				k = pos[j - 1].len + 1;
-			else
-				k = 1;
+			for (k = 1; j - k >= b1 && i - k >= a1; k++) {
+				/* reached an earlier match? */
+				if (pos[j - k].pos == i - k) {
+					k += pos[j - k].len;
+					break;
+				}
+				/* previous line mismatch? */
+				if (a[i - k].e != b[j - k].e)
+					break;
+			}
+
 			pos[j].pos = i;
 			pos[j].len = k;
 
@@ -188,18 +195,15 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 		mj = mj - mk + 1;
 	}
 
-	/* expand match to include neighboring popular lines */
-	while (mi - mb > a1 && mj - mb > b1 &&
-	       a[mi - mb - 1].e == b[mj - mb - 1].e)
-		mb++;
+	/* expand match to include subsequent popular lines */
 	while (mi + mk < a2 && mj + mk < b2 &&
 	       a[mi + mk].e == b[mj + mk].e)
 		mk++;
 
-	*omi = mi - mb;
-	*omj = mj - mb;
+	*omi = mi;
+	*omj = mj;
 
-	return mk + mb;
+	return mk;
 }
 
 static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,

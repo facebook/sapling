@@ -88,7 +88,7 @@ We currently can't detect an rbc cache with unknown names:
   $ damage "log -qr branch(b2)" rbc-names-v1
   --- before	* (glob)
   +++ after	* (glob)
-  @@ -1,8 +0,0 @@
+  @@ -1,8 +?,0 @@ (glob)
   -2:5fb7d38b9dc4
   -3:60b597ffdafa
   -4:b1174d11b69e
