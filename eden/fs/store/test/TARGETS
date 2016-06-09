@@ -2,7 +2,6 @@ cpp_unittest(
   name = 'test',
   srcs = glob(['*Test.cpp']),
   deps = [
-    '@/crypto/lib/cpp:fbcrypto-base',
     '@/eden/fs/model:model',
     '@/eden/fs/store:store',
     '@/folly:folly',

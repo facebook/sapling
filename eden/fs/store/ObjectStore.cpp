@@ -9,11 +9,16 @@
  */
 #include "ObjectStore.h"
 
+#include <folly/Conv.h>
 #include <folly/io/IOBuf.h>
+#include <stdexcept>
 #include "LocalStore.h"
+#include "eden/fs/model/Blob.h"
+#include "eden/fs/model/Tree.h"
 
 using folly::IOBuf;
 using std::shared_ptr;
+using std::string;
 using std::unique_ptr;
 
 namespace facebook {
@@ -30,15 +35,30 @@ ObjectStore::~ObjectStore() {}
  */
 
 unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
-  return localStore_->getTree(id);
+  auto tree = localStore_->getTree(id);
+  if (!tree) {
+    throw std::domain_error(
+        folly::to<string>("tree ", id.toString(), " not found"));
+  }
+  return tree;
 }
 
 unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
-  return localStore_->getBlob(id);
+  auto blob = localStore_->getBlob(id);
+  if (!blob) {
+    throw std::domain_error(
+        folly::to<string>("blob ", id.toString(), " not found"));
+  }
+  return blob;
 }
 
 unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
-  return localStore_->getSha1ForBlob(id);
+  auto sha1 = localStore_->getSha1ForBlob(id);
+  if (!sha1) {
+    throw std::domain_error(
+        folly::to<string>("SHA-1 for blob ", id.toString(), " not found"));
+  }
+  return sha1;
 }
 }
 } // facebook::eden

@@ -10,17 +10,19 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <rocksdb/db.h>
 #include <memory>
-#include <string>
-#include "eden/fs/model/Blob.h"
-#include "eden/fs/model/Hash.h"
-#include "eden/fs/model/Tree.h"
+
+namespace rocksdb {
+class DB;
+}
 
 namespace facebook {
 namespace eden {
 
+class Blob;
 class Hash;
+class StoreResult;
+class Tree;
 
 /*
  * LocalStore stores objects (trees and blobs) locally on disk.
@@ -36,10 +38,44 @@ class Hash;
 class LocalStore {
  public:
   explicit LocalStore(folly::StringPiece pathToRocksDb);
+  virtual ~LocalStore();
 
-  std::unique_ptr<std::string> get(const Hash& id) const;
+  /**
+   * Get arbitrary unserialized data from the store.
+   *
+   * StoreResult::isValid() will be true if the id was found, and false
+   * if the key was not present.
+   *
+   * May throw exceptions on error.
+   */
+  StoreResult get(const Hash& id) const;
+
+  /**
+   * Get a Tree from the store.
+   *
+   * Returns nullptr if this key is not present in the store.
+   * May throw exceptions on error (e.g., if this ID refers to a non-tree
+   * object).
+   */
   std::unique_ptr<Tree> getTree(const Hash& id) const;
+
+  /**
+   * Get a Blob from the store.
+   *
+   * Blob objects store file data.
+   *
+   * Returns nullptr if this key is not present in the store.
+   * May throw exceptions on error (e.g., if this ID refers to a non-blob
+   * object).
+   */
   std::unique_ptr<Blob> getBlob(const Hash& id) const;
+
+  /**
+   * Get the SHA-1 hash of the blob contents for the specified blob.
+   *
+   * Returns nullptr if this key is not present in the store, or throws an
+   * exception on error.
+   */
   std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
 
   void putTree(const Hash& id, folly::ByteRange treeData) const;
@@ -47,7 +83,7 @@ class LocalStore {
       const;
 
  private:
-  std::string _get(folly::ByteRange key) const;
+  StoreResult _get(folly::ByteRange key) const;
 
   std::unique_ptr<rocksdb::DB> db_;
 };

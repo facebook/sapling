@@ -10,20 +10,21 @@
 #include <folly/String.h>
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
-#include "crypto/lib/cpp/CryptoHelper.h"
+#include <stdexcept>
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/StoreResult.h"
 
 using namespace facebook::eden;
 using TempDir = folly::test::TemporaryDirectory;
 
 using facebook::eden::Hash;
+using folly::StringPiece;
+using folly::unhexlify;
 using std::string;
-
-string toBinaryHash(string hex);
 
 TEST(LocalStore, testReadAndWriteBlob) {
   TempDir tmp;
@@ -35,7 +36,7 @@ TEST(LocalStore, testReadAndWriteBlob) {
   string contents("{\n  \"breakConfig\": true\n}\n");
   auto gitBlobObjectStr = folly::to<string>(string("blob 26\x00", 8), contents);
 
-  Hash sha1(CryptoHelper::bin2hex(CryptoHelper::sha1(gitBlobObjectStr)));
+  auto sha1 = Hash::sha1(StringPiece(gitBlobObjectStr));
   store.putBlob(hash, folly::StringPiece{gitBlobObjectStr}, sha1);
 
   auto blob = store.getBlob(hash);
@@ -56,37 +57,37 @@ TEST(LocalStore, testReadsAndWriteTree) {
       string("tree 424\x00", 9),
 
       string("100644 .babelrc\x00", 16),
-      toBinaryHash("3a8f8eb91101860fd8484154885838bf322964d0"),
+      unhexlify("3a8f8eb91101860fd8484154885838bf322964d0"),
 
       string("100644 .flowconfig\x00", 19),
-      toBinaryHash("3610882f48696cc7ca0835929511c9db70acbec6"),
+      unhexlify("3610882f48696cc7ca0835929511c9db70acbec6"),
 
       string("100644 README.md\x00", 17),
-      toBinaryHash("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
+      unhexlify("c5f15617ed29cd35964dc197a7960aeaedf2c2d5"),
 
       string("40000 lib\x00", 10),
-      toBinaryHash("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
+      unhexlify("e95798e17f694c227b7a8441cc5c7dae50a187d0"),
 
       string("100755 nuclide-start-server\x00", 28),
-      toBinaryHash("006babcf5734d028098961c6f4b6b6719656924b"),
+      unhexlify("006babcf5734d028098961c6f4b6b6719656924b"),
 
       string("100644 package.json\x00", 20),
-      toBinaryHash("582591e0f0d92cb63a85156e39abd43ebf103edc"),
+      unhexlify("582591e0f0d92cb63a85156e39abd43ebf103edc"),
 
       string("40000 scripts\x00", 14),
-      toBinaryHash("e664fd28e60a0da25739fdf732f412ab3e91d1e1"),
+      unhexlify("e664fd28e60a0da25739fdf732f412ab3e91d1e1"),
 
       string("100644 services-3.json\x00", 23),
-      toBinaryHash("3ead3c6cd723f4867bef4444ba18e6ffbf0f711a"),
+      unhexlify("3ead3c6cd723f4867bef4444ba18e6ffbf0f711a"),
 
       string("100644 services-config.json\x00", 28),
-      toBinaryHash("bbc8e67499b7f3e1ea850eeda1253be7da5c9199"),
+      unhexlify("bbc8e67499b7f3e1ea850eeda1253be7da5c9199"),
 
       string("40000 spec\x00", 11),
-      toBinaryHash("3bae53a99d080dd851f78e36eb343320091a3d57"),
+      unhexlify("3bae53a99d080dd851f78e36eb343320091a3d57"),
 
       string("100644 xdebug.ini\x00", 18),
-      toBinaryHash("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
+      unhexlify("9ed5bbccd1b9b0077561d14c0130dc086ab27e04"));
 
   store.putTree(hash, folly::StringPiece{gitTreeObject});
   auto tree = store.getTree(hash);
@@ -102,8 +103,22 @@ TEST(LocalStore, testReadsAndWriteTree) {
   EXPECT_EQ(0b0110, readmeEntry.getOwnerPermissions());
 }
 
-string toBinaryHash(string hex) {
-  string bytes;
-  folly::unhexlify(hex, bytes);
-  return bytes;
+TEST(LocalStore, testGetResult) {
+  TempDir tmp;
+  LocalStore store(tmp.path().string());
+
+  Hash hash1{"1000000000000000000000000000000000000000"};
+  Hash hash2{"2000000000000000000000000000000000000000"};
+
+  EXPECT_FALSE(store.get(hash1).isValid());
+  EXPECT_FALSE(store.get(hash2).isValid());
+
+  store.putTree(hash1, StringPiece{"hello world"});
+  auto result1 = store.get(hash1);
+  ASSERT_TRUE(result1.isValid());
+  EXPECT_EQ("hello world", result1.piece());
+
+  auto result2 = store.get(hash2);
+  EXPECT_FALSE(result2.isValid());
+  EXPECT_THROW(result2.piece(), std::domain_error);
 }

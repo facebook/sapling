@@ -11,11 +11,15 @@
 
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <rocksdb/db.h>
 #include <array>
+#include "eden/fs/model/Blob.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitBlob.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/rocksdb/RocksDbUtil.h"
 #include "eden/fs/rocksdb/RocksException.h"
+#include "eden/fs/store/StoreResult.h"
 
 using facebook::eden::Hash;
 using folly::ByteRange;
@@ -70,8 +74,10 @@ namespace eden {
 LocalStore::LocalStore(StringPiece pathToRocksDb)
     : db_(createRocksDb(pathToRocksDb)) {}
 
-std::unique_ptr<string> LocalStore::get(const Hash& id) const {
-  return std::make_unique<string>(_get(id.getBytes()));
+LocalStore::~LocalStore() {}
+
+StoreResult LocalStore::get(const Hash& id) const {
+  return _get(id.getBytes());
 }
 
 // TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
@@ -81,29 +87,38 @@ std::unique_ptr<string> LocalStore::get(const Hash& id) const {
 // or deserializeGitBlob().
 
 std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
-  auto gitTreeObject = get(id);
-  return deserializeGitTree(id, folly::StringPiece{*gitTreeObject});
+  auto result = _get(id.getBytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  return deserializeGitTree(id, result.bytes());
 }
 
 std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
   // We have to hold this string in scope while we deserialize and build
   // the blob; otherwise, the results are undefined.
-  std::unique_ptr<string> gitBlobObject = get(id);
-  return deserializeGitBlob(id, std::move(*gitBlobObject));
+  auto result = _get(id.getBytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  return deserializeGitBlob(id, result.extractValue());
 }
 
 std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
   Sha1Key key(id);
-  string gitBlobObject = _get(key.bytes());
-  if (gitBlobObject.size() != Hash::RAW_SIZE) {
+  auto result = _get(key.bytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  auto bytes = result.bytes();
+  if (bytes.size() != Hash::RAW_SIZE) {
     throw std::invalid_argument(folly::sformat(
         "Database entry for {} was not of size {}. Could not convert to SHA-1.",
         id.toString(),
         static_cast<size_t>(Hash::RAW_SIZE)));
   }
 
-  ByteRange byteRange = StringPiece{gitBlobObject};
-  return std::make_unique<Hash>(byteRange);
+  return std::make_unique<Hash>(bytes);
 }
 
 void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1)
@@ -141,16 +156,24 @@ void LocalStore::putTree(const Hash& id, ByteRange treeData) const {
   }
 }
 
-string LocalStore::_get(ByteRange key) const {
+StoreResult LocalStore::_get(ByteRange key) const {
   string value;
   auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
   if (!status.ok()) {
+    if (status.IsNotFound()) {
+      // Return an empty StoreResult
+      return StoreResult();
+    }
+
+    // TODO: RocksDB can return a "TryAgain" error.
+    // Should we try again for the user, rather than re-throwing the error?
+
     // We don't use RocksException::check(), since we don't want to waste our
     // time computing the hex string of the key if we succeeded.
     throw RocksException::build(
         status, "failed to get ", folly::hexlify(key), " from local store");
   }
-  return value;
+  return StoreResult(std::move(value));
 }
 }
 }
