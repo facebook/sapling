@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 import os
 import shutil
 import struct
@@ -408,7 +409,7 @@ class mergestate(object):
         if fcl.isabsent():
             hash = nullhex
         else:
-            hash = util.sha1(fcl.path()).hexdigest()
+            hash = hashlib.sha1(fcl.path()).hexdigest()
             self._repo.vfs.write('merge/' + hash, fcl.data())
         self._state[fd] = ['u', hash, fcl.path(),
                            fca.path(), hex(fca.filenode()),

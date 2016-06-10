@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 import inspect
 import os
 import random
@@ -1013,7 +1014,7 @@ class localrepository(object):
                 hint=_("run 'hg recover' to clean up transaction"))
 
         idbase = "%.40f#%f" % (random.random(), time.time())
-        txnid = 'TXN:' + util.sha1(idbase).hexdigest()
+        txnid = 'TXN:' + hashlib.sha1(idbase).hexdigest()
         self.hook('pretxnopen', throw=True, txnname=desc, txnid=txnid)
 
         self._writejournal(desc)

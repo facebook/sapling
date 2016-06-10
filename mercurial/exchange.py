@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 
 from .i18n import _
 from .node import (
@@ -1646,7 +1647,7 @@ def check_heads(repo, their_heads, context):
     Used by peer for unbundling.
     """
     heads = repo.heads()
-    heads_hash = util.sha1(''.join(sorted(heads))).digest()
+    heads_hash = hashlib.sha1(''.join(sorted(heads))).digest()
     if not (their_heads == ['force'] or their_heads == heads or
             their_heads == ['hashed', heads_hash]):
         # someone else committed/pushed/unbundled while we

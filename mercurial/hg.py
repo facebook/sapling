@@ -9,6 +9,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 import os
 import shutil
 
@@ -480,7 +481,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
                 ui.status(_('(not using pooled storage: '
                             'unable to resolve identity of remote)\n'))
         elif sharenamemode == 'remote':
-            sharepath = os.path.join(sharepool, util.sha1(source).hexdigest())
+            sharepath = os.path.join(
+                sharepool, hashlib.sha1(source).hexdigest())
         else:
             raise error.Abort('unknown share naming mode: %s' % sharenamemode)
 

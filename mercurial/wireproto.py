@@ -7,6 +7,7 @@
 
 from __future__ import absolute_import
 
+import hashlib
 import itertools
 import os
 import sys
@@ -410,7 +411,7 @@ class wirepeer(peer.peerrepository):
 
         if heads != ['force'] and self.capable('unbundlehash'):
             heads = encodelist(['hashed',
-                                util.sha1(''.join(sorted(heads))).digest()])
+                                hashlib.sha1(''.join(sorted(heads))).digest()])
         else:
             heads = encodelist(heads)
 

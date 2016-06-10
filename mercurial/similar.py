@@ -7,6 +7,8 @@
 
 from __future__ import absolute_import
 
+import hashlib
+
 from .i18n import _
 from . import (
     bdiff,
@@ -27,14 +29,14 @@ def _findexactmatches(repo, added, removed):
     for i, fctx in enumerate(removed):
         repo.ui.progress(_('searching for exact renames'), i, total=numfiles,
                          unit=_('files'))
-        h = util.sha1(fctx.data()).digest()
+        h = hashlib.sha1(fctx.data()).digest()
         hashes[h] = fctx
 
     # For each added file, see if it corresponds to a removed file.
     for i, fctx in enumerate(added):
         repo.ui.progress(_('searching for exact renames'), i + len(removed),
                 total=numfiles, unit=_('files'))
-        h = util.sha1(fctx.data()).digest()
+        h = hashlib.sha1(fctx.data()).digest()
         if h in hashes:
             yield (hashes[h], fctx)
 

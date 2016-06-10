@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 import os
 import shutil
 
@@ -229,7 +230,7 @@ def _lfconvert_addchangeset(rsrc, rdst, ctx, revmap, lfiles, normalfiles,
                         raise error.Abort(_('largefile %s becomes symlink') % f)
 
                 # largefile was modified, update standins
-                m = util.sha1('')
+                m = hashlib.sha1('')
                 m.update(ctx[f].data())
                 hash = m.hexdigest()
                 if f not in lfiletohash or lfiletohash[f] != hash:

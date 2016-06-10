@@ -9,6 +9,7 @@
 from __future__ import absolute_import
 
 import copy
+import hashlib
 import heapq
 import struct
 
@@ -18,7 +19,6 @@ from . import (
     obsolete,
     phases,
     tags as tagsmod,
-    util,
 )
 
 def hideablerevs(repo):
@@ -102,7 +102,7 @@ def cachehash(repo, hideable):
     it to the cache. Upon reading we can easily validate by checking the hash
     against the stored one and discard the cache in case the hashes don't match.
     """
-    h = util.sha1()
+    h = hashlib.sha1()
     h.update(''.join(repo.heads()))
     h.update(str(hash(frozenset(hideable))))
     return h.digest()

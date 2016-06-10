@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import
 
+import hashlib
 import os
 import ssl
 import sys
@@ -388,9 +389,9 @@ def validatesocket(sock):
     # If a certificate fingerprint is pinned, use it and only it to
     # validate the remote cert.
     peerfingerprints = {
-        'sha1': util.sha1(peercert).hexdigest(),
-        'sha256': util.sha256(peercert).hexdigest(),
-        'sha512': util.sha512(peercert).hexdigest(),
+        'sha1': hashlib.sha1(peercert).hexdigest(),
+        'sha256': hashlib.sha256(peercert).hexdigest(),
+        'sha512': hashlib.sha512(peercert).hexdigest(),
     }
 
     def fmtfingerprint(s):

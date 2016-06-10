@@ -43,6 +43,7 @@ from __future__ import absolute_import
 import SocketServer
 import errno
 import gc
+import hashlib
 import inspect
 import os
 import random
@@ -76,7 +77,7 @@ _log = commandserver.log
 
 def _hashlist(items):
     """return sha1 hexdigest for a list"""
-    return util.sha1(str(items)).hexdigest()
+    return hashlib.sha1(str(items)).hexdigest()
 
 # sensitive config sections affecting confighash
 _configsections = [

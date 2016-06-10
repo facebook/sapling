@@ -91,6 +91,7 @@ will disable itself if any of those are active.
 
 from __future__ import absolute_import
 
+import hashlib
 import os
 import stat
 import sys
@@ -141,7 +142,7 @@ def _hashignore(ignore):
     copy.
 
     """
-    sha1 = util.sha1()
+    sha1 = hashlib.sha1()
     if util.safehasattr(ignore, 'includepat'):
         sha1.update(ignore.includepat)
     sha1.update('\0\0')

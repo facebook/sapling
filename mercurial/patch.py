@@ -12,6 +12,7 @@ import collections
 import copy
 import email
 import errno
+import hashlib
 import os
 import posixpath
 import re
@@ -2412,7 +2413,7 @@ def trydiff(repo, revs, ctx1, ctx2, modified, added, removed,
         if not text:
             text = ""
         l = len(text)
-        s = util.sha1('blob %d\0' % l)
+        s = hashlib.sha1('blob %d\0' % l)
         s.update(text)
         return s.hexdigest()
 

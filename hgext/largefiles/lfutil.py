@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 
 import copy
+import hashlib
 import os
 import platform
 import stat
@@ -359,7 +360,7 @@ def writestandin(repo, standin, hash, executable):
 def copyandhash(instream, outfile):
     '''Read bytes from instream (iterable) and write them to outfile,
     computing the SHA-1 hash of the data along the way. Return the hash.'''
-    hasher = util.sha1('')
+    hasher = hashlib.sha1('')
     for data in instream:
         hasher.update(data)
         outfile.write(data)
@@ -371,7 +372,7 @@ def hashrepofile(repo, file):
 def hashfile(file):
     if not os.path.exists(file):
         return ''
-    hasher = util.sha1('')
+    hasher = hashlib.sha1('')
     fd = open(file, 'rb')
     for data in util.filechunkiter(fd, 128 * 1024):
         hasher.update(data)
@@ -400,7 +401,7 @@ def urljoin(first, second, *arg):
 def hexsha1(data):
     """hexsha1 returns the hex-encoded sha1 sum of the data in the file-like
     object data"""
-    h = util.sha1()
+    h = hashlib.sha1()
     for chunk in util.filechunkiter(data):
         h.update(chunk)
     return h.hexdigest()

@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import contextlib
 import errno
 import glob
+import hashlib
 import os
 import re
 import shutil
@@ -224,7 +225,7 @@ def filteredhash(repo, maxrev):
     key = None
     revs = sorted(r for r in cl.filteredrevs if r <= maxrev)
     if revs:
-        s = util.sha1()
+        s = hashlib.sha1()
         for rev in revs:
             s.update('%s;' % rev)
         key = s.digest()

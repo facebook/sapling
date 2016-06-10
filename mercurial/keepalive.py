@@ -110,6 +110,7 @@ EXTRA ATTRIBUTES AND METHODS
 from __future__ import absolute_import, print_function
 
 import errno
+import hashlib
 import httplib
 import socket
 import sys
@@ -624,8 +625,7 @@ def error_handler(url):
     keepalive_handler.close_all()
 
 def continuity(url):
-    from . import util
-    md5 = util.md5
+    md5 = hashlib.md5
     format = '%25s: %s'
 
     # first fetch the file with the normal http handler
