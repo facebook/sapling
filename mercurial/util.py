@@ -64,10 +64,6 @@ if os.name == 'nt':
 else:
     from . import posix as platform
 
-md5 = hashlib.md5
-sha1 = hashlib.sha1
-sha256 = hashlib.sha256
-sha512 = hashlib.sha512
 _ = i18n._
 
 cachestat = platform.cachestat
@@ -138,9 +134,9 @@ def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
 
 DIGESTS = {
-    'md5': md5,
-    'sha1': sha1,
-    'sha512': sha512,
+    'md5': hashlib.md5,
+    'sha1': hashlib.sha1,
+    'sha512': hashlib.sha512,
 }
 # List of digest types from strongest to weakest
 DIGESTS_BY_STRENGTH = ['sha512', 'sha1', 'md5']
