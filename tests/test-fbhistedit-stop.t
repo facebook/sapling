@@ -1,7 +1,10 @@
   $ . "$TESTDIR/histedit-helpers.sh"
 
-  $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
+Setup
+
+  $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > histedit=
@@ -10,7 +13,7 @@
   > evolve=
   > rebase=
   > directaccess=
-  > fbhistedit=$TESTTMP/fbhistedit.py
+  > fbhistedit=
   > [experimental]
   > evolution = createmarkers
   > EOF
