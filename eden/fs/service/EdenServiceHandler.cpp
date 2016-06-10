@@ -185,5 +185,9 @@ void EdenServiceHandler::getSHA1(
     }
   }
 }
+
+void EdenServiceHandler::shutdown() {
+  server_->stop();
+}
 }
 } // facebook::eden

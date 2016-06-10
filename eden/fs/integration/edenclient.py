@@ -27,7 +27,6 @@ class EdenClient(object):
     '''Manages an instance of the eden fuse server.'''
 
     def __init__(self):
-        self._proc = None
         self._paths_to_clean = []
         self._config_dir = None
         self._mount_path = None
@@ -55,25 +54,8 @@ class EdenClient(object):
 
     def kill(self):
         '''Stops and unmounts this instance.'''
-
-        if not self._proc:
-            return None
-
-        # Send SIGTERM first, and then SIGKILL if the child process
-        # doesn't exit within 3 seconds.
-        self._proc.terminate()
-        for n in range(30):
-            if self._proc.poll() is None:
-                time.sleep(0.1)
-                continue
-            break
-        else:
-            self._proc.kill()
-            self._proc.wait()
-
-        rc = self._proc.returncode
-        self._proc = None
-        return rc
+        self.shutdown_cmd()
+        return 0
 
     def _create_dirs(self):
         '''Creates and sets _config_dir and _mount_path if not already set.'''
@@ -102,10 +84,6 @@ class EdenClient(object):
             except (OSError, socket.error) as ex:
                 if ex.errno != errno.ENOENT:
                     raise
-            if self._proc.poll() is not None:
-                # The eden process died
-                raise Exception("eden died during startup: exit code = %s" %
-                                (self._proc.returncode,))
 
             time.sleep(0.1)
         raise Exception("edenfs didn't start within timeout of %s" % timeout)
@@ -156,14 +134,26 @@ class EdenClient(object):
         else:
             self._create_dirs()
 
-        self._proc = subprocess.Popen(
+        subprocess.check_call(
             [
                 EDEN_CLI,
                 '--config-dir', self._config_dir,
                 'daemon',
+                # Preserve the environment variables so that we can use them to
+                # help track runaway processes from test runs.
+                '-E',
             ]
         )
         self._wait_for_thrift(timeout)
+
+    def shutdown_cmd(self):
+        subprocess.check_call(
+            [
+                EDEN_CLI,
+                '--config-dir', self._config_dir,
+                'shutdown',
+            ]
+        )
 
     def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
         '''Runs eden mount and passes the specified parameters.
@@ -182,17 +172,7 @@ class EdenClient(object):
         if config_dir is not None:
             self._config_dir = config_dir
 
-        self._create_dirs()
-
-        self._proc = subprocess.Popen(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
-                'daemon',
-            ]
-        )
-        self._wait_for_thrift(timeout)
-
+        self.daemon_cmd()
         self.mount_cmd()
 
     def mount_cmd(self):

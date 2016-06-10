@@ -209,6 +209,10 @@ void EdenServer::prepareThriftAddress() {
         "unable to remove old Eden thrift socket ", addr.getPath());
   }
 }
+
+void EdenServer::stop() const {
+  server_->stop();
+}
 }
 } // facebook::eden
 

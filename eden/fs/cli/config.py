@@ -12,7 +12,6 @@ import collections
 import errno
 import json
 import os
-import signal
 import stat
 import subprocess
 from facebook.eden import EdenService
@@ -152,26 +151,9 @@ class Config:
         client = self.get_thrift_client()
         client.unmount(mount_point)
 
-    def spawn(self, debug=False, gdb=False):
+    def spawn(self, debug=False, gdb=False, preserve_environment=False):
         '''Note that this method will not exit until the user kills the program.
         '''
-        def kill_child_process(signum, stack_frame):
-            p.send_signal(signum)
-
-        def kill_child_process_group(signum, stack_frame):
-            try:
-                os.kill(-p.pid, signum)
-            except EnvironmentError as ex:
-                # Since the child process is started as root, we sometimes can
-                # get EPERM when trying to kill its process group.  (This can
-                # happen if the privileged helper is still around.)
-                #
-                # Ignore this error, but re-raise all others.  The privileged
-                # helper should die on its own anyway when the main process
-                # goes away.
-                if ex.errno != errno.EPERM:
-                    raise
-
         # Run the eden server.
         eden_bin = _get_path_to_eden_server()
         cmd = [
@@ -185,51 +167,24 @@ class Config:
 
         # Run edenfs using sudo, unless we already have root privileges,
         # or the edenfs binary is setuid root.
-        if os.geteuid() == 0:
-            need_sudo = False
-        else:
+        if os.geteuid() != 0:
             s = os.stat(eden_bin)
-            if s.st_uid == 0 and (s.st_mode & stat.S_ISUID):
-                need_sudo = False
-            else:
-                need_sudo = True
-
-        if need_sudo:
-            # Run edenfs under sudo
-            # sudo will generally spawn edenfs as a separate child process,
-            # rather than just exec()ing it.  Therefore our immediate child
-            # will still have root privileges, so we don't have permissions to
-            # kill it.  We have permissions to kill the main edenfs process
-            # which drops privileges, but we don't know its process ID.
-            #
-            # Therefore, call os.setsid() in our child before invoking sudo.
-            # When we want to kill eden we can just send a signal to the entire
-            # child process group.
-            sigterm_handler = kill_child_process_group
-            # Have to set a SIGINT handler too.  Since edenfs isn't part of our
-            # process group it won't get SIGING when Ctrl-C is sent to our
-            # terminal.
-            sigint_handler = kill_child_process_group
-            p = subprocess.Popen(['sudo'] + cmd, preexec_fn=os.setsid)
-        else:
-            # We can just run edenfs directly.  On SIGTERM we just kill it.
-            sigterm_handler = kill_child_process
-            # We ignore SIGINT.  Hitting Ctrl-C in the terminal sends SIGINT to
-            # our entire process group, so it will automatically go to the main
-            # edenfs process too.
-            sigint_handler = signal.SIG_IGN
-            p = subprocess.Popen(cmd)
-
-        # If we get sent SIGTERM, forward it through to edenfs.
-        #
-        # If we get sent SIGINT, ignore it, and just keep waiting for edenfs to
-        # exit.  SIGINT normally will be sent from a user hitting Ctrl-C on the
-        # terminal, in which case Ctrl-C will be sent to everything in our
-        # process group (including edenfs), so we don't need to forward SIGINT
-        # to it a second time.
-        signal.signal(signal.SIGTERM, sigterm_handler)
-        signal.signal(signal.SIGINT, sigint_handler)
-        return p.wait()
+            if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
+                # Run edenfs under sudo
+                # sudo will generally spawn edenfs as a separate child process,
+                # rather than just exec()ing it.  Therefore our immediate child
+                # will still have root privileges, so we don't have permissions
+                # to kill it.  We have permissions to kill the main edenfs
+                # process which drops privileges, but we don't know its process
+                # ID.
+                sudo_args = ['sudo']
+                if preserve_environment:
+                    sudo_args.append('-E')
+                cmd = sudo_args + cmd
+            elif os.geteuid() == 0 and not preserve_environment:
+                # TODO: Reset the environment when running cmd.
+                pass
+        subprocess.Popen(cmd, preexec_fn=os.setsid)
 
     def get_or_create_path_to_rocks_db(self):
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)

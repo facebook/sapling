@@ -17,9 +17,8 @@ class HealthTest(testcase.EdenTestCase):
         client = edenclient.EdenClient()
         client.daemon_cmd()
         self.assertTrue(client.is_healthy())
-
-    # TODO(mbolin): Once we have `eden shutdown`, we should also assert that
-    # Eden fails a health check after it has been shut down.
+        client.shutdown_cmd()
+        self.assertFalse(client.is_healthy())
 
     def test_disconnected_client_is_not_healthy(self):
         client = edenclient.EdenClient()

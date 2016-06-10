@@ -16,8 +16,10 @@ import json
 import os
 import subprocess
 import sys
+import thrift
 
 from . import config as config_mod
+from fb303.ttypes import fb_status
 
 # Relative to the user's $HOME/%USERPROFILE% directory.
 # TODO: This value should be .eden outside of Facebook devservers.
@@ -25,9 +27,6 @@ DEFAULT_CONFIG_DIR = 'local/.eden'
 
 # Environment variable that can be used instead of specifying --config-dir.
 CONFIG_DIR_ENVIRONMENT_VARIABLE = 'EDEN_CONFIG_DIR'
-
-THRIFT_STATUS_STARTING = 1
-THRIFT_STATUS_ALIVE = 2
 
 
 def infer_client_from_cwd(config, clientname):
@@ -124,16 +123,21 @@ def _get_hg_commit(repo):
 
 def do_health(args):
     config = create_config(args)
-    is_healthy = False
     try:
         client = config.get_thrift_client()
         status = client.getStatus()
-        is_healthy = (status == THRIFT_STATUS_STARTING or
-                      status == THRIFT_STATUS_ALIVE)
-    except EdenNotRunningError:
-        pass
-    exit_code = 0 if is_healthy else 1
-    return exit_code
+    except (EdenNotRunningError, thrift.Thrift.TException) as e:
+        print(e, file=sys.stderr)
+        return 1
+
+    if status == fb_status.ALIVE:
+        print('eden health check passes')
+        return 0
+    else:
+        msg = fb_status._VALUES_TO_NAMES(status)
+        print('eden health check fails. thrift server status: ' + msg,
+              file=sys.stderr)
+        return 1
 
 
 def do_init(args):
@@ -213,7 +217,8 @@ def do_daemon(args):
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
     _ensure_dot_eden_folder_exists(config)
-    return config.spawn(debug=args.debug, gdb=args.gdb)
+    return config.spawn(debug=args.debug, gdb=args.gdb,
+                        preserve_environment=args.preserve_environment)
 
 
 def _ensure_dot_eden_folder_exists(config):
@@ -224,6 +229,16 @@ def _ensure_dot_eden_folder_exists(config):
     '''
     db = config.get_or_create_path_to_rocks_db()
     return db
+
+
+def do_shutdown(args):
+    config = create_config(args)
+    client = None
+    try:
+        client = config.get_thrift_client()
+    except EdenNotRunningError:
+        return 1
+    client.shutdown()
 
 
 def create_parser():
@@ -244,6 +259,17 @@ def create_parser():
                                  help='Name of the mounted client')
     checkout_parser.add_argument('snapshot', help='Snapshot hash to check out')
     checkout_parser.set_defaults(func=do_checkout)
+
+    daemon_parser = subparsers.add_parser(
+        'daemon', help='Run the edenfs daemon')
+    daemon_parser.add_argument(
+        '--debug', '-d', action='store_true', help='Enable fuse debugging.')
+    daemon_parser.add_argument(
+        '--preserve-environment', '-E', action='store_true',
+        help='Preserve environment for underlying sudo calls')
+    daemon_parser.add_argument(
+        '--gdb', '-g', action='store_true', help='Run under gdb')
+    daemon_parser.set_defaults(func=do_daemon)
 
     health_parser = subparsers.add_parser(
         'health', help='Check the health of the Eden service')
@@ -288,13 +314,9 @@ def create_parser():
         'name', help='Name of the client to mount')
     mount_parser.set_defaults(func=do_mount)
 
-    daemon_parser = subparsers.add_parser(
-        'daemon', help='Run the edenfs daemon')
-    daemon_parser.add_argument(
-        '--gdb', '-g', action='store_true', help='Run under gdb')
-    daemon_parser.add_argument(
-        '--debug', '-d', action='store_true', help='Enable fuse debugging.')
-    daemon_parser.set_defaults(func=do_daemon)
+    shutdown_parser = subparsers.add_parser(
+        'shutdown', help='Shutdown the daemon')
+    shutdown_parser.set_defaults(func=do_shutdown)
 
     unmount_parser = subparsers.add_parser(
         'unmount', help='Unmount a specific client')

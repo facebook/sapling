@@ -42,6 +42,12 @@ class EdenServiceHandler : virtual public EdenServiceSvIf,
       std::unique_ptr<std::string> mountPoint,
       std::unique_ptr<std::string> path) override;
 
+  /**
+   * When this Thrift handler is notified to shutdown, it notifies the
+   * EdenServer to shut down, as well.
+   */
+  void shutdown() override;
+
  private:
   // Forbidden copy constructor and assignment operator
   EdenServiceHandler(EdenServiceHandler const&) = delete;

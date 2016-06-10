@@ -48,6 +48,11 @@ class EdenServer {
 
   void run();
 
+  /**
+   * Stops this server, which includes the underlying Thrift server.
+   */
+  void stop() const;
+
   void mount(
       std::shared_ptr<EdenMount> edenMount,
       std::unique_ptr<ClientConfig> config);
