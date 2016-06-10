@@ -59,7 +59,7 @@ typedef struct _iterator_t iterator_t;
  */
 extern bool valid_path(const char *path, const size_t path_sz);
 
-extern tree_t *alloc_tree();
+extern tree_t *alloc_tree(void);
 
 extern void destroy_tree(tree_t *tree);
 

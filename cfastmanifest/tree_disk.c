@@ -62,7 +62,7 @@ typedef struct _v0_header_t {
 /**
  * Returns true iff the host is little endian.
  */
-static inline bool little_endian() {
+static inline bool little_endian(void) {
   int foo = LITTLE_ENDIAN_TEST_VALUE;
   if (ntohl(foo) == LITTLE_ENDIAN_TEST_VALUE) {
     return false;
@@ -74,7 +74,7 @@ static inline bool little_endian() {
 /**
  * Returns the size, in bytes, of the host pointer.
  */
-static inline uint8_t host_pointer_size() {
+static inline uint8_t host_pointer_size(void) {
   return sizeof(void*);
 }
 
