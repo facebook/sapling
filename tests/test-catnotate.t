@@ -18,7 +18,7 @@ Test catnotate
   > Hello
   > world
   > EOF
-  $ echo -e "\0" >> b
+  $ printf "\0\n" >> b
 
   $ hg add a b
   $ hg commit -m "Hello :)"
