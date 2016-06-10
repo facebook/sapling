@@ -653,24 +653,24 @@ static int sha1hash(char hash[20], const char *str, Py_ssize_t len)
 	PyObject *shaobj, *hashobj;
 
 	if (shafunc == NULL) {
-		PyObject *util, *name = PyString_FromString("mercurial.util");
+		PyObject *hashlib, *name = PyString_FromString("hashlib");
 
 		if (name == NULL)
 			return -1;
 
-		util = PyImport_Import(name);
+		hashlib = PyImport_Import(name);
 		Py_DECREF(name);
 
-		if (util == NULL) {
-			PyErr_SetString(PyExc_ImportError, "mercurial.util");
+		if (hashlib == NULL) {
+			PyErr_SetString(PyExc_ImportError, "hashlib");
 			return -1;
 		}
-		shafunc = PyObject_GetAttrString(util, "sha1");
-		Py_DECREF(util);
+		shafunc = PyObject_GetAttrString(hashlib, "sha1");
+		Py_DECREF(hashlib);
 
 		if (shafunc == NULL) {
 			PyErr_SetString(PyExc_AttributeError,
-					"module 'mercurial.util' has no "
+					"module 'hashlib' has no "
 					"attribute 'sha1'");
 			return -1;
 		}
