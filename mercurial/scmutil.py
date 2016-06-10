@@ -1388,4 +1388,3 @@ class backgroundfilecloser(object):
             return
 
         self._queue.put(fh, block=True, timeout=None)
-
