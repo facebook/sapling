@@ -106,4 +106,3 @@ def findrenames(repo, added, removed, threshold):
         for (a, b, score) in _findsimilarmatches(repo,
                 sorted(addedfiles), sorted(removedfiles), threshold):
             yield (a.path(), b.path(), score)
-
