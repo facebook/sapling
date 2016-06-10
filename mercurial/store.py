@@ -8,6 +8,7 @@
 from __future__ import absolute_import
 
 import errno
+import hashlib
 import os
 import stat
 
@@ -18,8 +19,6 @@ from . import (
     scmutil,
     util,
 )
-
-_sha = util.sha1
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d
@@ -211,7 +210,7 @@ _dirprefixlen = 8
 _maxshortdirslen = 8 * (_dirprefixlen + 1) - 4
 
 def _hashencode(path, dotencode):
-    digest = _sha(path).hexdigest()
+    digest = hashlib.sha1(path).hexdigest()
     le = lowerencode(path[5:]).split('/') # skips prefix 'data/' or 'meta/'
     parts = _auxencode(le, dotencode)
     basename = parts[-1]
