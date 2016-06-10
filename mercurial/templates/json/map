@@ -15,7 +15,12 @@ filerevision = '\{
 lineentry = '\{
   "line": {line|json}
   }'
-search = '"not yet implemented"'
+search = '\{
+  "node": {node|json},
+  "query": {query|json},
+  "entries": [{join(entries%searchentry, ", ")}]
+  }'
+searchentry = '{changelistentry}'
 # changelog and shortlog are the same web API but with different
 # number of entries.
 changelog = changelist.tmpl
