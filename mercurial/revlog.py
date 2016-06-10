@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import collections
 import errno
+import hashlib
 import os
 import struct
 import zlib
@@ -40,7 +41,6 @@ _pack = struct.pack
 _unpack = struct.unpack
 _compress = zlib.compress
 _decompress = zlib.decompress
-_sha = util.sha1
 
 # revlog header flags
 REVLOGV0 = 0
@@ -74,7 +74,7 @@ def gettype(q):
 def offset_type(offset, type):
     return long(long(offset) << 16 | type)
 
-_nullhash = _sha(nullid)
+_nullhash = hashlib.sha1(nullid)
 
 def hash(text, p1, p2):
     """generate a hash from the given text and its parent hashes
@@ -92,7 +92,7 @@ def hash(text, p1, p2):
         # none of the parent nodes are nullid
         l = [p1, p2]
         l.sort()
-        s = _sha(l[0])
+        s = hashlib.sha1(l[0])
         s.update(l[1])
     s.update(text)
     return s.digest()
