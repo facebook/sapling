@@ -13,6 +13,7 @@
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
+#include "eden/fuse/EdenStats.h"
 #include "eden/fuse/fuse_headers.h"
 #include "eden/utils/PathFuncs.h"
 
@@ -37,6 +38,7 @@ class DirHandle;
 class Dispatcher {
   fuse_conn_info connInfo_;
   Channel* chan_{nullptr};
+  EdenStats stats_;
 
  public:
   virtual ~Dispatcher();
@@ -45,6 +47,8 @@ class Dispatcher {
   std::unique_ptr<fuse_session, SessionDeleter> makeSession(
       Channel& channel,
       bool debug);
+  EdenStats& getStats();
+  const EdenStats& getStats() const;
   Channel& getChannel() const;
   const fuse_conn_info& getConnInfo() const;
 

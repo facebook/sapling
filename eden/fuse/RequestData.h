@@ -8,8 +8,10 @@
  *
  */
 #pragma once
-#include "eden/fuse/fuse_headers.h"
+#include <folly/futures/Future.h>
 #include <folly/io/async/Request.h>
+#include "eden/fuse/EdenStats.h"
+#include "eden/fuse/fuse_headers.h"
 
 namespace facebook {
 namespace eden {
@@ -22,6 +24,9 @@ class RequestData : public folly::RequestData {
   std::atomic<fuse_req_t> req_;
   // We're managed by this context, so we only keep a weak ref
   std::weak_ptr<folly::RequestContext> requestContext_;
+  // Needed to track stats
+  std::chrono::time_point<std::chrono::steady_clock> startTime_;
+  EdenStats::Histogram* latencyHistogram_{nullptr};
 
   static void interrupter(fuse_req_t req, void* data);
   fuse_req_t stealReq();
@@ -40,6 +45,8 @@ class RequestData : public folly::RequestData {
   explicit RequestData(fuse_req_t req);
   static RequestData& get();
   static RequestData& create(fuse_req_t req);
+  folly::Future<folly::Unit> startRequest(EdenStats::Histogram& histogram);
+  void finishRequest();
 
   // Returns the request context, which holds uid, gid, pid and umask info
   const fuse_ctx& getContext() const;

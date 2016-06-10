@@ -10,7 +10,10 @@
 #include "RequestData.h"
 #include "Dispatcher.h"
 
+#include <glog/logging.h>
+
 using namespace folly;
+using namespace std::chrono;
 
 namespace facebook {
 namespace eden {
@@ -53,6 +56,20 @@ RequestData& RequestData::create(fuse_req_t req) {
   folly::RequestContext::get()->setContextData(
       RequestData::kKey, std::make_unique<RequestData>(req));
   return get();
+}
+
+Future<folly::Unit> RequestData::startRequest(EdenStats::Histogram& histogram) {
+  startTime_ = steady_clock::now();
+  DCHECK(latencyHistogram_ == nullptr);
+  latencyHistogram_ = &histogram;
+  return folly::Unit{};
+}
+
+void RequestData::finishRequest() {
+  auto now = duration_cast<seconds>(steady_clock::now().time_since_epoch());
+  auto diff = duration_cast<microseconds>(steady_clock::now() - startTime_);
+  (*latencyHistogram_)->addValue(now, diff.count());
+  latencyHistogram_ = nullptr;
 }
 
 fuse_req_t RequestData::stealReq() {

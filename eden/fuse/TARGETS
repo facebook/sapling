@@ -4,6 +4,8 @@ cpp_library(
     headers = glob(["*.h"]),
     deps = [
         "@/folly:folly",
+        "@/folly:stats",
+        "@/folly:synchronized",
         "@/wangle:wangle",
         "@/eden/fuse/privhelper:privhelper",
         "@/eden/utils:utils",
