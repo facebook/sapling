@@ -30,7 +30,7 @@ Hash::Storage byteRangeToArray(ByteRange bytes);
 
 Hash::Hash() : bytes_{{0}} {}
 
-Hash::Hash(Storage bytes) : bytes_{bytes} {}
+Hash::Hash(Storage bytes) : bytes_(bytes) {}
 
 Hash::Hash(ByteRange bytes) : Hash{byteRangeToArray(bytes)} {}
 
