@@ -1871,18 +1871,27 @@ def sort(repo, subset, x):
         # i18n: "sort" is a keyword
         keys = getstring(args['keys'], _("sort spec must be a string"))
 
+    keyflags = []
+    for k in keys.split():
+        fk = k
+        reverse = (k[0] == '-')
+        if reverse:
+            k = k[1:]
+        if k not in _sortkeyfuncs and k != 'topo':
+            raise error.ParseError(_("unknown sort key %r") % fk)
+        keyflags.append((k, reverse))
+
     s = args['set']
-    keys = keys.split()
     revs = getset(repo, subset, s)
 
-    if len(keys) > 1 and any(k.lstrip('-') == 'topo' for k in keys):
+    if len(keyflags) > 1 and any(k == 'topo' for k, reverse in keyflags):
         # i18n: "topo" is a keyword
         raise error.ParseError(_(
             'topo sort order cannot be combined with other sort keys'))
 
     firstbranch = ()
     if 'topo.firstbranch' in args:
-        if any(k.lstrip('-') == 'topo' for k in keys):
+        if any(k == 'topo' for k, reverse in keyflags):
             firstbranch = getset(repo, subset, args['topo.firstbranch'])
         else:
             # i18n: "topo" and "topo.firstbranch" are keywords
@@ -1890,32 +1899,22 @@ def sort(repo, subset, x):
                 'topo.firstbranch can only be used when using the topo sort '
                 'key'))
 
-    if not keys:
+    if not keyflags:
         return revs
-    if keys == ["rev"]:
-        revs.sort()
+    if len(keyflags) == 1 and keyflags[0][0] == "rev":
+        revs.sort(reverse=keyflags[0][1])
         return revs
-    elif keys == ["-rev"]:
-        revs.sort(reverse=True)
-        return revs
-    elif keys[0] in ("topo", "-topo"):
+    elif keyflags[0][0] == "topo":
         revs = baseset(_toposort(revs, repo.changelog.parentrevs, firstbranch),
                        istopo=True)
-        if keys[0][0] == '-':
+        if keyflags[0][1]:
             revs.reverse()
         return revs
 
     # sort() is guaranteed to be stable
     ctxs = [repo[r] for r in revs]
-    for k in reversed(keys):
-        fk = k
-        reverse = (k[0] == '-')
-        if reverse:
-            k = k[1:]
-        try:
-            ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
-        except KeyError:
-            raise error.ParseError(_("unknown sort key %r") % fk)
+    for k, reverse in reversed(keyflags):
+        ctxs.sort(key=_sortkeyfuncs[k], reverse=reverse)
     return baseset([c.rev() for c in ctxs])
 
 def _toposort(revs, parentsfunc, firstbranch=()):
