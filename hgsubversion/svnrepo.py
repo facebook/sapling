@@ -157,7 +157,7 @@ class svnremoterepo(peerrepository):
 
     @property
     def svnurl(self):
-        return self.svn.svn_url
+        return self.svnauth[0]
 
     @propertycache
     def svn(self):
