@@ -1843,25 +1843,8 @@ _sortkeyfuncs = {
     'date': lambda c: c.date()[0],
 }
 
-@predicate('sort(set[, [-]key... [, ...]])', safe=True)
-def sort(repo, subset, x):
-    """Sort set by keys. The default sort order is ascending, specify a key
-    as ``-key`` to sort in descending order.
-
-    The keys can be:
-
-    - ``rev`` for the revision number,
-    - ``branch`` for the branch name,
-    - ``desc`` for the commit message (description),
-    - ``user`` for user name (``author`` can be used as an alias),
-    - ``date`` for the commit date
-    - ``topo`` for a reverse topographical sort
-
-    The ``topo`` sort order cannot be combined with other sort keys. This sort
-    takes one optional argument, ``topo.firstbranch``, which takes a revset that
-    specifies what topographical branches to prioritize in the sort.
-
-    """
+def _getsortargs(x):
+    """Parse sort options into (set, [(key, reverse)], opts)"""
     args = getargsdict(x, 'sort', 'set keys topo.firstbranch')
     if 'set' not in args:
         # i18n: "sort" is a keyword
@@ -1896,7 +1879,28 @@ def sort(repo, subset, x):
                 'topo.firstbranch can only be used when using the topo sort '
                 'key'))
 
-    s = args['set']
+    return args['set'], keyflags, opts
+
+@predicate('sort(set[, [-]key... [, ...]])', safe=True)
+def sort(repo, subset, x):
+    """Sort set by keys. The default sort order is ascending, specify a key
+    as ``-key`` to sort in descending order.
+
+    The keys can be:
+
+    - ``rev`` for the revision number,
+    - ``branch`` for the branch name,
+    - ``desc`` for the commit message (description),
+    - ``user`` for user name (``author`` can be used as an alias),
+    - ``date`` for the commit date
+    - ``topo`` for a reverse topographical sort
+
+    The ``topo`` sort order cannot be combined with other sort keys. This sort
+    takes one optional argument, ``topo.firstbranch``, which takes a revset that
+    specifies what topographical branches to prioritize in the sort.
+
+    """
+    s, keyflags, opts = _getsortargs(x)
     revs = getset(repo, subset, s)
 
     if not keyflags:
