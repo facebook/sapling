@@ -90,12 +90,6 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1
   
-  $ hg parents
-  changeset:   0:c19d34741b0a
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     1
-  
   $ hg --debug up
     searching for copies back to rev 1
     unmatched files in other:
