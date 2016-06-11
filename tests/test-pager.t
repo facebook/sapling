@@ -201,3 +201,24 @@ Pager works with hg aliases including environment variables.
   paged! '1\n'
   $ A=2 hg --config pager.attend-printa=yes printa
   paged! '2\n'
+
+Pager should not override the exit code of other commands
+
+  $ cat >> $TESTTMP/fortytwo.py <<'EOF'
+  > from mercurial import cmdutil, commands
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('fortytwo', [], 'fortytwo', norepo=True)
+  > def fortytwo(ui, *opts):
+  >     ui.write('42\n')
+  >     return 42
+  > EOF
+
+  $ cat >> $HGRCPATH <<'EOF'
+  > [extensions]
+  > fortytwo = $TESTTMP/fortytwo.py
+  > EOF
+
+  $ hg fortytwo --pager=on
+  paged! '42\n'
+  [42]

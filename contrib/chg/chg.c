@@ -417,21 +417,22 @@ error:
 	abortmsgerrno("failed to set up signal handlers");
 }
 
-/* This implementation is based on hgext/pager.py (pre 369741ef7253) */
-static void setuppager(hgclient_t *hgc, const char *const args[],
+/* This implementation is based on hgext/pager.py (post 369741ef7253)
+ * Return 0 if pager is not started, or pid of the pager */
+static pid_t setuppager(hgclient_t *hgc, const char *const args[],
 		       size_t argsize)
 {
 	const char *pagercmd = hgc_getpager(hgc, args, argsize);
 	if (!pagercmd)
-		return;
+		return 0;
 
 	int pipefds[2];
 	if (pipe(pipefds) < 0)
-		return;
+		return 0;
 	pid_t pid = fork();
 	if (pid < 0)
 		goto error;
-	if (pid == 0) {
+	if (pid > 0) {
 		close(pipefds[0]);
 		if (dup2(pipefds[1], fileno(stdout)) < 0)
 			goto error;
@@ -441,7 +442,7 @@ static void setuppager(hgclient_t *hgc, const char *const args[],
 		}
 		close(pipefds[1]);
 		hgc_attachio(hgc);  /* reattach to pager */
-		return;
+		return pid;
 	} else {
 		dup2(pipefds[0], fileno(stdin));
 		close(pipefds[0]);
@@ -451,13 +452,27 @@ static void setuppager(hgclient_t *hgc, const char *const args[],
 		if (r < 0) {
 			abortmsgerrno("cannot start pager '%s'", pagercmd);
 		}
-		return;
+		return 0;
 	}
 
 error:
 	close(pipefds[0]);
 	close(pipefds[1]);
 	abortmsgerrno("failed to prepare pager");
+	return 0;
+}
+
+static void waitpager(pid_t pid)
+{
+	/* close output streams to notify the pager its input ends */
+	fclose(stdout);
+	fclose(stderr);
+	while (1) {
+		pid_t ret = waitpid(pid, NULL, 0);
+		if (ret == -1 && errno == EINTR)
+			continue;
+		break;
+	}
 }
 
 /* Run instructions sent from the server like unlink and set redirect path
@@ -585,9 +600,12 @@ int main(int argc, const char *argv[], const char *envp[])
 	}
 
 	setupsignalhandler(hgc_peerpid(hgc));
-	setuppager(hgc, argv + 1, argc - 1);
+	pid_t pagerpid = setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	hgc_close(hgc);
 	freecmdserveropts(&opts);
+	if (pagerpid)
+		waitpager(pagerpid);
+
 	return exitcode;
 }
