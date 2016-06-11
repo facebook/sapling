@@ -65,6 +65,22 @@ def extsetup(ui):
         ('d', 'dest', '', _('destination for rebase or update')))
 
     try:
+        rebaseext = extensions.find('rebase')
+        # tweakdefaults is already loaded before other extensions
+        # (see tweakorder() function) so if these functions are wrapped
+        # by something else, it's not a problem.
+        wrapfunction(rebaseext, '_computeobsoletenotrebased',
+                     _computeobsoletenotrebasedwrapper)
+        wrapfunction(rebaseext, '_checkobsrebase',
+                     _checkobsrebasewrapper)
+    except KeyError:
+        pass # no rebase, no problem
+    except AssertionError:
+        msg = _('tweakdefaults: _computeobsoletenotrebased or ' +
+                '_checkobsrebase are not what we expect them to be')
+        ui.warning(msg)
+
+    try:
         remotenames = extensions.find('remotenames')
         wrapfunction(remotenames, '_getrebasedest', _getrebasedest)
     except KeyError:
@@ -523,6 +539,30 @@ def _rebase(orig, ui, repo, **opts):
             return result
 
     return orig(ui, repo, **opts)
+
+def _computeobsoletenotrebasedwrapper(orig, repo, rebaseobsrevs, dest):
+    """Wrapper for _computeobsoletenotrebased from rebase extensions
+
+    Unlike upstream rebase, we don't want to skip purely pruned commits.
+    We also want to explain why some particular commit was skipped."""
+    res = orig(repo, rebaseobsrevs, dest)
+    for key in res.keys():
+        if res[key] is None:
+            # key => None is a sign of a pruned commit
+            del res[key]
+    return res
+
+def _checkobsrebasewrapper(orig, repo, ui, *args):
+    cfgbackup = repo.ui.backupconfig('experimental', 'allowdivergence')
+    try:
+        extensions.find('inhibit')
+        repo.ui.setconfig('experimental', 'allowdivergence', 'on',
+                          'tweakdefaults')
+    except KeyError:
+        pass
+    finally:
+        orig(repo, ui, *args)
+        repo.ui.restoreconfig(cfgbackup)
 
 def currentdate():
     return "%d %d" % util.makedate(time.time())

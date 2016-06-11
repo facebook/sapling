@@ -460,4 +460,55 @@ Test non-remotenames use of pull --rebase and --update requires --dest
   searching for changes
   no changes found
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ cd $TESTTMP/repo
+  $ cd $TESTTMP
+
+Prepare a repo for testing divergence warnings with respect to inhibit extension
+and allowance of prune rebases
+  $ hg init repodiv && cd repodiv
+  $ cat >> .hg/hgrc << EOF
+  > [experimental]
+  > evolution=createmarkers
+  > prunestrip=on
+  > allowdivergence=off
+  > [extensions]
+  > strip=
+  > evolve=
+  > directaccess=
+  > EOF
+  $ echo root > root && hg ci -Am root  # rev 0
+  adding root
+  $ echo a > a && hg ci -Am a  # rev 1
+  adding a
+  $ hg up 0 && echo b > b && hg ci -Am b  # rev 2
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding b
+  created new head
+  $ hg up 0 && echo c > c && hg ci -Am c  # rev 3
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding c
+  created new head
+  $ hg up 0 && echo d > d && hg ci -Am d  # rev 4
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  adding d
+  created new head
+  $ hg rebase -r 1 -d 2
+  rebasing 1:09d39afb522a "a"
+
+Test that we show divergence warning if inhibit is disabled
+  $ hg rebase -r 1 -d 3 --hidden
+  abort: this rebase will cause divergences from: 09d39afb522a
+  (to force the rebase please set experimental.allowdivergence=True)
+  [255]
+
+Test that we do not show divergence warning if inhibit is enabled
+  $ echo "inhibit=" >> .hg/hgrc
+  $ hg rebase -r 1 -d 3 --hidden
+  rebasing 1:09d39afb522a "a"
+
+Test that we allow pure prune rebases
+  $ hg strip 4
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  working directory now at 1e4be0697311
+  1 changesets pruned
+  $ hg rebase -r 4 -d 3 --hidden
+  rebasing 4:31aefaa21905 "d"
