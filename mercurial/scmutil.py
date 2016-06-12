@@ -379,6 +379,12 @@ class abstractvfs(object):
         return util.readlock(self.join(path))
 
     def rename(self, src, dst, checkambig=False):
+        """Rename from src to dst
+
+        checkambig argument is used with util.filestat, and is useful
+        only if destination file is guarded by any lock
+        (e.g. repo.lock or repo.wlock).
+        """
         dstpath = self.join(dst)
         oldstat = checkambig and util.filestat(dstpath)
         if oldstat and oldstat.stat:
@@ -533,7 +539,9 @@ class vfs(abstractvfs):
            file were opened multiple times, there could be unflushed data
            because the original file handle hasn't been flushed/closed yet.)
 
-        ``checkambig`` is passed to atomictempfile (valid only for writing).
+        ``checkambig`` argument is passed to atomictemplfile (valid
+        only for writing), and is useful only if target file is
+        guarded by any lock (e.g. repo.lock or repo.wlock).
         '''
         if self._audit:
             r = util.checkosfilename(path)

@@ -1010,7 +1010,14 @@ def checksignature(func):
 
 def copyfile(src, dest, hardlink=False, copystat=False, checkambig=False):
     '''copy a file, preserving mode and optionally other stat info like
-    atime/mtime'''
+    atime/mtime
+
+    checkambig argument is used with filestat, and is useful only if
+    destination file is guarded by any lock (e.g. repo.lock or
+    repo.wlock).
+
+    copystat and checkambig should be exclusive.
+    '''
     assert not (copystat and checkambig)
     oldstat = None
     if os.path.lexists(dest):
@@ -1463,6 +1470,10 @@ class atomictempfile(object):
     the temporary copy to the original name, making the changes
     visible. If the object is destroyed without being closed, all your
     writes are discarded.
+
+    checkambig argument of constructor is used with filestat, and is
+    useful only if target file is guarded by any lock (e.g. repo.lock
+    or repo.wlock).
     '''
     def __init__(self, name, mode='w+b', createmode=None, checkambig=False):
         self.__name = name      # permanent name
