@@ -89,7 +89,16 @@ def requirements(orig, repo):
     return reqs
 
 if usable:
-    extensions.wrapfunction(localrepo, 'newreporequirements', requirements)
+    if util.safehasattr(localrepo, 'newreporequirements'):
+        extensions.wrapfunction(localrepo, 'newreporequirements', requirements)
+    else:
+        @replaceclass(localrepo, 'localrepository')
+        class lz4repo(localrepo.localrepository):
+            def _baserequirements(self, create):
+                reqs = super(lz4repo, self)._baserequirements(create)
+                if create and self.ui.configbool('format', 'uselz4', True):
+                    reqs.append('lz4revlog')
+                return reqs
 
     @replaceclass(revlog, 'revlog')
     class lz4revlog(revlog.revlog):
