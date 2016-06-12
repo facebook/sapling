@@ -1172,9 +1172,9 @@ class localrepository(object):
         vfsmap = {'plain': self.vfs, '': self.svfs}
         transaction.rollback(self.svfs, vfsmap, 'undo', ui.warn)
         if self.vfs.exists('undo.bookmarks'):
-            self.vfs.rename('undo.bookmarks', 'bookmarks')
+            self.vfs.rename('undo.bookmarks', 'bookmarks', checkambig=True)
         if self.svfs.exists('undo.phaseroots'):
-            self.svfs.rename('undo.phaseroots', 'phaseroots')
+            self.svfs.rename('undo.phaseroots', 'phaseroots', checkambig=True)
         self.invalidate()
 
         parentgone = (parents[0] not in self.changelog.nodemap or
