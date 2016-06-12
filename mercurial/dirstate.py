@@ -1243,7 +1243,8 @@ class dirstate(object):
         self.invalidate()
         filename = self._actualfilename(tr)
         # using self._filename to avoid having "pending" in the backup filename
-        self._opener.rename(prefix + self._filename + suffix, filename)
+        self._opener.rename(prefix + self._filename + suffix, filename,
+                            checkambig=True)
 
     def clearbackup(self, tr, suffix='', prefix=''):
         '''Clear backup file with suffix'''
