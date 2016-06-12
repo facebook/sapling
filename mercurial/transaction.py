@@ -72,7 +72,7 @@ def _playback(journal, report, opener, vfsmap, entries, backupentries,
                 filepath = vfs.join(f)
                 backuppath = vfs.join(b)
                 try:
-                    util.copyfile(backuppath, filepath)
+                    util.copyfile(backuppath, filepath, checkambig=True)
                     backupfiles.append(b)
                 except IOError:
                     report(_("failed to recover %s\n") % f)
