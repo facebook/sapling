@@ -138,6 +138,11 @@ class ui(object):
     def copy(self):
         return self.__class__(self)
 
+    def resetstate(self):
+        """Clear internal state that shouldn't persist across commands"""
+        if self._progbar:
+            self._progbar.resetstate()  # reset last-print time of progress bar
+
     def formatter(self, topic, opts):
         return formatter.formatter(self, topic, opts)
 
