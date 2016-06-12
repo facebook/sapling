@@ -3,54 +3,11 @@
 import optparse
 import os
 import sys
-import unittest
 
-import test_util
-test_util.SkipTest = None
-
-def tests():
-    import test_binaryfiles
-    import test_diff
-    import test_externals
-    import test_fetch_branches
-    import test_fetch_command
-    import test_fetch_command_regexes
-    import test_fetch_exec
-    import test_fetch_mappings
-    import test_fetch_renames
-    import test_fetch_symlinks
-    import test_fetch_truncated
-    import test_hooks
-    import test_svn_pre_commit_hooks
-    import test_pull
-    import test_pull_fallback
-    import test_push_command
-    import test_push_renames
-    import test_push_dirs
-    import test_push_eol
-    import test_push_autoprops
-    import test_single_dir_clone
-    import test_single_dir_push
-    import test_svnwrap
-    import test_tags
-    import test_template_keywords
-    import test_utility_commands
-    import test_unaffected_core
-    import test_urls
-
-    sys.path.append(os.path.dirname(__file__))
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'comprehensive'))
-
-    import test_rebuildmeta
-    import test_stupid_pull
-    import test_updatemeta
-    import test_verify_and_startrev
-
-    return locals()
-
-def comprehensive(mod):
-    dir = os.path.basename(os.path.dirname(mod.__file__))
-    return dir == 'comprehensive'
+if sys.version_info[:2] < (2, 7):
+    import unittest2 as unittest
+else:
+    import unittest
 
 if __name__ == '__main__':
     description = ("This script runs the hgsubversion tests. If no tests are "
@@ -100,26 +57,22 @@ if __name__ == '__main__':
         import tempfile
         sys.stdout = tempfile.TemporaryFile()
 
-    all_tests = tests()
-
-    args = [i.split('.py')[0].replace('-', '_') for i in args]
+    args = [os.path.basename(os.path.splitext(arg)[0]).replace('-', '_')
+            for arg in args]
 
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
     if not args:
-        check = lambda x: options.comprehensive or not comprehensive(x)
-        suite.addTests(loader.loadTestsFromModule(m)
-                       for (n, m) in sorted(all_tests.iteritems())
-                       if check(m))
+        suite = loader.discover('.')
+
+        if options.comprehensive:
+            suite.addTests(loader.discover('comprehensive',
+                                           top_level_dir='comprehensive'))
     else:
-        for arg in args:
-            if arg == 'test_util':
-                continue
-            elif arg not in all_tests:
-                print >> sys.stderr, 'test module %s not available' % arg
-            else:
-                suite.addTest(loader.loadTestsFromModule(all_tests[arg]))
+        sys.path.append(os.path.join(os.path.dirname(__file__), 'comprehensive'))
+
+        suite.addTests(loader.loadTestsFromNames(args))
 
     runner = unittest.TextTestRunner(**testargs)
     result = runner.run(suite)
