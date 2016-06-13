@@ -427,7 +427,12 @@ class fastmanifestcache(object):
         base = opener.join(None)
         self.cachepath = os.path.join(base, CACHE_SUBDIR)
         if not os.path.exists(self.cachepath):
-            os.makedirs(self.cachepath)
+            try:
+                os.makedirs(self.cachepath)
+            except EnvironmentError:
+                # Likely permission issues, in that case, we won't be able to
+                # access the cache afterwards
+                pass
         if self.ui.configbool("fastmanifest", "silent"):
             self.debug = _silent_debug
         else:
