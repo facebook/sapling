@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import os
+import errno
 import random
 import sys
 
@@ -196,6 +197,13 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         lock.lock()
     except error.LockHeld:
         return
+    except (OSError, IOError) as ex:
+        if ex.errno == errno.EACCES:
+            # permission issue
+            ui.warn(("warning: not using fastmanifest\n"))
+            ui.warn(("(make sure that .hg/store is writeable)\n"))
+            return
+        raise
     try:
         silent_worker = ui.configbool("fastmanifest", "silentworker", True)
 

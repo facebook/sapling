@@ -40,8 +40,8 @@ Check diagnosis, debugging information
   > }
   $ deauthorize
   $ hg debugcachemanifest -a
-  abort: could not lock fastmanifest: Permission denied
-  [255]
+  warning: not using fastmanifest
+  (make sure that .hg/store is writeable)
   $ authorize
   $ hg debugcachemanifest -a
 
