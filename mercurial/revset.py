@@ -1843,7 +1843,7 @@ _sortkeyfuncs = {
     'date': lambda c: c.date()[0],
 }
 
-@predicate('sort(set[, [-]key...])', safe=True)
+@predicate('sort(set[, [-]key... [, ...]])', safe=True)
 def sort(repo, subset, x):
     """Sort set by keys. The default sort order is ascending, specify a key
     as ``-key`` to sort in descending order.
@@ -1855,8 +1855,14 @@ def sort(repo, subset, x):
     - ``desc`` for the commit message (description),
     - ``user`` for user name (``author`` can be used as an alias),
     - ``date`` for the commit date
+    - ``topo`` for a reverse topographical sort
+
+    The ``topo`` sort order cannot be combined with other sort keys. This sort
+    takes one optional argument, ``topo.firstbranch``, which takes a revset that
+    specifies what topographical branches to prioritize in the sort.
+
     """
-    args = getargsdict(x, 'sort', 'set keys')
+    args = getargsdict(x, 'sort', 'set keys topo.firstbranch')
     if 'set' not in args:
         # i18n: "sort" is a keyword
         raise error.ParseError(_('sort requires one or two arguments'))
@@ -1868,12 +1874,35 @@ def sort(repo, subset, x):
     s = args['set']
     keys = keys.split()
     revs = getset(repo, subset, s)
+
+    if len(keys) > 1 and any(k.lstrip('-') == 'topo' for k in keys):
+        # i18n: "topo" is a keyword
+        raise error.ParseError(_(
+            'topo sort order cannot be combined with other sort keys'))
+
+    firstbranch = ()
+    if 'topo.firstbranch' in args:
+        if any(k.lstrip('-') == 'topo' for k in keys):
+            firstbranch = getset(repo, subset, args['topo.firstbranch'])
+        else:
+            # i18n: "topo" and "topo.firstbranch" are keywords
+            raise error.ParseError(_(
+                'topo.firstbranch can only be used when using the topo sort '
+                'key'))
+
     if keys == ["rev"]:
         revs.sort()
         return revs
     elif keys == ["-rev"]:
         revs.sort(reverse=True)
         return revs
+    elif keys[0] in ("topo", "-topo"):
+        revs = baseset(_toposort(revs, repo.changelog.parentrevs, firstbranch),
+                       istopo=True)
+        if keys[0][0] == '-':
+            revs.reverse()
+        return revs
+
     # sort() is guaranteed to be stable
     ctxs = [repo[r] for r in revs]
     for k in reversed(keys):
@@ -1887,7 +1916,7 @@ def sort(repo, subset, x):
             raise error.ParseError(_("unknown sort key %r") % fk)
     return baseset([c.rev() for c in ctxs])
 
-def groupbranchiter(revs, parentsfunc, firstbranch=()):
+def _toposort(revs, parentsfunc, firstbranch=()):
     """Yield revisions from heads to roots one (topo) branch at a time.
 
     This function aims to be used by a graph generator that wishes to minimize

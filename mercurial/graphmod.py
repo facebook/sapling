@@ -52,16 +52,6 @@ def dagwalker(repo, revs):
 
     gpcache = {}
 
-    if repo.ui.configbool('experimental', 'graph-group-branches', False):
-        firstbranch = ()
-        firstbranchrevset = repo.ui.config(
-            'experimental', 'graph-group-branches.firstbranch', '')
-        if firstbranchrevset:
-            firstbranch = repo.revs(firstbranchrevset)
-        parentrevs = repo.changelog.parentrevs
-        revs = revset.groupbranchiter(revs, parentrevs, firstbranch)
-        revs = revset.baseset(revs)
-
     for rev in revs:
         ctx = repo[rev]
         # partition into parents in the rev set and missing parents, then

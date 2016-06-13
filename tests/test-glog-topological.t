@@ -40,7 +40,7 @@ later.
 
 (display all nodes)
 
-  $ hg --config experimental.graph-group-branches=1 log -G
+  $ hg log -G -r 'sort(all(), topo)'
   o  8
   |
   o  3
@@ -62,7 +62,7 @@ later.
 
 (revset skipping nodes)
 
-  $ hg --config experimental.graph-group-branches=1 log -G --rev 'not (2+6)'
+  $ hg log -G --rev 'sort(not (2+6), topo)'
   o  8
   |
   o  3
@@ -80,7 +80,7 @@ later.
 
 (begin) from the other branch
 
-  $ hg --config experimental.graph-group-branches=1 --config experimental.graph-group-branches.firstbranch=5 log -G
+  $ hg log -G -r 'sort(all(), topo, topo.firstbranch=5)'
   o  7
   |
   o  6
