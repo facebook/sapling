@@ -521,6 +521,10 @@ class fastmanifestcache(object):
 
                 util.rename(tmpfpath, realfpath)
                 return True
+            except (OSError, IOError) as ex:
+                if ex.errno == errno.EACCES:
+                    return False
+                raise
             finally:
                 try:
                     os.unlink(tmpfpath)
