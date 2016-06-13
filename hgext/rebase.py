@@ -131,6 +131,7 @@ class rebaseruntime(object):
         self.activebookmark = None
         self.target = None
         self.skipped = set()
+        self.targetancestors = set()
 
 @command('rebase',
     [('s', 'source', '',
@@ -243,8 +244,6 @@ def rebase(ui, repo, **opts):
 
     """
     rbsrt = rebaseruntime()
-    targetancestors = set()
-
 
     lock = wlock = None
     try:
@@ -377,10 +376,10 @@ def rebase(ui, repo, **opts):
 
             (rbsrt.originalwd, rbsrt.target, rbsrt.state) = result
             if collapsef:
-                targetancestors = repo.changelog.ancestors([rbsrt.target],
-                                                           inclusive=True)
+                rbsrt.targetancestors = repo.changelog.ancestors([rbsrt.target],
+                                                                 inclusive=True)
                 rbsrt.external = externalparent(repo, rbsrt.state,
-                                                       targetancestors)
+                                                rbsrt.targetancestors)
 
             if dest.closesbranch() and not keepbranchesf:
                 ui.status(_('reopening closed branch head %s\n') % dest)
@@ -399,9 +398,9 @@ def rebase(ui, repo, **opts):
                             'branches'))
 
         # Rebase
-        if not targetancestors:
-            targetancestors = repo.changelog.ancestors([rbsrt.target],
-                                                       inclusive=True)
+        if not rbsrt.targetancestors:
+            rbsrt.targetancestors = repo.changelog.ancestors([rbsrt.target],
+                                                             inclusive=True)
 
         # Keep track of the current bookmarks in order to reset them later
         currentbookmarks = repo._bookmarks.copy()
@@ -428,7 +427,7 @@ def rebase(ui, repo, **opts):
                             _('changesets'), total)
                 p1, p2, base = defineparents(repo, rev, rbsrt.target,
                                              rbsrt.state,
-                                             targetancestors,
+                                             rbsrt.targetancestors,
                                              obsoletenotrebased)
                 storestatus(repo, rbsrt.originalwd, rbsrt.target,
                             rbsrt.state, collapsef, keepf, keepbranchesf,
@@ -496,7 +495,8 @@ def rebase(ui, repo, **opts):
         if collapsef and not keepopen:
             p1, p2, _base = defineparents(repo, min(rbsrt.state),
                                           rbsrt.target, rbsrt.state,
-                                          targetancestors, obsoletenotrebased)
+                                          rbsrt.targetancestors,
+                                          obsoletenotrebased)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if collapsemsg:
