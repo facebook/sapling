@@ -49,7 +49,10 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
 
   auto overlayPath = config->getOverlayPath();
   auto overlay = std::make_shared<Overlay>(overlayPath);
-  auto objectStore = make_unique<ObjectStore>(server_->getLocalStore());
+  auto backingStore =
+      server_->getBackingStore(config->getRepoType(), config->getRepoSource());
+  auto objectStore =
+      make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
   auto rootTree = objectStore->getTree(snapshotID);
   auto edenMount =
       std::make_shared<EdenMount>(mountPoint, std::move(objectStore), overlay);

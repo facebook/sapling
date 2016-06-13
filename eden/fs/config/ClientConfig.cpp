@@ -12,18 +12,22 @@
 #include <folly/String.h>
 #include <folly/json.h>
 
+namespace {
 // Keys in the config JSON.
 constexpr folly::StringPiece kBindMountsKey{"bind-mounts"};
 constexpr folly::StringPiece kMountKey{"mount"};
+constexpr folly::StringPiece kRepoTypeKey{"repo_type"};
+constexpr folly::StringPiece kRepoSourceKey{"repo_source"};
+
+// Files of interest in the client directory.
+const facebook::eden::RelativePathPiece kConfigFile{"config.json"};
+const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
+const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
+const facebook::eden::RelativePathPiece kOverlayDir{"local"};
+}
 
 namespace facebook {
 namespace eden {
-
-// Files of interest in the client directory.
-const RelativePathPiece kConfigFile{"config.json"};
-const RelativePathPiece kSnapshotFile{"SNAPSHOT"};
-const RelativePathPiece kBindMountsDir{"bind-mounts"};
-const RelativePathPiece kOverlayDir{"local"};
 
 ClientConfig::ClientConfig(
     AbsolutePathPiece clientDirectory,
@@ -77,8 +81,14 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     }
   }
 
-  return std::make_unique<ClientConfig>(
+  auto config = std::make_unique<ClientConfig>(
       ClientConfig(clientDirectory, mountPointPath, std::move(bindMounts)));
+
+  // Load the repository information
+  config->repoType_ = configData.getDefault(kRepoTypeKey, "null").asString();
+  config->repoSource_ = configData.getDefault(kRepoSourceKey, "").asString();
+
+  return config;
 }
 }
 }

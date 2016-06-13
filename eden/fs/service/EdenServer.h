@@ -15,6 +15,8 @@
 #include <folly/Synchronized.h>
 #include <folly/experimental/StringKeyedMap.h>
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace apache {
@@ -26,6 +28,7 @@ class ThriftServer;
 namespace facebook {
 namespace eden {
 
+class BackingStore;
 class ClientConfig;
 class EdenMount;
 class EdenServiceHandler;
@@ -73,11 +76,33 @@ class EdenServer {
     return localStore_;
   }
 
+  /**
+   * Look up the BackingStore object for the specified repository type+name.
+   *
+   * EdenServer maintains an internal cache of all known BackingStores,
+   * so that multiple mount points that use the same repository can
+   * share the same BackingStore object.
+   *
+   * If this is the first time this given (type, name) has been used, a new
+   * BackingStore object will be created and returned.  Otherwise this will
+   * return the existing BackingStore that was previously created.
+   */
+  std::shared_ptr<BackingStore> getBackingStore(
+      folly::StringPiece type,
+      folly::StringPiece name);
+
  private:
+  using BackingStoreKey = std::pair<std::string, std::string>;
+  using BackingStoreMap =
+      std::unordered_map<BackingStoreKey, std::shared_ptr<BackingStore>>;
+
   // Forbidden copy constructor and assignment operator
   EdenServer(EdenServer const&) = delete;
   EdenServer& operator=(EdenServer const&) = delete;
 
+  std::shared_ptr<BackingStore> createBackingStore(
+      folly::StringPiece type,
+      folly::StringPiece name);
   void runThriftServer();
   void createThriftServer();
   void acquireEdenLock();
@@ -94,6 +119,7 @@ class EdenServer {
 
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<MountMap> mountPoints_;
+  folly::Synchronized<BackingStoreMap> backingStores_;
 };
 }
 } // facebook::eden

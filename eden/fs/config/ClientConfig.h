@@ -48,6 +48,26 @@ class ClientConfig {
     return bindMounts_;
   }
 
+  /**
+   * Get the repository type.
+   *
+   * Currently supported types include "git" and "hg".
+   */
+  const std::string& getRepoType() const {
+    return repoType_;
+  }
+
+  /**
+   * Get the repository source.
+   *
+   * The meaning and format of repository source string depends on the
+   * repository type.  For git and hg repositories, this is the path to the
+   * git or mercuial repository.
+   */
+  const std::string& getRepoSource() const {
+    return repoSource_;
+  }
+
  private:
   ClientConfig(
       AbsolutePathPiece clientDirectory,
@@ -57,6 +77,8 @@ class ClientConfig {
   AbsolutePath clientDirectory_;
   AbsolutePath mountPath_;
   std::vector<BindMount> bindMounts_;
+  std::string repoType_;
+  std::string repoSource_;
 };
 }
 }

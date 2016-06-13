@@ -14,6 +14,7 @@
 namespace facebook {
 namespace eden {
 
+class BackingStore;
 class Blob;
 class Hash;
 class LocalStore;
@@ -31,7 +32,9 @@ class Tree;
  */
 class ObjectStore {
  public:
-  explicit ObjectStore(std::shared_ptr<LocalStore> localStore);
+  ObjectStore(
+      std::shared_ptr<LocalStore> localStore,
+      std::shared_ptr<BackingStore> backingStore);
   virtual ~ObjectStore();
 
   std::unique_ptr<Tree> getTree(const Hash& id) const;
@@ -58,6 +61,12 @@ class ObjectStore {
    * LocalStore.
    */
   std::shared_ptr<LocalStore> localStore_;
+  /*
+   * The BackingStore.
+   *
+   * Multiple ObjectStores may share the same BackingStore.
+   */
+  std::shared_ptr<BackingStore> backingStore_;
 };
 }
 } // facebook::eden

@@ -22,6 +22,7 @@
 #include "eden/fs/config/ClientConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/NullBackingStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/privhelper/PrivHelper.h"
 
@@ -45,7 +46,10 @@ DEFINE_int32(
 
 using apache::thrift::ThriftServer;
 using folly::StringPiece;
+using std::make_shared;
+using std::shared_ptr;
 using std::string;
+using std::unique_ptr;
 
 namespace {
 folly::SocketAddress getThriftAddress(
@@ -65,10 +69,10 @@ EdenServer::~EdenServer() {}
 void EdenServer::run() {
   acquireEdenLock();
   createThriftServer();
-  localStore_ = std::make_shared<LocalStore>(rocksPath_);
+  localStore_ = make_shared<LocalStore>(rocksPath_);
 
   auto pool =
-      std::make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
+      make_shared<wangle::CPUThreadPoolExecutor>(FLAGS_num_eden_threads);
   wangle::setCPUExecutor(pool);
 
   prepareThriftAddress();
@@ -76,8 +80,8 @@ void EdenServer::run() {
 }
 
 void EdenServer::mount(
-    std::shared_ptr<EdenMount> edenMount,
-    std::unique_ptr<ClientConfig> config) {
+    shared_ptr<EdenMount> edenMount,
+    unique_ptr<ClientConfig> config) {
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
@@ -154,7 +158,7 @@ EdenServer::MountList EdenServer::getMountPoints() const {
   return results;
 }
 
-std::shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
+shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
   SYNCHRONIZED(mp, mountPoints_) {
     auto it = mp.find(mountPath);
     if (it == mp.end()) {
@@ -167,10 +171,48 @@ std::shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
   return nullptr;
 }
 
+shared_ptr<BackingStore> EdenServer::getBackingStore(
+    StringPiece type,
+    StringPiece name) {
+  BackingStoreKey key{type.str(), name.str()};
+  SYNCHRONIZED(lockedStores, backingStores_) {
+    auto it = lockedStores.find(key);
+    if (it != lockedStores.end()) {
+      return it->second;
+    }
+
+    auto store = createBackingStore(type, name);
+    lockedStores.emplace(key, store);
+    return store;
+  }
+
+  // Ugh.  The SYNCHRONIZED() macro is super lame.
+  // We have to return something here, since the compiler can't figure out
+  // that we always return inside SYNCHRONIZED.
+  LOG(FATAL) << "unreached";
+}
+
+shared_ptr<BackingStore> EdenServer::createBackingStore(
+    StringPiece type,
+    StringPiece name) {
+  if (type == "null") {
+    return make_shared<NullBackingStore>();
+  } else if (type == "hg") {
+    // TODO: Add an HgBackingStore class
+    return make_shared<NullBackingStore>();
+  } else if (type == "git") {
+    // TODO: Add a GitBackingStore class
+    return make_shared<NullBackingStore>();
+  } else {
+    throw std::domain_error(
+        folly::to<string>("unsupported backing store type: ", type));
+  }
+}
+
 void EdenServer::createThriftServer() {
   auto address = getThriftAddress(FLAGS_thrift_address, edenDir_);
 
-  server_ = std::make_shared<ThriftServer>();
+  server_ = make_shared<ThriftServer>();
   server_->setMaxConnections(FLAGS_thrift_max_conns);
   server_->setMaxRequests(FLAGS_thrift_max_requests);
   server_->setNWorkerThreads(FLAGS_thrift_num_workers);
@@ -178,7 +220,7 @@ void EdenServer::createThriftServer() {
   server_->setMaxNumPendingConnectionsPerWorker(FLAGS_thrift_queue_len);
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
 
-  handler_ = std::make_shared<EdenServiceHandler>(this);
+  handler_ = make_shared<EdenServiceHandler>(this);
   server_->setInterface(handler_);
   server_->setAddress(address);
 }
