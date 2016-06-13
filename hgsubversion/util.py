@@ -44,6 +44,27 @@ def configpath(ui, name):
     path = ui.config('hgsubversion', name)
     return path and hgutil.expandpath(path)
 
+def fileproperty(fname, pathfunc, default=None,
+                 serializer=str, deserializer=str):
+    """define a property that is backed by a file"""
+    def fget(self):
+        if not hgutil.safehasattr(self, fname):
+            path = pathfunc(self)
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    setattr(self, fname, deserializer(f.read()))
+            else:
+                setattr(self, fname, default)
+        return getattr(self, fname)
+
+    def fset(self, value):
+        setattr(self, fname, value)
+        path = pathfunc(self)
+        with open(path, 'w') as f:
+            f.write(serializer(value))
+
+    return property(fget, fset)
+
 def filterdiff(diff, oldrev, newrev):
     diff = newfile_devnull_re.sub(r'--- \1\t(revision 0)' '\n'
                                   r'+++ \1\t(working copy)',
