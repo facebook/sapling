@@ -81,6 +81,10 @@ def _is_git_dir(path):
 
 
 def _get_git_dir(path):
+    '''
+    If path points to a git repository, return the path to the repository .git
+    directory.  Otherwise, if the path is not a git repository, return None.
+    '''
     path = os.path.realpath(path)
     if path.endswith('.git') and _is_git_dir(path):
         return path
@@ -92,8 +96,14 @@ def _get_git_dir(path):
     return None
 
 
-def _get_hg_dir(path):
-    hg_dir = os.path.join(os.path.realpath(path), '.hg')
+def _get_hg_repo(path):
+    '''
+    If path points to a mercurial repository, return a normalized path to the
+    repository root.  Otherwise, if path is not a mercurial repository, return
+    None.
+    '''
+    repo_path = os.path.realpath(path)
+    hg_dir = os.path.join(repo_path, '.hg')
     if not os.path.exists(os.path.join(hg_dir, 'hgrc')):
         return None
 
@@ -102,15 +112,16 @@ def _get_hg_dir(path):
     try:
         with open(os.path.join(hg_dir, 'sharedpath'), 'r') as f:
             hg_dir = f.readline().rstrip('\n')
+            hg_dir = os.path.realpath(hg_dir)
+            repo_path = os.path.dirname(hg_dir)
     except EnvironmentError as ex:
         if ex.errno != errno.ENOENT:
             raise
-        return None
 
     if not os.path.isdir(os.path.join(hg_dir, 'store')):
         return None
 
-    return hg_dir
+    return repo_path
 
 
 def _get_hg_commit(repo):
@@ -158,12 +169,12 @@ def do_init(args):
                              with_buck=args.with_buck)
         return
 
-    hg_dir = _get_hg_dir(args.repo)
-    if hg_dir is not None:
+    hg_repo = _get_hg_repo(args.repo)
+    if hg_repo is not None:
         snapshot_id = _get_hg_commit(args.repo)
         config.create_client(args.name, args.mount, snapshot_id,
                              repo_type='hg',
-                             repo_source=hg_dir,
+                             repo_source=hg_repo,
                              with_buck=args.with_buck)
         return
 
