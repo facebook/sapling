@@ -120,7 +120,6 @@ class _systemawarecachelimit(object):
 
     def bytes(self):
         return _systemawarecachelimit.cacheallocation(self.free, **self.config)
-        return systemawarecachelimit.cacheallocation(self.free, **self.config)
 
     @staticmethod
     def cacheallocation(
