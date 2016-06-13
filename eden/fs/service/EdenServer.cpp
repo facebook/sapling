@@ -23,6 +23,8 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/NullBackingStore.h"
+#include "eden/fs/store/git/GitBackingStore.h"
+#include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fuse/MountPoint.h"
 #include "eden/fuse/privhelper/PrivHelper.h"
 
@@ -198,11 +200,9 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
   if (type == "null") {
     return make_shared<NullBackingStore>();
   } else if (type == "hg") {
-    // TODO: Add an HgBackingStore class
-    return make_shared<NullBackingStore>();
+    return make_shared<HgBackingStore>(name, localStore_.get());
   } else if (type == "git") {
-    // TODO: Add a GitBackingStore class
-    return make_shared<NullBackingStore>();
+    return make_shared<GitBackingStore>(name, localStore_.get());
   } else {
     throw std::domain_error(
         folly::to<string>("unsupported backing store type: ", type));

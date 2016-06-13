@@ -35,6 +35,8 @@ class BackingStore {
   virtual std::unique_ptr<Tree> getTree(const Hash& id) = 0;
   virtual std::unique_ptr<Blob> getBlob(const Hash& id) = 0;
 
+  virtual std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) = 0;
+
  private:
   // Forbidden copy constructor and assignment operator
   BackingStore(BackingStore const&) = delete;

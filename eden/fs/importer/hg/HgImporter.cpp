@@ -47,6 +47,10 @@ HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
   Subprocess::Options opts;
   opts.stdin(Subprocess::PIPE).stdout(Subprocess::PIPE);
   helper_ = Subprocess{cmd, opts};
+
+  // TODO: Read some sort of success response back from the helper, to make
+  // sure it has started successfully.  For instance, if the repository doesn't
+  // exist it will bail out early, and we should catch that.
 }
 
 HgImporter::~HgImporter() {

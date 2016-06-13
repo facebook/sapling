@@ -29,5 +29,9 @@ unique_ptr<Tree> NullBackingStore::getTree(const Hash& id) {
 unique_ptr<Blob> NullBackingStore::getBlob(const Hash& id) {
   return nullptr;
 }
+
+unique_ptr<Tree> NullBackingStore::getTreeForCommit(const Hash& commitID) {
+  return nullptr;
+}
 }
 } // facebook::eden

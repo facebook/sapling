@@ -79,6 +79,17 @@ unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
   return blob;
 }
 
+unique_ptr<Tree> ObjectStore::getTreeForCommit(const Hash& commitID) const {
+  // For now we assume that the BackingStore will insert the Tree into the
+  // LocalStore on its own.
+  auto tree = backingStore_->getTreeForCommit(commitID);
+  if (!tree) {
+    throw std::domain_error(
+        folly::to<string>("unable to import commit ", commitID.toString()));
+  }
+  return tree;
+}
+
 unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
   auto sha1 = localStore_->getSha1ForBlob(id);
   if (sha1) {

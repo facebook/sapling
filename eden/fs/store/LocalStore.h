@@ -34,6 +34,9 @@ class Tree;
  * then it will need to be retrieved from the BackingStore.
  *
  * LocalStore uses RocksDB for the underlying storage.
+ *
+ * LocalStore is thread-safe, and can be used from multiple threads without
+ * requiring the caller to perform locking around accesses to the LocalStore.
  */
 class LocalStore {
  public:

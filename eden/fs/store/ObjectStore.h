@@ -40,6 +40,8 @@ class ObjectStore {
   std::unique_ptr<Tree> getTree(const Hash& id) const;
   std::unique_ptr<Blob> getBlob(const Hash& id) const;
 
+  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) const;
+
   /**
    * Return the SHA1 hash of the blob contents.
    *

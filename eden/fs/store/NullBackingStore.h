@@ -24,6 +24,7 @@ class NullBackingStore : public BackingStore {
 
   std::unique_ptr<Tree> getTree(const Hash& id) override;
   std::unique_ptr<Blob> getBlob(const Hash& id) override;
+  std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) override;
 };
 }
 } // facebook::eden

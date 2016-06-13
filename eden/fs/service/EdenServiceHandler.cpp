@@ -53,7 +53,7 @@ void EdenServiceHandler::mountImpl(const MountInfo& info) {
       server_->getBackingStore(config->getRepoType(), config->getRepoSource());
   auto objectStore =
       make_unique<ObjectStore>(server_->getLocalStore(), backingStore);
-  auto rootTree = objectStore->getTree(snapshotID);
+  auto rootTree = objectStore->getTreeForCommit(snapshotID);
   auto edenMount =
       std::make_shared<EdenMount>(mountPoint, std::move(objectStore), overlay);
 
