@@ -129,6 +129,7 @@ class rebaseruntime(object):
         # dict will be what contains most of the rebase progress state.
         self.state = {}
         self.activebookmark = None
+        self.target = None
 
 @command('rebase',
     [('s', 'source', '',
@@ -241,7 +242,6 @@ def rebase(ui, repo, **opts):
 
     """
     rbsrt = rebaseruntime()
-    target = None
     skipped = set()
     targetancestors = set()
 
@@ -302,7 +302,7 @@ def rebase(ui, repo, **opts):
                 ui.warn(_('tool option will be ignored\n'))
 
             try:
-                (rbsrt.originalwd, target, rbsrt.state, skipped,
+                (rbsrt.originalwd, rbsrt.target, rbsrt.state, skipped,
                  collapsef, keepf, keepbranchesf, rbsrt.external,
                  rbsrt.activebookmark) = restorestatus(repo)
                 collapsemsg = restorecollapsemsg(repo)
@@ -318,7 +318,8 @@ def rebase(ui, repo, **opts):
                     hint = _('use "hg rebase --abort" to clear broken state')
                     raise error.Abort(msg, hint=hint)
             if abortf:
-                return abort(repo, rbsrt.originalwd, target, rbsrt.state,
+                return abort(repo, rbsrt.originalwd, rbsrt.target,
+                             rbsrt.state,
                              activebookmark=rbsrt.activebookmark)
 
             obsoletenotrebased = {}
@@ -328,7 +329,7 @@ def rebase(ui, repo, **opts):
                                      if st == revprecursor])
                 rebasesetrevs = set(rbsrt.state.keys())
                 obsoletenotrebased = _computeobsoletenotrebased(repo,
-                                        rebaseobsrevs, target)
+                                        rebaseobsrevs, rbsrt.target)
                 rebaseobsskipped = set(obsoletenotrebased)
                 _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs,
                                 rebaseobsskipped)
@@ -374,9 +375,9 @@ def rebase(ui, repo, **opts):
                                  % repo[root],
                                  hint=_('see "hg help phases" for details'))
 
-            (rbsrt.originalwd, target, rbsrt.state) = result
+            (rbsrt.originalwd, rbsrt.target, rbsrt.state) = result
             if collapsef:
-                targetancestors = repo.changelog.ancestors([target],
+                targetancestors = repo.changelog.ancestors([rbsrt.target],
                                                            inclusive=True)
                 rbsrt.external = externalparent(repo, rbsrt.state,
                                                        targetancestors)
@@ -399,7 +400,8 @@ def rebase(ui, repo, **opts):
 
         # Rebase
         if not targetancestors:
-            targetancestors = repo.changelog.ancestors([target], inclusive=True)
+            targetancestors = repo.changelog.ancestors([rbsrt.target],
+                                                       inclusive=True)
 
         # Keep track of the current bookmarks in order to reset them later
         currentbookmarks = repo._bookmarks.copy()
@@ -424,11 +426,12 @@ def rebase(ui, repo, **opts):
                 ui.status(_('rebasing %s\n') % desc)
                 ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
                             _('changesets'), total)
-                p1, p2, base = defineparents(repo, rev, target, rbsrt.state,
+                p1, p2, base = defineparents(repo, rev, rbsrt.target,
+                                             rbsrt.state,
                                              targetancestors,
                                              obsoletenotrebased)
-                storestatus(repo, rbsrt.originalwd, target, rbsrt.state,
-                            collapsef, keepf, keepbranchesf,
+                storestatus(repo, rbsrt.originalwd, rbsrt.target,
+                            rbsrt.state, collapsef, keepf, keepbranchesf,
                             rbsrt.external, rbsrt.activebookmark)
                 storecollapsemsg(repo, collapsemsg)
                 if len(repo[None].parents()) == 2:
@@ -438,7 +441,7 @@ def rebase(ui, repo, **opts):
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                      'rebase')
                         stats = rebasenode(repo, rev, p1, base, rbsrt.state,
-                                           collapsef, target)
+                                           collapsef, rbsrt.target)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
@@ -491,9 +494,9 @@ def rebase(ui, repo, **opts):
         ui.note(_('rebase merging completed\n'))
 
         if collapsef and not keepopen:
-            p1, p2, _base = defineparents(repo, min(rbsrt.state), target,
-                                          rbsrt.state, targetancestors,
-                                          obsoletenotrebased)
+            p1, p2, _base = defineparents(repo, min(rbsrt.state),
+                                          rbsrt.target, rbsrt.state,
+                                          targetancestors, obsoletenotrebased)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if collapsemsg:
@@ -512,7 +515,7 @@ def rebase(ui, repo, **opts):
                                    keepbranches=keepbranchesf,
                                    date=date)
             if newnode is None:
-                newrev = target
+                newrev = rbsrt.target
             else:
                 newrev = repo[newnode].rev()
             for oldrev in rbsrt.state.iterkeys():
@@ -530,7 +533,7 @@ def rebase(ui, repo, **opts):
                     nstate[repo[k].node()] = repo[v].node()
             # XXX this is the same as dest.node() for the non-continue path --
             # this should probably be cleaned up
-            targetnode = repo[target].node()
+            targetnode = repo[rbsrt.target].node()
 
         # restore original working directory
         # (we do this before stripping)
