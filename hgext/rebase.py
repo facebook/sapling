@@ -130,6 +130,7 @@ class rebaseruntime(object):
         self.state = {}
         self.activebookmark = None
         self.target = None
+        self.skipped = set()
 
 @command('rebase',
     [('s', 'source', '',
@@ -242,7 +243,6 @@ def rebase(ui, repo, **opts):
 
     """
     rbsrt = rebaseruntime()
-    skipped = set()
     targetancestors = set()
 
 
@@ -302,9 +302,9 @@ def rebase(ui, repo, **opts):
                 ui.warn(_('tool option will be ignored\n'))
 
             try:
-                (rbsrt.originalwd, rbsrt.target, rbsrt.state, skipped,
-                 collapsef, keepf, keepbranchesf, rbsrt.external,
-                 rbsrt.activebookmark) = restorestatus(repo)
+                (rbsrt.originalwd, rbsrt.target, rbsrt.state,
+                 rbsrt.skipped, collapsef, keepf, keepbranchesf,
+                 rbsrt.external, rbsrt.activebookmark) = restorestatus(repo)
                 collapsemsg = restorecollapsemsg(repo)
             except error.RepoLookupError:
                 if abortf:
@@ -470,7 +470,7 @@ def rebase(ui, repo, **opts):
                     if not collapsef:
                         ui.warn(_('note: rebase of %d:%s created no changes '
                                   'to commit\n') % (rev, ctx))
-                        skipped.add(rev)
+                        rbsrt.skipped.add(rev)
                     rbsrt.state[rev] = p1
                     ui.debug('next revision set to %s\n' % p1)
             elif rbsrt.state[rev] == nullmerge:
@@ -504,7 +504,7 @@ def rebase(ui, repo, **opts):
             else:
                 commitmsg = 'Collapsed revision'
                 for rebased in rbsrt.state:
-                    if rebased not in skipped and\
+                    if rebased not in rbsrt.skipped and\
                        rbsrt.state[rebased] > nullmerge:
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
@@ -523,7 +523,7 @@ def rebase(ui, repo, **opts):
                     rbsrt.state[oldrev] = newrev
 
         if 'qtip' in repo.tags():
-            updatemq(repo, rbsrt.state, skipped, **opts)
+            updatemq(repo, rbsrt.state, rbsrt.skipped, **opts)
 
         if currentbookmarks:
             # Nodeids are needed to reset bookmarks
@@ -549,7 +549,7 @@ def rebase(ui, repo, **opts):
             collapsedas = None
             if collapsef:
                 collapsedas = newnode
-            clearrebased(ui, repo, rbsrt.state, skipped, collapsedas)
+            clearrebased(ui, repo, rbsrt.state, rbsrt.skipped, collapsedas)
 
         with repo.transaction('bookmark') as tr:
             if currentbookmarks:
@@ -562,8 +562,9 @@ def rebase(ui, repo, **opts):
 
         ui.note(_("rebase completed\n"))
         util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
-        if skipped:
-            ui.note(_("%d revisions have been skipped\n") % len(skipped))
+        if rbsrt.skipped:
+            skippedlen = len(rbsrt.skipped)
+            ui.note(_("%d revisions have been skipped\n") % skippedlen)
 
         if (rbsrt.activebookmark and
             repo['.'].node() == repo._bookmarks[rbsrt.activebookmark]):
