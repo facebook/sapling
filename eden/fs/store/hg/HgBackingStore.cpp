@@ -13,7 +13,9 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/store/StoreResult.h"
 
+using folly::ByteRange;
 using folly::StringPiece;
 using std::unique_ptr;
 
@@ -40,12 +42,30 @@ unique_ptr<Blob> HgBackingStore::getBlob(const Hash& id) {
 }
 
 unique_ptr<Tree> HgBackingStore::getTreeForCommit(const Hash& commitID) {
-  // TODO: Store a mapping of commitID --> treeID, and
-  // check to see if we have already imported this commit.
-  auto treeHash = importer_->importManifest(commitID.toString());
-  VLOG(1) << "imported mercurial commit " << commitID.toString() << " as tree "
-          << treeHash.toString();
-  return localStore_->getTree(treeHash);
+  // TODO: We should probably switch to using a RocksDB column family rather
+  // than a key suffix here.
+  static constexpr StringPiece mappingSuffix{"hgc"};
+  std::array<uint8_t, Hash::RAW_SIZE + mappingSuffix.size()> mappingKeyStorage;
+  memcpy(mappingKeyStorage.data(), commitID.getBytes().data(), Hash::RAW_SIZE);
+  memcpy(
+      mappingKeyStorage.data() + Hash::RAW_SIZE, "hgc", mappingSuffix.size());
+  ByteRange mappingKey(mappingKeyStorage.data(), mappingKeyStorage.size());
+
+  Hash rootTreeHash;
+  auto result = localStore_->get(mappingKey);
+  if (result.isValid()) {
+    rootTreeHash = Hash{result.bytes()};
+    VLOG(5) << "found existing tree " << rootTreeHash.toString()
+            << " for mercurial commit " << commitID.toString();
+  } else {
+    rootTreeHash = importer_->importManifest(commitID.toString());
+    VLOG(1) << "imported mercurial commit " << commitID.toString()
+            << " as tree " << rootTreeHash.toString();
+
+    localStore_->put(mappingKey, rootTreeHash.getBytes());
+  }
+
+  return localStore_->getTree(rootTreeHash);
 }
 }
 } // facebook::eden
