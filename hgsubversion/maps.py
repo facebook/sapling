@@ -342,6 +342,9 @@ class RevMap(dict):
 
     VERSION = 1
 
+    lastpulled = util.fileproperty('_lastpulled', lambda x: x._lastpulled_file,
+                                   default=0, deserializer=int)
+
     def __init__(self, revmap_path, lastpulled_path):
         dict.__init__(self)
         self._filepath = revmap_path
@@ -349,29 +352,10 @@ class RevMap(dict):
         self._hashes = None
 
         self.firstpulled = 0
-        if os.path.exists(self._lastpulled_file):
-            with open(self._lastpulled_file) as f:
-                self._lastpulled = int(f.read())
-        else:
-            self._lastpulled = 0
-
         if os.path.isfile(self._filepath):
             self._load()
         else:
             self._write()
-
-    def _writelastpulled(self):
-        with open(self._lastpulled_file, 'w') as f:
-            f.write('%d\n' % self.lastpulled)
-
-    @property
-    def lastpulled(self):
-        return self._lastpulled
-
-    @lastpulled.setter
-    def lastpulled(self, value):
-        self._lastpulled = value
-        self._writelastpulled()
 
     def hashes(self):
         if self._hashes is None:
@@ -417,8 +401,7 @@ class RevMap(dict):
         with open(self._filepath, 'a') as f:
             f.write(''.join('%s %s %s\n' % (revnum, hex(binhash), br or '')
                             for revnum, br, binhash in items))
-        with open(self._lastpulled_file, 'w') as f:
-            f.write('%s\n' % lastpulled)
+        self.lastpulled = lastpulled
 
     def _readmapfile(self):
         path = self._filepath
@@ -437,9 +420,6 @@ class RevMap(dict):
     def _load(self):
         lastpulled = self.lastpulled
         firstpulled = self.firstpulled
-        if os.path.exists(self._lastpulled_file):
-            with open(self._lastpulled_file) as f:
-                lastpulled = int(f.read())
         setitem = dict.__setitem__
         for l in self._readmapfile():
             revnum, ha, branch = l.split(' ', 2)
@@ -460,7 +440,6 @@ class RevMap(dict):
     def _write(self):
         with open(self._filepath, 'w') as f:
             f.write('%s\n' % self.VERSION)
-        self._writelastpulled()
 
     def __setitem__(self, key, ha):
         revnum, branch = key
