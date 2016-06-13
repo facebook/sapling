@@ -249,7 +249,13 @@ static hgclient_t *retryconnectcmdserver(struct cmdserveropts *opts, pid_t pid)
 	int pst = 0;
 
 	debugmsg("try connect to %s repeatedly", opts->sockname);
-	for (unsigned int i = 0; i < 10 * 100; i++) {
+
+	unsigned int timeoutsec = 10;  /* default: 10 seconds */
+	const char *timeoutenv = getenv("CHGTIMEOUT");
+	if (timeoutenv)
+		sscanf(timeoutenv, "%u", &timeoutsec);
+
+	for (unsigned int i = 0; !timeoutsec || i < timeoutsec * 100; i++) {
 		hgclient_t *hgc = hgc_open(opts->sockname);
 		if (hgc)
 			return hgc;
