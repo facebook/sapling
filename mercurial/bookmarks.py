@@ -17,6 +17,7 @@ from .node import (
 )
 from . import (
     encoding,
+    error,
     lock as lockmod,
     obsolete,
     util,
@@ -154,7 +155,10 @@ class bmstore(dict):
 
     def expandname(self, bname):
         if bname == '.':
-            return self.active
+            if self.active:
+                return self.active
+            else:
+                raise error.Abort(_("no active bookmark"))
         return bname
 
 def _readactive(repo, marks):

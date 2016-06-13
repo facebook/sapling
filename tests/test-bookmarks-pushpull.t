@@ -113,6 +113,19 @@ export the active bookmark
   exporting bookmark V
   [1]
 
+exporting the active bookmark with 'push -B .'
+demand that one of the bookmarks is activated
+
+  $ hg update -r default
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (leaving bookmark V)
+  $ hg push -B . ../a
+  abort: no active bookmark
+  [255]
+  $ hg update -r V
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  (activating bookmark V)
+
 delete the bookmark
 
   $ hg book -d V
