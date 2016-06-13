@@ -189,3 +189,15 @@ Pager works with shell aliases.
   a
   $ hg --config pager.attend-echoa=yes echoa
   paged! 'a\n'
+
+Pager works with hg aliases including environment variables.
+
+  $ cat >> $HGRCPATH <<'EOF'
+  > [alias]
+  > printa = log -T "$A\n" -r 0
+  > EOF
+
+  $ A=1 hg --config pager.attend-printa=yes printa
+  paged! '1\n'
+  $ A=2 hg --config pager.attend-printa=yes printa
+  paged! '2\n'
