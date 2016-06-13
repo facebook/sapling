@@ -113,7 +113,14 @@ class _systemawarecachelimit(object):
 
     def __init__(self, repo):
         # Probe the system root partition to know what is available
-        st = os.statvfs(repo.root)
+        try:
+            st = os.statvfs(repo.root)
+        except (OSError, IOError) as ex:
+            if ex.errno == errno.EACCES:
+                self.free = 0
+                self.total = 0
+                return
+            raise
         self.free = st.f_bavail * st.f_frsize
         self.total = st.f_blocks * st.f_frsize
         # Read parameters from config
