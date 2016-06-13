@@ -26,6 +26,7 @@ using folly::ByteRange;
 using folly::StringPiece;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
+using rocksdb::SliceParts;
 using rocksdb::WriteBatch;
 using rocksdb::WriteOptions;
 using std::string;
@@ -76,88 +77,7 @@ LocalStore::LocalStore(StringPiece pathToRocksDb)
 
 LocalStore::~LocalStore() {}
 
-StoreResult LocalStore::get(const Hash& id) const {
-  return _get(id.getBytes());
-}
-
-// TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
-// probably want to namespace these by column family going forward, at which
-// point we might want to have a GitLocalStore that delegates to an
-// LocalStore so a vanilla LocalStore has no knowledge of deserializeGitTree()
-// or deserializeGitBlob().
-
-std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
-  auto result = _get(id.getBytes());
-  if (!result.isValid()) {
-    return nullptr;
-  }
-  return deserializeGitTree(id, result.bytes());
-}
-
-std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
-  // We have to hold this string in scope while we deserialize and build
-  // the blob; otherwise, the results are undefined.
-  auto result = _get(id.getBytes());
-  if (!result.isValid()) {
-    return nullptr;
-  }
-  auto buf = result.extractIOBuf();
-  return deserializeGitBlob(id, &buf);
-}
-
-std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
-  Sha1Key key(id);
-  auto result = _get(key.bytes());
-  if (!result.isValid()) {
-    return nullptr;
-  }
-  auto bytes = result.bytes();
-  if (bytes.size() != Hash::RAW_SIZE) {
-    throw std::invalid_argument(folly::sformat(
-        "Database entry for {} was not of size {}. Could not convert to SHA-1.",
-        id.toString(),
-        static_cast<size_t>(Hash::RAW_SIZE)));
-  }
-
-  return std::make_unique<Hash>(bytes);
-}
-
-void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1)
-    const {
-  Sha1Key sha1Key(id);
-
-  // Record both the blob and SHA-1 entries in one RocksDB write operation.
-  WriteBatch blobWrites;
-  blobWrites.Put(_createSlice(id.getBytes()), _createSlice(blobData));
-  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
-  auto status = db_->Write(WriteOptions(), &blobWrites);
-  if (!status.ok()) {
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status,
-        "error putting blob ",
-        folly::hexlify(id.getBytes()),
-        " in local store");
-  }
-}
-
-void LocalStore::putTree(const Hash& id, ByteRange treeData) const {
-  auto treeKey = _createSlice(id.getBytes());
-  auto treeValue = _createSlice(treeData);
-  auto status = db_->Put(WriteOptions(), treeKey, treeValue);
-  if (!status.ok()) {
-    // We don't use RocksException::check(), since we don't want to waste our
-    // time computing the hex string of the key if we succeeded.
-    throw RocksException::build(
-        status,
-        "error putting tree ",
-        folly::hexlify(id.getBytes()),
-        " in local store");
-  }
-}
-
-StoreResult LocalStore::_get(ByteRange key) const {
+StoreResult LocalStore::get(ByteRange key) const {
   string value;
   auto status = db_.get()->Get(ReadOptions(), _createSlice(key), &value);
   if (!status.ok()) {
@@ -176,5 +96,89 @@ StoreResult LocalStore::_get(ByteRange key) const {
   }
   return StoreResult(std::move(value));
 }
+
+StoreResult LocalStore::get(const Hash& id) const {
+  return get(id.getBytes());
+}
+
+// TODO(mbolin): Currently, all objects in our RocksDB are Git objects. We
+// probably want to namespace these by column family going forward, at which
+// point we might want to have a GitLocalStore that delegates to an
+// LocalStore so a vanilla LocalStore has no knowledge of deserializeGitTree()
+// or deserializeGitBlob().
+
+std::unique_ptr<Tree> LocalStore::getTree(const Hash& id) const {
+  auto result = get(id.getBytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  return deserializeGitTree(id, result.bytes());
+}
+
+std::unique_ptr<Blob> LocalStore::getBlob(const Hash& id) const {
+  // We have to hold this string in scope while we deserialize and build
+  // the blob; otherwise, the results are undefined.
+  auto result = get(id.getBytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  auto buf = result.extractIOBuf();
+  return deserializeGitBlob(id, &buf);
+}
+
+std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
+  Sha1Key key(id);
+  auto result = get(key.bytes());
+  if (!result.isValid()) {
+    return nullptr;
+  }
+  auto bytes = result.bytes();
+  if (bytes.size() != Hash::RAW_SIZE) {
+    throw std::invalid_argument(folly::sformat(
+        "Database entry for {} was not of size {}. Could not convert to SHA-1.",
+        id.toString(),
+        static_cast<size_t>(Hash::RAW_SIZE)));
+  }
+
+  return std::make_unique<Hash>(bytes);
+}
+
+void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1) {
+  Sha1Key sha1Key(id);
+
+  // Record both the blob and SHA-1 entries in one RocksDB write operation.
+  WriteBatch blobWrites;
+  blobWrites.Put(_createSlice(id.getBytes()), _createSlice(blobData));
+  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
+  auto status = db_->Write(WriteOptions(), &blobWrites);
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status,
+        "error putting blob ",
+        folly::hexlify(id.getBytes()),
+        " in local store");
+  }
+}
+
+void LocalStore::putTree(const Hash& id, ByteRange treeData) {
+  put(id.getBytes(), treeData);
+}
+
+void LocalStore::put(folly::ByteRange key, folly::ByteRange value) {
+  auto status =
+      db_->Put(WriteOptions(), _createSlice(key), _createSlice(value));
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status,
+        "error putting data for key ",
+        folly::hexlify(key),
+        " in local store");
+  }
+}
+
 }
 }

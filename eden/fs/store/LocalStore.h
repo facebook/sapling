@@ -46,11 +46,12 @@ class LocalStore {
   /**
    * Get arbitrary unserialized data from the store.
    *
-   * StoreResult::isValid() will be true if the id was found, and false
+   * StoreResult::isValid() will be true if the key was found, and false
    * if the key was not present.
    *
    * May throw exceptions on error.
    */
+  StoreResult get(folly::ByteRange key) const;
   StoreResult get(const Hash& id) const;
 
   /**
@@ -81,13 +82,15 @@ class LocalStore {
    */
   std::unique_ptr<Hash> getSha1ForBlob(const Hash& id) const;
 
-  void putTree(const Hash& id, folly::ByteRange treeData) const;
-  void putBlob(const Hash& id, folly::ByteRange blobData, const Hash& sha1)
-      const;
+  void putTree(const Hash& id, folly::ByteRange treeData);
+  void putBlob(const Hash& id, folly::ByteRange blobData, const Hash& sha1);
+
+  /**
+   * Put arbitrary data in the store.
+   */
+  void put(folly::ByteRange key, folly::ByteRange value);
 
  private:
-  StoreResult _get(folly::ByteRange key) const;
-
   std::unique_ptr<rocksdb::DB> db_;
 };
 }

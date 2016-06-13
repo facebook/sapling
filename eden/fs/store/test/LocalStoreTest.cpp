@@ -107,18 +107,18 @@ TEST(LocalStore, testGetResult) {
   TempDir tmp;
   LocalStore store(tmp.path().string());
 
-  Hash hash1{"1000000000000000000000000000000000000000"};
-  Hash hash2{"2000000000000000000000000000000000000000"};
+  StringPiece key1 = "foo";
+  StringPiece key2 = "bar";
 
-  EXPECT_FALSE(store.get(hash1).isValid());
-  EXPECT_FALSE(store.get(hash2).isValid());
+  EXPECT_FALSE(store.get(key1).isValid());
+  EXPECT_FALSE(store.get(key2).isValid());
 
-  store.putTree(hash1, StringPiece{"hello world"});
-  auto result1 = store.get(hash1);
+  store.put(key1, StringPiece{"hello world"});
+  auto result1 = store.get(key1);
   ASSERT_TRUE(result1.isValid());
   EXPECT_EQ("hello world", result1.piece());
 
-  auto result2 = store.get(hash2);
+  auto result2 = store.get(key2);
   EXPECT_FALSE(result2.isValid());
   EXPECT_THROW(result2.piece(), std::domain_error);
 }
