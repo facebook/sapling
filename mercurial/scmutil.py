@@ -468,7 +468,8 @@ class abstractvfs(object):
         # have a use case.
         vfs = getattr(self, 'vfs', self)
         if getattr(vfs, '_backgroundfilecloser', None):
-            raise error.Abort('can only have 1 active background file closer')
+            raise error.Abort(
+                _('can only have 1 active background file closer'))
 
         with backgroundfilecloser(ui, expectedcount=expectedcount) as bfc:
             try:
@@ -590,8 +591,9 @@ class vfs(abstractvfs):
 
         if backgroundclose:
             if not self._backgroundfilecloser:
-                raise error.Abort('backgroundclose can only be used when a '
+                raise error.Abort(_('backgroundclose can only be used when a '
                                   'backgroundclosing context manager is active')
+                                  )
 
             fp = delayclosedfile(fp, self._backgroundfilecloser)
 
@@ -662,7 +664,7 @@ class readonlyvfs(abstractvfs, auditvfs):
 
     def __call__(self, path, mode='r', *args, **kw):
         if mode not in ('r', 'rb'):
-            raise error.Abort('this vfs is read only')
+            raise error.Abort(_('this vfs is read only'))
         return self.vfs(path, mode, *args, **kw)
 
     def join(self, path, *insidef):
@@ -1383,8 +1385,8 @@ class backgroundfilecloser(object):
     def close(self, fh):
         """Schedule a file for closing."""
         if not self._entered:
-            raise error.Abort('can only call close() when context manager '
-                              'active')
+            raise error.Abort(_('can only call close() when context manager '
+                              'active'))
 
         # If a background thread encountered an exception, raise now so we fail
         # fast. Otherwise we may potentially go on for minutes until the error

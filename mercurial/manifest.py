@@ -968,7 +968,7 @@ class manifest(revlog.revlog):
             return self.readdelta(node)
         if self._usemanifestv2:
             raise error.Abort(
-                "readshallowdelta() not implemented for manifestv2")
+                _("readshallowdelta() not implemented for manifestv2"))
         r = self.rev(node)
         d = mdiff.patchtext(self.revdiff(self.deltaparent(r), r))
         return manifestdict(d)

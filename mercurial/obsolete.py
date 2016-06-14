@@ -600,8 +600,8 @@ class obsstore(object):
         Take care of filtering duplicate.
         Return the number of new marker."""
         if self._readonly:
-            raise error.Abort('creating obsolete markers is not enabled on '
-                              'this repo')
+            raise error.Abort(_('creating obsolete markers is not enabled on '
+                              'this repo'))
         known = set(self._all)
         new = []
         for m in markers:
@@ -1234,7 +1234,7 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
                 localmetadata.update(rel[2])
 
             if not prec.mutable():
-                raise error.Abort("cannot obsolete public changeset: %s"
+                raise error.Abort(_("cannot obsolete public changeset: %s")
                                  % prec,
                                  hint='see "hg help phases" for details')
             nprec = prec.node()
@@ -1243,7 +1243,8 @@ def createmarkers(repo, relations, flag=0, date=None, metadata=None):
             if not nsucs:
                 npare = tuple(p.node() for p in prec.parents())
             if nprec in nsucs:
-                raise error.Abort("changeset %s cannot obsolete itself" % prec)
+                raise error.Abort(_("changeset %s cannot obsolete itself")
+                                  % prec)
 
             # Creating the marker causes the hidden cache to become invalid,
             # which causes recomputation when we ask for prec.parents() above.

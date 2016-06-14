@@ -1414,7 +1414,7 @@ class gitsubrepo(abstractsubrepo):
             if command in ('cat-file', 'symbolic-ref'):
                 return retdata, p.returncode
             # for all others, abort
-            raise error.Abort('git %s error %d in %s' %
+            raise error.Abort(_('git %s error %d in %s') %
                              (command, p.returncode, self._relpath))
 
         return retdata, p.returncode

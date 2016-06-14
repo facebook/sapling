@@ -2663,7 +2663,8 @@ def formatspec(expr, *args):
                 ret += listexp(list(args[arg]), d)
                 arg += 1
             else:
-                raise error.Abort('unexpected revspec format character %s' % d)
+                raise error.Abort(_('unexpected revspec format character %s')
+                                  % d)
         else:
             ret += c
         pos += 1

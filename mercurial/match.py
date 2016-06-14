@@ -38,7 +38,7 @@ def _expandsets(kindpats, ctx, listsubrepos):
     for kind, pat, source in kindpats:
         if kind == 'set':
             if not ctx:
-                raise error.Abort("fileset expression with no context")
+                raise error.Abort(_("fileset expression with no context"))
             s = ctx.getfileset(pat)
             fset.update(s)
 

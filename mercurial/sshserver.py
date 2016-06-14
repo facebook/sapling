@@ -11,6 +11,7 @@ from __future__ import absolute_import
 import os
 import sys
 
+from .i18n import _
 from . import (
     error,
     hook,
@@ -40,7 +41,7 @@ class sshserver(wireproto.abstractserverproto):
             argline = self.fin.readline()[:-1]
             arg, l = argline.split()
             if arg not in keys:
-                raise error.Abort("unexpected parameter %r" % arg)
+                raise error.Abort(_("unexpected parameter %r") % arg)
             if arg == '*':
                 star = {}
                 for k in xrange(int(l)):

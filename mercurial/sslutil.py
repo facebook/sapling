@@ -76,15 +76,15 @@ except AttributeError:
 
         def load_verify_locations(self, cafile=None, capath=None, cadata=None):
             if capath:
-                raise error.Abort('capath not supported')
+                raise error.Abort(_('capath not supported'))
             if cadata:
-                raise error.Abort('cadata not supported')
+                raise error.Abort(_('cadata not supported'))
 
             self._cacerts = cafile
 
         def set_ciphers(self, ciphers):
             if not self._supportsciphers:
-                raise error.Abort('setting ciphers not supported')
+                raise error.Abort(_('setting ciphers not supported'))
 
             self._ciphers = ciphers
 
@@ -229,7 +229,7 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
       to use.
     """
     if not serverhostname:
-        raise error.Abort('serverhostname argument is required')
+        raise error.Abort(_('serverhostname argument is required'))
 
     settings = _hostsettings(ui, serverhostname)
 

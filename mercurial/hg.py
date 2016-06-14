@@ -484,7 +484,8 @@ def clone(ui, peeropts, source, dest=None, pull=False, rev=None,
             sharepath = os.path.join(
                 sharepool, hashlib.sha1(source).hexdigest())
         else:
-            raise error.Abort('unknown share naming mode: %s' % sharenamemode)
+            raise error.Abort(_('unknown share naming mode: %s') %
+                              sharenamemode)
 
         if sharepath:
             return clonewithshare(ui, peeropts, sharepath, source, srcpeer,

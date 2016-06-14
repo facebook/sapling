@@ -858,14 +858,14 @@ def _pushbundle2(pushop):
         try:
             reply = pushop.remote.unbundle(stream, ['force'], 'push')
         except error.BundleValueError as exc:
-            raise error.Abort('missing support for %s' % exc)
+            raise error.Abort(_('missing support for %s') % exc)
         try:
             trgetter = None
             if pushback:
                 trgetter = pushop.trmanager.transaction
             op = bundle2.processbundle(pushop.repo, reply, trgetter)
         except error.BundleValueError as exc:
-            raise error.Abort('missing support for %s' % exc)
+            raise error.Abort(_('missing support for %s') % exc)
         except bundle2.AbortFromPart as exc:
             pushop.ui.status(_('remote: %s\n') % exc)
             raise error.Abort(_('push failed on remote'), hint=exc.hint)
@@ -1325,7 +1325,7 @@ def _pullbundle2(pullop):
     try:
         op = bundle2.processbundle(pullop.repo, bundle, pullop.gettransaction)
     except error.BundleValueError as exc:
-        raise error.Abort('missing support for %s' % exc)
+        raise error.Abort(_('missing support for %s') % exc)
 
     if pullop.fetch:
         results = [cg['return'] for cg in op.records['changegroup']]

@@ -307,7 +307,7 @@ class sshpeer(wireproto.wirepeer):
         r = self._call(cmd, **args)
         if r:
             # XXX needs to be made better
-            raise error.Abort('unexpected remote reply: %s' % r)
+            raise error.Abort(_('unexpected remote reply: %s') % r)
         while True:
             d = fp.read(4096)
             if not d:
