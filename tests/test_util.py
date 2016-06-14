@@ -702,7 +702,8 @@ class TestBase(unittest.TestCase):
                              changed + removed,
                              filectxfn,
                              'an_author',
-                             '2008-10-07 20:59:48 -0500')
+                             '2008-10-07 20:59:48 -0500',
+                             {'branch': parentctx.branch()})
         nodeid = repo.commitctx(ctx)
         repo = self.repo
         hg.clean(repo, nodeid)
