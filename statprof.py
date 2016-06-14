@@ -617,8 +617,12 @@ def display_hotpath(fp, limit=0.05, **kwargs):
 
             finalstring = liststring + codestring
             childrensamples = sum([c.count for c in node.children.itervalues()])
+            # Make frames that performed more than 10% of the operation red
             if node.count - childrensamples > (0.1 * root.count):
                 finalstring = '\033[91m' + finalstring + '\033[0m'
+            # Make frames that didn't actually perform work dark grey
+            elif node.count - childrensamples == 0:
+                finalstring = '\033[90m' + finalstring + '\033[0m'
             print >> fp, finalstring
 
         newdepth = depth
