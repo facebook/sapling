@@ -186,6 +186,10 @@ conditional above.
   src/.hg/largefiles/dirstate
   src/.hg/largefiles/e2fb5f2139d086ded2cb600d5a91a196e76bf020
 
+Verify that backwards compatibility is maintained for old storage layout
+  $ mv src/.hg/largefiles/$hash share_dst/.hg/largefiles
+  $ hg verify --quiet --lfa -R share_dst --config largefiles.usercache=
+
 Inject corruption into the largefiles store and see how update handles that:
 
   $ cd src

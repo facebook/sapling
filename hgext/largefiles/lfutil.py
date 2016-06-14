@@ -214,7 +214,7 @@ def findstorepath(repo, hash):
     if instore(repo, hash):
         return (path, True)
     elif repo.shared() and instore(repo, hash, True):
-        return storepath(repo, hash, True)
+        return storepath(repo, hash, True), True
 
     return (path, False)
 
