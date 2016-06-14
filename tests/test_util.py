@@ -28,6 +28,7 @@ from mercurial import util as hgutil
 from mercurial import extensions
 
 from hgsubversion import compathacks
+from hgsubversion import svnrepo
 from hgsubversion import svnwrap
 
 try:
@@ -781,6 +782,22 @@ files:     {files}
             from mercurial import commands
             commands.log(_ui, repo, rev=None, template=templ, graph=True)
         return _ui.popbuffer()
+
+    def svnlog(self, repo=None):
+        '''log of the remote Subversion repository corresponding to repo
+
+        In order to make the format suitable for direct comparison in
+        tests, we exclude dates and convert the path operations into
+        a tuple.
+        '''
+
+        if repo is None:
+            repo = self.repo
+
+        return [(r.revnum, r.message,
+                 dict((p, (op.action, op.copyfrom_path, int(op.copyfrom_rev)))
+                      for (p, op) in r.paths.items()))
+                for r in svnrepo.svnremoterepo(repo.ui).svn.revisions()]
 
     def draw(self, repo):
         sys.stdout.write(self.getgraph(repo))
