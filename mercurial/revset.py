@@ -2508,6 +2508,10 @@ class abstractsmartset(object):
         """True if the set will iterate in descending order"""
         raise NotImplementedError()
 
+    def istopo(self):
+        """True if the set will iterate in topographical order"""
+        raise NotImplementedError()
+
     @util.cachefunc
     def min(self):
         """return the minimum element in the set"""
@@ -2593,12 +2597,13 @@ class baseset(abstractsmartset):
 
     Every method in this class should be implemented by any smartset class.
     """
-    def __init__(self, data=(), datarepr=None):
+    def __init__(self, data=(), datarepr=None, istopo=False):
         """
         datarepr: a tuple of (format, obj, ...), a function or an object that
                   provides a printable representation of the given data.
         """
         self._ascending = None
+        self._istopo = istopo
         if not isinstance(data, list):
             if isinstance(data, set):
                 self._set = data
@@ -2641,12 +2646,14 @@ class baseset(abstractsmartset):
 
     def sort(self, reverse=False):
         self._ascending = not bool(reverse)
+        self._istopo = False
 
     def reverse(self):
         if self._ascending is None:
             self._list.reverse()
         else:
             self._ascending = not self._ascending
+        self._istopo = False
 
     def __len__(self):
         return len(self._list)
@@ -2666,6 +2673,14 @@ class baseset(abstractsmartset):
         if len(self) <= 1:
             return True
         return self._ascending is not None and not self._ascending
+
+    def istopo(self):
+        """Is the collection is in topographical order or not.
+
+        This is part of the mandatory API for smartset."""
+        if len(self) <= 1:
+            return True
+        return self._istopo
 
     def first(self):
         if self:
@@ -2781,6 +2796,9 @@ class filteredset(abstractsmartset):
 
     def isdescending(self):
         return self._subset.isdescending()
+
+    def istopo(self):
+        return self._subset.istopo()
 
     def first(self):
         for x in self:
@@ -3028,6 +3046,12 @@ class addset(abstractsmartset):
     def isdescending(self):
         return self._ascending is not None and not self._ascending
 
+    def istopo(self):
+        # not worth the trouble asserting if the two sets combined are still
+        # in topographical order. Use the sort() predicate to explicitly sort
+        # again instead.
+        return False
+
     def reverse(self):
         if self._ascending is None:
             self._list.reverse()
@@ -3195,6 +3219,12 @@ class generatorset(abstractsmartset):
     def isdescending(self):
         return not self._ascending
 
+    def istopo(self):
+        # not worth the trouble asserting if the two sets combined are still
+        # in topographical order. Use the sort() predicate to explicitly sort
+        # again instead.
+        return False
+
     def first(self):
         if self._ascending:
             it = self.fastasc
@@ -3256,6 +3286,12 @@ class spanset(abstractsmartset):
 
     def reverse(self):
         self._ascending = not self._ascending
+
+    def istopo(self):
+        # not worth the trouble asserting if the two sets combined are still
+        # in topographical order. Use the sort() predicate to explicitly sort
+        # again instead.
+        return False
 
     def _iterfilter(self, iterrange):
         s = self._hiddenrevs
