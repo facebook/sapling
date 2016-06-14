@@ -1123,7 +1123,7 @@ def _getoutgoings(repo, other, missing, addfunc):
             lfhashes.add(lfhash)
     lfutil.getlfilestoupload(repo, missing, dedup)
     if lfhashes:
-        lfexists = storefactory._openstore(repo, other).exists(lfhashes)
+        lfexists = storefactory.openstore(repo, other).exists(lfhashes)
         for fn, lfhash in knowns:
             if not lfexists[lfhash]: # lfhash doesn't exist on "other"
                 addfunc(fn, lfhash)
@@ -1352,7 +1352,7 @@ def overridecat(orig, ui, repo, file1, *pats, **opts):
         else:
             hash = lfutil.readstandin(repo, lf, ctx.rev())
             if not lfutil.inusercache(repo.ui, hash):
-                store = storefactory._openstore(repo)
+                store = storefactory.openstore(repo)
                 success, missing = store.get([(lf, hash)])
                 if len(success) != 1:
                     raise error.Abort(

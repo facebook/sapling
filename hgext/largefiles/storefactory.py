@@ -22,7 +22,7 @@ from . import (
 # During clone this function is passed the src's ui object
 # but it needs the dest's ui object so it can read out of
 # the config file. Use repo.ui instead.
-def _openstore(repo, remote=None, put=False):
+def openstore(repo, remote=None, put=False):
     ui = repo.ui
 
     if not remote:

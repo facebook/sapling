@@ -356,7 +356,7 @@ def uploadlfiles(ui, rsrc, rdst, files):
     if not files:
         return
 
-    store = storefactory._openstore(rsrc, rdst, put=True)
+    store = storefactory.openstore(rsrc, rdst, put=True)
 
     at = 0
     ui.debug("sending statlfile command for %d largefiles\n" % len(files))
@@ -387,7 +387,7 @@ def verifylfiles(ui, repo, all=False, contents=False):
     else:
         revs = ['.']
 
-    store = storefactory._openstore(repo)
+    store = storefactory.openstore(repo)
     return store.verify(revs, contents=contents)
 
 def cachelfiles(ui, repo, node, filelist=None):
@@ -413,7 +413,7 @@ def cachelfiles(ui, repo, node, filelist=None):
             toget.append((lfile, expectedhash))
 
     if toget:
-        store = storefactory._openstore(repo)
+        store = storefactory.openstore(repo)
         ret = store.get(toget)
         return ret
 
