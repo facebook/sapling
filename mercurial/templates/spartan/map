@@ -63,6 +63,8 @@ annotateline = '
       <div class="annotate-info">
         <div>{node|short}: {desc|escape|firstline}</div>
         <div>parents: {parents%annotateparent}</div>
+        <a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a>
+        <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a>
       </div>
     </td>
     <td>
