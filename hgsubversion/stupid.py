@@ -568,7 +568,7 @@ def fetch_branchrev(svn, meta, branch, branchpath, r, parentctx):
     return files, filectxfn
 
 def checkbranch(meta, r, branch):
-    branchedits = meta.revmap.branchedits(branch, r)
+    branchedits = meta.revmap.branchedits(branch, r.revnum)
     if not branchedits:
         return None
     branchtip = branchedits[0][1]

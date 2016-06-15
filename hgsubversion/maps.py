@@ -370,8 +370,8 @@ class RevMap(dict):
             self._hashes = dict((v, k) for (k, v) in self._origiteritems())
         return self._hashes
 
-    def branchedits(self, branch, rev):
-        check = lambda x: x[0][1] == branch and x[0][0] < rev.revnum
+    def branchedits(self, branch, revnum):
+        check = lambda x: x[0][1] == branch and x[0][0] < revnum
         return sorted(filter(check, self._origiteritems()), reverse=True)
 
     def branchmaxrevnum(self, branch, maxrevnum):
@@ -579,12 +579,12 @@ class SqliteRevMap(collections.MutableMapping):
             self._hashes = self.ReverseRevMap(self)
         return self._hashes
 
-    def branchedits(self, branch, rev):
+    def branchedits(self, branch, revnum):
         return [((r[0], r[1] or None), bytes(r[2])) for r in
                 self._query('SELECT rev, branch, hash FROM revmap ' +
                                 'WHERE rev < ? AND branch = ? ' +
                                 'ORDER BY rev DESC, branch DESC',
-                                (rev.revnum, branch or ''))]
+                                (revnum, branch or ''))]
 
     def branchmaxrevnum(self, branch, maxrev):
         for row in self._query('SELECT rev FROM revmap ' +

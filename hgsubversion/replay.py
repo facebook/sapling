@@ -103,7 +103,7 @@ def _convert_rev(ui, meta, svn, r, tbdelta, firstrun):
 
     closebranches = {}
     for branch in tbdelta['branches'][1]:
-        branchedits = meta.revmap.branchedits(branch, rev)
+        branchedits = meta.revmap.branchedits(branch, rev.revnum)
         if len(branchedits) < 1:
             # can't close a branch that never existed
             continue
