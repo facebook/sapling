@@ -37,6 +37,7 @@ unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
   // Check in the LocalStore first
   auto tree = localStore_->getTree(id);
   if (tree) {
+    VLOG(4) << "tree " << id << " found in local store";
     return tree;
   }
 
@@ -51,6 +52,7 @@ unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
   tree = backingStore_->getTree(id);
   if (!tree) {
     // TODO: Perhaps we should do some short-term negative caching?
+    VLOG(2) << "unable to find tree " << id;
     throw std::domain_error(
         folly::to<string>("tree ", id.toString(), " not found"));
   }
@@ -59,28 +61,34 @@ unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
   // saving the Tree object in the LocalStore, so we don't do anything here.
   //
   // localStore_->putTree(tree.get());
+  VLOG(3) << "tree " << id << " retrieved from backing store";
   return tree;
 }
 
 unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
   auto blob = localStore_->getBlob(id);
   if (blob) {
+    VLOG(4) << "blob " << id << "  found in local store";
     return blob;
   }
 
   // Look in the BackingStore
   blob = backingStore_->getBlob(id);
   if (!blob) {
+    VLOG(2) << "unable to find blob " << id;
     // TODO: Perhaps we should do some short-term negative caching?
     throw std::domain_error(
         folly::to<string>("blob ", id.toString(), " not found"));
   }
 
+  VLOG(3) << "blob " << id << "  retrieved from backing store";
   localStore_->putBlob(id, blob.get());
   return blob;
 }
 
 unique_ptr<Tree> ObjectStore::getTreeForCommit(const Hash& commitID) const {
+  VLOG(3) << "getTreeForCommit(" << commitID << ")";
+
   // For now we assume that the BackingStore will insert the Tree into the
   // LocalStore on its own.
   auto tree = backingStore_->getTreeForCommit(commitID);

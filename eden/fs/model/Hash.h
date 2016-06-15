@@ -9,10 +9,11 @@
  */
 #pragma once
 
+#include <boost/operators.hpp>
 #include <folly/Range.h>
 #include <stdint.h>
 #include <array>
-#include <boost/operators.hpp>
+#include <iosfwd>
 
 namespace folly {
 class IOBuf;
@@ -64,5 +65,12 @@ class Hash : boost::totally_ordered<Hash> {
  private:
   Storage bytes_;
 };
+
+/**
+ * Output stream operator for Hash.
+ *
+ * This makes it possible to easily use Hash in glog statements.
+ */
+std::ostream& operator<<(std::ostream& os, const Hash& hash);
 }
 }

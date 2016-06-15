@@ -116,5 +116,10 @@ Hash Hash::sha1(ByteRange data) {
   SHA1(data.data(), data.size(), hashBytes.data());
   return Hash(hashBytes);
 }
+
+std::ostream& operator<<(std::ostream& os, const Hash& hash) {
+  os << hash.toString();
+  return os;
+}
 }
 }
