@@ -14,7 +14,7 @@ from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
-import errno, os, re, collections
+import errno, os, re, collections, hashlib
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -442,7 +442,7 @@ def _wraprepo(ui, repo):
 
         def sparsechecksum(self, filepath):
             fh = open(filepath)
-            return util.sha1(fh.read()).hexdigest()
+            return hashlib.sha1(fh.read()).hexdigest()
 
         def _sparsesignature(self, includetemp=True):
             """Returns the signature string representing the contents of the
@@ -874,7 +874,7 @@ class forceincludematcher(object):
         return False
 
     def hash(self):
-        sha1 = util.sha1()
+        sha1 = hashlib.sha1()
         sha1.update(_hashmatcher(self._matcher))
         for include in sorted(self._includes):
             sha1.update(include + '\0')
@@ -907,7 +907,7 @@ class unionmatcher(object):
         return False
 
     def hash(self):
-        sha1 = util.sha1()
+        sha1 = hashlib.sha1()
         for m in self._matchers:
             sha1.update(_hashmatcher(m))
         return sha1.hexdigest()
@@ -932,7 +932,7 @@ class negatematcher(object):
         return True
 
     def hash(self):
-        sha1 = util.sha1()
+        sha1 = hashlib.sha1()
         sha1.update('negate')
         sha1.update(_hashmatcher(self._matcher))
         return sha1.hexdigest()
@@ -941,7 +941,7 @@ def _hashmatcher(matcher):
     if util.safehasattr(matcher, 'hash'):
         return matcher.hash()
 
-    sha1 = util.sha1()
+    sha1 = hashlib.sha1()
     if util.safehasattr(matcher, 'includepat'):
         sha1.update(matcher.includepat)
     sha1.update('\0\0')
