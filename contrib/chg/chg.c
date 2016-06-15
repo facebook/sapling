@@ -434,8 +434,6 @@ static void restoresignalhandler()
 
 	if (sigaction(SIGHUP, &sa, NULL) < 0)
 		goto error;
-	if (sigaction(SIGINT, &sa, NULL) < 0)
-		goto error;
 	if (sigaction(SIGTERM, &sa, NULL) < 0)
 		goto error;
 	if (sigaction(SIGWINCH, &sa, NULL) < 0)
@@ -443,6 +441,11 @@ static void restoresignalhandler()
 	if (sigaction(SIGCONT, &sa, NULL) < 0)
 		goto error;
 	if (sigaction(SIGTSTP, &sa, NULL) < 0)
+		goto error;
+
+	/* ignore Ctrl+C while shutting down to make pager exits cleanly */
+	sa.sa_handler = SIG_IGN;
+	if (sigaction(SIGINT, &sa, NULL) < 0)
 		goto error;
 
 	peerpid = 0;
