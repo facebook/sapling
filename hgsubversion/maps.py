@@ -1,8 +1,13 @@
 ''' Module for self-contained maps. '''
 
+import collections
+import contextlib
 import errno
 import os
 import re
+import sqlite3
+import sys
+import weakref
 from mercurial import error
 from mercurial import util as hgutil
 from mercurial.node import bin, hex, nullid
@@ -453,6 +458,258 @@ class RevMap(dict):
         dict.__setitem__(self, (revnum, branch), ha)
         if self._hashes is not None:
             self._hashes[ha] = (revnum, branch)
+
+
+class SqliteRevMap(collections.MutableMapping):
+    """RevMap backed by sqlite3.
+
+    It tries to address performance issues for a very large rev map.
+    As such iteration is unavailable for both the map itself and the
+    reverse map (self.hashes).
+
+    It migrates from the old RevMap upon first use. Then it will bump the
+    version of revmap so RevMap no longer works. The real database is a
+    separated file which has a ".db" suffix.
+    """
+
+    VERSION = 2
+
+    TABLESCHEMA = [
+        '''CREATE TABLE IF NOT EXISTS revmap (
+               rev INTEGER NOT NULL,
+               branch TEXT NOT NULL DEFAULT '',
+               hash BLOB NOT NULL)''',
+    ]
+
+    INDEXSCHEMA = [
+        'CREATE UNIQUE INDEX IF NOT EXISTS revbranch ON revmap (rev,branch);',
+        'CREATE INDEX IF NOT EXISTS hash ON revmap (hash);',
+    ]
+
+    # "bytes" in Python 2 will get truncated at '\0' when storing as sqlite
+    # blobs. "buffer" does not have this issue. Python 3 does not have "buffer"
+    # but "bytes" won't get truncated.
+    sqlblobtype = bytes if sys.version_info >= (3, 0) else buffer
+
+    class ReverseRevMap(object):
+        # collections.Mapping is not suitable since we don't want 2/3 of
+        # its required interfaces: __iter__, __len__.
+        def __init__(self, revmap):
+            self.revmap = weakref.proxy(revmap)
+            self._cache = {}
+
+        def get(self, key, default=None):
+            if key not in self._cache:
+                result = None
+                for row in self.revmap._query(
+                    'SELECT rev, branch FROM revmap WHERE hash=?',
+                    (SqliteRevMap.sqlblobtype(key),)):
+                    result = (row[0], row[1] or None)
+                    break
+                self._cache[key] = result
+            return self._cache[key] or default
+
+        def __contains__(self, key):
+            return self.get(key) != None
+
+        def __getitem__(self, key):
+            dummy = self._cache
+            item = self.get(key, dummy)
+            if item == dummy:
+                raise KeyError(key)
+            else:
+                return item
+
+        def keys(self):
+            for row in self.revmap._query('SELECT hash FROM revmap'):
+                yield bytes(row[0])
+
+    lastpulled = util.fileproperty('_lastpulled', lambda x: x._lastpulledpath,
+                                   default=0, deserializer=int)
+
+    def __init__(self, revmap_path, lastpulled_path):
+        self._filepath = revmap_path
+        self._dbpath = revmap_path + '.db'
+        self._lastpulledpath = lastpulled_path
+
+        self._db = None
+        self._hashes = None
+        self._opendb()
+        # update firstpulled, lastpulled
+        self.firstpulled = 0
+        for row in self._query('SELECT MIN(rev), MAX(rev) FROM revmap'):
+            if row != (None, None):
+                self.firstpulled, lastpulled = row
+                if lastpulled > self.lastpulled:
+                    self.lastpulled = lastpulled
+        # __iter__ is expensive and thus disabled by default
+        # it should only be enabled for testing
+        self._allowiter = False
+
+    def hashes(self):
+        if self._hashes is None:
+            self._hashes = self.ReverseRevMap(self)
+        return self._hashes
+
+    def branchedits(self, branch, rev):
+        return [((r[0], r[1] or None), bytes(r[2])) for r in
+                self._query('SELECT rev, branch, hash FROM revmap ' +
+                                'WHERE rev < ? AND branch = ? ' +
+                                'ORDER BY rev DESC, branch DESC',
+                                (rev.revnum, branch or ''))]
+
+    def branchmaxrevnum(self, branch, maxrev):
+        for row in self._query('SELECT rev FROM revmap ' +
+                               'WHERE rev <= ? AND branch = ? ' +
+                               'ORDER By rev DESC LIMIT 1',
+                               (maxrev, branch or '')):
+            return row[0]
+        return 0
+
+    @property
+    def lasthash(self):
+        for row in self._query('SELECT hash FROM revmap ORDER BY rev DESC'):
+            return bytes(row[0])
+        return None
+
+    def revhashes(self, revnum):
+        for row in self._query('SELECT hash FROM revmap WHERE rev = ?',
+                               (revnum,)):
+            yield bytes(row[0])
+
+    def clear(self):
+        hgutil.unlinkpath(self._filepath, ignoremissing=True)
+        hgutil.unlinkpath(self._dbpath, ignoremissing=True)
+        self._db = None
+        self._hashes = None
+        self._firstpull = None
+        self._lastpull = None
+
+    def batchset(self, items, lastpulled):
+        with self._transaction():
+            self._insert(items)
+        self.lastpulled = lastpulled
+
+    def __getitem__(self, key):
+        for row in self._querybykey('SELECT hash', key):
+            return bytes(row[0])
+        raise KeyError(key)
+
+    def __iter__(self):
+        if not self._allowiter:
+            raise NotImplementedError(
+                'SqliteRevMap.__iter__ is not implemented intentionally ' +
+                'to avoid performance issues')
+        # collect result to avoid nested transaction issues
+        rows = []
+        for row in self._query('SELECT rev, branch FROM revmap'):
+            rows.append((row[0], row[1] or None))
+        return iter(rows)
+
+    def __len__(self):
+        # 'WHERE rev >= 0' hints sqlite to use the rev index
+        with self._transaction() as db:
+            return db.execute('SELECT COUNT(1) FROM revmap ' +
+                              'WHERE rev >= 0').fetchone()[0]
+
+    def __setitem__(self, key, binha):
+        revnum, branch = key
+        with self._transaction():
+            self._insert([(revnum, branch, binha)])
+        if revnum < self.firstpulled or not self.firstpulled:
+            self.firstpulled = revnum
+        if revnum > self.lastpulled or not self.lastpulled:
+            self.lastpulled = revnum
+        if self._hashes is not None:
+            self._hashes._cache[binha] = key
+
+    def __delitem__(self, key):
+        for row in self._querybykey('DELETE', key):
+            return
+        # For performance reason, self._hashes is not updated
+        raise KeyError(key)
+
+    @contextlib.contextmanager
+    def _transaction(self, mode='IMMEDIATE'):
+        if self._db is None:
+            self._opendb()
+        with self._db as db:
+            db.execute('BEGIN %s' % mode)
+            yield db
+
+    def _query(self, sql, params=()):
+        with self._transaction() as db:
+            cur = db.execute(sql, params)
+            try:
+                for row in cur:
+                    yield row
+            finally:
+                cur.close()
+
+    def _querybykey(self, prefix, key):
+        revnum, branch = key
+        return self._query(
+            '%s FROM revmap WHERE rev=? AND branch=?'
+            % prefix, (revnum, branch or ''))
+
+    def _insert(self, rows):
+        # convert to a safe type so '\0' does not truncate the blob
+        if rows and type(rows[0][-1]) is not self.sqlblobtype:
+            rows = [(r, b, self.sqlblobtype(h)) for r, b, h in rows]
+        self._db.executemany(
+            'INSERT OR REPLACE INTO revmap (rev, branch, hash) ' +
+            'VALUES (?, ?, ?)', rows)
+
+    def _opendb(self):
+        '''Open the database and make sure the table is created on demand.'''
+        version = None
+        try:
+            version = int(open(self._filepath).read(2))
+        except (ValueError, IOError):
+            pass
+        if version and version not in [RevMap.VERSION, self.VERSION]:
+            raise error.Abort('revmap too new -- please upgrade')
+
+        if self._db:
+            self._db.close()
+
+        # if version mismatch, the database is considered invalid
+        if version != self.VERSION:
+            hgutil.unlinkpath(self._dbpath, ignoremissing=True)
+
+        self._db = sqlite3.connect(self._dbpath)
+        self._db.text_factory = bytes
+
+        # disable auto-commit. everything is inside a transaction
+        self._db.isolation_level = 'DEFERRED'
+
+        with self._transaction('EXCLUSIVE'):
+            map(self._db.execute, self.TABLESCHEMA)
+            if version == RevMap.VERSION:
+                self._importrevmapv1()
+            # "bulk insert; then create index" is about 2.4x as fast as
+            # "create index; then bulk insert" on a large repo
+            map(self._db.execute, self.INDEXSCHEMA)
+
+        # write a dummy rev map file with just the revision number
+        if version != self.VERSION:
+            f = open(self._filepath, 'w')
+            f.write('%s\n' % self.VERSION)
+            f.close()
+
+    @util.gcdisable
+    def _importrevmapv1(self):
+        with open(self._filepath, 'r') as f:
+            # 1st line is version
+            assert(int(f.readline())) == RevMap.VERSION
+            data = {}
+            for line in f:
+                revnum, ha, branch = line[:-1].split(' ', 2)
+                # ignore malicious lines
+                if len(ha) != 40:
+                    continue
+                data[revnum, branch or None] = bin(ha)
+            self._insert([(r, b, h) for (r, b), h in data.iteritems()])
 
 
 class FileMap(object):
