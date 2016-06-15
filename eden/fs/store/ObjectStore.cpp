@@ -55,7 +55,9 @@ unique_ptr<Tree> ObjectStore::getTree(const Hash& id) const {
         folly::to<string>("tree ", id.toString(), " not found"));
   }
 
-  // TODO:
+  // TODO: For now, the BackingStore objects actually end up already
+  // saving the Tree object in the LocalStore, so we don't do anything here.
+  //
   // localStore_->putTree(tree.get());
   return tree;
 }
@@ -74,8 +76,7 @@ unique_ptr<Blob> ObjectStore::getBlob(const Hash& id) const {
         folly::to<string>("blob ", id.toString(), " not found"));
   }
 
-  // TODO:
-  // localStore_->putBlob(blob.get());
+  localStore_->putBlob(id, blob.get());
   return blob;
 }
 
@@ -108,8 +109,7 @@ unique_ptr<Hash> ObjectStore::getSha1ForBlob(const Hash& id) const {
         folly::to<string>("blob ", id.toString(), " not found"));
   }
 
-  // TODO:
-  // localStore_->putBlob(blob.get());
+  localStore_->putBlob(id, blob.get());
   auto sha1Obj = Hash::sha1(&blob->getContents());
   return std::make_unique<Hash>(sha1Obj);
 }

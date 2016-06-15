@@ -11,6 +11,8 @@
 
 #include <folly/Format.h>
 #include <folly/String.h>
+#include <folly/io/Cursor.h>
+#include <folly/io/IOBuf.h>
 #include <rocksdb/db.h>
 #include <array>
 #include "eden/fs/model/Blob.h"
@@ -23,6 +25,8 @@
 
 using facebook::eden::Hash;
 using folly::ByteRange;
+using folly::io::Cursor;
+using folly::IOBuf;
 using folly::StringPiece;
 using rocksdb::ReadOptions;
 using rocksdb::Slice;
@@ -143,6 +147,53 @@ std::unique_ptr<Hash> LocalStore::getSha1ForBlob(const Hash& id) const {
   return std::make_unique<Hash>(bytes);
 }
 
+void LocalStore::putBlob(const Hash& id, const Blob* blob) {
+  const IOBuf& contents = blob->getContents();
+
+  Sha1Key sha1Key(id);
+  auto sha1 = Hash::sha1(&contents);
+
+  auto hashSlice = _createSlice(id.getBytes());
+  SliceParts keyParts(&hashSlice, 1);
+
+  ByteRange bodyBytes;
+
+  // Add a git-style blob prefix
+  auto prefix = folly::to<string>("blob ", contents.computeChainDataLength());
+  prefix.push_back('\0');
+  std::vector<Slice> bodySlices;
+  bodySlices.emplace_back(prefix);
+
+  // Add all of the IOBuf chunks
+  Cursor cursor(&contents);
+  while (true) {
+    auto bytes = cursor.peekBytes();
+    if (bytes.empty()) {
+      break;
+    }
+    bodySlices.push_back(_createSlice(bytes));
+    cursor.skip(bytes.size());
+  }
+
+  SliceParts bodyParts(bodySlices.data(), bodySlices.size());
+
+  WriteBatch blobWrites;
+  blobWrites.Put(keyParts, bodyParts);
+  blobWrites.Put(sha1Key.slice(), _createSlice(sha1.getBytes()));
+  auto status = db_->Write(WriteOptions(), &blobWrites);
+  if (!status.ok()) {
+    // We don't use RocksException::check(), since we don't want to waste our
+    // time computing the hex string of the key if we succeeded.
+    throw RocksException::build(
+        status,
+        "error putting blob ",
+        folly::hexlify(id.getBytes()),
+        " in local store");
+  }
+}
+
+// TODO: We should deprecate this function, and update all callers to use
+// the version of putBlob() above.
 void LocalStore::putBlob(const Hash& id, ByteRange blobData, const Hash& sha1) {
   Sha1Key sha1Key(id);
 

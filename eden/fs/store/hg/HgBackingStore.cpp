@@ -17,6 +17,7 @@
 
 using folly::ByteRange;
 using folly::StringPiece;
+using std::make_unique;
 using std::unique_ptr;
 
 namespace facebook {
@@ -37,8 +38,8 @@ unique_ptr<Tree> HgBackingStore::getTree(const Hash& id) {
 }
 
 unique_ptr<Blob> HgBackingStore::getBlob(const Hash& id) {
-  // TODO
-  return nullptr;
+  auto buf = importer_->importFileContents(id);
+  return make_unique<Blob>(id, std::move(buf));
 }
 
 unique_ptr<Tree> HgBackingStore::getTreeForCommit(const Hash& commitID) {

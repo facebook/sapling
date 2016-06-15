@@ -13,6 +13,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import binascii
 import logging
 import os
 import struct
@@ -24,15 +25,79 @@ import mercurial.node
 import mercurial.scmutil
 import mercurial.ui
 
-FLAG_ERROR = 0x01
-FLAG_MORE_CHUNKS = 0x02
-
-# Format argument for struct.unpack()
+#
+# Message chunk header format.
+# (This is a format argument for struct.unpack())
+#
+# The header consists of 4 big-endian 32-bit unsigned integers:
+#
+# - Transaction ID
+#   This is a numeric identifier used for associating a response with a given
+#   request.  The response for a particular request will always contain the
+#   same transaction ID as was sent in the request.  (Currently responses are
+#   always sent in the same order that requests were received, so this is
+#   primarily used just as a sanity check.)
+#
+# - Command ID
+#   This is one of the CMD_* constants below.
+#
+# - Flags
+#   This is a bit set of the FLAG_* constants defined below.
+#
+# - Data length
+#   This lists the number of body bytes sent with this request/response.
+#   The body is sent immediately after the header data.
+#
 HEADER_FORMAT = b'>IIII'
 HEADER_SIZE = 16
 
+# The length of a SHA-1 hash
+SHA1_NUM_BYTES = 20
+
+#
+# Message types.
+#
+# See the specific cmd_* functions below for documentation on the
+# request/response formats.
+#
 CMD_RESPONSE = 0
 CMD_MANIFEST = 1
+CMD_CAT_FILE = 2
+
+#
+# Flag values.
+#
+# The flag values are intended to be bitwise-ORed with each other.
+#
+
+# FLAG_ERROR:
+# - This flag is only valid in response chunks.  This indicates that an error
+#   has occurred.  The chunk body contains the error message.  Any chunks
+#   received prior to the error chunk should be ignored.
+FLAG_ERROR = 0x01
+# FLAG_MORE_CHUNKS:
+# - If this flag is set, there are more chunks to come that are part of the
+#   same request/response.  If this flag is not set, this is the final chunk in
+#   this request/response.
+FLAG_MORE_CHUNKS = 0x02
+
+
+class Request(object):
+    def __init__(self, txn_id, command, flags, body):
+        self.txn_id = txn_id
+        self.command = command
+        self.flags = flags
+        self.body = body
+
+
+def cmd(command_id):
+    '''
+    A helper function for identifying command functions
+    '''
+    def decorator(func):
+        func.__COMMAND_ID__ = command_id
+        return func
+    return decorator
 
 
 class HgServer(object):
@@ -47,6 +112,14 @@ class HgServer(object):
 
         self.in_file = sys.stdin
         self.out_file = sys.stdout
+
+        # Populate our command dictionary
+        self._commands = {}
+        for member_name in dir(self):
+            value = getattr(self, member_name)
+            if not hasattr(value, '__COMMAND_ID__'):
+                continue
+            self._commands[value.__COMMAND_ID__] = value
 
     def serve(self):
         while self.process_request():
@@ -66,42 +139,112 @@ class HgServer(object):
             raise Exception('received EOF after partial request header')
 
         header_fields = struct.unpack(HEADER_FORMAT, header_data)
-        request_id, command, flags, data_len = header_fields
+        txn_id, command, flags, data_len = header_fields
 
         # Read the request body
         body = self.in_file.read(data_len)
         if len(body) < data_len:
             raise Exception('received EOF after partial request')
+        req = Request(txn_id, command, flags, body)
 
-        if command == CMD_MANIFEST:
-            rev_name = body
-            self.debug('sending manifest for revision %r', rev_name)
-            self.dump_manifest(rev_name, request_id)
-        else:
+        cmd_function = self._commands.get(command)
+        if cmd_function is None:
             logging.warning('unknown command %r', command)
-            self.send_error(request_id, 'unknown command %r' % (command,))
+            self.send_error(req, 'unknown command %r' % (command,))
+            return True
 
+        try:
+            cmd_function(req)
+        except Exception as ex:
+            logging.exception('error processing command %r', command)
+            self.send_error(req, str(ex))
+
+        # Return True to indicate that we should continue serving
         return True
 
-    def send_chunk(self, request_id, data, is_last=True):
+    @cmd(CMD_MANIFEST)
+    def cmd_manifest(self, request):
+        '''
+        Handler for CMD_MANIFEST requests.
+
+        This request asks for the full mercurial manifest contents for a given
+        revision.  The response body will be split across one or more chunks.
+        (FLAG_MORE_CHUNKS will be set on all but the last chunk.)
+
+        Request body format:
+        - Revision name (string)
+          This is the mercurial revision ID.  This can be any string that will
+          be understood by mercurial to identify a single revision.  (For
+          instance, this might be ".", ".^", a 40-character hexadecmial hash,
+          or a unique hash prefix, etc.)
+
+        Response body format:
+          The response body is a list of manifest entries.  Each manifest entry
+          consists of:
+          - <rev_hash><tab><flag><tab><path><nul>
+
+          Entry fields:
+          - <rev_hash>: The file revision hash, as a 20-byte binary value.
+          - <tab>: A literal tab character ('\t')
+          - <flag>: The mercurial flag character.  If the mercurial flag is
+                    empty this will be omitted.  Valid mercurial flags are:
+                    'x': an executable file
+                    'l': an symlink
+                    '':  a regular file
+          - <path>: The full file path, relative to the root of the repository
+          - <nul>: a nul byte ('\0')
+        '''
+        rev_name = request.body
+        self.debug('sending manifest for revision %r', rev_name)
+        self.dump_manifest(rev_name, request)
+
+    @cmd(CMD_CAT_FILE)
+    def cmd_cat_file(self, request):
+        '''
+        Handler for CMD_CAT_FILE requests.
+
+        This requests the contents for a given file.
+
+        Request body format:
+        - <rev_hash><path>
+          Fields:
+          - <rev_hash>: The file revision hash, as a 20-byte binary value.
+          - <path>: The file path, relative to the root of the repository.
+
+        Response body format:
+        - <file_contents>
+          The body consists solely of the raw file contents.
+        '''
+        if len(request.body) < SHA1_NUM_BYTES + 1:
+            raise Exception('cat_file request data too short')
+
+        rev_hash = request.body[:SHA1_NUM_BYTES]
+        path = request.body[SHA1_NUM_BYTES:]
+        self.debug('getting contents of file %r revision %s', path,
+                   binascii.hexlify(rev_hash))
+
+        contents = self.get_file(path, rev_hash)
+        self.send_chunk(request, contents)
+
+    def send_chunk(self, request, data, is_last=True):
         flags = 0
         if not is_last:
             flags |= FLAG_MORE_CHUNKS
-        self._send_chunk(request_id, command=CMD_RESPONSE,
+        self._send_chunk(request, command=CMD_RESPONSE,
                          flags=flags, data=data)
 
-    def send_error(self, request_id, message):
-        self._send_chunk(request_id, command=CMD_RESPONSE,
+    def send_error(self, request, message):
+        self._send_chunk(request, command=CMD_RESPONSE,
                          flags=FLAG_ERROR, data=message)
 
-    def _send_chunk(self, request_id, command, flags, data):
-        header = struct.pack(HEADER_FORMAT, request_id, command, flags,
+    def _send_chunk(self, request, command, flags, data):
+        header = struct.pack(HEADER_FORMAT, request.txn_id, command, flags,
                              len(data))
         self.out_file.write(header)
         self.out_file.write(data)
         self.out_file.flush()
 
-    def dump_manifest(self, rev, request_id):
+    def dump_manifest(self, rev, request):
         '''
         Send the manifest data.
         '''
@@ -126,16 +269,20 @@ class HgServer(object):
             entry = b'\t'.join((mf[path], mf.flags(path), path + b'\0'))
             if len(chunked_paths) >= MANIFEST_PATHS_PER_CHUNK:
                 num_paths += len(chunked_paths)
-                self.send_chunk(request_id, b''.join(chunked_paths),
+                self.send_chunk(request, b''.join(chunked_paths),
                                 is_last=False)
                 chunked_paths = [entry]
             else:
                 chunked_paths.append(entry)
 
         num_paths += len(chunked_paths)
-        self.send_chunk(request_id, b''.join(chunked_paths), is_last=True)
+        self.send_chunk(request, b''.join(chunked_paths), is_last=True)
         self.debug('sent manifest with %d paths in %s seconds',
                    num_paths, time.time() - start)
+
+    def get_file(self, path, rev_hash):
+        fctx = self.repo.filectx(path, fileid=rev_hash)
+        return fctx.data()
 
     def prefetch(self, rev):
         if not hasattr(self.repo, 'prefetch'):
@@ -151,11 +298,44 @@ class HgServer(object):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('repo', help='The repository path')
+
+    # Arguments for testing and debugging.
+    # These cause the helper to perform a single operation and exit,
+    # rather than running as a server.
+    parser.add_argument('--manifest',
+                        metavar='REVISION',
+                        help='Dump the binary manifest data for the specified '
+                        'revision.')
+    parser.add_argument('--cat-file',
+                        metavar='PATH:REV',
+                        help='Dump the file contents for the specified file '
+                        'at the given file revision')
+
     args = parser.parse_args()
 
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(message)s')
-    HgServer(args.repo).serve()
+
+    server = HgServer(args.repo)
+
+    if args.manifest:
+        request = Request(0, CMD_MANIFEST, flags=0, body=args.manifest)
+        server.dump_manifest(args.manifest, request)
+        return 0
+
+    if args.cat_file:
+        path, file_rev_str = args.cat_file.rsplit(':', -1)
+        path = path.encode(sys.getfilesystemencoding())
+        file_rev = binascii.unhexlify(file_rev_str)
+        data = server.get_file(path, file_rev)
+        sys.stdout.write(data)
+        return 0
+
+    try:
+        server.serve()
+        logging.debug('hg_import_helper shutting down normally')
+    except KeyboardInterrupt:
+        logging.debug('hg_import_helper received interrupt; shutting down')
 
 
 if __name__ == '__main__':
