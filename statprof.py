@@ -104,7 +104,8 @@ main thread's work patterns.
 # no-check-code
 from __future__ import division
 
-import json, os, signal, tempfile, sys, getopt
+import inspect, json, os, signal, tempfile, sys, getopt, threading, traceback
+import time
 from collections import defaultdict
 from contextlib import contextmanager
 from subprocess import call
@@ -252,6 +253,18 @@ def profile_signal_handler(signum, frame):
             state.sample_interval, 0.0)
         state.last_start_time = clock()
 
+stopthread = threading.Event()
+def samplerthread(tid):
+    while not stopthread.is_set():
+        state.accumulate_time(clock())
+
+        frame = sys._current_frames()[tid]
+        state.samples.append(Sample.from_frame(frame, state.accumulated_time))
+
+        state.last_start_time = clock()
+        time.sleep(state.sample_interval)
+
+    stopthread.clear()
 
 ###########################################################################
 ## Profiling API
@@ -259,29 +272,43 @@ def profile_signal_handler(signum, frame):
 def is_active():
     return state.profile_level > 0
 
-
-def start():
+lastmechanism = None
+def start(mechanism='thread'):
     '''Install the profiling signal handler, and start profiling.'''
     state.profile_level += 1
     if state.profile_level == 1:
         state.last_start_time = clock()
         rpt = state.remaining_prof_time
         state.remaining_prof_time = None
-        signal.signal(signal.SIGPROF, profile_signal_handler)
-        signal.setitimer(signal.ITIMER_PROF,
-            rpt or state.sample_interval, 0.0)
 
+        global lastmechanism
+        lastmechanism = mechanism
+
+        if mechanism == 'signal':
+            signal.signal(signal.SIGPROF, profile_signal_handler)
+            signal.setitimer(signal.ITIMER_PROF,
+                rpt or state.sample_interval, 0.0)
+        elif mechanism == 'thread':
+            frame = inspect.currentframe()
+            tid = [k for k, f in sys._current_frames().items() if f == frame][0]
+            state.thread = threading.Thread(target=samplerthread,
+                                 args=(tid,), name="samplerthread")
+            state.thread.start()
 
 def stop():
     '''Stop profiling, and uninstall the profiling signal handler.'''
     state.profile_level -= 1
     if state.profile_level == 0:
+        if lastmechanism == 'signal':
+            rpt = signal.setitimer(signal.ITIMER_PROF, 0.0, 0.0)
+            signal.signal(signal.SIGPROF, signal.SIG_IGN)
+            state.remaining_prof_time = rpt[0]
+        elif lastmechanism == 'thread':
+            stopthread.set()
+            state.thread.join()
+
         state.accumulate_time(clock())
         state.last_start_time = None
-        rpt = signal.setitimer(signal.ITIMER_PROF, 0.0, 0.0)
-        signal.signal(signal.SIGPROF, signal.SIG_IGN)
-        state.remaining_prof_time = rpt[0]
-
         statprofpath = os.environ.get('STATPROF_DEST')
         save_data(statprofpath)
 
