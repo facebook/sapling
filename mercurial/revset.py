@@ -1890,6 +1890,8 @@ def sort(repo, subset, x):
                 'topo.firstbranch can only be used when using the topo sort '
                 'key'))
 
+    if not keys:
+        return revs
     if keys == ["rev"]:
         revs.sort()
         return revs

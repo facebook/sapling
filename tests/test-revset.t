@@ -962,6 +962,13 @@ test sorting two sorted collections in different orders backwards
   6
   2
 
+test empty sort key which is noop
+
+  $ log 'sort(0 + 2 + 1, "")'
+  0
+  2
+  1
+
 test invalid sort keys
 
   $ log 'sort(all(), -invalid)'
