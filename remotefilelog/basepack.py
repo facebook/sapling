@@ -1,5 +1,5 @@
-import errno, mmap, os, struct
-from mercurial import osutil, util
+import errno, hashlib, mmap, os, struct
+from mercurial import osutil
 
 import constants
 
@@ -137,7 +137,7 @@ class mutablebasepack(object):
             suffix=self.INDEXSUFFIX + '-tmp')
         self.packfp = os.fdopen(self.packfp, 'w+')
         self.idxfp = os.fdopen(self.idxfp, 'w+')
-        self.sha = util.sha1()
+        self.sha = hashlib.sha1()
         self._closed = False
 
         # The opener provides no way of doing permission fixup on files created

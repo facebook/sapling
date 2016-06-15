@@ -5,11 +5,11 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial import util, filelog, revlog
+from mercurial import filelog, revlog
 from mercurial.node import bin, hex, nullid, nullrev, short
 from mercurial.i18n import _
 import datapack, historypack, shallowrepo
-import os, lz4
+import hashlib, os, lz4
 
 def debugremotefilelog(ui, *args, **opts):
     path = args[0]
@@ -38,7 +38,7 @@ def debugremotefilelog(ui, *args, **opts):
 
 def buildtemprevlog(repo, file):
     # get filename key
-    filekey = util.sha1(file).hexdigest()
+    filekey = hashlib.sha1(file).hexdigest()
     filedir = os.path.join(repo.path, 'store/data', filekey)
 
     # sort all entries based on linkrev

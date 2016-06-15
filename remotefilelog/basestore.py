@@ -1,6 +1,6 @@
-import errno, heapq, os, shutil, time
+import errno, hashlib, heapq, os, shutil, time
 import shallowutil
-from mercurial import error, util
+from mercurial import error
 from mercurial.i18n import _
 from mercurial.node import bin, hex
 
@@ -127,7 +127,7 @@ class basestore(object):
 
         # Start with a full manifest, since it'll cover the majority of files
         for filename in self.repo['tip'].manifest():
-            sha = util.sha1(filename).digest()
+            sha = hashlib.sha1(filename).digest()
             if sha in missingfilename:
                 filenames[filename] = sha
                 missingfilename.discard(sha)
@@ -139,7 +139,7 @@ class basestore(object):
                 break
             files = cl.readfiles(cl.node(rev))
             for filename in files:
-                sha = util.sha1(filename).digest()
+                sha = hashlib.sha1(filename).digest()
                 if sha in missingfilename:
                     filenames[filename] = sha
                     missingfilename.discard(sha)

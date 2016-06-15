@@ -9,7 +9,7 @@ from mercurial.i18n import _
 from mercurial.node import hex, bin
 from mercurial import util, sshpeer, hg, error, util, wireproto, node, httppeer
 from mercurial import scmutil
-import os, socket, lz4, time, io, struct
+import hashlib, os, socket, lz4, time, io, struct
 import errno
 import itertools
 
@@ -28,11 +28,11 @@ fetchmisses = 0
 _downloading = _('downloading')
 
 def getcachekey(reponame, file, id):
-    pathhash = util.sha1(file).hexdigest()
+    pathhash = hashlib.sha1(file).hexdigest()
     return os.path.join(reponame, pathhash[:2], pathhash[2:], id)
 
 def getlocalkey(file, id):
-    pathhash = util.sha1(file).hexdigest()
+    pathhash = hashlib.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
 
 def peersetup(ui, peer):

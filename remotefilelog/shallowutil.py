@@ -5,7 +5,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-import errno, platform, os, stat, struct, subprocess, sys, tempfile
+import errno, hashlib, os, platform, stat, struct, subprocess, sys, tempfile
 from mercurial import filelog, util
 from mercurial.i18n import _
 
@@ -42,11 +42,11 @@ def interposeclass(container, classname):
     return wrap
 
 def getcachekey(reponame, file, id):
-    pathhash = util.sha1(file).hexdigest()
+    pathhash = hashlib.sha1(file).hexdigest()
     return os.path.join(reponame, pathhash[:2], pathhash[2:], id)
 
 def getlocalkey(file, id):
-    pathhash = util.sha1(file).hexdigest()
+    pathhash = hashlib.sha1(file).hexdigest()
     return os.path.join(pathhash, id)
 
 def getcachepath(ui, allowempty=False):

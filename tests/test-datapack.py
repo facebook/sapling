@@ -1,4 +1,5 @@
 import binascii
+import hashlib
 import itertools
 import random
 import shutil
@@ -20,7 +21,7 @@ from remotefilelog.basepack import (
     LARGEFANOUTPREFIX,
 )
 
-from mercurial import scmutil, util
+from mercurial import scmutil
 from mercurial.node import hex, bin, nullid
 
 class datapacktests(unittest.TestCase):
@@ -37,7 +38,7 @@ class datapacktests(unittest.TestCase):
         return tempdir
 
     def getHash(self, content):
-        return util.sha1(content).digest()
+        return hashlib.sha1(content).digest()
 
     def getFakeHash(self):
         return ''.join(chr(random.randint(0, 255)) for _ in range(20))

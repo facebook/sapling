@@ -1,4 +1,4 @@
-import errno, lz4, mmap, os, struct, tempfile
+import errno, hashlib, lz4, mmap, os, struct, tempfile
 from collections import defaultdict, deque
 from mercurial import mdiff, osutil, util
 from mercurial.node import nullid, bin, hex
@@ -125,7 +125,7 @@ class historypack(basepack.basepack):
 
     def _findsection(self, name):
         params = self.params
-        namehash = util.sha1(name).digest()
+        namehash = hashlib.sha1(name).digest()
         fanoutkey = struct.unpack(params.fanoutstruct,
                                   namehash[:params.fanoutprefix])[0]
         fanout = self._fanouttable
@@ -334,7 +334,7 @@ class mutablehistorypack(basepack.mutablebasepack):
         self.writeraw(rawdata)
 
         self.pastfiles[filename] = (sectionstart, sectionlen)
-        node = util.sha1(filename).digest()
+        node = hashlib.sha1(filename).digest()
         self.entries[node] = node
 
     def close(self, ledger=None):
@@ -344,7 +344,7 @@ class mutablehistorypack(basepack.mutablebasepack):
         return super(mutablehistorypack, self).close(ledger=ledger)
 
     def createindex(self, nodelocations):
-        files = ((util.sha1(filename).digest(), offset, size)
+        files = ((hashlib.sha1(filename).digest(), offset, size)
                 for filename, (offset, size) in self.pastfiles.iteritems())
         files = sorted(files)
 
