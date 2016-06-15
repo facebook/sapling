@@ -420,6 +420,13 @@ class RevMap(dict):
                 raise
             return iter([])
         ver = int(f.readline())
+        if ver == SqliteRevMap.VERSION:
+            revmap = SqliteRevMap(self._filepath, self._lastpulled_file)
+            tmppath = '%s.tmp' % self._filepath
+            revmap.exportrevmapv1(tmppath)
+            os.rename(tmppath, self._filepath)
+            hgutil.unlinkpath(revmap._dbpath)
+            return self._readmapfile()
         if ver != self.VERSION:
             raise hgutil.Abort('revmap too new -- please upgrade')
         return f
@@ -731,6 +738,14 @@ class SqliteRevMap(collections.MutableMapping):
                     continue
                 data[revnum, branch or None] = bin(ha)
             self._insert([(r, b, h) for (r, b), h in data.iteritems()])
+
+    @util.gcdisable
+    def exportrevmapv1(self, path):
+        with open(path, 'w') as f:
+            f.write('%s\n' % RevMap.VERSION)
+            for row in self._query('SELECT rev, branch, hash FROM revmap'):
+                rev, br, ha = row
+                f.write('%s %s %s\n' % (rev, hex(ha), br))
 
 
 class FileMap(object):
