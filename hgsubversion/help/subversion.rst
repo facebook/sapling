@@ -352,6 +352,16 @@ settings:
 
         Password stores are only supported with the SWIG bindings.
 
+  ``hgsubversion.revmapimpl``
+
+    Set the revision map implementation. ``plain`` which is simple and works
+    well for small repos. ``sqlite`` is a sqlite based implementation that
+    works better for large repos with a lot of revisions. The default is
+    ``plain``.
+
+    If it is set to an implementation different from what the repo is using,
+    a migration will run automatically when the revision map is accessed.
+
   ``hgsubversion.stupid``
     Setting this boolean option to true will force using a slower method for
     pulling revisions from Subversion. This method is compatible with servers

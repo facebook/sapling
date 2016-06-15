@@ -345,13 +345,27 @@ class SVNMeta(object):
     @property
     def revmap(self):
         if self._revmap is None:
-            self._revmap = maps.RevMap(
+            self._revmap = self.revmapclass(
                 self.revmap_file, os.path.join(self.metapath, 'lastpulled'))
         return self._revmap
 
     @property
     def revmapexists(self):
         return os.path.exists(self.revmap_file)
+
+    _defaultrevmapclass = maps.RevMap
+
+    @property
+    def revmapclass(self):
+        impl = self.ui.config('hgsubversion', 'revmapimpl')
+        if impl == 'plain':
+            return maps.RevMap
+        elif impl == 'sqlite':
+            return maps.SqliteRevMap
+        elif impl is None:
+            return self._defaultrevmapclass
+        else:
+            raise hgutil.Abort('unknown revmapimpl: %s' % impl)
 
     def fixdate(self, date):
         if date is not None:
