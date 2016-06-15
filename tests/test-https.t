@@ -63,7 +63,7 @@ A malformed per-host certificate file will raise an error
 
   $ echo baddata > badca.pem
   $ hg --config hostsecurity.localhost:verifycertsfile=badca.pem clone https://localhost:$HGPORT/
-  abort: error: unknown error* (glob)
+  abort: error: * (glob)
   [255]
 
 A per-host certificate mismatching the server will fail verification
