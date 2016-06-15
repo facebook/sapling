@@ -423,6 +423,35 @@ error:
 	abortmsgerrno("failed to set up signal handlers");
 }
 
+static void restoresignalhandler()
+{
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = SIG_DFL;
+	sa.sa_flags = SA_RESTART;
+	if (sigemptyset(&sa.sa_mask) < 0)
+		goto error;
+
+	if (sigaction(SIGHUP, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGINT, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGTERM, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGWINCH, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGCONT, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGTSTP, &sa, NULL) < 0)
+		goto error;
+
+	peerpid = 0;
+	return;
+
+error:
+	abortmsgerrno("failed to restore signal handlers");
+}
+
 /* This implementation is based on hgext/pager.py (post 369741ef7253)
  * Return 0 if pager is not started, or pid of the pager */
 static pid_t setuppager(hgclient_t *hgc, const char *const args[],
@@ -608,6 +637,7 @@ int main(int argc, const char *argv[], const char *envp[])
 	setupsignalhandler(hgc_peerpid(hgc));
 	pid_t pagerpid = setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
+	restoresignalhandler();
 	hgc_close(hgc);
 	freecmdserveropts(&opts);
 	if (pagerpid)
