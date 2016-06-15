@@ -185,6 +185,10 @@ void FileData::materialize(int open_flags, RelativePathPiece path) {
       // Test whether an overlay file exists by trying to open it.
       // O_NOFOLLOW because it never makes sense for the kernel to ask
       // a fuse server to open a file that is a symlink to something else.
+      //
+      // TODO: This currently ends up creating new directories in the overlay
+      // for all parent directories of this file.  We shouldn't create these if
+      // they don't already exist.
       file_ = mount_->getOverlay()->openFile(path, O_RDWR | O_NOFOLLOW, 0600);
       // since we have a pre-existing overlay file, we don't need the blob.
       need_blob = false;

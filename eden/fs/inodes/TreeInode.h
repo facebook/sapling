@@ -8,7 +8,6 @@
  *
  */
 #pragma once
-#include "eden/fs/model/Tree.h"
 #include "eden/fuse/Inodes.h"
 
 namespace facebook {
@@ -18,6 +17,8 @@ class EdenMount;
 class Hash;
 class ObjectStore;
 class Overlay;
+class Tree;
+class TreeEntry;
 
 // Represents a Tree instance in a form that FUSE can consume
 class TreeInode : public fusell::DirInode {
@@ -76,6 +77,8 @@ class TreeInode : public fusell::DirInode {
   fusell::InodeNameManager* getNameMgr() const;
 
  private:
+  const TreeEntry* getTreeEntry(PathComponentPiece name);
+
   // The EdenMount object that this inode belongs to.
   // We store this as a raw pointer since the TreeInode is part of the mount
   // point.  The EdenMount should always exist longer than any inodes it

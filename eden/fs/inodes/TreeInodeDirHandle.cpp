@@ -9,6 +9,7 @@
  */
 #include "TreeInodeDirHandle.h"
 
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/utils/DirType.h"
 

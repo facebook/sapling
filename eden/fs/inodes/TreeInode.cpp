@@ -13,6 +13,8 @@
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/model/Tree.h"
+#include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
@@ -62,6 +64,16 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     auto node = getNameMgr()->getNodeByName(ino_, namepiece);
 
     if (iter->second == dtype_t::Dir) {
+      if (!overlay_contents.isOpaque) {
+        // Check to see if we also have a TreeEntry for this directory
+        const auto* entry = getTreeEntry(namepiece);
+        if (entry != nullptr && entry->getFileType() == FileType::DIRECTORY) {
+          auto tree = getStore()->getTree(entry->getHash());
+          return std::make_shared<TreeInode>(
+              mount_, std::move(tree), ino_, node->getNodeId());
+        }
+      }
+      // No corresponding TreeEntry, this exists only in the overlay.
       return std::make_shared<TreeInode>(mount_, ino_, node->getNodeId());
     }
 
@@ -71,30 +83,44 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
         nullptr);
   }
 
-  if (!tree_ || overlay_contents.isOpaque) {
+  if (overlay_contents.isOpaque) {
     // No tree, or nothing from the tree is visible.
     folly::throwSystemErrorExplicit(ENOENT);
   }
 
-  for (const auto& ent : tree_->getTreeEntries()) {
-    if (ent.getName() == namepiece.stringPiece()) {
-      auto node = getNameMgr()->getNodeByName(ino_, namepiece);
+  const auto* ent = getTreeEntry(namepiece);
+  if (ent != nullptr) {
+    auto node = getNameMgr()->getNodeByName(ino_, namepiece);
 
-      if (ent.getFileType() == FileType::DIRECTORY) {
-        auto tree = getStore()->getTree(ent.getHash());
-        return std::make_shared<TreeInode>(
-            mount_, std::move(tree), ino_, node->getNodeId());
-      }
-
-      return std::make_shared<TreeEntryFileInode>(
-          node->getNodeId(),
-          std::static_pointer_cast<TreeInode>(shared_from_this()),
-          &ent);
+    if (ent->getFileType() == FileType::DIRECTORY) {
+      auto tree = getStore()->getTree(ent->getHash());
+      return std::make_shared<TreeInode>(
+          mount_, std::move(tree), ino_, node->getNodeId());
     }
+
+    return std::make_shared<TreeEntryFileInode>(
+        node->getNodeId(),
+        std::static_pointer_cast<TreeInode>(shared_from_this()),
+        ent);
   }
 
   // No matching entry with that name
   folly::throwSystemErrorExplicit(ENOENT);
+}
+
+const TreeEntry* TreeInode::getTreeEntry(PathComponentPiece name) {
+  if (!tree_) {
+    return nullptr;
+  }
+
+  // TODO: We should do something better than a linear scan here
+  for (const auto& ent : tree_->getTreeEntries()) {
+    if (ent.getName() == name.stringPiece()) {
+      return &ent;
+    }
+  }
+
+  return nullptr;
 }
 
 const Tree* TreeInode::getTree() const {
