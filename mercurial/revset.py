@@ -1881,23 +1881,23 @@ def sort(repo, subset, x):
             raise error.ParseError(_("unknown sort key %r") % fk)
         keyflags.append((k, reverse))
 
-    s = args['set']
-    revs = getset(repo, subset, s)
-
     if len(keyflags) > 1 and any(k == 'topo' for k, reverse in keyflags):
         # i18n: "topo" is a keyword
         raise error.ParseError(_(
             'topo sort order cannot be combined with other sort keys'))
 
-    firstbranch = ()
+    opts = {}
     if 'topo.firstbranch' in args:
         if any(k == 'topo' for k, reverse in keyflags):
-            firstbranch = getset(repo, subset, args['topo.firstbranch'])
+            opts['topo.firstbranch'] = args['topo.firstbranch']
         else:
             # i18n: "topo" and "topo.firstbranch" are keywords
             raise error.ParseError(_(
                 'topo.firstbranch can only be used when using the topo sort '
                 'key'))
+
+    s = args['set']
+    revs = getset(repo, subset, s)
 
     if not keyflags:
         return revs
@@ -1905,6 +1905,9 @@ def sort(repo, subset, x):
         revs.sort(reverse=keyflags[0][1])
         return revs
     elif keyflags[0][0] == "topo":
+        firstbranch = ()
+        if 'topo.firstbranch' in opts:
+            firstbranch = getset(repo, subset, opts['topo.firstbranch'])
         revs = baseset(_toposort(revs, repo.changelog.parentrevs, firstbranch),
                        istopo=True)
         if keyflags[0][1]:
