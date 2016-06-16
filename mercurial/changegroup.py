@@ -728,10 +728,11 @@ class cg1packer(object):
             dir = min(tmfnodes)
             nodes = tmfnodes[dir]
             prunednodes = self.prune(dirlog(dir), nodes, commonrevs)
-            for x in self._packmanifests(dir, prunednodes,
-                                         makelookupmflinknode(dir)):
-                size += len(x)
-                yield x
+            if not dir or prunednodes:
+                for x in self._packmanifests(dir, prunednodes,
+                                             makelookupmflinknode(dir)):
+                    size += len(x)
+                    yield x
             del tmfnodes[dir]
         self._verbosenote(_('%8.i (manifests)\n') % size)
         yield self._manifestsdone()

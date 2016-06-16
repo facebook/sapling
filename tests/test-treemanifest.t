@@ -742,3 +742,45 @@ Bundle with changegroup2 is not supported
   $ hg -R deeprepo bundle --all -t v2 deeprepo.bundle
   abort: repository does not support bundle version 02
   [255]
+
+Pull does not include changegroup for manifest the client already has from
+other branch
+
+  $ mkdir grafted-dir-repo
+  $ cd grafted-dir-repo
+  $ hg --config experimental.treemanifest=1 init
+  $ mkdir dir
+  $ echo a > dir/file
+  $ echo a > file
+  $ hg ci -Am initial
+  adding dir/file
+  adding file
+  $ echo b > dir/file
+  $ hg ci -m updated
+  $ hg co '.^'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg revert -r tip dir/
+  reverting dir/file (glob)
+  $ echo b > file # to make sure root manifest is sent
+  $ hg ci -m grafted
+  created new head
+  $ cd ..
+
+  $ hg --config experimental.treemanifest=1 clone --pull -r 1 \
+  >   grafted-dir-repo grafted-dir-repo-clone
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 3 changes to 2 files
+  updating to branch default
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ cd grafted-dir-repo-clone
+  $ hg pull -r 2
+  pulling from $TESTTMP/grafted-dir-repo (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+  (run 'hg heads' to see heads, 'hg merge' to merge)
+
