@@ -3,11 +3,7 @@
 import optparse
 import os
 import sys
-
-if sys.version_info[:2] < (2, 7):
-    import unittest2 as unittest
-else:
-    import unittest
+import unittest
 
 if __name__ == '__main__':
     description = ("This script runs the hgsubversion tests. If no tests are "
@@ -63,8 +59,19 @@ if __name__ == '__main__':
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
+    if sys.version_info[:2] < (2, 7):
+        import glob
+        def discover(start_dir, pattern='test*.py', top_level_dir=None):
+            tests = []
+            sys.path.append(start_dir)
+            for path in glob.glob(os.path.join(start_dir, pattern)):
+                name = os.path.splitext(os.path.basename(path))[0]
+                tests.append(loader.loadTestsFromModule(__import__(name)))
+            return tests
+        loader.discover = discover
+
     if not args:
-        suite = loader.discover('.')
+        suite.addTests(loader.discover('.'))
 
         if options.comprehensive:
             suite.addTests(loader.discover('comprehensive',

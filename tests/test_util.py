@@ -39,13 +39,10 @@ except ImportError:
 try:
     SkipTest = unittest.SkipTest
 except AttributeError:
-    try:
-        from unittest2 import SkipTest
-    except ImportError:
-        try:
-            from nose import SkipTest
-        except ImportError:
-            SkipTest = None
+    if 'nose' in sys.modules:
+        SkipTest = sys.modules['nose'].SkipTest
+    else:
+        SkipTest = None
 
 from hgsubversion import svnwrap
 from hgsubversion import util
