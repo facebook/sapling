@@ -1,24 +1,13 @@
 include_defs('//eden/DEFS')
 
-if is_facebook_internal():
-    edenfs_target = '@/eden/fs/service:edenfs'
-else:
-    edenfs_target = '@/eden/fs/service:edenfs-oss'
-
 python_binary(
   name = 'cli',
   py_version = "<3",
   srcs = glob(['*.py'], excludes = ['__init__.py']),
-  gen_srcs = {
-    edenfs_target: 'eden-server',
-  },
   main_module = 'eden/fs/cli/main',
   deps = [
     ':glue',
-    '@/eden/fs/importer/git:git',
-    '@/eden/fs/inodes:inodes',
     '@/eden/fs/service:py-client',
-    '@/libfb/py:parutil',
   ],
 )
 
@@ -48,3 +37,16 @@ cpp_python_extension(
     '@/eden/fs/importer/git:git',
   ],
 )
+
+for build_target, suffix in get_daemon_versions():
+    # The :all rule is a convenience to ensure that both the CLI and the daemon
+    # are built.
+    genrule(
+      name = 'all%s' % suffix,
+      srcs = [
+        ':cli',
+        build_target,
+      ],
+      out = 'eden%s-stamp' % suffix,
+      cmd = 'touch $OUT',
+    )

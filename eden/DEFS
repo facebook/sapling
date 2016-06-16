@@ -1,4 +1,35 @@
 # This file contains macros that are shared across Eden.
 
+
 def is_facebook_internal():
     return read_config('codebase', 'mode') != 'public'
+
+
+def get_fb_suffix():
+    '''Build rule suffix to use for Facebook-specific build targets.'''
+    # Internally at Facebook, it is convenient for the canonical version of an
+    # Eden build target to have no special suffix so that it can match the
+    # directory in which it is defined.
+    return '' if is_facebook_internal() else '-fb'
+
+
+def get_oss_suffix():
+    '''Build rule suffix to use for open-source-specific build targets.'''
+    # Outside of Facebook, it is convenient for the canonical version of an
+    # Eden build target to have no special suffix so that it can match the
+    # directory in which it is defined.
+    return '-oss' if is_facebook_internal() else ''
+
+
+def get_daemon_versions():
+    '''List of configurations to aid in creating dual build rules.
+
+    Returns:
+        An array of tuples where the first member is a build target for the
+        daemon and the second member is the suffix to use for other templated
+        build target names.
+    '''
+    return [
+        ('//eden/fs/service:edenfs%s' % suffix, suffix)
+        for suffix in [get_fb_suffix(), get_oss_suffix()]
+    ]

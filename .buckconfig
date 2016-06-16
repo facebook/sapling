@@ -1,5 +1,7 @@
 [alias]
-  eden = //eden/fs/cli:cli
+  eden = //eden/fs/cli:all
+  eden-cli = //eden/fs/cli:cli
+  eden-daemon = //eden/fs/service:edenfs
 
 [buildfile]
   name = TARGETS

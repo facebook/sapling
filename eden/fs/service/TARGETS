@@ -2,7 +2,7 @@ include_defs('//eden/DEFS')
 include_defs('//eden/fs/service/DEFS')
 
 create_eden_fs_rules(
-  suffix = '-oss',
+  suffix = get_oss_suffix(),
   subdir = 'out.oss',
   server_srcs = ['oss/EdenServer.cpp'],
   server_deps = [],
@@ -34,7 +34,7 @@ python_library(
 if is_facebook_internal():
     include_defs('//eden/fs/service/facebook/DEFS')
     create_eden_fs_rules(
-        suffix = '',
+        suffix = get_fb_suffix(),
         subdir = 'out.fb',
         server_srcs = ['facebook/EdenServer.cpp'],
         server_deps = ['@/common/services/cpp:cpp'],

@@ -225,11 +225,33 @@ def do_checkout(args):
 
 def do_daemon(args):
     config = create_config(args)
+    daemon_binary = args.daemon_binary or _find_default_daemon_binary()
+
     # If this is the first time running the daemon, the ~/.eden directory
     # structure needs to be set up.
+    # TODO(mbolin): Check whether the user is running as sudo/root. In general,
+    # we want to avoid creating ~/.eden as root.
     _ensure_dot_eden_folder_exists(config)
-    return config.spawn(debug=args.debug, gdb=args.gdb,
+
+    return config.spawn(daemon_binary, debug=args.debug, gdb=args.gdb,
                         preserve_environment=args.preserve_environment)
+
+
+def _find_default_daemon_binary():
+    # By default, we look for the daemon executable alongside this file.
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    candidate = os.path.join(script_dir, 'daemon')
+    permissions = os.R_OK | os.X_OK
+    if os.access(candidate, permissions):
+        return candidate
+
+    # This is where the binary will be found relative to this file when it is
+    # run out of buck-out in debug mode.
+    candidate = os.path.normpath(os.path.join(script_dir, '../service/edenfs'))
+    if os.access(candidate, permissions):
+        return candidate
+    else:
+        return None
 
 
 def _ensure_dot_eden_folder_exists(config):
@@ -257,8 +279,7 @@ def create_parser():
     parser = argparse.ArgumentParser(description='Manage Eden clients.')
     parser.add_argument(
         '--config-dir',
-        help='Path to directory where client data is stored.',
-        default=find_default_config_dir())
+        help='Path to directory where client data is stored.')
     subparsers = parser.add_subparsers(dest='subparser_name')
 
     # Please add the subparsers in alphabetical order because that is the order
@@ -273,6 +294,9 @@ def create_parser():
 
     daemon_parser = subparsers.add_parser(
         'daemon', help='Run the edenfs daemon')
+    daemon_parser.add_argument(
+        '--daemon-binary',
+        help='Path to the binary for the Eden daemon.')
     daemon_parser.add_argument(
         '--debug', '-d', action='store_true', help='Enable fuse debugging.')
     daemon_parser.add_argument(
@@ -358,7 +382,8 @@ def find_default_config_dir():
 
 
 def create_config(args):
-    return config_mod.Config(args.config_dir)
+    config = args.config_dir or find_default_config_dir()
+    return config_mod.Config(config)
 
 
 def main():

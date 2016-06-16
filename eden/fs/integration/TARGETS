@@ -1,14 +1,18 @@
-python_unittest(
-    name='integration',
-    py_version="<3",
-    srcs=glob(['*.py']),
-    gen_srcs = {
+include_defs('//eden/DEFS')
+
+for build_target, suffix in get_daemon_versions():
+    python_unittest(
+      name = 'integration%s' % suffix,
+      py_version = '<3',
+      srcs = glob(['*.py']),
+      gen_srcs = {
         '@/eden/fs/cli:cli': 'eden-cli',
-    },
-    deps=[
-      '@/libfb/py:parutil',
-      '@/eden/fs/cli:cli',
-      '@/eden/fs/service:py-client',
-      '@/eden/fs/service:thrift-py',
-    ],
-)
+        build_target.replace('//', '@/'): 'daemon',
+      },
+      deps = [
+        '@/libfb/py:parutil',
+        '@/eden/fs/cli:cli',
+        '@/eden/fs/service:py-client',
+        '@/eden/fs/service:thrift-py',
+      ],
+    )

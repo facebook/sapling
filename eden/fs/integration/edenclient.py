@@ -21,6 +21,7 @@ import time
 
 # gen_srcs in the TARGETS file populates this with the eden cli binary
 EDEN_CLI = get_file_path('eden/fs/integration/eden-cli')
+EDEN_DAEMON = get_file_path('eden/fs/integration/daemon')
 
 
 class EdenClient(object):
@@ -91,6 +92,20 @@ class EdenClient(object):
     def get_thrift_client(self):
         return create_thrift_client(self._config_dir)
 
+    def _get_eden_args(self, subcommand_with_args):
+        '''Combines the specified subcommand args with the appropriate defaults.
+
+        Args:
+            subcommand_with_args: array of strings
+        Returns:
+            A list of arguments to run Eden that can be used with
+            subprocess.Popen() or subprocess.check_call().
+        '''
+        return [
+            EDEN_CLI,
+            '--config-dir', self._config_dir,
+        ] + subcommand_with_args
+
     def init(
         self,
         repo_path,
@@ -115,14 +130,12 @@ class EdenClient(object):
         self._create_dirs()
 
         subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
+            self._get_eden_args([
                 'init',
                 '--repo', self._repo_path,
                 '--mount', self._mount_path,
                 self._client_name
-            ]
+            ])
         )
 
         self.daemon_cmd(self._config_dir, timeout)
@@ -135,24 +148,21 @@ class EdenClient(object):
             self._create_dirs()
 
         subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
+            self._get_eden_args([
                 'daemon',
+                '--daemon-binary', EDEN_DAEMON,
                 # Preserve the environment variables so that we can use them to
                 # help track runaway processes from test runs.
                 '-E',
-            ]
+            ])
         )
         self._wait_for_thrift(timeout)
 
     def shutdown_cmd(self):
         subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
+            self._get_eden_args([
                 'shutdown',
-            ]
+            ])
         )
 
     def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
@@ -179,23 +189,19 @@ class EdenClient(object):
         '''Executes mount command'''
 
         subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
+            self._get_eden_args([
                 'mount',
                 self._client_name
-            ]
+            ])
         )
 
     def unmount_cmd(self):
         '''Executes unmount command'''
         subprocess.check_call(
-            [
-                EDEN_CLI,
-                '--config-dir', self._config_dir,
+            self._get_eden_args([
                 'unmount',
                 self._client_name
-            ]
+            ])
         )
 
     def in_proc_mounts(self):
@@ -212,11 +218,9 @@ class EdenClient(object):
         if self._config_dir is not None:
             try:
                 subprocess.check_call(
-                    [
-                        EDEN_CLI,
-                        '--config-dir', self._config_dir,
+                    self._get_eden_args([
                         'health',
-                    ]
+                    ])
                 )
                 return True
             except subprocess.CalledProcessError:

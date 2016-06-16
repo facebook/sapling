@@ -151,15 +151,15 @@ class Config:
         client = self.get_thrift_client()
         client.unmount(mount_point)
 
-    def spawn(self, debug=False, gdb=False, preserve_environment=False):
+    def spawn(self,
+              daemon_binary,
+              debug=False,
+              gdb=False,
+              preserve_environment=False):
         '''Note that this method will not exit until the user kills the program.
         '''
         # Run the eden server.
-        eden_bin = _get_path_to_eden_server()
-        cmd = [
-            eden_bin,
-            '--edenDir', self._config_dir,
-        ]
+        cmd = [daemon_binary, '--edenDir', self._config_dir, ]
         if gdb:
             cmd = ['gdb', '--args'] + cmd
         if debug:
@@ -168,7 +168,7 @@ class Config:
         # Run edenfs using sudo, unless we already have root privileges,
         # or the edenfs binary is setuid root.
         if os.geteuid() != 0:
-            s = os.stat(eden_bin)
+            s = os.stat(daemon_binary)
             if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
                 # Run edenfs under sudo
                 # sudo will generally spawn edenfs as a separate child process,
@@ -212,11 +212,6 @@ def _verify_mount_point(mount_point):
             ('%s must be a directory in order to mount a client at %s. ' +
              'If this is the correct location, run `mkdir -p %s` to create ' +
              'the directory.') % (parent_dir, mount_point, parent_dir))
-
-
-def _get_path_to_eden_server():
-    from libfb.parutil import get_file_path
-    return get_file_path('eden/fs/cli/eden-server')
 
 
 def _get_or_create_dir(path):
