@@ -178,10 +178,10 @@ def wraprepo(repo):
     packmetadatastore = historypackstore(packpath)
 
     # Instantiate union stores
-    repo.contentstore = unioncontentstore(packcontentstore, localcontent,
-            cachecontent, remotecontent, writestore=localcontent)
-    repo.metadatastore = unionmetadatastore(packmetadatastore, localmetadata,
-                cachemetadata, remotemetadata, writestore=localmetadata)
+    repo.contentstore = unioncontentstore(packcontentstore, cachecontent,
+            localcontent, remotecontent, writestore=localcontent)
+    repo.metadatastore = unionmetadatastore(packmetadatastore, cachemetadata,
+            localmetadata, remotemetadata, writestore=localmetadata)
 
     fileservicedatawrite = cachecontent
     fileservicehistorywrite = cachecontent
