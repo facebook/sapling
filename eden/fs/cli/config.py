@@ -155,13 +155,14 @@ class Config:
               daemon_binary,
               debug=False,
               gdb=False,
-              preserve_environment=False):
+              foreground=False):
         '''Note that this method will not exit until the user kills the program.
         '''
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir, ]
         if gdb:
             cmd = ['gdb', '--args'] + cmd
+            foreground = True
         if debug:
             cmd.append('--debug')
 
@@ -170,21 +171,60 @@ class Config:
         if os.geteuid() != 0:
             s = os.stat(daemon_binary)
             if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
-                # Run edenfs under sudo
-                # sudo will generally spawn edenfs as a separate child process,
-                # rather than just exec()ing it.  Therefore our immediate child
-                # will still have root privileges, so we don't have permissions
-                # to kill it.  We have permissions to kill the main edenfs
-                # process which drops privileges, but we don't know its process
-                # ID.
-                sudo_args = ['sudo']
-                if preserve_environment:
-                    sudo_args.append('-E')
-                cmd = sudo_args + cmd
-            elif os.geteuid() == 0 and not preserve_environment:
-                # TODO: Reset the environment when running cmd.
+                # We need to run edenfs under sudo
+                cmd = ['/usr/bin/sudo', '-E'] + cmd
+
+        eden_env = self._build_eden_environment()
+
+        if foreground:
+            os.execve(cmd[0], cmd, eden_env)
+        else:
+            # TODO: We should probably redirect stdout and stderr to log files
+            subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid)
+
+    def _build_eden_environment(self):
+        # Reset $PATH to the following contents, so that everyone has the
+        # same consistent settings.
+        path_dirs = [
+            '/usr/local/bin',
+            '/bin',
+            '/usr/bin',
+        ]
+
+        eden_env = {
+            'PATH': ':'.join(path_dirs),
+        }
+
+        # Preserve the following environment settings
+        preserve = [
+            'USER',
+            'LOGNAME',
+            'HOME',
+            'EMAIL',
+            'NAME',
+            # When we import data from mercurial, the remotefilelog extension
+            # may need to SSH to a remote mercurial server to get the file
+            # contents.  Preserve SSH environment variables needed to do this.
+            'SSH_AUTH_SOCK',
+            'SSH_AGENT_PID',
+        ]
+
+        for name, value in os.environ.items():
+            # Preserve any environment variable starting with "TESTPILOT_".
+            # TestPilot uses a few environment variables to keep track of
+            # processes started during test runs, so it can track down and kill
+            # runaway processes that weren't cleaned up by the test itself.
+            # We want to make sure this behavior works during the eden
+            # integration tests.
+            if name.startswith('TESTPILOT_'):
+                eden_env[name] = value
+            elif name in preserve:
+                eden_env[name] = value
+            else:
+                # Drop any environment variable not matching the above cases
                 pass
-        subprocess.Popen(cmd, preexec_fn=os.setsid)
+
+        return eden_env
 
     def get_or_create_path_to_rocks_db(self):
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)

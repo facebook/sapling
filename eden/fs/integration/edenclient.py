@@ -16,7 +16,6 @@ import os
 import shutil
 import socket
 import subprocess
-import tempfile
 import time
 
 # gen_srcs in the TARGETS file populates this with the eden cli binary
@@ -27,10 +26,14 @@ EDEN_DAEMON = get_file_path('eden/fs/integration/daemon')
 class EdenClient(object):
     '''Manages an instance of the eden fuse server.'''
 
-    def __init__(self):
-        self._paths_to_clean = []
-        self._config_dir = None
-        self._mount_path = None
+    def __init__(self, eden_test_case):
+        self._test_case = eden_test_case
+        self.name = self._test_case.register_eden_client(self)
+        self._config_dir = os.path.join(self._test_case.tmp_dir,
+                                        self.name + '.config')
+        self._mount_path = os.path.join(self._test_case.tmp_dir,
+                                        self.name + '.mount')
+        self._process = None
 
     def __enter__(self):
         return self
@@ -38,35 +41,21 @@ class EdenClient(object):
     def __exit__(self, exc_type, exc_value, tb):
         self.cleanup()
 
-    def __del__(self):
-        self.cleanup()
-
     def cleanup(self):
         '''Stop the instance and clean up its temporary directories'''
-        rc = self.kill()
+        self.kill()
         self.cleanup_dirs()
-        return rc
 
     def cleanup_dirs(self):
         '''Remove any temporary dirs we have created.'''
-        for path in self._paths_to_clean:
-            shutil.rmtree(path, ignore_errors=True)
-        self._paths_to_clean = []
+        shutil.rmtree(self._config_dir, ignore_errors=True)
+        shutil.rmtree(self._mount_path, ignore_errors=True)
 
     def kill(self):
         '''Stops and unmounts this instance.'''
+        if self._process is None:
+            return
         self.shutdown_cmd()
-        return 0
-
-    def _create_dirs(self):
-        '''Creates and sets _config_dir and _mount_path if not already set.'''
-        if self._config_dir is None:
-            self._config_dir = tempfile.mkdtemp(prefix='eden_test.config.')
-            self._paths_to_clean.append(self._config_dir)
-
-        if self._mount_path is None:
-            self._mount_path = tempfile.mkdtemp(prefix='eden_test.mount.')
-            self._paths_to_clean.append(self._mount_path)
 
     def _wait_for_thrift(self, timeout):
         '''Wait for thrift server to start.
@@ -106,14 +95,7 @@ class EdenClient(object):
             '--config-dir', self._config_dir,
         ] + subcommand_with_args
 
-    def init(
-        self,
-        repo_path,
-        config_dir=None,
-        mount_path=None,
-        client_name='CLIENT',
-        timeout=10
-    ):
+    def init(self, repo_path, client_name='CLIENT', timeout=10):
         '''Runs eden init and passes the specified parameters.
 
         Will raise an error if the mount doesn't complete in a timely
@@ -122,12 +104,8 @@ class EdenClient(object):
         If it returns successfully, the eden instance is guaranteed
         to be mounted.
         '''
-        self._config_dir = config_dir
         self._repo_path = repo_path
-        self._mount_path = mount_path
         self._client_name = client_name
-
-        self._create_dirs()
 
         subprocess.check_call(
             self._get_eden_args([
@@ -138,22 +116,18 @@ class EdenClient(object):
             ])
         )
 
-        self.daemon_cmd(self._config_dir, timeout)
+        self.daemon_cmd(timeout)
         self.mount_cmd()
 
-    def daemon_cmd(self, config_dir=None, timeout=10):
-        if config_dir and self._config_dir is None:
-            self._config_dir = config_dir
-        else:
-            self._create_dirs()
+    def daemon_cmd(self, timeout=10):
+        if self._process is not None:
+            raise Exception('cannot start an already-running eden client')
 
-        subprocess.check_call(
+        self._process = subprocess.Popen(
             self._get_eden_args([
                 'daemon',
                 '--daemon-binary', EDEN_DAEMON,
-                # Preserve the environment variables so that we can use them to
-                # help track runaway processes from test runs.
-                '-E',
+                '--foreground',
             ])
         )
         self._wait_for_thrift(timeout)
@@ -164,6 +138,11 @@ class EdenClient(object):
                 'shutdown',
             ])
         )
+        return_code = self._process.wait()
+        self._process = None
+        if return_code != 0:
+            raise Exception('eden exited unsuccessfully with status {}'.format(
+                return_code))
 
     def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
         '''Runs eden mount and passes the specified parameters.

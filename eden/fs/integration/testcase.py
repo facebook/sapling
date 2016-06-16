@@ -24,25 +24,51 @@ else:
 @unittest.skipIf(not which("fusermount"), "fuse is not installed")
 class EdenTestCase(unittest.TestCase):
     def setUp(self):
-        self._paths_to_clean = []
-        self._eden_instances = []
+        self.tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
+        self._eden_instances = {}
+        self._next_client_id = 1
 
     def tearDown(self):
-        for inst in self._eden_instances:
-            inst.cleanup()
-        for path in self._paths_to_clean:
-            shutil.rmtree(path, ignore_errors=True)
+        errors = []
+        for inst in self._eden_instances.values():
+            try:
+                inst.cleanup()
+            except Exception as ex:
+                errors.append(ex)
+
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
+        self.tmp_dir = None
+
+        # Re-raise any errors that occurred, after we finish
+        # trying to clean up our directories.
+        if errors:
+            raise errors[0]
+
+    def new_tmp_dir(self, prefix='edentmp'):
+        return tempfile.mkdtemp(prefix=prefix, dir=self.tmp_dir)
 
     def init_eden(self, repo_path, **kwargs):
         '''Create and initialize an eden client for a given repo.
 
         @return EdenClient
         '''
-
-        inst = edenclient.EdenClient()
+        inst = edenclient.EdenClient(self)
         inst.init(repo_path, *kwargs)
-        self._eden_instances.append(inst)
+        self._eden_instances[id(inst)] = inst
         return inst
+
+    def register_eden_client(self, client):
+        '''
+        This function is called by the EdenClient constructor to register
+        a new EdenClient object.
+
+        This shouldn't be called by anyone else other than the EdenClient
+        constructor.
+        '''
+        self._eden_instances[id(client)] = client
+        client_name = 'client{}'.format(self._next_client_id)
+        self._next_client_id += 1
+        return client_name
 
     def init_git_repo(self):
         '''initializes a standard git repo in a temporary dir.
@@ -52,9 +78,8 @@ class EdenTestCase(unittest.TestCase):
         @return string the dir containing the repo.
         '''
 
-        repo_path = tempfile.mkdtemp(prefix='eden_test.repo.')
+        repo_path = self.new_tmp_dir('git')
         gitrepo.create_git_repo(repo_path)
-        self._paths_to_clean.append(repo_path)
         return repo_path
 
     def init_git_eden(self):

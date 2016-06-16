@@ -234,7 +234,7 @@ def do_daemon(args):
     _ensure_dot_eden_folder_exists(config)
 
     return config.spawn(daemon_binary, debug=args.debug, gdb=args.gdb,
-                        preserve_environment=args.preserve_environment)
+                        foreground=args.foreground)
 
 
 def _find_default_daemon_binary():
@@ -300,8 +300,8 @@ def create_parser():
     daemon_parser.add_argument(
         '--debug', '-d', action='store_true', help='Enable fuse debugging.')
     daemon_parser.add_argument(
-        '--preserve-environment', '-E', action='store_true',
-        help='Preserve environment for underlying sudo calls')
+        '--foreground', '-F', action='store_true',
+        help='Run eden in the foreground, rather than daemonizing')
     daemon_parser.add_argument(
         '--gdb', '-g', action='store_true', help='Run under gdb')
     daemon_parser.set_defaults(func=do_daemon)

@@ -14,12 +14,12 @@ from eden.fs.integration import edenclient, testcase
 
 class HealthTest(testcase.EdenTestCase):
     def test_connected_client_is_healthy(self):
-        client = edenclient.EdenClient()
+        client = edenclient.EdenClient(self)
         client.daemon_cmd()
         self.assertTrue(client.is_healthy())
         client.shutdown_cmd()
         self.assertFalse(client.is_healthy())
 
     def test_disconnected_client_is_not_healthy(self):
-        client = edenclient.EdenClient()
+        client = edenclient.EdenClient(self)
         self.assertFalse(client.is_healthy())
