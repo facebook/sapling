@@ -81,11 +81,35 @@ class EdenClient(object):
     def get_thrift_client(self):
         return create_thrift_client(self._config_dir)
 
-    def _get_eden_args(self, subcommand_with_args):
-        '''Combines the specified subcommand args with the appropriate defaults.
+    def run_cmd(self, command, *args):
+        '''
+        Run the specified eden command.
+
+        Args: The eden command name and any arguments to pass to it.
+        Usage example: run_cmd('mount', 'my_eden_client')
+        Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
+        '''
+        cmd = self._get_eden_args(command, *args)
+        subprocess.check_call(cmd)
+
+    def run_unchecked(self, command, *args):
+        '''
+        Run the specified eden command.
+
+        Args: The eden command name and any arguments to pass to it.
+        Usage example: run_cmd('mount', 'my_eden_client')
+        Returns the process return code.
+        '''
+        cmd = self._get_eden_args(command, *args)
+        return subprocess.call(cmd)
+
+    def _get_eden_args(self, command, *args):
+        '''Combines the specified eden command args with the appropriate
+        defaults.
 
         Args:
-            subcommand_with_args: array of strings
+            command: the eden command
+            *args: extra string arguments to the command
         Returns:
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
@@ -93,7 +117,8 @@ class EdenClient(object):
         return [
             EDEN_CLI,
             '--config-dir', self._config_dir,
-        ] + subcommand_with_args
+            command,
+        ] + list(args)
 
     def init(self, repo_path, client_name='CLIENT', timeout=10):
         '''Runs eden init and passes the specified parameters.
@@ -107,14 +132,10 @@ class EdenClient(object):
         self._repo_path = repo_path
         self._client_name = client_name
 
-        subprocess.check_call(
-            self._get_eden_args([
-                'init',
-                '--repo', self._repo_path,
-                '--mount', self._mount_path,
-                self._client_name
-            ])
-        )
+        self.run_cmd('init',
+                     '--repo', self._repo_path,
+                     '--mount', self._mount_path,
+                     self._client_name)
 
         self.daemon_cmd(timeout)
         self.mount_cmd()
@@ -124,20 +145,16 @@ class EdenClient(object):
             raise Exception('cannot start an already-running eden client')
 
         self._process = subprocess.Popen(
-            self._get_eden_args([
+            self._get_eden_args(
                 'daemon',
                 '--daemon-binary', EDEN_DAEMON,
                 '--foreground',
-            ])
+            )
         )
         self._wait_for_thrift(timeout)
 
     def shutdown_cmd(self):
-        subprocess.check_call(
-            self._get_eden_args([
-                'shutdown',
-            ])
-        )
+        self.run_cmd('shutdown')
         return_code = self._process.wait()
         self._process = None
         if return_code != 0:
@@ -167,21 +184,11 @@ class EdenClient(object):
     def mount_cmd(self):
         '''Executes mount command'''
 
-        subprocess.check_call(
-            self._get_eden_args([
-                'mount',
-                self._client_name
-            ])
-        )
+        self.run_cmd('mount', self._client_name)
 
     def unmount_cmd(self):
         '''Executes unmount command'''
-        subprocess.check_call(
-            self._get_eden_args([
-                'unmount',
-                self._client_name
-            ])
-        )
+        self.run_cmd('unmount', self._client_name)
 
     def in_proc_mounts(self):
         '''Gets all eden mounts found in /proc/mounts, and returns
@@ -194,18 +201,11 @@ class EdenClient(object):
 
     def is_healthy(self):
         '''Executes `eden health` and returns True if it exited with code 0.'''
-        if self._config_dir is not None:
-            try:
-                subprocess.check_call(
-                    self._get_eden_args([
-                        'health',
-                    ])
-                )
-                return True
-            except subprocess.CalledProcessError:
-                return False
-        else:
+        if self._config_dir is None:
             return False
+
+        return_code = self.run_unchecked('health')
+        return return_code == 0
 
     @property
     def repo_path(self):
