@@ -34,10 +34,10 @@ Check diagnosis, debugging information
   $ hg debugcachemanifest -a
   $ hg debugcachemanifest --list
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.13 KB
   number of entries is: 5
 
@@ -55,10 +55,10 @@ Check diagnosis, debugging information
   $ hg debugcachemanifest --list
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
   $ echo "ff" >> f

@@ -536,10 +536,22 @@ class fastmanifestcache(object):
         if ident not in self.inmemorycache:
             self.inmemorycache[ident] = fmdict.copy()
 
+    def items(self):
+        entries = []
+        for entry in os.listdir(self.cachepath):
+            try:
+                if entry.startswith(self.keyprefix()):
+                    path = os.path.join(self.cachepath, entry)
+                    entries.append((entry,
+                                    os.path.getmtime(path),
+                                    os.path.getsize(path)))
+            except EnvironmentError:
+                pass
+        entries.sort(key=lambda x:(-x[1], x[0]))
+        return [x[0] for x in entries]
+
     def __iter__(self):
-        for f in sorted(os.listdir(self.cachepath)):
-            if f.startswith(self.keyprefix()):
-                yield f
+        return iter(self.items())
 
     def entrysize(self, f):
         try:
@@ -604,7 +616,7 @@ class fastmanifestcache(object):
         self.pruneentrybyfname(self.filecachepath(hexnode))
 
     def pruneall(self):
-        for f in self:
+        for f in reversed(self.items()):
             self.pruneentrybyfname(f)
 
 class manifestfactory(object):

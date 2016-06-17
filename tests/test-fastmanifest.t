@@ -127,10 +127,10 @@ there is a concurrency issue to address
   $ sleep 1
   $ hg debugcachemanifest --list
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.13 KB
   number of entries is: 5
   [FM-METRICS] Begin metrics
@@ -157,11 +157,11 @@ there is a concurrency issue to address
 Test the --pruneall command to prune all the cached manifests
   $ hg debugcachemanifest --pruneall --debug
   [FM] caching revset: [], background(False), pruneall(True), list(False)
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -321,10 +321,10 @@ Test the --pruneall command to prune all the cached manifests
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
   [FM-METRICS] Begin metrics
@@ -439,10 +439,10 @@ Check that trimming the cache to 0 byte works
   [FM] caching revset: [], background(False), pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
+  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
+  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
+  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
   [FM-METRICS] Begin metrics
