@@ -1205,6 +1205,9 @@ class filecache(object):
         return self
 
     def __get__(self, obj, type=None):
+        # if accessed on the class, return the descriptor itself.
+        if obj is None:
+            return self
         # do we need to check if the file changed?
         if self.name in obj.__dict__:
             assert self.name in obj._filecache, self.name

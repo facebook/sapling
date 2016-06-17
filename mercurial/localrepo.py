@@ -66,6 +66,8 @@ class repofilecache(scmutil.filecache):
     """
 
     def __get__(self, repo, type=None):
+        if repo is None:
+            return self
         return super(repofilecache, self).__get__(repo.unfiltered(), type)
     def __set__(self, repo, value):
         return super(repofilecache, self).__set__(repo.unfiltered(), value)
