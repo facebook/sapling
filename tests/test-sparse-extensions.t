@@ -25,7 +25,8 @@ Test integration with simplecache for profile reads
 
 Test fsmonitor integration (if available)
 (disable the system watchman config)
-  $ export WATCHMAN_CONFIG_FILE=/dev/null
+  $ export WATCHMAN_CONFIG_FILE
+  $ WATCHMAN_CONFIG_FILE=/dev/null
 
   $ $PYTHON -c 'import hgext.fsmonitor' || exit 80
   $ echo "ignoredir1/" >> .hgignore
