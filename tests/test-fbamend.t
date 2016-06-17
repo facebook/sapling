@@ -651,4 +651,21 @@ Check whether unamend works with dirty working directory
   A c
   A d
   R b
+  $ cd ..
+
+Check whether fbamend warns people if preamend bookmark is the same as an active
+bookmark
+  $ hg init messedpreamed && cd messedpreamed
+  $ echo root > root && hg ci -Am root
+  adding root
+  $ hg book -r . activebook
+  $ hg book -r . activebook.preamend
+  $ hg up activebook
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  (activating bookmark activebook)
+  $ hg amend --fixup
+  abort: cannot automatically determine what to rebase because bookmark "activebook.preamend" points to the current commit
+  (please examine smartlog and rebase your commits manually)
+  [255]
+
 

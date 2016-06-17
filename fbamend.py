@@ -305,10 +305,16 @@ def fixupamend(ui, repo):
             raise error.Abort(_('no bookmark %s') % preamendname,
                              hint=_('check if your bookmark is active'))
 
-        ui.status(_("rebasing the children of %s\n") % (preamendname))
-
         old = repo[preamendname]
+        if old == current:
+            hint = _('please examine smartlog and rebase your commits manually')
+            err = _('cannot automatically determine what to rebase '
+                    'because bookmark "%s" points to the current commit') % \
+                   preamendname
+            raise error.Abort(err, hint=hint)
         oldbookmarks = old.bookmarks()
+
+        ui.status(_("rebasing the children of %s\n") % (preamendname))
 
         active = bmactive(repo)
         opts = {
