@@ -14,9 +14,14 @@ import json
 import os
 import stat
 import subprocess
+import time
+
+from . import util
+import eden.thrift
 from facebook.eden import EdenService
 import facebook.eden.ttypes as eden_ttypes
-from eden.thrift import create_thrift_client
+from fb303.ttypes import fb_status
+import thrift
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = 'clients'
@@ -26,6 +31,10 @@ ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
 # These are files in a client directory.
 CONFIG_JSON = 'config.json'
 SNAPSHOT = 'SNAPSHOT'
+
+
+class EdenStartError(Exception):
+    pass
 
 
 class Config:
@@ -51,7 +60,7 @@ class Config:
         return info
 
     def get_thrift_client(self):
-        return create_thrift_client(self._config_dir)
+        return eden.thrift.create_thrift_client(self._config_dir)
 
     def get_client_info(self, name):
         client_dir = os.path.join(self._get_clients_dir(), name)
@@ -151,20 +160,59 @@ class Config:
         client = self.get_thrift_client()
         client.unmount(mount_point)
 
+    def check_health(self):
+        '''
+        Get the status of the edenfs daemon.
+
+        Returns a HealthStatus object containing health information.
+        '''
+        try:
+            client = self.get_thrift_client()
+        except eden.thrift.EdenNotRunningError:
+            return HealthStatus(fb_status.DEAD, pid=None,
+                                detail='edenfs not running')
+
+        pid = None
+        status = fb_status.DEAD
+        try:
+            pid = client.getPid()
+            status = client.getStatus()
+        except thrift.Thrift.TException as ex:
+            detail = 'error talking to edenfs: ' + str(ex)
+            return HealthStatus(status, pid, detail)
+
+        status_name = fb_status._VALUES_TO_NAMES.get(status)
+        detail = 'edenfs running (pid {}); status is {}'.format(
+            pid, status_name)
+        return HealthStatus(status, pid, detail)
+
     def spawn(self,
               daemon_binary,
-              debug=False,
+              extra_args=None,
               gdb=False,
               foreground=False):
-        '''Note that this method will not exit until the user kills the program.
         '''
+        Start edenfs.
+
+        If foreground is True this function never returns (edenfs is exec'ed
+        directly in the current process).
+
+        Otherwise, this function waits for edenfs to become healthy, and
+        returns a HealthStatus object.  On error an exception will be raised.
+        '''
+        # Check to see if edenfs is already running
+        health_info = self.check_health()
+        if health_info.is_healthy():
+            raise EdenStartError('edenfs is already running (pid {})'.format(
+                health_info.pid))
+
         # Run the eden server.
         cmd = [daemon_binary, '--edenDir', self._config_dir, ]
         if gdb:
             cmd = ['gdb', '--args'] + cmd
             foreground = True
-        if debug:
-            cmd.append('--debug')
+        if extra_args:
+            cmd.extend(extra_args)
 
         # Run edenfs using sudo, unless we already have root privileges,
         # or the edenfs binary is setuid root.
@@ -177,10 +225,53 @@ class Config:
         eden_env = self._build_eden_environment()
 
         if foreground:
+            # This call does not return
             os.execve(cmd[0], cmd, eden_env)
-        else:
-            # TODO: We should probably redirect stdout and stderr to log files
-            subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid)
+
+        # Open the log file
+        log_path = self.get_log_path()
+        _get_or_create_dir(os.path.dirname(log_path))
+        log_file = open(log_path, 'a')
+        startup_msg = time.strftime('%Y-%m-%d %H:%M:%S: starting edenfs\n')
+        log_file.write(startup_msg)
+
+        # Start edenfs
+        proc = subprocess.Popen(cmd, env=eden_env, preexec_fn=os.setsid,
+                                stdout=log_file, stderr=log_file)
+        log_file.close()
+
+        # Wait for edenfs to start
+        return self._wait_for_daemon_healthy(proc)
+
+    def _wait_for_daemon_healthy(self, proc):
+        '''
+        Wait for edenfs to become healthy.
+        '''
+        def check_health():
+            # Check the thrift status
+            health_info = self.check_health()
+            if health_info.is_healthy():
+                return health_info
+
+            # Make sure that edenfs is still running
+            status = proc.poll()
+            if status is not None:
+                if status < 0:
+                    msg = 'terminated with signal {}'.format(-status)
+                else:
+                    msg = 'exit status {}'.format(status)
+                raise EdenStartError('edenfs exited before becoming healthy: ' +
+                                     msg)
+
+            # Still starting
+            return None
+
+        timeout_ex = EdenStartError('timed out waiting for edenfs to become '
+                                    'healthy')
+        return util.poll_until(check_health, timeout=5, timeout_ex=timeout_ex)
+
+    def get_log_path(self):
+        return os.path.join(self._config_dir, 'logs', 'edenfs.log')
 
     def _build_eden_environment(self):
         # Reset $PATH to the following contents, so that everyone has the
@@ -239,6 +330,16 @@ class Config:
         local_dir = os.path.join(self._get_clients_dir(),
                                  client_name, 'local')
         return _get_or_create_dir(local_dir)
+
+
+class HealthStatus(object):
+    def __init__(self, status, pid, detail):
+        self.status = status
+        self.pid = pid  # The process ID, or None if not running
+        self.detail = detail  # a human-readable message
+
+    def is_healthy(self):
+        return self.status == fb_status.ALIVE
 
 
 def _verify_mount_point(mount_point):

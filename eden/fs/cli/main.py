@@ -19,6 +19,7 @@ import sys
 import thrift
 
 from . import config as config_mod
+from . import util
 from fb303.ttypes import fb_status
 
 # Relative to the user's $HOME/%USERPROFILE% directory.
@@ -134,21 +135,13 @@ def _get_hg_commit(repo):
 
 def do_health(args):
     config = create_config(args)
-    try:
-        client = config.get_thrift_client()
-        status = client.getStatus()
-    except (EdenNotRunningError, thrift.Thrift.TException) as e:
-        print(e, file=sys.stderr)
-        return 1
-
-    if status == fb_status.ALIVE:
-        print('eden health check passes')
+    health_info = config.check_health()
+    if health_info.is_healthy():
+        print('eden running normally (pid {})'.format(health_info.pid))
         return 0
-    else:
-        msg = fb_status._VALUES_TO_NAMES(status)
-        print('eden health check fails. thrift server status: ' + msg,
-              file=sys.stderr)
-        return 1
+
+    print('edenfs not healthy: {}'.format(health_info.detail))
+    return 1
 
 
 def do_init(args):
@@ -233,8 +226,21 @@ def do_daemon(args):
     # we want to avoid creating ~/.eden as root.
     _ensure_dot_eden_folder_exists(config)
 
-    return config.spawn(daemon_binary, debug=args.debug, gdb=args.gdb,
-                        foreground=args.foreground)
+    # If the user put an "--" argument before the edenfs args, argparse passes
+    # that through to us.  Strip it out.
+    edenfs_args = args.edenfs_args
+    if edenfs_args and edenfs_args[0] == '--':
+        edenfs_args = edenfs_args[1:]
+
+    try:
+        health_info = config.spawn(daemon_binary, edenfs_args, gdb=args.gdb,
+                                   foreground=args.foreground)
+    except config_mod.EdenStartError as ex:
+        print_stderr('error: {}', ex)
+        return 1
+    print('Started edenfs (pid {}). Logs available at {}'.format(
+        health_info.pid, config.get_log_path()))
+    return 0
 
 
 def _find_default_daemon_binary():
@@ -269,9 +275,41 @@ def do_shutdown(args):
     client = None
     try:
         client = config.get_thrift_client()
+        pid = client.getPid()
     except EdenNotRunningError:
+        print_stderr('error: edenfs is not running')
         return 1
+
+    # Ask the client to shutdown
     client.shutdown()
+
+    if args.timeout == 0:
+        print('Sent shutdown request to edenfs.')
+        return 0
+
+    # Wait until the process exits.
+    def eden_exited():
+        try:
+            os.kill(pid, 0)
+        except OSError as ex:
+            if ex.errno == errno.ESRCH:
+                # The process has exited
+                return True
+            # EPERM is okay (and means the process is still running),
+            # anything else is unexpected
+            if ex.errno != errno.EPERM:
+                raise
+        # Still running
+        return None
+
+    try:
+        util.poll_until(eden_exited, timeout=args.timeout)
+        print('edenfs exited')
+        return 0
+    except util.TimeoutError:
+        print_stderr('error: sent shutdown request, but edenfs did not exit '
+                     'within {} seconds', args.timeout)
+        return 1
 
 
 def create_parser():
@@ -298,12 +336,14 @@ def create_parser():
         '--daemon-binary',
         help='Path to the binary for the Eden daemon.')
     daemon_parser.add_argument(
-        '--debug', '-d', action='store_true', help='Enable fuse debugging.')
-    daemon_parser.add_argument(
         '--foreground', '-F', action='store_true',
         help='Run eden in the foreground, rather than daemonizing')
     daemon_parser.add_argument(
         '--gdb', '-g', action='store_true', help='Run under gdb')
+    daemon_parser.add_argument(
+        'edenfs_args', nargs=argparse.REMAINDER,
+        help='Any extra arguments after an "--" argument will be passed to the '
+        'edenfs daemon.')
     daemon_parser.set_defaults(func=do_daemon)
 
     health_parser = subparsers.add_parser(
@@ -351,6 +391,10 @@ def create_parser():
 
     shutdown_parser = subparsers.add_parser(
         'shutdown', help='Shutdown the daemon')
+    shutdown_parser.add_argument(
+        '-t', '--timeout', type=float, default=15.0,
+        help='Wait up to TIMEOUT seconds for the daemon to exit.  '
+        '(default=%(default)s).  If timeout is 0, then do not wait at all.')
     shutdown_parser.set_defaults(func=do_shutdown)
 
     unmount_parser = subparsers.add_parser(
