@@ -603,7 +603,7 @@ class fastmanifestcache(object):
                 break
             sizetokeep += entry[2]
 
-        for entry in entriesbyage[startindextodiscard:]:
+        for entry in reversed(entriesbyage[startindextodiscard:]):
             self.pruneentrybyfname(entry[0])
 
     def pruneentrybyfname(self, fname):

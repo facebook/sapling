@@ -395,9 +395,9 @@ Trim the cache to at most 1kb, we should start from the oldest entry to the
 newest ones:
   $ hg debugcachemanifest --debug --limit=1024
   [FM] caching revset: [], background(False), pruneall(False), list(False)
-  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: ondiskcachestats, args: [], kwargs: [('bytes', 984), ('numentries', 3)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -435,8 +435,8 @@ newest ones:
 Trim the cache to at most 512 bytes
   $ hg debugcachemanifest --debug --limit=512
   [FM] caching revset: [], background(False), pruneall(False), list(False)
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: ondiskcachestats, args: [], kwargs: [('bytes', 376), ('numentries', 1)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -519,12 +519,12 @@ Check that trimming the cache to 0 byte works
   [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --limit=0
   [FM] caching revset: [], background(False), pruneall(False), list(False)
-  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
+  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: ondiskcachestats, args: [], kwargs: [('bytes', 0), ('numentries', 0)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
