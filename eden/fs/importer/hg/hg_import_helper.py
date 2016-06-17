@@ -60,9 +60,10 @@ SHA1_NUM_BYTES = 20
 # See the specific cmd_* functions below for documentation on the
 # request/response formats.
 #
-CMD_RESPONSE = 0
-CMD_MANIFEST = 1
-CMD_CAT_FILE = 2
+CMD_STARTED = 0
+CMD_RESPONSE = 1
+CMD_MANIFEST = 2
+CMD_CAT_FILE = 3
 
 #
 # Flag values.
@@ -103,15 +104,12 @@ def cmd(command_id):
 class HgServer(object):
     def __init__(self, repo_path):
         self.repo_path = repo_path
-
-        hgrc = os.path.join(repo_path, b".hg", b"hgrc")
-        self.ui = mercurial.ui.ui()
-        self.ui.readconfig(hgrc, repo_path)
-        mercurial.extensions.loadall(self.ui)
-        self.repo = mercurial.hg.repository(self.ui, repo_path).unfiltered()
-
         self.in_file = sys.stdin
         self.out_file = sys.stdout
+
+        # The repository will be set during initialized()
+        self.repo = None
+        self.ui = None
 
         # Populate our command dictionary
         self._commands = {}
@@ -121,9 +119,32 @@ class HgServer(object):
                 continue
             self._commands[value.__COMMAND_ID__] = value
 
+    def initialize(self):
+        hgrc = os.path.join(self.repo_path, b".hg", b"hgrc")
+        self.ui = mercurial.ui.ui()
+        self.ui.readconfig(hgrc, self.repo_path)
+        mercurial.extensions.loadall(self.ui)
+        repo = mercurial.hg.repository(self.ui, self.repo_path)
+        self.repo = repo.unfiltered()
+
     def serve(self):
+        try:
+            self.initialize()
+        except Exception as ex:
+            # If an error occurs during initialization (say, if the repository
+            # path is invalid), send an error response.
+            self.send_error(request=None, message=str(ex))
+            return 1
+
+        # Send a success response to indicate we have started
+        self._send_chunk(txn_id=0, command=CMD_STARTED,
+                         flags=0, data='')
+
         while self.process_request():
             pass
+
+        logging.debug('hg_import_helper shutting down normally')
+        return 0
 
     def debug(self, msg, *args, **kwargs):
         logging.debug(msg, *args, **kwargs)
@@ -230,15 +251,18 @@ class HgServer(object):
         flags = 0
         if not is_last:
             flags |= FLAG_MORE_CHUNKS
-        self._send_chunk(request, command=CMD_RESPONSE,
+        self._send_chunk(request.txn_id, command=CMD_RESPONSE,
                          flags=flags, data=data)
 
     def send_error(self, request, message):
-        self._send_chunk(request, command=CMD_RESPONSE,
+        txn_id = 0
+        if request is not None:
+            txn_id = request.txn_id
+        self._send_chunk(txn_id, command=CMD_RESPONSE,
                          flags=FLAG_ERROR, data=message)
 
-    def _send_chunk(self, request, command, flags, data):
-        header = struct.pack(HEADER_FORMAT, request.txn_id, command, flags,
+    def _send_chunk(self, txn_id, command, flags, data):
+        header = struct.pack(HEADER_FORMAT, txn_id, command, flags,
                              len(data))
         self.out_file.write(header)
         self.out_file.write(data)
@@ -319,11 +343,13 @@ def main():
     server = HgServer(args.repo)
 
     if args.manifest:
+        server.initialize()
         request = Request(0, CMD_MANIFEST, flags=0, body=args.manifest)
         server.dump_manifest(args.manifest, request)
         return 0
 
     if args.cat_file:
+        server.initialize()
         path, file_rev_str = args.cat_file.rsplit(':', -1)
         path = path.encode(sys.getfilesystemencoding())
         file_rev = binascii.unhexlify(file_rev_str)
@@ -332,8 +358,7 @@ def main():
         return 0
 
     try:
-        server.serve()
-        logging.debug('hg_import_helper shutting down normally')
+        return server.serve()
     except KeyboardInterrupt:
         logging.debug('hg_import_helper received interrupt; shutting down')
 

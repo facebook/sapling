@@ -9,12 +9,18 @@
  */
 #include "HgImporter.h"
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <folly/Array.h>
 #include <folly/Bits.h>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
+#include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <unistd.h>
+#include <mutex>
 
 #include "HgManifestImporter.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -33,7 +39,7 @@ using std::string;
 
 DEFINE_string(
     hgImportHelper,
-    "./eden/fs/importer/hg/hg_import_helper.py",
+    "",
     "The path to the mercurial import helper script");
 
 namespace {
@@ -199,6 +205,87 @@ struct HgBlobInfo {
   RelativePathPiece path_;
 };
 
+/**
+ * Internal helper function for use by getImportHelperPath().
+ *
+ * Callers should use getImportHelperPath() rather than directly calling this
+ * function.
+ */
+std::string findImportHelperPath() {
+  // If a path was specified on the command line, use that
+  if (!FLAGS_hgImportHelper.empty()) {
+    return FLAGS_hgImportHelper;
+  }
+
+  const char* argv0 = gflags::GetArgv0();
+  if (argv0 == nullptr) {
+    throw std::runtime_error(
+        "unable to find hg_import_helper.py script: "
+        "unable to determine edenfs executable path");
+  }
+
+  auto programDir = boost::filesystem::absolute(boost::filesystem::path(argv0));
+  VLOG(4) << "edenfs path: " << programDir.native();
+  programDir.remove_filename();
+
+  auto toCheck = folly::make_array(
+      // Check in the same directory as the edenfs binary.
+      // This is where we expect to find the helper script in normal
+      // deployments.
+      programDir / boost::filesystem::path("hg_import_helper.py"),
+      // Check relative to the edenfs binary, if we are being run directly
+      // from the buck-out directory in a source code repository.
+      programDir /
+          boost::filesystem::path(
+              "../../../../../eden/fs/importer/hg/hg_import_helper.py"));
+
+  for (const auto& path : toCheck) {
+    VLOG(5) << "checking for hg_import_helper at \"" << path.native() << "\"";
+    boost::filesystem::path normalized;
+    try {
+      normalized = boost::filesystem::canonical(path);
+    } catch (const std::exception& ex) {
+      // canonical() only succeeds if the path exists
+      continue;
+    }
+    if (access(normalized.c_str(), X_OK) == 0) {
+      return normalized.native();
+    }
+  }
+
+  throw std::runtime_error("unable to find hg_import_helper.py script");
+}
+
+/**
+ * Get the path to the hg_import_helper.py script.
+ *
+ * This function is thread-safe and caches the result once we have found
+ * the  helper script once.
+ */
+std::string getImportHelperPath() {
+  // We could use folly::Singleton to store the helper path, but we don't for a
+  // couple reasons:
+  // - We want to retry finding the helper path on subsequent calls if we fail
+  //   finding it the first time.  (If someone has sinced fixed the
+  //   installation path for ths script it's nicer to try looking for it
+  //   again.)
+  // - The Singleton API is slightly awkward for just storing a string with a
+  //   custom lookup function.
+  //
+  // This code should never be accessed during static initialization before
+  // main() starts, or during shutdown cleanup, so the we don't really need
+  // the extra safety that folly::Singleton provides for those situations.
+  static std::mutex helperPathMutex;
+  static std::string helperPath;
+
+  std::lock_guard<std::mutex> guard(helperPathMutex);
+  if (helperPath.empty()) {
+    helperPath = findImportHelperPath();
+  }
+
+  return helperPath;
+}
+
 } // unnamed namespace
 
 namespace facebook {
@@ -207,7 +294,7 @@ namespace eden {
 HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
     : store_(store) {
   std::vector<string> cmd = {
-      FLAGS_hgImportHelper, repoPath.str(),
+      getImportHelperPath(), repoPath.str(),
   };
 
   // In the future, it might be better to use some other arbitrary fd for
@@ -216,10 +303,22 @@ HgImporter::HgImporter(StringPiece repoPath, LocalStore* store)
   Subprocess::Options opts;
   opts.stdin(Subprocess::PIPE).stdout(Subprocess::PIPE);
   helper_ = Subprocess{cmd, opts};
+  SCOPE_FAIL {
+    helper_.closeParentFd(STDIN_FILENO);
+    helper_.wait();
+  };
 
-  // TODO: Read some sort of success response back from the helper, to make
-  // sure it has started successfully.  For instance, if the repository doesn't
-  // exist it will bail out early, and we should catch that.
+  // Wait for the import helper to send the CMD_STARTED message indicating
+  // that it has started successfully.
+  auto header = readChunkHeader();
+  if (header.command != CMD_STARTED) {
+    // This normally shouldn't happen.  If an error occurs, the
+    // hg_import_helper script should send an error chunk causing
+    // readChunkHeader() to throw an exception with the the error message
+    // sent back by the script.
+    throw std::runtime_error(
+        "unexpected start message from hg_import_helper script");
+  }
 }
 
 HgImporter::~HgImporter() {

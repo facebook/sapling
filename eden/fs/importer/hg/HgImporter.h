@@ -77,9 +77,10 @@ class HgImporter {
    * request/response formats.
    */
   enum : uint32_t {
-    CMD_RESPONSE = 0,
-    CMD_MANIFEST = 1,
-    CMD_CAT_FILE = 2,
+    CMD_STARTED = 0,
+    CMD_RESPONSE = 1,
+    CMD_MANIFEST = 2,
+    CMD_CAT_FILE = 3,
   };
   struct ChunkHeader {
     uint32_t requestID;
