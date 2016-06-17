@@ -472,6 +472,7 @@ class fastmanifestcache(object):
         filetime = time.time() - delay
         path = self.filecachepath(hexnode)
         try:
+            self.debug("[FM] refreshing %s with delay %d\n" % (hexnode, delay))
             os.utime(path, (filetime, filetime))
         except EnvironmentError:
             pass

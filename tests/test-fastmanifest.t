@@ -218,11 +218,23 @@ Test the --pruneall command to prune all the cached manifests
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] End metrics
   [FM] skipped 1853a742c28c3a531336bbb3d677d2e2d8937027, already cached (fast path)
+  [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
   [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 0
   [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 0
   [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 0
   [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 0
   [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 0
+  [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
+  [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 2
+  [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 4
+  [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
+  [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
+  [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   [FM] nothing to do, cache size < limit
   $ hg diff -c . --debug --nodate
   [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
@@ -243,11 +255,23 @@ Test the --pruneall command to prune all the cached manifests
   $ hg debugcachemanifest --all --debug
   [FM] caching revset: ['fastmanifesttocache()'], background(False), pruneall(False), list(False)
   [FM] skipped 1853a742c28c3a531336bbb3d677d2e2d8937027, already cached (fast path)
+  [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
   [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
+  [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 0
   [FM] skipped f064a7f8e3e138341587096641d86e9d23cd9778, already cached (fast path)
+  [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 0
   [FM] skipped e3738bf5439958f89499a656982023aba57b076e, already cached (fast path)
+  [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 0
   [FM] skipped a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7, already cached (fast path)
+  [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 0
   [FM] skipped a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, already cached (fast path)
+  [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 0
+  [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
+  [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 2
+  [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 4
+  [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
+  [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
+  [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -293,6 +317,12 @@ Test the --pruneall command to prune all the cached manifests
   [FM] cache miss for fastmanifest a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] caching revision a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   [FM] cache miss for fastmanifest a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
+  [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 2
+  [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 4
+  [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
+  [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
+  [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', 100.0)]
@@ -361,7 +391,8 @@ Check that trimming to a limit higher than what is cached does nothing
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] End metrics
 
-Trim the cache to at most 1kb
+Trim the cache to at most 1kb, we should start from the oldest entry to the
+newest ones:
   $ hg debugcachemanifest --debug --limit=1024
   [FM] caching revset: [], background(False), pruneall(False), list(False)
   [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
