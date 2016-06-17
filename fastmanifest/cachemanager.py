@@ -111,10 +111,18 @@ class _systemawarecachelimit(object):
                 repo.ui.warn((msg % strconfig))
         return configs
 
-    def __init__(self, repo):
+    def __init__(self, repo=None, opener=None, ui=None):
         # Probe the system root partition to know what is available
         try:
-            st = os.statvfs(repo.root)
+            if repo is None and (opener is None or ui is None):
+                raise error.Abort("Need to specify repo or (opener and ui)")
+            if repo is not None:
+                st = os.statvfs(repo.root)
+            else:
+                if util.safehasattr(opener, "vfs"):
+                    st = os.statvfs(opener.vfs.base)
+                else:
+                    st = os.statvfs(opener.base)
         except (OSError, IOError) as ex:
             if ex.errno == errno.EACCES:
                 self.free = 0
@@ -124,7 +132,10 @@ class _systemawarecachelimit(object):
         self.free = st.f_bavail * st.f_frsize
         self.total = st.f_blocks * st.f_frsize
         # Read parameters from config
-        self.config = self.parseconfig(repo)
+        if repo is not None:
+            self.config = self.parseconfig(repo.ui)
+        else:
+            self.config = self.parseconfig(ui)
 
     def bytes(self):
         return _systemawarecachelimit.cacheallocation(self.free, **self.config)

@@ -19,7 +19,7 @@ class HybridManifest(unittest.TestCase):
         breakage in prod
 
         """
-        vfs = scmutil.vfs('')
+        vfs = scmutil.vfs(os.getcwd())
         hd = fastmanifest.implementation.hybridmanifest(ui.ui(), vfs)
         ismagic = lambda x: x.startswith("__") and x.endswith("__")
         magicmethods = [k
