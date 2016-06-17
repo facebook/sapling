@@ -40,6 +40,14 @@ Check diagnosis, debugging information
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.13 KB
   number of entries is: 5
+  Freshest cache entries appear last
+  ================================================================================
+  manifest node                           |revs
+  7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
+  f064a7f8e3e138341587096641d86e9d23cd9778|3
+  e3738bf5439958f89499a656982023aba57b076e|2
+  a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
+  a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
 
 3) Test commits based off of revisions that are in the cache
 
@@ -61,6 +69,15 @@ Check diagnosis, debugging information
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
+  Freshest cache entries appear last
+  ================================================================================
+  manifest node                           |revs
+  1853a742c28c3a531336bbb3d677d2e2d8937027|5
+  7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
+  f064a7f8e3e138341587096641d86e9d23cd9778|3
+  e3738bf5439958f89499a656982023aba57b076e|2
+  a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
+  a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
   $ echo "ff" >> f
   $ hg commit -m "amended" --debug | grep 'wrote manifest'
   [FM] wrote manifest 2545498ff92a8988bcc2173b6b21f181449e4d68

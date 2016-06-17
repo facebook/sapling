@@ -178,6 +178,21 @@ def cachemanifestlist(ui, repo):
     ui.status(("cache size is: %s\n" % util.bytecount(total)))
     ui.status(("number of entries is: %s\n" % numentries))
 
+    if ui.debug:
+        revs = set(repo.revs("fastmanifestcached()"))
+        import collections
+        revstoman = collections.defaultdict(list)
+        for r in revs:
+            mannode = revlog.hex(repo.changelog.changelogrevision(r).manifest)
+            revstoman[mannode].append(str(r))
+        if revs:
+            ui.status(("Freshest cache entries appear last\n"))
+            ui.status(("="*80))
+            ui.status(("\nmanifest node                           |revs\n"))
+            for h in cache:
+                l = h.replace("fast","")
+                ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
+
 def shufflebybatch(it, batchsize):
     """Shuffle by batches to avoid caching process stepping on each other
     while maintaining an ordering between batches:
