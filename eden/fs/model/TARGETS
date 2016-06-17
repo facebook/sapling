@@ -4,6 +4,7 @@ cpp_library(
   headers = glob(['*.h']),
   deps = [
     '@/folly:folly',
+    '@/folly/ssl:openssl_hash',
     '@/eden/utils:utils',
   ],
   external_deps = [

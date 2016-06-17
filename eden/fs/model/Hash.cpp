@@ -13,12 +13,14 @@
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
-#include <openssl/sha.h>
+#include <folly/ssl/OpenSSLHash.h>
 #include <string>
 
 using std::string;
 using folly::ByteRange;
 using folly::StringPiece;
+using folly::range;
+using folly::ssl::OpenSSLHash;
 
 namespace facebook {
 namespace eden {
@@ -93,27 +95,14 @@ Hash::Storage byteRangeToArray(ByteRange bytes) {
 }
 
 Hash Hash::sha1(const folly::IOBuf* buf) {
-  SHA_CTX shaCtx;
-  SHA1_Init(&shaCtx);
-
-  folly::io::Cursor c(buf);
-  while (true) {
-    ByteRange peeked = c.peekBytes();
-    if (peeked.empty()) {
-      break;
-    }
-    SHA1_Update(&shaCtx, peeked.data(), peeked.size());
-    c.skip(peeked.size());
-  }
-
   Storage hashBytes;
-  SHA1_Final(hashBytes.data(), &shaCtx);
+  OpenSSLHash::sha1(range(hashBytes), *buf);
   return Hash(hashBytes);
 }
 
 Hash Hash::sha1(ByteRange data) {
   Storage hashBytes;
-  SHA1(data.data(), data.size(), hashBytes.data());
+  OpenSSLHash::sha1(range(hashBytes), data);
   return Hash(hashBytes);
 }
 
