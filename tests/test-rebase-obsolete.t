@@ -709,9 +709,7 @@ should display a friendly error message
   created new head
   $ hg debugobsolete `hg log -r 11 -T '{node}\n'` --config experimental.evolution=all
   $ hg rebase -r . -d 10
-  abort: all requested changesets have equivalents or were marked as obsolete
-  (to force the rebase, set the config experimental.rebaseskipobsolete to False)
-  [255]
+  note: not rebasing 11:f44da1f4954c "nonrelevant" (tip), it has no successor
 
 If a rebase is going to create divergence, it should abort
 
@@ -916,3 +914,38 @@ rebase source is obsoleted (issue5198)
   o  0:cd010b8cd998 A
   
   $ cd ..
+
+Test that bookmark is moved and working dir is updated when all changesets have
+equivalents in destination
+  $ hg init rbsrepo && cd rbsrepo
+  $ echo "[experimental]" > .hg/hgrc
+  $ echo "evolution=all" >> .hg/hgrc
+  $ echo "rebaseskipobsolete=on" >> .hg/hgrc
+  $ echo root > root && hg ci -Am root
+  adding root
+  $ echo a > a && hg ci -Am a
+  adding a
+  $ hg up 0
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  $ echo b > b && hg ci -Am b
+  adding b
+  created new head
+  $ hg rebase -r 2 -d 1
+  rebasing 2:1e9a3c00cbe9 "b" (tip)
+  $ hg log -r .  # working dir is at rev 3 (successor of 2)
+  3:be1832deae9a b (no-eol)
+  $ hg book -r 2 mybook --hidden  # rev 2 has a bookmark on it now
+  $ hg up 2 && hg log -r .  # working dir is at rev 2 again
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  2:1e9a3c00cbe9 b (no-eol)
+  $ hg rebase -r 2 -d 3
+  note: not rebasing 2:1e9a3c00cbe9 "b" (mybook), already in destination as 3:be1832deae9a "b"
+Check that working directory was updated to rev 3 although rev 2 was skipped
+during the rebase operation
+  $ hg log -r .
+  3:be1832deae9a b (no-eol)
+
+Check that bookmark was moved to rev 3 although rev 2 was skipped
+during the rebase operation
+  $ hg bookmarks
+     mybook                    3:be1832deae9a

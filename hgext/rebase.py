@@ -531,6 +531,9 @@ def rebase(ui, repo, **opts):
             for k, v in rbsrt.state.iteritems():
                 if v > nullmerge:
                     nstate[repo[k].node()] = repo[v].node()
+                elif v == revprecursor:
+                    succ = obsoletenotrebased[k]
+                    nstate[repo[k].node()] = repo[succ].node()
             # XXX this is the same as dest.node() for the non-continue path --
             # this should probably be cleaned up
             targetnode = repo[rbsrt.target].node()
@@ -538,7 +541,9 @@ def rebase(ui, repo, **opts):
         # restore original working directory
         # (we do this before stripping)
         newwd = rbsrt.state.get(rbsrt.originalwd, rbsrt.originalwd)
-        if newwd < 0:
+        if newwd == revprecursor:
+            newwd = obsoletenotrebased[rbsrt.originalwd]
+        elif newwd < 0:
             # original directory is a parent of rebase set root or ignored
             newwd = rbsrt.originalwd
         if newwd not in [c.rev() for c in repo[None].parents()]:
@@ -776,17 +781,6 @@ def _checkobsrebase(repo, ui,
         h = _("to force the rebase please set "
               "experimental.allowdivergence=True")
         raise error.Abort(msg % (",".join(divhashes),), hint=h)
-
-    # - plain prune (no successor) changesets are rebased
-    # - split changesets are not rebased if at least one of the
-    # changeset resulting from the split is an ancestor of dest
-    rebaseset = rebasesetrevs - rebaseobsskipped
-    if rebasesetrevs and not rebaseset:
-        msg = _('all requested changesets have equivalents '
-                'or were marked as obsolete')
-        hint = _('to force the rebase, set the config '
-                 'experimental.rebaseskipobsolete to False')
-        raise error.Abort(msg, hint=hint)
 
 def defineparents(repo, rev, target, state, targetancestors,
                   obsoletenotrebased):
