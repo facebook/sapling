@@ -11,7 +11,7 @@ import time
 import heapq
 
 from mercurial import manifest, mdiff, revlog, util
-
+import cachemanager
 import cfastmanifest
 from metrics import metricscollector
 from constants import *
@@ -73,8 +73,8 @@ class hybridmanifest(object):
         if self.incache is None:
             # Cache lookup
             if (self.cachekey is not None and
-                self.fastcache.containsnode(self.cachekey)):
-                self.__cachedmanifest = self.fastcache.get(self.cachekey)
+                self.cachekey in self.fastcache):
+                self.__cachedmanifest = self.fastcache[self.cachekey]
             elif self.node == revlog.nullid:
                 fm = cfastmanifest.fastmanifest()
                 self.__cachedmanifest = fastmanifestdict(fm)
@@ -96,7 +96,7 @@ class hybridmanifest(object):
         if self.incache or self.debugfastmanifest:
             return True
         elif self.cachekey:
-            return self.fastcache.containsnode(self.cachekey)
+            return self.cachekey in self.fastcache
         return False
 
     def _manifest(self, operation):
@@ -413,17 +413,13 @@ class fastmanifestdict(object):
 
         return arraytext, deltatext
 
-class fastmanifestcache(object):
-    _instance = None
-    @classmethod
-    def getinstance(cls, opener, ui):
-        if not cls._instance:
-            cls._instance = fastmanifestcache(opener, ui)
-        return cls._instance
 
-    def __init__(self, opener, ui):
+class ondiskcache(object):
+    def __init__(self, debugf, opener, ui):
+        self.debugf = debugf
         self.opener = opener
         self.ui = ui
+        self.pathprefix = "fast"
         base = opener.join(None)
         self.cachepath = os.path.join(base, CACHE_SUBDIR)
         if not os.path.exists(self.cachepath):
@@ -433,115 +429,28 @@ class fastmanifestcache(object):
                 # Likely permission issues, in that case, we won't be able to
                 # access the cache afterwards
                 pass
-        if self.ui.configbool("fastmanifest", "silent"):
-            self.debug = _silent_debug
-        else:
-            self.debug = self.ui.debug
 
-        maxinmemoryentries = self.ui.config("fastmanifest",
-                                            "maxinmemoryentries",
-                                            DEFAULT_MAX_MEMORY_ENTRIES)
-        self.inmemorycache = util.lrucachedict(maxinmemoryentries)
+    def _pathfromnode(self, hexnode):
+        return os.path.join(self.cachepath, self.pathprefix + hexnode)
 
-    def keyprefix(self):
-        return "fast"
-
-    def load(self, fpath):
-        try:
-            fm = cfastmanifest.fastmanifest.load(fpath)
-            # touch on access to make this cache a LRU cache
-            os.utime(fpath, None)
-        except EnvironmentError:
-            return None
-        else:
-            return fastmanifestdict(fm)
-
-    def dump(self, fpath, manifest):
-        # We can't skip the conversion step here, if `manifest`
-        # was a fastmanifest we wouldn't be saving it
-        fm = cfastmanifest.fastmanifest(manifest.text())
-        fm.save(fpath)
-
-    def inmemorycachekey(self, hexnode):
-        return (self.keyprefix(), hexnode)
-
-    def filecachepath(self, hexnode):
-        return os.path.join(self.cachepath, self.keyprefix() + hexnode)
-
-    def refresh(self, hexnode, delay=0):
+    def touch(self, hexnode, delay=0):
         filetime = time.time() - delay
-        path = self.filecachepath(hexnode)
+        path = self._pathfromnode(hexnode)
         try:
-            self.debug("[FM] refreshing %s with delay %d\n" % (hexnode, delay))
+            self.debugf("[FM] refreshing %s with delay %d\n" %(hexnode, delay))
             os.utime(path, (filetime, filetime))
         except EnvironmentError:
             pass
 
-    def get(self, hexnode):
-        # In memory cache lookup
-        ident = self.inmemorycachekey(hexnode)
-        if ident in self.inmemorycache:
-            return self.inmemorycache[ident]
-
-        # On disk cache lookup
-        realfpath = self.filecachepath(hexnode)
-        r = self.load(realfpath)
-
-        # In memory cache update
-        if r:
-            self.inmemorycache[ident] = r
-        return r
-
-    def containsnode(self, hexnode):
-        if self.inmemorycachekey(hexnode) in self.inmemorycache:
-            return True
-        return os.path.exists(self.filecachepath(hexnode))
-
-    def put(self, hexnode, manifest, limit=None):
-        # Is there no more space already?
-        if limit is not None:
-            cachesize = self.totalsize()[0]
-            allowedspace = limit.bytes() - cachesize
-            if allowedspace < 0:
-                return False
-
-        if self.containsnode(hexnode):
-            self.debug("[FM] skipped %s, already cached\n" % hexnode)
-        else:
-            self.debug("[FM] caching revision %s\n" % hexnode)
-
-            realfpath = self.filecachepath(hexnode)
-            tmpfpath = util.mktempcopy(realfpath, True)
-            try:
-                self.dump(tmpfpath, manifest)
-                newsize = os.path.getsize(tmpfpath)
-
-                # Inserting the entry would make the cache overflow
-                if limit is not None and newsize + cachesize > limit.bytes():
-                    return False
-
-                util.rename(tmpfpath, realfpath)
-                return True
-            except (OSError, IOError) as ex:
-                if ex.errno == errno.EACCES:
-                    return False
-                raise
-            finally:
-                try:
-                    os.unlink(tmpfpath)
-                except OSError:
-                    pass
-
-    def put_inmemory(self, hexnode, fmdict):
-        ident = self.inmemorycachekey(hexnode)
-        if ident not in self.inmemorycache:
-            self.inmemorycache[ident] = fmdict.copy()
+    def __contains__(self, hexnode):
+        path = self._pathfromnode(hexnode)
+        return os.path.exists(path)
 
     def items(self):
         entries = []
         for entry in os.listdir(self.cachepath):
             try:
-                if entry.startswith(self.keyprefix()):
+                if entry.startswith(self.pathprefix):
                     path = os.path.join(self.cachepath, entry)
                     entries.append((entry,
                                     os.path.getmtime(path),
@@ -549,14 +458,54 @@ class fastmanifestcache(object):
             except EnvironmentError:
                 pass
         entries.sort(key=lambda x:(-x[1], x[0]))
-        return [x[0] for x in entries]
+        return [x[0].replace(self.pathprefix, "") for x in entries]
 
     def __iter__(self):
         return iter(self.items())
 
-    def entrysize(self, f):
+    def setwithlimit(self, hexnode, manifest, limit=-1):
+        path = self._pathfromnode(hexnode)
+        fm = cfastmanifest.fastmanifest(manifest.text())
+        tmpfpath = util.mktempcopy(path, True)
         try:
-            return os.path.getsize(os.path.join(self.cachepath, f))
+            fm.save(tmpfpath)
+            entrysize = os.path.getsize(tmpfpath)
+            if limit and self.totalsize()[0] + entrysize > limit:
+                return False
+            util.rename(tmpfpath, path)
+            return True
+        except EnvironmentError:
+            return False
+        finally:
+            try:
+                os.unlink(tmpfpath)
+            except OSError:
+                pass
+
+    def __setitem__(self, hexnode, manifest):
+        self.setwithlimit(hexnode, manifest)
+
+    def __delitem__(self, hexnode):
+        path = self._pathfromnode(hexnode)
+        try:
+            os.unlink(path)
+        except EnvironmentError:
+            pass
+
+    def __getitem__(self, hexnode):
+        path = self._pathfromnode(hexnode)
+        try:
+            fm = cfastmanifest.fastmanifest.load(path)
+            # touch on access to make this cache a LRU cache
+            os.utime(path, None)
+        except EnvironmentError:
+            return None
+        else:
+            return fastmanifestdict(fm)
+
+    def entrysize(self, hexnode):
+        try:
+            return os.path.getsize(self._pathfromnode(hexnode))
         except EnvironmentError:
             return None
 
@@ -571,54 +520,91 @@ class fastmanifestcache(object):
             totalsize += entrysize
             numentries += 1
             if not silent:
-                msg = "%s (size %s)\n" % (entry, util.bytecount(entrysize))
-                self.ui.status((msg))
+                msg = "%s (size %s)\n" % (self.pathprefix + entry,
+                                          util.bytecount(entrysize))
+                self.ui.status(msg)
         return totalsize, numentries
 
+class CacheFullException(Exception):
+    pass
+
+class fastmanifestcache(object):
+    _instance = None
+    @classmethod
+    def getinstance(cls, opener, ui):
+        if not cls._instance:
+            limit = cachemanager._systemawarecachelimit(opener=opener, ui=ui)
+            cls._instance = fastmanifestcache(opener, ui, limit)
+        return cls._instance
+
+    def __init__(self, opener, ui, limit):
+        self.ui = ui
+        if self.ui.configbool("fastmanifest", "silent"):
+            self.debug = _silent_debug
+        else:
+            self.debug = self.ui.debug
+        self.ondiskcache = ondiskcache(self.debug, opener, ui)
+        maxinmemoryentries = self.ui.config("fastmanifest",
+                                            "maxinmemoryentries",
+                                            DEFAULT_MAX_MEMORY_ENTRIES)
+        self.inmemorycache = util.lrucachedict(maxinmemoryentries)
+        self.limit = limit
+
+    def touch(self, hexnode, delay=0):
+        self.ondiskcache.touch(hexnode, delay)
+
+    def __getitem__(self, hexnode):
+        if hexnode in self.inmemorycache:
+            return self.inmemorycache[hexnode]
+
+        r = self.ondiskcache[hexnode]
+        if r:
+            self.inmemorycache[hexnode] = r
+        return r
+
+    def __contains__(self, hexnode):
+        return hexnode in self.inmemorycache or hexnode in self.ondiskcache
+
+    def __setitem__(self, hexnode, manifest):
+        if hexnode in self:
+            self.debug("[FM] skipped %s, already cached\n" % hexnode)
+            return
+
+        if self.limit:
+            if self.ondiskcache.totalsize()[0] > self.limit.bytes():
+                self.debug("[FM] skipped %s, cache full\n" % hexnode)
+            else:
+                self.debug("[FM] caching revision %s\n" % hexnode)
+                ret = self.ondiskcache.setwithlimit(hexnode, manifest,
+                                                    self.limit.bytes())
+                if not ret:
+                    raise CacheFullException()
+        else:
+            self.debug("[FM] caching revision %s\n" % hexnode)
+            self.ondiskcache[hexnode] = manifest
+
+    def put_inmemory(self, hexnode, fmdict):
+        if hexnode not in self.inmemorycache:
+            self.inmemorycache[hexnode] = fmdict.copy()
+
+    def __iter__(self):
+        return self.ondiskcache.__iter__()
+
     def prune(self, limit):
-        # Get the list of entries and mtime first to avoid race condition
-        entries = []
-        for entry in self:
-            try:
-                path = os.path.join(self.cachepath, entry)
-                entries.append((entry, os.path.getmtime(path),
-                                      os.path.getsize(path)))
-            except EnvironmentError:
-                pass
-        # Do nothing, we don't exceed the limit
-        if limit.bytes() > sum([e[2] for e in entries]):
+        if limit is None or limit.bytes() > self.ondiskcache.totalsize()[0]:
             self.debug("[FM] nothing to do, cache size < limit\n")
             return
-        # [most recently accessed, second most recently accessed ...]
-        entriesbyage = sorted(entries, key=lambda x:(-x[1],x[0]))
 
-        # We traverse the list of entries from the newest to the oldest
-        # and once we hit the limit of what we can keep, we stop and
-        # trim what is above the limit
-        sizetokeep = 0
-        startindextodiscard = 0
-        for i, entry in enumerate(entriesbyage):
-            if sizetokeep + entry[2] > limit.bytes():
-                startindextodiscard = i
+        for entry in reversed(list(self.ondiskcache)):
+            self.debug("[FM] removing cached manifest fast%s\n" % entry)
+            del self.ondiskcache[entry]
+            if self.ondiskcache.totalsize()[0] < limit.bytes():
                 break
-            sizetokeep += entry[2]
-
-        for entry in reversed(entriesbyage[startindextodiscard:]):
-            self.pruneentrybyfname(entry[0])
-
-    def pruneentrybyfname(self, fname):
-        self.debug("[FM] removing cached manifest %s\n" % fname)
-        try:
-            os.unlink(os.path.join(self.cachepath, fname))
-        except EnvironmentError:
-            pass
-
-    def pruneentry(self, hexnode):
-        self.pruneentrybyfname(self.filecachepath(hexnode))
 
     def pruneall(self):
-        for f in reversed(self.items()):
-            self.pruneentrybyfname(f)
+        for entry in reversed(list(self.ondiskcache)):
+            self.debug("[FM] removing cached manifest fast%s\n" % entry)
+            del self.ondiskcache[entry]
 
 class manifestfactory(object):
     def __init__(self, ui):
@@ -640,12 +626,12 @@ class manifestfactory(object):
         fastcache = fastmanifestcache.getinstance(origself.opener, self.ui)
 
         p1hexnode = revlog.hex(p1)
-        if (fastcache.containsnode(p1hexnode) and
+        if (p1hexnode in fastcache and
             isinstance(m, hybridmanifest) and
             m._incache()):
             # yay, we can satisfy this from the fastmanifest.
 
-            p1manifest = fastcache.get(p1hexnode)
+            p1manifest = fastcache[p1hexnode]
 
             manifest._checkforbidden(added)
             # combine the changed lists into one sorted iterator

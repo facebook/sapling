@@ -15,7 +15,7 @@ from mercurial import extensions, revlog, scmutil, util, error
 import concurrency
 import constants
 from metrics import metricscollector
-from implementation import fastmanifestcache
+from implementation import fastmanifestcache, CacheFullException
 
 def _relevantremonamesrevs(repo):
     revs = set()
@@ -48,7 +48,8 @@ def fastmanifestcached(repo, subset, x):
     # 3) From this minimum, we inspect all the more recent and visible changelog
     # revisions and keep track of the one whose manifest is cached.
     cache = fastmanifestcache.getinstance(repo.store.opener, repo.ui)
-    manifestsbinnodes = set([revlog.bin(u.replace("fast","")) for u in cache])
+    manifestsbinnodes = set([revlog.bin(u.replace("fast",""))
+                            for u in cache.ondiskcache])
     manifestslinkrevs = [repo.manifest.linkrev(repo.manifest.rev(k))
                          for k in manifestsbinnodes]
     cachedrevs = set()
@@ -91,7 +92,7 @@ MB = 1024**2
 
 class _systemawarecachelimit(object):
     """A limit that will be tighter as the free disk space reduces"""
-    def parseconfig(self, repo):
+    def parseconfig(self, ui):
         configkeys = set([
             'lowgrowthslope',
             'lowgrowththresholdgb',
@@ -100,7 +101,7 @@ class _systemawarecachelimit(object):
         ])
         configs = {}
         for configkey in configkeys:
-            strconfig = repo.ui.config("fastmanifest", configkey)
+            strconfig = ui.config("fastmanifest", configkey)
             if strconfig is None:
                 continue
             try:
@@ -108,7 +109,7 @@ class _systemawarecachelimit(object):
             except ValueError:
                 # Keep default value and print a warning when config is invalid
                 msg = ("Invalid config for fastmanifest.%s, expected a number")
-                repo.ui.warn((msg % strconfig))
+                ui.warn((msg % strconfig))
         return configs
 
     def __init__(self, repo=None, opener=None, ui=None):
@@ -185,7 +186,7 @@ def cachemanifestpruneall(ui, repo):
 
 def cachemanifestlist(ui, repo):
     cache = fastmanifestcache.getinstance(repo.store.opener, ui)
-    total, numentries = cache.totalsize(silent=False)
+    total, numentries = cache.ondiskcache.totalsize(silent=False)
     ui.status(("cache size is: %s\n" % util.bytecount(total)))
     ui.status(("number of entries is: %s\n" % numentries))
 
@@ -200,7 +201,7 @@ def cachemanifestlist(ui, repo):
             ui.status(("Freshest cache entries appear last\n"))
             ui.status(("="*80))
             ui.status(("\nmanifest node                           |revs\n"))
-            for h in cache:
+            for h in cache.ondiskcache:
                 l = h.replace("fast","")
                 ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
 
@@ -260,16 +261,16 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         for rev in revs:
             mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
             revstomannodes[rev] = mannode
-            if cache.containsnode(mannode):
+            if mannode in cache.ondiskcache:
                 ui.debug("[FM] skipped %s, already cached (fast path)\n" %
                          (mannode,))
                 # Account for the fact that we access this manifest
-                cache.refresh(mannode)
+                cache.ondiskcache.touch(mannode)
                 continue
             manifest = repo[rev].manifest()
-            if not cache.put(mannode, manifest, limit):
-                # Insertion failed because cache is full
-                del revstomannodes[rev]
+            try:
+                cache[mannode] = manifest
+            except CacheFullException:
                 break
 
         # Make the least relevant entries have an artificially older mtime
@@ -283,7 +284,7 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
         for offset, rev in enumerate(sortedrevs):
             if rev in revstomannodes:
                 hexnode = revstomannodes[rev]
-                cache.refresh(hexnode, delay=offset * mtimemultiplier)
+                cache.ondiskcache.touch(hexnode, delay=offset * mtimemultiplier)
             else:
                 metricscollector.get(repo).recordsample("cacheoverflow",
                                                         hit=True)
@@ -295,7 +296,7 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     if limit is not None:
         cache.prune(limit)
 
-    total, numentries = cache.totalsize()
+    total, numentries = cache.ondiskcache.totalsize()
     if limit:
         if isinstance(limit, _systemawarecachelimit):
             free = limit.free / 1024**2
