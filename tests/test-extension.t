@@ -249,6 +249,191 @@ Check absolute/relative import of extension specific modules
   $TESTTMP/a (glob)
 #endif
 
+#if absimport
+
+Examine whether module loading is delayed until actual refering, even
+though module is imported with "absolute_import" feature.
+
+Files below in each packages are used for descirbed purpose:
+
+- "called": examine whether "from MODULE import ATTR" works correctly
+- "unused": examine whether loading is delayed correctly
+- "used":   examine whether "from PACKAGE import MODULE" works correctly
+
+Package hierarchy is needed to examine whether demand importing works
+as expected for "from SUB.PACK.AGE import MODULE".
+
+Setup "external library" to be imported with "absolute_import"
+feature.
+
+  $ mkdir -p $TESTTMP/extlibroot/lsub1/lsub2
+  $ touch $TESTTMP/extlibroot/__init__.py
+  $ touch $TESTTMP/extlibroot/lsub1/__init__.py
+  $ touch $TESTTMP/extlibroot/lsub1/lsub2/__init__.py
+
+  $ cat > $TESTTMP/extlibroot/lsub1/lsub2/called.py <<EOF
+  > def func():
+  >     return "this is extlibroot.lsub1.lsub2.called.func()"
+  > EOF
+  $ cat > $TESTTMP/extlibroot/lsub1/lsub2/unused.py <<EOF
+  > raise Exception("extlibroot.lsub1.lsub2.unused is loaded unintentionally")
+  > EOF
+  $ cat > $TESTTMP/extlibroot/lsub1/lsub2/used.py <<EOF
+  > detail = "this is extlibroot.lsub1.lsub2.used"
+  > EOF
+
+Setup sub-package of "external library", which causes instantiation of
+demandmod in "recurse down the module chain" code path. Relative
+importing with "absolute_import" feature isn't tested, because "level
+>=1 " doesn't cause instantiation of demandmod.
+
+  $ mkdir -p $TESTTMP/extlibroot/recursedown/abs
+  $ cat > $TESTTMP/extlibroot/recursedown/abs/used.py <<EOF
+  > detail = "this is extlibroot.recursedown.abs.used"
+  > EOF
+  $ cat > $TESTTMP/extlibroot/recursedown/abs/__init__.py <<EOF
+  > from __future__ import absolute_import
+  > from extlibroot.recursedown.abs.used import detail
+  > EOF
+
+  $ mkdir -p $TESTTMP/extlibroot/recursedown/legacy
+  $ cat > $TESTTMP/extlibroot/recursedown/legacy/used.py <<EOF
+  > detail = "this is extlibroot.recursedown.legacy.used"
+  > EOF
+  $ cat > $TESTTMP/extlibroot/recursedown/legacy/__init__.py <<EOF
+  > # legacy style (level == -1) import
+  > from extlibroot.recursedown.legacy.used import detail
+  > EOF
+
+  $ cat > $TESTTMP/extlibroot/recursedown/__init__.py <<EOF
+  > from __future__ import absolute_import
+  > from extlibroot.recursedown.abs import detail as absdetail
+  > from .legacy import detail as legacydetail
+  > EOF
+
+Setup extension local modules to be imported with "absolute_import"
+feature.
+
+  $ mkdir -p $TESTTMP/absextroot/xsub1/xsub2
+  $ touch $TESTTMP/absextroot/xsub1/__init__.py
+  $ touch $TESTTMP/absextroot/xsub1/xsub2/__init__.py
+
+  $ cat > $TESTTMP/absextroot/xsub1/xsub2/called.py <<EOF
+  > def func():
+  >     return "this is absextroot.xsub1.xsub2.called.func()"
+  > EOF
+  $ cat > $TESTTMP/absextroot/xsub1/xsub2/unused.py <<EOF
+  > raise Exception("absextroot.xsub1.xsub2.unused is loaded unintentionally")
+  > EOF
+  $ cat > $TESTTMP/absextroot/xsub1/xsub2/used.py <<EOF
+  > detail = "this is absextroot.xsub1.xsub2.used"
+  > EOF
+
+Setup extension local modules to examine whether demand importing
+works as expected in "level > 1" case.
+
+  $ cat > $TESTTMP/absextroot/relimportee.py <<EOF
+  > detail = "this is absextroot.relimportee"
+  > EOF
+  $ cat > $TESTTMP/absextroot/xsub1/xsub2/relimporter.py <<EOF
+  > from __future__ import absolute_import
+  > from ... import relimportee
+  > detail = "this relimporter imports %r" % (relimportee.detail)
+  > EOF
+
+Setup modules, which actually import extension local modules at
+runtime.
+
+  $ cat > $TESTTMP/absextroot/absolute.py << EOF
+  > from __future__ import absolute_import
+  > 
+  > # import extension local modules absolutely (level = 0)
+  > from absextroot.xsub1.xsub2 import used, unused
+  > from absextroot.xsub1.xsub2.called import func
+  > 
+  > def getresult():
+  >     result = []
+  >     result.append(used.detail)
+  >     result.append(func())
+  >     return result
+  > EOF
+
+  $ cat > $TESTTMP/absextroot/relative.py << EOF
+  > from __future__ import absolute_import
+  > 
+  > # import extension local modules relatively (level == 1)
+  > from .xsub1.xsub2 import used, unused
+  > from .xsub1.xsub2.called import func
+  > 
+  > # import a module, which implies "importing with level > 1"
+  > from .xsub1.xsub2 import relimporter
+  > 
+  > def getresult():
+  >     result = []
+  >     result.append(used.detail)
+  >     result.append(func())
+  >     result.append(relimporter.detail)
+  >     return result
+  > EOF
+
+Setup main procedure of extension.
+
+  $ cat > $TESTTMP/absextroot/__init__.py <<EOF
+  > from __future__ import absolute_import
+  > from mercurial import cmdutil
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > 
+  > # "absolute" and "relative" shouldn't be imported before actual
+  > # command execution, because (1) they import same modules, and (2)
+  > # preceding import (= instantiate "demandmod" object instead of
+  > # real "module" object) might hide problem of succeeding import.
+  > 
+  > @command('showabsolute', [], norepo=True)
+  > def showabsolute(ui, *args, **opts):
+  >     from absextroot import absolute
+  >     ui.write('ABS: %s\n' % '\nABS: '.join(absolute.getresult()))
+  > 
+  > @command('showrelative', [], norepo=True)
+  > def showrelative(ui, *args, **opts):
+  >     from . import relative
+  >     ui.write('REL: %s\n' % '\nREL: '.join(relative.getresult()))
+  > 
+  > # import modules from external library
+  > from extlibroot.lsub1.lsub2 import used as lused, unused as lunused
+  > from extlibroot.lsub1.lsub2.called import func as lfunc
+  > from extlibroot.recursedown import absdetail, legacydetail
+  > 
+  > def uisetup(ui):
+  >     result = []
+  >     result.append(lused.detail)
+  >     result.append(lfunc())
+  >     result.append(absdetail)
+  >     result.append(legacydetail)
+  >     ui.write('LIB: %s\n' % '\nLIB: '.join(result))
+  > EOF
+
+Examine module importing.
+
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.absextroot=$TESTTMP/absextroot showabsolute)
+  LIB: this is extlibroot.lsub1.lsub2.used
+  LIB: this is extlibroot.lsub1.lsub2.called.func()
+  LIB: this is extlibroot.recursedown.abs.used
+  LIB: this is extlibroot.recursedown.legacy.used
+  ABS: this is absextroot.xsub1.xsub2.used
+  ABS: this is absextroot.xsub1.xsub2.called.func()
+
+  $ (PYTHONPATH=${PYTHONPATH}${PATHSEP}${TESTTMP}; hg --config extensions.absextroot=$TESTTMP/absextroot showrelative)
+  LIB: this is extlibroot.lsub1.lsub2.used
+  LIB: this is extlibroot.lsub1.lsub2.called.func()
+  LIB: this is extlibroot.recursedown.abs.used
+  LIB: this is extlibroot.recursedown.legacy.used
+  REL: this is absextroot.xsub1.xsub2.used
+  REL: this is absextroot.xsub1.xsub2.called.func()
+  REL: this relimporter imports 'this is absextroot.relimportee'
+
+#endif
+
   $ cd ..
 
 hide outer repo

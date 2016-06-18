@@ -188,15 +188,23 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
             if globalname and isinstance(symbol, _demandmod):
                 symbol._addref(globalname)
 
-        if level >= 0:
-            # The "from a import b,c,d" or "from .a import b,c,d"
-            # syntax gives errors with some modules for unknown
-            # reasons. Work around the problem.
-            if name:
-                return _hgextimport(_origimport, name, globals, locals,
-                                    fromlist, level)
+        def chainmodules(rootmod, modname):
+            # recurse down the module chain, and return the leaf module
+            mod = rootmod
+            for comp in modname.split('.')[1:]:
+                if getattr(mod, comp, nothing) is nothing:
+                    setattr(mod, comp,
+                            _demandmod(comp, mod.__dict__, mod.__dict__))
+                mod = getattr(mod, comp)
+            return mod
 
-            if _pypy:
+        if level >= 0:
+            if name:
+                # "from a import b" or "from .a import b" style
+                rootmod = _hgextimport(_origimport, name, globals, locals,
+                                       level=level)
+                mod = chainmodules(rootmod, name)
+            elif _pypy:
                 # PyPy's __import__ throws an exception if invoked
                 # with an empty name and no fromlist.  Recreate the
                 # desired behaviour by hand.
@@ -220,12 +228,7 @@ def _demandimport(name, globals=None, locals=None, fromlist=None, level=level):
         # But, we still need to support lazy loading of standard library and 3rd
         # party modules. So handle level == -1.
         mod = _hgextimport(_origimport, name, globals, locals)
-        # recurse down the module chain
-        for comp in name.split('.')[1:]:
-            if getattr(mod, comp, nothing) is nothing:
-                setattr(mod, comp,
-                        _demandmod(comp, mod.__dict__, mod.__dict__))
-            mod = getattr(mod, comp)
+        mod = chainmodules(mod, name)
 
         for x in fromlist:
             processfromitem(mod, x)
