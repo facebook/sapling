@@ -141,8 +141,8 @@ def fromlocalfunc(modulename, localmods):
     if prefix:
         prefix += '.'
     def fromlocal(name, level=0):
-        # name is None when relative imports are used.
-        if name is None:
+        # name is false value when relative imports are used.
+        if not name:
             # If relative imports are used, level must not be absolute.
             assert level > 0
             candidates = ['.'.join(modulename.split('.')[:-level])]
