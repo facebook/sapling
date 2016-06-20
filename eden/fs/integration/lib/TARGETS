@@ -1,0 +1,8 @@
+python_library(
+  name = 'lib',
+  srcs = glob(['*.py']),
+  deps = [
+    '@/eden/fs/service:py-client',
+    '@/eden/fs/service:thrift-py',
+  ],
+)

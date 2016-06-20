@@ -192,6 +192,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   // We have to return something here, since the compiler can't figure out
   // that we always return inside SYNCHRONIZED.
   LOG(FATAL) << "unreached";
+  abort();
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(

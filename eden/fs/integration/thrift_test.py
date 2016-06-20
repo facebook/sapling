@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016, Facebook, Inc.
 # All rights reserved.
 #
@@ -5,14 +7,10 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+import hashlib
 
 from facebook.eden.ttypes import EdenError
-from eden.fs.integration import testcase
-import hashlib
+from .lib import testcase
 
 
 class ThriftTest(testcase.EdenTestCase):
@@ -32,11 +30,11 @@ class ThriftTest(testcase.EdenTestCase):
         eden = self.init_git_eden()
         client = eden.get_thrift_client()
 
-        expected_sha1_for_hello = hashlib.sha1('hola\n').digest()
+        expected_sha1_for_hello = hashlib.sha1(b'hola\n').digest()
         self.assertEqual(expected_sha1_for_hello,
                          client.getSHA1(eden.mount_path, 'hello'))
 
-        expected_sha1_for_adir_file = hashlib.sha1('foo!\n').digest()
+        expected_sha1_for_adir_file = hashlib.sha1(b'foo!\n').digest()
         self.assertEqual(expected_sha1_for_adir_file,
                          client.getSHA1(eden.mount_path, 'adir/file'))
 

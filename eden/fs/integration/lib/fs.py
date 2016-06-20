@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016, Facebook, Inc.
 # All rights reserved.
 #
@@ -5,17 +7,14 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 import subprocess
 
+
 def getxattr(abspath, attr):
     if is_linux():
-        stdout = subprocess.check_output(['getfattr', '-n', attr, abspath])
+        raw_stdout = subprocess.check_output(['getfattr', '-n', attr, abspath])
+        stdout = raw_stdout.decode('utf-8', errors='surrogateescape')
         lines = stdout.split('\n')
         if len(lines) < 1:
             return None
@@ -32,7 +31,8 @@ def getxattr(abspath, attr):
 
 def listxattr(abspath):
     if is_linux():
-        stdout = subprocess.check_output(['getfattr', '-d', abspath])
+        raw_stdout = subprocess.check_output(['getfattr', '-d', abspath])
+        stdout = raw_stdout.decode('utf-8', errors='surrogateescape')
         lines = stdout.split('\n')
         if not lines:
             return {}

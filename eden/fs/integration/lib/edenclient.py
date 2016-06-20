@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Copyright (c) 2016, Facebook, Inc.
 # All rights reserved.
 #
@@ -5,22 +7,40 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from libfb.parutil import get_file_path
 import errno
 from eden.thrift import create_thrift_client
 import os
 import shutil
 import socket
 import subprocess
+import sys
 import time
 
-# gen_srcs in the TARGETS file populates this with the eden cli binary
-EDEN_CLI = get_file_path('eden/fs/integration/eden-cli')
-EDEN_DAEMON = get_file_path('eden/fs/integration/daemon')
+
+def _find_executables():
+    '''Find the eden CLI and edenfs daemon relative to the unit test binary.'''
+    test_binary = os.path.abspath(sys.argv[0])
+    edenfs_dir = os.path.dirname(os.path.dirname(test_binary))
+    cli = os.path.join(edenfs_dir, 'cli', 'cli.par')
+    # The EDENFS_SUFFIX will be set to indicate if we should test with a
+    # particular variant of the edenfs daemon
+    suffix = os.environ.get('EDENFS_SUFFIX', '')
+    edenfs = os.path.join(edenfs_dir, 'service', 'edenfs' + suffix)
+
+    if not os.access(cli, os.X_OK):
+        msg = 'unable to find eden CLI for integration testing: {!r}'.format(
+            cli)
+        raise Exception(msg)
+
+    if not os.access(edenfs, os.X_OK):
+        msg = 'unable to find eden daemon for integration testing: {!r}'.format(
+            edenfs)
+        raise Exception(msg)
+
+    return cli, edenfs
+
+
+EDEN_CLI, EDEN_DAEMON = _find_executables()
 
 
 class EdenClient(object):
