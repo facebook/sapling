@@ -11,7 +11,6 @@ from __future__ import (absolute_import, division,
 import argparse
 from eden.thrift import EdenNotRunningError
 import errno
-import glue
 import json
 import os
 import subprocess
@@ -97,6 +96,12 @@ def _get_git_dir(path):
     return None
 
 
+def _get_git_commit(git_dir):
+    cmd = ['git', '--git-dir', git_dir, 'rev-parse', 'HEAD']
+    out = subprocess.check_output(cmd)
+    return out.strip()
+
+
 def _get_hg_repo(path):
     '''
     If path points to a mercurial repository, return a normalized path to the
@@ -149,13 +154,12 @@ def do_init(args):
     args.repo = normalize_path_arg(args.repo)
 
     config = create_config(args)
-    db = _ensure_dot_eden_folder_exists(config)
 
     # Check to see if we can figure out the repository type
     snapshot_id = None
     git_dir = _get_git_dir(args.repo)
     if git_dir is not None:
-        snapshot_id = glue.do_git_import(git_dir, db)
+        snapshot_id = _get_git_commit(git_dir)
         config.create_client(args.name, args.mount, snapshot_id,
                              repo_type='git',
                              repo_source=git_dir,

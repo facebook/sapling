@@ -7,4 +7,7 @@ cpp_library(
     '@/eden/fs/store:store',
     '@/folly:folly',
   ],
+  external_deps = [
+    ('libgit2', None, 'git2'),
+  ],
 )

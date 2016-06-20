@@ -111,15 +111,24 @@ class EdenServer {
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(EdenMount* mountPoint);
 
+  /*
+   * Member variables.
+   *
+   * Note that the declaration order below is important for initialization
+   * and cleanup order.  lockFile_ is near the top so it will be released last.
+   * mountPoints_ are near the bottom, so they get destroyed before the
+   * backingStores_ and localStore_.
+   */
+
   std::string edenDir_;
   std::string rocksPath_;
+  folly::File lockFile_;
   std::shared_ptr<EdenServiceHandler> handler_;
   std::shared_ptr<apache::thrift::ThriftServer> server_;
-  folly::File lockFile_;
 
   std::shared_ptr<LocalStore> localStore_;
-  folly::Synchronized<MountMap> mountPoints_;
   folly::Synchronized<BackingStoreMap> backingStores_;
+  folly::Synchronized<MountMap> mountPoints_;
 };
 }
 } // facebook::eden

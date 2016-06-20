@@ -72,5 +72,8 @@ class Hash : boost::totally_ordered<Hash> {
  * This makes it possible to easily use Hash in glog statements.
  */
 std::ostream& operator<<(std::ostream& os, const Hash& hash);
+
+/* Define toAppend() so folly::to<string>(Hash) will work */
+void toAppend(const Hash& hash, std::string* result);
 }
 }

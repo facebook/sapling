@@ -13,9 +13,13 @@
 
 #include <folly/Range.h>
 
+struct git_oid;
+struct git_repository;
+
 namespace facebook {
 namespace eden {
 
+class Hash;
 class LocalStore;
 
 /**
@@ -33,6 +37,13 @@ class GitBackingStore : public BackingStore {
   GitBackingStore(folly::StringPiece repository, LocalStore* localStore);
   virtual ~GitBackingStore();
 
+  /**
+   * Get the repository path.
+   *
+   * This returns the path to the .git directory itself.
+   */
+  const char* getPath() const;
+
   std::unique_ptr<Tree> getTree(const Hash& id) override;
   std::unique_ptr<Blob> getBlob(const Hash& id) override;
   std::unique_ptr<Tree> getTreeForCommit(const Hash& commitID) override;
@@ -41,7 +52,11 @@ class GitBackingStore : public BackingStore {
   GitBackingStore(GitBackingStore const&) = delete;
   GitBackingStore& operator=(GitBackingStore const&) = delete;
 
+  static git_oid hash2Oid(const Hash& hash);
+  static Hash oid2Hash(const git_oid* oid);
+
   LocalStore* localStore_{nullptr};
+  git_repository* repo_{nullptr};
 };
 }
 }

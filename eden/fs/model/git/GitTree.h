@@ -55,7 +55,7 @@ class GitTreeSerializer {
    * It is the callers responsibility to ensure that addEntry() is called in
    * the proper order.
    */
-  void addEntry(TreeEntry&& entry);
+  void addEntry(const TreeEntry& entry);
 
   /**
    * Finish serializing the tree, once all entries have been added.

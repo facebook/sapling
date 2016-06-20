@@ -160,7 +160,7 @@ GitTreeSerializer& GitTreeSerializer::operator=(
 
 GitTreeSerializer::~GitTreeSerializer() {}
 
-void GitTreeSerializer::addEntry(TreeEntry&& entry) {
+void GitTreeSerializer::addEntry(const TreeEntry& entry) {
   // Note: We don't do any sorting of the entries.  We simply serialize them in
   // the order given to us by the caller.  It is up to the caller to ensure
   // that the entries are sorted in the correct order.  (The sorting order does

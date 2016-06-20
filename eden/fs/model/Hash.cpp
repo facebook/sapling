@@ -9,6 +9,7 @@
  */
 #include "Hash.h"
 
+#include <folly/Conv.h>
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/io/Cursor.h>
@@ -109,6 +110,10 @@ Hash Hash::sha1(ByteRange data) {
 std::ostream& operator<<(std::ostream& os, const Hash& hash) {
   os << hash.toString();
   return os;
+}
+
+void toAppend(const Hash& hash, std::string* result) {
+  folly::toAppend(hash.toString(), result);
 }
 }
 }
