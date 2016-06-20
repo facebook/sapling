@@ -9,6 +9,10 @@
   > rename.default=remote
   > EOF
 
+We want to import extutil from the repo and not the system one
+  $ PYTHONPATH=$extpath:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ hg init remote
   $ cd remote
   $ touch a

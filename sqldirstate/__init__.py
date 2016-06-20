@@ -13,6 +13,8 @@ from mercurial import commands, error, extensions, cmdutil, localrepo, util
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 
+from extutil import getfilecache
+
 def issqldirstate(repo):
     return util.safehasattr(repo, 'requirements') and \
         'sqldirstate' in repo.requirements
@@ -108,7 +110,7 @@ def uisetup(ui):
                  wrapnewreporequirements)
     wrapfunction(localrepo.localrepository, '_journalfiles',
                  wrapjournalfiles)
-    fcdescr = localrepo.localrepository.dirstate
+    fcdescr = getfilecache(localrepo.localrepository, 'dirstate')
     wrapfunction(fcdescr, 'func', wrapdirstate)
     fcdescr.paths = ()
 
