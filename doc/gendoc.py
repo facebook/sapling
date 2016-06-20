@@ -117,11 +117,11 @@ def showdoc(ui):
     ui.write(_("This section contains help for extensions that are "
                "distributed together with Mercurial. Help for other "
                "extensions is available in the help system."))
-    ui.write("\n\n"
+    ui.write(("\n\n"
              ".. contents::\n"
              "   :class: htmlonly\n"
              "   :local:\n"
-             "   :depth: 1\n\n")
+             "   :depth: 1\n\n"))
 
     for extensionname in sorted(allextensionnames()):
         mod = extensions.load(ui, extensionname, None)

@@ -81,13 +81,13 @@ def difftree(ui, repo, node1=None, node2=None, *files, **opts):
 
         for f in modified:
             # TODO get file permissions
-            ui.write(":100664 100664 %s %s M\t%s\t%s\n" %
+            ui.write((":100664 100664 %s %s M\t%s\t%s\n") %
                      (short(mmap[f]), short(mmap2[f]), f, f))
         for f in added:
-            ui.write(":000000 100664 %s %s N\t%s\t%s\n" %
+            ui.write((":000000 100664 %s %s N\t%s\t%s\n") %
                      (empty, short(mmap2[f]), f, f))
         for f in removed:
-            ui.write(":100664 000000 %s %s D\t%s\t%s\n" %
+            ui.write((":100664 000000 %s %s D\t%s\t%s\n") %
                      (short(mmap[f]), empty, f, f))
     ##
 

@@ -262,6 +262,20 @@ web templates
   >        'bar foo-'
   >        'bar')
   > EOF
+
+'missing _() in ui message' detection
+
+  $ cat > uigettext.py <<EOF
+  > ui.status("% 10s %05d % -3.2f %*s %%"
+  >           # this use '\\\\' instead of '\\', because the latter in
+  >           # heredoc on shell becomes just '\'
+  >           '\\\\ \n \t \0'
+  >           """12345
+  >           """
+  >           '''.:*+-=
+  >           ''' "%-6d \n 123456 .:*+-= foobar")
+  > EOF
+
   $ "$check_code" stringjoin.py
   stringjoin.py:1:
    > foo = (' foo'
@@ -287,4 +301,10 @@ web templates
   stringjoin.py:8:
    >        'bar foo-'
    string join across lines with no space
+  [1]
+
+  $ "$check_code" uigettext.py
+  uigettext.py:1:
+   > ui.status("% 10s %05d % -3.2f %*s %%"
+   missing _() in ui message (use () to hide false-positives)
   [1]

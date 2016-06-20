@@ -2095,7 +2095,7 @@ def debugbundle(ui, bundlepath, all=None, spec=None, **opts):
 def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
     indent_string = ' ' * indent
     if all:
-        ui.write("%sformat: id, p1, p2, cset, delta base, len(delta)\n"
+        ui.write(("%sformat: id, p1, p2, cset, delta base, len(delta)\n")
                  % indent_string)
 
         def showchunks(named):
@@ -2562,12 +2562,12 @@ def debugindex(ui, repo, file_=None, **opts):
         break
 
     if format == 0:
-        ui.write("   rev    offset  length " + basehdr + " linkrev"
-                 " %s %s p2\n" % ("nodeid".ljust(idlen), "p1".ljust(idlen)))
+        ui.write(("   rev    offset  length " + basehdr + " linkrev"
+                 " %s %s p2\n") % ("nodeid".ljust(idlen), "p1".ljust(idlen)))
     elif format == 1:
-        ui.write("   rev flag   offset   length"
+        ui.write(("   rev flag   offset   length"
                  "     size " + basehdr + "   link     p1     p2"
-                 " %s\n" % "nodeid".rjust(idlen))
+                 " %s\n") % "nodeid".rjust(idlen))
 
     for i in r:
         node = r.node(i)
@@ -3030,13 +3030,13 @@ def debuglocks(ui, repo, **opts):
                     else:
                         locker = 'user %s, process %s, host %s' \
                                  % (user, pid, host)
-                ui.write("%-6s %s (%ds)\n" % (name + ":", locker, age))
+                ui.write(("%-6s %s (%ds)\n") % (name + ":", locker, age))
                 return 1
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
-        ui.write("%-6s free\n" % (name + ":"))
+        ui.write(("%-6s free\n") % (name + ":"))
         return 0
 
     held += report(repo.svfs, "lock", repo.lock)
@@ -3329,8 +3329,8 @@ def debugrevlog(ui, repo, file_=None, **opts):
 
     if opts.get("dump"):
         numrevs = len(r)
-        ui.write("# rev p1rev p2rev start   end deltastart base   p1   p2"
-                 " rawsize totalsize compression heads chainlen\n")
+        ui.write(("# rev p1rev p2rev start   end deltastart base   p1   p2"
+                 " rawsize totalsize compression heads chainlen\n"))
         ts = 0
         heads = set()
 
@@ -3519,18 +3519,19 @@ def debugrevspec(ui, repo, expr, **opts):
         ui.note(revset.prettyformat(tree), "\n")
         newtree = revset.expandaliases(ui, tree)
         if newtree != tree:
-            ui.note("* expanded:\n", revset.prettyformat(newtree), "\n")
+            ui.note(("* expanded:\n"), revset.prettyformat(newtree), "\n")
         tree = newtree
         newtree = revset.foldconcat(tree)
         if newtree != tree:
-            ui.note("* concatenated:\n", revset.prettyformat(newtree), "\n")
+            ui.note(("* concatenated:\n"), revset.prettyformat(newtree), "\n")
         if opts["optimize"]:
             optimizedtree = revset.optimize(newtree)
-            ui.note("* optimized:\n", revset.prettyformat(optimizedtree), "\n")
+            ui.note(("* optimized:\n"),
+                    revset.prettyformat(optimizedtree), "\n")
     func = revset.match(ui, expr, repo)
     revs = func(repo)
     if ui.verbose:
-        ui.note("* set:\n", revset.prettyformatset(revs), "\n")
+        ui.note(("* set:\n"), revset.prettyformatset(revs), "\n")
     for c in revs:
         ui.write("%s\n" % c)
 
@@ -3685,7 +3686,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
         ui.note(templater.prettyformat(tree), '\n')
         newtree = templater.expandaliases(tree, aliases)
         if newtree != tree:
-            ui.note("* expanded:\n", templater.prettyformat(newtree), '\n')
+            ui.note(("* expanded:\n"), templater.prettyformat(newtree), '\n')
 
     mapfile = None
     if revs is None:

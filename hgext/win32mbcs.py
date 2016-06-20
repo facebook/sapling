@@ -192,5 +192,5 @@ def extsetup(ui):
         # command line options is not yet applied when
         # extensions.loadall() is called.
         if '--debug' in sys.argv:
-            ui.write("[win32mbcs] activated with encoding: %s\n"
+            ui.write(("[win32mbcs] activated with encoding: %s\n")
                      % _encoding)

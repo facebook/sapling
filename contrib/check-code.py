@@ -329,7 +329,20 @@ pypats = [
     # rules depending on implementation of repquote()
     (r' x+[xpqo%APM][\'"]\n\s+[\'"]x',
      'string join across lines with no space'),
-    (r'ui\.(status|progress|write|note|warn)\([\'\"]x',
+    (r'''(?x)ui\.(status|progress|write|note|warn)\(
+         [ \t\n#]*
+         (?# any strings/comments might precede a string, which
+           # contains translatable message)
+         ((['"]|\'\'\'|""")[ \npq%bAPMxno]*(['"]|\'\'\'|""")[ \t\n#]+)*
+         (?# sequence consisting of below might precede translatable message
+           # - formatting string: "% 10s", "%05d", "% -3.2f", "%*s", "%%" ...
+           # - escaped character: "\\", "\n", "\0" ...
+           # - character other than '%', 'b' as '\', and 'x' as alphabet)
+         (['"]|\'\'\'|""")
+         ((%([ n]?[PM]?([np]+|A))?x)|%%|b[bnx]|[ \nnpqAPMo])*x
+         (?# this regexp can't use [^...] style,
+           # because _preparepats forcibly adds "\n" into [^...],
+           # even though this regexp wants match it against "\n")''',
      "missing _() in ui message (use () to hide false-positives)"),
   ],
   # warnings
