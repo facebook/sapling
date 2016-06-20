@@ -8,3 +8,4 @@ New errors are not allowed. Warnings are strongly discouraged.
   $ EXTRAS=`python -c 'import lz4revlog' 2> /dev/null && echo "--config extensions.lz4revlog="`
   $ hg $EXTRAS locate | sed 's-\\-/-g' |
   >   xargs "$check_code" --warnings --per-file=0 || false
+  Skipping tests/test-bad-configs.t it has no-che?k-code (glob)
