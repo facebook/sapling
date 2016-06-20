@@ -1,3 +1,4 @@
+no-check-code
   $ . "$TESTDIR/library.sh"
 
   $ hginit master
@@ -16,6 +17,15 @@
   $ hgcloneshallow ssh://user@dummy/master shallow -q
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob)
   $ cd shallow
+
+Verify error message when no cachepath specified
+  $ hg up -q null
+  $ cp $HGRCPATH $HGRCPATH.bak
+  $ sed -i.bak -n "/cachepath/!p" $HGRCPATH
+  $ hg up tip
+  abort: could not find config option remotefilelog.cachepath
+  [255]
+  $ mv $HGRCPATH.bak $HGRCPATH
 
 Verify error message when no fallback specified
 

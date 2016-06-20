@@ -6,7 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import errno, hashlib, os, platform, stat, struct, subprocess, sys, tempfile
-from mercurial import filelog, util
+from mercurial import filelog, util, error
 from mercurial.i18n import _
 
 if os.name != 'nt':
