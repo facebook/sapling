@@ -12,6 +12,8 @@ to queue hook arguments on the bundle2 operation object.
 '''
 
 from mercurial import bundle2
+from mercurial import error
+from mercurial.i18n import _
 
 from extutil import replaceclass
 
@@ -23,8 +25,8 @@ def reposetup(ui, repo):
                 transaction = transactiongetter()
 
                 if self.hookargs is not None:
-                    # the ones added to the transaction supercede those added to
-                    # the operation.
+                    # the ones added to the transaction supercede those added
+                    # to the operation.
                     self.hookargs.update(transaction.hookargs)
                     transaction.hookargs = self.hookargs
 
@@ -41,6 +43,7 @@ def reposetup(ui, repo):
 
         def addhookargs(self, hookargs):
             if self.hookargs is None:
-                raise error.Abort(_('attempted to add hooks to operation after '
-                                    'transaction started'))
+                raise error.Abort(
+                    _('attempted to add hooks to operation after transaction '
+                      'started'))
             self.hookargs.update(hookargs)
