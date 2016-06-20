@@ -235,9 +235,8 @@ std::string findImportHelperPath() {
       programDir / boost::filesystem::path("hg_import_helper.py"),
       // Check relative to the edenfs binary, if we are being run directly
       // from the buck-out directory in a source code repository.
-      programDir /
-          boost::filesystem::path(
-              "../../../../../eden/fs/importer/hg/hg_import_helper.py"));
+      programDir / boost::filesystem::path(
+                       "../../../../../eden/fs/store/hg/hg_import_helper.py"));
 
   for (const auto& path : toCheck) {
     VLOG(5) << "checking for hg_import_helper at \"" << path.native() << "\"";

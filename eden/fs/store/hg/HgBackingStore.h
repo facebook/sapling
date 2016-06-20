@@ -9,8 +9,8 @@
  */
 #pragma once
 
-#include "eden/fs/importer/hg/HgImporter.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/hg/HgImporter.h"
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
@@ -44,6 +44,9 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
+  // TODO: In the future we may want to maintain a pool of HgImporter objects,
+  // rather than just a single one, so we can perform multiple imports in
+  // parallel.
   folly::Synchronized<HgImporter> importer_;
   LocalStore* localStore_{nullptr};
 };

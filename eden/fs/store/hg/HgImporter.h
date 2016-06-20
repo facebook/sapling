@@ -28,12 +28,22 @@ class Hash;
 class HgManifestImporter;
 class LocalStore;
 
-/*
- * HgImporter is the main class for all mercurial import functionality.
+/**
+ * HgImporter provides an API for extracting data out of a mercurial
+ * repository.
+ *
+ * Mercurial itself is in python, so some of the import logic runs as python
+ * code.  HgImporter hides all of the interaction with the underlying python
+ * code.
+ *
+ * HgImporter is not thread safe.  The external caller must provide their own
+ * locking around each HgImporter object.  However, to achieve parallelism
+ * multiple HgImporter objects can be created for the same repository and used
+ * simultaneously.
  */
 class HgImporter {
  public:
-  /*
+  /**
    * Create a new HgImporter object that will import data from the specified
    * repository into the given LocalStore.
    *
