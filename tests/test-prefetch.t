@@ -21,7 +21,7 @@
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
   streaming all changes
   2 files to transfer, 528 bytes of data
-  transferred 528 bytes in 0.0 seconds (*/sec) (glob)
+  transferred 528 bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
   $ cd shallow
@@ -135,7 +135,7 @@
   $ hgcloneshallow ssh://user@dummy/master shallow2
   streaming all changes
   2 files to transfer, 528 bytes of data
-  transferred 528 bytes in 0.0 seconds * (glob)
+  transferred 528 bytes in * seconds * (glob)
   searching for changes
   no changes found
   updating to branch default
@@ -178,7 +178,7 @@
   $ hgcloneshallow ssh://user@dummy/master packprefetch
   streaming all changes
   2 files to transfer, 528 bytes of data
-  transferred 528 bytes in 0.0 seconds (*/sec) (glob)
+  transferred 528 bytes in * seconds (*/sec) (glob)
   searching for changes
   no changes found
   updating to branch default
