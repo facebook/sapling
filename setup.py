@@ -39,6 +39,7 @@ setup(
         'manifestdiskcache',
         'mergedriver',
         'morestatus',
+        'patchpython',
         'perftweaks',
         'phabdiff',
         'phrevset',
