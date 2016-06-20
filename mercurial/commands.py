@@ -5784,6 +5784,9 @@ def pull(ui, repo, source="default", **opts):
     If SOURCE is omitted, the 'default' path will be used.
     See :hg:`help urls` for more information.
 
+    Specifying bookmark as ``.`` is equivalent to specifying the active
+    bookmark's name.
+
     Returns 0 on success, 1 if an update had unresolved files.
     """
     source, branches = hg.parseurl(ui.expandpath(source), opts.get('branch'))
