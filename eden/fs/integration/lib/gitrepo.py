@@ -9,57 +9,91 @@
 
 import os
 import subprocess
+import tempfile
+import time
+
+from . import repobase
 
 
-def create_git_repo(repoPath):
-    '''Create a simple git repo with deterministic properties.
+class GitRepository(repobase.Repository):
+    def __init__(self, path):
+        super().__init__(path)
 
-    The structure is:
+    def git(self, *args, **kwargs):
+        '''
+        Invoke a git command inside the repository.
 
-    - hello (a regular file with content 'hola\n')
-    + adir/
-    `----- file (a regular file with content 'foo!\n')
-    - slink (a symlink that points to 'hello')
-    '''
-    subprocess.check_call(['git', 'init'], cwd=repoPath)
+        All non-keyword arguments are treated as arguments to git.
 
-    hello_file = os.path.join(repoPath, 'hello')
-    with open(hello_file, 'w') as f:
-        f.write('hola\n')
+        A keyword argument of "env" can be used to specify a dictionary of
+        additional environment variables to be passed to git.  (These will be
+        added to the current environment.)
 
-    os.mkdir(os.path.join(repoPath, 'adir'))
-    other_file = os.path.join(repoPath, 'adir', 'file')
-    with open(other_file, 'w') as f:
-        f.write('foo!\n')
+        "env" is currently the only valid keyword argument.
 
-    symlink_name = os.path.join(repoPath, 'slink')
-    os.symlink('hello', symlink_name)
+        Example usage:
 
-    subprocess.check_call(
-        [
-            'git', 'add', hello_file, other_file, symlink_name
-        ],
-        cwd=repoPath
-    )
+          repo.git('commit', '-m', 'my new commit',
+                   env={'GIT_AUTHOR_NAME': 'John Doe'})
+        '''
+        cmd = ['git'] + list(args)
 
-    # Specify all arguments to `git commit` to ensure the resulting hashes
-    # are the same every time this test is run.
-    dummy_name = 'A. Person'
-    dummy_email = 'person@example.com'
-    dummy_date = '2000-01-01T00:00:00+0000'
-    git_commit_args = [
-        'git',
-        'commit',
-        '--message',
-        'Initial commit.',
-        '--date',
-        dummy_date,
-        '--author',
-        '%s <%s>' % (dummy_name, dummy_email),
-    ]
-    git_commit_env = {
-        'GIT_COMMITTER_NAME': dummy_name,
-        'GIT_COMMITTER_EMAIL': dummy_email,
-        'GIT_COMMITTER_DATE': dummy_date,
-    }
-    subprocess.check_call(git_commit_args, env=git_commit_env, cwd=repoPath)
+        env = os.environ.copy()
+        env_args = kwargs.pop('env', None)
+        if env_args is not None:
+            env.update(env_args)
+
+        if kwargs:
+            raise Exception('unexpected keyword argumnts to git(): %r' %
+                            list(kwargs.keys))
+
+        subprocess.check_call(cmd, cwd=self.path, env=env)
+
+    def init(self):
+        self.git('init')
+
+    def add_file(self, path):
+        self.git('add', path)
+
+    def commit(self,
+               message,
+               author_name=None,
+               author_email=None,
+               date=None,
+               committer_name=None,
+               committer_email=None,
+               committer_date=None):
+        if author_name is None:
+            author_name = self.author_name
+        if author_email is None:
+            author_email = self.author_email
+        if date is None:
+            date = self.get_commit_time()
+            date_str = time.strftime('%Y-%m-%dT%H:%M:%S%z',
+                                     date.utctimetuple())
+        if committer_name is None:
+            committer_name = author_name
+        if committer_email is None:
+            committer_email = author_email
+        if committer_date is None:
+            committer_date = date
+            committer_date_str = time.strftime('%Y-%m-%dT%H:%M:%S%z',
+                                               committer_date.utctimetuple())
+
+        # Specify all arguments to `git commit` to ensure the resulting hashes
+        # are the same every time this test is run.
+        git_commit_env = {
+            'GIT_AUTHOR_NAME': author_name,
+            'GIT_AUTHOR_EMAIL': author_email,
+            'GIT_AUTHOR_DATE': date_str,
+            'GIT_COMMITTER_NAME': committer_name,
+            'GIT_COMMITTER_EMAIL': committer_email,
+            'GIT_COMMITTER_DATE': committer_date_str,
+        }
+
+        with tempfile.NamedTemporaryFile(prefix='eden_commit_msg.',
+                                         mode='w',
+                                         encoding='utf-8') as msgf:
+            msgf.write(message)
+            msgf.flush()
+            self.git('commit', '-F', msgf.name, env=git_commit_env)

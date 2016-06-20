@@ -69,16 +69,26 @@ class EdenTestCase(unittest.TestCase):
         return client_name
 
     def init_git_repo(self):
-        '''initializes a standard git repo in a temporary dir.
+        '''Create a simple git repo with deterministic properties.
 
-        The temporary dir will be automatically cleaned up.
+        The structure is:
+
+          - hello (a regular file with content 'hola\n')
+          + adir/
+          `----- file (a regular file with content 'foo!\n')
+          - slink (a symlink that points to 'hello')
 
         @return string the dir containing the repo.
         '''
-
         repo_path = self.new_tmp_dir('git')
-        gitrepo.create_git_repo(repo_path)
-        return repo_path
+        repo = gitrepo.GitRepository(repo_path)
+        repo.init()
+
+        repo.write_file('hello', 'hola\n')
+        repo.write_file('adir/file', 'foo!\n')
+        repo.symlink('slink', 'hello')
+        repo.commit('Initial commit.')
+        return repo.path
 
     def init_git_eden(self):
         '''Initializes a git repo and an eden client for it.

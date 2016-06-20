@@ -110,7 +110,7 @@ def _get_hg_repo(path):
     '''
     repo_path = os.path.realpath(path)
     hg_dir = os.path.join(repo_path, '.hg')
-    if not os.path.exists(os.path.join(hg_dir, 'hgrc')):
+    if not os.path.isdir(hg_dir):
         return None
 
     # Check to see if this is a shared working directory from another
