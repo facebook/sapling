@@ -1,5 +1,8 @@
 Init repo
 
+  $ PYTHONPATH=`dirname $TESTDIR`:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > sqldirstate=$(dirname $TESTDIR)/sqldirstate

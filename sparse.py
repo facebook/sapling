@@ -14,6 +14,7 @@ from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
+from extutil import getfilecache
 import errno, os, re, collections, hashlib
 
 cmdtable = {}
@@ -51,28 +52,6 @@ def reposetup(ui, repo):
         return
 
     _wraprepo(ui, repo)
-
-def wrapfilecache(cls, propname, wrapper):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    origcls = cls
-    assert callable(wrapper)
-    stack = [cls]
-    while stack:
-        cls = stack.pop()
-        if propname in cls.__dict__:
-            origfn = cls.__dict__[propname].func
-            assert callable(origfn)
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-            cls.__dict__[propname].func = wrap
-            return
-        # Reverse the bases, so we descend first parents first
-        stack.extend(reversed(cls.__bases__))
-
-    raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
-                         propname))
 
 def replacefilecache(cls, propname, replacement):
     """Replace a filecache property with a new class. This allows changing the
@@ -279,7 +258,8 @@ def _setupdirstate(ui):
         dirstate = orig(repo)
         dirstate.repo = repo
         return dirstate
-    wrapfilecache(localrepo.localrepository, 'dirstate', _dirstate)
+    extensions.wrapfunction(
+        getfilecache(localrepo.localrepository, 'dirstate'), 'func', _dirstate)
 
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.

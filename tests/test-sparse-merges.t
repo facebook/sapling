@@ -1,5 +1,8 @@
 test merging things outside of the sparse checkout
 
+  $ PYTHONPATH=`dirname $TESTDIR`:$PYTHONPATH
+  $ export PYTHONPATH
+
   $ hg init myrepo
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF

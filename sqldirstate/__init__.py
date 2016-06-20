@@ -13,29 +13,11 @@ from mercurial import commands, error, extensions, cmdutil, localrepo, util
 from mercurial.i18n import _
 from mercurial.extensions import wrapfunction
 
+from extutil import getfilecache
 
 def issqldirstate(repo):
     return util.safehasattr(repo, 'requirements') and \
         'sqldirstate' in repo.requirements
-
-def wrapfilecache(cls, propname, wrapper, *paths):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    assert callable(wrapper)
-    for currcls in cls.__mro__:
-        if propname in currcls.__dict__:
-            origfn = currcls.__dict__[propname].func
-            assert callable(origfn)
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-            currcls.__dict__[propname].func = wrap
-            currcls.__dict__[propname].paths = paths
-            break
-
-    if currcls is object:
-        raise AttributeError(
-            _("type '%s' has no property '%s'") % (cls, propname))
 
 def wrapjournalfiles(orig, self):
     if issqldirstate(self):
@@ -128,8 +110,10 @@ def uisetup(ui):
                  wrapnewreporequirements)
     wrapfunction(localrepo.localrepository, '_journalfiles',
                  wrapjournalfiles)
-    wrapfilecache(localrepo.localrepository, 'dirstate',
-                  wrapdirstate, 'dirstate')
+    fcdescr = getfilecache(localrepo.localrepository, 'dirstate')
+    wrapfunction(fcdescr, 'func', wrapdirstate)
+    fcdescr.paths = ()
+
     try:
         shelve = extensions.find('shelve')
         wrapfunction(shelve, '_aborttransaction', wrapshelveaborttransaction)

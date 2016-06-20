@@ -5,6 +5,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
+from mercurial.i18n import _
+
 def replaceclass(container, classname):
     '''Replace a class with another in a module, and interpose it into
     the hierarchies of all loaded subclasses. This function is
@@ -35,22 +37,21 @@ def replaceclass(container, classname):
         return cls
     return wrap
 
-def wrapfilecache(cls, propname, wrapper):
-    """Wraps a filecache property. These can't be wrapped using the normal
-    wrapfunction. This should eventually go into upstream Mercurial.
-    """
-    origcls = cls
-    assert callable(wrapper)
-    while cls is not object:
-        if propname in cls.__dict__:
-            origfn = cls.__dict__[propname].func
-            assert callable(origfn)
-            def wrap(*args, **kwargs):
-                return wrapper(origfn, *args, **kwargs)
-            cls.__dict__[propname].func = wrap
-            break
-        cls = cls.__bases__[0]
+def getfilecache(cls, name):
+    """Retrieve a filecache descriptor object from a class.
 
-    if cls is object:
-        raise AttributeError(_("type '%s' has no property '%s'") % (origcls,
-                             propname))
+    Because these are descriptors that are executed even when accessed directly
+    on the class, they can be accessed only through `cls.__dict__` , which in
+    turn requires a full scan over cls.__mro__.
+
+    This function can be dropped altogether once
+    https://patchwork.mercurial-scm.org/patch/15541/ lands upstream.
+
+    """
+    for parent in cls.__mro__:
+        fcdescr = cls.__dict__.get(name)
+        if fcdescr is not None:
+            return fcdescr
+
+    raise AttributeError(
+        _("type '%s' has no filecache descriptor '%s'") % (cls, name))
