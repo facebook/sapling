@@ -276,7 +276,11 @@ web templates
   >           ''' "%-6d \n 123456 .:*+-= foobar")
   > EOF
 
-  $ "$check_code" stringjoin.py
+(Checking multiple invalid files at once examines whether caching
+translation table for repquote() works as expected or not. All files
+should break rules depending on result of repquote(), in this case)
+
+  $ "$check_code" stringjoin.py uigettext.py
   stringjoin.py:1:
    > foo = (' foo'
    string join across lines with no space
@@ -301,9 +305,6 @@ web templates
   stringjoin.py:8:
    >        'bar foo-'
    string join across lines with no space
-  [1]
-
-  $ "$check_code" uigettext.py
   uigettext.py:1:
    > ui.status("% 10s %05d % -3.2f %*s %%"
    missing _() in ui message (use () to hide false-positives)

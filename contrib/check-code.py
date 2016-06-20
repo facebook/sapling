@@ -50,25 +50,26 @@ def compilere(pat, multiline=False):
             pass
     return re.compile(pat)
 
+# check "rules depending on implementation of repquote()" in each
+# patterns (especially pypats), before changing around repquote()
+_repquotefixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q',
+                     '%': '%', '\\': 'b', '*': 'A', '+': 'P', '-': 'M'}
+def _repquoteencodechr(i):
+    if i > 255:
+        return 'u'
+    c = chr(i)
+    if c in _repquotefixedmap:
+        return _repquotefixedmap[c]
+    if c.isalpha():
+        return 'x'
+    if c.isdigit():
+        return 'n'
+    return 'o'
+_repquotett = ''.join(_repquoteencodechr(i) for i in xrange(256))
+
 def repquote(m):
-    # check "rules depending on implementation of repquote()" in each
-    # patterns (especially pypats), before changing this function
-    fixedmap = {' ': ' ', '\n': '\n', '.': 'p', ':': 'q',
-                '%': '%', '\\': 'b', '*': 'A', '+': 'P', '-': 'M'}
-    def encodechr(i):
-        if i > 255:
-            return 'u'
-        c = chr(i)
-        if c in fixedmap:
-            return fixedmap[c]
-        if c.isalpha():
-            return 'x'
-        if c.isdigit():
-            return 'n'
-        return 'o'
     t = m.group('text')
-    tt = ''.join(encodechr(i) for i in xrange(256))
-    t = t.translate(tt)
+    t = t.translate(_repquotett)
     return m.group('quote') + t + m.group('quote')
 
 def reppython(m):
