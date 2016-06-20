@@ -17,8 +17,11 @@ namespace fusell {
 
 InodeBase::~InodeBase() {}
 
-InodeBase::InodeBase(fuse_ino_t ino) : ino_(ino) {}
-fuse_ino_t InodeBase::getNodeId() const { return ino_; }
+InodeBase::InodeBase(fuse_ino_t ino) : ino_(ino) {
+  // Inode numbers generally shouldn't be 0.
+  // Older versions of glibc have bugs handling files with an inode number of 0
+  DCHECK_NE(ino_, 0);
+}
 
 // See Dispatcher::getattr
 folly::Future<Dispatcher::Attr> InodeBase::getattr() {

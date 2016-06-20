@@ -44,7 +44,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
 
   fusell::Dispatcher::Attr attr;
   attr.st = data->stat();
-  attr.st.st_ino = ino_;
+  attr.st.st_ino = getNodeId();
   return attr;
 }
 

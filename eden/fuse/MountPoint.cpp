@@ -13,6 +13,8 @@
 #include "InodeDispatcher.h"
 #include "InodeNameManager.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <string>
 #include <vector>
 
@@ -100,6 +102,18 @@ void MountPoint::run(bool debug) {
   channel_.reset();
 }
 
+struct stat MountPoint::initStatData() const {
+  struct stat st;
+  memset(&st, 0, sizeof(st));
+
+  st.st_uid = uid_;
+  st.st_gid = gid_;
+  // We don't really use the block size for anything.
+  // 4096 is fairly standard for many file systems.
+  st.st_blksize = 4096;
+
+  return st;
+}
 }
 }
 } // facebook::eden::fusell

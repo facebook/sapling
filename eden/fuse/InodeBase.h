@@ -29,7 +29,9 @@ class InodeBase : public std::enable_shared_from_this<InodeBase> {
  public:
   virtual ~InodeBase();
   explicit InodeBase(fuse_ino_t ino);
-  fuse_ino_t getNodeId() const;
+  fuse_ino_t getNodeId() const {
+    return ino_;
+  }
 
   void incNumLookups(uint32_t count = 1) {
     nlookup_.fetch_add(count, std::memory_order_acq_rel);

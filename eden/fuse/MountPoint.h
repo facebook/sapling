@@ -14,6 +14,8 @@
 #include <mutex>
 #include "eden/utils/PathFuncs.h"
 
+struct stat;
+
 namespace facebook {
 namespace eden {
 namespace fusell {
@@ -44,7 +46,7 @@ class MountPoint {
     return nameManager_.get();
   }
 
-  /*
+  /**
    * Spawn a new thread to mount the filesystem and run the fuse channel.
    *
    * This is similar to run(), except that it returns as soon as the filesystem
@@ -59,7 +61,7 @@ class MountPoint {
   void start(bool debug);
   void start(bool debug, const std::function<void()>& onStop);
 
-  /*
+  /**
    * Mount the file system, and run the fuse channel.
    *
    * This function will not return until the filesystem is unmounted.
@@ -84,12 +86,21 @@ class MountPoint {
     return channel_.get();
   }
 
-  /*
+  /**
    * Indicate that the mount point has been successfully started.
    *
    * This function should only be invoked by InodeDispatcher.
    */
   void mountStarted();
+
+  /**
+   * Return a stat structure that has been minimally initialized with
+   * data for this mount point.
+   *
+   * The caller must still initialize all file-specific data (inode number,
+   * file mode, size, timestamps, link count, etc).
+   */
+  struct stat initStatData() const;
 
  private:
   enum class Status { UNINIT, STARTING, RUNNING, ERROR };

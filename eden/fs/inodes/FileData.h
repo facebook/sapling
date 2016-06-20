@@ -62,7 +62,17 @@ class FileData {
   // Recommended practice in the implementation of methods on this class is to
   // hold a unique_lock as a guard for the duration of the method.
   std::mutex& mutex_;
-  EdenMount* mount_{nullptr};
+
+  /**
+   * The EdenMount that this FileData object belongs to.
+   *
+   * This pointer never changes once a FileData object is constructed.  A
+   * FileData always belongs to the same EdenMount.  Therefore it is safe to
+   * access this pointer without locking.
+   */
+  EdenMount* const mount_{nullptr};
+
+  /// The TreeEntry for this file.
   const TreeEntry* entry_;
 
   /// if backed by tree, the data from the tree, else nullptr.

@@ -88,7 +88,6 @@ class TreeInode : public fusell::DirInode {
 
   std::unique_ptr<Tree> tree_;
   fuse_ino_t parent_;
-  fuse_ino_t ino_;
 };
 }
 }

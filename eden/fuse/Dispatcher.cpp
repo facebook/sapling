@@ -26,11 +26,9 @@ namespace eden {
 namespace fusell {
 
 Dispatcher::Attr::Attr() : timeout(1.0) {
-  memset(&st, 0, sizeof(st));
   auto& req = RequestData::get();
   auto mount = req.getChannel().getMountPoint();
-  st.st_uid = mount->getUid();
-  st.st_gid = mount->getGid();
+  st = mount->initStatData();
 }
 
 Dispatcher::~Dispatcher() {}

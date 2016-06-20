@@ -49,7 +49,6 @@ class TreeEntryFileInode : public fusell::FileInode {
   /// Compute the path to the overlay file for this item.
   AbsolutePath getLocalPath() const;
 
-  fuse_ino_t ino_;
   // We hold the ref on the parentInode so that entry_ remains
   // valid while we're both alive
   std::shared_ptr<TreeInode> parentInode_;

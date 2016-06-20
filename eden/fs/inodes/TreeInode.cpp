@@ -29,14 +29,10 @@ TreeInode::TreeInode(
     std::unique_ptr<Tree>&& tree,
     fuse_ino_t parent,
     fuse_ino_t ino)
-    : DirInode(ino),
-      mount_(mount),
-      tree_(std::move(tree)),
-      parent_(parent),
-      ino_(ino) {}
+    : DirInode(ino), mount_(mount), tree_(std::move(tree)), parent_(parent) {}
 
 TreeInode::TreeInode(EdenMount* mount, fuse_ino_t parent, fuse_ino_t ino)
-    : DirInode(ino), mount_(mount), parent_(parent), ino_(ino) {}
+    : DirInode(ino), mount_(mount), parent_(parent) {}
 
 TreeInode::~TreeInode() {}
 
@@ -44,14 +40,16 @@ folly::Future<fusell::Dispatcher::Attr> TreeInode::getattr() {
   fusell::Dispatcher::Attr attr;
 
   attr.st.st_mode = S_IFDIR | 0755;
-  attr.st.st_ino = ino_;
+  attr.st.st_ino = getNodeId();
+  // TODO: set nlink.  It should be 2 plus the number of subdirectories
+  // TODO: set atime, mtime, and ctime
 
   return attr;
 }
 
 folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
     PathComponentPiece namepiece) {
-  auto myname = getNameMgr()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
   auto overlay_contents = getOverlay()->readDir(myname);
 
   const auto& iter = overlay_contents.entries.find(namepiece.copy());
@@ -61,7 +59,7 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
       folly::throwSystemErrorExplicit(ENOENT);
     }
 
-    auto node = getNameMgr()->getNodeByName(ino_, namepiece);
+    auto node = getNameMgr()->getNodeByName(getNodeId(), namepiece);
 
     if (iter->second == dtype_t::Dir) {
       if (!overlay_contents.isOpaque) {
@@ -70,11 +68,12 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
         if (entry != nullptr && entry->getFileType() == FileType::DIRECTORY) {
           auto tree = getStore()->getTree(entry->getHash());
           return std::make_shared<TreeInode>(
-              mount_, std::move(tree), ino_, node->getNodeId());
+              mount_, std::move(tree), getNodeId(), node->getNodeId());
         }
       }
       // No corresponding TreeEntry, this exists only in the overlay.
-      return std::make_shared<TreeInode>(mount_, ino_, node->getNodeId());
+      return std::make_shared<TreeInode>(
+          mount_, getNodeId(), node->getNodeId());
     }
 
     return std::make_shared<TreeEntryFileInode>(
@@ -90,12 +89,12 @@ folly::Future<std::shared_ptr<fusell::InodeBase>> TreeInode::getChildByName(
 
   const auto* ent = getTreeEntry(namepiece);
   if (ent != nullptr) {
-    auto node = getNameMgr()->getNodeByName(ino_, namepiece);
+    auto node = getNameMgr()->getNodeByName(getNodeId(), namepiece);
 
     if (ent->getFileType() == FileType::DIRECTORY) {
       auto tree = getStore()->getTree(ent->getHash());
       return std::make_shared<TreeInode>(
-          mount_, std::move(tree), ino_, node->getNodeId());
+          mount_, std::move(tree), getNodeId(), node->getNodeId());
     }
 
     return std::make_shared<TreeEntryFileInode>(
@@ -132,7 +131,7 @@ fuse_ino_t TreeInode::getParent() const {
 }
 
 fuse_ino_t TreeInode::getInode() const {
-  return ino_;
+  return getNodeId();
 }
 
 folly::Future<std::unique_ptr<fusell::DirHandle>> TreeInode::opendir(
@@ -144,7 +143,7 @@ folly::Future<std::unique_ptr<fusell::DirHandle>> TreeInode::opendir(
 folly::Future<fusell::DirInode::CreateResult>
 TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Figure out the relative path to this inode.
-  auto myname = getNameMgr()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
 
   // Compute the effective name of the node they want to create.
   auto targetname = myname + name;
@@ -157,7 +156,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   file.close();
 
   // Generate an inode number for this new entry.
-  auto node = getNameMgr()->getNodeByName(ino_, name);
+  auto node = getNameMgr()->getNodeByName(getNodeId(), name);
 
   // build a corresponding TreeEntryFileInode
   auto inode = std::make_shared<TreeEntryFileInode>(
@@ -192,7 +191,7 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
     PathComponentPiece name,
     mode_t mode) {
   // Figure out the relative path to this inode.
-  auto myname = getNameMgr()->resolvePathToNode(ino_);
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
 
   // Compute the effective name of the node they want to create.
   auto targetName = myname + name;

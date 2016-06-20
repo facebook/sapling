@@ -19,6 +19,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fuse/MountPoint.h"
 #include "eden/utils/XAttr.h"
 
 namespace facebook {
@@ -30,7 +31,8 @@ FileData::FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry)
     : mutex_(mutex), mount_(mount), entry_(entry) {}
 
 struct stat FileData::stat() {
-  struct stat st;
+  auto st = mount_->getMountPoint()->initStatData();
+  st.st_nlink = 1;
 
   std::unique_lock<std::mutex> lock(mutex_);
 
@@ -67,6 +69,7 @@ struct stat FileData::stat() {
 
   auto buf = blob_->getContents();
   st.st_size = buf.computeChainDataLength();
+  // TODO: set atime, mtime, and ctime
 
   return st;
 }
