@@ -1,8 +1,5 @@
 test sparse
 
-  $ PYTHONPATH=`dirname $TESTDIR`:$PYTHONPATH
-  $ export PYTHONPATH
-
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/sparse.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF

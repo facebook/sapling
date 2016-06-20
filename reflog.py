@@ -11,7 +11,6 @@ from mercurial import bookmarks, dispatch, dirstate
 from mercurial.extensions import wrapcommand, wrapfunction, find
 from mercurial.node import nullid, hex, bin
 from mercurial.i18n import _
-from extutil import getfilecache
 import errno, os, getpass, time, sys
 
 cmdtable = {}
@@ -46,9 +45,7 @@ def extsetup(ui):
         dirstate = orig(self)
         dirstate.reflogrepo = self
         return dirstate
-    wrapfunction(
-        getfilecache(localrepo.localrepository, 'dirstate'), 'func',
-        wrapdirstate)
+    wrapfunction(localrepo.localrepository.dirstate, 'func', wrapdirstate)
 
 def reposetup(ui, repo):
     if repo.local():

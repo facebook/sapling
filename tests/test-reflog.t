@@ -5,10 +5,6 @@
   > reflog=$TESTTMP/reflog.py
   > EOF
 
-We want to import extutil from the repo and not the system one
-  $ PYTHONPATH=$extpath:$PYTHONPATH
-  $ export PYTHONPATH
-
   $ hg init repo
   $ cd repo
 

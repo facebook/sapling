@@ -1,6 +1,3 @@
-  $ PYTHONPATH=`dirname $TESTDIR`:$PYTHONPATH
-  $ export PYTHONPATH
-
   $ cat <<EOF >> $HGRCPATH
   > [extensions]
   > mq =
