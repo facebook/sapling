@@ -172,7 +172,8 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   // Let's open a file handle now.
   return inode->open(fi).then([=](std::unique_ptr<fusell::FileHandle> handle) {
     // Now that we have the file handle, let's look up the attributes.
-    return handle->getattr().then([ =, handle = std::move(handle) ](
+    auto getattrResult = handle->getattr();
+    return getattrResult.then([ =, handle = std::move(handle) ](
         fusell::Dispatcher::Attr attr) mutable {
       fusell::DirInode::CreateResult result;
 
