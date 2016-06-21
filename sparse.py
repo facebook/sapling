@@ -14,7 +14,6 @@ from mercurial import match as matchmod
 from mercurial import merge as mergemod
 from mercurial.node import nullid
 from mercurial.i18n import _
-from extutil import getfilecache
 import errno, os, re, collections, hashlib
 
 cmdtable = {}
@@ -259,7 +258,7 @@ def _setupdirstate(ui):
         dirstate.repo = repo
         return dirstate
     extensions.wrapfunction(
-        getfilecache(localrepo.localrepository, 'dirstate'), 'func', _dirstate)
+        localrepo.localrepository.dirstate, 'func', _dirstate)
 
     # The atrocity below is needed to wrap dirstate._ignore. It is a cached
     # property, which means normal function wrapping doesn't work.

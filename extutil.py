@@ -5,8 +5,6 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2 or any later version.
 
-from mercurial.i18n import _
-
 def replaceclass(container, classname):
     '''Replace a class with another in a module, and interpose it into
     the hierarchies of all loaded subclasses. This function is
@@ -36,22 +34,3 @@ def replaceclass(container, classname):
         setattr(container, classname, cls)
         return cls
     return wrap
-
-def getfilecache(cls, name):
-    """Retrieve a filecache descriptor object from a class.
-
-    Because these are descriptors that are executed even when accessed directly
-    on the class, they can be accessed only through `cls.__dict__` , which in
-    turn requires a full scan over cls.__mro__.
-
-    This function can be dropped altogether once
-    https://patchwork.mercurial-scm.org/patch/15541/ lands upstream.
-
-    """
-    for parent in cls.__mro__:
-        fcdescr = cls.__dict__.get(name)
-        if fcdescr is not None:
-            return fcdescr
-
-    raise AttributeError(
-        _("type '%s' has no filecache descriptor '%s'") % (cls, name))
