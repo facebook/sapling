@@ -358,10 +358,15 @@ Test abort a stopped evolve histedit
 
   $ hg histedit d8249471110a --commands - 2>&1 << EOF
   > pick 8800a5180f91 d
-  > pick d8249471110a e
+  > stop d8249471110a e
   > exec false
   > pick 0d9a4961b100 f
   > EOF
+  Changes commited as 1d7ed205640e. You may amend the commit now.
+  When you are done, run hg histedit --continue to resume
+  [1]
+  $ hg histedit --edit-plan
+  $ hg histedit --continue
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   Command 'false' failed with exit status 1
   [1]

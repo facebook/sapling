@@ -64,7 +64,7 @@ def defineactions():
             command = rule
             return cls(state, command)
 
-        def torule(self):
+        def torule(self, *args, **kwargs):
             return "%s %s" % (self.verb, self.command)
 
         def tostate(self):
