@@ -507,17 +507,15 @@ Test autoverb feature
   $ hg init autoverb
   $ cd autoverb
   $ echo alpha >> alpha
-  $ hg addr
-  adding alpha
-  $ hg ci -m one
+  $ hg ci -qAm one
   $ echo alpha >> alpha
-  $ hg ci -m two
-  $ echo alpha >> alpha
-  $ hg ci -m "roll! three"
+  $ hg ci -qm two
+  $ echo beta >> beta
+  $ hg ci -qAm "roll! one"
 
   $ hg log --style compact --graph
-  @  2[tip]   1b0b0b04c8fe   1970-01-01 00:00 +0000   test
-  |    roll! three
+  @  2[tip]   4f34d0f8b5fa   1970-01-01 00:00 +0000   test
+  |    roll! one
   |
   o  1   579e40513370   1970-01-01 00:00 +0000   test
   |    two
@@ -528,11 +526,12 @@ Test autoverb feature
 
 Check that 'roll' is selected by default
 
-  $ HGEDITOR=cat hg histedit 1 --config experimental.histedit.autoverb=True
+  $ HGEDITOR=cat hg histedit 0 --config experimental.histedit.autoverb=True
+  pick 6058cbb6cfd7 0 one
+  roll 4f34d0f8b5fa 2 roll! one
   pick 579e40513370 1 two
-  roll 1b0b0b04c8fe 2 roll! three
   
-  # Edit history between 579e40513370 and 1b0b0b04c8fe
+  # Edit history between 6058cbb6cfd7 and 4f34d0f8b5fa
   #
   # Commits are listed from least to most recent
   #

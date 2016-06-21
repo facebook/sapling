@@ -1316,15 +1316,38 @@ def ruleeditor(repo, ui, actions, editcomment=""):
     rules are in the format [ [act, ctx], ...] like in state.rules
     """
     if repo.ui.configbool("experimental", "histedit.autoverb"):
+        newact = util.sortdict()
         for act in actions:
             ctx = repo[act.node]
             summary = _getsummary(ctx)
             fword = summary.split(' ', 1)[0].lower()
+            added = False
+
             # if it doesn't end with the special character '!' just skip this
             if fword.endswith('!'):
                 fword = fword[:-1]
                 if fword in primaryactions | secondaryactions | tertiaryactions:
                     act.verb = fword
+                    # get the target summary
+                    tsum = summary[len(fword) + 1:].lstrip()
+                    # safe but slow: reverse iterate over the actions so we
+                    # don't clash on two commits having the same summary
+                    for na, l in reversed(list(newact.iteritems())):
+                        actx = repo[na.node]
+                        asum = _getsummary(actx)
+                        if asum == tsum:
+                            added = True
+                            l.append(act)
+                            break
+
+            if not added:
+                newact[act] = []
+
+        # copy over and flatten the new list
+        actions = []
+        for na, l in newact.iteritems():
+            actions.append(na)
+            actions += l
 
     rules = '\n'.join([act.torule() for act in actions])
     rules += '\n\n'
