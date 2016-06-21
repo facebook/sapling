@@ -184,7 +184,7 @@ _hg()
             return
         fi
 
-        opts=$(_hg_cmd debugcomplete --options "$cmd")
+        opts=$(HGPLAINEXCEPT=alias _hg_cmd debugcomplete --options "$cmd")
 
         COMPREPLY=(${COMPREPLY[@]:-} $(compgen -W '$opts' -- "$cur"))
         _hg_fix_wordlist
