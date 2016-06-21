@@ -121,7 +121,13 @@ def _revsetdestrebase(repo, subset, x):
 
 class rebaseruntime(object):
     """This class is a container for rebase runtime state"""
-    def __init__(self):
+    def __init__(self, repo, ui, opts=None):
+        if opts is None:
+            opts = {}
+
+        self.repo = repo
+        self.ui = ui
+        self.opts = opts
         self.originalwd = None
         self.external = nullrev
         # Mapping between the old revision id and either what is the new rebased
@@ -243,7 +249,7 @@ def rebase(ui, repo, **opts):
     unresolved conflicts.
 
     """
-    rbsrt = rebaseruntime()
+    rbsrt = rebaseruntime(repo, ui, opts)
 
     lock = wlock = None
     try:
