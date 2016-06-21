@@ -141,6 +141,12 @@ class rebaseruntime(object):
 
         self.collapsef = opts.get('collapse', False)
         self.collapsemsg = cmdutil.logmessage(ui, opts)
+        self.date = opts.get('date', None)
+
+        e = opts.get('extrafn') # internal, used by e.g. hgsubversion
+        self.extrafns = [_savegraft]
+        if e:
+            self.extrafns = [e]
 
 @command('rebase',
     [('s', 'source', '',
@@ -269,11 +275,6 @@ def rebase(ui, repo, **opts):
         destspace = opts.get('_destspace')
         contf = opts.get('continue')
         abortf = opts.get('abort')
-        date = opts.get('date', None)
-        e = opts.get('extrafn') # internal, used by e.g. hgsubversion
-        extrafns = [_savegraft]
-        if e:
-            extrafns = [e]
         keepf = opts.get('keep', False)
         keepbranchesf = opts.get('keepbranches', False)
         # keepopen is not meant for use on the command line, but by
@@ -395,7 +396,7 @@ def rebase(ui, repo, **opts):
             # insert _savebranch at the start of extrafns so if
             # there's a user-provided extrafn it can clobber branch if
             # desired
-            extrafns.insert(0, _savebranch)
+            rbsrt.extrafns.insert(0, _savebranch)
             if rbsrt.collapsef:
                 branches = set()
                 for rev in rbsrt.state:
@@ -415,7 +416,7 @@ def rebase(ui, repo, **opts):
         if rbsrt.activebookmark:
             bookmarks.deactivate(repo)
 
-        extrafn = _makeextrafn(extrafns)
+        extrafn = _makeextrafn(rbsrt.extrafns)
 
         sortedstate = sorted(rbsrt.state)
         total = len(sortedstate)
@@ -462,7 +463,7 @@ def rebase(ui, repo, **opts):
                     newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
                                            editor=editor,
                                            keepbranches=keepbranchesf,
-                                           date=date)
+                                           date=rbsrt.date)
                 else:
                     # Skip commit if we are collapsing
                     repo.dirstate.beginparentchange()
@@ -521,7 +522,7 @@ def rebase(ui, repo, **opts):
                                    commitmsg=commitmsg,
                                    extrafn=extrafn, editor=editor,
                                    keepbranches=keepbranchesf,
-                                   date=date)
+                                   date=rbsrt.date)
             if newnode is None:
                 newrev = rbsrt.target
             else:
