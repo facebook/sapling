@@ -139,6 +139,9 @@ class rebaseruntime(object):
         self.skipped = set()
         self.targetancestors = set()
 
+        self.collapsef = opts.get('collapse', False)
+        self.collapsemsg = cmdutil.logmessage(ui, opts)
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -266,8 +269,6 @@ def rebase(ui, repo, **opts):
         destspace = opts.get('_destspace')
         contf = opts.get('continue')
         abortf = opts.get('abort')
-        collapsef = opts.get('collapse', False)
-        collapsemsg = cmdutil.logmessage(ui, opts)
         date = opts.get('date', None)
         e = opts.get('extrafn') # internal, used by e.g. hgsubversion
         extrafns = [_savegraft]
@@ -290,14 +291,14 @@ def rebase(ui, repo, **opts):
                     "'histedit' extension (see \"%s\")") % help
             raise error.Abort(msg)
 
-        if collapsemsg and not collapsef:
+        if rbsrt.collapsemsg and not rbsrt.collapsef:
             raise error.Abort(
                 _('message can only be specified with collapse'))
 
         if contf or abortf:
             if contf and abortf:
                 raise error.Abort(_('cannot use both abort and continue'))
-            if collapsef:
+            if rbsrt.collapsef:
                 raise error.Abort(
                     _('cannot use collapse with continue or abort'))
             if srcf or basef or destf:
@@ -308,9 +309,9 @@ def rebase(ui, repo, **opts):
 
             try:
                 (rbsrt.originalwd, rbsrt.target, rbsrt.state,
-                 rbsrt.skipped, collapsef, keepf, keepbranchesf,
+                 rbsrt.skipped, rbsrt.collapsef, keepf, keepbranchesf,
                  rbsrt.external, rbsrt.activebookmark) = restorestatus(repo)
-                collapsemsg = restorecollapsemsg(repo)
+                rbsrt.collapsemsg = restorecollapsemsg(repo)
             except error.RepoLookupError:
                 if abortf:
                     clearstatus(repo)
@@ -366,7 +367,7 @@ def rebase(ui, repo, **opts):
                                               rebasesetrevs,
                                               rebaseobsskipped)
 
-            result = buildstate(repo, dest, rebaseset, collapsef,
+            result = buildstate(repo, dest, rebaseset, rbsrt.collapsef,
                                 obsoletenotrebased)
 
             if not result:
@@ -381,7 +382,7 @@ def rebase(ui, repo, **opts):
                                  hint=_('see "hg help phases" for details'))
 
             (rbsrt.originalwd, rbsrt.target, rbsrt.state) = result
-            if collapsef:
+            if rbsrt.collapsef:
                 rbsrt.targetancestors = repo.changelog.ancestors([rbsrt.target],
                                                                  inclusive=True)
                 rbsrt.external = externalparent(repo, rbsrt.state,
@@ -395,7 +396,7 @@ def rebase(ui, repo, **opts):
             # there's a user-provided extrafn it can clobber branch if
             # desired
             extrafns.insert(0, _savebranch)
-            if collapsef:
+            if rbsrt.collapsef:
                 branches = set()
                 for rev in rbsrt.state:
                     branches.add(repo[rev].branch())
@@ -436,9 +437,10 @@ def rebase(ui, repo, **opts):
                                              rbsrt.targetancestors,
                                              obsoletenotrebased)
                 storestatus(repo, rbsrt.originalwd, rbsrt.target,
-                            rbsrt.state, collapsef, keepf, keepbranchesf,
-                            rbsrt.external, rbsrt.activebookmark)
-                storecollapsemsg(repo, collapsemsg)
+                            rbsrt.state, rbsrt.collapsef, keepf,
+                            keepbranchesf, rbsrt.external,
+                            rbsrt.activebookmark)
+                storecollapsemsg(repo, rbsrt.collapsemsg)
                 if len(repo[None].parents()) == 2:
                     repo.ui.debug('resuming interrupted rebase\n')
                 else:
@@ -446,14 +448,14 @@ def rebase(ui, repo, **opts):
                         ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
                                      'rebase')
                         stats = rebasenode(repo, rev, p1, base, rbsrt.state,
-                                           collapsef, rbsrt.target)
+                                           rbsrt.collapsef, rbsrt.target)
                         if stats and stats[3] > 0:
                             raise error.InterventionRequired(
                                 _('unresolved conflicts (see hg '
                                   'resolve, then hg rebase --continue)'))
                     finally:
                         ui.setconfig('ui', 'forcemerge', '', 'rebase')
-                if not collapsef:
+                if not rbsrt.collapsef:
                     merging = p2 != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
@@ -472,7 +474,7 @@ def rebase(ui, repo, **opts):
                     rbsrt.state[rev] = repo[newnode].rev()
                     ui.debug('rebased as %s\n' % short(newnode))
                 else:
-                    if not collapsef:
+                    if not rbsrt.collapsef:
                         ui.warn(_('note: rebase of %d:%s created no changes '
                                   'to commit\n') % (rev, ctx))
                         rbsrt.skipped.add(rev)
@@ -498,15 +500,15 @@ def rebase(ui, repo, **opts):
         ui.progress(_('rebasing'), None)
         ui.note(_('rebase merging completed\n'))
 
-        if collapsef and not keepopen:
+        if rbsrt.collapsef and not keepopen:
             p1, p2, _base = defineparents(repo, min(rbsrt.state),
                                           rbsrt.target, rbsrt.state,
                                           rbsrt.targetancestors,
                                           obsoletenotrebased)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
-            if collapsemsg:
-                commitmsg = collapsemsg
+            if rbsrt.collapsemsg:
+                commitmsg = rbsrt.collapsemsg
             else:
                 commitmsg = 'Collapsed revision'
                 for rebased in rbsrt.state:
@@ -558,7 +560,7 @@ def rebase(ui, repo, **opts):
 
         if not keepf:
             collapsedas = None
-            if collapsef:
+            if rbsrt.collapsef:
                 collapsedas = newnode
             clearrebased(ui, repo, rbsrt.state, rbsrt.skipped, collapsedas)
 
