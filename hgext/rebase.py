@@ -154,6 +154,78 @@ class rebaseruntime(object):
         # other extensions
         self.keepopen = opts.get('keepopen', False)
 
+    def restorestatus(self):
+        """Restore a previously stored status"""
+        repo = self.repo
+        keepbranches = None
+        target = None
+        collapse = False
+        external = nullrev
+        activebookmark = None
+        state = {}
+
+        try:
+            f = repo.vfs("rebasestate")
+            for i, l in enumerate(f.read().splitlines()):
+                if i == 0:
+                    originalwd = repo[l].rev()
+                elif i == 1:
+                    target = repo[l].rev()
+                elif i == 2:
+                    external = repo[l].rev()
+                elif i == 3:
+                    collapse = bool(int(l))
+                elif i == 4:
+                    keep = bool(int(l))
+                elif i == 5:
+                    keepbranches = bool(int(l))
+                elif i == 6 and not (len(l) == 81 and ':' in l):
+                    # line 6 is a recent addition, so for backwards
+                    # compatibility check that the line doesn't look like the
+                    # oldrev:newrev lines
+                    activebookmark = l
+                else:
+                    oldrev, newrev = l.split(':')
+                    if newrev in (str(nullmerge), str(revignored),
+                                  str(revprecursor), str(revpruned)):
+                        state[repo[oldrev].rev()] = int(newrev)
+                    elif newrev == nullid:
+                        state[repo[oldrev].rev()] = revtodo
+                        # Legacy compat special case
+                    else:
+                        state[repo[oldrev].rev()] = repo[newrev].rev()
+
+        except IOError as err:
+            if err.errno != errno.ENOENT:
+                raise
+            cmdutil.wrongtooltocontinue(repo, _('rebase'))
+
+        if keepbranches is None:
+            raise error.Abort(_('.hg/rebasestate is incomplete'))
+
+        skipped = set()
+        # recompute the set of skipped revs
+        if not collapse:
+            seen = set([target])
+            for old, new in sorted(state.items()):
+                if new != revtodo and new in seen:
+                    skipped.add(old)
+                seen.add(new)
+        repo.ui.debug('computed skipped revs: %s\n' %
+                        (' '.join(str(r) for r in sorted(skipped)) or None))
+        repo.ui.debug('rebase status resumed\n')
+        _setrebasesetvisibility(repo, state.keys())
+
+        self.originalwd = originalwd
+        self.target = target
+        self.state = state
+        self.skipped = skipped
+        self.collapsef = collapse
+        self.keepf = keep
+        self.keepbranchesf = keepbranches
+        self.external = external
+        self.activebookmark = activebookmark
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -309,10 +381,7 @@ def rebase(ui, repo, **opts):
                 ui.warn(_('tool option will be ignored\n'))
 
             try:
-                (rbsrt.originalwd, rbsrt.target, rbsrt.state,
-                 rbsrt.skipped, rbsrt.collapsef, rbsrt.keepf,
-                 rbsrt.keepbranchesf, rbsrt.external,
-                 rbsrt.activebookmark) = restorestatus(repo)
+                rbsrt.restorestatus()
                 rbsrt.collapsemsg = restorecollapsemsg(repo)
             except error.RepoLookupError:
                 if abortf:
@@ -1006,68 +1075,6 @@ def clearstatus(repo):
     _clearrebasesetvisibiliy(repo)
     util.unlinkpath(repo.join("rebasestate"), ignoremissing=True)
 
-def restorestatus(repo):
-    'Restore a previously stored status'
-    keepbranches = None
-    target = None
-    collapse = False
-    external = nullrev
-    activebookmark = None
-    state = {}
-
-    try:
-        f = repo.vfs("rebasestate")
-        for i, l in enumerate(f.read().splitlines()):
-            if i == 0:
-                originalwd = repo[l].rev()
-            elif i == 1:
-                target = repo[l].rev()
-            elif i == 2:
-                external = repo[l].rev()
-            elif i == 3:
-                collapse = bool(int(l))
-            elif i == 4:
-                keep = bool(int(l))
-            elif i == 5:
-                keepbranches = bool(int(l))
-            elif i == 6 and not (len(l) == 81 and ':' in l):
-                # line 6 is a recent addition, so for backwards compatibility
-                # check that the line doesn't look like the oldrev:newrev lines
-                activebookmark = l
-            else:
-                oldrev, newrev = l.split(':')
-                if newrev in (str(nullmerge), str(revignored),
-                              str(revprecursor), str(revpruned)):
-                    state[repo[oldrev].rev()] = int(newrev)
-                elif newrev == nullid:
-                    state[repo[oldrev].rev()] = revtodo
-                    # Legacy compat special case
-                else:
-                    state[repo[oldrev].rev()] = repo[newrev].rev()
-
-    except IOError as err:
-        if err.errno != errno.ENOENT:
-            raise
-        cmdutil.wrongtooltocontinue(repo, _('rebase'))
-
-    if keepbranches is None:
-        raise error.Abort(_('.hg/rebasestate is incomplete'))
-
-    skipped = set()
-    # recompute the set of skipped revs
-    if not collapse:
-        seen = set([target])
-        for old, new in sorted(state.items()):
-            if new != revtodo and new in seen:
-                skipped.add(old)
-            seen.add(new)
-    repo.ui.debug('computed skipped revs: %s\n' %
-                    (' '.join(str(r) for r in sorted(skipped)) or None))
-    repo.ui.debug('rebase status resumed\n')
-    _setrebasesetvisibility(repo, state.keys())
-    return (originalwd, target, state, skipped,
-            collapse, keep, keepbranches, external, activebookmark)
-
 def needupdate(repo, state):
     '''check whether we should `update --clean` away from a merge, or if
     somehow the working dir got forcibly updated, e.g. by older hg'''
@@ -1390,7 +1397,9 @@ def summaryhook(ui, repo):
     if not os.path.exists(repo.join('rebasestate')):
         return
     try:
-        state = restorestatus(repo)[2]
+        rbsrt = rebaseruntime(repo, ui, {})
+        rbsrt.restorestatus()
+        state = rbsrt.state
     except error.RepoLookupError:
         # i18n: column positioning for "hg summary"
         msg = _('rebase: (use "hg rebase --abort" to clear broken state)\n')
