@@ -153,6 +153,7 @@ class rebaseruntime(object):
         # keepopen is not meant for use on the command line, but by
         # other extensions
         self.keepopen = opts.get('keepopen', False)
+        self.obsoletenotrebased = {}
 
     def restorestatus(self):
         """Restore a previously stored status"""
@@ -399,15 +400,15 @@ def rebase(ui, repo, **opts):
                              rbsrt.state,
                              activebookmark=rbsrt.activebookmark)
 
-            obsoletenotrebased = {}
+            rbsrt.obsoletenotrebased = {}
             if ui.configbool('experimental', 'rebaseskipobsolete',
                              default=True):
                 rebaseobsrevs = set([r for r, st in rbsrt.state.items()
                                      if st == revprecursor])
                 rebasesetrevs = set(rbsrt.state.keys())
-                obsoletenotrebased = _computeobsoletenotrebased(repo,
-                                        rebaseobsrevs, rbsrt.target)
-                rebaseobsskipped = set(obsoletenotrebased)
+                rbsrt.obsoletenotrebased = _computeobsoletenotrebased(repo,
+                                                rebaseobsrevs, rbsrt.target)
+                rebaseobsskipped = set(rbsrt.obsoletenotrebased)
                 _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs,
                                 rebaseobsskipped)
         else:
@@ -425,21 +426,21 @@ def rebase(ui, repo, **opts):
                       " unrebased descendants"),
                     hint=_('use --keep to keep original changesets'))
 
-            obsoletenotrebased = {}
+            rbsrt.obsoletenotrebased = {}
             if ui.configbool('experimental', 'rebaseskipobsolete',
                              default=True):
                 rebasesetrevs = set(rebaseset)
                 rebaseobsrevs = _filterobsoleterevs(repo, rebasesetrevs)
-                obsoletenotrebased = _computeobsoletenotrebased(repo,
+                rbsrt.obsoletenotrebased = _computeobsoletenotrebased(repo,
                                                                 rebaseobsrevs,
                                                                 dest)
-                rebaseobsskipped = set(obsoletenotrebased)
+                rebaseobsskipped = set(rbsrt.obsoletenotrebased)
                 _checkobsrebase(repo, ui, rebaseobsrevs,
                                               rebasesetrevs,
                                               rebaseobsskipped)
 
             result = buildstate(repo, dest, rebaseset, rbsrt.collapsef,
-                                obsoletenotrebased)
+                                rbsrt.obsoletenotrebased)
 
             if not result:
                 # Empty state built, nothing to rebase
@@ -506,7 +507,7 @@ def rebase(ui, repo, **opts):
                 p1, p2, base = defineparents(repo, rev, rbsrt.target,
                                              rbsrt.state,
                                              rbsrt.targetancestors,
-                                             obsoletenotrebased)
+                                             rbsrt.obsoletenotrebased)
                 storestatus(repo, rbsrt.originalwd, rbsrt.target,
                             rbsrt.state, rbsrt.collapsef, rbsrt.keepf,
                             rbsrt.keepbranchesf, rbsrt.external,
@@ -556,7 +557,7 @@ def rebase(ui, repo, **opts):
             elif rbsrt.state[rev] == revignored:
                 ui.status(_('not rebasing ignored %s\n') % desc)
             elif rbsrt.state[rev] == revprecursor:
-                targetctx = repo[obsoletenotrebased[rev]]
+                targetctx = repo[rbsrt.obsoletenotrebased[rev]]
                 desctarget = '%d:%s "%s"' % (targetctx.rev(), targetctx,
                              targetctx.description().split('\n', 1)[0])
                 msg = _('note: not rebasing %s, already in destination as %s\n')
@@ -575,7 +576,7 @@ def rebase(ui, repo, **opts):
             p1, p2, _base = defineparents(repo, min(rbsrt.state),
                                           rbsrt.target, rbsrt.state,
                                           rbsrt.targetancestors,
-                                          obsoletenotrebased)
+                                          rbsrt.obsoletenotrebased)
             editopt = opts.get('edit')
             editform = 'rebase.collapse'
             if rbsrt.collapsemsg:
@@ -611,7 +612,7 @@ def rebase(ui, repo, **opts):
                 if v > nullmerge:
                     nstate[repo[k].node()] = repo[v].node()
                 elif v == revprecursor:
-                    succ = obsoletenotrebased[k]
+                    succ = rbsrt.obsoletenotrebased[k]
                     nstate[repo[k].node()] = repo[succ].node()
             # XXX this is the same as dest.node() for the non-continue path --
             # this should probably be cleaned up
@@ -621,7 +622,7 @@ def rebase(ui, repo, **opts):
         # (we do this before stripping)
         newwd = rbsrt.state.get(rbsrt.originalwd, rbsrt.originalwd)
         if newwd == revprecursor:
-            newwd = obsoletenotrebased[rbsrt.originalwd]
+            newwd = rbsrt.obsoletenotrebased[rbsrt.originalwd]
         elif newwd < 0:
             # original directory is a parent of rebase set root or ignored
             newwd = rbsrt.originalwd
