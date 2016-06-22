@@ -464,6 +464,8 @@ class ondiskcache(object):
         return iter(self.items())
 
     def setwithlimit(self, hexnode, manifest, limit=-1):
+        if hexnode in self:
+            return
         path = self._pathfromnode(hexnode)
         fm = cfastmanifest.fastmanifest(manifest.text())
         tmpfpath = util.mktempcopy(path, True)
@@ -566,7 +568,7 @@ class fastmanifestcache(object):
         return hexnode in self.inmemorycache or hexnode in self.ondiskcache
 
     def __setitem__(self, hexnode, manifest):
-        if hexnode in self:
+        if hexnode in self.ondiskcache and hexnode in self.inmemorycache:
             self.debug("[FM] skipped %s, already cached\n" % hexnode)
             return
 
@@ -582,6 +584,7 @@ class fastmanifestcache(object):
         else:
             self.debug("[FM] caching revision %s\n" % hexnode)
             self.ondiskcache[hexnode] = manifest
+        self.put_inmemory(hexnode, manifest)
 
     def put_inmemory(self, hexnode, fmdict):
         if hexnode not in self.inmemorycache:

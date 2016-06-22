@@ -10,6 +10,49 @@ from mercurial import scmutil
 from mercurial import ui
 from mercurial import util
 
+class mockmanifest(object):
+    def __init__(self, text):
+        self.text = text
+
+    def copy(self):
+        return mockmanifest(self.text)
+
+class mockondiskcache(object):
+    def __init__(self):
+        self.data = {}
+
+    def _pathfromnode(self, hexnode):
+        return hexnode
+
+    def touch(self, hexnode, delay=0):
+        pass
+
+    def __contains__(self, hexnode):
+        return hexnode in self.data
+
+    def items(self):
+        return self.data.keys()
+
+    def __iter__(self):
+        return iter(self.items())
+
+    def __setitem__(self, hexnode, manifest):
+        self.data[hexnode] = manifest
+
+    def __delitem__(self, hexnode):
+        if hexnode in self.data:
+            del self.data[hexnode]
+
+    def __getitem__(self, hexnode):
+        return self.data.get(hexnode, None)
+
+    def entrysize(self, hexnode):
+        return len(self.data[hexnode]) if hexnode in self.data else None
+
+    def totalsize(self, silent=True):
+        return (sum(self.entrysize(hexnode) for hexnode in self),
+                len(self.items()))
+
 class HybridManifest(unittest.TestCase):
 
     def test_wrap(self):
@@ -62,6 +105,43 @@ class HybridManifest(unittest.TestCase):
 
         self.assertRaises(OSError,
                           lambda: vfs.lstat("lock"))
+
+    def test_cachehierarchy(self):
+        """We mock the ondisk cache and test that the two layers of cache
+        work properly"""
+        vfs = scmutil.vfs(os.getcwd())
+        cache = fastmanifest.implementation.fastmanifestcache(vfs,
+                                                              ui.ui(), None)
+        ondiskcache = mockondiskcache()
+        cache.ondiskcache = ondiskcache
+        # Test 1) Put one manifest in the cache, check that retrieving it does
+        # not hit the disk
+        cache["abc"] = mockmanifest("abcnode")
+        # remove the ondiskcache to make sure we don't hit it
+        cache.ondiskcache = None
+        assert cache["abc"].text == "abcnode"
+        assert ondiskcache.data["abc"].text == "abcnode"
+        cache.ondiskcache = ondiskcache
+
+        # Test 2) Put an entry in the cache that is already in memory but not
+        # on disk, should write it on disk
+        ondiskcache.data.clear()
+        cache["abc"] = mockmanifest("abcnode")
+        assert ondiskcache.data["abc"].text == "abcnode"
+
+        # Test 3) Put an entry in the cache that is already on disk, not in
+        # memory, it should be added to the inmemorycache
+        cache.inmemorycache.clear()
+        cache["abc"] = mockmanifest("abcnode")
+        assert cache.inmemorycache["abc"].text == "abcnode"
+
+        # Test 4) We have at most 10 entries in the in memorycache by
+        # default
+        for a in range(20):
+            cache[chr(a + ord('a'))] = mockmanifest(chr(a + ord('a')) + "node")
+
+        assert len(cache.ondiskcache.items()) == 21
+        assert len(cache.inmemorycache) == 10
 
     def test_looselock_stealing(self):
         """Attempt to secure three locks.  The second lock should succeed
