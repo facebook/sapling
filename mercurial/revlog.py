@@ -941,8 +941,11 @@ class revlog(object):
             return None
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
+            # fast path: for unfiltered changelog, radix tree is accurate
+            if not getattr(self, 'filteredrevs', None):
+                raise LookupError(id, self.indexfile,
+                                  _('ambiguous identifier'))
             # fall through to slow path that filters hidden revisions
-            pass
         except (AttributeError, ValueError):
             # we are pure python, or key was too short to search radix tree
             pass
