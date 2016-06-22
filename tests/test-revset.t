@@ -31,6 +31,46 @@
   >   hg log --template '{rev}\n' -r "$1"
   > }
 
+extension to build '_intlist()' and '_hexlist()', which is necessary because
+these predicates use '\0' as a separator:
+
+  $ cat <<EOF > debugrevlistspec.py
+  > from __future__ import absolute_import
+  > from mercurial import (
+  >     cmdutil,
+  >     node as nodemod,
+  >     revset,
+  > )
+  > cmdtable = {}
+  > command = cmdutil.command(cmdtable)
+  > @command('debugrevlistspec',
+  >     [('', 'optimize', None, 'print parsed tree after optimizing'),
+  >      ('', 'bin', None, 'unhexlify arguments')])
+  > def debugrevlistspec(ui, repo, fmt, *args, **opts):
+  >     if opts['bin']:
+  >         args = map(nodemod.bin, args)
+  >     expr = revset.formatspec(fmt, list(args))
+  >     if ui.verbose:
+  >         tree = revset.parse(expr, lookup=repo.__contains__)
+  >         ui.note(revset.prettyformat(tree), "\n")
+  >         if opts["optimize"]:
+  >             opttree = revset.optimize(tree)
+  >             ui.note("* optimized:\n", revset.prettyformat(opttree), "\n")
+  >     func = revset.match(ui, expr, repo)
+  >     revs = func(repo)
+  >     if ui.verbose:
+  >         ui.note("* set:\n", revset.prettyformatset(revs), "\n")
+  >     for c in revs:
+  >         ui.write("%s\n" % c)
+  > EOF
+  $ cat <<EOF >> $HGRCPATH
+  > [extensions]
+  > debugrevlistspec = $TESTTMP/debugrevlistspec.py
+  > EOF
+  $ trylist() {
+  >   hg debugrevlistspec --debug "$@"
+  > }
+
   $ hg init repo
   $ cd repo
 
@@ -901,12 +941,442 @@ Test working-directory revision
 Test order of revisions in compound expression
 ----------------------------------------------
 
+The general rule is that only the outermost (= leftmost) predicate can
+enforce its ordering requirement. The other predicates should take the
+ordering defined by it.
+
  'A & B' should follow the order of 'A':
 
   $ log '2:0 & 0::2'
   2
   1
   0
+
+ 'head()' combines sets in wrong order:
+
+  $ log '2:0 & head()'
+  0
+  1
+  2
+ BROKEN: should be '2 1 0'
+
+ 'a + b', which is optimized to '_list(a b)', should take the ordering of
+ the left expression:
+
+  $ try --optimize '2:0 & (0 + 1 + 2)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (group
+      (or
+        ('symbol', '0')
+        ('symbol', '1')
+        ('symbol', '2'))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', '_list')
+      ('string', '0\x001\x002')))
+  * set:
+  <baseset [0, 1, 2]>
+  0
+  1
+  2
+ BROKEN: should be '2 1 0'
+
+ 'A + B' should take the ordering of the left expression:
+
+  $ try --optimize '2:0 & (0:1 + 2)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (group
+      (or
+        (range
+          ('symbol', '0')
+          ('symbol', '1'))
+        ('symbol', '2'))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (or
+      (range
+        ('symbol', '0')
+        ('symbol', '1'))
+      ('symbol', '2')))
+  * set:
+  <addset
+    <filteredset
+      <spanset+ 0:1>,
+      <spanset- 0:2>>,
+    <baseset [2]>>
+  0
+  1
+  2
+ BROKEN: should be '2 1 0'
+
+ '_intlist(a b)' should behave like 'a + b':
+
+  $ trylist --optimize '2:0 & %ld' 0 1 2
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', '_intlist')
+      ('string', '0\x001\x002')))
+  * optimized:
+  (and
+    (func
+      ('symbol', '_intlist')
+      ('string', '0\x001\x002'))
+    (range
+      ('symbol', '2')
+      ('symbol', '0')))
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <baseset [0, 1, 2]>>
+  2
+  1
+  0
+
+  $ trylist --optimize '%ld & 2:0' 0 2 1
+  (and
+    (func
+      ('symbol', '_intlist')
+      ('string', '0\x002\x001'))
+    (range
+      ('symbol', '2')
+      ('symbol', '0')))
+  * optimized:
+  (and
+    (func
+      ('symbol', '_intlist')
+      ('string', '0\x002\x001'))
+    (range
+      ('symbol', '2')
+      ('symbol', '0')))
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <baseset [0, 2, 1]>>
+  2
+  1
+  0
+ BROKEN: should be '0 2 1'
+
+ '_hexlist(a b)' should behave like 'a + b':
+
+  $ trylist --optimize --bin '2:0 & %ln' `hg log -T '{node} ' -r0:2`
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', '_hexlist')
+      ('string', '*'))) (glob)
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', '_hexlist')
+      ('string', '*'))) (glob)
+  * set:
+  <baseset [0, 1, 2]>
+  0
+  1
+  2
+ BROKEN: should be '2 1 0'
+
+  $ trylist --optimize --bin '%ln & 2:0' `hg log -T '{node} ' -r0+2+1`
+  (and
+    (func
+      ('symbol', '_hexlist')
+      ('string', '*')) (glob)
+    (range
+      ('symbol', '2')
+      ('symbol', '0')))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', '_hexlist')
+      ('string', '*'))) (glob)
+  * set:
+  <baseset [0, 2, 1]>
+  0
+  2
+  1
+
+ 'present()' should do nothing other than suppressing an error:
+
+  $ try --optimize '2:0 & present(0 + 1 + 2)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', 'present')
+      (or
+        ('symbol', '0')
+        ('symbol', '1')
+        ('symbol', '2'))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', 'present')
+      (func
+        ('symbol', '_list')
+        ('string', '0\x001\x002'))))
+  * set:
+  <baseset [0, 1, 2]>
+  0
+  1
+  2
+ BROKEN: should be '2 1 0'
+
+ 'reverse()' should take effect only if it is the outermost expression:
+
+  $ try --optimize '0:2 & reverse(all())'
+  (and
+    (range
+      ('symbol', '0')
+      ('symbol', '2'))
+    (func
+      ('symbol', 'reverse')
+      (func
+        ('symbol', 'all')
+        None)))
+  * optimized:
+  (and
+    (range
+      ('symbol', '0')
+      ('symbol', '2'))
+    (func
+      ('symbol', 'reverse')
+      (func
+        ('symbol', 'all')
+        None)))
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <spanset+ 0:9>>
+  2
+  1
+  0
+ BROKEN: should be '0 1 2'
+
+ 'sort()' should take effect only if it is the outermost expression:
+
+  $ try --optimize '0:2 & sort(all(), -rev)'
+  (and
+    (range
+      ('symbol', '0')
+      ('symbol', '2'))
+    (func
+      ('symbol', 'sort')
+      (list
+        (func
+          ('symbol', 'all')
+          None)
+        (negate
+          ('symbol', 'rev')))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '0')
+      ('symbol', '2'))
+    (func
+      ('symbol', 'sort')
+      (list
+        (func
+          ('symbol', 'all')
+          None)
+        ('string', '-rev'))))
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <spanset+ 0:9>>
+  2
+  1
+  0
+ BROKEN: should be '0 1 2'
+
+ for 'A & f(B)', 'B' should not be affected by the order of 'A':
+
+  $ try --optimize '2:0 & first(1 + 0 + 2)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', 'first')
+      (or
+        ('symbol', '1')
+        ('symbol', '0')
+        ('symbol', '2'))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', 'first')
+      (func
+        ('symbol', '_list')
+        ('string', '1\x000\x002'))))
+  * set:
+  <baseset
+    <limit n=1, offset=0,
+      <spanset- 0:2>,
+      <baseset [1, 0, 2]>>>
+  1
+
+  $ try --optimize '2:0 & not last(0 + 2 + 1)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (not
+      (func
+        ('symbol', 'last')
+        (or
+          ('symbol', '0')
+          ('symbol', '2')
+          ('symbol', '1')))))
+  * optimized:
+  (difference
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (func
+      ('symbol', 'last')
+      (func
+        ('symbol', '_list')
+        ('string', '0\x002\x001'))))
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <not
+      <baseset
+        <last n=1,
+          <fullreposet+ 0:9>,
+          <baseset [1, 2, 0]>>>>>
+  2
+  0
+
+ for 'A & (op)(B)', 'B' should not be affected by the order of 'A':
+
+  $ try --optimize '2:0 & (1 + 0 + 2):(0 + 2 + 1)'
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (range
+      (group
+        (or
+          ('symbol', '1')
+          ('symbol', '0')
+          ('symbol', '2')))
+      (group
+        (or
+          ('symbol', '0')
+          ('symbol', '2')
+          ('symbol', '1')))))
+  * optimized:
+  (and
+    (range
+      ('symbol', '2')
+      ('symbol', '0'))
+    (range
+      (func
+        ('symbol', '_list')
+        ('string', '1\x000\x002'))
+      (func
+        ('symbol', '_list')
+        ('string', '0\x002\x001'))))
+  * set:
+  <filteredset
+    <baseset [1]>,
+    <spanset- 0:2>>
+  1
+
+ 'A & B' can be rewritten as 'B & A' by weight, but the ordering rule should
+ be determined before the optimization (i.e. 'B' should take the ordering of
+ 'A'):
+
+  $ try --optimize 'contains("glob:*") & (2 + 0 + 1)'
+  (and
+    (func
+      ('symbol', 'contains')
+      ('string', 'glob:*'))
+    (group
+      (or
+        ('symbol', '2')
+        ('symbol', '0')
+        ('symbol', '1'))))
+  * optimized:
+  (and
+    (func
+      ('symbol', '_list')
+      ('string', '2\x000\x001'))
+    (func
+      ('symbol', 'contains')
+      ('string', 'glob:*')))
+  * set:
+  <filteredset
+    <baseset [2, 0, 1]>,
+    <contains 'glob:*'>>
+  2
+  0
+  1
+ BROKEN: should be '0 1 2'
+
+  $ try --optimize 'reverse(contains("glob:*")) & (0 + 2 + 1)'
+  (and
+    (func
+      ('symbol', 'reverse')
+      (func
+        ('symbol', 'contains')
+        ('string', 'glob:*')))
+    (group
+      (or
+        ('symbol', '0')
+        ('symbol', '2')
+        ('symbol', '1'))))
+  * optimized:
+  (and
+    (func
+      ('symbol', '_list')
+      ('string', '0\x002\x001'))
+    (func
+      ('symbol', 'reverse')
+      (func
+        ('symbol', 'contains')
+        ('string', 'glob:*'))))
+  * set:
+  <filteredset
+    <baseset [1, 2, 0]>,
+    <contains 'glob:*'>>
+  1
+  2
+  0
+ BROKEN: should be '2 1 0'
 
 test sort revset
 --------------------------------------------
