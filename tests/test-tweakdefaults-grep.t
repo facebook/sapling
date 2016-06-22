@@ -56,3 +56,17 @@ Test mercurial file patterns
   $ hg grep -n foobar 'glob:*rep*'
   grepfile1:1:foobarbaz
   grepfile2:1:foobarboo
+
+Test using alternative grep commands
+  $ hg grep -i FooBarB
+  grepfile1:foobarbaz
+  grepfile2:foobarboo
+  $ hg grep FooBarB
+  [123]
+  $ hg grep --config grep.command='grep -i' FooBarB
+  grepfile1:foobarbaz
+  grepfile2:foobarboo
+  $ hg grep --config grep.command='echo searching' FooBarB subdir1
+  searching * -- subdir1/subfile1 (glob)
+  $ hg grep --config grep.command='echo foo ; false' FooBarB subdir2
+  foo ; false * -- subdir2/subfile2 (glob)

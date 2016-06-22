@@ -25,7 +25,7 @@ from mercurial import extensions
 from mercurial import error
 from mercurial.i18n import _
 from hgext import rebase
-import errno, inspect, os, re, stat, subprocess, time
+import errno, inspect, os, re, shlex, stat, subprocess, time
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -432,35 +432,49 @@ def grep(ui, repo, pattern, *pats, **opts):
 
     For the old 'hg grep', see 'histgrep'."""
 
-    grepcommand = ui.config('grep', 'command', default='grep')
-    optstr = ''
+    grepcommandstr = ui.config('grep', 'command', default='grep')
+    # Use shlex.split() to split up grepcommandstr into multiple arguments.
+    # this allows users to specify a command plus arguments (e.g., "grep -i").
+    # We don't use a real shell to execute this, which ensures we won't do
+    # bad stuff if their command includes redirects, semicolons, or other
+    # special characters etc.
+    cmd = ['xargs', '-0'] + shlex.split(grepcommandstr) + [
+        '--no-messages',
+        '--binary-files=without-match',
+        '--with-filename',
+        '--regexp=' + pattern,
+    ]
+
     if opts.get('after_context'):
-        optstr += '-A' + opts.get('after_context') + ' '
+        cmd.append('-A')
+        cmd.append(opts.get('after_context'))
     if opts.get('before_context'):
-        optstr += '-B' + opts.get('before_context') + ' '
+        cmd.append('-B')
+        cmd.append(opts.get('before_context'))
     if opts.get('context'):
-        optstr += '-C' + opts.get('context') + ' '
+        cmd.append('-C')
+        cmd.append(opts.get('context'))
     if opts.get('ignore_case'):
-        optstr += '-i '
+        cmd.append('-i')
     if opts.get('files_with_matches'):
-        optstr += '-l '
+        cmd.append('-l')
     if opts.get('line_number'):
-        optstr += '-n '
+        cmd.append('-n')
     if opts.get('invert_match'):
-        optstr += '-v '
+        cmd.append('-v')
     if opts.get('word_regexp'):
-        optstr += '-w '
+        cmd.append('-w')
     if opts.get('extended_regexp'):
-        optstr += '-E '
+        cmd.append('-E')
     if opts.get('fixed_strings'):
-        optstr += '-F '
+        cmd.append('-F')
     if opts.get('perl_regexp'):
-        optstr += '-P '
+        cmd.append('-P')
 
     # color support, using the color extension
     colormode = getattr(ui, '_colormode', '')
     if colormode == 'ansi':
-        optstr += '--color=always '
+        cmd.append('--color=always')
 
     wctx = repo[None]
     if not pats:
@@ -469,12 +483,12 @@ def grep(ui, repo, pattern, *pats, **opts):
     else:
         # Search using the specified patterns
         m = scmutil.match(wctx, pats)
-    p = subprocess.Popen(
-        'xargs -0 %s --no-messages --binary-files=without-match '
-        '--with-filename --regexp=%s %s --' %
-        (grepcommand, util.shellquote(pattern), optstr),
-        shell=True, bufsize=-1, close_fds=util.closefds,
-        stdin=subprocess.PIPE)
+
+    # Add '--' to make sure grep recognizes all remaining arguments
+    # (passed in by xargs) as filenames.
+    cmd.append('--')
+    p = subprocess.Popen(cmd, bufsize=-1, close_fds=util.closefds,
+                         stdin=subprocess.PIPE)
 
     write = p.stdin.write
     ds = repo.dirstate
