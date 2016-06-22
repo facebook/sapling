@@ -463,7 +463,12 @@ def grep(ui, repo, pattern, *pats, **opts):
         optstr += '--color=always '
 
     wctx = repo[None]
-    m = scmutil.match(wctx, ['.'], {'include': pats})
+    if not pats:
+        # Search everything in the current directory
+        m = scmutil.match(wctx, ['.'])
+    else:
+        # Search using the specified patterns
+        m = scmutil.match(wctx, pats)
     p = subprocess.Popen(
         'xargs -0 %s --no-messages --binary-files=without-match '
         '--with-filename --regexp=%s %s --' %

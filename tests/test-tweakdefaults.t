@@ -206,17 +206,17 @@ Filesets
 Crazy filenames
   $ hg grep str1 -- -v
   -v:str1-v
-  $ hg grep str1 '*v'
+  $ hg grep str1 'glob:*v'
   -v:str1-v
   $ hg grep str1 'file with space'
   file with space:str1space
-  $ hg grep str1 '*with*'
+  $ hg grep str1 'glob:*with*'
   file with space:str1space
-  $ hg grep str1 '*f1'
+  $ hg grep str1 'glob:*f1'
   f1:str1f1
   $ hg grep str1 subdir1
   subdir1/subf1:str1sub
-  $ hg grep str1 '**/*f1'
+  $ hg grep str1 'glob:**/*f1'
   f1:str1f1
   subdir1/subf1:str1sub
 
