@@ -39,7 +39,7 @@ FASTMANIFEST_METRICS = set([
     "ondiskcachestats",
     # revsetsize is the number of revisions in the 'fastmanifesttocache()'
     # => key is "size", a number
-    "revsetsetsize",
+    "revsetsize",
     # trigger is what caused caching to trigger
     # => keys is "source", one of ("commit", "remotenames", "bookmark")
     "trigger",
@@ -135,7 +135,6 @@ class metricscollector(object):
                 # Here we sort to make test output stable
                 self.ui.status(("[FM-METRICS] kind: %s, args: %s, kwargs: %s\n"
                                 % (kind, sorted(args), sorted(dispkw.items()))))
-            self.ui.log('fastmanifest', kind, *args, **kwargs)
-
+            self.ui.log('fastmanifest-%s'% kind, *args, **kwargs)
         if self.debug:
             self.ui.status(("[FM-METRICS] End metrics\n"))

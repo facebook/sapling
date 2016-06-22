@@ -273,7 +273,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -292,7 +292,7 @@ Test the --pruneall command to prune all the cached manifests
   4
   5
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -324,7 +324,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', 100.0)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -337,7 +337,7 @@ Test the --pruneall command to prune all the cached manifests
   4
   5
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -488,7 +488,7 @@ Trim the cache to at most 100 bytes
 Check that trimming the cache to 0 byte works
   $ hg debugcachemanifest -a
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', 100.0)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]
@@ -544,7 +544,7 @@ Check that trimming the cache to 0 byte works
 Use the cache in a commit.
   $ hg debugcachemanifest -a
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsetsize, args: [], kwargs: [('size', 6)]
+  [FM-METRICS] kind: revsetsize, args: [], kwargs: [('size', 6)]
   [FM-METRICS] kind: cachehitratio, args: [], kwargs: [('ratio', 100.0)]
   [FM-METRICS] kind: diffcachehitratio, args: [], kwargs: [('ratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, args: [], kwargs: [('ratio', -1)]

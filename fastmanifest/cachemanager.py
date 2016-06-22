@@ -84,7 +84,7 @@ def fastmanifesttocache(repo, subset, x):
     revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
                 %(query, query, datelimit)]))
 
-    metricscollector.get(repo).recordsample("revsetsetsize", size=len(revs))
+    metricscollector.get(repo).recordsample("revsetsize", size=len(revs))
     return subset & revs
 
 GB = 1024**3

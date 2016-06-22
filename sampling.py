@@ -81,10 +81,11 @@ def uisetup(ui):
             script = _getcandidatelocation(ui)
             if script:
                 try:
-                    opts["msg"] = msg
+                    opts["metrics_type"] = event
+                    if msg:
+                        opts["msg"] = msg
                     with open(script, 'a') as outfile:
-                        outfile.write(json.dumps({"event": event,
-                                                  "data": opts,
+                        outfile.write(json.dumps({"data": opts,
                                                   "category": ref}))
                         outfile.write("\0")
                 except EnvironmentError:

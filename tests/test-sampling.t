@@ -55,6 +55,6 @@ Do a couple of commits we expect to log two call to repo.revs for each commit
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
   ...     print parsedrecord["data"]["msg"], parsedrecord["category"]
-  ...     assert len(parsedrecord["data"]) == 3
+  ...     assert len(parsedrecord["data"]) == 4
   [u'match filter'] commit_table
   [u'match filter'] commit_table
