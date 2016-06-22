@@ -23,7 +23,7 @@ def _parentfolderexists(f):
             os.path.exists(os.path.dirname(os.path.normpath(f))))
 
 def _getcandidatelocation(ui):
-    for candidatelocation in (os.environ.get("HG_SAMPLING_FILEPATH", None),
+    for candidatelocation in (os.environ.get("SCM_SAMPLING_FILEPATH", None),
                               ui.config("sampling", "filepath", "")):
         if _parentfolderexists(candidatelocation):
             return candidatelocation
