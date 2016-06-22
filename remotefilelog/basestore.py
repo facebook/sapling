@@ -213,7 +213,7 @@ class basestore(object):
             if self._validatecache:
                 if not self._validatekey(filepath, 'write'):
                     raise error.Abort(_("local cache write was corrupted %s") %
-                                      path)
+                                      filepath)
         finally:
             os.umask(oldumask)
 
