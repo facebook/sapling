@@ -1145,7 +1145,7 @@ def head(repo, subset, x):
     getargs(x, 0, 0, _("head takes no arguments"))
     hs = set()
     cl = repo.changelog
-    for b, ls in repo.branchmap().iteritems():
+    for ls in repo.branchmap().itervalues():
         hs.update(cl.rev(h) for h in ls)
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
