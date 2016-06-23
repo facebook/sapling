@@ -47,7 +47,10 @@ class localstore(basestore.basestore):
     def _verifyfiles(self, contents, filestocheck):
         failed = False
         for cset, filename, expectedhash in filestocheck:
-            storepath, exists = lfutil.findstorepath(self.remote, expectedhash)
+            storepath, exists = lfutil.findstorepath(self.repo, expectedhash)
+            if not exists:
+                storepath, exists = lfutil.findstorepath(
+                    self.remote, expectedhash)
             if not exists:
                 self.ui.warn(
                     _('changeset %s: %s references missing %s\n')

@@ -1536,8 +1536,11 @@ revert some files to an older revision
   searching 1 changesets for largefiles
   verified existence of 3 revisions of 3 largefiles
 
-- introduce missing blob in local store repo and make sure that this is caught:
+- introduce missing blob in local store repo and remote store
+and make sure that this is caught:
+
   $ mv $TESTTMP/d/.hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928 .
+  $ rm .hg/largefiles/e166e74c7303192238d60af5a9c4ce9bef0b7928
   $ hg verify --large
   checking changesets
   checking manifests
@@ -1556,7 +1559,8 @@ revert some files to an older revision
   [1]
 
 - cleanup
-  $ mv e166e74c7303192238d60af5a9c4ce9bef0b7928 $TESTTMP/d/.hg/largefiles/
+  $ cp e166e74c7303192238d60af5a9c4ce9bef0b7928 $TESTTMP/d/.hg/largefiles/
+  $ mv e166e74c7303192238d60af5a9c4ce9bef0b7928 .hg/largefiles/
 
 - verifying all revisions will fail because we didn't clone all largefiles to d:
   $ echo 'T-shirt' > $TESTTMP/d/.hg/largefiles/eb7338044dc27f9bc59b8dd5a246b065ead7a9c4

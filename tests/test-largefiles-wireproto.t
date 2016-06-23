@@ -149,6 +149,14 @@ largefiles clients refuse to push largefiles repos to vanilla servers
   $ hg commit -m "m2"
   Invoking status precommit hook
   A f2
+  $ hg verify --large
+  checking changesets
+  checking manifests
+  crosschecking files in changesets and manifests
+  checking files
+  2 files, 2 changesets, 2 total revisions
+  searching 1 changesets for largefiles
+  verified existence of 1 revisions of 1 largefiles
   $ hg serve --config extensions.largefiles=! -R ../r6 -d -p $HGPORT --pid-file ../hg.pid
   $ cat ../hg.pid >> $DAEMON_PIDS
   $ hg push http://localhost:$HGPORT
