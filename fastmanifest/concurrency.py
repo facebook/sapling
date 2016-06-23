@@ -14,6 +14,7 @@ import stat
 import subprocess
 import sys
 import time
+import traceback
 
 from mercurial import error
 
@@ -179,14 +180,18 @@ if platform.system() == 'Windows':
     DETACHED_PROCESS = 0x00000008
     _creationflags = DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
 
-    def runshellcommand(script, env):
+    def runshellcommand(script, env=None, silent_worker=True):
+        if not silent_worker:
+            raise NotImplementedError(
+                "support for non-silent workers not yet built.")
+
         # we can't use close_fds *and* redirect stdin. I'm not sure that we
         # need to because the detached process has no console connection.
         subprocess.Popen(
             script, env=env, close_fds=True,
             creationflags=_creationflags)
 else:
-    def runshellcommand(script, env):
+    def runshellcommand(script, env=None, silent_worker=True):
         # double-fork to completely detach from the parent process
         # based on http://code.activestate.com/recipes/278731
         pid = os.fork()
@@ -195,18 +200,34 @@ else:
             return
         # subprocess.Popen() forks again, all we need to add is
         # flag the new process as a new session.
-        if sys.version_info < (3, 2):
-            newsession = {'preexec_fn': os.setsid}
-        else:
-            newsession = {'start_new_session': True}
+        newsession = {}
+        if silent_worker:
+            if sys.version_info < (3, 2):
+                newsession['preexec_fn'] = os.setsid
+            else:
+                newsession['start_new_session'] = True
         try:
             # connect stdin to devnull to make sure the subprocess can't
             # muck up that stream for mercurial.
+            if silent_worker:
+                stderr = stdout = open(os.devnull, 'w')
+            else:
+                stderr = stdout = None
             subprocess.Popen(
-                script, stdout=open(os.devnull, 'w'),
-                stderr=open(os.devnull, 'w'), stdin=open(os.devnull, 'r'),
+                script,
+                stdout=stdout,
+                stderr=stderr,
+                stdin=open(os.devnull, 'r'),
                 env=env, close_fds=True, **newsession)
+        except Exception:
+            if not silent_worker:
+                sys.stderr.write("Error spawning worker\n")
+                traceback.print_exc(file=sys.stderr)
         finally:
             # mission accomplished, this child needs to exit and not
             # continue the hg process here.
+
+            if not silent_worker:
+                sys.stdout.flush()
+                sys.stderr.flush()
             os._exit(0)
