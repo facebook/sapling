@@ -143,6 +143,11 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         cachemanager.cachemanifestfillandtrim(
             ui, repo, revset, limit)
 
+@command('^cachemanifest', [],
+    'hg cachemanifest')
+def cachemanifest(ui, repo, *pats, **opts):
+    cachemanager.cacher.cachemanifest(repo)
+
 def _logonexit(orig, ui, repo, cmd, fullargs, *args):
     r = orig(ui, repo, cmd, fullargs, *args)
     if repo is not None:

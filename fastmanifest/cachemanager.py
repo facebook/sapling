@@ -239,8 +239,6 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
             return
         raise
     try:
-        silent_worker = ui.configbool("fastmanifest", "silentworker", True)
-
         cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
         computedrevs = scmutil.revrange(repo, revset)
@@ -305,25 +303,45 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
                                                 limit=(limit.bytes() / 1024**2),
                                                 freespace=free)
 
+class cacher(object):
+    @staticmethod
+    def _cacheonchangeconfig(repo):
+        """return revs, limit suitable for caching fastmanifest on change"""
+        revset = ["fastmanifesttocache()"]
+        return revset, _systemawarecachelimit(repo)
+
+    @staticmethod
+    def cachemanifest(repo):
+        revset, limit = cacher._cacheonchangeconfig(repo)
+        cachemanifestfillandtrim(repo.ui, repo, revset, limit)
+
 class triggers(object):
     repos_to_update = set()
 
-    @staticmethod
-    def _cacheonchangeconfig(repo):
-        """return revs, bg, limit suitable for caching fastmanifest on change"""
-        revset = ["fastmanifesttocache()"]
-        bg = repo.ui.configbool("fastmanifest",
-                                "cacheonchangebackground",
-                                True)
-        return revset, bg, _systemawarecachelimit(repo)
 
     @staticmethod
     def runcommandtrigger(orig, *args, **kwargs):
         result = orig(*args, **kwargs)
 
         for repo in triggers.repos_to_update:
-            revset, bg, limit = triggers._cacheonchangeconfig(repo)
-            cachemanifestfillandtrim(repo.ui, repo, revset, limit)
+            bg = repo.ui.configbool("fastmanifest",
+                                    "cacheonchangebackground",
+                                    True)
+
+            if bg:
+                silent_worker = repo.ui.configbool(
+                    "fastmanifest", "silentworker", True)
+
+                # TODO: see if the user wants us to invoke a specific instance
+                # of mercurial.
+
+                cmd = util.hgcmd()[:]
+                cmd.extend(["--repository",
+                            repo.root,
+                            "cachemanifest"])
+                concurrency.runshellcommand(cmd, silent_worker=silent_worker)
+            else:
+                cacher.cachemanifest(repo)
 
         return result
 
