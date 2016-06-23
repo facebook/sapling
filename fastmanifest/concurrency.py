@@ -183,7 +183,7 @@ if platform.system() == 'Windows':
         # we can't use close_fds *and* redirect stdin. I'm not sure that we
         # need to because the detached process has no console connection.
         subprocess.Popen(
-            script, shell=True, env=env, close_fds=True,
+            script, env=env, close_fds=True,
             creationflags=_creationflags)
 else:
     def runshellcommand(script, env):
@@ -203,7 +203,7 @@ else:
             # connect stdin to devnull to make sure the subprocess can't
             # muck up that stream for mercurial.
             subprocess.Popen(
-                script, shell=True, stdout=open(os.devnull, 'w'),
+                script, stdout=open(os.devnull, 'w'),
                 stderr=open(os.devnull, 'w'), stdin=open(os.devnull, 'r'),
                 env=env, close_fds=True, **newsession)
         finally:
