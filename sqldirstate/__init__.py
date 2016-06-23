@@ -102,7 +102,7 @@ def featuresetup(ui, supported):
     # don't die on seeing a repo with the sqldirstate requirement
     supported |= set(['sqldirstate'])
 
-def uisetup(ui):
+def extsetup(ui):
     localrepo.localrepository.featuresetupfuncs.add(featuresetup)
     wrapfunction(localrepo, 'newreporequirements',
                  wrapnewreporequirements)
@@ -117,8 +117,6 @@ def uisetup(ui):
         wrapfunction(shelve, '_aborttransaction', wrapshelveaborttransaction)
     except KeyError:
         pass
-
-def extsetup(ui):
     extensions.wrapcommand(commands.table, 'pull', wrappull)
 
 # debug commands
