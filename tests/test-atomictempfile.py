@@ -2,6 +2,8 @@ from __future__ import absolute_import
 
 import glob
 import os
+import shutil
+import tempfile
 import unittest
 
 from mercurial import (
@@ -10,31 +12,36 @@ from mercurial import (
 atomictempfile = util.atomictempfile
 
 class testatomictempfile(unittest.TestCase):
+    def setUp(self):
+        self._testdir = tempfile.mkdtemp('atomictempfiletest')
+        self._filename = os.path.join(self._testdir, 'testfilename')
+
+    def tearDown(self):
+        shutil.rmtree(self._testdir, True)
+
     def test1_simple(self):
-        if os.path.exists('foo'):
-            os.remove('foo')
-        file = atomictempfile('foo')
-        (dir, basename) = os.path.split(file._tempname)
-        self.assertFalse(os.path.isfile('foo'))
-        self.assertTrue(basename in glob.glob('.foo-*'))
+        file = atomictempfile(self._filename)
+        self.assertFalse(os.path.isfile(self._filename))
+        tempfilename = file._tempname
+        self.assertTrue(tempfilename in glob.glob(
+            os.path.join(self._testdir, '.testfilename-*')))
 
         file.write(b'argh\n')
         file.close()
 
-        self.assertTrue(os.path.isfile('foo'))
-        self.assertTrue(basename not in glob.glob('.foo-*'))
+        self.assertTrue(os.path.isfile(self._filename))
+        self.assertTrue(tempfilename not in glob.glob(
+            os.path.join(self._testdir, '.testfilename-*')))
 
     # discard() removes the temp file without making the write permanent
     def test2_discard(self):
-        if os.path.exists('foo'):
-            os.remove('foo')
-        file = atomictempfile('foo')
+        file = atomictempfile(self._filename)
         (dir, basename) = os.path.split(file._tempname)
 
         file.write(b'yo\n')
         file.discard()
 
-        self.assertFalse(os.path.isfile('foo'))
+        self.assertFalse(os.path.isfile(self._filename))
         self.assertTrue(basename not in os.listdir('.'))
 
     # if a programmer screws up and passes bad args to atomictempfile, they
@@ -45,7 +52,7 @@ class testatomictempfile(unittest.TestCase):
     # checkambig=True avoids ambiguity of timestamp
     def test4_checkambig(self):
         def atomicwrite(checkambig):
-            f = atomictempfile('foo', checkambig=checkambig)
+            f = atomictempfile(self._filename, checkambig=checkambig)
             f.write('FOO')
             f.close()
 
@@ -53,7 +60,7 @@ class testatomictempfile(unittest.TestCase):
         # "filesystem time"
         for i in xrange(5):
             atomicwrite(False)
-            oldstat = os.stat('foo')
+            oldstat = os.stat(self._filename)
             if oldstat.st_ctime != oldstat.st_mtime:
                 # subsequent changing never causes ambiguity
                 continue
@@ -64,7 +71,7 @@ class testatomictempfile(unittest.TestCase):
             # whether st_mtime is advanced multiple times as expecetd
             for j in xrange(repetition):
                 atomicwrite(True)
-            newstat = os.stat('foo')
+            newstat = os.stat(self._filename)
             if oldstat.st_ctime != newstat.st_ctime:
                 # timestamp ambiguity was naturally avoided while repetition
                 continue
