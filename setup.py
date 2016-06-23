@@ -28,6 +28,7 @@ setup(
         'commitextras',
         'dirsync',
         'errorredirect',
+        'extorder',
         'extutil',
         'fbamend',
         'fbconduit',
