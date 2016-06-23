@@ -19,7 +19,7 @@ class testatomictempfile(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self._testdir, True)
 
-    def test1_simple(self):
+    def testsimple(self):
         file = atomictempfile(self._filename)
         self.assertFalse(os.path.isfile(self._filename))
         tempfilename = file._tempname
@@ -34,7 +34,7 @@ class testatomictempfile(unittest.TestCase):
             os.path.join(self._testdir, '.testfilename-*')))
 
     # discard() removes the temp file without making the write permanent
-    def test2_discard(self):
+    def testdiscard(self):
         file = atomictempfile(self._filename)
         (dir, basename) = os.path.split(file._tempname)
 
@@ -46,11 +46,11 @@ class testatomictempfile(unittest.TestCase):
 
     # if a programmer screws up and passes bad args to atomictempfile, they
     # get a plain ordinary TypeError, not infinite recursion
-    def test3_oops(self):
+    def testoops(self):
         self.assertRaises(TypeError, atomictempfile)
 
     # checkambig=True avoids ambiguity of timestamp
-    def test4_checkambig(self):
+    def testcheckambig(self):
         def atomicwrite(checkambig):
             f = atomictempfile(self._filename, checkambig=checkambig)
             f.write('FOO')
