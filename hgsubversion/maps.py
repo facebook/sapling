@@ -426,6 +426,7 @@ class RevMap(dict):
             revmap.exportrevmapv1(tmppath)
             os.rename(tmppath, self._filepath)
             hgutil.unlinkpath(revmap._dbpath)
+            hgutil.unlinkpath(revmap._rowcountpath, ignoremissing=True)
             return self._readmapfile()
         if ver != self.VERSION:
             raise hgutil.Abort('revmap too new -- please upgrade')
@@ -554,10 +555,13 @@ class SqliteRevMap(collections.MutableMapping):
 
     lastpulled = util.fileproperty('_lastpulled', lambda x: x._lastpulledpath,
                                    default=0, deserializer=int)
+    rowcount = util.fileproperty('_rowcount', lambda x: x._rowcountpath,
+                                 default=0, deserializer=int)
 
     def __init__(self, revmap_path, lastpulled_path):
         self._filepath = revmap_path
         self._dbpath = revmap_path + '.db'
+        self._rowcountpath = self._dbpath + '.rowcount'
         self._lastpulledpath = lastpulled_path
 
         self._db = None
@@ -608,6 +612,7 @@ class SqliteRevMap(collections.MutableMapping):
     def clear(self):
         hgutil.unlinkpath(self._filepath, ignoremissing=True)
         hgutil.unlinkpath(self._dbpath, ignoremissing=True)
+        hgutil.unlinkpath(self._rowcountpath, ignoremissing=True)
         self._db = None
         self._hashes = None
         self._firstpull = None
@@ -635,10 +640,8 @@ class SqliteRevMap(collections.MutableMapping):
         return iter(rows)
 
     def __len__(self):
-        # 'WHERE rev >= 0' hints sqlite to use the rev index
-        with self._transaction() as db:
-            return db.execute('SELECT COUNT(1) FROM revmap ' +
-                              'WHERE rev >= 0').fetchone()[0]
+        # rowcount is faster than "SELECT COUNT(1)". the latter is not O(1)
+        return self.rowcount
 
     def __setitem__(self, key, binha):
         revnum, branch = key
@@ -653,6 +656,8 @@ class SqliteRevMap(collections.MutableMapping):
 
     def __delitem__(self, key):
         for row in self._querybykey('DELETE', key):
+            if self.rowcount > 0:
+                self.rowcount -= 1
             return
         # For performance reason, self._hashes is not updated
         raise KeyError(key)
@@ -687,6 +692,10 @@ class SqliteRevMap(collections.MutableMapping):
         self._db.executemany(
             'INSERT OR REPLACE INTO revmap (rev, branch, hash) ' +
             'VALUES (?, ?, ?)', rows)
+        # If REPLACE happens, rowcount can be wrong. But it is only used to
+        # calculate how many revisions pulled, and during pull we don't
+        # replace rows. So it is fine.
+        self.rowcount += len(rows)
 
     def _opendb(self):
         '''Open the database and make sure the table is created on demand.'''
@@ -723,7 +732,12 @@ class SqliteRevMap(collections.MutableMapping):
         with self._transaction('EXCLUSIVE'):
             map(self._db.execute, self.TABLESCHEMA)
             if version == RevMap.VERSION:
+                self.rowcount = 0
                 self._importrevmapv1()
+            elif not self.rowcount:
+                self.rowcount = self._db.execute(
+                    'SELECT COUNT(1) FROM revmap').fetchone()[0]
+
             # "bulk insert; then create index" is about 2.4x as fast as
             # "create index; then bulk insert" on a large repo
             map(self._db.execute, self.INDEXSCHEMA)
