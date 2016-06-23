@@ -1147,9 +1147,7 @@ def head(repo, subset, x):
     cl = repo.changelog
     for ls in repo.branchmap().itervalues():
         hs.update(cl.rev(h) for h in ls)
-    # XXX We should combine with subset first: 'subset & baseset(...)'. This is
-    # necessary to ensure we preserve the order in subset.
-    return baseset(hs) & subset
+    return subset & baseset(hs)
 
 @predicate('heads(set)', safe=True)
 def heads(repo, subset, x):

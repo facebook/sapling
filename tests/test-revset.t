@@ -952,13 +952,12 @@ ordering defined by it.
   1
   0
 
- 'head()' combines sets in wrong order:
+ 'head()' combines sets in right order:
 
   $ log '2:0 & head()'
-  0
-  1
   2
- BROKEN: should be '2 1 0'
+  1
+  0
 
  'a + b', which is optimized to '_list(a b)', should take the ordering of
  the left expression:
