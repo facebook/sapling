@@ -18,38 +18,6 @@ import traceback
 
 from mercurial import error
 
-# Returns true if we're the original process, returns false if we're the child
-# process.
-#
-# NOTE: This is extremely platform-specific code.
-def fork_worker(ui, repo, silent_worker):
-    if not silent_worker:
-        # if we don't want a silent worker, then we need to flush any streams so
-        # any buffered content only gets written *once*.
-        sys.stdout.flush()
-        sys.stderr.flush()
-
-    pid = os.fork()
-    if pid > 0:
-        return True
-
-    if silent_worker:
-        # close all file descriptors.
-        flimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-        os.closerange(0, flimit[0])
-
-        # reopen some new file handles.
-        ui.fin = sys.stdin = open(os.devnull, "r")
-        ui.fout = ui.ferr = sys.stdout = sys.stderr = open(os.devnull, "w")
-        repo.ui = ui
-
-    os.setsid()
-    pid = os.fork()
-    if pid > 0:
-        os._exit(0)
-
-    return False
-
 class looselock(object):
     """A loose lock.  If the lock is held and the lockfile is recent, then we
     immediately fail.  If the lockfile is older than X seconds, where
