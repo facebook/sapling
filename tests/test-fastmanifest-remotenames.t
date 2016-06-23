@@ -36,7 +36,7 @@ Check that remotename changes trigger caching
   $ hg book master -r "." -f
   $ cd ../client
   $ hg debugcachemanifest --debug --list
-  [FM] caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], pruneall(False), list(True)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
   cache size is: 184 bytes
   number of entries is: 1
@@ -45,7 +45,7 @@ Check that remotename changes trigger caching
   manifest node                           |revs
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
   $ hg debugcachemanifest --debug --pruneall
-  [FM] caching revset: [], background(False), pruneall(True), list(False)
+  [FM] caching revset: [], pruneall(True), list(False)
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   $ hg pull -r master
   pulling from $TESTTMP/server (glob)
@@ -60,7 +60,7 @@ Check that remotename changes trigger caching
   summary:     add c
   
   $ hg debugcachemanifest --debug --list
-  [FM] caching revset: [], background(False), pruneall(False), list(True)
+  [FM] caching revset: [], pruneall(False), list(True)
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   cache size is: 232 bytes
   number of entries is: 1

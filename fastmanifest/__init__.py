@@ -108,12 +108,9 @@ command = cmdutil.command(cmdtable)
     ('a', 'all', False, 'cache all relevant revisions', ''),
     ('l', 'limit', -1, 'limit size of total rev in bytes', 'BYTES'),
     ('p', 'pruneall', False, 'prune all the entries'),
-    ('b', 'background', False,
-     'return imediately and process in the background', ''),
     ('e', 'list', False, 'list the content of the cache and its size','')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
-    background = opts["background"]
     if opts["limit"] == -1 :
         limit = None
     else:
@@ -128,9 +125,8 @@ def debugcachemanifest(ui, repo, *pats, **opts):
     else:
         revset = []
 
-    ui.debug(("[FM] caching revset: %s, background(%s), "
-              "pruneall(%s), list(%s)\n")
-             % (revset, background, pruneall, displaylist))
+    ui.debug(("[FM] caching revset: %s, pruneall(%s), list(%s)\n")
+             % (revset, pruneall, displaylist))
 
     if displaylist and pruneall:
         raise error.Abort("can only use --pruneall or --list not both")
@@ -145,7 +141,7 @@ def debugcachemanifest(ui, repo, *pats, **opts):
 
     if revset or limit:
         cachemanager.cachemanifestfillandtrim(
-            ui, repo, revset, limit, background)
+            ui, repo, revset, limit)
 
 def _logonexit(orig, ui, repo, cmd, fullargs, *args):
     r = orig(ui, repo, cmd, fullargs, *args)

@@ -222,7 +222,7 @@ def shufflebybatch(it, batchsize):
         random.shuffle(batch)
         it[batchstart:batchend] = batch
 
-def cachemanifestfillandtrim(ui, repo, revset, limit, background):
+def cachemanifestfillandtrim(ui, repo, revset, limit):
     lock = concurrency.looselock(repo.vfs, "fastmanifest",
                                  constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT)
     # we don't use the with: syntax because we only want to unlock in *one*
@@ -241,9 +241,6 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
     try:
         silent_worker = ui.configbool("fastmanifest", "silentworker", True)
 
-        if background:
-            if concurrency.fork_worker(ui, repo, silent_worker):
-                return
         cache = fastmanifestcache.getinstance(repo.store.opener, ui)
 
         computedrevs = scmutil.revrange(repo, revset)
@@ -308,14 +305,6 @@ def cachemanifestfillandtrim(ui, repo, revset, limit, background):
                                                 limit=(limit.bytes() / 1024**2),
                                                 freespace=free)
 
-    if background:
-        if not silent_worker:
-            ui.flush()
-            sys.stdout.flush()
-            sys.stderr.flush()
-
-        os._exit(0)
-
 class triggers(object):
     repos_to_update = set()
 
@@ -334,7 +323,7 @@ class triggers(object):
 
         for repo in triggers.repos_to_update:
             revset, bg, limit = triggers._cacheonchangeconfig(repo)
-            cachemanifestfillandtrim(repo.ui, repo, revset, limit, bg)
+            cachemanifestfillandtrim(repo.ui, repo, revset, limit)
 
         return result
 
