@@ -345,8 +345,14 @@ class SVNMeta(object):
     @property
     def revmap(self):
         if self._revmap is None:
+            lastpulled_path = os.path.join(self.metapath, 'lastpulled')
+            opts = {}
+            if self.revmapclass is maps.SqliteRevMap:
+                # sqlite revmap takes an optional option: sqlitepragmas
+                opts['sqlitepragmas'] = self.ui.configlist(
+                    'hgsubversion', 'sqlitepragmas')
             self._revmap = self.revmapclass(
-                self.revmap_file, os.path.join(self.metapath, 'lastpulled'))
+                self.revmap_file, lastpulled_path, **opts)
         return self._revmap
 
     @property

@@ -558,7 +558,7 @@ class SqliteRevMap(collections.MutableMapping):
     rowcount = util.fileproperty('_rowcount', lambda x: x._rowcountpath,
                                  default=0, deserializer=int)
 
-    def __init__(self, revmap_path, lastpulled_path):
+    def __init__(self, revmap_path, lastpulled_path, sqlitepragmas=None):
         self._filepath = revmap_path
         self._dbpath = revmap_path + '.db'
         self._rowcountpath = self._dbpath + '.rowcount'
@@ -566,6 +566,7 @@ class SqliteRevMap(collections.MutableMapping):
 
         self._db = None
         self._hashes = None
+        self._sqlitepragmas = sqlitepragmas
         self.firstpulled = 0
         self._updatefirstlastpulled()
         # __iter__ is expensive and thus disabled by default
@@ -719,6 +720,12 @@ class SqliteRevMap(collections.MutableMapping):
             if os.path.exists(path):
                 cachesize += os.stat(path).st_size * ratio // 1000
         self._db.execute('PRAGMA cache_size=%d' % (-cachesize))
+
+        # PRAGMA statements provided by the user
+        for pragma in (self._sqlitepragmas or []):
+            # drop malicious ones
+            if re.match(r'\A\w+=\w+\Z', pragma):
+                self._db.execute('PRAGMA %s' % pragma)
 
         # disable auto-commit. everything is inside a transaction
         self._db.isolation_level = 'DEFERRED'

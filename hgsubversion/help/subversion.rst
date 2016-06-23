@@ -362,6 +362,15 @@ settings:
     If it is set to an implementation different from what the repo is using,
     a migration will run automatically when the revision map is accessed.
 
+  ``hgsubversion.sqlitepragmas``
+
+    A list of sqlite PRAGMA statements to tweak sqlite. Each item should be
+    in the format ``key=value`` without ``PRAGMA``, or spaces, or quotation
+    marks. Refer to https://www.sqlite.org/pragma.html for possible options.
+
+    For example, setting it to ``synchronous=0, journal_mode=memory`` will
+    give you better performance at the cost of possible database corruption.
+
   ``hgsubversion.stupid``
     Setting this boolean option to true will force using a slower method for
     pulling revisions from Subversion. This method is compatible with servers
