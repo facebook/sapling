@@ -99,7 +99,7 @@ class sqlmap(collections.MutableMapping):
         cur.close()
 
     def copy(self):
-        return dict(self)
+        return dict(self.iteritems())
 
     def _update(self, otherdict):
         tuplelist = [(k,) + self._valuetorow(v)
