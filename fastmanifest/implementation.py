@@ -356,7 +356,7 @@ class fastmanifestdict(object):
 
     def text(self, usemanifestv2=False):
         if usemanifestv2:
-            return manifest._textv2(self._fm.iterentries())
+            raise NotImplementedError("v2 not supported")
         else:
             # use (probably) native version for v1
             return self._fm.text()
