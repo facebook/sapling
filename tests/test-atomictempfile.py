@@ -96,6 +96,24 @@ class testatomictempfile(unittest.TestCase):
         self.assertTrue(file.read(), b'foobar\n')
         file.discard()
 
+    def testcontextmanagersuccess(self):
+        """When the context closes, the file is closed"""
+        with atomictempfile('foo') as f:
+            self.assertFalse(os.path.isfile('foo'))
+            f.write(b'argh\n')
+        self.assertTrue(os.path.isfile('foo'))
+
+    def testcontextmanagerfailure(self):
+        """On exception, the file is discarded"""
+        try:
+            with atomictempfile('foo') as f:
+                self.assertFalse(os.path.isfile('foo'))
+                f.write(b'argh\n')
+                raise ValueError
+        except ValueError:
+            pass
+        self.assertFalse(os.path.isfile('foo'))
+
 if __name__ == '__main__':
     import silenttestrunner
     silenttestrunner.main(__name__)

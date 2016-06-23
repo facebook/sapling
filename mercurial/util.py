@@ -1516,6 +1516,15 @@ class atomictempfile(object):
         if safehasattr(self, '_fp'): # constructor actually did something
             self.discard()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exctype, excvalue, traceback):
+        if exctype is not None:
+            self.discard()
+        else:
+            self.close()
+
 def makedirs(name, mode=None, notindexed=False):
     """recursive directory creation with parent mode inheritance
 
