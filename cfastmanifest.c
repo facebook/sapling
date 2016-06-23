@@ -730,7 +730,7 @@ static PyMethodDef fastmanifest_methods[] = {
    "Make a copy of this fastmanifest."},
   {"filtercopy", (PyCFunction)fastmanifest_filtercopy, METH_O,
    "Make a copy of this manifest filtered by matchfn."},
-  {"save", (PyCFunction)fastmanifest_save, METH_VARARGS,
+  {"_save", (PyCFunction)fastmanifest_save, METH_VARARGS,
    "Save a fastmanifest to a file"},
   {"load", (PyCFunction)fastmanifest_load, METH_VARARGS | METH_CLASS,
    "Load a tree manifest from a file"},

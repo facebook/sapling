@@ -470,7 +470,7 @@ class ondiskcache(object):
         fm = cfastmanifest.fastmanifest(manifest.text())
         tmpfpath = util.mktempcopy(path, True)
         try:
-            fm.save(tmpfpath)
+            fm._save(tmpfpath)
             entrysize = os.path.getsize(tmpfpath)
             if limit and self.totalsize()[0] + entrysize > limit:
                 return False
