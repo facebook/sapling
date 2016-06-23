@@ -692,20 +692,18 @@ def checkstatus(repo, subset, pat, field):
 
     return subset.filter(matches, condrepr=('<status[%r] %r>', field, pat))
 
-def _children(repo, narrow, parentset):
+def _children(repo, subset, parentset):
     if not parentset:
         return baseset()
     cs = set()
     pr = repo.changelog.parentrevs
     minrev = parentset.min()
-    for r in narrow:
+    for r in subset:
         if r <= minrev:
             continue
         for p in pr(r):
             if p in parentset:
                 cs.add(r)
-    # XXX using a set to feed the baseset is wrong. Sets are not ordered.
-    # This does not break because of other fullreposet misbehavior.
     return baseset(cs)
 
 @predicate('children(set)', safe=True)
@@ -1149,8 +1147,6 @@ def head(repo, subset, x):
     cl = repo.changelog
     for b, ls in repo.branchmap().iteritems():
         hs.update(cl.rev(h) for h in ls)
-    # XXX using a set to feed the baseset is wrong. Sets are not ordered.
-    # This does not break because of other fullreposet misbehavior.
     # XXX We should combine with subset first: 'subset & baseset(...)'. This is
     # necessary to ensure we preserve the order in subset.
     return baseset(hs) & subset
