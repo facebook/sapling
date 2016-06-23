@@ -223,12 +223,57 @@ def shufflebybatch(it, batchsize):
         it[batchstart:batchend] = batch
 
 def cachemanifestfillandtrim(ui, repo, revset, limit):
-    lock = concurrency.looselock(repo.vfs, "fastmanifest",
-                                 constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT)
-    # we don't use the with: syntax because we only want to unlock in *one*
-    # process (in this case, the child process).
     try:
-        lock.lock()
+        with concurrency.looselock(repo.vfs,
+                "fastmanifest",
+                constants.WORKER_SPAWN_LOCK_STEAL_TIMEOUT) as lock:
+            cache = fastmanifestcache.getinstance(repo.store.opener, ui)
+
+            computedrevs = scmutil.revrange(repo, revset)
+            sortedrevs = sorted(computedrevs, key=lambda x:-x)
+            if ui.configbool("fastmanifest", "randomorder", True):
+                # Make a copy because we want to keep the ordering to assign
+                # mtime below
+                revs = sortedrevs[:]
+                batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
+                shufflebybatch(revs, batchsize)
+            else:
+                revs = sortedrevs
+
+            revstomannodes = {}
+            for rev in revs:
+                mannode = revlog.hex(
+                    repo.changelog.changelogrevision(rev).manifest)
+                revstomannodes[rev] = mannode
+                if mannode in cache.ondiskcache:
+                    ui.debug("[FM] skipped %s, already cached (fast path)\n" %
+                             (mannode,))
+                    # Account for the fact that we access this manifest
+                    cache.ondiskcache.touch(mannode)
+                    continue
+                manifest = repo[rev].manifest()
+                try:
+                    cache[mannode] = manifest
+                except CacheFullException:
+                    break
+
+            # Make the least relevant entries have an artificially older mtime
+            # than the more relevant ones. We use a resolution of 2 for time to
+            # work accross all platforms and ensure that the order is marked.
+            #
+            # Note that we use sortedrevs and not revs because here we don't
+            # care about the shuffling, we just want the most relevant revisions
+            # to have more recent mtime.
+            mtimemultiplier = 2
+            for offset, rev in enumerate(sortedrevs):
+                if rev in revstomannodes:
+                    hexnode = revstomannodes[rev]
+                    cache.ondiskcache.touch(hexnode,
+                            delay=offset * mtimemultiplier)
+                else:
+                    metricscollector.get(repo).recordsample("cacheoverflow",
+                            hit=True)
+                    pass # We didn't have enough space for that rev
     except error.LockHeld:
         return
     except (OSError, IOError) as ex:
@@ -238,55 +283,6 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
             ui.warn(("(make sure that .hg/store is writeable)\n"))
             return
         raise
-    try:
-        cache = fastmanifestcache.getinstance(repo.store.opener, ui)
-
-        computedrevs = scmutil.revrange(repo, revset)
-        sortedrevs = sorted(computedrevs, key=lambda x:-x)
-        if ui.configbool("fastmanifest", "randomorder", True):
-            # Make a copy because we want to keep the ordering to assign mtime
-            # below
-            revs = sortedrevs[:]
-            batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
-            shufflebybatch(revs, batchsize)
-        else:
-            revs = sortedrevs
-
-        revstomannodes = {}
-        for rev in revs:
-            mannode = revlog.hex(repo.changelog.changelogrevision(rev).manifest)
-            revstomannodes[rev] = mannode
-            if mannode in cache.ondiskcache:
-                ui.debug("[FM] skipped %s, already cached (fast path)\n" %
-                         (mannode,))
-                # Account for the fact that we access this manifest
-                cache.ondiskcache.touch(mannode)
-                continue
-            manifest = repo[rev].manifest()
-            try:
-                cache[mannode] = manifest
-            except CacheFullException:
-                break
-
-        # Make the least relevant entries have an artificially older mtime
-        # than the more relevant ones. We use a resolution of 2 for time to work
-        # accross all platforms and ensure that the order is marked.
-        #
-        # Note that we use sortedrevs and not revs because here we don't care
-        # about the shuffling, we just want the most relevant revisions to have
-        # more recent mtime.
-        mtimemultiplier = 2
-        for offset, rev in enumerate(sortedrevs):
-            if rev in revstomannodes:
-                hexnode = revstomannodes[rev]
-                cache.ondiskcache.touch(hexnode, delay=offset * mtimemultiplier)
-            else:
-                metricscollector.get(repo).recordsample("cacheoverflow",
-                                                        hit=True)
-                pass # We didn't have enough space for that rev
-    finally:
-        lock.unlock()
-
 
     if limit is not None:
         cache.prune(limit)
