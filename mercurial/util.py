@@ -1483,6 +1483,7 @@ class atomictempfile(object):
         self._checkambig = checkambig
 
         # delegated methods
+        self.read = self._fp.read
         self.write = self._fp.write
         self.seek = self._fp.seek
         self.tell = self._fp.tell

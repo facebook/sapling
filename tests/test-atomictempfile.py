@@ -89,6 +89,13 @@ class testatomictempfile(unittest.TestCase):
             # on other faster platforms can detect problems
             pass
 
+    def testread(self):
+        with open(self._filename, 'wb') as f:
+            f.write(b'foobar\n')
+        file = atomictempfile(self._filename, mode='rb')
+        self.assertTrue(file.read(), b'foobar\n')
+        file.discard()
+
 if __name__ == '__main__':
     import silenttestrunner
     silenttestrunner.main(__name__)
