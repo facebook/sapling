@@ -566,7 +566,6 @@ class SqliteRevMap(collections.MutableMapping):
 
         self._db = None
         self._hashes = None
-        self._opendb()
         self.firstpulled = 0
         self._updatefirstlastpulled()
         # __iter__ is expensive and thus disabled by default
