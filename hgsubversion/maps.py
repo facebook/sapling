@@ -567,13 +567,8 @@ class SqliteRevMap(collections.MutableMapping):
         self._db = None
         self._hashes = None
         self._opendb()
-        # update firstpulled, lastpulled
         self.firstpulled = 0
-        for row in self._query('SELECT MIN(rev), MAX(rev) FROM revmap'):
-            if row != (None, None):
-                self.firstpulled, lastpulled = row
-                if lastpulled > self.lastpulled:
-                    self.lastpulled = lastpulled
+        self._updatefirstlastpulled()
         # __iter__ is expensive and thus disabled by default
         # it should only be enabled for testing
         self._allowiter = False
@@ -747,6 +742,14 @@ class SqliteRevMap(collections.MutableMapping):
             f = open(self._filepath, 'w')
             f.write('%s\n' % self.VERSION)
             f.close()
+
+    def _updatefirstlastpulled(self):
+        sql = 'SELECT rev FROM revmap ORDER BY rev %s LIMIT 1'
+        for row in self._query(sql % 'ASC'):
+            self.firstpulled = row[0]
+        for row in self._query(sql % 'DESC'):
+            if row[0] > self.lastpulled:
+                self.lastpulled = row[0]
 
     @util.gcdisable
     def _importrevmapv1(self):
