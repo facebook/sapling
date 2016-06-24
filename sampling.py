@@ -83,7 +83,8 @@ def uisetup(ui):
                 try:
                     opts["metrics_type"] = event
                     if msg:
-                        opts["msg"] = msg
+                        # ui.log treats msg as a format string + format args.
+                        opts["msg"] = msg[0] % msg[1:]
                     with open(script, 'a') as outfile:
                         outfile.write(json.dumps({"data": opts,
                                                   "category": ref}))

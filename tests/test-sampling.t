@@ -24,6 +24,7 @@ Create an extension that logs the call to commit
   > def _commit(orig, repo, *args, **kwargs):
   >     repo.ui.log("commit", "match filter", k=1, a={"hi":"ho"})
   >     repo.ui.log("foo", "does not match filter", k=1, a={"hi":"ho"})
+  >     repo.ui.log("commit", "message %s", "string", k=1, a={"hi":"ho"})
   >     return orig(repo, *args, **kwargs)
   > def extsetup(ui):
   >     extensions.wrapfunction(localrepo.localrepository, 'commit', _commit)
@@ -45,7 +46,7 @@ logged
   $ echo "[sampling]" >> $HGRCPATH
   $ echo "filepath = $LOGDIR/samplingpath.txt" >> $HGRCPATH
 
-Do a couple of commits we expect to log two call to repo.revs for each commit
+Do a couple of commits.  We expect to log two messages per call to repo.commit.
 
   $ mkcommit b
   $ mkcommit c
@@ -56,5 +57,7 @@ Do a couple of commits we expect to log two call to repo.revs for each commit
   ...     parsedrecord = json.loads(record)
   ...     print parsedrecord["data"]["msg"], parsedrecord["category"]
   ...     assert len(parsedrecord["data"]) == 4
-  [u'match filter'] commit_table
-  [u'match filter'] commit_table
+  match filter commit_table
+  message string commit_table
+  match filter commit_table
+  message string commit_table
