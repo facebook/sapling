@@ -135,7 +135,7 @@ def _hassharedbookmarks(repo):
         if inst.errno != errno.ENOENT:
             raise
         return False
-    return 'bookmarks' in shared
+    return hg.sharedbookmarks in shared
 
 def _getsrcrepo(repo):
     """

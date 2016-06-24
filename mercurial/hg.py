@@ -44,6 +44,9 @@ from . import (
 
 release = lock.release
 
+# shared features
+sharedbookmarks = 'bookmarks'
+
 def _local(path):
     path = util.expandpath(util.urllocalpath(path))
     return (os.path.isfile(path) and bundlerepo or localrepo)
@@ -258,7 +261,7 @@ def postshare(sourcerepo, destrepo, bookmarks=True):
 
     if bookmarks:
         fp = destrepo.vfs('shared', 'w')
-        fp.write('bookmarks\n')
+        fp.write(sharedbookmarks + '\n')
         fp.close()
 
 def _postshareupdate(repo, update, checkout=None):
