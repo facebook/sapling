@@ -140,7 +140,8 @@ class looselock(object):
     def __exit__(self, exc_type, exc_value, exc_tb):
         return self.unlock()
 
-# Copied from the hgext/logtoprocess.py extension
+# This originated in hgext/logtoprocess.py, was copied to
+# remotefilelog/shallowutil.py, and now here.
 if platform.system() == 'Windows':
     # no fork on Windows, but we can create a detached process
     # https://msdn.microsoft.com/en-us/library/windows/desktop/ms684863.aspx
