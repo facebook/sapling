@@ -532,7 +532,7 @@ def openrevlog(repo, cmd, file_, opts):
         msg = _('cannot specify --changelog and --manifest at the same time')
     elif cl and dir:
         msg = _('cannot specify --changelog and --dir at the same time')
-    elif cl or mf:
+    elif cl or mf or dir:
         if file_:
             msg = _('cannot specify filename with --changelog or --manifest')
         elif not repo:
@@ -549,7 +549,7 @@ def openrevlog(repo, cmd, file_, opts):
             if 'treemanifest' not in repo.requirements:
                 raise error.Abort(_("--dir can only be used on repos with "
                                    "treemanifest enabled"))
-            dirlog = repo.dirlog(file_)
+            dirlog = repo.dirlog(dir)
             if len(dirlog):
                 r = dirlog
         elif mf:

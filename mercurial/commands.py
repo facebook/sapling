@@ -216,7 +216,7 @@ subrepoopts = [
 debugrevlogopts = [
     ('c', 'changelog', False, _('open changelog')),
     ('m', 'manifest', False, _('open manifest')),
-    ('', 'dir', False, _('open directory manifest')),
+    ('', 'dir', '', _('open directory manifest')),
 ]
 
 # Commands start here, listed alphabetically
@@ -2299,7 +2299,7 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 @command('debugdata', debugrevlogopts, _('-c|-m|FILE REV'))
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
-    if opts.get('changelog') or opts.get('manifest'):
+    if opts.get('changelog') or opts.get('manifest') or opts.get('dir'):
         if rev is not None:
             raise error.CommandError('debugdata', _('invalid arguments'))
         file_, rev = None, file_
