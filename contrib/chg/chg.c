@@ -338,6 +338,7 @@ static void killcmdserver(const struct cmdserveropts *opts)
 	}
 }
 
+static pid_t pagerpid = 0;
 static pid_t peerpid = 0;
 
 static void forwardsignal(int sig)
@@ -380,6 +381,17 @@ error:
 	abortmsgerrno("failed to handle stop signal");
 }
 
+static void handlechildsignal(int sig)
+{
+	if (peerpid == 0 || pagerpid == 0)
+		return;
+	/* if pager exits, notify the server with SIGPIPE immediately.
+	 * otherwise the server won't get SIGPIPE if it does not write
+	 * anything. (issue5278) */
+	if (waitpid(pagerpid, NULL, WNOHANG) == pagerpid)
+		kill(peerpid, SIGPIPE);
+}
+
 static void setupsignalhandler(pid_t pid)
 {
 	if (pid <= 0)
@@ -416,6 +428,11 @@ static void setupsignalhandler(pid_t pid)
 	sa.sa_flags = SA_RESTART;
 	if (sigaction(SIGTSTP, &sa, NULL) < 0)
 		goto error;
+	/* get notified when pager exits */
+	sa.sa_handler = handlechildsignal;
+	sa.sa_flags = SA_RESTART;
+	if (sigaction(SIGCHLD, &sa, NULL) < 0)
+		goto error;
 
 	return;
 
@@ -441,6 +458,8 @@ static void restoresignalhandler()
 	if (sigaction(SIGCONT, &sa, NULL) < 0)
 		goto error;
 	if (sigaction(SIGTSTP, &sa, NULL) < 0)
+		goto error;
+	if (sigaction(SIGCHLD, &sa, NULL) < 0)
 		goto error;
 
 	/* ignore Ctrl+C while shutting down to make pager exits cleanly */
@@ -638,7 +657,7 @@ int main(int argc, const char *argv[], const char *envp[])
 	}
 
 	setupsignalhandler(hgc_peerpid(hgc));
-	pid_t pagerpid = setuppager(hgc, argv + 1, argc - 1);
+	pagerpid = setuppager(hgc, argv + 1, argc - 1);
 	int exitcode = hgc_runcommand(hgc, argv + 1, argc - 1);
 	restoresignalhandler();
 	hgc_close(hgc);
