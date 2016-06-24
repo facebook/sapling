@@ -40,7 +40,7 @@ Check diagnosis, debugging information
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.13 KB
   number of entries is: 5
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
@@ -69,7 +69,7 @@ Check diagnosis, debugging information
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5

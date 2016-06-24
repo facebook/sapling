@@ -198,7 +198,7 @@ def cachemanifestlist(ui, repo):
             mannode = revlog.hex(repo.changelog.changelogrevision(r).manifest)
             revstoman[mannode].append(str(r))
         if revs:
-            ui.status(("Freshest cache entries appear last\n"))
+            ui.status(("Most relevant cache entries appear first\n"))
             ui.status(("="*80))
             ui.status(("\nmanifest node                           |revs\n"))
             for h in cache.ondiskcache:

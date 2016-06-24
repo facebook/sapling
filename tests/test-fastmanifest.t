@@ -114,7 +114,7 @@ Check diagnosis, debugging information
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.13 KB
   number of entries is: 5
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
@@ -346,7 +346,7 @@ Test the --pruneall command to prune all the cached manifests
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5
@@ -392,7 +392,7 @@ newest ones:
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
   cache size is: 984 bytes
   number of entries is: 3
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5
@@ -429,7 +429,7 @@ Trim the cache to at most 512 bytes
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
   cache size is: 376 bytes
   number of entries is: 1
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5
@@ -484,7 +484,7 @@ Check that trimming the cache to 0 byte works
   fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
   cache size is: 1.50 KB
   number of entries is: 6
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5

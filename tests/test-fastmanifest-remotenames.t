@@ -40,7 +40,7 @@ Check that remotename changes trigger caching
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
   cache size is: 184 bytes
   number of entries is: 1
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
@@ -64,7 +64,7 @@ Check that remotename changes trigger caching
   faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
   cache size is: 232 bytes
   number of entries is: 1
-  Freshest cache entries appear last
+  Most relevant cache entries appear first
   ================================================================================
   manifest node                           |revs
   e3738bf5439958f89499a656982023aba57b076e|2

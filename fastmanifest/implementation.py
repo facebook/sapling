@@ -447,6 +447,8 @@ class ondiskcache(object):
         return os.path.exists(path)
 
     def items(self):
+        """Return the entries in the cache, sorted from most relevant to least
+        relevant"""
         entries = []
         for entry in os.listdir(self.cachepath):
             try:
