@@ -85,9 +85,9 @@ class metricscollector(object):
         self.ui = ui
         self.debug = self.ui.config("fastmanifest", "debugmetrics", False)
 
-    def recordsample(self, kind, *args, **kwargs):
+    def recordsample(self, kind, **kwargs):
         if kind in FASTMANIFEST_METRICS:
-            self.samples.append((kind, args, kwargs))
+            self.samples.append((kind, kwargs))
         else:
             self.ui.warn(("unknown metric %s\n" % kind))
 
@@ -101,9 +101,9 @@ class metricscollector(object):
             # Aggregate the cache hit and miss to build a hit ratio
             # store the ratio as aggkey : {ratio: ratio} in self.samples
             hit = len([s for s in self.samples
-                         if s[0] == key and s[2]["hit"]])
+                         if s[0] == key and s[1]["hit"]])
             miss = len([s for s in self.samples
-                          if s[0] == key and not s[2]["hit"]])
+                          if s[0] == key and not s[1]["hit"]])
             if miss + hit == 0:
                 ratio = -1
             else:
@@ -120,7 +120,7 @@ class metricscollector(object):
         if self.debug:
             self.ui.status(("[FM-METRICS] Begin metrics\n"))
 
-        for kind, args, kwargs in self.samples:
+        for kind, kwargs in self.samples:
             if kind in FASTMANIFEST_DONOTREPORT_METRICS:
                 continue
 
@@ -133,8 +133,10 @@ class metricscollector(object):
                 if "limit" in kwargs:
                     del dispkw["limit"]
                 # Here we sort to make test output stable
-                self.ui.status(("[FM-METRICS] kind: %s, args: %s, kwargs: %s\n"
-                                % (kind, sorted(args), sorted(dispkw.items()))))
-            self.ui.log('fastmanifest-%s'% kind, *args, **kwargs)
+                self.ui.status(("[FM-METRICS] kind: %s, kwargs: %s\n"
+                                % (kind, sorted(dispkw.items()))))
+            self.ui.log('fastmanifest-%s' % kind,
+                        "",     # ui.log requires a format string as args[0].
+                        **kwargs)
         if self.debug:
             self.ui.status(("[FM-METRICS] End metrics\n"))
