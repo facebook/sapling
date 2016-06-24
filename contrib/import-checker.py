@@ -186,6 +186,9 @@ def list_stdlib_modules():
 
     >>> 'cStringIO' in mods
     True
+
+    >>> 'cffi' in mods
+    True
     """
     for m in sys.builtin_module_names:
         yield m
@@ -197,6 +200,8 @@ def list_stdlib_modules():
     for m in 'fcntl', 'grp', 'pwd', 'termios':  # Unix only
         yield m
     for m in 'cPickle', 'datetime': # in Python (not C) on PyPy
+        yield m
+    for m in ['cffi']:
         yield m
     stdlib_prefixes = set([sys.prefix, sys.exec_prefix])
     # We need to supplement the list of prefixes for the search to work
