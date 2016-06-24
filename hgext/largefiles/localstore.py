@@ -36,7 +36,6 @@ class localstore(basestore.basestore):
             retval[hash] = lfutil.instore(self.remote, hash)
         return retval
 
-
     def _getfile(self, tmpfile, filename, hash):
         path = lfutil.findfile(self.remote, hash)
         if not path:
