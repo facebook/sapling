@@ -427,6 +427,14 @@ def makedirstate(cls):
                         copies[f] = self._copymap[f]
                     self.add(f)
             return copies
+
+        def walk(self, match, subrepos, unknown, ignored, full=True):
+            self._map.enablelookupcache()
+            self._copymap.enablelookupcache()
+            return super(sqldirstate, self).walk(
+                match, subrepos, unknown, ignored, full)
+            return ret
+
     return sqldirstate
 
 

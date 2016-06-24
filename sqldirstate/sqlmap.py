@@ -6,11 +6,41 @@
 # GNU General Public License version 2 or any later version.
 
 from abc import abstractmethod, ABCMeta
-import collections
+import collections, inspect
 
 from mercurial import parsers
 
 dirstatetuple = parsers.dirstatetuple
+
+def allowcachelookup(f):
+    """Decorator that will delegate the function call to the lookupcache instead
+       of executing the function and querying the SQLite database
+       For example with:
+
+       @allowcachelookup
+       def __len__(self):
+           ....
+
+       It will return self._lookupcache.__len__() iff self._lookupcache is
+       not None, otherwise it will call the original function
+    """
+    # generator need a generator wrapper
+    if inspect.isgenerator(f) or inspect.isgeneratorfunction(f):
+        def withcachelookup(self, *args, **kwargs):
+            if self._lookupcache is not None:
+                for i in getattr(self._lookupcache, f.__name__)(*args,
+                                                                **kwargs):
+                    yield i
+            else:
+                for i in f(self, *args, **kwargs):
+                    yield i
+    else:
+        def withcachelookup(self, *args, **kwargs):
+            if self._lookupcache is not None:
+                return getattr(self._lookupcache, f.__name__)(*args, **kwargs)
+            else:
+                return f(self, *args, **kwargs)
+    return withcachelookup
 
 class sqlmap(collections.MutableMapping):
     """ a dictionary-like object backed by sqllite db."""
@@ -18,7 +48,15 @@ class sqlmap(collections.MutableMapping):
 
     def __init__(self, sqlconn):
         self._sqlconn = sqlconn
+        self._lookupcache = None
         self.createschema()
+
+    def enablelookupcache(self):
+        if self._lookupcache is None:
+            self._lookupcache = dict(self.iteritems())
+
+    def invalidatelookupcache(self):
+        self._lookupcache = None
 
     @abstractmethod
     def createschema(self):
@@ -54,6 +92,7 @@ class sqlmap(collections.MutableMapping):
                 'placeholders': ', '.join(['?'] * self._numcols)}
 
     def __setitem__(self, key, item):
+        self.invalidatelookupcache()
         cur = self._sqlconn.cursor()
 
         item = self._valuetorow(item)
@@ -64,6 +103,7 @@ class sqlmap(collections.MutableMapping):
             (key,) + item)
         cur.close()
 
+    @allowcachelookup
     def __getitem__(self, key):
         cur = self._sqlconn.cursor()
         cur.execute('''SELECT {valuenames} FROM {table}
@@ -77,6 +117,7 @@ class sqlmap(collections.MutableMapping):
         return self._rowtovalue(row)
 
     def __delitem__(self, key):
+        self.invalidatelookupcache()
         cur = self._sqlconn.cursor()
         cur.execute('''DELETE FROM {table} WHERE {keyname}=?'''.format(
             **self._querytemplateargs), (key,))
@@ -85,6 +126,7 @@ class sqlmap(collections.MutableMapping):
             raise KeyError("key %s not found" % key)
         cur.close()
 
+    @allowcachelookup
     def __len__(self):
         cur = self._sqlconn.cursor()
         cur.execute('''SELECT COUNT(*) FROM {table}'''.format(
@@ -94,14 +136,17 @@ class sqlmap(collections.MutableMapping):
         return res[0]
 
     def clear(self):
+        self.invalidatelookupcache()
         cur = self._sqlconn.cursor()
         cur.execute('''DELETE FROM {table}'''.format(**self._querytemplateargs))
         cur.close()
 
+    @allowcachelookup
     def copy(self):
         return dict(self.iteritems())
 
     def _update(self, otherdict):
+        self.invalidatelookupcache()
         tuplelist = [(k,) + self._valuetorow(v)
                      for k, v in otherdict.iteritems()]
 
@@ -118,6 +163,7 @@ class sqlmap(collections.MutableMapping):
         if kwargs:
             self._update(kwargs)
 
+    @allowcachelookup
     def keys(self):
         cur = self._sqlconn.cursor()
         cur.execute('''SELECT {keyname} FROM {table}'''.format(
@@ -126,6 +172,7 @@ class sqlmap(collections.MutableMapping):
         cur.close()
         return [k[0] for k in keys]
 
+    @allowcachelookup
     def __iter__(self):
         cur = self._sqlconn.cursor()
         cur.execute('''SELECT {keyname} FROM {table}'''.format(
@@ -134,9 +181,11 @@ class sqlmap(collections.MutableMapping):
             yield r[0]
         cur.close()
 
+    @allowcachelookup
     def iteritems(self):
         cur = self._sqlconn.cursor()
-        cur.execute('''SELECT {keyname}, {valuenames} from {table}'''.format(
+        cur.execute('''SELECT {keyname}, {valuenames}
+                    FROM {table}'''.format(
             **self._querytemplateargs))
         for r in cur:
             yield (r[0], self._rowtovalue(r[1:]))
