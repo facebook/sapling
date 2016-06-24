@@ -2300,6 +2300,8 @@ def debugdag(ui, repo, file_=None, *revs, **opts):
 def debugdata(ui, repo, file_, rev=None, **opts):
     """dump the contents of a data file revision"""
     if opts.get('changelog') or opts.get('manifest'):
+        if rev is not None:
+            raise error.CommandError('debugdata', _('invalid arguments'))
         file_, rev = None, file_
     elif rev is None:
         raise error.CommandError('debugdata', _('invalid arguments'))
