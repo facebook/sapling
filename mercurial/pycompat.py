@@ -15,6 +15,7 @@ try:
     pickle.dumps
 except ImportError:
     import pickle
+    pickle.dumps # silence pyflakes
 
 try:
     import cStringIO as io
