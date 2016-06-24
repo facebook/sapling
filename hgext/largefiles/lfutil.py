@@ -190,12 +190,11 @@ def listlfiles(repo, rev=None, matcher=None):
             if rev is not None or repo.dirstate[f] != '?']
 
 def instore(repo, hash, forcelocal=False):
-    '''Return true if a largefile with the given hash exists in the user
-    cache.'''
+    '''Return true if a largefile with the given hash exists in the store'''
     return os.path.exists(storepath(repo, hash, forcelocal))
 
 def storepath(repo, hash, forcelocal=False):
-    '''Return the correct location in the repository largefiles cache for a
+    '''Return the correct location in the repository largefiles store for a
     file with the given hash.'''
     if not forcelocal and repo.shared():
         return repo.vfs.reljoin(repo.sharedpath, longname, hash)
