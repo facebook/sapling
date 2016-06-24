@@ -48,6 +48,7 @@ import inspect
 import os
 import random
 import re
+import signal
 import struct
 import sys
 import threading
@@ -498,6 +499,11 @@ class chgcmdserver(commandserver.server):
 
         pagercmd = _setuppagercmd(self.ui, options, cmd)
         if pagercmd:
+            # Python's SIGPIPE is SIG_IGN by default. change to SIG_DFL so
+            # we can exit if the pipe to the pager is closed
+            if util.safehasattr(signal, 'SIGPIPE') and \
+                    signal.getsignal(signal.SIGPIPE) == signal.SIG_IGN:
+                signal.signal(signal.SIGPIPE, signal.SIG_DFL)
             self.cresult.write(pagercmd)
         else:
             self.cresult.write('\0')
