@@ -328,10 +328,6 @@ def _verifycert(cert, hostname):
             return _('certificate is for %s') % certname
     return _('no commonName or subjectAltName found in certificate')
 
-
-# CERT_REQUIRED means fetch the cert from the server all the time AND
-# validate it against the CA store provided in web.cacerts.
-
 def _plainapplepython():
     """return true if this seems to be a pure Apple Python that
     * is unfrozen and presumably has the whole mercurial module in the file
