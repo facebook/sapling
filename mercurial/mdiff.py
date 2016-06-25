@@ -58,10 +58,8 @@ class diffopts(object):
         'upgrade': False,
         }
 
-    __slots__ = defaults.keys()
-
     def __init__(self, **opts):
-        for k in self.__slots__:
+        for k in self.defaults.keys():
             v = opts.get(k)
             if v is None:
                 v = self.defaults[k]
