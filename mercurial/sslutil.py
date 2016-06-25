@@ -207,8 +207,9 @@ def _hostsettings(ui, hostname):
         else:
             # At this point we don't have a fingerprint, aren't being
             # explicitly insecure, and can't load CA certs. Connecting
-            # at this point is insecure. But we do it for BC reasons.
-            # TODO abort here to make secure by default.
+            # is insecure. We allow the connection and abort during
+            # validation (once we have the fingerprint to print to the
+            # user).
             s['verifymode'] = ssl.CERT_NONE
 
     assert s['verifymode'] is not None
@@ -413,11 +414,16 @@ def validatesocket(sock):
                             'fingerprint %s') % (host, nice),
                           hint=_('check %s configuration') % section)
 
+    # Security is enabled but no CAs are loaded. We can't establish trust
+    # for the cert so abort.
     if not sock._hgstate['caloaded']:
-        ui.warn(_('warning: certificate for %s not verified '
-                  '(set hostsecurity.%s:certfingerprints=%s or web.cacerts '
-                  'config settings)\n') % (host, host, nicefingerprint))
-        return
+        raise error.Abort(
+            _('unable to verify security of %s (no loaded CA certificates); '
+              'refusing to connect') % host,
+            hint=_('see https://mercurial-scm.org/wiki/SecureConnections for '
+                   'how to configure Mercurial to avoid this error or set '
+                   'hostsecurity.%s:fingerprints=%s to trust this server') %
+                   (host, nicefingerprint))
 
     msg = _verifycert(peercert2, host)
     if msg:

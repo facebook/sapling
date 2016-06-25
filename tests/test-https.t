@@ -103,10 +103,15 @@ Defining both per-host certificate and a fingerprint will print a warning
 
   $ DISABLECACERTS="--config devel.disableloaddefaultcerts=true"
 
-clone via pull
+Inability to verify peer certificate will result in abort
 
   $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLECACERTS
-  warning: certificate for localhost not verified (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 or web.cacerts config settings)
+  abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
+  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 to trust this server)
+  [255]
+
+  $ hg clone --insecure https://localhost:$HGPORT/ copy-pull
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   requesting all changes
   adding changesets
   adding manifests
@@ -133,7 +138,13 @@ pull without cacert
   $ echo "changegroup = printenv.py changegroup" >> .hg/hgrc
   $ hg pull $DISABLECACERTS
   pulling from https://localhost:$HGPORT/
-  warning: certificate for localhost not verified (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 or web.cacerts config settings)
+  abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
+  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 to trust this server)
+  [255]
+
+  $ hg pull --insecure
+  pulling from https://localhost:$HGPORT/
+  warning: connection security to localhost is disabled per current settings; communication is susceptible to eavesdropping and tampering
   searching for changes
   adding changesets
   adding manifests
