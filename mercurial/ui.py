@@ -228,6 +228,9 @@ class ui(object):
             root = root or os.getcwd()
             for c in self._tcfg, self._ucfg, self._ocfg:
                 for n, p in c.items('paths'):
+                    # Ignore sub-options.
+                    if ':' in n:
+                        continue
                     if not p:
                         continue
                     if '%%' in p:

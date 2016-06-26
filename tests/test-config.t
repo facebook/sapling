@@ -90,3 +90,15 @@ Test exit code when no config matches
 
   $ hg config Section.idontexist
   [1]
+
+sub-options in [paths] aren't expanded
+
+  $ cat > .hg/hgrc << EOF
+  > [paths]
+  > foo = ~/foo
+  > foo:suboption = ~/foo
+  > EOF
+
+  $ hg showconfig paths
+  paths.foo:suboption=~/foo
+  paths.foo=$TESTTMP/foo
