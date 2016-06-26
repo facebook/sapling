@@ -2253,9 +2253,7 @@ def wdir(repo, subset, x):
         return baseset([node.wdirrev])
     return baseset()
 
-# for internal use
-@predicate('_list', safe=True)
-def _list(repo, subset, x):
+def _orderedlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2284,8 +2282,15 @@ def _list(repo, subset, x):
     return baseset(ls)
 
 # for internal use
-@predicate('_intlist', safe=True)
-def _intlist(repo, subset, x):
+@predicate('_list', safe=True, takeorder=True)
+def _list(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedlist(repo, subset, x)
+
+def _orderedintlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2294,8 +2299,15 @@ def _intlist(repo, subset, x):
     return baseset([r for r in ls if r in s])
 
 # for internal use
-@predicate('_hexlist', safe=True)
-def _hexlist(repo, subset, x):
+@predicate('_intlist', safe=True, takeorder=True)
+def _intlist(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedintlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedintlist(repo, subset, x)
+
+def _orderedhexlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:
         return baseset()
@@ -2303,6 +2315,15 @@ def _hexlist(repo, subset, x):
     ls = [cl.rev(node.bin(r)) for r in s.split('\0')]
     s = subset
     return baseset([r for r in ls if r in s])
+
+# for internal use
+@predicate('_hexlist', safe=True, takeorder=True)
+def _hexlist(repo, subset, x, order):
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orderedhexlist(repo, fullreposet(repo), x)
+    else:
+        return _orderedhexlist(repo, subset, x)
 
 methods = {
     "range": rangeset,

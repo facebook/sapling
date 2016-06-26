@@ -1281,11 +1281,12 @@ ordering defined by it.
       follow)
     define)
   * set:
-  <baseset [0, 1, 2]>
-  0
-  1
+  <filteredset
+    <spanset- 0:2>,
+    <baseset [0, 1, 2]>>
   2
- BROKEN: should be '2 1 0'
+  1
+  0
 
  'A + B' should take the ordering of the left expression:
 
@@ -1350,7 +1351,7 @@ ordering defined by it.
   * set:
   <filteredset
     <spanset- 0:2>,
-    <baseset [0, 1, 2]>>
+    <baseset+ [0, 1, 2]>>
   2
   1
   0
@@ -1405,11 +1406,12 @@ ordering defined by it.
       follow)
     define)
   * set:
-  <baseset [0, 1, 2]>
-  0
-  1
+  <filteredset
+    <spanset- 0:2>,
+    <baseset [0, 1, 2]>>
   2
- BROKEN: should be '2 1 0'
+  1
+  0
 
   $ trylist --optimize --bin '%ln & 2:0' `hg log -T '{node} ' -r0+2+1`
   (and
@@ -1435,6 +1437,53 @@ ordering defined by it.
   0
   2
   1
+
+ '_list' should not go through the slow follow-order path if order doesn't
+ matter:
+
+  $ try -p optimized '2:0 & not (0 + 1)'
+  * optimized:
+  (difference
+    (range
+      ('symbol', '2')
+      ('symbol', '0')
+      define)
+    (func
+      ('symbol', '_list')
+      ('string', '0\x001')
+      any)
+    define)
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <not
+      <baseset [0, 1]>>>
+  2
+
+  $ try -p optimized '2:0 & not (0:2 & (0 + 1))'
+  * optimized:
+  (difference
+    (range
+      ('symbol', '2')
+      ('symbol', '0')
+      define)
+    (and
+      (range
+        ('symbol', '0')
+        ('symbol', '2')
+        any)
+      (func
+        ('symbol', '_list')
+        ('string', '0\x001')
+        any)
+      any)
+    define)
+  * set:
+  <filteredset
+    <spanset- 0:2>,
+    <not
+      <baseset [0, 1]>>>
+  2
 
  'present()' should do nothing other than suppressing an error:
 
@@ -1662,9 +1711,10 @@ ordering defined by it.
     <spanset- 0:2>>
   1
 
- 'A & B' can be rewritten as 'B & A' by weight, but the ordering rule should
- be determined before the optimization (i.e. 'B' should take the ordering of
- 'A'):
+ 'A & B' can be rewritten as 'B & A' by weight, but that's fine as long as
+ the ordering rule is determined before the rewrite; in this example,
+ 'B' follows the order of the initial set, which is the same order as 'A'
+ since 'A' also follows the order:
 
   $ try --optimize 'contains("glob:*") & (2 + 0 + 1)'
   (and
@@ -1690,12 +1740,14 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <baseset [2, 0, 1]>,
+    <baseset+ [0, 1, 2]>,
     <contains 'glob:*'>>
-  2
   0
   1
- BROKEN: should be '0 1 2'
+  2
+
+ and in this example, 'A & B' is rewritten as 'B & A', but 'A' overrides
+ the order appropriately:
 
   $ try --optimize 'reverse(contains("glob:*")) & (0 + 2 + 1)'
   (and
@@ -1726,12 +1778,11 @@ ordering defined by it.
     define)
   * set:
   <filteredset
-    <baseset [1, 2, 0]>,
+    <baseset- [0, 1, 2]>,
     <contains 'glob:*'>>
-  1
   2
+  1
   0
- BROKEN: should be '2 1 0'
 
 test sort revset
 --------------------------------------------
