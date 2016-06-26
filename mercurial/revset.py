@@ -2529,8 +2529,6 @@ def posttreebuilthook(tree, repo):
 
 def match(ui, spec, repo=None):
     """Create a matcher for a single revision spec."""
-    if not spec:
-        raise error.ParseError(_("empty query"))
     return matchany(ui, [spec], repo=repo)
 
 def matchany(ui, specs, repo=None):
