@@ -808,10 +808,29 @@ def revpair(repo, revs):
 
     return repo.lookup(first), repo.lookup(second)
 
-def revrange(repo, revs):
-    """Yield revision as strings from a list of revision specifications."""
+def revrange(repo, specs):
+    """Execute 1 to many revsets and return the union.
+
+    This is the preferred mechanism for executing revsets using user-specified
+    config options, such as revset aliases.
+
+    The revsets specified by ``specs`` will be executed via a chained ``OR``
+    expression. If ``specs`` is empty, an empty result is returned.
+
+    ``specs`` can contain integers, in which case they are assumed to be
+    revision numbers.
+
+    It is assumed the revsets are already formatted. If you have arguments
+    that need to be expanded in the revset, call ``revset.formatspec()``
+    and pass the result as an element of ``specs``.
+
+    Specifying a single revset is allowed.
+
+    Returns a ``revset.abstractsmartset`` which is a list-like interface over
+    integer revisions.
+    """
     allspecs = []
-    for spec in revs:
+    for spec in specs:
         if isinstance(spec, int):
             spec = revset.formatspec('rev(%d)', spec)
         allspecs.append(spec)

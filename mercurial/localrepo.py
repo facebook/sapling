@@ -554,7 +554,10 @@ class localrepository(object):
         The revset is specified as a string ``expr`` that may contain
         %-formatting to escape certain types. See ``revset.formatspec``.
 
-        Return a revset.abstractsmartset, which is a list-like interface
+        Revset aliases from the configuration are not expanded. To expand
+        user aliases, consider calling ``scmutil.revrange()``.
+
+        Returns a revset.abstractsmartset, which is a list-like interface
         that contains integer revisions.
         '''
         expr = revset.formatspec(expr, *args)
@@ -566,6 +569,9 @@ class localrepository(object):
 
         This is a convenience wrapper around ``revs()`` that iterates the
         result and is a generator of changectx instances.
+
+        Revset aliases from the configuration are not expanded. To expand
+        user aliases, consider calling ``scmutil.revrange()``.
         '''
         for r in self.revs(expr, *args):
             yield self[r]
