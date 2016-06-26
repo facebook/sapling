@@ -149,9 +149,9 @@ class MapTests(test_util.TestBase):
         # The exclusion of alpha is overridden by the later rule to
         # include all of '.', whereas gamma should remain excluded
         # because it's excluded after the root directory.
-        self.assertEqual(self.repo[0].manifest().keys(),
+        self.assertEqual(sorted(self.repo[0].manifest().keys()),
                          ['alpha', 'beta'])
-        self.assertEqual(self.repo['default'].manifest().keys(),
+        self.assertEqual(sorted(self.repo['default'].manifest().keys()),
                          ['alpha', 'beta'])
 
     @test_util.requiresreplay
