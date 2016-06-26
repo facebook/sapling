@@ -105,4 +105,43 @@ Windows needs a leading slash to make a URL that passes all of the checks
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
+:pushrev is used when no -r is passed
+
+  $ cat >> .hg/hgrc << EOF
+  > default:pushrev = .
+  > EOF
+  $ hg -q up -r 0
+  $ echo head1 > foo
+  $ hg -q commit -A -m head1
+  $ hg -q up -r 0
+  $ echo head2 > foo
+  $ hg -q commit -A -m head2
+  $ hg push -f
+  pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+
+  $ hg --config 'paths.default:pushrev=draft()' push -f
+  pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 1 changes to 1 files (+1 heads)
+
+Invalid :pushrev raises appropriately
+
+  $ hg --config 'paths.default:pushrev=notdefined()' push
+  pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
+  hg: parse error: unknown identifier: notdefined
+  [255]
+
+  $ hg --config 'paths.default:pushrev=(' push
+  pushing to file:/*/$TESTTMP/pushurlsource/../pushurldest (glob)
+  hg: parse error at 1: not a prefix: end
+  [255]
+
   $ cd ..

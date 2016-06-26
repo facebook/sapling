@@ -1515,6 +1515,18 @@ Test section lookup
          The URL to use for push operations. If not defined, the location
          defined by the path's main entry is used.
   
+      "pushrev"
+         A revset defining which revisions to push by default.
+  
+         When 'hg push' is executed without a "-r" argument, the revset defined
+         by this sub-option is evaluated to determine what to push.
+  
+         For example, a value of "." will push the working directory's revision
+         by default.
+  
+         Revsets specifying bookmarks will not result in the bookmark being
+         pushed.
+  
       The following special named paths exist:
   
       "default"

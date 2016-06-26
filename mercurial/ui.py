@@ -1281,6 +1281,10 @@ def pushurlpathoption(ui, path, value):
 
     return str(u)
 
+@pathsuboption('pushrev', 'pushrev')
+def pushrevpathoption(ui, path, value):
+    return value
+
 class path(object):
     """Represents an individual path and its configuration."""
 

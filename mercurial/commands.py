@@ -5942,6 +5942,15 @@ def push(ui, repo, dest=None, **opts):
         if not revs:
             raise error.Abort(_("specified revisions evaluate to an empty set"),
                              hint=_("use different revision arguments"))
+    elif path.pushrev:
+        # It doesn't make any sense to specify ancestor revisions. So limit
+        # to DAG heads to make discovery simpler.
+        expr = revset.formatspec('heads(%r)', path.pushrev)
+        revs = scmutil.revrange(repo, [expr])
+        revs = [repo[rev].node() for rev in revs]
+        if not revs:
+            raise error.Abort(_('default push revset for path evaluates to an '
+                                'empty set'))
 
     repo._subtoppath = dest
     try:
