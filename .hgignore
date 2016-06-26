@@ -12,6 +12,7 @@ syntax:glob
 .project
 .pydevproject
 .settings
+.tox
 MANIFEST
 build
 cover
