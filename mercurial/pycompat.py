@@ -106,6 +106,7 @@ except ImportError:
         "pathname2url",
         "HTTPBasicAuthHandler",
         "HTTPDigestAuthHandler",
+        "HTTPPasswordMgrWithDefaultRealm",
         "ProxyHandler",
         "quote",
         "Request",
