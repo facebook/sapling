@@ -78,7 +78,7 @@ def gettext(message):
             paragraphs = [p.decode("ascii") for p in message.split('\n\n')]
         # Be careful not to translate the empty string -- it holds the
         # meta data of the .po file.
-        u = u'\n\n'.join([p and _ugettext(p) or '' for p in paragraphs])
+        u = u'\n\n'.join([p and _ugettext(p) or u'' for p in paragraphs])
         try:
             # encoding.tolocal cannot be used since it will first try to
             # decode the Unicode string. Calling u.decode(enc) really
