@@ -407,7 +407,12 @@ def _orsetlist(repo, subset, xs):
     return a + b
 
 def orset(repo, subset, x, order):
-    return _orsetlist(repo, subset, getlist(x))
+    xs = getlist(x)
+    if order == followorder:
+        # slow path to take the subset order
+        return subset & _orsetlist(repo, fullreposet(repo), xs)
+    else:
+        return _orsetlist(repo, subset, xs)
 
 def notset(repo, subset, x, order):
     return subset - getset(repo, subset, x)

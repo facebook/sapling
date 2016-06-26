@@ -1317,15 +1317,14 @@ ordering defined by it.
       follow)
     define)
   * set:
-  <addset
-    <filteredset
+  <filteredset
+    <spanset- 0:2>,
+    <addset
       <spanset+ 0:1>,
-      <spanset- 0:2>>,
-    <baseset [2]>>
-  0
-  1
+      <baseset [2]>>>
   2
- BROKEN: should be '2 1 0'
+  1
+  0
 
  '_intlist(a b)' should behave like 'a + b':
 
