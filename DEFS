@@ -58,13 +58,12 @@ def cpp_unittest(
 original_python_binary = python_binary
 def python_binary(
     name,
-    py_version=None,
     srcs=None,
     gen_srcs=None,
     main_module=None,
     deps=None,
 ):
-    # TODO: Handle py_version and gen_srcs.
+    # TODO: Handle gen_srcs.
     original_python_binary(
         name=name,
         srcs=srcs,

@@ -2,7 +2,6 @@ include_defs('//eden/DEFS')
 
 python_binary(
   name = 'cli',
-  py_version = "<3",
   srcs = glob(['*.py']),
   main_module = 'eden/fs/cli/main',
   deps = [
