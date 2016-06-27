@@ -2184,7 +2184,7 @@ def difffeatureopts(ui, opts=None, untrusted=False, section='diff', git=False,
     return mdiff.diffopts(**buildopts)
 
 def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
-         losedatafn=None, prefix='', relroot=''):
+         losedatafn=None, prefix='', relroot='', copy=None):
     '''yields diff of changes to files between two nodes, or node and
     working directory.
 
@@ -2203,7 +2203,10 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
     display (used for subrepos).
 
     relroot, if not empty, must be normalized with a trailing /. Any match
-    patterns that fall outside it will be ignored.'''
+    patterns that fall outside it will be ignored.
+
+    copy, if not empty, should contain mappings {dst@y: src@x} of copy
+    information.'''
 
     if opts is None:
         opts = mdiff.defaultopts
@@ -2250,9 +2253,10 @@ def diff(repo, node1=None, node2=None, match=None, changes=None, opts=None,
         hexfunc = short
     revs = [hexfunc(node) for node in [ctx1.node(), ctx2.node()] if node]
 
-    copy = {}
-    if opts.git or opts.upgrade:
-        copy = copies.pathcopies(ctx1, ctx2, match=match)
+    if copy is None:
+        copy = {}
+        if opts.git or opts.upgrade:
+            copy = copies.pathcopies(ctx1, ctx2, match=match)
 
     if relroot is not None:
         if not relfiltered:
