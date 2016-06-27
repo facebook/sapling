@@ -325,6 +325,11 @@ pypats = [
     (r'^import Queue', "don't use Queue, use util.queue + util.empty"),
     (r'^import cStringIO', "don't use cStringIO.StringIO, use util.stringio"),
     (r'^import urllib', "don't use urllib, use util.urlreq/util.urlerr"),
+    (r'^import SocketServer', "don't use SockerServer, use util.socketserver"),
+    (r'^import urlparse', "don't use urlparse, use util.urlparse"),
+    (r'^import xmlrpclib', "don't use xmlrpclib, use util.xmlrpclib"),
+    (r'^import cPickle', "don't use cPickle, use util.pickle"),
+    (r'^import pickle', "don't use pickle, use util.pickle"),
     (r'\.next\(\)', "don't use .next(), use next(...)"),
 
     # rules depending on implementation of repquote()
