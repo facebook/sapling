@@ -302,6 +302,11 @@ def tokenize(program, lookup=None, syminitletters=None, symletters=None):
 
 # helpers
 
+def getsymbol(x):
+    if x and x[0] == 'symbol':
+        return x[1]
+    raise error.ParseError(_('not a symbol'))
+
 def getstring(x, err):
     if x and (x[0] == 'string' or x[0] == 'symbol'):
         return x[1]
@@ -414,13 +419,14 @@ def keyvaluepair(repo, subset, k, v):
     raise error.ParseError(_("can't use a key-value pair in this context"))
 
 def func(repo, subset, a, b):
-    if a[0] == 'symbol' and a[1] in symbols:
-        return symbols[a[1]](repo, subset, b)
+    f = getsymbol(a)
+    if f in symbols:
+        return symbols[f](repo, subset, b)
 
     keep = lambda fn: getattr(fn, '__doc__', None) is not None
 
     syms = [s for (s, fn) in symbols.items() if keep(fn)]
-    raise error.UnknownIdentifier(a[1], syms)
+    raise error.UnknownIdentifier(f, syms)
 
 # functions
 
@@ -2304,11 +2310,11 @@ def _matchonly(revs, bases):
     """
     if (revs is not None
         and revs[0] == 'func'
-        and getstring(revs[1], _('not a symbol')) == 'ancestors'
+        and getsymbol(revs[1]) == 'ancestors'
         and bases is not None
         and bases[0] == 'not'
         and bases[1][0] == 'func'
-        and getstring(bases[1][1], _('not a symbol')) == 'ancestors'):
+        and getsymbol(bases[1][1]) == 'ancestors'):
         return ('list', revs[2], bases[1][2])
 
 def _optimize(x, small):
@@ -2419,7 +2425,7 @@ def _optimize(x, small):
         ws, ts = zip(*(_optimize(y, small) for y in x[1:]))
         return sum(ws), (op,) + ts
     elif op == 'func':
-        f = getstring(x[1], _("not a symbol"))
+        f = getsymbol(x[1])
         wa, ta = _optimize(x[2], small)
         if f in ("author branch closed date desc file grep keyword "
                  "outgoing user"):

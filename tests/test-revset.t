@@ -434,6 +434,12 @@ quoting needed
   4
   $ hg book -d date
 
+function name should be a symbol
+
+  $ log '"date"(2005)'
+  hg: parse error: not a symbol
+  [255]
+
 keyword arguments
 
   $ log 'extra(branch, value=a)'
@@ -2031,6 +2037,16 @@ no crash by empty group "()" while optimizing to "only()"
       ('symbol', 'ancestors')
       ('symbol', '1')))
   hg: parse error: missing argument
+  [255]
+
+invalid function call should not be optimized to only()
+
+  $ log '"ancestors"(6) and not ancestors(4)'
+  hg: parse error: not a symbol
+  [255]
+
+  $ log 'ancestors(6) and not "ancestors"(4)'
+  hg: parse error: not a symbol
   [255]
 
 we can use patterns when searching for tags
