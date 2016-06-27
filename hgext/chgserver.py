@@ -40,7 +40,6 @@ Config
 
 from __future__ import absolute_import
 
-import SocketServer
 import errno
 import gc
 import hashlib
@@ -67,6 +66,8 @@ from mercurial import (
     osutil,
     util,
 )
+
+socketserver = util.socketserver
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
@@ -530,7 +531,7 @@ class chgcmdserver(commandserver.server):
                          'setumask': setumask})
 
 # copied from mercurial/commandserver.py
-class _requesthandler(SocketServer.StreamRequestHandler):
+class _requesthandler(socketserver.StreamRequestHandler):
     def handle(self):
         # use a different process group from the master process, making this
         # process pass kernel "is_current_pgrp_orphaned" check so signals like
@@ -603,7 +604,7 @@ class AutoExitMixIn:  # use old-style to comply with SocketServer design
 
     def process_request(self, request, address):
         self.lastactive = time.time()
-        return SocketServer.ForkingMixIn.process_request(
+        return socketserver.ForkingMixIn.process_request(
             self, request, address)
 
     def server_bind(self):
@@ -656,8 +657,8 @@ class chgunixservice(commandserver.unixservice):
             self.repo = None
         self._inithashstate()
         self._checkextensions()
-        class cls(AutoExitMixIn, SocketServer.ForkingMixIn,
-                  SocketServer.UnixStreamServer):
+        class cls(AutoExitMixIn, socketserver.ForkingMixIn,
+                  socketserver.UnixStreamServer):
             ui = self.ui
             repo = self.repo
             hashstate = self.hashstate

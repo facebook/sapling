@@ -18,6 +18,13 @@ except ImportError:
     pickle.dumps # silence pyflakes
 
 try:
+    import SocketServer as socketserver
+    socketserver.ThreadingMixIn
+except ImportError:
+    import socketserver
+    socketserver.ThreadingMixIn
+
+try:
     import xmlrpclib
     xmlrpclib.Transport
 except ImportError:

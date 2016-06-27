@@ -9,7 +9,6 @@
 from __future__ import absolute_import
 
 import BaseHTTPServer
-import SocketServer
 import errno
 import os
 import socket
@@ -23,6 +22,7 @@ from .. import (
     util,
 )
 
+socketserver = util.socketserver
 urlerr = util.urlerr
 urlreq = util.urlreq
 
@@ -147,9 +147,9 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
         env['wsgi.input'] = self.rfile
         env['wsgi.errors'] = _error_logger(self)
         env['wsgi.multithread'] = isinstance(self.server,
-                                             SocketServer.ThreadingMixIn)
+                                             socketserver.ThreadingMixIn)
         env['wsgi.multiprocess'] = isinstance(self.server,
-                                              SocketServer.ForkingMixIn)
+                                              socketserver.ForkingMixIn)
         env['wsgi.run_once'] = 0
 
         self.saved_status = None
@@ -240,10 +240,10 @@ class _httprequesthandlerssl(_httprequesthandler):
 try:
     import threading
     threading.activeCount() # silence pyflakes and bypass demandimport
-    _mixin = SocketServer.ThreadingMixIn
+    _mixin = socketserver.ThreadingMixIn
 except ImportError:
     if util.safehasattr(os, "fork"):
-        _mixin = SocketServer.ForkingMixIn
+        _mixin = socketserver.ForkingMixIn
     else:
         class _mixin(object):
             pass

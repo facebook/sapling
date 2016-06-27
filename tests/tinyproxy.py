@@ -15,7 +15,6 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 __version__ = "0.2.1"
 
 import BaseHTTPServer
-import SocketServer
 import os
 import select
 import socket
@@ -24,6 +23,7 @@ import sys
 from mercurial import util
 
 urlparse = util.urlparse
+socketserver = util.socketserver
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     __base = BaseHTTPServer.BaseHTTPRequestHandler
@@ -135,7 +135,7 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     do_PUT  = do_GET
     do_DELETE = do_GET
 
-class ThreadingHTTPServer (SocketServer.ThreadingMixIn,
+class ThreadingHTTPServer (socketserver.ThreadingMixIn,
                            BaseHTTPServer.HTTPServer):
     def __init__(self, *args, **kwargs):
         BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
