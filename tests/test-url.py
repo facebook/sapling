@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import absolute_import, print_function
 
 import doctest
@@ -62,6 +63,177 @@ check(_verifycert(None, 'example.com'),
 # Unicode (IDN) certname isn't supported
 check(_verifycert(cert(u'\u4f8b.jp'), 'example.jp'),
       'IDN in certificate not supported')
+
+# The following tests are from CPython's test_ssl.py.
+check(_verifycert(cert('example.com'), 'example.com'), None)
+check(_verifycert(cert('example.com'), 'ExAmple.cOm'), None)
+check(_verifycert(cert('example.com'), 'www.example.com'),
+      'certificate is for example.com')
+check(_verifycert(cert('example.com'), '.example.com'),
+      'certificate is for example.com')
+check(_verifycert(cert('example.com'), 'example.org'),
+      'certificate is for example.com')
+check(_verifycert(cert('example.com'), 'exampleXcom'),
+      'certificate is for example.com')
+check(_verifycert(cert('*.a.com'), 'foo.a.com'), None)
+check(_verifycert(cert('*.a.com'), 'bar.foo.a.com'),
+      'certificate is for *.a.com')
+check(_verifycert(cert('*.a.com'), 'a.com'),
+      'certificate is for *.a.com')
+check(_verifycert(cert('*.a.com'), 'Xa.com'),
+      'certificate is for *.a.com')
+check(_verifycert(cert('*.a.com'), '.a.com'), None)
+
+# only match one left-most wildcard
+check(_verifycert(cert('f*.com'), 'foo.com'),
+      'certificate is for f*.com')
+check(_verifycert(cert('f*.com'), 'f.com'),
+      'certificate is for f*.com')
+check(_verifycert(cert('f*.com'), 'bar.com'),
+      'certificate is for f*.com')
+check(_verifycert(cert('f*.com'), 'foo.a.com'),
+      'certificate is for f*.com')
+check(_verifycert(cert('f*.com'), 'bar.foo.com'),
+      'certificate is for f*.com')
+
+# NULL bytes are bad, CVE-2013-4073
+check(_verifycert(cert('null.python.org\x00example.org'),
+                  'null.python.org\x00example.org'), None)
+check(_verifycert(cert('null.python.org\x00example.org'),
+                  'example.org'),
+      'certificate is for null.python.org\x00example.org')
+check(_verifycert(cert('null.python.org\x00example.org'),
+                  'null.python.org'),
+      'certificate is for null.python.org\x00example.org')
+
+# error cases with wildcards
+check(_verifycert(cert('*.*.a.com'), 'bar.foo.a.com'),
+      'certificate is for *.*.a.com')
+check(_verifycert(cert('*.*.a.com'), 'a.com'),
+      'certificate is for *.*.a.com')
+check(_verifycert(cert('*.*.a.com'), 'Xa.com'),
+      'certificate is for *.*.a.com')
+check(_verifycert(cert('*.*.a.com'), '.a.com'),
+      'certificate is for *.*.a.com')
+
+check(_verifycert(cert('a.*.com'), 'a.foo.com'),
+      'certificate is for a.*.com')
+check(_verifycert(cert('a.*.com'), 'a..com'),
+      'certificate is for a.*.com')
+check(_verifycert(cert('a.*.com'), 'a.com'),
+      'certificate is for a.*.com')
+
+# wildcard doesn't match IDNA prefix 'xn--'
+idna = u'püthon.python.org'.encode('idna').decode('ascii')
+check(_verifycert(cert(idna), idna), None)
+check(_verifycert(cert('x*.python.org'), idna),
+      'certificate is for x*.python.org')
+check(_verifycert(cert('xn--p*.python.org'), idna),
+      'certificate is for xn--p*.python.org')
+
+# wildcard in first fragment and  IDNA A-labels in sequent fragments
+# are supported.
+idna = u'www*.pythön.org'.encode('idna').decode('ascii')
+check(_verifycert(cert(idna),
+                  u'www.pythön.org'.encode('idna').decode('ascii')),
+      'certificate is for www*.xn--pythn-mua.org')
+check(_verifycert(cert(idna),
+                  u'www1.pythön.org'.encode('idna').decode('ascii')),
+      'certificate is for www*.xn--pythn-mua.org')
+check(_verifycert(cert(idna),
+                  u'ftp.pythön.org'.encode('idna').decode('ascii')),
+      'certificate is for www*.xn--pythn-mua.org')
+check(_verifycert(cert(idna),
+                  u'pythön.org'.encode('idna').decode('ascii')),
+      'certificate is for www*.xn--pythn-mua.org')
+
+c = {
+    'notAfter': 'Jun 26 21:41:46 2011 GMT',
+    'subject': (((u'commonName', u'linuxfrz.org'),),),
+    'subjectAltName': (
+        ('DNS', 'linuxfr.org'),
+        ('DNS', 'linuxfr.com'),
+        ('othername', '<unsupported>'),
+    )
+}
+check(_verifycert(c, 'linuxfr.org'), None)
+check(_verifycert(c, 'linuxfr.com'), None)
+# Not a "DNS" entry
+check(_verifycert(c, '<unsupported>'),
+      'certificate is for linuxfr.org, linuxfr.com')
+# When there is a subjectAltName, commonName isn't used
+check(_verifycert(c, 'linuxfrz.org'),
+      'certificate is for linuxfr.org, linuxfr.com')
+
+# A pristine real-world example
+c = {
+    'notAfter': 'Dec 18 23:59:59 2011 GMT',
+    'subject': (
+        ((u'countryName', u'US'),),
+        ((u'stateOrProvinceName', u'California'),),
+        ((u'localityName', u'Mountain View'),),
+        ((u'organizationName', u'Google Inc'),),
+        ((u'commonName', u'mail.google.com'),),
+    ),
+}
+check(_verifycert(c, 'mail.google.com'), None)
+check(_verifycert(c, 'gmail.com'), 'certificate is for mail.google.com')
+
+# Only commonName is considered
+check(_verifycert(c, 'California'), 'certificate is for mail.google.com')
+
+# Neither commonName nor subjectAltName
+c = {
+    'notAfter': 'Dec 18 23:59:59 2011 GMT',
+    'subject': (
+        ((u'countryName', u'US'),),
+        ((u'stateOrProvinceName', u'California'),),
+        ((u'localityName', u'Mountain View'),),
+        ((u'organizationName', u'Google Inc'),),
+    ),
+}
+check(_verifycert(c, 'mail.google.com'),
+      'no commonName or subjectAltName found in certificate')
+
+# No DNS entry in subjectAltName but a commonName
+c = {
+    'notAfter': 'Dec 18 23:59:59 2099 GMT',
+    'subject': (
+        ((u'countryName', u'US'),),
+        ((u'stateOrProvinceName', u'California'),),
+        ((u'localityName', u'Mountain View'),),
+        ((u'commonName', u'mail.google.com'),),
+    ),
+    'subjectAltName': (('othername', 'blabla'),),
+}
+check(_verifycert(c, 'mail.google.com'), None)
+
+# No DNS entry subjectAltName and no commonName
+c = {
+    'notAfter': 'Dec 18 23:59:59 2099 GMT',
+    'subject': (
+        ((u'countryName', u'US'),),
+        ((u'stateOrProvinceName', u'California'),),
+        ((u'localityName', u'Mountain View'),),
+        ((u'organizationName', u'Google Inc'),),
+    ),
+    'subjectAltName': (('othername', 'blabla'),),
+}
+check(_verifycert(c, 'google.com'),
+      'no commonName or subjectAltName found in certificate')
+
+# Empty cert / no cert
+check(_verifycert(None, 'example.com'), 'no certificate received')
+check(_verifycert({}, 'example.com'), 'no certificate received')
+
+# avoid denials of service by refusing more than one
+# wildcard per fragment.
+check(_verifycert({'subject': (((u'commonName', u'a*b.com'),),)},
+                  'axxb.com'), 'certificate is for a*b.com')
+check(_verifycert({'subject': (((u'commonName', u'a*b.co*'),),)},
+                  'axxb.com'), 'certificate is for a*b.co*')
+check(_verifycert({'subject': (((u'commonName', u'a*b*.com'),),)},
+                  'axxbxxc.com'), 'certificate is for a*b*.com')
 
 def test_url():
     """
