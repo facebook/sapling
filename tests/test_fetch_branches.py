@@ -41,7 +41,8 @@ class TestFetchBranches(test_util.TestBase):
         heads = dict([(ctx.branch(), ctx) for ctx in heads])
         # Let these tests disabled yet as the fix is not obvious
         self.assertEqual(heads['branch1'].manifest().keys(), ['b'])
-        self.assertEqual(heads['branch2'].manifest().keys(), ['a', 'b'])
+        self.assertEqual(sorted(heads['branch2'].manifest().keys()),
+                         ['a', 'b'])
 
     def test_unorderedbranch(self):
         repo = self._load_fixture_and_fetch('unorderedbranch.svndump')

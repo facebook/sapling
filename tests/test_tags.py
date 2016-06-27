@@ -129,10 +129,8 @@ rename a tag
             'branch': 'magic',
             'convert_revision': 'svn:af82cc90-c2d2-43cd-b1aa-c8a78449440a/tags/will-edit@19'})
        self.assertEqual(willedit, repo.tags()['will-edit'])
-       self.assertEqual(repo['will-edit'].manifest().keys(), ['alpha',
-                                                              'beta',
-                                                              'gamma',
-                                                              ])
+       self.assertEqual(sorted(repo['will-edit'].manifest().keys()),
+                        ['alpha', 'beta', 'gamma'])
        self.assertEqual(
            repo[alsoedit].extra(),
            {'close': '1',

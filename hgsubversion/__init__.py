@@ -269,6 +269,8 @@ def svnuuidkw(**args):
     """:svnuuid: String. Converted subversion revision repository identifier."""
     return _templatehelper(args['ctx'], 'svnuuid')
 
+loadkeyword(templatekeyword)
+
 def listsvnkeys(repo):
     keys = {}
     repo = repo.local()

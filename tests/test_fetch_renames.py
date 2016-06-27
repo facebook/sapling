@@ -34,12 +34,16 @@ class TestFetchRenames(test_util.TestBase):
         repo = self._load_fixture_and_fetch('renames_with_prefix.svndump',
                                             subdir='prefix',
                                             config=config)
-        self._run_assertions(repo)
+        self._run_assertions(repo, prefix=True)
 
-    def _run_assertions(self, repo):
+    def _run_assertions(self, repo, prefix=False):
         # Map revnum to mappings of dest name to (source name, dest content)
+        if prefix:
+            prefixlen = len('svn:ae30a990-0fd3-493e-b5d7-883bdd606745/prefix')
+        else:
+            prefixlen = len('svn:ae30a990-0fd3-493e-b5d7-883bdd606745')
         copies = {
-            4: {
+            '/trunk@6': {
                 'a1': ('a', 'a\n'),
                 'linka1': ('linka', 'a'),
                 'a2': ('a', 'a\n'),
@@ -55,32 +59,35 @@ class TestFetchRenames(test_util.TestBase):
                 'da2/db/dbf': ('da/db/dbf', 'd\n'),
                 'da2/db/dblink': ('da/db/dblink', '../daf'),
                 },
-            5: {
+            '/branches/branch1@6': {
                 'c1': ('c', 'c\nc\n'),
                 'linkc1': ('linkc', 'cc'),
                 },
-            9: {
+            '/trunk@10': {
                 'unchanged2': ('unchanged', 'unchanged\n'),
                 'unchangedlink2': ('unchangedlink', 'unchanged'),
                 'unchangeddir2/f': ('unchangeddir/f', 'unchanged2\n'),
                 'unchangeddir2/link': ('unchangeddir/link', 'f'),
                 },
-            10: {
+            '/trunk@11': {
                 'groupdir2/b': ('groupdir/b', 'b\n'),
                 'groupdir2/linkb': ('groupdir/linkb', 'b'),
                  },
             }
         for rev in repo:
             ctx = repo[rev]
-            copymap = copies.get(rev, {})
+            copymap = copies.get(ctx.extra()['convert_revision'][prefixlen:],
+                                 {})
             for f in ctx.manifest():
                 cp = ctx[f].renamed()
-                self.assertEqual(bool(cp), bool(copymap.get(f)),
-                                 'copy records differ for %s in %d' % (f, rev))
-                if not cp:
-                    continue
-                self.assertEqual(cp[0], copymap[f][0])
-                self.assertEqual(ctx[f].data(), copymap[f][1])
+                want = copymap.get(f)
+                self.assertEqual(
+                    bool(cp), bool(want),
+                    'copy records differ for %s in %d (want %r, got %r)' % (
+                        f, rev, want, cp))
+                if cp:
+                    self.assertEqual(cp[0], want[0])
+                    self.assertEqual(ctx[f].data(), want[1])
 
         self.assertEqual(repo['tip']['changed3'].data(), 'changed\nchanged3\n')
 
