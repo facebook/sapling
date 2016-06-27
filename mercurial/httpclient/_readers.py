@@ -98,7 +98,7 @@ class AbstractReader(object):
             need -= len(b)
             if need == 0:
                 break
-        result = ''.join(blocks)
+        result = b''.join(blocks)
         assert len(result) == amt or (self._finished and len(result) < amt)
 
         return result

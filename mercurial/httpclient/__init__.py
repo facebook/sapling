@@ -40,13 +40,15 @@ from __future__ import absolute_import
 
 # Many functions in this file have too many arguments.
 # pylint: disable=R0913
-
+import email
+import email.message
 import errno
 import inspect
 import logging
-import rfc822
 import select
 import socket
+import ssl
+import sys
 
 try:
     import cStringIO as io
@@ -62,15 +64,14 @@ except ImportError:
 
 from . import (
     _readers,
-    socketutil,
 )
 
 logger = logging.getLogger(__name__)
 
 __all__ = ['HTTPConnection', 'HTTPResponse']
 
-HTTP_VER_1_0 = 'HTTP/1.0'
-HTTP_VER_1_1 = 'HTTP/1.1'
+HTTP_VER_1_0 = b'HTTP/1.0'
+HTTP_VER_1_1 = b'HTTP/1.1'
 
 OUTGOING_BUFFER_SIZE = 1 << 15
 INCOMING_BUFFER_SIZE = 1 << 20
@@ -84,13 +85,64 @@ XFER_ENCODING_CHUNKED = 'chunked'
 
 CONNECTION_CLOSE = 'close'
 
-EOL = '\r\n'
+EOL = b'\r\n'
 _END_HEADERS = EOL * 2
 
 # Based on some searching around, 1 second seems like a reasonable
 # default here.
 TIMEOUT_ASSUME_CONTINUE = 1
 TIMEOUT_DEFAULT = None
+
+if sys.version_info > (3, 0):
+    _unicode = str
+else:
+    _unicode = unicode
+
+def _ensurebytes(data):
+    if not isinstance(data, (_unicode, bytes)):
+        data = str(data)
+    if not isinstance(data, bytes):
+        try:
+            return data.encode('latin-1')
+        except UnicodeEncodeError as err:
+            raise UnicodeEncodeError(
+                err.encoding,
+                err.object,
+                err.start,
+                err.end,
+                '%r is not valid Latin-1 Use .encode("utf-8") '
+                'if sending as utf-8 is desired.' % (
+                    data[err.start:err.end],))
+    return data
+
+class _CompatMessage(email.message.Message):
+    """Workaround for rfc822.Message and email.message.Message API diffs."""
+
+    @classmethod
+    def from_string(cls, s):
+        if sys.version_info > (3, 0):
+            # Python 3 can't decode headers from bytes, so we have to
+            # trust RFC 2616 and decode the headers as iso-8859-1
+            # bytes.
+            s = s.decode('iso-8859-1')
+        headers = email.message_from_string(s, _class=_CompatMessage)
+        # Fix multi-line headers to match httplib's behavior from
+        # Python 2.x, since email.message.Message handles them in
+        # slightly different ways.
+        if sys.version_info < (3, 0):
+            new = []
+            for h, v in headers._headers:
+                if '\r\n' in v:
+                    v = '\n'.join([' ' + x.lstrip() for x in v.split('\r\n')])[1:]
+                new.append((h, v))
+            headers._headers = new
+        return headers
+
+    def getheaders(self, key):
+        return self.get_all(key)
+
+    def getheader(self, key, default=None):
+        return self.get(key, failobj=default)
 
 
 class HTTPResponse(object):
@@ -102,11 +154,11 @@ class HTTPResponse(object):
     def __init__(self, sock, timeout, method):
         self.sock = sock
         self.method = method
-        self.raw_response = ''
+        self.raw_response = b''
         self._headers_len = 0
         self.headers = None
         self.will_close = False
-        self.status_line = ''
+        self.status_line = b''
         self.status = None
         self.continued = False
         self.http_version = None
@@ -142,6 +194,10 @@ class HTTPResponse(object):
         return self.headers.getheader(header, default=default)
 
     def getheaders(self):
+        if sys.version_info < (3, 0):
+            return [(k.lower(), v) for k, v in self.headers.items()]
+        # Starting in Python 3, headers aren't lowercased before being
+        # returned here.
         return self.headers.items()
 
     def readline(self):
@@ -152,14 +208,14 @@ class HTTPResponse(object):
         """
         blocks = []
         while True:
-            self._reader.readto('\n', blocks)
+            self._reader.readto(b'\n', blocks)
 
-            if blocks and blocks[-1][-1] == '\n' or self.complete():
+            if blocks and blocks[-1][-1:] == b'\n' or self.complete():
                 break
 
             self._select()
 
-        return ''.join(blocks)
+        return b''.join(blocks)
 
     def read(self, length=None):
         """Read data from the response body."""
@@ -186,8 +242,8 @@ class HTTPResponse(object):
                 raise HTTPTimeoutException('timeout reading data')
         try:
             data = self.sock.recv(INCOMING_BUFFER_SIZE)
-        except socket.sslerror as e:
-            if e.args[0] != socket.SSL_ERROR_WANT_READ:
+        except ssl.SSLError as e:
+            if e.args[0] != ssl.SSL_ERROR_WANT_READ:
                 raise
             logger.debug('SSL_ERROR_WANT_READ in _select, should retry later')
             return True
@@ -214,7 +270,7 @@ class HTTPResponse(object):
         self.raw_response += data
         # This is a bogus server with bad line endings
         if self._eol not in self.raw_response:
-            for bad_eol in ('\n', '\r'):
+            for bad_eol in (b'\n', b'\r'):
                 if (bad_eol in self.raw_response
                     # verify that bad_eol is not the end of the incoming data
                     # as this could be a response line that just got
@@ -231,8 +287,8 @@ class HTTPResponse(object):
 
         # handle 100-continue response
         hdrs, body = self.raw_response.split(self._end_headers, 1)
-        unused_http_ver, status = hdrs.split(' ', 1)
-        if status.startswith('100'):
+        unused_http_ver, status = hdrs.split(b' ', 1)
+        if status.startswith(b'100'):
             self.raw_response = body
             self.continued = True
             logger.debug('continue seen, setting body to %r', body)
@@ -246,14 +302,14 @@ class HTTPResponse(object):
             self.status_line, hdrs = hdrs.split(self._eol, 1)
         else:
             self.status_line = hdrs
-            hdrs = ''
+            hdrs = b''
         # TODO HTTP < 1.0 support
         (self.http_version, self.status,
-         self.reason) = self.status_line.split(' ', 2)
+         self.reason) = self.status_line.split(b' ', 2)
         self.status = int(self.status)
         if self._eol != EOL:
-            hdrs = hdrs.replace(self._eol, '\r\n')
-        headers = rfc822.Message(io.StringIO(hdrs))
+            hdrs = hdrs.replace(self._eol, b'\r\n')
+        headers = _CompatMessage.from_string(hdrs)
         content_len = None
         if HDR_CONTENT_LENGTH in headers:
             content_len = int(headers[HDR_CONTENT_LENGTH])
@@ -270,8 +326,8 @@ class HTTPResponse(object):
             # HEAD responses are forbidden from returning a body, and
             # it's implausible for a CONNECT response to use
             # close-is-end logic for an OK response.
-            if (self.method == 'HEAD' or
-                (self.method == 'CONNECT' and content_len is None)):
+            if (self.method == b'HEAD' or
+                (self.method == b'CONNECT' and content_len is None)):
                 content_len = 0
             if content_len is not None:
                 logger.debug('using a content-length reader with length %d',
@@ -305,7 +361,7 @@ def _foldheaders(headers):
     >>> _foldheaders({'Accept-Encoding': 'wat'})
     {'accept-encoding': ('Accept-Encoding', 'wat')}
     """
-    return dict((k.lower(), (k, v)) for k, v in headers.iteritems())
+    return dict((k.lower(), (k, v)) for k, v in headers.items())
 
 try:
     inspect.signature
@@ -391,15 +447,16 @@ class HTTPConnection(object):
         Any extra keyword arguments to this function will be provided
         to the ssl_wrap_socket method. If no ssl
         """
-        if port is None and host.count(':') == 1 or ']:' in host:
-            host, port = host.rsplit(':', 1)
+        host = _ensurebytes(host)
+        if port is None and host.count(b':') == 1 or b']:' in host:
+            host, port = host.rsplit(b':', 1)
             port = int(port)
-            if '[' in host:
+            if b'[' in host:
                 host = host[1:-1]
         if ssl_wrap_socket is not None:
             _wrap_socket = ssl_wrap_socket
         else:
-            _wrap_socket = socketutil.wrap_socket
+            _wrap_socket = ssl.wrap_socket
         call_wrap_socket = None
         handlesubar = _handlesarg(_wrap_socket, 'server_hostname')
         if handlesubar is True:
@@ -430,8 +487,6 @@ class HTTPConnection(object):
         elif port is None:
             port = (use_ssl and 443 or 80)
         self.port = port
-        if use_ssl and not socketutil.have_ssl:
-            raise Exception('ssl requested but unavailable on this Python')
         self.ssl = use_ssl
         self.ssl_opts = ssl_opts
         self._ssl_validator = ssl_validator
@@ -461,15 +516,15 @@ class HTTPConnection(object):
         if self._proxy_host is not None:
             logger.info('Connecting to http proxy %s:%s',
                         self._proxy_host, self._proxy_port)
-            sock = socketutil.create_connection((self._proxy_host,
-                                                 self._proxy_port))
+            sock = socket.create_connection((self._proxy_host,
+                                             self._proxy_port))
             if self.ssl:
-                data = self._buildheaders('CONNECT', '%s:%d' % (self.host,
-                                                                self.port),
+                data = self._buildheaders(b'CONNECT', b'%s:%d' % (self.host,
+                                                                  self.port),
                                           proxy_headers, HTTP_VER_1_0)
                 sock.send(data)
                 sock.setblocking(0)
-                r = self.response_class(sock, self.timeout, 'CONNECT')
+                r = self.response_class(sock, self.timeout, b'CONNECT')
                 timeout_exc = HTTPTimeoutException(
                     'Timed out waiting for CONNECT response from proxy')
                 while not r.complete():
@@ -494,7 +549,7 @@ class HTTPConnection(object):
                 logger.info('CONNECT (for SSL) to %s:%s via proxy succeeded.',
                             self.host, self.port)
         else:
-            sock = socketutil.create_connection((self.host, self.port))
+            sock = socket.create_connection((self.host, self.port))
         if self.ssl:
             # This is the default, but in the case of proxied SSL
             # requests the proxy logic above will have cleared
@@ -515,25 +570,26 @@ class HTTPConnection(object):
             hdrhost = self.host
         else:
             # include nonstandard port in header
-            if ':' in self.host:  # must be IPv6
-                hdrhost = '[%s]:%d' % (self.host, self.port)
+            if b':' in self.host:  # must be IPv6
+                hdrhost = b'[%s]:%d' % (self.host, self.port)
             else:
-                hdrhost = '%s:%d' % (self.host, self.port)
+                hdrhost = b'%s:%d' % (self.host, self.port)
         if self._proxy_host and not self.ssl:
             # When talking to a regular http proxy we must send the
             # full URI, but in all other cases we must not (although
             # technically RFC 2616 says servers must accept our
             # request if we screw up, experimentally few do that
             # correctly.)
-            assert path[0] == '/', 'path must start with a /'
-            path = 'http://%s%s' % (hdrhost, path)
-        outgoing = ['%s %s %s%s' % (method, path, http_ver, EOL)]
-        headers['host'] = ('Host', hdrhost)
+            assert path[0:1] == b'/', 'path must start with a /'
+            path = b'http://%s%s' % (hdrhost, path)
+        outgoing = [b'%s %s %s%s' % (method, path, http_ver, EOL)]
+        headers[b'host'] = (b'Host', hdrhost)
         headers[HDR_ACCEPT_ENCODING] = (HDR_ACCEPT_ENCODING, 'identity')
-        for hdr, val in headers.itervalues():
-            outgoing.append('%s: %s%s' % (hdr, val, EOL))
+        for hdr, val in sorted((_ensurebytes(h), _ensurebytes(v))
+                               for h, v in headers.values()):
+            outgoing.append(b'%s: %s%s' % (hdr, val, EOL))
         outgoing.append(EOL)
-        return ''.join(outgoing)
+        return b''.join(outgoing)
 
     def close(self):
         """Close the connection to the server.
@@ -586,6 +642,8 @@ class HTTPConnection(object):
         available. Use the `getresponse()` method to retrieve the
         response.
         """
+        method = _ensurebytes(method)
+        path = _ensurebytes(path)
         if self.busy():
             raise httplib.CannotSendRequest(
                 'Can not send another request before '
@@ -594,11 +652,26 @@ class HTTPConnection(object):
 
         logger.info('sending %s request for %s to %s on port %s',
                     method, path, self.host, self.port)
+
         hdrs = _foldheaders(headers)
-        if hdrs.get('expect', ('', ''))[1].lower() == '100-continue':
+        # Figure out headers that have to be computed from the request
+        # body.
+        chunked = False
+        if body and HDR_CONTENT_LENGTH not in hdrs:
+            if getattr(body, '__len__', False):
+                hdrs[HDR_CONTENT_LENGTH] = (HDR_CONTENT_LENGTH,
+                                            b'%d' % len(body))
+            elif getattr(body, 'read', False):
+                hdrs[HDR_XFER_ENCODING] = (HDR_XFER_ENCODING,
+                                           XFER_ENCODING_CHUNKED)
+                chunked = True
+            else:
+                raise BadRequestData('body has no __len__() nor read()')
+        # Figure out expect-continue header
+        if hdrs.get('expect', ('', ''))[1].lower() == b'100-continue':
             expect_continue = True
         elif expect_continue:
-            hdrs['expect'] = ('Expect', '100-Continue')
+            hdrs['expect'] = (b'Expect', b'100-Continue')
         # httplib compatibility: if the user specified a
         # proxy-authorization header, that's actually intended for a
         # proxy CONNECT action, not the real request, but only if
@@ -608,25 +681,15 @@ class HTTPConnection(object):
             pa = hdrs.pop('proxy-authorization', None)
             if pa is not None:
                 pheaders['proxy-authorization'] = pa
-
-        chunked = False
-        if body and HDR_CONTENT_LENGTH not in hdrs:
-            if getattr(body, '__len__', False):
-                hdrs[HDR_CONTENT_LENGTH] = (HDR_CONTENT_LENGTH, len(body))
-            elif getattr(body, 'read', False):
-                hdrs[HDR_XFER_ENCODING] = (HDR_XFER_ENCODING,
-                                           XFER_ENCODING_CHUNKED)
-                chunked = True
-            else:
-                raise BadRequestData('body has no __len__() nor read()')
+        # Build header data
+        outgoing_headers = self._buildheaders(
+            method, path, hdrs, self.http_version)
 
         # If we're reusing the underlying socket, there are some
         # conditions where we'll want to retry, so make a note of the
         # state of self.sock
         fresh_socket = self.sock is None
         self._connect(pheaders)
-        outgoing_headers = self._buildheaders(
-            method, path, hdrs, self.http_version)
         response = None
         first = True
 
@@ -666,8 +729,8 @@ class HTTPConnection(object):
                 try:
                     try:
                         data = r[0].recv(INCOMING_BUFFER_SIZE)
-                    except socket.sslerror as e:
-                        if e.args[0] != socket.SSL_ERROR_WANT_READ:
+                    except ssl.SSLError as e:
+                        if e.args[0] != ssl.SSL_ERROR_WANT_READ:
                             raise
                         logger.debug('SSL_ERROR_WANT_READ while sending '
                                      'data, retrying...')
@@ -736,16 +799,20 @@ class HTTPConnection(object):
                             continue
                         if len(data) < OUTGOING_BUFFER_SIZE:
                             if chunked:
-                                body = '0' + EOL + EOL
+                                body = b'0' + EOL + EOL
                             else:
                                 body = None
                         if chunked:
-                            out = hex(len(data))[2:] + EOL + data + EOL
+                            # This encode is okay because we know
+                            # hex() is building us only 0-9 and a-f
+                            # digits.
+                            asciilen = hex(len(data))[2:].encode('ascii')
+                            out = asciilen + EOL + data + EOL
                         else:
                             out = data
                     amt = w[0].send(out)
                 except socket.error as e:
-                    if e[0] == socket.SSL_ERROR_WANT_WRITE and self.ssl:
+                    if e[0] == ssl.SSL_ERROR_WANT_WRITE and self.ssl:
                         # This means that SSL hasn't flushed its buffer into
                         # the socket yet.
                         # TODO: find a way to block on ssl flushing its buffer
@@ -764,6 +831,7 @@ class HTTPConnection(object):
                     body = out[amt:]
                 else:
                     outgoing_headers = out[amt:]
+        # End of request-sending loop.
 
         # close if the server response said to or responded before eating
         # the whole request
