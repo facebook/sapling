@@ -30,3 +30,4 @@ class TestHelpers(unittest.TestCase):
         fs.popfile('bb')
         self.assertEqual([], os.listdir(fs._tempdir))
         self.assertRaises(editor.EditingError, lambda: fs.getfile('bb'))
+        fs.close()
