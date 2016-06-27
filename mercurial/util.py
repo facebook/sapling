@@ -54,6 +54,7 @@ for attr in (
     # we do import urlreq, but we do it outside the loop
     #'urlreq',
     'stringio',
+    'xmlrpclib',
 ):
     globals()[attr] = getattr(pycompat, attr)
 

@@ -18,6 +18,13 @@ except ImportError:
     pickle.dumps # silence pyflakes
 
 try:
+    import xmlrpclib
+    xmlrpclib.Transport
+except ImportError:
+    import xmlrpc.client as xmlrpclib
+    xmlrpclib.Transport
+
+try:
     import urlparse
     urlparse.urlparse
 except ImportError:
