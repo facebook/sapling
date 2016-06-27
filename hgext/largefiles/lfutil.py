@@ -31,7 +31,6 @@ shortname = '.hglf'
 shortnameslash = shortname + '/'
 longname = 'largefiles'
 
-
 # -- Private worker functions ------------------------------------------
 
 def getminsize(ui, assumelfiles, opt, default=10):
@@ -259,7 +258,6 @@ def copyalltostore(repo, node):
         if isstandin(filename) and filename in ctx.manifest():
             realfile = splitstandin(filename)
             copytostore(repo, ctx.node(), realfile)
-
 
 def copytostoreabsolute(repo, file, hash):
     if inusercache(repo.ui, hash):

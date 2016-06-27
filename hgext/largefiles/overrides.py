@@ -546,7 +546,6 @@ def mergerecordupdates(orig, repo, actions, branchmerge):
 
     return orig(repo, actions, branchmerge)
 
-
 # Override filemerge to prompt the user about how they wish to merge
 # largefiles. This will handle identical edits without prompting the user.
 def overridefilemerge(origfn, premerge, repo, mynode, orig, fcd, fco, fca,
