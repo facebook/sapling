@@ -26,7 +26,7 @@
   doc/hgmanpage.py: invalid syntax: invalid syntax (<unknown>, line *) (glob)
   hgext/automv.py: error importing module: <SyntaxError> invalid syntax (commands.py, line *) (line *) (glob)
   hgext/blackbox.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
-  hgext/bugzilla.py: error importing module: <ImportError> No module named 'urlparse' (line *) (glob)
+  hgext/bugzilla.py: error importing module: <ImportError> No module named 'xmlrpclib' (line *) (glob)
   hgext/censor.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)
   hgext/chgserver.py: error importing module: <ImportError> No module named 'SocketServer' (line *) (glob)
   hgext/children.py: error importing: <AttributeError> 'dict' object has no attribute 'iteritems' (error at revset.py:*) (glob)

@@ -50,6 +50,7 @@ for attr in (
     'pickle',
     'queue',
     'urlerr',
+    'urlparse',
     # we do import urlreq, but we do it outside the loop
     #'urlreq',
     'stringio',

@@ -18,6 +18,13 @@ except ImportError:
     pickle.dumps # silence pyflakes
 
 try:
+    import urlparse
+    urlparse.urlparse
+except ImportError:
+    import urllib.parse as urlparse
+    urlparse.urlparse
+
+try:
     import cStringIO as io
     stringio = io.StringIO
 except ImportError:

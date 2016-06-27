@@ -20,7 +20,10 @@ import os
 import select
 import socket
 import sys
-import urlparse
+
+from mercurial import util
+
+urlparse = util.urlparse
 
 class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     __base = BaseHTTPServer.BaseHTTPRequestHandler
