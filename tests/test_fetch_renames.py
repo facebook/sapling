@@ -75,12 +75,15 @@ class TestFetchRenames(test_util.TestBase):
             copymap = copies.get(rev, {})
             for f in ctx.manifest():
                 cp = ctx[f].renamed()
-                self.assertEqual(bool(cp), bool(copymap.get(f)),
-                                 'copy records differ for %s in %d' % (f, rev))
+                want = copymap.get(f)
+                self.assertEqual(
+                    bool(cp), bool(want),
+                    'copy records differ for %s in %d (want %r, got %r)' % (
+                        f, rev, want, cp))
                 if not cp:
                     continue
-                self.assertEqual(cp[0], copymap[f][0])
-                self.assertEqual(ctx[f].data(), copymap[f][1])
+                self.assertEqual(cp[0], want[0])
+                self.assertEqual(ctx[f].data(), want[1])
 
         self.assertEqual(repo['tip']['changed3'].data(), 'changed\nchanged3\n')
 
