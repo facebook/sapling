@@ -10,6 +10,7 @@
 from __future__ import absolute_import
 
 import os
+import re
 import ssl
 import sys
 
@@ -167,6 +168,57 @@ def wrapsocket(sock, keyfile, certfile, ui, cert_reqs=ssl.CERT_NONE,
         raise error.Abort(_('ssl connection failed'))
     return sslsocket
 
+class wildcarderror(Exception):
+    """Represents an error parsing wildcards in DNS name."""
+
+def _dnsnamematch(dn, hostname, maxwildcards=1):
+    """Match DNS names according RFC 6125 section 6.4.3.
+
+    This code is effectively copied from CPython's ssl._dnsname_match.
+
+    Returns a bool indicating whether the expected hostname matches
+    the value in ``dn``.
+    """
+    pats = []
+    if not dn:
+        return False
+
+    pieces = dn.split(r'.')
+    leftmost = pieces[0]
+    remainder = pieces[1:]
+    wildcards = leftmost.count('*')
+    if wildcards > maxwildcards:
+        raise wildcarderror(
+            _('too many wildcards in certificate DNS name: %s') % dn)
+
+    # speed up common case w/o wildcards
+    if not wildcards:
+        return dn.lower() == hostname.lower()
+
+    # RFC 6125, section 6.4.3, subitem 1.
+    # The client SHOULD NOT attempt to match a presented identifier in which
+    # the wildcard character comprises a label other than the left-most label.
+    if leftmost == '*':
+        # When '*' is a fragment by itself, it matches a non-empty dotless
+        # fragment.
+        pats.append('[^.]+')
+    elif leftmost.startswith('xn--') or hostname.startswith('xn--'):
+        # RFC 6125, section 6.4.3, subitem 3.
+        # The client SHOULD NOT attempt to match a presented identifier
+        # where the wildcard character is embedded within an A-label or
+        # U-label of an internationalized domain name.
+        pats.append(re.escape(leftmost))
+    else:
+        # Otherwise, '*' matches any dotless string, e.g. www*
+        pats.append(re.escape(leftmost).replace(r'\*', '[^.]*'))
+
+    # add the remaining fragments, ignore any wildcards
+    for frag in remainder:
+        pats.append(re.escape(frag))
+
+    pat = re.compile(r'\A' + r'\.'.join(pats) + r'\Z', re.IGNORECASE)
+    return pat.match(hostname) is not None
+
 def _verifycert(cert, hostname):
     '''Verify that cert (in socket.getpeercert() format) matches hostname.
     CRLs is not handled.
@@ -175,33 +227,46 @@ def _verifycert(cert, hostname):
     '''
     if not cert:
         return _('no certificate received')
-    dnsname = hostname.lower()
-    def matchdnsname(certname):
-        return (certname == dnsname or
-                '.' in dnsname and certname == '*.' + dnsname.split('.', 1)[1])
 
+    dnsnames = []
     san = cert.get('subjectAltName', [])
-    if san:
-        certnames = [value.lower() for key, value in san if key == 'DNS']
-        for name in certnames:
-            if matchdnsname(name):
-                return None
-        if certnames:
-            return _('certificate is for %s') % ', '.join(certnames)
-
-    # subject is only checked when subjectAltName is empty
-    for s in cert.get('subject', []):
-        key, value = s[0]
-        if key == 'commonName':
+    for key, value in san:
+        if key == 'DNS':
             try:
-                # 'subject' entries are unicode
-                certname = value.lower().encode('ascii')
-            except UnicodeEncodeError:
-                return _('IDN in certificate not supported')
-            if matchdnsname(certname):
-                return None
-            return _('certificate is for %s') % certname
-    return _('no commonName or subjectAltName found in certificate')
+                if _dnsnamematch(value, hostname):
+                    return
+            except wildcarderror as e:
+                return e.message
+
+            dnsnames.append(value)
+
+    if not dnsnames:
+        # The subject is only checked when there is no DNS in subjectAltName.
+        for sub in cert.get('subject', []):
+            for key, value in sub:
+                # According to RFC 2818 the most specific Common Name must
+                # be used.
+                if key == 'commonName':
+                    # 'subject' entries are unicide.
+                    try:
+                        value = value.encode('ascii')
+                    except UnicodeEncodeError:
+                        return _('IDN in certificate not supported')
+
+                    try:
+                        if _dnsnamematch(value, hostname):
+                            return
+                    except wildcarderror as e:
+                        return e.message
+
+                    dnsnames.append(value)
+
+    if len(dnsnames) > 1:
+        return _('certificate is for %s') % ', '.join(dnsnames)
+    elif len(dnsnames) == 1:
+        return _('certificate is for %s') % dnsnames[0]
+    else:
+        return _('no commonName or subjectAltName found in certificate')
 
 
 # CERT_REQUIRED means fetch the cert from the server all the time AND
