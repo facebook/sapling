@@ -80,10 +80,9 @@ class TestFetchRenames(test_util.TestBase):
                     bool(cp), bool(want),
                     'copy records differ for %s in %d (want %r, got %r)' % (
                         f, rev, want, cp))
-                if not cp:
-                    continue
-                self.assertEqual(cp[0], want[0])
-                self.assertEqual(ctx[f].data(), want[1])
+                if cp:
+                    self.assertEqual(cp[0], want[0])
+                    self.assertEqual(ctx[f].data(), want[1])
 
         self.assertEqual(repo['tip']['changed3'].data(), 'changed\nchanged3\n')
 
