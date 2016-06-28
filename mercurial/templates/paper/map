@@ -79,13 +79,18 @@ annotateline = '
   <tr id="{lineid}"{ifeq(node, originalnode, ' class="thisrev"')}>
     <td class="annotate">
       {if(blockhead,
-          '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
-              title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>',
-          '')}
+          '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
+             {author|user}@{rev}
+           </a>')}
+      <div class="annotate-info">
+        <div>{node|short}: {desc|escape|firstline}</div>
+        <div>parents: {parents%annotateparent}</div>
+      </div>
     </td>
     <td class="source"><a href="#{lineid}">{linenumber}</a> {line|escape}</td>
   </tr>'
-
+annotateparent = '
+  <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rev}</a>'
 diffblock = '<div class="bottomline inc-lineno"><pre class="sourcelines wrap">{lines}</pre></div>'
 difflineplus = '
   <span id="{lineid}" class="plusline">{strip(line|escape, '\r\n')}</span><a href="#{lineid}"></a>'

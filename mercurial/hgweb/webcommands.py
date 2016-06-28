@@ -864,6 +864,13 @@ def annotate(web, req, tmpl):
     diffopts = patch.difffeatureopts(web.repo.ui, untrusted=True,
                                      section='annotate', whitespace=True)
 
+    def parents(f):
+        for p in f.parents():
+            yield {
+                "node": p.hex(),
+                "rev": p.rev(),
+            }
+
     def annotate(**map):
         if util.binary(fctx.data()):
             mt = (mimetypes.guess_type(fctx.path())[0]
@@ -882,6 +889,7 @@ def annotate(web, req, tmpl):
                    "node": f.hex(),
                    "rev": rev,
                    "author": f.user(),
+                   "parents": parents(f),
                    "desc": f.description(),
                    "extra": f.extra(),
                    "file": f.path(),

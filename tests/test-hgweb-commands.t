@@ -1965,6 +1965,17 @@ Static files
   .annotate { font-size: smaller; text-align: right; padding-right: 1em; }
   tr.thisrev a { color:#999999; text-decoration: none; }
   tr.thisrev pre { color:#009900; }
+  div.annotate-info {
+    display: none;
+    position: absolute;
+    background-color: #FFFFFF;
+    border: 1px solid #000000;
+    text-align: left;
+    color: #000000;
+    padding: 5px;
+  }
+  div.annotate-info a { color: #0000FF; }
+  td.annotate:hover div.annotate-info { display: inline; }
   .buttons a {
     background-color: #666;
     padding: 2pt;

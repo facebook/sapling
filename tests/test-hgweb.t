@@ -340,7 +340,7 @@ static file
 
   $ get-with-headers.py --twice localhost:$HGPORT 'static/style-gitweb.css' - date etag server
   200 Script output follows
-  content-length: 6610
+  content-length: 6908
   content-type: text/css
   
   body { font-family: sans-serif; font-size: 12px; border:solid #d9d8d1; border-width:1px; margin:10px; background: white; color: black; }
@@ -399,6 +399,17 @@ static file
   div.search { margin:4px 8px; position:absolute; top:56px; right:12px }
   tr.thisrev a { color:#999999; text-decoration: none; }
   tr.thisrev pre { color:#009900; }
+  div.annotate-info {
+    display: none;
+    position: absolute;
+    background-color: #FFFFFF;
+    border: 1px solid #000000;
+    text-align: left;
+    color: #000000;
+    padding: 5px;
+  }
+  div.annotate-info a { color: #0000FF; text-decoration: underline; }
+  td.annotate:hover div.annotate-info { display: inline; }
   .linenr { color:#999999; text-decoration:none }
   div.rss_logo { float: right; white-space: nowrap; }
   div.rss_logo a {

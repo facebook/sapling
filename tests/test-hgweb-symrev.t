@@ -190,8 +190,9 @@ Set up the repo
    annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=paper">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=paper">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=paper">9d8c40cba617</a> </td>
-  <a href="/annotate/43c799df6e75/foo?style=paper#l1"
-  <a href="/annotate/a7c1559b7bba/foo?style=paper#l2"
+  <a href="/annotate/43c799df6e75/foo?style=paper#l1">
+  <a href="/annotate/a7c1559b7bba/foo?style=paper#l2">
+  <a href="/annotate/43c799df6e75/foo?style=paper">0</a></div>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=paper' | egrep $REVLINKS
   <li><a href="/shortlog/xyzzy?style=paper">log</a></li>
@@ -378,8 +379,9 @@ Set up the repo
    annotate foo @ 1:<a href="/rev/a7c1559b7bba?style=coal">a7c1559b7bba</a>
    <td class="author"><a href="/file/43c799df6e75/foo?style=coal">43c799df6e75</a> </td>
    <td class="author"><a href="/file/9d8c40cba617/foo?style=coal">9d8c40cba617</a> </td>
-  <a href="/annotate/43c799df6e75/foo?style=coal#l1"
-  <a href="/annotate/a7c1559b7bba/foo?style=coal#l2"
+  <a href="/annotate/43c799df6e75/foo?style=coal#l1">
+  <a href="/annotate/a7c1559b7bba/foo?style=coal#l2">
+  <a href="/annotate/43c799df6e75/foo?style=coal">0</a></div>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=coal' | egrep $REVLINKS
   <li><a href="/shortlog/xyzzy?style=coal">log</a></li>
@@ -616,8 +618,9 @@ Set up the repo
    <td style="font-family:monospace"><a class="list" href="/rev/a7c1559b7bba?style=gitweb">a7c1559b7bba</a></td>
   <a class="list" href="/annotate/43c799df6e75/foo?style=gitweb">
   <a class="list" href="/annotate/9d8c40cba617/foo?style=gitweb">9d8c40cba617</a></td>
-  <a href="/annotate/43c799df6e75/foo?style=gitweb#l1"
-  <a href="/annotate/a7c1559b7bba/foo?style=gitweb#l2"
+  <a href="/annotate/43c799df6e75/foo?style=gitweb#l1">
+  <a href="/annotate/a7c1559b7bba/foo?style=gitweb#l2">
+  <a href="/annotate/43c799df6e75/foo?style=gitweb">0</a></div>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=gitweb' | egrep $REVLINKS
   <a href="/file/xyzzy?style=gitweb">files</a> |
@@ -832,8 +835,9 @@ Set up the repo
           <dd><a href="/rev/a7c1559b7bba?style=monoblue">a7c1559b7bba</a></dd>
   <a href="/annotate/43c799df6e75/foo?style=monoblue">
   <a href="/annotate/9d8c40cba617/foo?style=monoblue">9d8c40cba617</a>
-  <a href="/annotate/43c799df6e75/foo?style=monoblue#l1"
-  <a href="/annotate/a7c1559b7bba/foo?style=monoblue#l2"
+  <a href="/annotate/43c799df6e75/foo?style=monoblue#l1">
+  <a href="/annotate/a7c1559b7bba/foo?style=monoblue#l2">
+  <a href="/annotate/43c799df6e75/foo?style=monoblue">0</a></div>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=monoblue' | egrep $REVLINKS
               <li><a href="/graph/xyzzy?style=monoblue">graph</a></li>
@@ -1029,8 +1033,9 @@ Set up the repo
    <td><a href="/rev/a7c1559b7bba?style=spartan">a7c1559b7bba</a></td>
   <a href="/annotate/43c799df6e75/foo?style=spartan">
   <td><a href="/annotate/9d8c40cba617/foo?style=spartan">9d8c40cba617</a></td>
-  <a href="/annotate/43c799df6e75/foo?style=spartan#l1"
-  <a href="/annotate/a7c1559b7bba/foo?style=spartan#l2"
+  <a href="/annotate/43c799df6e75/foo?style=spartan#l1">
+  <a href="/annotate/a7c1559b7bba/foo?style=spartan#l2">
+  <a href="/annotate/43c799df6e75/foo?style=spartan">0</a></div>
 
   $ "$TESTDIR/get-with-headers.py" 127.0.0.1:$HGPORT 'diff/xyzzy/foo?style=spartan' | egrep $REVLINKS
   <a href="/log/xyzzy?style=spartan">changelog</a>

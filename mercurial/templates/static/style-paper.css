@@ -210,6 +210,17 @@ h3 {
 .bigtable td.source { font-size: inherit; }
 tr.thisrev a { color:#999999; text-decoration: none; }
 tr.thisrev td.source { color:#009900; }
+div.annotate-info {
+  display: none;
+  position: absolute;
+  background-color: #FFFFFF;
+  border: 1px solid #000000;
+  text-align: left;
+  color: #000000;
+  padding: 5px;
+}
+div.annotate-info a { color: #0000FF; }
+td.annotate:hover div.annotate-info { display: inline; }
 
 .source, .sourcefirst {
   font-family: monospace;

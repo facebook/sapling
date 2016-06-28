@@ -92,17 +92,23 @@ fileline = '
   <a href="#{lineid}"></a><span id="{lineid}">{strip(line|escape, '\r\n')}</span>'
 annotateline = '
   <tr id="{lineid}" class="parity{parity}{ifeq(node, originalnode, ' thisrev')}">
-    <td class="linenr">
+    <td class="annotate linenr">
       {if(blockhead,
-          '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}"
-              title="{node|short}: {desc|escape|firstline}">{author|user}@{rev}</a>',
-          '')}
+          '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
+             {author|user}@{rev}
+           </a>')}
+      <div class="annotate-info">
+        <div>{node|short}: {desc|escape|firstline}</div>
+        <div>parents: {parents%annotateparent}</div>
+      </div>
     </td>
     <td class="lineno">
       <a href="#{lineid}">{linenumber}</a>
     </td>
     <td class="source">{line|escape}</td>
   </tr>'
+annotateparent = '
+  <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}">{rev}</a>'
 difflineplus = '
   <a href="#{lineid}"></a><span id="{lineid}" class="difflineplus">{strip(line|escape, '\r\n')}</span>'
 difflineminus = '
