@@ -249,7 +249,7 @@ def do_daemon(args):
 def _find_default_daemon_binary():
     # By default, we look for the daemon executable alongside this file.
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    candidate = os.path.join(script_dir, 'daemon')
+    candidate = os.path.join(script_dir, 'edenfs')
     permissions = os.R_OK | os.X_OK
     if os.access(candidate, permissions):
         return candidate
