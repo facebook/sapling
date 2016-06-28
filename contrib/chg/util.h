@@ -12,8 +12,10 @@
 
 #ifdef __GNUC__
 #define PRINTF_FORMAT_ __attribute__((format(printf, 1, 2)))
+#define UNUSED_ __attribute__((unused))
 #else
 #define PRINTF_FORMAT_
+#define UNUSED_
 #endif
 
 void abortmsg(const char *fmt, ...) PRINTF_FORMAT_;

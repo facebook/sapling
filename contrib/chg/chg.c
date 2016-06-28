@@ -381,7 +381,7 @@ error:
 	abortmsgerrno("failed to handle stop signal");
 }
 
-static void handlechildsignal(int sig)
+static void handlechildsignal(int sig UNUSED_)
 {
 	if (peerpid == 0 || pagerpid == 0)
 		return;
