@@ -9,7 +9,6 @@
 from __future__ import absolute_import
 
 import errno
-import httplib
 import os
 import socket
 import tempfile
@@ -27,6 +26,7 @@ from . import (
     wireproto,
 )
 
+httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
 

@@ -5,10 +5,15 @@ a subset of the headers plus the body of the result."""
 
 from __future__ import absolute_import, print_function
 
-import httplib
 import json
 import os
 import sys
+
+from mercurial import (
+    util,
+)
+
+httplib = util.httplib
 
 try:
     import msvcrt

@@ -18,6 +18,13 @@ except ImportError:
     pickle.dumps # silence pyflakes
 
 try:
+    import httplib
+    httplib.HTTPException
+except ImportError:
+    import http.client as httplib
+    httplib.HTTPException
+
+try:
     import SocketServer as socketserver
     socketserver.ThreadingMixIn
 except ImportError:

@@ -10,7 +10,6 @@
 from __future__ import absolute_import
 
 import base64
-import httplib
 import os
 import socket
 
@@ -22,8 +21,9 @@ from . import (
     sslutil,
     util,
 )
-stringio = util.stringio
 
+httplib = util.httplib
+stringio = util.stringio
 urlerr = util.urlerr
 urlreq = util.urlreq
 

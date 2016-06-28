@@ -111,7 +111,6 @@ from __future__ import absolute_import, print_function
 
 import errno
 import hashlib
-import httplib
 import socket
 import sys
 import thread
@@ -120,6 +119,7 @@ from . import (
     util,
 )
 
+httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq
 
