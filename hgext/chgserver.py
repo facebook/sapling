@@ -154,6 +154,10 @@ def _mtimehash(paths):
 
     for chgserver, it is designed that once mtimehash changes, the server is
     considered outdated immediately and should no longer provide service.
+
+    mtimehash is not included in confighash because we only know the paths of
+    extensions after importing them (there is imp.find_module but that faces
+    race conditions). We need to calculate confighash without importing.
     """
     def trystat(path):
         try:
