@@ -9,35 +9,35 @@
   <updated>{date|rfc3339date}</updated>
   <published>{date|rfc3339date}</published>
   <content type="xhtml">
-	<table xmlns="http://www.w3.org/1999/xhtml">
-	<tr>
-		<th style="text-align:left;">changeset</th>
-		<td>{node|short}</td>
-              </tr>
-              <tr>
-                              <th style="text-align:left;">branch</th>
-                              <td>{inbranch%"{name|escape}"}{branches%"{name|escape}"}</td>
-              </tr>
-              <tr>
-                              <th style="text-align:left;">bookmark</th>
-		<td>{bookmarks%"{name|escape}"}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;">tag</th>
-		<td>{tags%"{name|escape}"}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;">user</th>
-		<td>{author|obfuscate}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;vertical-align:top;">description</th>
-		<td>{desc|strip|escape|websub|addbreaks|nonempty}</td>
-	</tr>
-	<tr>
-		<th style="text-align:left;vertical-align:top;">files</th>
-		<td>{files}</td>
-	</tr>
-	</table>
+   <table xmlns="http://www.w3.org/1999/xhtml">
+    <tr>
+     <th style="text-align:left;">changeset</th>
+     <td>{node|short}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;">branch</th>
+     <td>{inbranch%"{name|escape}"}{branches%"{name|escape}"}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;">bookmark</th>
+     <td>{bookmarks%"{name|escape}"}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;">tag</th>
+     <td>{tags%"{name|escape}"}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;">user</th>
+     <td>{author|obfuscate}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;vertical-align:top;">description</th>
+     <td>{desc|strip|escape|websub|addbreaks|nonempty}</td>
+    </tr>
+    <tr>
+     <th style="text-align:left;vertical-align:top;">files</th>
+     <td>{files}</td>
+    </tr>
+   </table>
   </content>
  </entry>

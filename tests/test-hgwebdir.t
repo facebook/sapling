@@ -783,36 +783,36 @@ should succeed, slashy names
     <updated>1970-01-01T00:00:01+00:00</updated>
     <published>1970-01-01T00:00:01+00:00</published>
     <content type="xhtml">
-  	<table xmlns="http://www.w3.org/1999/xhtml">
-  	<tr>
-  		<th style="text-align:left;">changeset</th>
-  		<td>8580ff50825a</td>
-                </tr>
-                <tr>
-                                <th style="text-align:left;">branch</th>
-                                <td>default</td>
-                </tr>
-                <tr>
-                                <th style="text-align:left;">bookmark</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">tag</th>
-  		<td>tip</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">user</th>
-  		<td>&#116;&#101;&#115;&#116;</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>a</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;vertical-align:top;">files</th>
-  		<td>a<br /></td>
-  	</tr>
-  	</table>
+     <table xmlns="http://www.w3.org/1999/xhtml">
+      <tr>
+       <th style="text-align:left;">changeset</th>
+       <td>8580ff50825a</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">branch</th>
+       <td>default</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">bookmark</th>
+       <td></td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">tag</th>
+       <td>tip</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">user</th>
+       <td>&#116;&#101;&#115;&#116;</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;vertical-align:top;">description</th>
+       <td>a</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;vertical-align:top;">files</th>
+       <td>a<br /></td>
+      </tr>
+     </table>
     </content>
    </entry>
   
@@ -840,36 +840,36 @@ should succeed, slashy names
     <updated>1970-01-01T00:00:01+00:00</updated>
     <published>1970-01-01T00:00:01+00:00</published>
     <content type="xhtml">
-  	<table xmlns="http://www.w3.org/1999/xhtml">
-  	<tr>
-  		<th style="text-align:left;">changeset</th>
-  		<td>8580ff50825a</td>
-                </tr>
-                <tr>
-                                <th style="text-align:left;">branch</th>
-                                <td>default</td>
-                </tr>
-                <tr>
-                                <th style="text-align:left;">bookmark</th>
-  		<td></td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">tag</th>
-  		<td>tip</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;">user</th>
-  		<td>&#116;&#101;&#115;&#116;</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;vertical-align:top;">description</th>
-  		<td>a</td>
-  	</tr>
-  	<tr>
-  		<th style="text-align:left;vertical-align:top;">files</th>
-  		<td>a<br /></td>
-  	</tr>
-  	</table>
+     <table xmlns="http://www.w3.org/1999/xhtml">
+      <tr>
+       <th style="text-align:left;">changeset</th>
+       <td>8580ff50825a</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">branch</th>
+       <td>default</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">bookmark</th>
+       <td></td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">tag</th>
+       <td>tip</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;">user</th>
+       <td>&#116;&#101;&#115;&#116;</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;vertical-align:top;">description</th>
+       <td>a</td>
+      </tr>
+      <tr>
+       <th style="text-align:left;vertical-align:top;">files</th>
+       <td>a<br /></td>
+      </tr>
+     </table>
     </content>
    </entry>
   
