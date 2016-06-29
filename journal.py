@@ -43,11 +43,20 @@ storage_version = 0
 
 # namespaces
 bookmarktype = 'bookmark'
+remotebookmarktype = 'remotebookmark'
 
 # Journal recording, register hooks and storage object
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
+
+    def hasremotenames(loaded):
+        if not loaded:
+            return
+        remotenames = extensions.find('remotenames')
+        extensions.wrapfunction(
+            remotenames, 'saveremotenames', recordremotebookmarks)
+    extensions.afterloaded('remotenames', hasremotenames)
 
 def reposetup(ui, repo):
     if repo.local():
@@ -58,6 +67,7 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     journalstorage.recordcommand(*fullargs)
     return orig(lui, repo, cmd, fullargs, *args)
 
+# hooks to record bookmark changes (both local and remote)
 def recordbookmarks(orig, store, fp):
     """Records all bookmark changes in the journal."""
     repo = store._repo
@@ -68,6 +78,36 @@ def recordbookmarks(orig, store, fp):
             if value != oldvalue:
                 repo.journal.record(bookmarktype, mark, oldvalue, value)
     return orig(store, fp)
+
+def recordremotebookmarks(
+        orig, repo, remotepath, branches=None, bookmarks=None):
+    """Records all remote bookmark movements in the journal."""
+    if util.safehasattr(repo, 'journal'):
+        if bookmarks is None:
+            bookmarks = {}
+
+        if branches is None:
+            branches = {}
+
+        if bookmarks:
+            remotenames = extensions.find('remotenames')
+            oldremotenames = remotenames.readremotenames(repo)
+
+            oldbookmarks = dict(
+                (oldname, oldnode)
+                for oldnode, nametype, oldremote, oldname in oldremotenames
+                if nametype == 'bookmarks' and oldremote == remotepath)
+
+            for rmbookmark, newnode in bookmarks.iteritems():
+                oldnode = oldbookmarks.get(rmbookmark, node.hex(node.nullid))
+                if oldnode != newnode:
+                    joinedremotename = remotenames.joinremotename(
+                        remotepath, rmbookmark)
+                    repo.journal.record(
+                        remotebookmarktype, joinedremotename,
+                        node.bin(oldnode), node.bin(newnode))
+
+    return orig(repo, remotepath, branches, bookmarks)
 
 class journalentry(collections.namedtuple(
         'journalentry',
