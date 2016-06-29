@@ -334,7 +334,6 @@ class journalstorage(object):
         entry = journalentry(
             util.makedate(), self.user, self.command, namespace, name,
             oldhashes, newhashes)
-        self._write(entry)
 
         repo = self.repo
         if self.repo.shared() and 'journal' in self.sharedfeatures:
