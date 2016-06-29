@@ -14,10 +14,12 @@ bookmarks were previously located.
 from __future__ import absolute_import
 
 import collections
+import errno
 import os
 
 from mercurial.i18n import _
 
+from hgext import share
 from mercurial import (
     bookmarks,
     cmdutil,
@@ -26,6 +28,7 @@ from mercurial import (
     dispatch,
     error,
     extensions,
+    hg,
     localrepo,
     node,
     util,
@@ -47,6 +50,12 @@ storage_version = 0
 bookmarktype = 'bookmark'
 remotebookmarktype = 'remotebookmark'
 wdirparenttype = 'wdirparent'
+# In a shared repository, what shared feature name is used
+# to indicate this namespace is shared with the source?
+sharednamespaces = {
+    bookmarktype: hg.sharedbookmarks,
+    remotebookmarktype: hg.sharedbookmarks,
+}
 
 # Journal recording, register hooks and storage object
 def extsetup(ui):
@@ -56,6 +65,8 @@ def extsetup(ui):
         dirstate.dirstate, '_writedirstate', recorddirstateparents)
     extensions.wrapfunction(
         localrepo.localrepository.dirstate, 'func', wrapdirstate)
+    extensions.wrapfunction(hg, 'postshare', wrappostshare)
+    extensions.wrapcommand(share.cmdtable, 'unshare', unsharejournal)
 
     def hasremotenames(loaded):
         if not loaded:
@@ -149,6 +160,80 @@ def recordremotebookmarks(
 
     return orig(repo, remotepath, branches, bookmarks)
 
+# shared repository support
+def _readsharedfeatures(repo):
+    """A set of shared features for this repository"""
+    try:
+        return set(repo.vfs.read('shared').splitlines())
+    except IOError as inst:
+        if inst.errno != errno.ENOENT:
+            raise
+        return set()
+
+def _mergeentriesiter(*iterables, **kwargs):
+    """Given a set of sorted iterables, yield the next entry in merged order
+
+    Note that by default entries go from most recent to oldest.
+    """
+    order = kwargs.pop('order', max)
+    iterables = [iter(it) for it in iterables]
+    # this tracks still active iterables; iterables are deleted as they are
+    # exhausted, which is why this is a dictionary and why each entry also
+    # stores the key. Entries are mutable so we can store the next value each
+    # time.
+    iterable_map = {}
+    for key, it in enumerate(iterables):
+        try:
+            iterable_map[key] = [next(it), key, it]
+        except StopIteration:
+            # empty entry, can be ignored
+            pass
+    if not iterable_map:
+        # all iterables where empty
+        return
+
+    while True:
+        value, key, it = order(iterable_map.itervalues())
+        yield value
+        try:
+            iterable_map[key][0] = next(it)
+        except StopIteration:
+            # this iterable is empty, remove it from consideration
+            del iterable_map[key]
+            if not iterable_map:
+                # all iterables are empty
+                return
+
+def wrappostshare(orig, sourcerepo, destrepo, **kwargs):
+    orig(sourcerepo, destrepo, **kwargs)
+    with destrepo.vfs('shared', 'a') as fp:
+        fp.write('journal\n')
+
+def unsharejournal(orig, ui, repo):
+    # do the work *before* the unshare command does it, as otherwise
+    # we no longer have access to the source repo. We also can't wrap
+    # copystore as we need a wlock while unshare takes the store lock.
+    if repo.shared() and util.safehasattr(repo, 'journal'):
+        sharedrepo = share._getsrcrepo(repo)
+        sharedfeatures = _readsharedfeatures(repo)
+        if sharedrepo and sharedfeatures > set(['journal']):
+            # there is a shared repository and there are shared journal entries
+            # to copy. move shared date over from source to destination but
+            # move the local file first
+            if repo.vfs.exists('journal'):
+                journalpath = repo.join('journal')
+                util.rename(journalpath, journalpath + '.bak')
+            storage = repo.journal
+            local = storage._open(
+                repo, filename='journal.bak', _newestfirst=False)
+            shared = (
+                e for e in storage._open(sharedrepo, _newestfirst=False)
+                if sharednamespaces.get(e.namespace) in sharedfeatures)
+            for entry in _mergeentriesiter(local, shared, order=min):
+                storage._write(repo, entry)
+
+    return orig(ui, repo)
+
 class journalentry(collections.namedtuple(
         'journalentry',
         'timestamp user command namespace name oldhashes newhashes')):
@@ -192,6 +277,10 @@ class journalentry(collections.namedtuple(
 class journalstorage(object):
     """Storage for journal entries
 
+    Entries are divided over two files; one with entries that pertain to the
+    local working copy *only*, and one with entries that are shared across
+    multiple working copies when shared using the share extension.
+
     Entries are stored with NUL bytes as separators. See the journalentry
     class for the per-entry structure.
 
@@ -203,7 +292,6 @@ class journalstorage(object):
     def __init__(self, repo):
         self.repo = repo
         self.user = util.getuser()
-        self.vfs = repo.vfs
 
     # track the current command for recording in journal entries
     @property
@@ -221,6 +309,10 @@ class journalstorage(object):
         # Set the current command on the class because we may have started
         # with a non-local repo (cloning for example).
         cls._currentcommand = fullargs
+
+    @util.propertycache
+    def sharedfeatures(self):
+        return _readsharedfeatures(self.repo)
 
     def record(self, namespace, name, oldhashes, newhashes):
         """Record a new journal entry
@@ -244,12 +336,23 @@ class journalstorage(object):
             oldhashes, newhashes)
         self._write(entry)
 
-    def _write(self, entry, _wait=False):
+        repo = self.repo
+        if self.repo.shared() and 'journal' in self.sharedfeatures:
+            # write to the shared repository if this feature is being
+            # shared between working copies.
+            if sharednamespaces.get(namespace) in self.sharedfeatures:
+                srcrepo = share._getsrcrepo(repo)
+                if srcrepo is not None:
+                    repo = srcrepo
+
+        self._write(repo, entry)
+
+    def _write(self, repo, entry, _wait=False):
         try:
-            with self.repo.wlock(wait=_wait):
+            with repo.wlock(wait=_wait):
                 version = None
                 # open file in amend mode to ensure it is created if missing
-                with self.vfs('journal', mode='a+b', atomictemp=True) as f:
+                with repo.vfs('journal', mode='a+b', atomictemp=True) as f:
                     f.seek(0, os.SEEK_SET)
                     # Read just enough bytes to get a version number (up to 2
                     # digits plus separator)
@@ -259,7 +362,7 @@ class journalstorage(object):
                         # not write anything) if this is not a version we can
                         # handle or the file is corrupt. In future, perhaps
                         # rotate the file instead?
-                        self.repo.ui.warn(
+                        repo.ui.warn(
                             _("unsupported journal file version '%s'\n") %
                             version)
                         return
@@ -269,16 +372,16 @@ class journalstorage(object):
                     f.seek(0, os.SEEK_END)
                     f.write(str(entry) + '\0')
         except error.LockHeld as lockerr:
-            lock = self.repo._wlockref and self.repo._wlockref()
+            lock = repo._wlockref and repo._wlockref()
             if lock and lockerr.locker == '%s:%s' % (lock._host, lock.pid):
                 # the dirstate can be written out during wlock unlock, before
                 # the lockfile is removed. Re-run the write as a postrelease
                 # function instead.
                 lock.postrelease.append(
-                    lambda: self._write(entry, _wait=True))
+                    lambda: self._write(repo, entry, _wait=True))
             else:
                 # another process holds the lock, retry and wait
-                self._write(entry, _wait=True)
+                self._write(repo, entry, _wait=True)
 
     def filtered(self, namespace=None, name=None):
         """Yield all journal entries with the given namespace or name
@@ -300,11 +403,27 @@ class journalstorage(object):
         Yields journalentry instances for each contained journal record.
 
         """
-        if not self.vfs.exists('journal'):
+        local = self._open(self.repo)
+
+        if not self.repo.shared() or 'journal' not in self.sharedfeatures:
+            return local
+        sharedrepo = share._getsrcrepo(self.repo)
+        if sharedrepo is None:
+            return local
+
+        # iterate over both local and shared entries, but only those
+        # shared entries that are among the currently shared features
+        shared = (
+            e for e in self._open(sharedrepo)
+            if sharednamespaces.get(e.namespace) in self.sharedfeatures)
+        return _mergeentriesiter(local, shared)
+
+    def _open(self, repo, filename='journal', _newestfirst=True):
+        if not repo.vfs.exists(filename):
             return
 
-        with self.repo.wlock():
-            with self.vfs('journal') as f:
+        with repo.wlock():
+            with repo.vfs(filename) as f:
                 raw = f.read()
 
         lines = raw.split('\0')
@@ -313,8 +432,12 @@ class journalstorage(object):
             version = version or _('not available')
             raise error.Abort(_("unknown journal file version '%s'") % version)
 
-        # Skip the first line, it's a version number. Reverse the rest.
-        lines = reversed(lines[1:])
+        # Skip the first line, it's a version number. Normally we iterate over
+        # these in reverse order to list newest first; only when copying across
+        # a shared storage do we forgo reversing.
+        lines = lines[1:]
+        if _newestfirst:
+            lines = reversed(lines)
         for line in lines:
             if not line:
                 continue
