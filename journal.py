@@ -22,9 +22,11 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
+    dirstate,
     dispatch,
     error,
     extensions,
+    localrepo,
     node,
     util,
 )
@@ -44,11 +46,16 @@ storage_version = 0
 # namespaces
 bookmarktype = 'bookmark'
 remotebookmarktype = 'remotebookmark'
+wdirparenttype = 'wdirparent'
 
 # Journal recording, register hooks and storage object
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
+    extensions.wrapfunction(
+        dirstate.dirstate, '_writedirstate', recorddirstateparents)
+    extensions.wrapfunction(
+        localrepo.localrepository.dirstate, 'func', wrapdirstate)
 
     def hasremotenames(loaded):
         if not loaded:
@@ -66,6 +73,39 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     """Track the command line options for recording in the journal"""
     journalstorage.recordcommand(*fullargs)
     return orig(lui, repo, cmd, fullargs, *args)
+
+# hooks to record dirstate changes
+def wrapdirstate(orig, repo):
+    dirstate = orig(repo)
+    if util.safehasattr(repo, 'journal'):
+        dirstate.journalrepo = repo
+    return dirstate
+
+def recorddirstateparents(orig, dirstate, dirstatefp):
+    """Records all dirstate parent changes in the journal."""
+    if util.safehasattr(dirstate, 'journalrepo'):
+        old = [node.nullid, node.nullid]
+        nodesize = len(node.nullid)
+        try:
+            # The only source for the old state is in the dirstate file
+            # still on disk; the in-memory dirstate object only contains
+            # the new state.
+            with dirstate._opener(dirstate._filename) as fp:
+                state = fp.read(2 * nodesize)
+            if len(state) == 2 * nodesize:
+                old = [state[:nodesize], state[nodesize:]]
+        except IOError:
+            pass
+
+        new = dirstate.parents()
+        if old != new:
+            # only record two hashes if there was a merge
+            oldhashes = old[:1] if old[1] == node.nullid else old
+            newhashes = new[:1] if new[1] == node.nullid else new
+            dirstate.journalrepo.journal.record(
+                wdirparenttype, '.', oldhashes, newhashes)
+
+    return orig(dirstate, dirstatefp)
 
 # hooks to record bookmark changes (both local and remote)
 def recordbookmarks(orig, store, fp):
@@ -202,28 +242,43 @@ class journalstorage(object):
         entry = journalentry(
             util.makedate(), self.user, self.command, namespace, name,
             oldhashes, newhashes)
+        self._write(entry)
 
-        with self.repo.wlock():
-            version = None
-            # open file in amend mode to ensure it is created if missing
-            with self.vfs('journal', mode='a+b', atomictemp=True) as f:
-                f.seek(0, os.SEEK_SET)
-                # Read just enough bytes to get a version number (up to 2
-                # digits plus separator)
-                version = f.read(3).partition('\0')[0]
-                if version and version != str(storage_version):
-                    # different version of the storage. Exit early (and not
-                    # write anything) if this is not a version we can handle or
-                    # the file is corrupt. In future, perhaps rotate the file
-                    # instead?
-                    self.repo.ui.warn(
-                        _("unsupported journal file version '%s'\n") % version)
-                    return
-                if not version:
-                    # empty file, write version first
-                    f.write(str(storage_version) + '\0')
-                f.seek(0, os.SEEK_END)
-                f.write(str(entry) + '\0')
+    def _write(self, entry, _wait=False):
+        try:
+            with self.repo.wlock(wait=_wait):
+                version = None
+                # open file in amend mode to ensure it is created if missing
+                with self.vfs('journal', mode='a+b', atomictemp=True) as f:
+                    f.seek(0, os.SEEK_SET)
+                    # Read just enough bytes to get a version number (up to 2
+                    # digits plus separator)
+                    version = f.read(3).partition('\0')[0]
+                    if version and version != str(storage_version):
+                        # different version of the storage. Exit early (and
+                        # not write anything) if this is not a version we can
+                        # handle or the file is corrupt. In future, perhaps
+                        # rotate the file instead?
+                        self.repo.ui.warn(
+                            _("unsupported journal file version '%s'\n") %
+                            version)
+                        return
+                    if not version:
+                        # empty file, write version first
+                        f.write(str(storage_version) + '\0')
+                    f.seek(0, os.SEEK_END)
+                    f.write(str(entry) + '\0')
+        except error.LockHeld as lockerr:
+            lock = self.repo._wlockref and self.repo._wlockref()
+            if lock and lockerr.locker == '%s:%s' % (lock._host, lock.pid):
+                # the dirstate can be written out during wlock unlock, before
+                # the lockfile is removed. Re-run the write as a postrelease
+                # function instead.
+                lock.postrelease.append(
+                    lambda: self._write(entry, _wait=True))
+            else:
+                # another process holds the lock, retry and wait
+                self._write(entry, _wait=True)
 
     def filtered(self, namespace=None, name=None):
         """Yield all journal entries with the given namespace or name
@@ -270,15 +325,19 @@ class journalstorage(object):
 _ignore_opts = ('no-merges', 'graph')
 @command(
     'journal', [
+        ('', 'all', None, 'show history for all names'),
         ('c', 'commits', None, 'show commit metadata'),
     ] + [opt for opt in commands.logopts if opt[1] not in _ignore_opts],
-    '[OPTION]... [BOOKMARKNAME]')
+    '[OPTION]... [NAME]')
 def journal(ui, repo, *args, **opts):
-    """show the previous position of bookmarks
+    """show the previous position of bookmarks and the working copy
 
-    The journal is used to see the previous commits of bookmarks. By default
-    the previous locations for all bookmarks are shown.  Passing a bookmark
-    name will show all the previous positions of that bookmark.
+    The journal is used to see the previous commits that bookmarks and the
+    working copy pointed to. By default the previous locations for the working
+    copy.  Passing a bookmark name will show all the previous positions of
+    that bookmark. Use the --all switch to show previous locations for all
+    bookmarks and the working copy; each line will then include the bookmark
+    name, or '.' for the working copy, as well.
 
     By default hg journal only shows the commit hash and the command that was
     running at that time. -v/--verbose will show the prior hash, the user, and
@@ -291,22 +350,27 @@ def journal(ui, repo, *args, **opts):
     `hg journal -T json` can be used to produce machine readable output.
 
     """
-    bookmarkname = None
+    name = '.'
+    if opts.get('all'):
+        if args:
+            raise error.Abort(
+                _("You can't combine --all and filtering on a name"))
+        name = None
     if args:
-        bookmarkname = args[0]
+        name = args[0]
 
     fm = ui.formatter('journal', opts)
 
     if opts.get("template") != "json":
-        if bookmarkname is None:
-            name = _('all bookmarks')
+        if name is None:
+            displayname = _('the working copy and bookmarks')
         else:
-            name = "'%s'" % bookmarkname
-        ui.status(_("Previous locations of %s:\n") % name)
+            displayname = "'%s'" % name
+        ui.status(_("Previous locations of %s:\n") % displayname)
 
     limit = cmdutil.loglimit(opts)
     entry = None
-    for count, entry in enumerate(repo.journal.filtered(name=bookmarkname)):
+    for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break
         newhashesstr = ','.join([node.short(hash) for hash in entry.newhashes])
@@ -316,6 +380,7 @@ def journal(ui, repo, *args, **opts):
         fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
         fm.write('newhashes', '%s', newhashesstr)
         fm.condwrite(ui.verbose, 'user', ' %s', entry.user.ljust(8))
+        fm.condwrite(opts.get('all'), 'name', '  %s', entry.name.ljust(8))
 
         timestring = util.datestr(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
