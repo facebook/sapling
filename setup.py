@@ -37,6 +37,7 @@ setup(
         'gitlookup',
         'gitrevset',
         'inhibitwarn',
+        'journal',
         'manifestdiskcache',
         'mergedriver',
         'morestatus',
