@@ -260,7 +260,7 @@ def amend(ui, repo, *pats, **opts):
             else:
                 _usereducation(ui)
                 ui.warn(msg)
-                ui.status("(use 'hg amend --fixup' to rebase them)\n")
+                ui.status(_("(use 'hg amend --fixup' to rebase them)\n"))
 
         newbookmarks = repo._bookmarks
 

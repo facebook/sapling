@@ -71,7 +71,7 @@ def backups(ui, repo, *pats, **opts):
     recovernode = opts.get('recover')
     if recovernode:
         if recovernode in repo:
-            ui.warn("%s already exists in the repo\n" % recovernode)
+            ui.warn(_("%s already exists in the repo\n") % recovernode)
             return
     else:
         msg = _("Recover commits using: hg backups --recover <commit hash>\n")
