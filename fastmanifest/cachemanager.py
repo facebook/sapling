@@ -328,10 +328,14 @@ class triggers(object):
                 silent_worker = repo.ui.configbool(
                     "fastmanifest", "silentworker", True)
 
-                # TODO: see if the user wants us to invoke a specific instance
-                # of mercurial.
+                # see if the user wants us to invoke a specific instance of
+                # mercurial.
+                workerexe = os.environ.get("SCM_WORKER_EXE")
 
                 cmd = util.hgcmd()[:]
+                if workerexe is not None:
+                    cmd[0] = workerexe
+
                 cmd.extend(["--repository",
                             repo.root,
                             "cachemanifest"])
