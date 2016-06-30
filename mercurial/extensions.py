@@ -127,6 +127,21 @@ def load(ui, name, path):
         fn(loaded=True)
     return mod
 
+def _runuisetup(name, ui):
+    uisetup = getattr(_extensions[name], 'uisetup', None)
+    if uisetup:
+        uisetup(ui)
+
+def _runextsetup(name, ui):
+    extsetup = getattr(_extensions[name], 'extsetup', None)
+    if extsetup:
+        try:
+            extsetup(ui)
+        except TypeError:
+            if extsetup.func_code.co_argcount != 0:
+                raise
+            extsetup() # old extsetup with no ui argument
+
 def loadall(ui):
     result = ui.configitems("extensions")
     newindex = len(_order)
@@ -148,19 +163,10 @@ def loadall(ui):
             ui.traceback()
 
     for name in _order[newindex:]:
-        uisetup = getattr(_extensions[name], 'uisetup', None)
-        if uisetup:
-            uisetup(ui)
+        _runuisetup(name, ui)
 
     for name in _order[newindex:]:
-        extsetup = getattr(_extensions[name], 'extsetup', None)
-        if extsetup:
-            try:
-                extsetup(ui)
-            except TypeError:
-                if extsetup.func_code.co_argcount != 0:
-                    raise
-                extsetup() # old extsetup with no ui argument
+        _runextsetup(name, ui)
 
     # Call aftercallbacks that were never met.
     for shortname in _aftercallbacks:
