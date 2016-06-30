@@ -154,11 +154,13 @@ def _hostsettings(ui, hostname):
     # matters. No need to validate CA certs.
     if s['certfingerprints']:
         s['verifymode'] = ssl.CERT_NONE
+        s['allowloaddefaultcerts'] = False
 
     # If --insecure is used, don't take CAs into consideration.
     elif ui.insecureconnections:
         s['disablecertverification'] = True
         s['verifymode'] = ssl.CERT_NONE
+        s['allowloaddefaultcerts'] = False
 
     if ui.configbool('devel', 'disableloaddefaultcerts'):
         s['allowloaddefaultcerts'] = False
