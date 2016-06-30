@@ -760,7 +760,7 @@ def verifyremotefilelog(ui, *args, **opts):
 
 @command('debugdatapack', [
     ], _('hg debugdatapack <path>'), norepo=True)
-def debugremotefilelog(ui, path, *args, **opts):
+def debugdatapack(ui, path, *args, **opts):
     return debugcommands.debugdatapack(ui, path, *args, **opts)
 
 @command('debughistorypack', [
