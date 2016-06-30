@@ -35,6 +35,14 @@ Check that remotename changes trigger caching
   $ cd server
   $ hg book master -r "." -f
   $ cd ../client
+  $ hg log -r "fastmanifesttocache()"
+  changeset:   1:7c3bad9141dc
+  bookmark:    remote/master
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     add b
+  
+  $ hg debugcache -a
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
