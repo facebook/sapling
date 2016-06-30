@@ -92,7 +92,7 @@ def uisetup(ui):
             Arguments are passed on as environment variables.
 
             """
-            script = ui.config('logtoprocess', event)
+            script = self.config('logtoprocess', event)
             if script:
                 if msg:
                     # try to format the log message given the remaining
