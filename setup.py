@@ -51,7 +51,6 @@ setup(
         'pushrebase',
         'pushvars',
         'rage',
-        'reflog',
         'reset',
         'sampling',
         'show',
