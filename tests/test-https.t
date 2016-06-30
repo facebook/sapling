@@ -180,6 +180,14 @@ variables in the filename
   searching for changes
   no changes found
 
+empty cacert file
+
+  $ touch emptycafile
+  $ hg --config web.cacerts=emptycafile -R copy-pull pull
+  pulling from https://localhost:$HGPORT/
+  abort: error: * (glob)
+  [255]
+
 cacert mismatch
 
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub.pem" \
