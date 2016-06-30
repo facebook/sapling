@@ -309,7 +309,16 @@ Stripping and recovering changes should work
   $ hg --config extensions.strip= strip tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   saved backup bundle to $TESTTMP/repo-mixed/.hg/strip-backup/51cfd7b1e13b-78a2f3ed-backup.hg (glob)
+  $ hg debugindex --dir dir1
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0     127     -1       4 064927a0648a 000000000000 000000000000
+       1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
   $ hg unbundle -q .hg/strip-backup/*
+  $ hg debugindex --dir dir1
+     rev    offset  length  delta linkrev nodeid       p1           p2
+       0         0     127     -1       4 064927a0648a 000000000000 000000000000
+       1       127     111      0       5 25ecb8cb8618 000000000000 000000000000
+       2       238      55      1       6 5b16163a30c6 25ecb8cb8618 000000000000
   $ hg st --change tip
   M dir1/a
 

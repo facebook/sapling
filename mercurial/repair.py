@@ -167,6 +167,13 @@ def strip(ui, repo, nodelist, backup=True, topic='backup'):
             tr.startgroup()
             cl.strip(striprev, tr)
             mfst.strip(striprev, tr)
+            if 'treemanifest' in repo.requirements: # safe but unnecessary
+                                                    # otherwise
+                for unencoded, encoded, size in repo.store.datafiles():
+                    if (unencoded.startswith('meta/') and
+                        unencoded.endswith('00manifest.i')):
+                        dir = unencoded[5:-12]
+                        repo.dirlog(dir).strip(striprev, tr)
             for fn in files:
                 repo.file(fn).strip(striprev, tr)
             tr.endgroup()
