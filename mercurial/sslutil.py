@@ -268,7 +268,12 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
         sslcontext.load_cert_chain(certfile, keyfile, password)
 
     if settings['cafile'] is not None:
-        sslcontext.load_verify_locations(cafile=settings['cafile'])
+        try:
+            sslcontext.load_verify_locations(cafile=settings['cafile'])
+        except ssl.SSLError as e:
+            raise error.Abort(_('error loading CA file %s: %s') % (
+                              settings['cafile'], e.args[1]),
+                              hint=_('file is empty or malformed?'))
         caloaded = True
     elif settings['allowloaddefaultcerts']:
         # This is a no-op on old Python.

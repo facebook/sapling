@@ -62,9 +62,16 @@ Specifying a per-host certificate file that doesn't exist will abort
 A malformed per-host certificate file will raise an error
 
   $ echo baddata > badca.pem
+#if sslcontext
+  $ hg --config hostsecurity.localhost:verifycertsfile=badca.pem clone https://localhost:$HGPORT/
+  abort: error loading CA file badca.pem: * (glob)
+  (file is empty or malformed?)
+  [255]
+#else
   $ hg --config hostsecurity.localhost:verifycertsfile=badca.pem clone https://localhost:$HGPORT/
   abort: error: * (glob)
   [255]
+#endif
 
 A per-host certificate mismatching the server will fail verification
 
@@ -183,10 +190,19 @@ variables in the filename
 empty cacert file
 
   $ touch emptycafile
+
+#if sslcontext
+  $ hg --config web.cacerts=emptycafile -R copy-pull pull
+  pulling from https://localhost:$HGPORT/
+  abort: error loading CA file emptycafile: * (glob)
+  (file is empty or malformed?)
+  [255]
+#else
   $ hg --config web.cacerts=emptycafile -R copy-pull pull
   pulling from https://localhost:$HGPORT/
   abort: error: * (glob)
   [255]
+#endif
 
 cacert mismatch
 
