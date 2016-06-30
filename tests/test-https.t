@@ -49,6 +49,7 @@ we are able to load CA certs.
 
 #if defaultcacerts
   $ hg clone https://localhost:$HGPORT/ copy-pull
+  (an attempt was made to load CA certificates but none were loaded; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
   abort: error: *certificate verify failed* (glob)
   [255]
 #else
@@ -80,9 +81,17 @@ A malformed per-host certificate file will raise an error
 
 A per-host certificate mismatching the server will fail verification
 
+(modern ssl is able to discern whether the loaded cert is a CA cert)
+#if sslcontext
+  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/client-cert.pem" clone https://localhost:$HGPORT/
+  (an attempt was made to load CA certificates but none were loaded; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *certificate verify failed* (glob)
+  [255]
+#else
   $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/client-cert.pem" clone https://localhost:$HGPORT/
   abort: error: *certificate verify failed* (glob)
   [255]
+#endif
 
 A per-host certificate matching the server's cert will be accepted
 

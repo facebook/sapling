@@ -284,7 +284,22 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     else:
         caloaded = False
 
-    sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
+    try:
+        sslsocket = sslcontext.wrap_socket(sock, server_hostname=serverhostname)
+    except ssl.SSLError:
+        # If we're doing certificate verification and no CA certs are loaded,
+        # that is almost certainly the reason why verification failed. Provide
+        # a hint to the user.
+        # Only modern ssl module exposes SSLContext.get_ca_certs() so we can
+        # only show this warning if modern ssl is available.
+        if (caloaded and settings['verifymode'] == ssl.CERT_REQUIRED and
+            modernssl and not sslcontext.get_ca_certs()):
+            ui.warn(_('(an attempt was made to load CA certificates but none '
+                      'were loaded; see '
+                      'https://mercurial-scm.org/wiki/SecureConnections for '
+                      'how to configure Mercurial to avoid this error)\n'))
+        raise
+
     # check if wrap_socket failed silently because socket had been
     # closed
     # - see http://bugs.python.org/issue13721

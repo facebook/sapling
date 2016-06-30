@@ -48,6 +48,7 @@ we are able to load CA certs:
   this patch series consists of 1 patches.
   
   
+  (an attempt was made to load CA certificates but none were loaded; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 #endif
