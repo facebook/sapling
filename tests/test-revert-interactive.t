@@ -134,7 +134,41 @@ Test that --interactive lift the need for --all
   
   abort: user quit
   [255]
-  $ rm folder1/g.orig
+  $ ls folder1/
+  g
+
+Test that a noop revert doesn't do an unecessary backup
+  $ (echo y; echo n) | hg revert -i -r 2 folder1/g
+  diff --git a/folder1/g b/folder1/g
+  1 hunks, 1 lines changed
+  examine changes to 'folder1/g'? [Ynesfdaq?] y
+  
+  @@ -3,3 +3,4 @@
+   3
+   4
+   5
+  +d
+  revert this change to 'folder1/g'? [Ynesfdaq?] n
+  
+  $ ls folder1/
+  g
+
+Test --no-backup
+  $ (echo y; echo y) | hg revert -i -C -r 2 folder1/g
+  diff --git a/folder1/g b/folder1/g
+  1 hunks, 1 lines changed
+  examine changes to 'folder1/g'? [Ynesfdaq?] y
+  
+  @@ -3,3 +3,4 @@
+   3
+   4
+   5
+  +d
+  revert this change to 'folder1/g'? [Ynesfdaq?] y
+  
+  $ ls folder1/
+  g
+  >>> open('folder1/g', 'wb').write("1\n2\n3\n4\n5\nd\n")
 
 
   $ hg update -C 6

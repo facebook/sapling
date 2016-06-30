@@ -3143,11 +3143,17 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         # All set to `discard` if `no-backup` is set do avoid checking
         # no_backup lower in the code.
         # These values are ordered for comparison purposes
+        backupinteractive = 3 # do backup if interactively modified
         backup = 2  # unconditionally do backup
         check = 1   # check if the existing file differs from target
         discard = 0 # never do backup
         if opts.get('no_backup'):
-            backup = check = discard
+            backupinteractive = backup = check = discard
+        if interactive:
+            dsmodifiedbackup = backupinteractive
+        else:
+            dsmodifiedbackup = backup
+        tobackup = set()
 
         backupanddel = actions['remove']
         if not opts.get('no_backup'):
@@ -3165,7 +3171,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
             # Modified compared to target, but local file is deleted
             (deleted,       actions['revert'],   discard),
             # Modified compared to target, local change
-            (dsmodified,    actions['revert'],   backup),
+            (dsmodified,    actions['revert'],   dsmodifiedbackup),
             # Added since target
             (added,         actions['remove'],   discard),
             # Added in working directory
@@ -3200,8 +3206,12 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
                     continue
                 if xlist is not None:
                     xlist.append(abs)
-                    if dobackup and (backup <= dobackup
-                                     or wctx[abs].cmp(ctx[abs])):
+                    if dobackup:
+                        # If in interactive mode, don't automatically create
+                        # .orig files (issue4793)
+                        if dobackup == backupinteractive:
+                            tobackup.add(abs)
+                        elif (backup <= dobackup or wctx[abs].cmp(ctx[abs])):
                             bakname = scmutil.origpath(ui, repo, rel)
                             ui.note(_('saving current version of %s as %s\n') %
                                     (rel, bakname))
@@ -3221,7 +3231,7 @@ def revert(ui, repo, ctx, parents, *pats, **opts):
         if not opts.get('dry_run'):
             needdata = ('revert', 'add', 'undelete')
             _revertprefetch(repo, ctx, *[actions[name][0] for name in needdata])
-            _performrevert(repo, parents, ctx, actions, interactive)
+            _performrevert(repo, parents, ctx, actions, interactive, tobackup)
 
         if targetsubs:
             # Revert the subrepos on the revert list
@@ -3236,7 +3246,8 @@ def _revertprefetch(repo, ctx, *files):
     """Let extension changing the storage layer prefetch content"""
     pass
 
-def _performrevert(repo, parents, ctx, actions, interactive=False):
+def _performrevert(repo, parents, ctx, actions, interactive=False,
+                   tobackup=None):
     """function that actually perform all the actions computed for revert
 
     This is an independent function to let extension to plug in and react to
@@ -3316,9 +3327,18 @@ def _performrevert(repo, parents, ctx, actions, interactive=False):
             raise error.Abort(_('error parsing patch: %s') % err)
 
         newlyaddedandmodifiedfiles = newandmodified(chunks, originalchunks)
+        if tobackup is None:
+            tobackup = set()
         # Apply changes
         fp = stringio()
         for c in chunks:
+            # Create a backup file only if this hunk should be backed up
+            if ishunk(c) and c.header.filename() in tobackup:
+                abs = c.header.filename()
+                target = repo.wjoin(abs)
+                bakname = scmutil.origpath(repo.ui, repo, m.rel(abs))
+                util.copyfile(target, bakname)
+                tobackup.remove(abs)
             c.write(fp)
         dopatch = fp.tell()
         fp.seek(0)
