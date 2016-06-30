@@ -84,7 +84,7 @@ def fastmanifesttocache(repo, subset, x):
     revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
                 %(query, query, datelimit)]))
 
-    metricscollector.get(repo).recordsample("revsetsize", size=len(revs))
+    metricscollector.get().recordsample("revsetsize", size=len(revs))
     return subset & revs
 
 GB = 1024**3
@@ -271,7 +271,7 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
                     cache.ondiskcache.touch(hexnode,
                             delay=offset * mtimemultiplier)
                 else:
-                    metricscollector.get(repo).recordsample("cacheoverflow",
+                    metricscollector.get().recordsample("cacheoverflow",
                             hit=True)
                     pass # We didn't have enough space for that rev
     except error.LockHeld:
@@ -293,11 +293,11 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
             free = limit.free / 1024**2
         else:
             free = -1
-        metricscollector.get(repo).recordsample("ondiskcachestats",
-                                                bytes=total,
-                                                numentries=numentries,
-                                                limit=(limit.bytes() / 1024**2),
-                                                freespace=free)
+        metricscollector.get().recordsample("ondiskcachestats",
+                                            bytes=total,
+                                            numentries=numentries,
+                                            limit=(limit.bytes() / 1024**2),
+                                            freespace=free)
 
 class cacher(object):
     @staticmethod
@@ -349,18 +349,18 @@ class triggers(object):
     def onbookmarkchange(orig, self, *args, **kwargs):
         repo = self._repo
         triggers.repos_to_update.add(repo)
-        metricscollector.get(repo).recordsample("trigger", source="bookmark")
+        metricscollector.get().recordsample("trigger", source="bookmark")
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def oncommit(orig, self, *args, **kwargs):
         repo = self
         triggers.repos_to_update.add(repo)
-        metricscollector.get(repo).recordsample("trigger", source="commit")
+        metricscollector.get().recordsample("trigger", source="commit")
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def onremotenameschange(orig, repo, *args, **kwargs):
         triggers.repos_to_update.add(repo)
-        metricscollector.get(repo).recordsample("trigger", source="remotenames")
+        metricscollector.get().recordsample("trigger", source="remotenames")
         return orig(repo, *args, **kwargs)

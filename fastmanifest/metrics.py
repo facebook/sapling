@@ -70,29 +70,22 @@ FASTMANIFEST_METRICS = set([
 
 class metricscollector(object):
     _instance = None
-    @classmethod
-    def get(cls, repo):
-        return cls.getfromui(repo.ui)
 
     @classmethod
-    def getfromui(cls, ui):
+    def get(cls):
         if not cls._instance:
-            cls._instance = metricscollector(ui)
+            cls._instance = metricscollector()
         return cls._instance
 
-    def __init__(self, ui):
+    def __init__(self):
         self.samples = []
-        self.ui = ui
-        self.debug = self.ui.config("fastmanifest", "debugmetrics", False)
 
     def recordsample(self, kind, **kwargs):
-        if kind in FASTMANIFEST_METRICS:
-            self.samples.append((kind, kwargs))
-        else:
-            self.ui.warn(("unknown metric %s\n" % kind))
+        assert kind in FASTMANIFEST_METRICS
+        self.samples.append((kind, kwargs))
 
     def mergesamples(self, collector):
-        if self.ui != collector.ui:
+        if collector is not self:
             self.samples.extend(collector.samples)
         return self
 
@@ -115,16 +108,17 @@ class metricscollector(object):
         _addhitratio("diffcachehit", "diffcachehitratio")
         _addhitratio("filesnotincachehit", "filesnotincachehitratio")
 
-    def logsamples(self):
+    def logsamples(self, ui):
         self._addaggregatesamples()
-        if self.debug:
-            self.ui.status(("[FM-METRICS] Begin metrics\n"))
+        debug = ui.config("fastmanifest", "debugmetrics", False)
+        if debug:
+            ui.status(("[FM-METRICS] Begin metrics\n"))
 
         for kind, kwargs in self.samples:
             if kind in FASTMANIFEST_DONOTREPORT_METRICS:
                 continue
 
-            if self.debug:
+            if debug:
                 dispkw = kwargs
                 # Not removing freespace and limit would make the output of
                 # test machine dependant
@@ -133,10 +127,10 @@ class metricscollector(object):
                 if "limit" in kwargs:
                     del dispkw["limit"]
                 # Here we sort to make test output stable
-                self.ui.status(("[FM-METRICS] kind: %s, kwargs: %s\n"
-                                % (kind, sorted(dispkw.items()))))
-            self.ui.log('fastmanifest-%s' % kind,
-                        "",     # ui.log requires a format string as args[0].
-                        **kwargs)
-        if self.debug:
-            self.ui.status(("[FM-METRICS] End metrics\n"))
+                ui.status(("[FM-METRICS] kind: %s, kwargs: %s\n"
+                           % (kind, sorted(dispkw.items()))))
+            ui.log('fastmanifest-%s' % kind,
+                   "",     # ui.log requires a format string as args[0].
+                   **kwargs)
+        if debug:
+            ui.status(("[FM-METRICS] End metrics\n"))

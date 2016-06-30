@@ -85,8 +85,7 @@ class hybridmanifest(object):
                 self.__cachedmanifest = fastmanifestdict(fm)
 
             self.incache = self.__cachedmanifest is not None
-            metricscollector.getfromui(self.ui).recordsample("cachehit",
-                                                             hit=self._incache)
+            metricscollector.get().recordsample("cachehit", hit=self._incache)
             self.debug("[FM] cache %s for fastmanifest %s\n"
                        % ("hit" if self.incache else "miss", self.cachekey))
 
@@ -186,15 +185,13 @@ class hybridmanifest(object):
     def diff(self, m2, *args, **kwargs):
         self.debug("[FM] performing diff\n")
         _m1, _m2, hit = self._getmatchingtypemanifest(m2)
-        metricscollector.getfromui(self.ui).recordsample("diffcachehit",
-                                                         hit=hit)
+        metricscollector.get().recordsample("diffcachehit", hit=hit)
         return _m1.diff(_m2, *args, **kwargs)
 
     def filesnotin(self, m2, *args, **kwargs):
         self.debug("[FM] performing filesnotin\n")
         _m1, _m2, hit = self._getmatchingtypemanifest(m2)
-        metricscollector.getfromui(self.ui).recordsample("filesnotincachehit",
-                                                         hit=hit)
+        metricscollector.get().recordsample("filesnotincachehit", hit=hit)
         return _m1.filesnotin(_m2, *args, **kwargs)
 
 class fastmanifestdict(object):

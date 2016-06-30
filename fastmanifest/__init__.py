@@ -154,13 +154,7 @@ class FastManifestExtension(object):
     @staticmethod
     def _logonexit(orig, ui, repo, cmd, fullargs, *args):
         r = orig(ui, repo, cmd, fullargs, *args)
-        if repo is not None:
-            # Somehow, the ui object can be different than repo.ui
-            # To mitigate that, if repo.ui != ui we merge the samples collected
-            # on ui and on repo.ui.
-            repocollector = metricscollector.get(repo)
-            uicollector = metricscollector.getfromui(ui)
-            uicollector.mergesamples(repocollector).logsamples()
+        metricscollector.get().logsamples(ui)
         return r
 
     @staticmethod
