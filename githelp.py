@@ -784,7 +784,7 @@ def reflog(ui, repo, *args, **kwargs):
     ]
     args, opts = parseoptions(ui, cmdoptions, args)
 
-    cmd = Command('reflog')
+    cmd = Command('journal')
     if opts.get('all'):
         cmd['--all'] = None
     if len(args) > 0:
