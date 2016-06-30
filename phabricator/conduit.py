@@ -12,8 +12,9 @@ import os
 import sys
 import time
 from mercurial import util
-import urlparse
 import arcconfig
+
+urlparse = util.urlparse
 
 DEFAULT_HOST = 'https://phabricator.fb.com/api/'
 DEFAULT_TIMEOUT = 60
