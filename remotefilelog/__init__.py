@@ -749,28 +749,28 @@ def _revertprefetch(orig, repo, ctx, *files):
 @command('debugremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelog first')),
     ], _('hg debugremotefilelog <path>'), norepo=True)
-def debugremotefilelog(ui, *args, **opts):
-    return debugcommands.debugremotefilelog(ui, *args, **opts)
+def debugremotefilelog(ui, path, **opts):
+    return debugcommands.debugremotefilelog(ui, path, **opts)
 
 @command('verifyremotefilelog', [
     ('d', 'decompress', None, _('decompress the filelogs first')),
     ], _('hg verifyremotefilelogs <directory>'), norepo=True)
-def verifyremotefilelog(ui, *args, **opts):
-    return debugcommands.verifyremotefilelog(ui, *args, **opts)
+def verifyremotefilelog(ui, path, **opts):
+    return debugcommands.verifyremotefilelog(ui, path, **opts)
 
 @command('debugdatapack', [
     ], _('hg debugdatapack <path>'), norepo=True)
-def debugdatapack(ui, path, *args, **opts):
-    return debugcommands.debugdatapack(ui, path, *args, **opts)
+def debugdatapack(ui, path, **opts):
+    return debugcommands.debugdatapack(ui, path)
 
 @command('debughistorypack', [
     ], _('hg debughistorypack <path>'), norepo=True)
-def debughistorypack(ui, path, *args, **opts):
-    return debugcommands.debughistorypack(ui, path, *args, **opts)
+def debughistorypack(ui, path, **opts):
+    return debugcommands.debughistorypack(ui, path)
 
 @command('debugwaitonrepack', [
     ], _('hg debugwaitonrepack'))
-def debugwaitonrepack(ui, repo, *args, **opts):
+def debugwaitonrepack(ui, repo, **opts):
     return debugcommands.debugwaitonrepack(repo)
 
 @command('prefetch', [

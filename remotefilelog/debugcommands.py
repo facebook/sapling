@@ -11,9 +11,7 @@ from mercurial.i18n import _
 import datapack, historypack, shallowrepo
 import hashlib, os, lz4
 
-def debugremotefilelog(ui, *args, **opts):
-    path = args[0]
-
+def debugremotefilelog(ui, path, **opts):
     decompress = opts.get('decompress')
 
     size, firstnode, mapping = parsefileblob(path, decompress)
@@ -138,9 +136,7 @@ def debugindexdot(orig, ui, repo, file_):
             ui.write("\t%d -> %d\n" % (r.rev(pp[1]), i))
     ui.write("}\n")
 
-def verifyremotefilelog(ui, *args, **opts):
-    path = args[0]
-
+def verifyremotefilelog(ui, path, **opts):
     decompress = opts.get('decompress')
 
     for root, dirs, files in os.walk(path):
@@ -193,7 +189,7 @@ def parsefileblob(path, decompress):
 
     return size, firstnode, mapping
 
-def debugdatapack(ui, path, *args, **kwargs):
+def debugdatapack(ui, path):
     dpack = datapack.datapack(path)
 
     lastfilename = None
@@ -207,7 +203,7 @@ def debugdatapack(ui, path, *args, **kwargs):
             lastfilename = filename
         ui.write("%s  %s  %s\n" % (short(node), short(deltabase), deltalen))
 
-def debughistorypack(ui, path, *args, **kwargs):
+def debughistorypack(ui, path):
     hpack = historypack.historypack(path)
 
     lastfilename = None
