@@ -92,7 +92,7 @@ class metricscollector(object):
     def _addaggregatesamples(self):
         def _addhitratio(key, aggkey):
             # Aggregate the cache hit and miss to build a hit ratio
-            # store the ratio as aggkey : {ratio: ratio} in self.samples
+            # store the ratio as aggkey : {aggkey: ratio} in self.samples
             hit = len([s for s in self.samples
                          if s[0] == key and s[1]["hit"]])
             miss = len([s for s in self.samples
@@ -102,7 +102,9 @@ class metricscollector(object):
             else:
                 ratio=float(hit) * 100 / (miss + hit)
 
-            self.recordsample(aggkey, ratio=ratio)
+            data = { aggkey: ratio }
+
+            self.recordsample(aggkey, **data)
 
         _addhitratio("cachehit", "cachehitratio")
         _addhitratio("diffcachehit", "diffcachehitratio")
