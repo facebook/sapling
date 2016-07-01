@@ -499,10 +499,10 @@ def rebase(ui, repo, **opts):
 
         extrafn = _makeextrafn(rbsrt.extrafns)
 
-        sortedstate = sorted(rbsrt.state)
-        total = len(sortedstate)
+        rbsrt.sortedstate = sorted(rbsrt.state)
+        total = len(rbsrt.sortedstate)
         pos = 0
-        for rev in sortedstate:
+        for rev in rbsrt.sortedstate:
             ctx = repo[rev]
             desc = '%d:%s "%s"' % (ctx.rev(), ctx,
                                    ctx.description().split('\n', 1)[0])
@@ -599,7 +599,8 @@ def rebase(ui, repo, **opts):
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-            newnode = concludenode(repo, rev, p1, rbsrt.external,
+            revtoreuse = rbsrt.sortedstate[-1]
+            newnode = concludenode(repo, revtoreuse, p1, rbsrt.external,
                                    commitmsg=commitmsg,
                                    extrafn=extrafn, editor=editor,
                                    keepbranches=rbsrt.keepbranchesf,
