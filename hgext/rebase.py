@@ -148,6 +148,7 @@ class rebaseruntime(object):
         self.extrafns = [_savegraft]
         if e:
             self.extrafns = [e]
+        self.extrafn = None
 
         self.keepf = opts.get('keep', False)
         self.keepbranchesf = opts.get('keepbranches', False)
@@ -498,7 +499,7 @@ def rebase(ui, repo, **opts):
         if rbsrt.activebookmark:
             bookmarks.deactivate(repo)
 
-        extrafn = _makeextrafn(rbsrt.extrafns)
+        rbsrt.extrafn = _makeextrafn(rbsrt.extrafns)
 
         rbsrt.sortedstate = sorted(rbsrt.state)
         total = len(rbsrt.sortedstate)
@@ -542,7 +543,8 @@ def rebase(ui, repo, **opts):
                     merging = p2 != nullrev
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
-                    newnode = concludenode(repo, rev, p1, p2, extrafn=extrafn,
+                    newnode = concludenode(repo, rev, p1, p2,
+                                           extrafn=rbsrt.extrafn,
                                            editor=editor,
                                            keepbranches=rbsrt.keepbranchesf,
                                            date=rbsrt.date)
@@ -603,7 +605,7 @@ def rebase(ui, repo, **opts):
             revtoreuse = rbsrt.sortedstate[-1]
             newnode = concludenode(repo, revtoreuse, p1, rbsrt.external,
                                    commitmsg=commitmsg,
-                                   extrafn=extrafn, editor=editor,
+                                   extrafn=rbsrt.extrafn, editor=editor,
                                    keepbranches=rbsrt.keepbranchesf,
                                    date=rbsrt.date)
             if newnode is None:
