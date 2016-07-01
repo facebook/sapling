@@ -569,6 +569,16 @@ def extsetup(ui):
         # histedit isn't on
         pass
 
+    def hasjournal(loaded):
+        if not loaded:
+            return
+        # register our namespace as 'shared' when bookmarks are shared
+        journal = extensions.find('journal')
+        journal.sharednamespaces[journalremotebookmarktype] = (
+            hg.sharedbookmarks)
+
+    extensions.afterloaded('journal', hasjournal)
+
     bookcmd = extensions.wrapcommand(commands.table, 'bookmarks', exbookmarks)
     branchcmd = extensions.wrapcommand(commands.table, 'branches', exbranches)
     pushcmd = extensions.wrapcommand(commands.table, 'push', expushcmd)
