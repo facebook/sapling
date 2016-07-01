@@ -20,6 +20,7 @@
 #include "eden/fs/overlay/Overlay.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fuse/MountPoint.h"
+#include "eden/fuse/fuse_headers.h"
 #include "eden/utils/XAttr.h"
 
 namespace facebook {
@@ -29,6 +30,87 @@ using folly::checkUnixError;
 
 FileData::FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry)
     : mutex_(mutex), mount_(mount), entry_(entry) {}
+
+// Conditionally updates target with either the value provided by
+// the caller, or with the current time value, depending on the value
+// of the flags in to_set.  Valid flag values are defined in fuse_lowlevel.h
+// and have symbolic names matching FUSE_SET_*.
+// useAttrFlag is the bitmask that indicates whether we should use the value
+// from wantedTimeSpec.  useNowFlag is the bitmask that indicates whether we
+// should use the current time instead.
+// If neither flag is present, we will preserve the current value in target.
+static void resolveTimeForSetAttr(
+    struct timespec& target,
+    int to_set,
+    int useAttrFlag,
+    int useNowFlag,
+    const struct timespec& wantedTimeSpec) {
+  if (to_set & useAttrFlag) {
+    target = wantedTimeSpec;
+  } else if (to_set & useNowFlag) {
+    clock_gettime(CLOCK_REALTIME, &target);
+  }
+}
+
+// Valid values for to_set are found in fuse_lowlevel.h and have symbolic
+// names matching FUSE_SET_*.
+struct stat FileData::setAttr(const struct stat& attr, int to_set) {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  CHECK(file_) << "MUST have a materialized file at this point";
+
+  // We most likely need the current information to apply the requested
+  // changes below, so just fetch it here first.
+  struct stat currentStat;
+  checkUnixError(fstat(file_.fd(), &currentStat));
+
+  if (to_set & FUSE_SET_ATTR_SIZE) {
+    checkUnixError(ftruncate(file_.fd(), attr.st_size));
+  }
+
+  if (to_set & (FUSE_SET_ATTR_UID | FUSE_SET_ATTR_GID)) {
+    if ((to_set & FUSE_SET_ATTR_UID && attr.st_uid != currentStat.st_uid) ||
+        (to_set & FUSE_SET_ATTR_GID && attr.st_gid != currentStat.st_gid)) {
+      folly::throwSystemErrorExplicit(
+          EACCES, "changing the owner/group is not supported");
+    }
+
+    // Otherwise: there is no change
+  }
+
+  if (to_set & FUSE_SET_ATTR_MODE) {
+    checkUnixError(fchmod(file_.fd(), attr.st_mode));
+  }
+
+  if (to_set & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME |
+                FUSE_SET_ATTR_ATIME_NOW | FUSE_SET_ATTR_MTIME_NOW)) {
+    // Changing various time components.
+    // Element 0 is the atime, element 1 is the mtime.
+    struct timespec times[2] = {currentStat.st_atim, currentStat.st_mtim};
+
+    resolveTimeForSetAttr(
+        times[0],
+        to_set,
+        FUSE_SET_ATTR_ATIME,
+        FUSE_SET_ATTR_ATIME_NOW,
+        attr.st_atim);
+
+    resolveTimeForSetAttr(
+        times[1],
+        to_set,
+        FUSE_SET_ATTR_MTIME,
+        FUSE_SET_ATTR_MTIME_NOW,
+        attr.st_mtim);
+
+    checkUnixError(futimens(file_.fd(), times));
+  }
+
+  // We need to return the now-current stat information for this file.
+  struct stat returnedStat;
+  checkUnixError(fstat(file_.fd(), &returnedStat));
+
+  return returnedStat;
+}
 
 struct stat FileData::stat() {
   auto st = mount_->getMountPoint()->initStatData();

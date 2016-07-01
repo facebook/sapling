@@ -28,6 +28,9 @@ class TreeEntryFileInode : public fusell::FileInode {
       const TreeEntry* entry);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
+  folly::Future<fusell::Dispatcher::Attr> setattr(
+      const struct stat& attr,
+      int to_set) override;
   folly::Future<std::string> readlink() override;
   folly::Future<std::unique_ptr<fusell::FileHandle>> open(
       const struct fuse_file_info& fi) override;

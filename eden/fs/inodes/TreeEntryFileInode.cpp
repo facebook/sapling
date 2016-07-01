@@ -48,6 +48,28 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   return attr;
 }
 
+folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
+    const struct stat& attr,
+    int to_set) {
+  auto data = getOrLoadData();
+  int open_flags = O_RDWR;
+
+  // Minor optimization: if we know that the file is being completed truncated
+  // as part of this operation, there's no need to fetch the underlying data,
+  // so pass on the truncate flag our underlying open call
+  if ((to_set & FUSE_SET_ATTR_MODE) && attr.st_size == 0) {
+    open_flags |= O_TRUNC;
+  }
+
+  data->materialize(
+      open_flags, parentInode_->getNameMgr()->resolvePathToNode(getNodeId()));
+
+  fusell::Dispatcher::Attr result;
+  result.st = data->setAttr(attr, to_set);
+  result.st.st_ino = getNodeId();
+  return result;
+}
+
 folly::Future<std::string> TreeEntryFileInode::readlink() {
   std::unique_lock<std::mutex> lock(mutex_);
 

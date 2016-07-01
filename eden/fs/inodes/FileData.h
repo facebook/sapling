@@ -41,6 +41,13 @@ class FileData {
   void flush(uint64_t lock_owner);
   void fsync(bool datasync);
 
+  /// Change attributes for this inode.
+  // attr is a standard struct stat.  Only the members indicated
+  // by to_set are valid.  Defined values for the to_set flags
+  // are found in the fuse_lowlevel.h header file and have symbolic
+  // names matching FUSE_SET_*.
+  struct stat setAttr(const struct stat& attr, int to_set);
+
   /// Returns the sha1 hash of the content.
   Hash getSha1();
   /// Returns the sha1 hash of the content, for existing lock holders.
