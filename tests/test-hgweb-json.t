@@ -848,6 +848,7 @@ summary/ shows a summary of repository state
         "status": "inactive"
       }
     ],
+    "labels": [],
     "lastchange": [
       0.0,
       0

@@ -62,6 +62,7 @@ create a subdirectory containing repositories and subrepositories
   $ cat >> f/.hg/hgrc << EOF
   > [web]
   > name = fancy name for repo f
+  > labels = foo, bar
   > EOF
   $ cd ..
 
@@ -108,12 +109,14 @@ should succeed
   "name": "a",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *] (glob)
+  "lastchange": [*, *], (glob)
+  "labels": []
   }, {
   "name": "b",
   "description": "unknown",
   "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
-  "lastchange": [*, *] (glob)
+  "lastchange": [*, *], (glob)
+  "labels": []
   }]
   } (no-eol)
 
@@ -201,6 +204,218 @@ should succeed, slashy names
   /astar/
   /astar/.hg/patches/
   
+
+  $ get-with-headers.py localhost:$HGPORT1 '?style=json'
+  200 Script output follows
+  
+  {
+  "entries": [{
+  "name": "t/a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "coll/a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "coll/a/.hg/patches",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "coll/b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "coll/c",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "coll/notrepo/e",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "fancy name for repo f",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": ["foo", "bar"]
+  }, {
+  "name": "rcoll/a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/a/.hg/patches",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/b/d",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/c",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/notrepo/e",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "rcoll/notrepo/e/e2",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "fancy name for repo f",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": ["foo", "bar"]
+  }, {
+  "name": "rcoll/notrepo/f/f2",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "star/webdir/a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "star/webdir/a/.hg/patches",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "star/webdir/b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "star/webdir/c",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "star/webdir/notrepo/e",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "fancy name for repo f",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": ["foo", "bar"]
+  }, {
+  "name": "starstar/webdir/a",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/a/.hg/patches",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/b",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/b/d",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/c",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/notrepo/e",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "starstar/webdir/notrepo/e/e2",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "fancy name for repo f",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": ["foo", "bar"]
+  }, {
+  "name": "starstar/webdir/notrepo/f/f2",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "astar",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }, {
+  "name": "astar/.hg/patches",
+  "description": "unknown",
+  "contact": "Foo Bar \u003cfoo.bar@example.com\u003e",
+  "lastchange": [*, *], (glob)
+  "labels": []
+  }]
+  } (no-eol)
+
   $ get-with-headers.py localhost:$HGPORT1 '?style=paper'
   200 Script output follows
   

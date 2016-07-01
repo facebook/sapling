@@ -366,7 +366,9 @@ class hgwebdir(object):
                            'lastchange': d,
                            'lastchange_sort': d[1]-d[0],
                            'archives': [],
-                           'isdirectory': True}
+                           'isdirectory': True,
+                           'labels': [],
+                           }
 
                     seendirs.add(name)
                     yield row
@@ -416,6 +418,7 @@ class hgwebdir(object):
                        'lastchange_sort': d[1]-d[0],
                        'archives': archivelist(u, "tip", url),
                        'isdirectory': None,
+                       'labels': u.configlist('web', 'labels', untrusted=True),
                        }
 
                 yield row

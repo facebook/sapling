@@ -2026,6 +2026,14 @@ The full set of options is:
 ``ipv6``
     Whether to use IPv6. (default: False)
 
+``labels``
+    List of string *labels* associated with the repository.
+
+    Labels are exposed as a template keyword and can be used to customize
+    output. e.g. the ``index`` template can group or filter repositories
+    by labels and the ``summary`` template can display additional content
+    if a specific label is present.
+
 ``logoimg``
     File name of the logo image that some templates display on each page.
     The file name is relative to ``staticurl``. That is, the full path to

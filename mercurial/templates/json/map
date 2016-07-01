@@ -109,7 +109,8 @@ summary = '\{
   "branches": [{join(branches%branchentry, ", ")}],
   "shortlog": [{join(shortlog%shortlogentry, ", ")}],
   "tags": [{join(tags%tagentry, ", ")}],
-  "archives": [{join(archives%archiveentry, ", ")}]
+  "archives": [{join(archives%archiveentry, ", ")}],
+  "labels": {labels|json}
   }'
 archiveentry = '\{
   "node": {node|json},
@@ -220,5 +221,6 @@ indexentry = '\{
   "name": {name|utf8|json},
   "description": {description|utf8|json},
   "contact": {contact|utf8|json},
-  "lastchange": {lastchange|json}
+  "lastchange": {lastchange|json},
+  "labels": {labels|json}
   }'

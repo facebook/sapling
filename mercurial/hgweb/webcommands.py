@@ -725,7 +725,8 @@ def summary(web, req, tmpl):
                 shortlog=changelist,
                 node=tip.hex(),
                 symrev='tip',
-                archives=web.archivelist("tip"))
+                archives=web.archivelist("tip"),
+                labels=web.configlist('web', 'labels'))
 
 @webcommand('filediff')
 def filediff(web, req, tmpl):
