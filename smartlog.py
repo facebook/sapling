@@ -439,7 +439,7 @@ def smartlogrevset(repo, subset, x):
     ('', 'commit-info', False, _('show changes in current commit'), ''),
 ] + commands.logopts, _('hg smartlog|slog'))
 def smartlog(ui, repo, *pats, **opts):
-    '''Displays the graph of commits that are relevant to you.
+    '''displays the graph of commits that are relevant to you
 Also highlights your current commit in purple.
 
 Includes:

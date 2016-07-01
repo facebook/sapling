@@ -52,7 +52,7 @@ def uisetup(ui):
             inferrepo=True)(show)
 
 def show(ui, repo, *args, **opts):
-    """Shows the given revision in detail, or '.' if no revision is given.
+    """show revision in detail
 
     This behaves similarly to :hg:`log -vp -r REV [OPTION]... [FILE]...`, or
     if called without a REV, :hg:`log -vp -r . [OPTION]...` Use
