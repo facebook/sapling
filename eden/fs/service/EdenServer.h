@@ -14,7 +14,9 @@
 #include <folly/SocketAddress.h>
 #include <folly/Synchronized.h>
 #include <folly/experimental/StringKeyedMap.h>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -128,7 +130,10 @@ class EdenServer {
 
   std::shared_ptr<LocalStore> localStore_;
   folly::Synchronized<BackingStoreMap> backingStores_;
-  folly::Synchronized<MountMap> mountPoints_;
+
+  mutable std::mutex mountPointsMutex_;
+  std::condition_variable mountPointsCV_;
+  MountMap mountPoints_;
 };
 }
 } // facebook::eden

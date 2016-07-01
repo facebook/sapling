@@ -132,5 +132,7 @@ int main(int argc, char **argv) {
   EdenServer server(FLAGS_edenDir, rocksPath);
   server.run();
 
+  LOG(INFO) << "edenfs performing orderly shutdown";
+
   return EX_OK;
 }

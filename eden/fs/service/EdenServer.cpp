@@ -66,7 +66,24 @@ namespace eden {
 EdenServer::EdenServer(StringPiece edenDir, StringPiece rocksPath)
     : edenDir_(edenDir.str()), rocksPath_(rocksPath.str()) {}
 
-EdenServer::~EdenServer() {}
+EdenServer::~EdenServer() {
+  // Stop all of the mount points.
+  // They will each call mountFinished() as they exit.
+  {
+    std::lock_guard<std::mutex> guard(mountPointsMutex_);
+    for (const auto& mountPoint : mountPoints_) {
+      fusell::privilegedFuseUnmount(mountPoint.first);
+    }
+  }
+
+  {
+    // Wait for all the mounts to stop, and for mountPoints_ to become empty.
+    std::unique_lock<std::mutex> lock(mountPointsMutex_);
+    while (!mountPoints_.empty()) {
+      mountPointsCV_.wait(lock);
+    }
+  }
+}
 
 void EdenServer::run() {
   acquireEdenLock();
@@ -87,8 +104,9 @@ void EdenServer::mount(
   // Add the mount point to mountPoints_.
   // This also makes sure we don't have this path mounted already
   auto mountPath = edenMount->getPath().stringPiece();
-  SYNCHRONIZED(mp, mountPoints_) {
-    auto ret = mp.emplace(mountPath, edenMount);
+  {
+    std::lock_guard<std::mutex> guard(mountPointsMutex_);
+    auto ret = mountPoints_.emplace(mountPath, edenMount);
     if (!ret.second) {
       // This mount point already exists.
       throw EdenError(folly::to<string>(
@@ -144,16 +162,19 @@ void EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(EdenMount* edenMount) {
   auto mountPath = edenMount->getPath().stringPiece();
   LOG(INFO) << "mount point \"" << mountPath << "\" stopped";
-  SYNCHRONIZED(mp, mountPoints_) {
-    auto numErased = mp.erase(mountPath);
+  {
+    std::lock_guard<std::mutex> guard(mountPointsMutex_);
+    auto numErased = mountPoints_.erase(mountPath);
     CHECK_EQ(numErased, 1);
   }
+  mountPointsCV_.notify_all();
 }
 
 EdenServer::MountList EdenServer::getMountPoints() const {
   MountList results;
-  SYNCHRONIZED(mp, mountPoints_) {
-    for (const auto& entry : mp) {
+  {
+    std::lock_guard<std::mutex> guard(mountPointsMutex_);
+    for (const auto& entry : mountPoints_) {
       results.emplace_back(entry.second);
     }
   }
@@ -161,16 +182,12 @@ EdenServer::MountList EdenServer::getMountPoints() const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
-  SYNCHRONIZED(mp, mountPoints_) {
-    auto it = mp.find(mountPath);
-    if (it == mp.end()) {
-      return nullptr;
-    }
-    return it->second;
+  std::lock_guard<std::mutex> guard(mountPointsMutex_);
+  auto it = mountPoints_.find(mountPath);
+  if (it == mountPoints_.end()) {
+    return nullptr;
   }
-  // Not reached, but the SYNCHRONIZED macro sucks, and we have to put
-  // something here to avoid compiler warnings.
-  return nullptr;
+  return it->second;
 }
 
 shared_ptr<BackingStore> EdenServer::getBackingStore(
