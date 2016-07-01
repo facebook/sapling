@@ -114,7 +114,8 @@ summary = '\{
 archiveentry = '\{
   "node": {node|json},
   "extension": {extension|json},
-  "type": {type|json}
+  "type": {type|json},
+  "url": {"{urlbase}{url}archive/{node}{extension}"|json}
   }'
 filediff = '\{
   "path": {file|json},

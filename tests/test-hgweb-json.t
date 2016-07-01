@@ -806,7 +806,8 @@ summary/ shows a summary of repository state
       {
         "extension": ".tar.bz2",
         "node": "tip",
-        "type": "bz2"
+        "type": "bz2",
+        "url": "http://*:$HGPORT/archive/tip.tar.bz2" (glob)
       }
     ],
     "bookmarks": [
