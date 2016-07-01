@@ -135,6 +135,7 @@ class rebaseruntime(object):
         # dict will be what contains most of the rebase progress state.
         self.state = {}
         self.activebookmark = None
+        self.currentbookmarks = None
         self.target = None
         self.skipped = set()
         self.targetancestors = set()
@@ -492,7 +493,7 @@ def rebase(ui, repo, **opts):
                                                              inclusive=True)
 
         # Keep track of the current bookmarks in order to reset them later
-        currentbookmarks = repo._bookmarks.copy()
+        rbsrt.currentbookmarks = repo._bookmarks.copy()
         rbsrt.activebookmark = rbsrt.activebookmark or repo._activebookmark
         if rbsrt.activebookmark:
             bookmarks.deactivate(repo)
@@ -616,7 +617,7 @@ def rebase(ui, repo, **opts):
         if 'qtip' in repo.tags():
             updatemq(repo, rbsrt.state, rbsrt.skipped, **opts)
 
-        if currentbookmarks:
+        if rbsrt.currentbookmarks:
             # Nodeids are needed to reset bookmarks
             nstate = {}
             for k, v in rbsrt.state.iteritems():
@@ -648,8 +649,9 @@ def rebase(ui, repo, **opts):
             clearrebased(ui, repo, rbsrt.state, rbsrt.skipped, collapsedas)
 
         with repo.transaction('bookmark') as tr:
-            if currentbookmarks:
-                updatebookmarks(repo, targetnode, nstate, currentbookmarks, tr)
+            if rbsrt.currentbookmarks:
+                updatebookmarks(repo, targetnode, nstate,
+                                rbsrt.currentbookmarks, tr)
                 if rbsrt.activebookmark not in repo._bookmarks:
                     # active bookmark was divergent one and has been deleted
                     rbsrt.activebookmark = None
