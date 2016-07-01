@@ -311,6 +311,118 @@ class rebaseruntime(object):
         if dest.closesbranch() and not self.keepbranchesf:
             self.ui.status(_('reopening closed branch head %s\n') % dest)
 
+    def _performrebase(self):
+        repo, ui, opts = self.repo, self.ui, self.opts
+        if self.keepbranchesf:
+            # insert _savebranch at the start of extrafns so if
+            # there's a user-provided extrafn it can clobber branch if
+            # desired
+            self.extrafns.insert(0, _savebranch)
+            if self.collapsef:
+                branches = set()
+                for rev in self.state:
+                    branches.add(repo[rev].branch())
+                    if len(branches) > 1:
+                        raise error.Abort(_('cannot collapse multiple named '
+                            'branches'))
+
+        # Rebase
+        if not self.targetancestors:
+            self.targetancestors = repo.changelog.ancestors([self.target],
+                                                               inclusive=True)
+
+        # Keep track of the current bookmarks in order to reset them later
+        self.currentbookmarks = repo._bookmarks.copy()
+        self.activebookmark = self.activebookmark or repo._activebookmark
+        if self.activebookmark:
+            bookmarks.deactivate(repo)
+
+        self.extrafn = _makeextrafn(self.extrafns)
+
+        self.sortedstate = sorted(self.state)
+        total = len(self.sortedstate)
+        pos = 0
+        for rev in self.sortedstate:
+            ctx = repo[rev]
+            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
+                                   ctx.description().split('\n', 1)[0])
+            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
+            if names:
+                desc += ' (%s)' % ' '.join(names)
+            pos += 1
+            if self.state[rev] == revtodo:
+                ui.status(_('rebasing %s\n') % desc)
+                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
+                            _('changesets'), total)
+                p1, p2, base = defineparents(repo, rev, self.target,
+                                             self.state,
+                                             self.targetancestors,
+                                             self.obsoletenotrebased)
+                storestatus(repo, self.originalwd, self.target,
+                            self.state, self.collapsef, self.keepf,
+                            self.keepbranchesf, self.external,
+                            self.activebookmark)
+                storecollapsemsg(repo, self.collapsemsg)
+                if len(repo[None].parents()) == 2:
+                    repo.ui.debug('resuming interrupted rebase\n')
+                else:
+                    try:
+                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
+                                     'rebase')
+                        stats = rebasenode(repo, rev, p1, base, self.state,
+                                           self.collapsef, self.target)
+                        if stats and stats[3] > 0:
+                            raise error.InterventionRequired(
+                                _('unresolved conflicts (see hg '
+                                  'resolve, then hg rebase --continue)'))
+                    finally:
+                        ui.setconfig('ui', 'forcemerge', '', 'rebase')
+                if not self.collapsef:
+                    merging = p2 != nullrev
+                    editform = cmdutil.mergeeditform(merging, 'rebase')
+                    editor = cmdutil.getcommiteditor(editform=editform, **opts)
+                    newnode = concludenode(repo, rev, p1, p2,
+                                           extrafn=self.extrafn,
+                                           editor=editor,
+                                           keepbranches=self.keepbranchesf,
+                                           date=self.date)
+                else:
+                    # Skip commit if we are collapsing
+                    repo.dirstate.beginparentchange()
+                    repo.setparents(repo[p1].node())
+                    repo.dirstate.endparentchange()
+                    newnode = None
+                # Update the state
+                if newnode is not None:
+                    self.state[rev] = repo[newnode].rev()
+                    ui.debug('rebased as %s\n' % short(newnode))
+                else:
+                    if not self.collapsef:
+                        ui.warn(_('note: rebase of %d:%s created no changes '
+                                  'to commit\n') % (rev, ctx))
+                        self.skipped.add(rev)
+                    self.state[rev] = p1
+                    ui.debug('next revision set to %s\n' % p1)
+            elif self.state[rev] == nullmerge:
+                ui.debug('ignoring null merge rebase of %s\n' % rev)
+            elif self.state[rev] == revignored:
+                ui.status(_('not rebasing ignored %s\n') % desc)
+            elif self.state[rev] == revprecursor:
+                targetctx = repo[self.obsoletenotrebased[rev]]
+                desctarget = '%d:%s "%s"' % (targetctx.rev(), targetctx,
+                             targetctx.description().split('\n', 1)[0])
+                msg = _('note: not rebasing %s, already in destination as %s\n')
+                ui.status(msg % (desc, desctarget))
+            elif self.state[rev] == revpruned:
+                msg = _('note: not rebasing %s, it has no successor\n')
+                ui.status(msg % desc)
+            else:
+                ui.status(_('already rebased %s as %s\n') %
+                          (desc, repo[self.state[rev]]))
+
+        ui.progress(_('rebasing'), None)
+        ui.note(_('rebase merging completed\n'))
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -475,115 +587,7 @@ def rebase(ui, repo, **opts):
             if retcode is not None:
                 return retcode
 
-        if rbsrt.keepbranchesf:
-            # insert _savebranch at the start of extrafns so if
-            # there's a user-provided extrafn it can clobber branch if
-            # desired
-            rbsrt.extrafns.insert(0, _savebranch)
-            if rbsrt.collapsef:
-                branches = set()
-                for rev in rbsrt.state:
-                    branches.add(repo[rev].branch())
-                    if len(branches) > 1:
-                        raise error.Abort(_('cannot collapse multiple named '
-                            'branches'))
-
-        # Rebase
-        if not rbsrt.targetancestors:
-            rbsrt.targetancestors = repo.changelog.ancestors([rbsrt.target],
-                                                             inclusive=True)
-
-        # Keep track of the current bookmarks in order to reset them later
-        rbsrt.currentbookmarks = repo._bookmarks.copy()
-        rbsrt.activebookmark = rbsrt.activebookmark or repo._activebookmark
-        if rbsrt.activebookmark:
-            bookmarks.deactivate(repo)
-
-        rbsrt.extrafn = _makeextrafn(rbsrt.extrafns)
-
-        rbsrt.sortedstate = sorted(rbsrt.state)
-        total = len(rbsrt.sortedstate)
-        pos = 0
-        for rev in rbsrt.sortedstate:
-            ctx = repo[rev]
-            desc = '%d:%s "%s"' % (ctx.rev(), ctx,
-                                   ctx.description().split('\n', 1)[0])
-            names = repo.nodetags(ctx.node()) + repo.nodebookmarks(ctx.node())
-            if names:
-                desc += ' (%s)' % ' '.join(names)
-            pos += 1
-            if rbsrt.state[rev] == revtodo:
-                ui.status(_('rebasing %s\n') % desc)
-                ui.progress(_("rebasing"), pos, ("%d:%s" % (rev, ctx)),
-                            _('changesets'), total)
-                p1, p2, base = defineparents(repo, rev, rbsrt.target,
-                                             rbsrt.state,
-                                             rbsrt.targetancestors,
-                                             rbsrt.obsoletenotrebased)
-                storestatus(repo, rbsrt.originalwd, rbsrt.target,
-                            rbsrt.state, rbsrt.collapsef, rbsrt.keepf,
-                            rbsrt.keepbranchesf, rbsrt.external,
-                            rbsrt.activebookmark)
-                storecollapsemsg(repo, rbsrt.collapsemsg)
-                if len(repo[None].parents()) == 2:
-                    repo.ui.debug('resuming interrupted rebase\n')
-                else:
-                    try:
-                        ui.setconfig('ui', 'forcemerge', opts.get('tool', ''),
-                                     'rebase')
-                        stats = rebasenode(repo, rev, p1, base, rbsrt.state,
-                                           rbsrt.collapsef, rbsrt.target)
-                        if stats and stats[3] > 0:
-                            raise error.InterventionRequired(
-                                _('unresolved conflicts (see hg '
-                                  'resolve, then hg rebase --continue)'))
-                    finally:
-                        ui.setconfig('ui', 'forcemerge', '', 'rebase')
-                if not rbsrt.collapsef:
-                    merging = p2 != nullrev
-                    editform = cmdutil.mergeeditform(merging, 'rebase')
-                    editor = cmdutil.getcommiteditor(editform=editform, **opts)
-                    newnode = concludenode(repo, rev, p1, p2,
-                                           extrafn=rbsrt.extrafn,
-                                           editor=editor,
-                                           keepbranches=rbsrt.keepbranchesf,
-                                           date=rbsrt.date)
-                else:
-                    # Skip commit if we are collapsing
-                    repo.dirstate.beginparentchange()
-                    repo.setparents(repo[p1].node())
-                    repo.dirstate.endparentchange()
-                    newnode = None
-                # Update the state
-                if newnode is not None:
-                    rbsrt.state[rev] = repo[newnode].rev()
-                    ui.debug('rebased as %s\n' % short(newnode))
-                else:
-                    if not rbsrt.collapsef:
-                        ui.warn(_('note: rebase of %d:%s created no changes '
-                                  'to commit\n') % (rev, ctx))
-                        rbsrt.skipped.add(rev)
-                    rbsrt.state[rev] = p1
-                    ui.debug('next revision set to %s\n' % p1)
-            elif rbsrt.state[rev] == nullmerge:
-                ui.debug('ignoring null merge rebase of %s\n' % rev)
-            elif rbsrt.state[rev] == revignored:
-                ui.status(_('not rebasing ignored %s\n') % desc)
-            elif rbsrt.state[rev] == revprecursor:
-                targetctx = repo[rbsrt.obsoletenotrebased[rev]]
-                desctarget = '%d:%s "%s"' % (targetctx.rev(), targetctx,
-                             targetctx.description().split('\n', 1)[0])
-                msg = _('note: not rebasing %s, already in destination as %s\n')
-                ui.status(msg % (desc, desctarget))
-            elif rbsrt.state[rev] == revpruned:
-                msg = _('note: not rebasing %s, it has no successor\n')
-                ui.status(msg % desc)
-            else:
-                ui.status(_('already rebased %s as %s\n') %
-                          (desc, repo[rbsrt.state[rev]]))
-
-        ui.progress(_('rebasing'), None)
-        ui.note(_('rebase merging completed\n'))
+        rbsrt._performrebase()
 
         if rbsrt.collapsef and not rbsrt.keepopen:
             p1, p2, _base = defineparents(repo, min(rbsrt.state),
