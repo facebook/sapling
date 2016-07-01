@@ -1559,8 +1559,9 @@ rewrite it. Groups can be matched in ``pattern`` and referenced in
 rewrites ``http://server/foo-hg/`` into ``http://hg.server/foo/``.
 
 Relative subrepository paths are first made absolute, and the
-rewrite rules are then applied on the full (absolute) path. The rules
-are applied in definition order.
+rewrite rules are then applied on the full (absolute) path. If ``pattern``
+doesn't match the full path, an attempt is made to apply it on the
+relative path alone. The rules are applied in definition order.
 
 ``templatealias``
 -----------------
