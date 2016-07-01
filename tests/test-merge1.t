@@ -24,9 +24,10 @@
   $ hg update 0
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-Test interrupted updates by exploiting our non-handling of directory collisions
+Test interrupted updates by having a non-empty dir with the same name as one
+of the files in a commit we're updating to
 
-  $ mkdir b
+  $ mkdir b && touch b/nonempty
   $ hg up
   abort: *: '$TESTTMP/t/b' (glob)
   [255]
@@ -38,10 +39,10 @@ Test interrupted updates by exploiting our non-handling of directory collisions
   parent: 0:538afb845929 
    commit #0
   branch: default
-  commit: (interrupted update)
+  commit: 1 unknown (interrupted update)
   update: 1 new changesets (update)
   phases: 2 draft
-  $ rmdir b
+  $ rm b/nonempty
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum

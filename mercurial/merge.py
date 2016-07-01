@@ -1076,15 +1076,14 @@ def batchget(repo, mctx, actions):
                 absf = repo.wjoin(f)
                 orig = scmutil.origpath(ui, repo, absf)
                 try:
-                    # TODO Mercurial has always aborted if an untracked
-                    # directory is replaced by a tracked file, or generally
-                    # with file/directory merges. This needs to be sorted out.
                     if repo.wvfs.isfileorlink(f):
                         util.rename(absf, orig)
                 except OSError as e:
                     if e.errno != errno.ENOENT:
                         raise
 
+            if repo.wvfs.isdir(f):
+                repo.wvfs.removedirs(f)
             wwrite(f, fctx(f).data(), flags, backgroundclose=True)
             if i == 100:
                 yield i, f
