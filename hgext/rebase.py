@@ -227,6 +227,37 @@ class rebaseruntime(object):
         self.external = external
         self.activebookmark = activebookmark
 
+    def _prepareabortorcontinue(self, isabort):
+        try:
+            self.restorestatus()
+            self.collapsemsg = restorecollapsemsg(self.repo)
+        except error.RepoLookupError:
+            if isabort:
+                clearstatus(self.repo)
+                clearcollapsemsg(self.repo)
+                self.repo.ui.warn(_('rebase aborted (no revision is removed,'
+                                    ' only broken state is cleared)\n'))
+                return 0
+            else:
+                msg = _('cannot continue inconsistent rebase')
+                hint = _('use "hg rebase --abort" to clear broken state')
+                raise error.Abort(msg, hint=hint)
+        if isabort:
+            return abort(self.repo, self.originalwd, self.target,
+                         self.state, activebookmark=self.activebookmark)
+
+        self.obsoletenotrebased = {}
+        if self.ui.configbool('experimental', 'rebaseskipobsolete',
+                              default=True):
+            rebaseobsrevs = set([r for r, st in self.state.items()
+                                    if st == revprecursor])
+            rebasesetrevs = set(self.state.keys())
+            self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
+                                            rebaseobsrevs, self.target)
+            rebaseobsskipped = set(self.obsoletenotrebased)
+            _checkobsrebase(self.repo, self.ui, rebaseobsrevs, rebasesetrevs,
+                            rebaseobsskipped)
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -381,36 +412,9 @@ def rebase(ui, repo, **opts):
             if abortf and opts.get('tool', False):
                 ui.warn(_('tool option will be ignored\n'))
 
-            try:
-                rbsrt.restorestatus()
-                rbsrt.collapsemsg = restorecollapsemsg(repo)
-            except error.RepoLookupError:
-                if abortf:
-                    clearstatus(repo)
-                    clearcollapsemsg(repo)
-                    repo.ui.warn(_('rebase aborted (no revision is removed,'
-                                   ' only broken state is cleared)\n'))
-                    return 0
-                else:
-                    msg = _('cannot continue inconsistent rebase')
-                    hint = _('use "hg rebase --abort" to clear broken state')
-                    raise error.Abort(msg, hint=hint)
-            if abortf:
-                return abort(repo, rbsrt.originalwd, rbsrt.target,
-                             rbsrt.state,
-                             activebookmark=rbsrt.activebookmark)
-
-            rbsrt.obsoletenotrebased = {}
-            if ui.configbool('experimental', 'rebaseskipobsolete',
-                             default=True):
-                rebaseobsrevs = set([r for r, st in rbsrt.state.items()
-                                     if st == revprecursor])
-                rebasesetrevs = set(rbsrt.state.keys())
-                rbsrt.obsoletenotrebased = _computeobsoletenotrebased(repo,
-                                                rebaseobsrevs, rbsrt.target)
-                rebaseobsskipped = set(rbsrt.obsoletenotrebased)
-                _checkobsrebase(repo, ui, rebaseobsrevs, rebasesetrevs,
-                                rebaseobsskipped)
+            retcode = rbsrt._prepareabortorcontinue(abortf)
+            if retcode is not None:
+                return retcode
         else:
             dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf,
                                           destspace=destspace)
