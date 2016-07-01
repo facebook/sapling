@@ -39,9 +39,12 @@ from mercurial import templatekw
 from mercurial import url
 from mercurial import util
 from mercurial.i18n import _
-from mercurial.node import hex, short, bin
+from mercurial.node import hex, short, bin, nullid
 from hgext import schemes
 from hgext.convert import hg as converthg
+
+# namespace to use when recording an hg journal entry
+journalremotebookmarktype = 'remotebookmark'
 
 def exbookcalcupdate(orig, ui, repo, checkout):
     '''Return a tuple (targetrev, movemarkfrom) indicating the rev to
@@ -1329,6 +1332,16 @@ def saveremotenames(repo, remotepath, branches=None, bookmarks=None):
                 f.write('%s %s %s\n' % (node, nametype, n))
             elif nametype == 'bookmarks':
                 oldbooks[rname] = node
+
+        # record a journal entry if journal is loaded
+        if util.safehasattr(repo, 'journal'):
+            for rmbookmark, newnode in bookmarks.iteritems():
+                oldnode = oldbooks.get(rmbookmark, hex(nullid))
+                if oldnode != newnode:
+                    joinedremotename = joinremotename(remotepath, rmbookmark)
+                    repo.journal.record(
+                        journalremotebookmarktype, joinedremotename,
+                        bin(oldnode), bin(newnode))
 
         for branch, nodes in branches.iteritems():
             for n in nodes:
