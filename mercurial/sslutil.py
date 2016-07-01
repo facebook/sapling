@@ -431,7 +431,12 @@ def _plainapplepython():
             exe.startswith('/system/library/frameworks/python.framework/'))
 
 def _defaultcacerts(ui):
-    """return path to default CA certificates or None."""
+    """return path to default CA certificates or None.
+
+    It is assumed this function is called when the returned certificates
+    file will actually be used to validate connections. Therefore this
+    function may print warnings or debug messages assuming this usage.
+    """
     # The "certifi" Python package provides certificates. If it is installed,
     # assume the user intends it to be used and use it.
     try:
