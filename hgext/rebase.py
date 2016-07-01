@@ -258,6 +258,57 @@ class rebaseruntime(object):
             _checkobsrebase(self.repo, self.ui, rebaseobsrevs, rebasesetrevs,
                             rebaseobsskipped)
 
+    def _preparenewrebase(self, dest, rebaseset):
+        if dest is None:
+            return _nothingtorebase()
+
+        allowunstable = obsolete.isenabled(self.repo, obsolete.allowunstableopt)
+        if (not (self.keepf or allowunstable)
+              and self.repo.revs('first(children(%ld) - %ld)',
+                                 rebaseset, rebaseset)):
+            raise error.Abort(
+                _("can't remove original changesets with"
+                  " unrebased descendants"),
+                hint=_('use --keep to keep original changesets'))
+
+        self.obsoletenotrebased = {}
+        if self.ui.configbool('experimental', 'rebaseskipobsolete',
+                              default=True):
+            rebasesetrevs = set(rebaseset)
+            rebaseobsrevs = _filterobsoleterevs(self.repo, rebasesetrevs)
+            self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
+                                                            rebaseobsrevs,
+                                                            dest)
+            rebaseobsskipped = set(self.obsoletenotrebased)
+            _checkobsrebase(self.repo, self.ui, rebaseobsrevs,
+                                          rebasesetrevs,
+                                          rebaseobsskipped)
+
+        result = buildstate(self.repo, dest, rebaseset, self.collapsef,
+                            self.obsoletenotrebased)
+
+        if not result:
+            # Empty state built, nothing to rebase
+            self.ui.status(_('nothing to rebase\n'))
+            return _nothingtorebase()
+
+        root = min(rebaseset)
+        if not self.keepf and not self.repo[root].mutable():
+            raise error.Abort(_("can't rebase public changeset %s")
+                             % self.repo[root],
+                             hint=_('see "hg help phases" for details'))
+
+        (self.originalwd, self.target, self.state) = result
+        if self.collapsef:
+            self.targetancestors = self.repo.changelog.ancestors(
+                                        [self.target],
+                                        inclusive=True)
+            self.external = externalparent(self.repo, self.state,
+                                              self.targetancestors)
+
+        if dest.closesbranch() and not self.keepbranchesf:
+            self.ui.status(_('reopening closed branch head %s\n') % dest)
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -418,54 +469,9 @@ def rebase(ui, repo, **opts):
         else:
             dest, rebaseset = _definesets(ui, repo, destf, srcf, basef, revf,
                                           destspace=destspace)
-            if dest is None:
-                return _nothingtorebase()
-
-            allowunstable = obsolete.isenabled(repo, obsolete.allowunstableopt)
-            if (not (rbsrt.keepf or allowunstable)
-                  and repo.revs('first(children(%ld) - %ld)',
-                                rebaseset, rebaseset)):
-                raise error.Abort(
-                    _("can't remove original changesets with"
-                      " unrebased descendants"),
-                    hint=_('use --keep to keep original changesets'))
-
-            rbsrt.obsoletenotrebased = {}
-            if ui.configbool('experimental', 'rebaseskipobsolete',
-                             default=True):
-                rebasesetrevs = set(rebaseset)
-                rebaseobsrevs = _filterobsoleterevs(repo, rebasesetrevs)
-                rbsrt.obsoletenotrebased = _computeobsoletenotrebased(repo,
-                                                                rebaseobsrevs,
-                                                                dest)
-                rebaseobsskipped = set(rbsrt.obsoletenotrebased)
-                _checkobsrebase(repo, ui, rebaseobsrevs,
-                                              rebasesetrevs,
-                                              rebaseobsskipped)
-
-            result = buildstate(repo, dest, rebaseset, rbsrt.collapsef,
-                                rbsrt.obsoletenotrebased)
-
-            if not result:
-                # Empty state built, nothing to rebase
-                ui.status(_('nothing to rebase\n'))
-                return _nothingtorebase()
-
-            root = min(rebaseset)
-            if not rbsrt.keepf and not repo[root].mutable():
-                raise error.Abort(_("can't rebase public changeset %s")
-                                 % repo[root],
-                                 hint=_('see "hg help phases" for details'))
-
-            (rbsrt.originalwd, rbsrt.target, rbsrt.state) = result
-            if rbsrt.collapsef:
-                rbsrt.targetancestors = repo.changelog.ancestors([rbsrt.target],
-                                                                 inclusive=True)
-                rbsrt.external = externalparent(repo, rbsrt.state,
-                                                rbsrt.targetancestors)
-
-            if dest.closesbranch() and not rbsrt.keepbranchesf:
-                ui.status(_('reopening closed branch head %s\n') % dest)
+            retcode = rbsrt._preparenewrebase(dest, rebaseset)
+            if retcode is not None:
+                return retcode
 
         if rbsrt.keepbranchesf:
             # insert _savebranch at the start of extrafns so if
