@@ -423,6 +423,93 @@ class rebaseruntime(object):
         ui.progress(_('rebasing'), None)
         ui.note(_('rebase merging completed\n'))
 
+    def _finishrebase(self):
+        repo, ui, opts = self.repo, self.ui, self.opts
+        if self.collapsef and not self.keepopen:
+            p1, p2, _base = defineparents(repo, min(self.state),
+                                          self.target, self.state,
+                                          self.targetancestors,
+                                          self.obsoletenotrebased)
+            editopt = opts.get('edit')
+            editform = 'rebase.collapse'
+            if self.collapsemsg:
+                commitmsg = self.collapsemsg
+            else:
+                commitmsg = 'Collapsed revision'
+                for rebased in self.state:
+                    if rebased not in self.skipped and\
+                       self.state[rebased] > nullmerge:
+                        commitmsg += '\n* %s' % repo[rebased].description()
+                editopt = True
+            editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
+            revtoreuse = self.sortedstate[-1]
+            newnode = concludenode(repo, revtoreuse, p1, self.external,
+                                   commitmsg=commitmsg,
+                                   extrafn=self.extrafn, editor=editor,
+                                   keepbranches=self.keepbranchesf,
+                                   date=self.date)
+            if newnode is None:
+                newrev = self.target
+            else:
+                newrev = repo[newnode].rev()
+            for oldrev in self.state.iterkeys():
+                if self.state[oldrev] > nullmerge:
+                    self.state[oldrev] = newrev
+
+        if 'qtip' in repo.tags():
+            updatemq(repo, self.state, self.skipped, **opts)
+
+        if self.currentbookmarks:
+            # Nodeids are needed to reset bookmarks
+            nstate = {}
+            for k, v in self.state.iteritems():
+                if v > nullmerge:
+                    nstate[repo[k].node()] = repo[v].node()
+                elif v == revprecursor:
+                    succ = self.obsoletenotrebased[k]
+                    nstate[repo[k].node()] = repo[succ].node()
+            # XXX this is the same as dest.node() for the non-continue path --
+            # this should probably be cleaned up
+            targetnode = repo[self.target].node()
+
+        # restore original working directory
+        # (we do this before stripping)
+        newwd = self.state.get(self.originalwd, self.originalwd)
+        if newwd == revprecursor:
+            newwd = self.obsoletenotrebased[self.originalwd]
+        elif newwd < 0:
+            # original directory is a parent of rebase set root or ignored
+            newwd = self.originalwd
+        if newwd not in [c.rev() for c in repo[None].parents()]:
+            ui.note(_("update back to initial working directory parent\n"))
+            hg.updaterepo(repo, newwd, False)
+
+        if not self.keepf:
+            collapsedas = None
+            if self.collapsef:
+                collapsedas = newnode
+            clearrebased(ui, repo, self.state, self.skipped, collapsedas)
+
+        with repo.transaction('bookmark') as tr:
+            if self.currentbookmarks:
+                updatebookmarks(repo, targetnode, nstate,
+                                self.currentbookmarks, tr)
+                if self.activebookmark not in repo._bookmarks:
+                    # active bookmark was divergent one and has been deleted
+                    self.activebookmark = None
+        clearstatus(repo)
+        clearcollapsemsg(repo)
+
+        ui.note(_("rebase completed\n"))
+        util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
+        if self.skipped:
+            skippedlen = len(self.skipped)
+            ui.note(_("%d revisions have been skipped\n") % skippedlen)
+
+        if (self.activebookmark and
+            repo['.'].node() == repo._bookmarks[self.activebookmark]):
+                bookmarks.activate(repo, self.activebookmark)
+
 @command('rebase',
     [('s', 'source', '',
      _('rebase the specified changeset and descendants'), _('REV')),
@@ -588,92 +675,7 @@ def rebase(ui, repo, **opts):
                 return retcode
 
         rbsrt._performrebase()
-
-        if rbsrt.collapsef and not rbsrt.keepopen:
-            p1, p2, _base = defineparents(repo, min(rbsrt.state),
-                                          rbsrt.target, rbsrt.state,
-                                          rbsrt.targetancestors,
-                                          rbsrt.obsoletenotrebased)
-            editopt = opts.get('edit')
-            editform = 'rebase.collapse'
-            if rbsrt.collapsemsg:
-                commitmsg = rbsrt.collapsemsg
-            else:
-                commitmsg = 'Collapsed revision'
-                for rebased in rbsrt.state:
-                    if rebased not in rbsrt.skipped and\
-                       rbsrt.state[rebased] > nullmerge:
-                        commitmsg += '\n* %s' % repo[rebased].description()
-                editopt = True
-            editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-            revtoreuse = rbsrt.sortedstate[-1]
-            newnode = concludenode(repo, revtoreuse, p1, rbsrt.external,
-                                   commitmsg=commitmsg,
-                                   extrafn=rbsrt.extrafn, editor=editor,
-                                   keepbranches=rbsrt.keepbranchesf,
-                                   date=rbsrt.date)
-            if newnode is None:
-                newrev = rbsrt.target
-            else:
-                newrev = repo[newnode].rev()
-            for oldrev in rbsrt.state.iterkeys():
-                if rbsrt.state[oldrev] > nullmerge:
-                    rbsrt.state[oldrev] = newrev
-
-        if 'qtip' in repo.tags():
-            updatemq(repo, rbsrt.state, rbsrt.skipped, **opts)
-
-        if rbsrt.currentbookmarks:
-            # Nodeids are needed to reset bookmarks
-            nstate = {}
-            for k, v in rbsrt.state.iteritems():
-                if v > nullmerge:
-                    nstate[repo[k].node()] = repo[v].node()
-                elif v == revprecursor:
-                    succ = rbsrt.obsoletenotrebased[k]
-                    nstate[repo[k].node()] = repo[succ].node()
-            # XXX this is the same as dest.node() for the non-continue path --
-            # this should probably be cleaned up
-            targetnode = repo[rbsrt.target].node()
-
-        # restore original working directory
-        # (we do this before stripping)
-        newwd = rbsrt.state.get(rbsrt.originalwd, rbsrt.originalwd)
-        if newwd == revprecursor:
-            newwd = rbsrt.obsoletenotrebased[rbsrt.originalwd]
-        elif newwd < 0:
-            # original directory is a parent of rebase set root or ignored
-            newwd = rbsrt.originalwd
-        if newwd not in [c.rev() for c in repo[None].parents()]:
-            ui.note(_("update back to initial working directory parent\n"))
-            hg.updaterepo(repo, newwd, False)
-
-        if not rbsrt.keepf:
-            collapsedas = None
-            if rbsrt.collapsef:
-                collapsedas = newnode
-            clearrebased(ui, repo, rbsrt.state, rbsrt.skipped, collapsedas)
-
-        with repo.transaction('bookmark') as tr:
-            if rbsrt.currentbookmarks:
-                updatebookmarks(repo, targetnode, nstate,
-                                rbsrt.currentbookmarks, tr)
-                if rbsrt.activebookmark not in repo._bookmarks:
-                    # active bookmark was divergent one and has been deleted
-                    rbsrt.activebookmark = None
-        clearstatus(repo)
-        clearcollapsemsg(repo)
-
-        ui.note(_("rebase completed\n"))
-        util.unlinkpath(repo.sjoin('undo'), ignoremissing=True)
-        if rbsrt.skipped:
-            skippedlen = len(rbsrt.skipped)
-            ui.note(_("%d revisions have been skipped\n") % skippedlen)
-
-        if (rbsrt.activebookmark and
-            repo['.'].node() == repo._bookmarks[rbsrt.activebookmark]):
-                bookmarks.activate(repo, rbsrt.activebookmark)
-
+        rbsrt._finishrebase()
     finally:
         release(lock, wlock)
 
