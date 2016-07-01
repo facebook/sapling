@@ -100,6 +100,8 @@
      summary:     initial
   
 
+  $ echo '[web]' >> .hg/hgrc
+  $ echo 'allow_archive = bz2' >> .hg/hgrc
   $ hg serve -p $HGPORT -d --pid-file=hg.pid -A access.log -E error.log
   $ cat hg.pid >> $DAEMON_PIDS
 
@@ -800,7 +802,13 @@ summary/ shows a summary of repository state
   200 Script output follows
   
   {
-    "archives": [],
+    "archives": [
+      {
+        "extension": ".tar.bz2",
+        "node": "tip",
+        "type": "bz2"
+      }
+    ],
     "bookmarks": [
       {
         "bookmark": "bookmark2",
