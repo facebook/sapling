@@ -229,6 +229,24 @@ class rebaseruntime(object):
         self.external = external
         self.activebookmark = activebookmark
 
+    def _handleskippingobsolete(self, rebaserevs, obsoleterevs, target):
+        """Compute structures necessary for skipping obsolete revisions
+
+        rebaserevs:     iterable of all revisions that are to be rebased
+        obsoleterevs:   iterable of all obsolete revisions in rebaseset
+        target:         a destination revision for the rebase operation
+        """
+        self.obsoletenotrebased = {}
+        if not self.ui.configbool('experimental', 'rebaseskipobsolete',
+                                  default=True):
+            return
+        rebaseset = set(rebaserevs)
+        obsoleteset = set(obsoleterevs)
+        self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
+                                    obsoleteset, target)
+        skippedset = set(self.obsoletenotrebased)
+        _checkobsrebase(self.repo, self.ui, obsoleteset, rebaseset, skippedset)
+
     def _prepareabortorcontinue(self, isabort):
         try:
             self.restorestatus()
@@ -248,17 +266,8 @@ class rebaseruntime(object):
             return abort(self.repo, self.originalwd, self.target,
                          self.state, activebookmark=self.activebookmark)
 
-        self.obsoletenotrebased = {}
-        if self.ui.configbool('experimental', 'rebaseskipobsolete',
-                              default=True):
-            rebaseobsrevs = set([r for r, st in self.state.items()
-                                    if st == revprecursor])
-            rebasesetrevs = set(self.state.keys())
-            self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
-                                            rebaseobsrevs, self.target)
-            rebaseobsskipped = set(self.obsoletenotrebased)
-            _checkobsrebase(self.repo, self.ui, rebaseobsrevs, rebasesetrevs,
-                            rebaseobsskipped)
+        obsrevs = (r for r, st in self.state.items() if st == revprecursor)
+        self._handleskippingobsolete(self.state.keys(), obsrevs, self.target)
 
     def _preparenewrebase(self, dest, rebaseset):
         if dest is None:
@@ -273,18 +282,8 @@ class rebaseruntime(object):
                   " unrebased descendants"),
                 hint=_('use --keep to keep original changesets'))
 
-        self.obsoletenotrebased = {}
-        if self.ui.configbool('experimental', 'rebaseskipobsolete',
-                              default=True):
-            rebasesetrevs = set(rebaseset)
-            rebaseobsrevs = _filterobsoleterevs(self.repo, rebasesetrevs)
-            self.obsoletenotrebased = _computeobsoletenotrebased(self.repo,
-                                                            rebaseobsrevs,
-                                                            dest)
-            rebaseobsskipped = set(self.obsoletenotrebased)
-            _checkobsrebase(self.repo, self.ui, rebaseobsrevs,
-                                          rebasesetrevs,
-                                          rebaseobsskipped)
+        obsrevs = _filterobsoleterevs(self.repo, rebaseset)
+        self._handleskippingobsolete(rebaseset, obsrevs, dest)
 
         result = buildstate(self.repo, dest, rebaseset, self.collapsef,
                             self.obsoletenotrebased)
