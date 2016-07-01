@@ -113,7 +113,7 @@ import errno
 import hashlib
 import socket
 import sys
-import thread
+import threading
 
 from . import (
     util,
@@ -135,7 +135,7 @@ class ConnectionManager(object):
       * keep track of all existing
       """
     def __init__(self):
-        self._lock = thread.allocate_lock()
+        self._lock = threading.Lock()
         self._hostmap = {} # map hosts to a list of connections
         self._connmap = {} # map connections to host
         self._readymap = {} # map connection to ready state
