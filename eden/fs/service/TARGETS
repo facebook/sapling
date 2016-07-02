@@ -51,10 +51,10 @@ if is_facebook_internal():
 #     buck build \
 #         --config java.target_level=7 \
 #         --config java.source_level=7 \
-#        //eden/fs/service:thrift#java
+#        //eden/fs/service:thrift-java
 #
 # Copy the resulting JAR
-# (`buck targets --show-output //eden/fs/service:thrift#java`) to the project
+# (`buck targets --show-output //eden/fs/service:thrift-java`) to the project
 # where you are using Eden in Java. (Note that the Java 7 config options are
 # specified because Buck itself is currently limited to Java 7.)
 #
@@ -77,7 +77,7 @@ if is_facebook_internal():
 java_binary(
   name = 'java-thrift-dependencies',
   deps = [
-    '//common/fb303/if:fb303#java',
+    '//common/fb303/if:fb303-java',
     '//thrift/lib/java/src:thrift',
   ],
 )
