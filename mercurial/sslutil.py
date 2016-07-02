@@ -196,10 +196,10 @@ def _hostsettings(ui, hostname):
                     raise error.Abort(_('could not find web.cacerts: %s') %
                                       cafile)
             else:
-                # No global CA certs. See if we can load defaults.
+                # CAs not defined in config. Try to find system bundles.
                 cafile = _defaultcacerts()
                 if cafile:
-                    ui.debug('using %s to enable OS X system CA\n' % cafile)
+                    ui.debug('using %s for CA file\n' % cafile)
 
             s['cafile'] = cafile
 
