@@ -418,6 +418,25 @@ def has_defaultcacerts():
     from mercurial import sslutil
     return sslutil._defaultcacerts() or sslutil._canloaddefaultcerts
 
+@check("defaultcacertsloaded", "detected presence of loaded system CA certs")
+def has_defaultcacertsloaded():
+    import ssl
+    from mercurial import sslutil
+
+    if not has_defaultcacerts():
+        return False
+    if not has_sslcontext():
+        return False
+
+    cafile = sslutil._defaultcacerts()
+    ctx = ssl.create_default_context()
+    if cafile:
+        ctx.load_verify_locations(cafile=cafile)
+    else:
+        ctx.load_default_certs()
+
+    return len(ctx.get_ca_certs()) > 0
+
 @check("windows", "Windows")
 def has_windows():
     return os.name == 'nt'
