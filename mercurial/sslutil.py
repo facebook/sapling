@@ -195,7 +195,7 @@ def _hostsettings(ui, hostname):
                 if not os.path.exists(cafile):
                     raise error.Abort(_('could not find web.cacerts: %s') %
                                       cafile)
-            else:
+            elif s['allowloaddefaultcerts']:
                 # CAs not defined in config. Try to find system bundles.
                 cafile = _defaultcacerts(ui)
                 if cafile:
