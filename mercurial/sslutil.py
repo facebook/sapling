@@ -197,7 +197,7 @@ def _hostsettings(ui, hostname):
                                       cafile)
             else:
                 # CAs not defined in config. Try to find system bundles.
-                cafile = _defaultcacerts()
+                cafile = _defaultcacerts(ui)
                 if cafile:
                     ui.debug('using %s for CA file\n' % cafile)
 
@@ -430,7 +430,7 @@ def _plainapplepython():
     return (exe.startswith('/usr/bin/python') or
             exe.startswith('/system/library/frameworks/python.framework/'))
 
-def _defaultcacerts():
+def _defaultcacerts(ui):
     """return path to default CA certificates or None."""
     if _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
