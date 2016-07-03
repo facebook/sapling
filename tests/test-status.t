@@ -203,8 +203,9 @@ hg status -A:
   ]
 
   $ hg status -A -Tpickle > pickle
+  >>> from __future__ import print_function
   >>> import pickle
-  >>> print sorted((x['status'], x['path']) for x in pickle.load(open("pickle")))
+  >>> print(sorted((x['status'], x['path']) for x in pickle.load(open("pickle"))))
   [('!', 'deleted'), ('?', 'pickle'), ('?', 'unknown'), ('A', 'added'), ('A', 'copied'), ('C', '.hgignore'), ('C', 'modified'), ('I', 'ignored'), ('R', 'removed')]
   $ rm pickle
 

@@ -26,24 +26,25 @@ Return codes before inline python:
 
 Doctest commands:
 
-  >>> print 'foo'
+  >>> from __future__ import print_function
+  >>> print('foo')
   foo
   $ echo interleaved
   interleaved
   >>> for c in 'xyz':
-  ...     print c
+  ...     print(c)
   x
   y
   z
-  >>> print
+  >>> print()
   
   >>> foo = 'global name'
   >>> def func():
-  ...     print foo, 'should be visible in func()'
+  ...     print(foo, 'should be visible in func()')
   >>> func()
   global name should be visible in func()
-  >>> print '''multiline
-  ... string'''
+  >>> print('''multiline
+  ... string''')
   multiline
   string
 

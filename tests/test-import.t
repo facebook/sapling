@@ -53,7 +53,8 @@ import exported patch with external patcher
 regardless of the commit message in the patch)
 
   $ cat > dummypatch.py <<EOF
-  > print 'patching file a'
+  > from __future__ import print_function
+  > print('patching file a')
   > file('a', 'wb').write('line2\n')
   > EOF
   $ hg clone -r0 a b

@@ -37,10 +37,22 @@ The following ``share.`` config options influence this feature:
     The default naming mode is "identity."
 '''
 
-from mercurial.i18n import _
-from mercurial import cmdutil, commands, hg, util, extensions, bookmarks, error
-from mercurial.hg import repository, parseurl
+from __future__ import absolute_import
+
 import errno
+from mercurial.i18n import _
+from mercurial import (
+    bookmarks,
+    cmdutil,
+    commands,
+    error,
+    extensions,
+    hg,
+    util,
+)
+
+repository = hg.repository
+parseurl = hg.parseurl
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

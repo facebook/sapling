@@ -6,12 +6,17 @@
 # of the PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2, which is
 # GPL-compatible.
 
-import sys, os
+from __future__ import absolute_import
+
+import os
+import sys
 
 try:
-    from hashlib import md5
+    import hashlib
+    md5 = hashlib.md5
 except ImportError:
-    from md5 import md5
+    import md5
+    md5 = md5.md5
 
 try:
     import msvcrt

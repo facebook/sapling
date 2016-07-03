@@ -41,10 +41,16 @@ pushed or pulled::
   # or pretxnchangegroup.cr = python:hgext.win32text.forbidcr
 '''
 
-from mercurial.i18n import _
-from mercurial.node import short
-from mercurial import util
+from __future__ import absolute_import
+
 import re
+from mercurial.i18n import _
+from mercurial.node import (
+    short,
+)
+from mercurial import (
+    util,
+)
 
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should

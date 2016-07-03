@@ -26,9 +26,21 @@ Pygments will try very hard to identify the file type from content and any
 match (even matches with a low confidence score) will be used.
 """
 
-import highlight
-from mercurial.hgweb import webcommands, webutil, common
-from mercurial import extensions, encoding, fileset
+from __future__ import absolute_import
+
+from . import highlight
+from mercurial.hgweb import (
+    common,
+    webcommands,
+    webutil,
+)
+
+from mercurial import (
+    encoding,
+    extensions,
+    fileset,
+)
+
 # Note for extension authors: ONLY specify testedwith = 'internal' for
 # extensions which SHIP WITH MERCURIAL. Non-mainline extensions should
 # be specifying the version(s) of Mercurial they are tested with, or

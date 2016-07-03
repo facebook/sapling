@@ -8,17 +8,8 @@
   hgext/fsmonitor/pywatchman/__init__.py requires print_function
   hgext/fsmonitor/pywatchman/capabilities.py not using absolute_import
   hgext/fsmonitor/pywatchman/pybser.py not using absolute_import
-  hgext/highlight/__init__.py not using absolute_import
-  hgext/highlight/highlight.py not using absolute_import
-  hgext/share.py not using absolute_import
-  hgext/win32text.py not using absolute_import
   i18n/check-translation.py not using absolute_import
-  i18n/polib.py not using absolute_import
   setup.py not using absolute_import
-  tests/heredoctest.py requires print_function
-  tests/md5sum.py not using absolute_import
-  tests/readlink.py not using absolute_import
-  tests/run-tests.py not using absolute_import
   tests/test-demandimport.py not using absolute_import
 
 #if py3exe

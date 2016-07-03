@@ -13,11 +13,12 @@ typical client does not want echo-back messages, so test without it:
   $ hg init repo
   $ cd repo
 
+  >>> from __future__ import print_function
   >>> from hgclient import readchannel, runcommand, check
   >>> @check
   ... def hellomessage(server):
   ...     ch, data = readchannel(server)
-  ...     print '%c, %r' % (ch, data)
+  ...     print('%c, %r' % (ch, data))
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
@@ -99,7 +100,7 @@ typical client does not want echo-back messages, so test without it:
   ...     server.stdin.close()
   ... 
   ...     # server exits with 1 if the pipe closed while reading the command
-  ...     print 'server exit code =', server.wait()
+  ...     print('server exit code =', server.wait())
   server exit code = 1
 
   >>> from hgclient import readchannel, runcommand, check, stringio
@@ -206,10 +207,11 @@ check that local configs for the cached repo aren't inherited when -R is used:
 #endif
 
   $ cat <<EOF > hook.py
+  > from __future__ import print_function
   > import sys
   > def hook(**args):
-  >     print 'hook talking'
-  >     print 'now try to read something: %r' % sys.stdin.read()
+  >     print('hook talking')
+  >     print('now try to read something: %r' % sys.stdin.read())
   > EOF
 
   >>> from hgclient import readchannel, runcommand, check, stringio
@@ -610,18 +612,19 @@ changelog and manifest would have invalid node:
 
 run commandserver in commandserver, which is silly but should work:
 
+  >>> from __future__ import print_function
   >>> from hgclient import readchannel, runcommand, check, stringio
   >>> @check
   ... def nested(server):
-  ...     print '%c, %r' % readchannel(server)
+  ...     print('%c, %r' % readchannel(server))
   ...     class nestedserver(object):
   ...         stdin = stringio('getencoding\n')
   ...         stdout = stringio()
   ...     runcommand(server, ['serve', '--cmdserver', 'pipe'],
   ...                output=nestedserver.stdout, input=nestedserver.stdin)
   ...     nestedserver.stdout.seek(0)
-  ...     print '%c, %r' % readchannel(nestedserver)  # hello
-  ...     print '%c, %r' % readchannel(nestedserver)  # getencoding
+  ...     print('%c, %r' % readchannel(nestedserver))  # hello
+  ...     print('%c, %r' % readchannel(nestedserver))  # getencoding
   o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
   *** runcommand serve --cmdserver pipe
   o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
@@ -632,11 +635,12 @@ start without repository:
 
   $ cd ..
 
+  >>> from __future__ import print_function
   >>> from hgclient import readchannel, runcommand, check
   >>> @check
   ... def hellomessage(server):
   ...     ch, data = readchannel(server)
-  ...     print '%c, %r' % (ch, data)
+  ...     print('%c, %r' % (ch, data))
   ...     # run an arbitrary command to make sure the next thing the server
   ...     # sends isn't part of the hello message
   ...     runcommand(server, ['id'])
@@ -672,11 +676,12 @@ unix domain socket:
 
 #if unix-socket unix-permissions
 
+  >>> from __future__ import print_function
   >>> from hgclient import unixserver, readchannel, runcommand, check, stringio
   >>> server = unixserver('.hg/server.sock', '.hg/server.log')
   >>> def hellomessage(conn):
   ...     ch, data = readchannel(conn)
-  ...     print '%c, %r' % (ch, data)
+  ...     print('%c, %r' % (ch, data))
   ...     runcommand(conn, ['id'])
   >>> check(hellomessage, server.connect)
   o, 'capabilities: getencoding runcommand\nencoding: *\npid: *' (glob)
@@ -723,6 +728,7 @@ unix domain socket:
   > [cmdserver]
   > log = inexistent/path.log
   > EOF
+  >>> from __future__ import print_function
   >>> from hgclient import unixserver, readchannel, check
   >>> server = unixserver('.hg/server.sock', '.hg/server.log')
   >>> def earlycrash(conn):
@@ -730,7 +736,7 @@ unix domain socket:
   ...         try:
   ...             ch, data = readchannel(conn)
   ...             if not data.startswith('  '):
-  ...                 print '%c, %r' % (ch, data)
+  ...                 print('%c, %r' % (ch, data))
   ...         except EOFError:
   ...             break
   >>> check(earlycrash, server.connect)

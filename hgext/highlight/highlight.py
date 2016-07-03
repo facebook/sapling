@@ -8,14 +8,27 @@
 # The original module was split in an interface and an implementation
 # file to defer pygments loading and speedup extension setup.
 
+from __future__ import absolute_import
+
+import pygments
+import pygments.formatters
+import pygments.lexers
+import pygments.util
+
 from mercurial import demandimport
 demandimport.ignore.extend(['pkgutil', 'pkg_resources', '__main__'])
-from mercurial import util, encoding
 
-from pygments import highlight
-from pygments.util import ClassNotFound
-from pygments.lexers import guess_lexer, guess_lexer_for_filename, TextLexer
-from pygments.formatters import HtmlFormatter
+from mercurial import (
+    encoding,
+    util,
+)
+
+highlight = pygments.highlight
+ClassNotFound = pygments.util.ClassNotFound
+guess_lexer = pygments.lexers.guess_lexer
+guess_lexer_for_filename = pygments.lexers.guess_lexer_for_filename
+TextLexer = pygments.lexers.TextLexer
+HtmlFormatter = pygments.formatters.HtmlFormatter
 
 SYNTAX_CSS = ('\n<link rel="stylesheet" href="{url}highlightcss" '
               'type="text/css" />')

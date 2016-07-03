@@ -18,11 +18,12 @@ inserted due to big distance from its paren revision (zero).
   > done
 
   $ cd ..
+  >>> from __future__ import print_function
   >>> import os
   >>> regsize = os.stat("repo/.hg/store/00manifest.i").st_size
   >>> gdsize = os.stat("gdrepo/.hg/store/00manifest.i").st_size
   >>> if regsize < gdsize:
-  ...     print 'generaldata increased size of manifest'
+  ...     print('generaldata increased size of manifest')
 
 Verify rev reordering doesnt create invalid bundles (issue4462)
 This requires a commit tree that when pulled will reorder manifest revs such

@@ -43,31 +43,31 @@
 # completes fairly quickly, includes both shell and Python scripts, and
 # includes some scripts that run daemon processes.)
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
-from distutils import version
 import difflib
+import distutils.version as version
 import errno
 import json
 import optparse
 import os
-import shutil
-import subprocess
-import signal
-import socket
-import sys
-import tempfile
-import time
 import random
 import re
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import tempfile
 import threading
-import killdaemons as killmod
+import time
+import unittest
+import xml.dom.minidom as minidom
+
 try:
     import Queue as queue
 except ImportError:
     import queue
-from xml.dom import minidom
-import unittest
 
 if os.environ.get('RTUNICODEPEDANTRY', False):
     try:
@@ -475,6 +475,7 @@ def terminate(proc):
         pass
 
 def killdaemons(pidfile):
+    import killdaemons as killmod
     return killmod.killdaemons(pidfile, tryhard=False, remove=True,
                                logfn=vlog)
 
@@ -2493,7 +2494,8 @@ class TestRunner(object):
 
     def _outputcoverage(self):
         """Produce code coverage output."""
-        from coverage import coverage
+        import coverage
+        coverage = coverage.coverage
 
         vlog('# Producing coverage report')
         # chdir is the easiest way to get short, relative paths in the
