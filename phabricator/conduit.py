@@ -5,7 +5,7 @@
 # conduit client.
 
 import hashlib
-import httplib
+from mercurial.util import httplib
 
 import json
 import os

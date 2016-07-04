@@ -10,7 +10,7 @@ from mercurial.i18n import _
 import re
 import json
 from urllib import urlencode
-import httplib
+from mercurial.util import httplib
 
 conduit_host = None
 conduit_path = None
