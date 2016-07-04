@@ -61,7 +61,20 @@ def check_compat_py3(f):
                 imp.load_module(name, fh, '', ('py', 'r', imp.PY_SOURCE))
             except Exception as e:
                 exc_type, exc_value, tb = sys.exc_info()
-                frame = traceback.extract_tb(tb)[-1]
+                # We walk the stack and ignore frames from our custom importer,
+                # import mechanisms, and stdlib modules. This kinda/sorta
+                # emulates CPython behavior in import.c while also attempting
+                # to pin blame on a Mercurial file.
+                for frame in reversed(traceback.extract_tb(tb)):
+                    if frame.name == '_call_with_frames_removed':
+                        continue
+                    if 'importlib' in frame.filename:
+                        continue
+                    if 'mercurial/__init__.py' in frame.filename:
+                        continue
+                    if frame.filename.startswith(sys.prefix):
+                        continue
+                    break
 
                 if frame.filename:
                     filename = os.path.basename(frame.filename)
