@@ -432,6 +432,16 @@ def _plainapplepython():
 
 def _defaultcacerts(ui):
     """return path to default CA certificates or None."""
+    # The "certifi" Python package provides certificates. If it is installed,
+    # assume the user intends it to be used and use it.
+    try:
+        import certifi
+        certs = certifi.where()
+        ui.debug('using ca certificates from certifi\n')
+        return certs
+    except ImportError:
+        pass
+
     if _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
