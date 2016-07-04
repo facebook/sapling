@@ -39,6 +39,14 @@ from mercurial import (
     util,
 )
 
+# for "historical portability":
+# define util.safehasattr forcibly, because util.safehasattr has been
+# available since 1.9.3 (or 94b200a11cf7)
+_undefined = object()
+def safehasattr(thing, attr):
+    return getattr(thing, attr, _undefined) is not _undefined
+setattr(util, 'safehasattr', safehasattr)
+
 formatteropts = commands.formatteropts
 revlogopts = commands.debugrevlogopts
 
