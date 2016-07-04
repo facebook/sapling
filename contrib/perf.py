@@ -48,7 +48,12 @@ def safehasattr(thing, attr):
     return getattr(thing, attr, _undefined) is not _undefined
 setattr(util, 'safehasattr', safehasattr)
 
-formatteropts = commands.formatteropts
+# for "historical portability":
+# use locally defined empty option list, if formatteropts isn't
+# available, because commands.formatteropts has been available since
+# 3.2 (or 7a7eed5176a4), even though formatting itself has been
+# available since 2.2 (or ae5f92e154d3)
+formatteropts = getattr(commands, "formatteropts", [])
 
 # for "historical portability":
 # use locally defined option list, if debugrevlogopts isn't available,
