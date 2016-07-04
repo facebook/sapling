@@ -30,6 +30,7 @@ from mercurial import (
     commands,
     copies,
     error,
+    extensions,
     mdiff,
     merge,
     obsolete,
@@ -48,7 +49,17 @@ def safehasattr(thing, attr):
 setattr(util, 'safehasattr', safehasattr)
 
 formatteropts = commands.formatteropts
-revlogopts = commands.debugrevlogopts
+
+# for "historical portability":
+# use locally defined option list, if debugrevlogopts isn't available,
+# because commands.debugrevlogopts has been available since 3.7 (or
+# 5606f7d0d063), even though cmdutil.openrevlog() has been available
+# since 1.9 (or a79fea6b3e77).
+revlogopts = getattr(commands, "debugrevlogopts", [
+        ('c', 'changelog', False, ('open changelog')),
+        ('m', 'manifest', False, ('open manifest')),
+        ('', 'dir', False, ('open directory manifest')),
+        ])
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -821,3 +832,18 @@ def perflrucache(ui, size=4, gets=10000, sets=10000, mixed=10000,
         timer, fm = gettimer(ui, opts)
         timer(fn, title=title)
         fm.end()
+
+def uisetup(ui):
+    if (util.safehasattr(cmdutil, 'openrevlog') and
+        not util.safehasattr(commands, 'debugrevlogopts')):
+        # for "historical portability":
+        # In this case, Mercurial should be 1.9 (or a79fea6b3e77) -
+        # 3.7 (or 5606f7d0d063). Therefore, '--dir' option for
+        # openrevlog() should cause failure, because it has been
+        # available since 3.5 (or 49c583ca48c4).
+        def openrevlog(orig, repo, cmd, file_, opts):
+            if opts.get('dir') and not util.safehasattr(repo, 'dirlog'):
+                raise error.Abort("This version doesn't support --dir option",
+                                  hint="use 3.5 or later")
+            return orig(repo, cmd, file_, opts)
+        extensions.wrapfunction(cmdutil, 'openrevlog', openrevlog)
