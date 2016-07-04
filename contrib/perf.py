@@ -67,7 +67,39 @@ revlogopts = getattr(commands, "debugrevlogopts", [
         ])
 
 cmdtable = {}
-command = cmdutil.command(cmdtable)
+
+# for "historical portability":
+# define parsealiases locally, because cmdutil.parsealiases has been
+# available since 1.5 (or 6252852b4332)
+def parsealiases(cmd):
+    return cmd.lstrip("^").split("|")
+
+if safehasattr(cmdutil, 'command'):
+    import inspect
+    command = cmdutil.command(cmdtable)
+    if 'norepo' not in inspect.getargspec(command)[0]:
+        # for "historical portability":
+        # wrap original cmdutil.command, because "norepo" option has
+        # been available since 3.1 (or 75a96326cecb)
+        _command = command
+        def command(name, options=(), synopsis=None, norepo=False):
+            if norepo:
+                commands.norepo += ' %s' % ' '.join(parsealiases(name))
+            return _command(name, list(options), synopsis)
+else:
+    # for "historical portability":
+    # define "@command" annotation locally, because cmdutil.command
+    # has been available since 1.9 (or 2daa5179e73f)
+    def command(name, options=(), synopsis=None, norepo=False):
+        def decorator(func):
+            if synopsis:
+                cmdtable[name] = func, list(options), synopsis
+            else:
+                cmdtable[name] = func, list(options)
+            if norepo:
+                commands.norepo += ' %s' % ' '.join(parsealiases(name))
+            return func
+        return decorator
 
 def getlen(ui):
     if ui.configbool("perf", "stub"):
