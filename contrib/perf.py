@@ -1,6 +1,23 @@
 # perf.py - performance test routines
 '''helper extension to measure performance'''
 
+# "historical portability" policy of perf.py:
+#
+# We have to do:
+# - make perf.py "loadable" with as wide Mercurial version as possible
+#   This doesn't mean that perf commands work correctly with that Mercurial.
+#   BTW, perf.py itself has been available since 1.1 (or eb240755386d).
+# - make historical perf command work correctly with as wide Mercurial
+#   version as possible
+#
+# We have to do, if possible with reasonable cost:
+# - make recent perf command for historical feature work correctly
+#   with early Mercurial
+#
+# We don't have to do:
+# - make perf command for recent feature work correctly with early
+#   Mercurial
+
 from __future__ import absolute_import
 import functools
 import os
