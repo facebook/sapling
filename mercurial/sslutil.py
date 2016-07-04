@@ -442,6 +442,9 @@ def _defaultcacerts(ui):
     except ImportError:
         pass
 
+    # Apple's OpenSSL has patches that allow a specially constructed certificate
+    # to load the system CA store. If we're running on Apple Python, use this
+    # trick.
     if _plainapplepython():
         dummycert = os.path.join(os.path.dirname(__file__), 'dummycert.pem')
         if os.path.exists(dummycert):
