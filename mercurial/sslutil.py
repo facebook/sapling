@@ -447,6 +447,19 @@ def _defaultcacerts(ui):
     except ImportError:
         pass
 
+    # On Windows, only the modern ssl module is capable of loading the system
+    # CA certificates. If we're not capable of doing that, emit a warning
+    # because we'll get a certificate verification error later and the lack
+    # of loaded CA certificates will be the reason why.
+    # Assertion: this code is only called if certificates are being verified.
+    if os.name == 'nt':
+        if not _canloaddefaultcerts:
+            ui.warn(_('(unable to load Windows CA certificates; see '
+                      'https://mercurial-scm.org/wiki/SecureConnections for '
+                      'how to configure Mercurial to avoid this message)\n'))
+
+        return None
+
     # Apple's OpenSSL has patches that allow a specially constructed certificate
     # to load the system CA store. If we're running on Apple Python, use this
     # trick.

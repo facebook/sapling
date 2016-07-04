@@ -60,6 +60,13 @@ we are able to load CA certs.
   [255]
 #endif
 
+#if no-sslcontext windows
+  $ hg clone https://localhost:$HGPORT/ copy-pull
+  (unable to load Windows CA certificates; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message)
+  abort: error: *certificate verify failed* (glob)
+  [255]
+#endif
+
 #if defaultcacertsloaded
   $ hg clone https://localhost:$HGPORT/ copy-pull
   abort: error: *certificate verify failed* (glob)
