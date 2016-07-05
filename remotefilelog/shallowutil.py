@@ -124,6 +124,27 @@ def readfile(path):
     finally:
         f.close()
 
+
+def unlinkfile(filepath):
+    if os.name == 'nt':
+        # On Windows, os.unlink cannnot delete readonly files
+        os.chmod(filepath, stat.S_IWUSR)
+
+    os.unlink(filepath)
+
+
+def renamefile(source, destination):
+    if os.name == 'nt':
+        # On Windows, os.rename cannot rename readonly files
+        # and cannot overwrite destination if it exists
+        os.chmod(source, stat.S_IWUSR)
+        if os.path.isfile(destination):
+            os.chmod(destination, stat.S_IWUSR)
+            os.unlink(destination)
+
+    os.rename(source, destination)
+
+
 def writefile(path, content, readonly=False):
     dirname, filename = os.path.split(path)
     if not os.path.exists(dirname):
@@ -152,21 +173,14 @@ def writefile(path, content, readonly=False):
             os.umask(oldumask)
             mode = ~oldumask
 
-        os.chmod(temp, mode)
-        os.rename(temp, path)
+        renamefile(temp, path)
+        os.chmod(path, mode)
     except Exception:
         try:
-            os.unlink(temp)
+            unlinkfile(temp)
         except OSError:
             pass
         raise
-
-def unlinkfile(filepath):
-    if os.name == 'nt':
-        # On Windows, os.unlink cannnot delete readonly files
-        os.chmod(filepath, stat.S_IWUSR)
-
-    os.unlink(filepath)
 
 def sortnodes(nodes, parentfunc):
     """Topologically sorts the nodes, using the parentfunc to find
