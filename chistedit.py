@@ -52,7 +52,8 @@ ACTION_LABELS = {
 
 COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
 
-E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN, E_RESIZE = 1, 2, 3, 4, 5, 6, 7
+E_QUIT, E_HISTEDIT = 1, 2
+E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN, E_RESIZE = 3, 4, 5, 6, 7
 MODE_INIT, MODE_PATCH, MODE_RULES, MODE_HELP = 0, 1, 2, 3
 
 KEYTABLE = {
@@ -147,8 +148,8 @@ class histeditrule(object):
 
 # ============ EVENTS ===============
 def movecursor(state, oldpos, newpos):
-    '''Change the rule/commit that the cursor is pointing to, regardless of current
-       mode (you can switch between patches from the view patch window).'''
+    '''Change the rule/commit that the cursor is pointing to, regardless of
+    current mode (you can switch between patches from the view patch window).'''
     state['pos'] = newpos
 
     mode, _ = state['mode']
@@ -218,7 +219,7 @@ def cycleaction(state, pos, next=False):
 
 def changeview(state, delta, unit):
     '''Change the region of whatever is being viewed (a patch or the list of
-       changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'.'''
+    changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'.'''
     mode, _ = state['mode']
     if mode != MODE_PATCH:
         return
