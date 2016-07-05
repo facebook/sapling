@@ -3913,16 +3913,16 @@ def export(ui, repo, *changesets, **opts):
     [('r', 'rev', '', _('search the repository as it is in REV'), _('REV')),
      ('0', 'print0', None, _('end filenames with NUL, for use with xargs')),
     ] + walkopts + formatteropts + subrepoopts,
-    _('[OPTION]... [PATTERN]...'))
+    _('[OPTION]... [FILE]...'))
 def files(ui, repo, *pats, **opts):
     """list tracked files
 
     Print files under Mercurial control in the working directory or
-    specified revision whose names match the given patterns (excluding
-    removed files).
+    specified revision for given files (excluding removed files).
+    Files can be specified as filenames or filesets.
 
-    If no patterns are given to match, this command prints the names
-    of all files under Mercurial control in the working directory.
+    If no files are given to match, this command prints the names
+    of all files under Mercurial control.
 
     .. container:: verbose
 
