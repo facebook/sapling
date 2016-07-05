@@ -53,7 +53,7 @@ ACTION_LABELS = {
 COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
 
 E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN = 1, 2, 3, 4, 5, 6
-MODE_PATCH, MODE_RULES, MODE_HELP = 1, 2, 3
+MODE_INIT, MODE_PATCH, MODE_RULES, MODE_HELP = 0, 1, 2, 3
 
 KEYTABLE = {
     'global': {
@@ -141,7 +141,22 @@ class histeditrule(object):
 
 # ============ EVENTS ===============
 def movecursor(state, oldpos, newpos):
+    '''Change the rule/commit that the cursor is pointing to, regardless of current
+       mode (you can switch between patches from the view patch window).'''
     state['pos'] = newpos
+
+    mode, _ = state['mode']
+    if mode == MODE_RULES:
+        # Scroll through the list by updating the view for MODE_RULES, so that
+        # even if we are not currently viewing the rules, switching back will
+        # result in the cursor's rule being visible.
+        modestate = state['modes'][MODE_RULES]
+        if newpos < modestate['line_offset']:
+            modestate['line_offset'] = newpos
+        elif newpos > modestate['line_offset'] + state['page_height'] - 1:
+            modestate['line_offset'] = newpos - state['page_height'] + 1
+
+    # Reset the patch view region to the top of the new patch.
     state['modes'][MODE_PATCH]['line_offset'] = 0
 
 def changemode(state, mode):
@@ -196,16 +211,19 @@ def cycleaction(state, pos, next=False):
     changeaction(state, pos, KEY_LIST[index % len(KEY_LIST)])
 
 def changeview(state, delta, unit):
-    if state['mode'][0] != MODE_PATCH:
+    '''Change the region of whatever is being viewed (a patch or the list of
+       changesets). 'delta' is an amount (+/- 1) and 'unit' is 'page' or 'line'.'''
+    mode, _ = state['mode']
+    if mode != MODE_PATCH:
         return
-    patch_state = state['modes'][MODE_PATCH]
-    patch_lines = len(patchcontents(state))
-    page_height = patch_state['page_height']
+    mode_state = state['modes'][mode]
+    num_lines = len(patchcontents(state))
+    page_height = state['page_height']
     unit = page_height if unit == 'page' else 1
-    num_pages = 1 + (patch_lines - 1) / page_height
+    num_pages = 1 + (num_lines - 1) / page_height
     max_offset = (num_pages - 1) * page_height
-    newline = patch_state['line_offset'] + delta * unit
-    patch_state['line_offset'] = max(0, min(max_offset, newline))
+    newline = mode_state['line_offset'] + delta * unit
+    mode_state['line_offset'] = max(0, min(max_offset, newline))
 
 def event(state, ch):
     """Change state based on the current character input
@@ -378,20 +396,23 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         rules = state['rules']
         pos = state['pos']
         selected = state['selected']
+        start = state['modes'][MODE_RULES]['line_offset']
 
         conflicts = [r.ctx for r in rules if r.conflicts]
         if len(conflicts) > 0:
             line = "potential conflict in %s" % ','.join(map(str, conflicts))
             addln(rulesscr, -1, 0, line, curses.color_pair(COLOR_WARN))
 
-        for y, rule in enumerate(rules):
+        for y, rule in enumerate(rules[start:]):
+            if y >= state['page_height']:
+                break
             if len(rule.conflicts) > 0:
                 rulesscr.addstr(y, 0, " ", curses.color_pair(COLOR_WARN))
             else:
                 rulesscr.addstr(y, 0, " ", curses.COLOR_BLACK)
-            if y == selected:
+            if y + start == selected:
                 addln(rulesscr, y, 2, rule, curses.color_pair(COLOR_SELECTED))
-            elif y == pos:
+            elif y + start == pos:
                 addln(rulesscr, y, 2, rule, curses.A_BOLD)
             else:
                 addln(rulesscr, y, 2, rule)
@@ -408,16 +429,32 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
         start = state['modes'][MODE_PATCH]['line_offset']
         renderstring(win, state, patchcontents(state)[start:])
 
+    def layout(mode):
+        maxy, maxx = stdscr.getmaxyx()
+        helplen = len(helplines(mode))
+        return {
+            'commit': (8, maxx),
+            'help': (helplen, maxx),
+            'main': (maxy - helplen - 8, maxx),
+        }
+
+    def drawvertwin(size, y, x):
+        win = curses.newwin(size[0], size[1], y, x)
+        y += size[0]
+        return win, y, x
+
     state = {
         'pos': 0,
         'rules': rules,
         'selected': None,
-        'mode': (MODE_RULES, MODE_RULES),
+        'mode': (MODE_INIT, MODE_INIT),
+        'page_height': None,
         'modes': {
+            MODE_RULES: {
+                'line_offset': 0,
+            },
             MODE_PATCH: {
                 'line_offset': 0,
-                'page_height': None,
-                'patch_lines': None,
             }
         },
         'repo': repo,
@@ -429,18 +466,30 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
     stdscr.refresh()
     while True:
         try:
+            oldmode, _ = state['mode']
+            if oldmode == MODE_INIT:
+                changemode(state, MODE_RULES)
             e = event(state, ch)
+
             if e == E_QUIT:
                 return False
             if e == E_HISTEDIT:
                 return state['rules']
             else:
-                maxy, maxx = stdscr.getmaxyx()
-                commitwin = curses.newwin(8, maxx, maxy - 8, 0)
-                helplen = len(helplines(state))
-                helpwin = curses.newwin(helplen, maxx, 0, 0)
-                editwin = curses.newwin(maxy - helplen - 8, maxx, helplen, 0)
-                state['modes'][MODE_PATCH]['page_height'] = editwin.getmaxyx()[0]
+                curmode, _ = state['mode']
+                sizes = layout(curmode)
+                if curmode != oldmode:
+                    state['page_height'] = sizes['main'][0]
+                    # Adjust the view to fit the current screen size.
+                    movecursor(state, state['pos'], state['pos'])
+
+                # Pack the windows against the top, each pane spread across the
+                # full width of the screen.
+                y, x = (0, 0)
+                helpwin, y, x = drawvertwin(sizes['help'], y, x)
+                mainwin, y, x = drawvertwin(sizes['main'], y, x)
+                commitwin, y, x = drawvertwin(sizes['commit'], y, x)
+
                 if e in (E_PAGEDOWN, E_PAGEUP, E_LINEDOWN, E_LINEUP):
                     if e == E_PAGEDOWN:
                         changeview(state, +1, 'page')
@@ -454,14 +503,13 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
                 # start rendering
                 commitwin.erase()
                 helpwin.erase()
-                editwin.erase()
-                curmode, _ = state['mode']
+                mainwin.erase()
                 if curmode == MODE_PATCH:
-                    renderpatch(editwin, state)
+                    renderpatch(mainwin, state)
                 elif curmode == MODE_HELP:
-                    renderstring(editwin, state, __doc__.strip().splitlines())
+                    renderstring(mainwin, state, __doc__.strip().splitlines())
                 else:
-                    renderrules(editwin, state)
+                    renderrules(mainwin, state)
                     rendercommit(commitwin, state)
                 renderhelp(helpwin, state)
                 curses.doupdate()
