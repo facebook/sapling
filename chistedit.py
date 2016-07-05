@@ -353,17 +353,23 @@ def main(repo, rules, stdscr):
         win.addstr(6, 1, conflictstr[:length])
         win.noutrefresh()
 
-    def helplines():
-        help = """
-?: help, up/k: move up, down/j: move down, space: select, v: view patch
-d: drop, e: edit, f: fold, m: mess, p: pick, r: roll
-K: move current up, J: move current down, c: commit changes, q: abort
+    def helplines(state):
+        if state['mode'][0] == MODE_PATCH:
+            help = """\
+?: help, k/up: line up, j/down: line down, v: stop viewing patch
+pgup: prev page, space/pgdn: next page, c: commit, q: abort
 """
-        return help.strip().splitlines()
+        else:
+            help = """\
+?: help, k/up: move up, j/down: move down, space: select, v: view patch
+d: drop, e: edit, f: fold, m: mess, p: pick, r: roll
+pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
+"""
+        return help.splitlines()
 
     def renderhelp(win, state):
         maxy, maxx = win.getmaxyx()
-        for y, line in enumerate(helplines()):
+        for y, line in enumerate(helplines(state)):
             if y > maxy:
                 break
             addln(win, y, 0, line, curses.color_pair(COLOR_HELP))
@@ -432,11 +438,11 @@ K: move current up, J: move current down, c: commit changes, q: abort
             else:
                 maxy, maxx = stdscr.getmaxyx()
                 commitwin = curses.newwin(8, maxx, maxy - 8, 0)
-                helplen = len(helplines())
+                helplen = len(helplines(state))
                 helpwin = curses.newwin(helplen, maxx, 0, 0)
                 editwin = curses.newwin(maxy - helplen - 8, maxx, helplen, 0)
+                state['modes'][MODE_PATCH]['page_height'] = editwin.getmaxyx()[0]
                 if e in (E_PAGEDOWN, E_PAGEUP, E_LINEDOWN, E_LINEUP):
-                    state['modes'][MODE_PATCH]['page_height'] = editwin.getmaxyx()[0]
                     if e == E_PAGEDOWN:
                         changeview(state, +1, 'page')
                     elif e == E_PAGEUP:
