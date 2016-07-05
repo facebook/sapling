@@ -246,6 +246,7 @@ static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
 
   switch (result) {
     case WRITE_TO_FILE_OK:
+      Py_INCREF(Py_None);
       return Py_None;
 
     case WRITE_TO_FILE_OOM:
@@ -422,6 +423,7 @@ static void fastmanifest_diff_callback(
       left_flags == right_flags &&
       left_checksum_sz == right_checksum_sz &&
       memcmp(left_checksum, right_checksum, left_checksum_sz) == 0) {
+    Py_INCREF(Py_None);
     outer = Py_None;
   } else {
     if (left_present) {
