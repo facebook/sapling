@@ -52,7 +52,7 @@ ACTION_LABELS = {
 
 COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
 
-E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN = 1, 2, 3, 4, 5, 6
+E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN, E_RESIZE = 1, 2, 3, 4, 5, 6, 7
 MODE_INIT, MODE_PATCH, MODE_RULES, MODE_HELP = 0, 1, 2, 3
 
 KEYTABLE = {
@@ -99,6 +99,12 @@ KEYTABLE = {
     MODE_HELP: {
     },
 }
+
+def screen_size():
+    import termios
+    from fcntl import ioctl
+    from struct import unpack
+    return unpack('hh', ioctl(1, termios.TIOCGWINSZ, '    '))
 
 class histeditrule(object):
     def __init__(self, ctx, pos, action='pick'):
@@ -234,6 +240,9 @@ def event(state, ch):
     selected = state['selected']
     oldpos = state['pos']
     rules = state['rules']
+
+    if ch in (curses.KEY_RESIZE, "KEY_RESIZE"):
+        return E_RESIZE
 
     lookup_ch = ch
     if '0' <= ch <= '9':
@@ -476,6 +485,11 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
             if e == E_HISTEDIT:
                 return state['rules']
             else:
+                if e == E_RESIZE:
+                    size = screen_size()
+                    if size != stdscr.getmaxyx():
+                        curses.resizeterm(*size)
+
                 curmode, _ = state['mode']
                 sizes = layout(curmode)
                 if curmode != oldmode:
