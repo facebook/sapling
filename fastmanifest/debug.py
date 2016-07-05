@@ -7,17 +7,19 @@
 
 class manifestaccesslogger(object):
     """Class to log manifest access and confirm our assumptions"""
-    def __init__(self, logfile):
-        self._logfile = logfile
+    def __init__(self, ui):
+        self._ui = ui
 
     def revwrap(self, orig, *args, **kwargs):
         """Wraps manifest.rev and log access"""
         r = orig(*args, **kwargs)
-        try:
-            with open(self._logfile, "a") as f:
-                f.write("%s\n" % r)
-        except EnvironmentError:
-            pass
+        logfile = self._ui.config("fastmanifest", "logfile", "")
+        if logfile:
+            try:
+                with open(logfile, "a") as f:
+                    f.write("%s\n" % r)
+            except EnvironmentError:
+                pass
         return r
 
 class fixedcachelimit(object):

@@ -148,8 +148,21 @@ def debugcachemanifest(ui, repo, *pats, **opts):
 def cachemanifest(ui, repo, *pats, **opts):
     cachemanager.cacher.cachemanifest(repo)
 
+class uiproxy(object):
+    """This is a proxy object that forwards all requests to a real ui object."""
+
+    def __init__(self, ui):
+        self.ui = ui
+
+    def _updateui(self, ui):
+        self.ui = ui
+
+    def __getattr__(self, name):
+        return getattr(self.ui, name)
+
 class FastManifestExtension(object):
     initialized = False
+    uiproxy = uiproxy(None)
 
     @staticmethod
     def _logonexit(orig, ui, repo, cmd, fullargs, *args):
@@ -158,13 +171,19 @@ class FastManifestExtension(object):
         return r
 
     @staticmethod
-    def setup(ui):
-        logfile = ui.config("fastmanifest", "logfile", "")
-        if logfile:
-            logger = debug.manifestaccesslogger(logfile)
-            extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
+    def get_ui():
+        return FastManifestExtension.uiproxy
 
-        factory = manifestfactory(ui)
+    @staticmethod
+    def set_ui(ui):
+        FastManifestExtension.uiproxy._updateui(ui)
+
+    @staticmethod
+    def setup():
+        logger = debug.manifestaccesslogger(FastManifestExtension.get_ui())
+        extensions.wrapfunction(manifest.manifest, 'rev', logger.revwrap)
+
+        factory = manifestfactory(FastManifestExtension.get_ui())
         # Wraps all the function creating a manifestdict
         # We have to do that because the logic to create manifest can take
         # 7 different codepaths and we want to retain the node information
@@ -231,9 +250,12 @@ class FastManifestExtension(object):
 
     @staticmethod
     def reposetup(ui, repo):
+        # always update the ui object.
+        FastManifestExtension.set_ui(ui)
+
         if FastManifestExtension.initialized is False:
             try:
-                FastManifestExtension.setup(ui)
+                FastManifestExtension.setup()
             finally:
                 FastManifestExtension.initialized = True
 
