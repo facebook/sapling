@@ -48,9 +48,13 @@ KEY_NEXT_ACTION = ['h', 'KEY_RIGHT']
 KEY_PREV_ACTION = ['l', 'KEY_LEFT']
 KEY_DOWN = ['j', 'KEY_DOWN']
 KEY_UP = ['k', 'KEY_UP']
-KEY_MOVE_DOWN = ['J']
-KEY_MOVE_UP = ['K']
+KEY_MOVE_DOWN = ['J', 'KEY_NPAGE']
+KEY_MOVE_UP = ['K', 'KEY_PPAGE']
 KEY_SEL = [' ']
+KEY_PATCH_PGUP = ['KEY_PPAGE']
+KEY_PATCH_PGDOWN = [' ', 'KEY_NPAGE']
+KEY_PATCH_LINEUP = ['k']
+KEY_PATCH_LINEDOWN = ['j']
 KEY_QUIT = ['q']
 KEY_HISTEDIT = ['c', 'C']
 KEY_SHOWPATCH = ['v']
@@ -71,7 +75,7 @@ ACTION_LABELS = {
 
 COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
 
-E_QUIT, E_HISTEDIT = 1, 2
+E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN = 1, 2, 3, 4, 5, 6
 MODE_PATCH, MODE_RULES, MODE_HELP = 1, 2, 3
 
 class histeditrule(object):
@@ -116,6 +120,7 @@ class histeditrule(object):
 # ============ EVENTS ===============
 def movecursor(state, oldpos, newpos):
     state['pos'] = newpos
+    state['modes'][MODE_PATCH]['line_offset'] = 0
 
 def makeselection(state, pos):
     state['selected'] = pos
@@ -165,6 +170,18 @@ def cycleaction(state, pos, next=False):
         index -= 1
     changeaction(state, pos, KEY_LIST[index % len(KEY_LIST)])
 
+def changeview(state, delta, unit):
+    if state['mode'][0] != MODE_PATCH:
+        return
+    patch_state = state['modes'][MODE_PATCH]
+    patch_lines = len(patchcontents(state))
+    page_height = patch_state['page_height']
+    unit = page_height if unit == 'page' else 1
+    num_pages = 1 + (patch_lines - 1) / page_height
+    max_offset = (num_pages - 1) * page_height
+    newline = patch_state['line_offset'] + delta * unit
+    patch_state['line_offset'] = max(0, min(max_offset, newline))
+
 def event(state, ch):
     """Change state based on the current character input
 
@@ -174,6 +191,17 @@ def event(state, ch):
     selected = state['selected']
     oldpos = state['pos']
     rules = state['rules']
+
+    if state['mode'][0] == MODE_PATCH:
+        if ch in KEY_PATCH_PGDOWN:
+            return E_PAGEDOWN
+        elif ch in KEY_PATCH_PGUP:
+            return E_PAGEUP
+        elif ch in KEY_PATCH_LINEUP:
+            return E_LINEUP
+        elif ch in KEY_PATCH_LINEDOWN:
+            return E_LINEDOWN
+
     if ch in KEY_DOWN or ch in KEY_MOVE_DOWN:
         newpos = min(oldpos + 1, len(rules) - 1)
         movecursor(state, oldpos, newpos)
@@ -237,6 +265,16 @@ def addln(win, y, x, line, color=None):
         win.addstr(y, x, line, color)
     else:
         win.addstr(y, x, line)
+
+def patchcontents(state):
+    repo = state['repo']
+    rule = state['rules'][state['pos']]
+    displayer = cmdutil.show_changeset(repo.ui, repo, {
+        'patch': True, 'verbose': True
+    }, buffered=True)
+    displayer.show(rule.ctx)
+    displayer.close()
+    return displayer.hunk[rule.ctx.rev()].splitlines()
 
 def main(repo, rules, stdscr):
     # initialize color pattern
@@ -337,24 +375,22 @@ K: move current up, J: move current down, c: commit changes, q: abort
         win.noutrefresh()
 
     def renderpatch(win, state):
-        pos = state['pos']
-        rules = state['rules']
-        rule = rules[pos]
-
-        displayer = cmdutil.show_changeset(repo.ui, repo, {
-            'patch': True, 'verbose': True},
-            buffered=True)
-        displayer.show(rule.ctx)
-        displayer.close()
-        output = displayer.hunk[rule.ctx.rev()].splitlines()
-
-        renderstring(win, state, output)
+        start = state['modes'][MODE_PATCH]['line_offset']
+        renderstring(win, state, patchcontents(state)[start:])
 
     state = {
         'pos': 0,
         'rules': rules,
         'selected': None,
         'mode': (MODE_RULES, MODE_RULES),
+        'modes': {
+            MODE_PATCH: {
+                'line_offset': 0,
+                'page_height': None,
+                'patch_lines': None,
+            }
+        },
+        'repo': repo,
     }
 
     # eventloop
@@ -374,6 +410,17 @@ K: move current up, J: move current down, c: commit changes, q: abort
                 helplen = len(helplines())
                 helpwin = curses.newwin(helplen, maxx, 0, 0)
                 editwin = curses.newwin(maxy - helplen - 8, maxx, helplen, 0)
+                if e in (E_PAGEDOWN, E_PAGEUP, E_LINEDOWN, E_LINEUP):
+                    state['modes'][MODE_PATCH]['page_height'] = editwin.getmaxyx()[0]
+                    if e == E_PAGEDOWN:
+                        changeview(state, 1, 'page')
+                    elif e == E_PAGEUP:
+                        changeview(state, -1, 'page')
+                    elif e == E_LINEDOWN:
+                        changeview(state, 1, 'line')
+                    elif e == E_LINEUP:
+                        changeview(state, -1, 'line')
+
                 # start rendering
                 commitwin.erase()
                 helpwin.erase()
