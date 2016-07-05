@@ -248,16 +248,13 @@ class FastManifestExtension(object):
         extensions.wrapfunction(dispatch, 'runcommand',
                         cachemanager.triggers.runcommandtrigger)
 
-    @staticmethod
-    def reposetup(ui, repo):
-        # always update the ui object.
-        FastManifestExtension.set_ui(ui)
+def extsetup(ui):
+    # always update the ui object.  this is probably a bogus ui object, but we
+    # don't want to have a backing ui object of None.
+    FastManifestExtension.set_ui(ui)
 
-        if FastManifestExtension.initialized is False:
-            try:
-                FastManifestExtension.setup()
-            finally:
-                FastManifestExtension.initialized = True
+    FastManifestExtension.setup()
 
 def reposetup(ui, repo):
-    FastManifestExtension.reposetup(ui, repo)
+    # always update the ui object.
+    FastManifestExtension.set_ui(ui)
