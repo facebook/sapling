@@ -82,7 +82,7 @@ def fastmanifesttocache(repo, subset, x):
         datelimit = "and date(-%d)" % cutoff
 
     revs.update(scmutil.revrange(repo,["(%s + parents(%s)) %s"
-                %(query, query, datelimit)]))
+                % (query, query, datelimit)]))
 
     metricscollector.get().recordsample("revsetsize", size=len(revs))
     return subset & revs
@@ -231,6 +231,8 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
 
             computedrevs = scmutil.revrange(repo, revset)
             sortedrevs = sorted(computedrevs, key=lambda x:-x)
+            repo.ui.log("fastmanifest", "FM: trying to cache %s\n"
+                        % str(sortedrevs))
             if ui.configbool("fastmanifest", "randomorder", True):
                 # Make a copy because we want to keep the ordering to assign
                 # mtime below
@@ -248,13 +250,19 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
                 if mannode in cache.ondiskcache:
                     ui.debug("[FM] skipped %s, already cached (fast path)\n" %
                              (mannode,))
+                    repo.ui.log("fastmanifest", "FM: skip(rev, man) %s->%s\n"
+                                %(rev, mannode))
+
                     # Account for the fact that we access this manifest
                     cache.ondiskcache.touch(mannode)
                     continue
                 manifest = repo[rev].manifest()
                 try:
                     cache[mannode] = manifest
+                    repo.ui.log("fastmanifest", "FM: cached(rev,man) %s->%s\n"
+                                %(rev, mannode))
                 except CacheFullException:
+                    repo.ui.log("fastmanifest", "FM: overflow\n")
                     break
 
             # Make the least relevant entries have an artificially older mtime
@@ -284,8 +292,16 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
             return
         raise
 
+    before = cache.ondiskcache.items()
     if limit is not None:
         cache.prune(limit)
+    after = cache.ondiskcache.items()
+    diff = set(after) - set(before)
+    if diff:
+        ui.log("fastmanifest", "FM: removed entries %s\n" % str(diff))
+    else:
+        ui.log("fastmanifest", "FM: no entries removed\n")
+
 
     total, numentries = cache.ondiskcache.totalsize()
     if limit:
@@ -320,6 +336,8 @@ class triggers(object):
         result = orig(*args, **kwargs)
 
         for repo in triggers.repos_to_update:
+            repo.ui.log("fastmanifest", "FM: triggering caching for %s\n"
+                        % repo.root)
             bg = repo.ui.configbool("fastmanifest",
                                     "cacheonchangebackground",
                                     True)
@@ -339,6 +357,8 @@ class triggers(object):
                 cmd.extend(["--repository",
                             repo.root,
                             "cachemanifest"])
+
+                repo.ui.log("fastmanifest", "FM: running command %s\n" % cmd)
                 concurrency.runshellcommand(cmd, silent_worker=silent_worker)
             else:
                 cacher.cachemanifest(repo)
@@ -350,6 +370,7 @@ class triggers(object):
         repo = self._repo
         triggers.repos_to_update.add(repo)
         metricscollector.get().recordsample("trigger", source="bookmark")
+        repo.ui.log("fastmanifest", "FM: caching trigger: bookmark\n")
         return orig(self, *args, **kwargs)
 
     @staticmethod
@@ -357,10 +378,12 @@ class triggers(object):
         repo = self
         triggers.repos_to_update.add(repo)
         metricscollector.get().recordsample("trigger", source="commit")
+        repo.ui.log("fastmanifest", "FM: caching trigger: commit\n")
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def onremotenameschange(orig, repo, *args, **kwargs):
         triggers.repos_to_update.add(repo)
         metricscollector.get().recordsample("trigger", source="remotenames")
+        repo.ui.log("fastmanifest", "FM: caching trigger: remotenames\n")
         return orig(repo, *args, **kwargs)
