@@ -44,29 +44,6 @@ try:
 except ImportError:
     print("Python curses library required", file=sys.stderr)
 
-KEY_NEXT_ACTION = ['h', 'KEY_RIGHT']
-KEY_PREV_ACTION = ['l', 'KEY_LEFT']
-KEY_DOWN = ['j', 'KEY_DOWN']
-KEY_UP = ['k', 'KEY_UP']
-KEY_MOVE_DOWN = ['J', 'KEY_NPAGE']
-KEY_MOVE_UP = ['K', 'KEY_PPAGE']
-KEY_SEL = [' ']
-KEY_PATCH_PGUP = ['KEY_PPAGE']
-KEY_PATCH_PGDOWN = [' ', 'KEY_NPAGE']
-KEY_PATCH_LINEUP = ['k']
-KEY_PATCH_LINEDOWN = ['j']
-KEY_QUIT = ['q']
-KEY_HISTEDIT = ['c', 'C']
-KEY_SHOWPATCH = ['v']
-KEY_HELP = ['?']
-KEY_ACTION = {
-        'd': 'drop',
-        'e': 'edit',
-        'f': 'fold',
-        'm': 'mess',
-        'p': 'pick',
-        'r': 'roll',
-    }
 KEY_LIST = ['pick', 'edit', 'fold', 'drop', 'mess', 'roll']
 ACTION_LABELS = {
     'fold': '^fold',
@@ -77,6 +54,51 @@ COLOR_HELP, COLOR_SELECTED, COLOR_OK, COLOR_WARN  = 1, 2, 3, 4
 
 E_QUIT, E_HISTEDIT, E_PAGEDOWN, E_PAGEUP, E_LINEUP, E_LINEDOWN = 1, 2, 3, 4, 5, 6
 MODE_PATCH, MODE_RULES, MODE_HELP = 1, 2, 3
+
+KEYTABLE = {
+    'global': {
+        'h':         'next-action',
+        'KEY_RIGHT': 'next-action',
+        'l':         'prev-action',
+        'KEY_LEFT':  'prev-action',
+        'q':         'quit',
+        'c':         'histedit',
+        'C':         'histedit',
+        'v':         'showpatch',
+        '?':         'help',
+    },
+    MODE_RULES: {
+        'd':         'action-drop',
+        'e':         'action-edit',
+        'f':         'action-fold',
+        'm':         'action-mess',
+        'p':         'action-pick',
+        'r':         'action-roll',
+        ' ':         'select',
+        'j':         'down',
+        'k':         'up',
+        'KEY_DOWN':  'down',
+        'KEY_UP':    'up',
+        'J':         'move-down',
+        'K':         'move-up',
+        'KEY_NPAGE': 'move-down',
+        'KEY_PPAGE': 'move-up',
+        '0':         'goto',  # Used for 0..9
+    },
+    MODE_PATCH: {
+        ' ':         'page-down',
+        'KEY_NPAGE': 'page-down',
+        'KEY_PPAGE': 'page-up',
+        'j':         'line-down',
+        'k':         'line-up',
+        'KEY_DOWN':  'line-down',
+        'KEY_UP':    'line-up',
+        'J':         'down',
+        'K':         'up',
+    },
+    MODE_HELP: {
+    },
+}
 
 class histeditrule(object):
     def __init__(self, ctx, pos, action='pick'):
@@ -160,7 +182,6 @@ def cycleaction(state, pos, next=False):
     assert 0 <= pos < len(rules)
     current = rules[pos].action
 
-    assert current in KEY_ACTION.values()
     assert current in KEY_LIST
 
     index = KEY_LIST.index(current)
@@ -192,56 +213,60 @@ def event(state, ch):
     oldpos = state['pos']
     rules = state['rules']
 
-    if state['mode'][0] == MODE_PATCH:
-        if ch in KEY_PATCH_PGDOWN:
-            return E_PAGEDOWN
-        elif ch in KEY_PATCH_PGUP:
-            return E_PAGEUP
-        elif ch in KEY_PATCH_LINEUP:
-            return E_LINEUP
-        elif ch in KEY_PATCH_LINEDOWN:
-            return E_LINEDOWN
+    lookup_ch = ch
+    if '0' <= ch <= '9':
+        lookup_ch = '0'
 
-    if ch in KEY_DOWN or ch in KEY_MOVE_DOWN:
+    curmode, prevmode = state['mode']
+    action = KEYTABLE[curmode].get(lookup_ch, KEYTABLE['global'].get(lookup_ch))
+    if action is None:
+        return
+    if action in ('down', 'move-down'):
         newpos = min(oldpos + 1, len(rules) - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None or ch in KEY_MOVE_DOWN:
+        if selected is not None or action == 'move-down':
             swap(state, oldpos, newpos)
-    if ch in KEY_UP or ch in KEY_MOVE_UP:
+    elif action in ('up', 'move-up'):
         newpos = max(0, oldpos - 1)
         movecursor(state, oldpos, newpos)
-        if selected is not None or ch in KEY_MOVE_UP:
+        if selected is not None or action == 'move-up':
             swap(state, oldpos, newpos)
-    if ch in KEY_NEXT_ACTION:
+    elif action == 'next-action':
         cycleaction(state, oldpos, next=True)
-    if ch in KEY_PREV_ACTION:
+    elif action == 'prev-action':
         cycleaction(state, oldpos, next=False)
-    if ch in KEY_SEL:
+    elif action == 'select':
         selected = oldpos if selected is None else None
         makeselection(state, selected)
-    if '0' <= ch <= '9' and int(ch) < len(rules):
+    elif action == 'goto' and int(ch) < len(rules):
         newrule = next((r for r in rules if r.origpos == int(ch)))
         movecursor(state, oldpos, newrule.pos)
         if selected is not None:
             swap(state, oldpos, newrule.pos)
-    if ch in KEY_ACTION:
-        changeaction(state, oldpos, KEY_ACTION[ch])
-    if ch in KEY_SHOWPATCH:
-        cur, prev = state['mode']
-        if cur == MODE_PATCH:
-            state['mode'] = (MODE_RULES, cur)
+    elif action.startswith('action-'):
+        changeaction(state, oldpos, action[7:])
+    elif action == 'showpatch':
+        if curmode == MODE_PATCH:
+            state['mode'] = (MODE_RULES, curmode)
         else:
-            state['mode'] = (MODE_PATCH, cur)
-    if ch in KEY_HELP:
-        cur, prev = state['mode']
-        if cur == MODE_HELP:
-            state['mode'] = (MODE_RULES, cur)
+            state['mode'] = (MODE_PATCH, curmode)
+    elif action == 'help':
+        if curmode == MODE_HELP:
+            state['mode'] = (MODE_RULES, curmode)
         else:
-            state['mode'] = (MODE_HELP, cur)
-    if ch in KEY_QUIT:
+            state['mode'] = (MODE_HELP, curmode)
+    elif action == 'quit':
         return E_QUIT
-    if ch in KEY_HISTEDIT:
+    elif action == 'histedit':
         return E_HISTEDIT
+    elif action == 'page-down':
+        return E_PAGEDOWN
+    elif action == 'page-up':
+        return E_PAGEUP
+    elif action == 'line-down':
+        return E_LINEDOWN
+    elif action == 'line-up':
+        return E_LINEUP
 
 def makecommands(rules):
     """Returns a list of commands consumable by histedit --commands based on
@@ -413,11 +438,11 @@ K: move current up, J: move current down, c: commit changes, q: abort
                 if e in (E_PAGEDOWN, E_PAGEUP, E_LINEDOWN, E_LINEUP):
                     state['modes'][MODE_PATCH]['page_height'] = editwin.getmaxyx()[0]
                     if e == E_PAGEDOWN:
-                        changeview(state, 1, 'page')
+                        changeview(state, +1, 'page')
                     elif e == E_PAGEUP:
                         changeview(state, -1, 'page')
                     elif e == E_LINEDOWN:
-                        changeview(state, 1, 'line')
+                        changeview(state, +1, 'line')
                     elif e == E_LINEUP:
                         changeview(state, -1, 'line')
 
