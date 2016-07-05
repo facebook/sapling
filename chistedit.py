@@ -144,6 +144,10 @@ def movecursor(state, oldpos, newpos):
     state['pos'] = newpos
     state['modes'][MODE_PATCH]['line_offset'] = 0
 
+def changemode(state, mode):
+    curmode, _ = state['mode']
+    state['mode'] = (mode, curmode)
+
 def makeselection(state, pos):
     state['selected'] = pos
 
@@ -246,15 +250,9 @@ def event(state, ch):
     elif action.startswith('action-'):
         changeaction(state, oldpos, action[7:])
     elif action == 'showpatch':
-        if curmode == MODE_PATCH:
-            state['mode'] = (MODE_RULES, curmode)
-        else:
-            state['mode'] = (MODE_PATCH, curmode)
+        changemode(state, MODE_PATCH if curmode != MODE_PATCH else prevmode)
     elif action == 'help':
-        if curmode == MODE_HELP:
-            state['mode'] = (MODE_RULES, curmode)
-        else:
-            state['mode'] = (MODE_HELP, curmode)
+        changemode(state, MODE_HELP if curmode != MODE_HELP else prevmode)
     elif action == 'quit':
         return E_QUIT
     elif action == 'histedit':
