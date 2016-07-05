@@ -368,22 +368,34 @@ class triggers(object):
     @staticmethod
     def onbookmarkchange(orig, self, *args, **kwargs):
         repo = self._repo
-        triggers.repos_to_update.add(repo)
-        metricscollector.get().recordsample("trigger", source="bookmark")
-        repo.ui.log("fastmanifest", "FM: caching trigger: bookmark\n")
+        ui = repo.ui
+
+        if ui.configbool("fastmanifest", "cacheonchange", False):
+            triggers.repos_to_update.add(repo)
+            metricscollector.get().recordsample("trigger", source="bookmark")
+            ui.log("fastmanifest", "FM: caching trigger: bookmark\n")
+
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def oncommit(orig, self, *args, **kwargs):
         repo = self
-        triggers.repos_to_update.add(repo)
-        metricscollector.get().recordsample("trigger", source="commit")
-        repo.ui.log("fastmanifest", "FM: caching trigger: commit\n")
+        ui = repo.ui
+
+        if ui.configbool("fastmanifest", "cacheonchange", False):
+            triggers.repos_to_update.add(repo)
+            metricscollector.get().recordsample("trigger", source="commit")
+            ui.log("fastmanifest", "FM: caching trigger: commit\n")
+
         return orig(self, *args, **kwargs)
 
     @staticmethod
     def onremotenameschange(orig, repo, *args, **kwargs):
-        triggers.repos_to_update.add(repo)
-        metricscollector.get().recordsample("trigger", source="remotenames")
-        repo.ui.log("fastmanifest", "FM: caching trigger: remotenames\n")
+        ui = repo.ui
+
+        if ui.configbool("fastmanifest", "cacheonchange", False):
+            triggers.repos_to_update.add(repo)
+            metricscollector.get().recordsample("trigger", source="remotenames")
+            ui.log("fastmanifest", "FM: caching trigger: remotenames\n")
+
         return orig(repo, *args, **kwargs)

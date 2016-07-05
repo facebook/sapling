@@ -210,25 +210,24 @@ class FastManifestExtension(object):
         )
         revsetmod.safesymbols.add('fastmanifestcached')
 
-        if ui.configbool("fastmanifest", "cacheonchange", False):
-            # Trigger to enable caching of relevant manifests
-            extensions.wrapfunction(bookmarks.bmstore, '_write',
-                                    cachemanager.triggers.onbookmarkchange)
-            extensions.wrapfunction(localrepo.localrepository, 'commitctx',
-                                    cachemanager.triggers.oncommit)
-            try:
-                remotenames = extensions.find('remotenames')
-            except KeyError:
-                pass
-            else:
-                if remotenames:
-                    extensions.wrapfunction(
-                        remotenames,
-                        'saveremotenames',
-                        cachemanager.triggers.onremotenameschange)
+        # Trigger to enable caching of relevant manifests
+        extensions.wrapfunction(bookmarks.bmstore, '_write',
+                                cachemanager.triggers.onbookmarkchange)
+        extensions.wrapfunction(localrepo.localrepository, 'commitctx',
+                                cachemanager.triggers.oncommit)
+        try:
+            remotenames = extensions.find('remotenames')
+        except KeyError:
+            pass
+        else:
+            if remotenames:
+                extensions.wrapfunction(
+                    remotenames,
+                    'saveremotenames',
+                    cachemanager.triggers.onremotenameschange)
 
-            extensions.wrapfunction(dispatch, 'runcommand',
-                            cachemanager.triggers.runcommandtrigger)
+        extensions.wrapfunction(dispatch, 'runcommand',
+                        cachemanager.triggers.runcommandtrigger)
 
     @staticmethod
     def reposetup(ui, repo):
