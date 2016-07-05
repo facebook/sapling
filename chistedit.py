@@ -353,8 +353,8 @@ def main(repo, rules, stdscr):
         win.addstr(6, 1, conflictstr[:length])
         win.noutrefresh()
 
-    def helplines(state):
-        if state['mode'][0] == MODE_PATCH:
+    def helplines(mode):
+        if mode == MODE_PATCH:
             help = """\
 ?: help, k/up: line up, j/down: line down, v: stop viewing patch
 pgup: prev page, space/pgdn: next page, c: commit, q: abort
@@ -369,7 +369,8 @@ pgup/K: move patch up, pgdn/J: move patch down, c: commit, q: abort
 
     def renderhelp(win, state):
         maxy, maxx = win.getmaxyx()
-        for y, line in enumerate(helplines(state)):
+        mode, _ = state['mode']
+        for y, line in enumerate(helplines(mode)):
             if y > maxy:
                 break
             addln(win, y, 0, line, curses.color_pair(COLOR_HELP))
