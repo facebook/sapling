@@ -236,7 +236,7 @@ class EdenClient(object):
 
     def unmount_cmd(self):
         '''Executes unmount command'''
-        self.run_cmd('unmount', self._client_name)
+        self.run_cmd('unmount', self._mount_path)
 
     def in_proc_mounts(self):
         '''Gets all eden mounts found in /proc/mounts, and returns

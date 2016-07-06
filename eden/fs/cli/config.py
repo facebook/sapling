@@ -196,27 +196,9 @@ class Config:
         except EdenService.EdenError as ex:
             raise Exception(ex.message)
 
-    def mount(self, name):
-        info = self.get_client_info(name)
-        mount_point = info['mount']
-        _verify_mount_point(mount_point)
-        self._get_or_create_write_dir(name)
-        mount_info = eden_ttypes.MountInfo(mountPoint=mount_point,
-                                           edenClientPath=info['client-dir'])
+    def unmount(self, path):
         client = self.get_thrift_client()
-        try:
-            client.mount(mount_info)
-        except EdenService.EdenError as ex:
-            # str(ex) yields a rather ugly string, this reboxes the
-            # exception so that the error message looks nicer in
-            # the driver script.
-            raise Exception(ex.message)
-
-    def unmount(self, name):
-        info = self.get_client_info(name)
-        mount_point = info['mount']
-        client = self.get_thrift_client()
-        client.unmount(mount_point)
+        client.unmount(path)
 
     def check_health(self):
         '''

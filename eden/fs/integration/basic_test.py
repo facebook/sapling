@@ -157,7 +157,7 @@ class BasicTest(testcase.EdenTestCase):
 
         self.assertFalse(eden.in_proc_mounts())
 
-        eden.mount_cmd()
+        eden.clone_cmd()
 
         entries = sorted(os.listdir(eden.mount_path))
         self.assertEqual(['adir', 'hello', 'slink'], entries)

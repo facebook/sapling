@@ -219,9 +219,10 @@ def do_mount(args):
 
 
 def do_unmount(args):
+    args.path = normalize_path_arg(args.path)
     config = create_config(args)
     try:
-        return config.unmount(args.name)
+        return config.unmount(args.path)
     except Exception as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -400,12 +401,6 @@ def create_parser():
         'list', help='List available clients')
     list_parser.set_defaults(func=do_list)
 
-    mount_parser = subparsers.add_parser(
-        'mount', help='Mount a specific client')
-    mount_parser.add_argument(
-        'name', help='Name of the client to mount')
-    mount_parser.set_defaults(func=do_mount)
-
     repository_parser = subparsers.add_parser(
         'repository', help='List all repositories')
     repository_parser.add_argument(
@@ -431,7 +426,7 @@ def create_parser():
     unmount_parser = subparsers.add_parser(
         'unmount', help='Unmount a specific client')
     unmount_parser.add_argument(
-        'name', help='Name of client to unmount')
+        'path', help='Path where client should be unmounted from')
     unmount_parser.set_defaults(func=do_unmount)
 
     return parser, subparsers
