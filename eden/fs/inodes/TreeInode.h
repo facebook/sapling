@@ -39,6 +39,10 @@ class TreeInode : public fusell::DirInode {
       PathComponentPiece namepiece) override;
   folly::Future<std::unique_ptr<fusell::DirHandle>> opendir(
       const struct fuse_file_info& fi) override;
+  folly::Future<folly::Unit> rename(
+      PathComponentPiece name,
+      std::shared_ptr<DirInode> newParent,
+      PathComponentPiece newName) override;
 
   const Tree* getTree() const;
   fuse_ino_t getParent() const;

@@ -163,6 +163,12 @@ void InodeNameManager::rename(
   // Remove from old
   nameIndex.erase(it);
 
+  // If the newName already exists, remove it
+  it = nameIndex.find(std::make_tuple(newParent, newName));
+  if (it != nameIndex.end()) {
+    nameIndex.erase(it);
+  }
+
   // Now we'll re-insert with the new parent info
   node->renamed(newParent, newName);
   map_.insert(node);

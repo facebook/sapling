@@ -182,9 +182,21 @@ void Overlay::makeWhiteout(RelativePathPiece path) {
 
 void Overlay::makeOpaque(RelativePathPiece path) {
   auto oname = localDir_ + path + PathComponentPiece(kOpaque);
-  // the file descriptor for file will be automatically released
-  // when we return from this function.
-  File file(oname.c_str(), O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+  try {
+    // the file descriptor for file will be automatically released
+    // when we return from this function.
+    File file(oname.c_str(), O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+  } catch (const std::system_error& e) {
+    if (e.code().category() == std::system_category() &&
+        e.code().value() == ENOTDIR) {
+      // This is OK: it only makes sense to make dirs opaque and
+      // we were trying to make a file opaque.  We check this here
+      // rather than before trying to call makeOpaque because this
+      // is less prone to racing.
+      return;
+    }
+    throw;
+  }
 }
 
 bool Overlay::removeWhiteout(RelativePathPiece path) {
@@ -224,6 +236,32 @@ void Overlay::removeFile(RelativePathPiece path, bool needWhiteout) {
 
   if (needWhiteout) {
     makeWhiteout(path);
+  }
+}
+
+void Overlay::renameFile(
+    RelativePathPiece sourcePath,
+    RelativePathPiece destPath,
+    bool srcNeedsWhiteout) {
+  auto parent = destPath.dirname();
+  if (isWhiteout(parent)) {
+    folly::throwSystemErrorExplicit(
+        ENOTDIR, "a parent of ", destPath, " is whiteout");
+  }
+  makeDirs(parent);
+
+  auto absoluteSourcePath = localDir_ + sourcePath;
+  auto absoluteDestPath = localDir_ + destPath;
+
+  folly::checkUnixError(
+      rename(absoluteSourcePath.c_str(), absoluteDestPath.c_str()));
+
+  if (removeWhiteout(destPath)) {
+    makeOpaque(destPath);
+  }
+
+  if (srcNeedsWhiteout) {
+    makeWhiteout(sourcePath);
   }
 }
 

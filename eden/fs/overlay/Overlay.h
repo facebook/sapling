@@ -94,6 +94,17 @@ class Overlay {
    */
   void removeFile(RelativePathPiece path, bool needWhiteout);
 
+  /** Rename a file from sourcePath -> destPath
+   * The sourcePath and destPath.dirname() must already exist, otherwise
+   * an error is raised.
+   * If srcNeedsWhiteout is true, create a whiteout entry for sourcePath
+   * after it has been renamed.
+   */
+  void renameFile(
+      RelativePathPiece sourcePath,
+      RelativePathPiece destPath,
+      bool srcNeedsWhiteout);
+
   /** Open a file in the overlay area.
    * If the flags include O_CREAT, the semantics are similar to makeDir()
    * above: any ancestor component of path that is whiteout will cause

@@ -13,6 +13,7 @@
 #include "TreeEntryFileInode.h"
 #include "TreeInodeDirHandle.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileData.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/overlay/Overlay.h"
@@ -260,6 +261,46 @@ folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
   }
 
   overlay->removeDir(targetName, needWhiteout);
+  return folly::Unit{};
+}
+
+folly::Future<folly::Unit> TreeInode::rename(
+    PathComponentPiece name,
+    std::shared_ptr<DirInode> newParent,
+    PathComponentPiece newName) {
+  auto targetDir = std::dynamic_pointer_cast<TreeInode>(newParent);
+  if (!targetDir) {
+    // This probably can't happen, but it is better to be safe than sorry.
+    folly::throwSystemErrorExplicit(EXDEV, "target dir is not a TreeInode");
+  }
+
+  auto childInode = getChildByName(name).get();
+  if (std::dynamic_pointer_cast<TreeInode>(childInode)) {
+    // We'd have to recursively materialize the dir before we can move it
+    // in our current model, so we're focusing on renaming files first.
+    folly::throwSystemErrorExplicit(ENOSYS, "don't yet support renaming dirs");
+  }
+
+  auto nameMgr = getNameMgr();
+  auto sourceName = nameMgr->resolvePathToNode(getNodeId()) + name;
+
+  // Ensure that the file is materialized, otherwise the rename call
+  // performed by the overlay manager will fail
+  auto fileInode = std::dynamic_pointer_cast<TreeEntryFileInode>(childInode);
+  if (!fileInode) {
+    // This can't happen, but it is better to be safe than sorry.
+    folly::throwSystemErrorExplicit(
+        EXDEV, "source file is not a TreeEntryFileInode");
+  }
+  auto fileData = fileInode->getOrLoadData();
+  // We need O_RDWR so that the overlay manager populates the local file
+  fileData->materialize(O_RDWR, sourceName);
+
+  auto targetName =
+      nameMgr->resolvePathToNode(targetDir->getNodeId()) + newName;
+  bool needWhiteout = getTreeEntry(name) != nullptr;
+
+  getOverlay()->renameFile(sourceName, targetName, needWhiteout);
   return folly::Unit{};
 }
 

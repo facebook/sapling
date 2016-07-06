@@ -69,7 +69,7 @@ folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::setattr(
   // Minor optimization: if we know that the file is being completed truncated
   // as part of this operation, there's no need to fetch the underlying data,
   // so pass on the truncate flag our underlying open call
-  if ((to_set & FUSE_SET_ATTR_MODE) && attr.st_size == 0) {
+  if ((to_set & FUSE_SET_ATTR_SIZE) && attr.st_size == 0) {
     open_flags |= O_TRUNC;
   }
 
