@@ -85,7 +85,8 @@ class hybridmanifest(object):
                 self.__cachedmanifest = fastmanifestdict(fm)
 
             self.incache = self.__cachedmanifest is not None
-            metricscollector.get().recordsample("cachehit", hit=self._incache)
+            metricscollector.get().recordsample("cachehit", hit=self.incache,
+                                                            node=self.cachekey)
             self.debug("[FM] cache %s for fastmanifest %s\n"
                        % ("hit" if self.incache else "miss", self.cachekey))
 
@@ -153,30 +154,30 @@ class hybridmanifest(object):
         matches = self._manifest('matches').matches(*args, **kwargs)
         return self._converttohybridmanifest(matches)
 
-    def _getmatchingtypemanifest(self, m2):
+    def _getmatchingtypemanifest(self, m2, operation):
         # Find _m1 and _m2 of the same type, to provide the fastest computation
         _m1, _m2 = None, None
         hit = False
         if isinstance(m2, hybridmanifest):
-            self.debug("[FM] other side is hybrid manifest\n")
+            self.debug("[FM] %s: other side is hybrid manifest\n" % operation)
             # CACHE HIT
             if self._incache() and m2._incache():
                 _m1, _m2 = self._cachedmanifest(), m2._cachedmanifest()
                 # _m1 or _m2 can be None if _incache was True if the cache
                 # got garbage collected in the meantime or entry is corrupted
                 if _m1 is None or _m2 is None:
-                    self.debug("[FM] unable to load one or "
-                               "more manifests\n")
+                    self.debug("[FM] %s: unable to load one or "
+                               "more manifests\n" % operation)
                     _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
                 else:
                     hit = True
             # CACHE MISS
             else:
-                self.debug("[FM] cache miss\n")
+                self.debug("[FM] %s: cache miss\n" % operation)
                 _m1, _m2 = self._flatmanifest(), m2._flatmanifest()
         else:
             # This happens when diffing against a new manifest (like rev -1)
-            self.debug("[FM] other side not hybrid manifest\n")
+            self.debug("[FM] %s: other side not hybrid manifest\n" % operation)
             _m1, _m2 = self._flatmanifest(), m2
 
         assert type(_m1) == type(_m2)
@@ -184,13 +185,13 @@ class hybridmanifest(object):
 
     def diff(self, m2, *args, **kwargs):
         self.debug("[FM] performing diff\n")
-        _m1, _m2, hit = self._getmatchingtypemanifest(m2)
+        _m1, _m2, hit = self._getmatchingtypemanifest(m2, "diff")
         metricscollector.get().recordsample("diffcachehit", hit=hit)
         return _m1.diff(_m2, *args, **kwargs)
 
     def filesnotin(self, m2, *args, **kwargs):
         self.debug("[FM] performing filesnotin\n")
-        _m1, _m2, hit = self._getmatchingtypemanifest(m2)
+        _m1, _m2, hit = self._getmatchingtypemanifest(m2, "filesnotin")
         metricscollector.get().recordsample("filesnotincachehit", hit=hit)
         return _m1.filesnotin(_m2, *args, **kwargs)
 

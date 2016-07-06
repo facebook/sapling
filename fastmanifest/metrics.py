@@ -23,8 +23,6 @@
 # the metrics collected for each command with ui.status at the end of each
 # command.
 
-from mercurial import util
-
 FASTMANIFEST_DONOTREPORT_METRICS = set([
     "cachehit",
     "diffcachehit",
@@ -90,23 +88,31 @@ class metricscollector(object):
         return self
 
     def _addaggregatesamples(self):
-        def _addhitratio(key, aggkey):
+        def _addhitratio(key, aggkey, dedupe=False):
             # Aggregate the cache hit and miss to build a hit ratio
-            # store the ratio as aggkey : {aggkey: ratio} in self.samples
-            hit = len([s for s in self.samples
-                         if s[0] == key and s[1]["hit"]])
-            miss = len([s for s in self.samples
-                          if s[0] == key and not s[1]["hit"]])
+            # store the ratio as aggkey : {ratio: ratio} in self.samples
+            # If dedupe is set, will dedupe using the node field of each sample
+            hitlist = (s for s in self.samples
+                         if s[0] == key and s[1]["hit"])
+            misslist = (s for s in self.samples
+                          if s[0] == key and not s[1]["hit"])
+            if dedupe:
+                hit = len(set(s[1]["node"] for s in hitlist))
+                miss = len(set(s[1]["node"] for s in misslist))
+            else:
+                hit = len(list(hitlist))
+                miss = len(list(misslist))
+
             if miss + hit == 0:
                 ratio = -1
             else:
                 ratio=float(hit) * 100 / (miss + hit)
 
-            data = { aggkey: ratio }
+            data = { aggkey: int(ratio) }
 
             self.recordsample(aggkey, **data)
 
-        _addhitratio("cachehit", "cachehitratio")
+        _addhitratio("cachehit", "cachehitratio", dedupe=True)
         _addhitratio("diffcachehit", "diffcachehitratio")
         _addhitratio("filesnotincachehit", "filesnotincachehitratio")
 

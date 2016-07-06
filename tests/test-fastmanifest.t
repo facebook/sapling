@@ -27,6 +27,8 @@ Check diagnosis, debugging information
   > randomorder=False
   > EOF
 
+Here we expect a cache hit of 100% because we are based of revision -1 that
+is cached
   $ mkcommit a
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
@@ -34,10 +36,13 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
+
+For all the next ones, we expect a cache hit of 50% because we are checking the
+manifest of each parent, one is cached (-1) and the other is not:
   $ mkcommit b
   [FM-METRICS] Begin metrics
   [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
@@ -45,7 +50,7 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -56,7 +61,7 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -67,7 +72,7 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -78,7 +83,7 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 50)]
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
@@ -86,16 +91,16 @@ Check diagnosis, debugging information
   [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
-  [FM] other side is hybrid manifest
-  [FM] cache miss
+  [FM] diff: other side is hybrid manifest
+  [FM] diff: cache miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
   @@ -0,0 +1,1 @@
   +e
   [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 0.0)]
+  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 0)]
+  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 0)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
   $ cat >> .hg/hgrc << EOF
@@ -124,7 +129,7 @@ Check diagnosis, debugging information
   [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
-  [FM] other side is hybrid manifest
+  [FM] diff: other side is hybrid manifest
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -144,8 +149,8 @@ Test the --pruneall command to prune all the cached manifests
   [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] performing diff
-  [FM] other side is hybrid manifest
-  [FM] cache miss
+  [FM] diff: other side is hybrid manifest
+  [FM] diff: cache miss
   diff -r 47d2a3944de8b013de3be9578e8e344ea2e6c097 -r 9d206ffc875e1bc304590549be293be36821e66c e
   --- /dev/null
   +++ b/e
@@ -182,7 +187,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] cache hit for fastmanifest 1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM] performing diff
-  [FM] other side is hybrid manifest
+  [FM] diff: other side is hybrid manifest
   diff -r 9d206ffc875e1bc304590549be293be36821e66c -r bbc3e467917630e7d77cd77298e1027030972893 f
   --- /dev/null
   +++ b/f
@@ -366,5 +371,4 @@ Check that trimming the cache to 0 byte works
 Use the cache in a commit.
   $ hg debugcachemanifest -a
   $ mkcommit g
-
   $ cd ..
