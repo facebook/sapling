@@ -156,20 +156,17 @@ def do_repository(args):
         if git_dir:
             repo_type = 'git'
             source = git_dir
-            snapshot_id = _get_git_commit(git_dir)
         else:
             hg_repo = _get_hg_repo(args.path)
             if hg_repo:
                 repo_type = 'hg'
                 source = hg_repo
-                snapshot_id = _get_hg_commit(args.path)
         if repo_type is None:
             print_stderr(
                 '%s does not look like a git or hg repository' % args.path)
             return 1
         try:
             config.add_repository(args.name,
-                                  snapshot_id,
                                   repo_type=repo_type,
                                   source=source,
                                   with_buck=args.with_buck)
@@ -198,8 +195,24 @@ def do_list(args):
 def do_clone(args):
     args.path = normalize_path_arg(args.path)
     config = create_config(args)
+    snapshot_id = args.snapshot
+    if not snapshot_id:
+        try:
+            source = config.get_repo_source(args.repo)
+        except Exception as ex:
+            print_stderr('{}', ex)
+            return 1
+
+        if source['type'] == 'git':
+            snapshot_id = _get_git_commit(source['path'])
+        elif source['type'] == 'hg':
+            snapshot_id = _get_hg_commit(source['path'])
+        else:
+            print_stderr(
+                '%s does not look like a git or hg repository' % args.path)
+            return 1
     try:
-        return config.clone(args.repo, args.path)
+        return config.clone(args.repo, args.path, snapshot_id)
     except Exception as ex:
         print_stderr('error: {}', ex)
         return 1
@@ -361,6 +374,8 @@ def create_parser():
         'repo', help='Name of repository to clone')
     clone_parser.add_argument(
         'path', help='Path where the client should be mounted')
+    clone_parser.add_argument(
+        '--snapshot', '-s', type=str, help='Snapshot id of revision')
     clone_parser.set_defaults(func=do_clone)
 
     daemon_parser = subparsers.add_parser(

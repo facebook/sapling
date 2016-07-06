@@ -73,6 +73,23 @@ class Config:
         sorted(result)
         return result
 
+    def get_repo_source(self, name):
+        '''
+        Returns a dictionary containing the repo_type and repo_source of the
+        repository specified by name.
+
+        Raises an exception if the repository does not exist.
+        '''
+        rc_files = self.get_rc_files()
+        parser = configparser.ConfigParser()
+        parser.read(rc_files)
+        for section in parser.sections():
+            header = section.split(' ')
+            if len(header) == 2:
+                if header[0] == 'repository' and header[1] == name:
+                    return parser[section]
+        raise Exception('Error: repository %s does not exist.' % name)
+
     def get_client_names(self):
         clients_dir = self._get_clients_dir()
         if not os.path.isdir(clients_dir):
@@ -126,18 +143,12 @@ class Config:
             # the driver script.
             raise Exception(ex.message)
 
-    def add_repository(self, name, snapshot_id, repo_type,
-                       source, with_buck=False):
+    def add_repository(self, name, repo_type, source, with_buck=False):
         # create a directory for client to store repository metadata
         client_dir = os.path.join(self._get_clients_dir(), name)
         if os.path.isdir(client_dir):
             raise Exception('Error: repository %s already exists.' % name)
         os.makedirs(client_dir)
-
-        if snapshot_id:
-            client_snapshot = os.path.join(client_dir, SNAPSHOT)
-            with open(client_snapshot, 'w') as f:
-                f.write(snapshot_id + '\n')
 
         bind_mounts = {}
         bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
@@ -170,8 +181,16 @@ class Config:
         with open(config_ini, mode) as f:
             parser.write(f)
 
-    def clone(self, repo_name, path):
+    def clone(self, repo_name, path, snapshot_id):
         client_path = os.path.join(self._get_clients_dir(), repo_name)
+
+        if snapshot_id:
+            client_snapshot = os.path.join(client_path, SNAPSHOT)
+            with open(client_snapshot, 'w') as f:
+                f.write(snapshot_id + '\n')
+        else:
+            raise Exception('Error: snapshot id not provided')
+
         client_config = os.path.join(client_path, CONFIG_JSON)
         config_data = None
         with open(client_config) as f:
