@@ -8,6 +8,7 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import collections
+import configparser
 import errno
 import json
 import os
@@ -21,6 +22,10 @@ from facebook.eden import EdenService
 import facebook.eden.ttypes as eden_ttypes
 from fb303.ttypes import fb_status
 import thrift
+
+# These are INI files that hold config data.
+GLOBAL_CONFIG_DIR = '/etc/eden/config.d'
+HOME_CONFIG = '.edenrc'
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = 'clients'
@@ -44,6 +49,29 @@ class EdenStartError(Exception):
 class Config:
     def __init__(self, config_dir):
         self._config_dir = config_dir
+
+    def get_rc_files(self):
+        rc_files = []
+        if os.path.isdir(GLOBAL_CONFIG_DIR):
+            rc_files = os.listdir(GLOBAL_CONFIG_DIR)
+            rc_files = [os.path.join(GLOBAL_CONFIG_DIR, f) for f in rc_files]
+        sorted(rc_files)
+        local_config = os.path.join(util.get_home_dir(), HOME_CONFIG)
+        if os.path.isfile(local_config):
+            rc_files.append(local_config)
+        return rc_files
+
+    def get_repository_list(self):
+        result = []
+        rc_files = self.get_rc_files()
+        parser = configparser.ConfigParser()
+        parser.read(rc_files)
+        for section in parser.sections():
+            header = section.split(' ')
+            if len(header) == 2 and header[0] == 'repository':
+                result.append(header[1])
+        sorted(result)
+        return result
 
     def get_client_names(self):
         clients_dir = self._get_clients_dir()

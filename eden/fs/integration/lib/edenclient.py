@@ -54,6 +54,8 @@ class EdenClient(object):
         self._mount_path = os.path.join(self._test_case.tmp_dir,
                                         self.name + '.mount')
         self._process = None
+        self._home_dir = self._test_case.new_tmp_dir()
+        self._home_dir_reset = os.getenv('HOME')
 
     def __enter__(self):
         return self
@@ -63,6 +65,7 @@ class EdenClient(object):
 
     def cleanup(self):
         '''Stop the instance and clean up its temporary directories'''
+        os.environ['HOME'] = self._home_dir_reset
         self.kill()
         self.cleanup_dirs()
 
@@ -119,7 +122,7 @@ class EdenClient(object):
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         '''
         cmd = self._get_eden_args(command, *args)
-        subprocess.check_call(cmd)
+        return subprocess.check_output(cmd).decode('utf-8')
 
     def run_unchecked(self, command, *args):
         '''
@@ -161,6 +164,10 @@ class EdenClient(object):
         self._repo_path = repo_path
         self._client_name = client_name
 
+        # TODO: Find a way to test this without depending on $HOME, since it can
+        # potentially be unsafe to run tests in parallel if another test is
+        # running at the same time that depends on the $HOME value.
+        os.environ['HOME'] = self._home_dir
         self.run_cmd('init',
                      '--repo', self._repo_path,
                      '--mount', self._mount_path,
@@ -209,6 +216,11 @@ class EdenClient(object):
 
         self.daemon_cmd()
         self.mount_cmd()
+
+    def repository_cmd(self):
+        '''Executes repository command'''
+
+        return self.run_cmd('repository')
 
     def mount_cmd(self):
         '''Executes mount command'''

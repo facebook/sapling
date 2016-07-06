@@ -178,6 +178,17 @@ def do_init(args):
         args.repo))
 
 
+def do_repository(args):
+    config = create_config(args)
+    try:
+        repo_list = config.get_repository_list()
+    except Exception as ex:
+        print_stderr('error: {}', ex)
+        return 1
+    for repo in repo_list:
+        print(repo)
+
+
 def do_list(args):
     config = create_config(args)
     for name in config.get_client_names():
@@ -392,6 +403,10 @@ def create_parser():
         'name', help='Name of the client to mount')
     mount_parser.set_defaults(func=do_mount)
 
+    repository_parser = subparsers.add_parser(
+        'repository', help='List all repositories')
+    repository_parser.set_defaults(func=do_repository)
+
     shutdown_parser = subparsers.add_parser(
         'shutdown', help='Shutdown the daemon')
     shutdown_parser.add_argument(
@@ -421,10 +436,7 @@ def find_default_config_dir():
     if config_dir:
         return config_dir
 
-    if os.name == 'nt':
-        home_dir = os.getenv('USERPROFILE')
-    else:
-        home_dir = os.getenv('HOME')
+    home_dir = util.get_home_dir()
     return os.path.join(home_dir, DEFAULT_CONFIG_DIR)
 
 

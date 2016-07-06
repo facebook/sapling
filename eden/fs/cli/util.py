@@ -7,6 +7,8 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
+import pwd
 import time
 
 
@@ -37,3 +39,14 @@ def poll_until(function, timeout, interval=0.2, timeout_ex=None):
                 function.__name__))
 
         time.sleep(interval)
+
+
+def get_home_dir():
+    home_dir = None
+    if os.name == 'nt':
+        home_dir = os.getenv('USERPROFILE')
+    else:
+        home_dir = os.getenv('HOME')
+    if not home_dir:
+        home_dir = pwd.getpwuid(os.getuid()).pw_dir
+    return home_dir
