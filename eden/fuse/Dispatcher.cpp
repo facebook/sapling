@@ -1044,15 +1044,24 @@ std::unique_ptr<fuse_session, SessionDeleter> Dispatcher::makeSession(
     bool debug) {
   chan_ = &channel;
 
+  // libfuse may decide to mutate these arguments when we call fuse_lowlevel_new
+  // so we use fuse_opt_add_arg() to mutate it.  Start with a well-defined
+  // initial state.
   fuse_args fargs{0, nullptr, 0};
-  std::vector<const char*> fuseArgs = {
-      "fuse", "-o", "allow_root",
+  SCOPE_EXIT {
+    // Ensure that the allocations associated with fargs are released when
+    // we exit this function.
+    fuse_opt_free_args(&fargs);
   };
+
+  // Each of these calls will duplicate the input string and expand the storage
+  // in fargs.
+  fuse_opt_add_arg(&fargs, "fuse");
+  fuse_opt_add_arg(&fargs, "-o");
+  fuse_opt_add_arg(&fargs, "allow_root");
   if (debug) {
-    fuseArgs.push_back("-d");
+    fuse_opt_add_arg(&fargs, "-d");
   }
-  fargs.argc = fuseArgs.size();
-  fargs.argv = const_cast<char**>(fuseArgs.data());
 
   auto sess =
       fuse_lowlevel_new(&fargs, &dispatcher_ops, sizeof(dispatcher_ops), this);
