@@ -95,6 +95,15 @@ class EdenClient(object):
                 if ex.errno != errno.ENOENT:
                     raise
 
+            status = self._process.poll()
+            if status is not None:
+                if status < 0:
+                    msg = 'terminated with signal {}'.format(-status)
+                else:
+                    msg = 'exit status {}'.format(status)
+                raise Exception('edenfs exited before becoming healthy: ' +
+                                msg)
+
             time.sleep(0.1)
         raise Exception("edenfs didn't start within timeout of %s" % timeout)
 
