@@ -8,6 +8,7 @@
  *
  */
 #include "Overlay.h"
+#include <boost/filesystem.hpp>
 #include <dirent.h>
 #include <folly/Exception.h>
 #include "eden/utils/PathFuncs.h"
@@ -204,12 +205,7 @@ bool Overlay::removeWhiteout(RelativePathPiece path) {
 void Overlay::removeDir(RelativePathPiece path, bool needWhiteout) {
   auto dirPath = localDir_ + path;
 
-  // We allow for this to fail with ENOENT in the case that we have an
-  // empty local tree and want to record a delete for something that we
-  // haven't materialized yet.
-  if (rmdir(dirPath.c_str()) == -1 && errno != ENOENT) {
-    folly::throwSystemError("rmdir: ", dirPath);
-  }
+  boost::filesystem::remove_all(dirPath.c_str());
 
   if (needWhiteout) {
     makeWhiteout(path);

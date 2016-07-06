@@ -66,6 +66,8 @@ class TreeInode : public fusell::DirInode {
 
   folly::Future<fuse_entry_param> mkdir(PathComponentPiece name, mode_t mode)
       override;
+  folly::Future<folly::Unit> unlink(PathComponentPiece name) override;
+  folly::Future<folly::Unit> rmdir(PathComponentPiece name) override;
 
   /** Called in a thrift context to switch the active snapshot.
    * Since this is called in a thrift context, RequestData::get() won't

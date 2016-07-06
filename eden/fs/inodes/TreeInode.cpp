@@ -198,6 +198,72 @@ folly::Future<fuse_entry_param> TreeInode::mkdir(
       getNodeId(), name);
 }
 
+folly::Future<folly::Unit> TreeInode::unlink(PathComponentPiece name) {
+  // This will throw ENOENT if the name doesn't exist.
+  auto inode = getChildByName(name).get();
+
+  auto treeInode = std::dynamic_pointer_cast<TreeInode>(inode);
+  if (treeInode) {
+    folly::throwSystemErrorExplicit(EISDIR, "cannot unlink a dir");
+  }
+  // Compute the full name of the node they want to remove.
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  auto targetName = myname + name;
+
+  auto needWhiteout = getTreeEntry(name) != nullptr;
+  auto overlay = getOverlay();
+  overlay->removeFile(targetName, needWhiteout);
+  return folly::Unit{};
+}
+
+folly::Future<folly::Unit> TreeInode::rmdir(PathComponentPiece name) {
+  // This will throw ENOENT if the name doesn't exist.
+  auto inode = getChildByName(name).get();
+
+  auto treeInode = std::dynamic_pointer_cast<TreeInode>(inode);
+  if (!treeInode) {
+    folly::throwSystemErrorExplicit(ENOTDIR, "rmdir used on a file");
+  }
+
+  // Compute the full name of the node they want to remove.
+  auto myname = getNameMgr()->resolvePathToNode(getNodeId());
+  auto targetName = myname + name;
+
+  auto childEntry = getTreeEntry(name);
+  auto needWhiteout = childEntry != nullptr;
+  auto overlay = getOverlay();
+
+  // Pre-condition for removing a dir is that it must be empty;
+  auto overlay_contents = overlay->readDir(targetName);
+
+  if (!overlay_contents.isOpaque && childEntry) {
+    auto childTree = getStore()->getTree(childEntry->getHash());
+    // Check for any tree entries that are not marked as removed in the overlay
+    for (auto& treeEntry : childTree->getTreeEntries()) {
+      auto overlayIter = overlay_contents.entries.find(treeEntry.getName());
+      if (overlayIter != overlay_contents.entries.end()) {
+        if (overlayIter->second == dtype_t::Whiteout) {
+          // This entry is marked as deleted, so it doesn't count here
+          continue;
+        }
+      }
+      folly::throwSystemErrorExplicit(
+          ENOTEMPTY, "rmdir used on dir that is not empty (children in Tree)");
+    }
+  }
+
+  for (auto& ent : overlay_contents.entries) {
+    if (ent.second != dtype_t::Whiteout) {
+      folly::throwSystemErrorExplicit(
+          ENOTEMPTY,
+          "rmdir used on dir that is not empty (children in Overlay)");
+    }
+  }
+
+  overlay->removeDir(targetName, needWhiteout);
+  return folly::Unit{};
+}
+
 EdenMount* TreeInode::getMount() const {
   return mount_;
 }
