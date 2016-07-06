@@ -112,14 +112,7 @@ const TreeEntry* TreeInode::getTreeEntry(PathComponentPiece name) {
     return nullptr;
   }
 
-  // TODO: We should do something better than a linear scan here
-  for (const auto& ent : tree_->getTreeEntries()) {
-    if (ent.getName() == name.stringPiece()) {
-      return &ent;
-    }
-  }
-
-  return nullptr;
+  return tree_->getEntryPtr(name);
 }
 
 const Tree* TreeInode::getTree() const {

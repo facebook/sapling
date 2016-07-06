@@ -9,6 +9,7 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <vector>
 #include "Hash.h"
 #include "TreeEntry.h"
@@ -31,6 +32,29 @@ class Tree {
 
   const TreeEntry& getEntryAt(size_t index) const {
     return entries_.at(index);
+  }
+
+  const TreeEntry* getEntryPtr(PathComponentPiece path) const {
+    auto iter = std::lower_bound(
+        entries_.cbegin(),
+        entries_.cend(),
+        path,
+        [](const TreeEntry& entry, PathComponentPiece piece) {
+          return entry.getName() < piece;
+        });
+    if (UNLIKELY(iter == entries_.cend() || iter->getName() != path)) {
+      return nullptr;
+    }
+    return &*iter;
+  }
+
+  const TreeEntry& getEntryAt(PathComponentPiece path) const {
+    auto entry = getEntryPtr(path);
+    if (!entry) {
+      throw std::out_of_range(
+          folly::to<std::string>(path, " is not present in this Tree"));
+    }
+    return *entry;
   }
 
  private:

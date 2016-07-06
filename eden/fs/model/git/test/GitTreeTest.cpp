@@ -80,6 +80,9 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(facebook::eden::TreeEntryType::BLOB, babelrc.getType());
   EXPECT_EQ(facebook::eden::FileType::REGULAR_FILE, babelrc.getFileType());
   EXPECT_EQ(0b0110, babelrc.getOwnerPermissions());
+  EXPECT_EQ(
+      babelrc.getName(),
+      tree->getEntryAt(PathComponentPiece(".babelrc")).getName());
 
   // Executable file.
   auto nuclideStartServer = tree->getEntryAt(4);
@@ -91,6 +94,9 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(
       facebook::eden::FileType::REGULAR_FILE, nuclideStartServer.getFileType());
   EXPECT_EQ(0b0111, nuclideStartServer.getOwnerPermissions());
+  EXPECT_EQ(
+      nuclideStartServer.getName(),
+      tree->getEntryAt(PathComponentPiece("nuclide-start-server")).getName());
 
   // Directory.
   auto lib = tree->getEntryAt(3);
@@ -99,6 +105,13 @@ TEST(GitTree, testDeserialize) {
   EXPECT_EQ(facebook::eden::TreeEntryType::TREE, lib.getType());
   EXPECT_EQ(facebook::eden::FileType::DIRECTORY, lib.getFileType());
   EXPECT_EQ(0b0111, lib.getOwnerPermissions());
+  EXPECT_EQ(
+      lib.getName(), tree->getEntryAt(PathComponentPiece("lib")).getName());
+
+  // lab sorts before lib but is not present in the Tree, so ensure that
+  // we don't get an entry back here
+  EXPECT_EQ(nullptr, tree->getEntryPtr(PathComponentPiece("lab")));
+  EXPECT_THROW(tree->getEntryAt(PathComponentPiece("lab")), std::out_of_range);
 }
 
 TEST(GitTree, testDeserializeWithSymlink) {
