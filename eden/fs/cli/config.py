@@ -31,6 +31,11 @@ ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
 CONFIG_JSON = 'config.json'
 SNAPSHOT = 'SNAPSHOT'
 
+# In our test environment, when we need to run as root, we
+# may need to launch via a helper script that is whitelisted
+# by the local sudo configuration.
+SUDO_HELPER = '/var/www/scripts/testinfra/run_eden.sh'
+
 
 class EdenStartError(Exception):
     pass
@@ -219,6 +224,8 @@ class Config:
             s = os.stat(daemon_binary)
             if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
                 # We need to run edenfs under sudo
+                if ('SANDCASTLE' in os.environ) and os.path.exists(SUDO_HELPER):
+                    cmd = [SUDO_HELPER] + cmd
                 cmd = ['/usr/bin/sudo', '-E'] + cmd
 
         eden_env = self._build_eden_environment()
