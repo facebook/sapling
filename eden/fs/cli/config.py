@@ -170,6 +170,42 @@ class Config:
             # the driver script.
             raise Exception(ex.message)
 
+    def add_repository(self, name, snapshot_id, repo_type,
+                       source, with_buck=False):
+        # create a directory for client to store repository metadata
+        client_dir = os.path.join(self._get_clients_dir(), name)
+        if os.path.isdir(client_dir):
+            raise Exception('Error: repository %s already exists.' % name)
+        os.makedirs(client_dir)
+
+        # TODO(mbolin): We need to decide what the protocol is when a new, empty
+        # Eden client is created rather than seeding it with Git or Hg data.
+        if snapshot_id:
+            client_snapshot = os.path.join(client_dir, SNAPSHOT)
+            with open(client_snapshot, 'w') as f:
+                f.write(snapshot_id + '\n')
+
+        bind_mounts = {}
+        bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
+        os.makedirs(bind_mounts_dir)
+
+        if with_buck:
+            bind_mount_name = 'buck-out'
+            bind_mounts[bind_mount_name] = 'buck-out'
+            os.makedirs(os.path.join(bind_mounts_dir, bind_mount_name))
+
+        # Add repository to INI file
+        config_ini = os.path.join(util.get_home_dir(), HOME_CONFIG)
+
+        parser = configparser.ConfigParser()
+        parser['repository ' + name] = {'type': repo_type,
+                                        'path': source}
+        if bind_mounts:
+            parser['bindmounts ' + name] = bind_mounts
+        mode = 'a' if os.path.isfile(config_ini) else 'w'
+        with open(config_ini, mode) as f:
+            parser.write(f)
+
     def mount(self, name):
         info = self.get_client_info(name)
         mount_point = info['mount']

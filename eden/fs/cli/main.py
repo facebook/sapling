@@ -180,13 +180,43 @@ def do_init(args):
 
 def do_repository(args):
     config = create_config(args)
-    try:
-        repo_list = config.get_repository_list()
-    except Exception as ex:
-        print_stderr('error: {}', ex)
+    if (args.name and args.path):
+        repo_type = None
+        git_dir = _get_git_dir(args.path)
+        if git_dir:
+            repo_type = 'git'
+            source = git_dir
+            snapshot_id = _get_git_commit(git_dir)
+        else:
+            hg_repo = _get_hg_repo(args.path)
+            if hg_repo:
+                repo_type = 'hg'
+                source = hg_repo
+                snapshot_id = _get_hg_commit(args.path)
+        if repo_type is None:
+            print_stderr(
+                '%s does not look like a git or hg repository' % args.path)
+            return 1
+        try:
+            config.add_repository(args.name,
+                                  snapshot_id,
+                                  repo_type=repo_type,
+                                  source=source,
+                                  with_buck=args.with_buck)
+        except Exception as ex:
+            print_stderr('{}', ex)
+            return 1
+    elif (args.name or args.path):
+        print_stderr('repository command called with incorrect arguments')
         return 1
-    for repo in repo_list:
-        print(repo)
+    else:
+        try:
+            repo_list = config.get_repository_list()
+        except Exception as ex:
+            print_stderr('error: {}', ex)
+            return 1
+        for repo in repo_list:
+            print(repo)
 
 
 def do_list(args):
@@ -405,6 +435,16 @@ def create_parser():
 
     repository_parser = subparsers.add_parser(
         'repository', help='List all repositories')
+    repository_parser.add_argument(
+        'name', nargs='?', default=None, help='Name of the client to mount')
+    repository_parser.add_argument(
+        'path',
+        nargs='?',
+        default=None,
+        help='Path to the repository to import')
+    repository_parser.add_argument(
+        '--with-buck', '-b', action='store_true',
+        help='Client should create a bind mount for buck-out/.')
     repository_parser.set_defaults(func=do_repository)
 
     shutdown_parser = subparsers.add_parser(
