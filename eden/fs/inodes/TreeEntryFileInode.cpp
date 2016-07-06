@@ -32,6 +32,18 @@ TreeEntryFileInode::TreeEntryFileInode(
     const TreeEntry* entry)
     : fusell::FileInode(ino), parentInode_(parentInode), entry_(entry) {}
 
+TreeEntryFileInode::TreeEntryFileInode(
+    fuse_ino_t ino,
+    std::shared_ptr<TreeInode> parentInode,
+    folly::File&& file)
+    : fusell::FileInode(ino),
+      parentInode_(parentInode),
+      entry_(nullptr),
+      data_(std::make_shared<FileData>(
+          mutex_,
+          parentInode_->getMount(),
+          std::move(file))) {}
+
 folly::Future<fusell::Dispatcher::Attr> TreeEntryFileInode::getattr() {
   auto data = getOrLoadData();
 

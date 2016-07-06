@@ -8,6 +8,7 @@
  *
  */
 #pragma once
+#include <folly/File.h>
 #include "TreeInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fuse/Inodes.h"
@@ -22,10 +23,20 @@ class Hash;
 
 class TreeEntryFileInode : public fusell::FileInode {
  public:
+  /** Construct an inode using an optional entry (it may be nullptr) */
   TreeEntryFileInode(
       fuse_ino_t ino,
       std::shared_ptr<TreeInode> parentInode_,
       const TreeEntry* entry);
+
+  /** Construct an inode using a freshly created overlay file.
+   * file must be moved in and must have been created by a call to
+   * Overlay::openFile.  This constructor is used in the DirInode::create
+   * case and is required to implement O_EXCL correctly. */
+  TreeEntryFileInode(
+      fuse_ino_t ino,
+      std::shared_ptr<TreeInode> parentInode,
+      folly::File&& file);
 
   folly::Future<fusell::Dispatcher::Attr> getattr() override;
   folly::Future<fusell::Dispatcher::Attr> setattr(

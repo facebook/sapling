@@ -142,11 +142,10 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   auto targetname = myname + name;
 
   // Ask the overlay manager to create it.
-  auto file = getOverlay()->openFile(targetname, O_CREAT | flags, mode);
-  // Discard the file handle and allow the FileData class to open it again.
-  // We'll need to figure out something nicer than this in a follow-on diff
-  // to make sure that O_EXCL|O_CREAT is working correctly.
-  file.close();
+  // Since we will move this file into the underlying file data, we
+  // take special care to ensure that it is opened read-write
+  auto file = getOverlay()->openFile(
+      targetname, O_RDWR | O_CREAT | (flags & ~(O_RDONLY | O_WRONLY)), 0600);
 
   // Generate an inode number for this new entry.
   auto node = getNameMgr()->getNodeByName(getNodeId(), name);
@@ -155,7 +154,7 @@ TreeInode::create(PathComponentPiece name, mode_t mode, int flags) {
   auto inode = std::make_shared<TreeEntryFileInode>(
       node->getNodeId(),
       std::static_pointer_cast<TreeInode>(shared_from_this()),
-      nullptr);
+      std::move(file));
 
   fuse_file_info fi;
   memset(&fi, 0, sizeof(fi));

@@ -31,6 +31,9 @@ using folly::checkUnixError;
 FileData::FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry)
     : mutex_(mutex), mount_(mount), entry_(entry) {}
 
+FileData::FileData(std::mutex& mutex, EdenMount* mount, folly::File&& file)
+    : mutex_(mutex), mount_(mount), entry_(nullptr), file_(std::move(file)) {}
+
 // Conditionally updates target with either the value provided by
 // the caller, or with the current time value, depending on the value
 // of the flags in to_set.  Valid flag values are defined in fuse_lowlevel.h

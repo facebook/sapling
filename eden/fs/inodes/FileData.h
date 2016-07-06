@@ -32,7 +32,15 @@ class Hash;
  */
 class FileData {
  public:
+  /** Construct a FileData from an optional entry (it may be nullptr) */
   FileData(std::mutex& mutex, EdenMount* mount, const TreeEntry* entry);
+
+  /** Construct a freshly created FileData from a pre-opened File object.
+   * file must be moved in (it has no copy constructor) and must have
+   * been created by a call to Overlay::openFile.  This constructor
+   * is used in the DirInode::create case and is required to implement
+   * O_EXCL correctly. */
+  FileData(std::mutex& mutex, EdenMount* mount, folly::File&& file);
 
   fusell::BufVec read(size_t size, off_t off);
   size_t write(fusell::BufVec&& buf, off_t off);
