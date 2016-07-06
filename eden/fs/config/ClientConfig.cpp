@@ -8,19 +8,28 @@
  *
  */
 #include "ClientConfig.h"
+#include <boost/filesystem.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/range/adaptor/reversed.hpp>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
-#include <folly/json.h>
+#include <pwd.h>
+#include <stdlib.h>
+
+using std::string;
 
 namespace {
-// Keys in the config JSON.
-constexpr folly::StringPiece kBindMountsKey{"bind-mounts"};
-constexpr folly::StringPiece kMountKey{"mount"};
-constexpr folly::StringPiece kRepoTypeKey{"repo_type"};
-constexpr folly::StringPiece kRepoSourceKey{"repo_source"};
+// INI config files
+const facebook::eden::AbsolutePathPiece kGlobalConfig{"/etc/eden/config.d"};
+const facebook::eden::RelativePathPiece kHomeConfig{".edenrc"};
+
+// Keys for the config INI file.
+constexpr folly::StringPiece kBindMountsKey{"bindmounts "};
+constexpr folly::StringPiece kRepositoryKey{"repository "};
+constexpr folly::StringPiece kRepoTypeKey{"type"};
+constexpr folly::StringPiece kRepoSourceKey{"path"};
 
 // Files of interest in the client directory.
-const facebook::eden::RelativePathPiece kConfigFile{"config.json"};
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
 const facebook::eden::RelativePathPiece kBindMountsDir{"bind-mounts"};
 const facebook::eden::RelativePathPiece kOverlayDir{"local"};
@@ -40,7 +49,7 @@ ClientConfig::ClientConfig(
 Hash ClientConfig::getSnapshotID() const {
   // Read the snapshot.
   auto snapshotFile = clientDirectory_ + kSnapshotFile;
-  std::string snapshotFileContents;
+  string snapshotFileContents;
   folly::readFile(snapshotFile.c_str(), snapshotFileContents);
   // Make sure to remove any leading or trailing whitespace.
   auto snapshotID = folly::trimWhitespace(snapshotFileContents);
@@ -52,41 +61,68 @@ AbsolutePath ClientConfig::getOverlayPath() const {
 }
 
 std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
-    AbsolutePathPiece clientDirectory) {
-  // Extract the JSON and strip any comments.
-  auto configJsonFile = clientDirectory + kConfigFile;
-  std::string jsonContents;
-  folly::readFile(configJsonFile.c_str(), jsonContents);
-  auto jsonWithoutComments = folly::json::stripComments(jsonContents);
+    AbsolutePathPiece mountPoint,
+    AbsolutePathPiece clientDirectory,
+    AbsolutePathPiece homeDirectory) {
+  // Extract repo name from clientDirectory
+  auto repo = folly::to<string>(clientDirectory.basename().stringPiece());
 
-  // Parse the comment-free JSON while tolerating trailing commas.
-  folly::json::serialization_opts options;
-  options.allow_trailing_comma = true;
-  auto configData = folly::parseJson(jsonWithoutComments, options);
+  // Get global config files
+  boost::filesystem::path rcDir(folly::to<string>(kGlobalConfig));
+  std::vector<string> rcFiles;
+  if (boost::filesystem::is_directory(rcDir)) {
+    for (auto it : boost::filesystem::directory_iterator(rcDir)) {
+      rcFiles.push_back(it.path().string());
+    }
+  }
+  sort(rcFiles.begin(), rcFiles.end());
 
-  auto mountPoint = configData[kMountKey].asString();
+  // Get home config file
+  auto configFile = AbsolutePathPiece{homeDirectory} + kHomeConfig;
+  rcFiles.push_back(configFile.c_str());
+
+  // Find repository data in config files
+  boost::property_tree::ptree configData;
+  boost::property_tree::ptree repoData;
+  string header = kRepositoryKey.toString() + repo;
+  // Find the first config file that defines the [repository]
+  for (auto rc : boost::adaptors::reverse(rcFiles)) {
+    // Parse INI file into property tree
+    boost::property_tree::ini_parser::read_ini(rc, configData);
+    repoData = configData.get_child(
+        header, boost::property_tree::basic_ptree<string, string>());
+    if (!repoData.empty()) {
+      break;
+    }
+  }
+  // Repository not found
+  if (repoData.empty()) {
+    throw std::runtime_error("Could not find repository data for " + repo);
+  }
   auto mountPointPath = AbsolutePath{mountPoint};
 
-  // Extract the list of bind mounts.
+  // Extract the bind mounts
   std::vector<BindMount> bindMounts;
-  auto bindMountsJsonPtr = configData.get_ptr(kBindMountsKey);
-  if (bindMountsJsonPtr != nullptr) {
+  header = kBindMountsKey.toString() + repo;
+  auto bindMountPoints = configData.get_child(
+      header, boost::property_tree::basic_ptree<string, string>());
+  if (!bindMountPoints.empty()) {
     AbsolutePath bindMountsPath = clientDirectory + kBindMountsDir;
-    for (auto& item : bindMountsJsonPtr->items()) {
-      auto pathInClientDir =
-          bindMountsPath + RelativePathPiece{item.first.asString()};
+    for (auto item : bindMountPoints) {
+      auto pathInClientDir = bindMountsPath + RelativePathPiece{item.first};
       auto pathInMountDir =
-          mountPointPath + RelativePathPiece{item.second.asString()};
+          mountPointPath + RelativePathPiece{item.second.data()};
       bindMounts.emplace_back(BindMount{pathInClientDir, pathInMountDir});
     }
   }
 
+  // Construct ClientConfig object
   auto config = std::make_unique<ClientConfig>(
       ClientConfig(clientDirectory, mountPointPath, std::move(bindMounts)));
 
-  // Load the repository information
-  config->repoType_ = configData.getDefault(kRepoTypeKey, "null").asString();
-  config->repoSource_ = configData.getDefault(kRepoSourceKey, "").asString();
+  // Load repository information
+  config->repoType_ = repoData.get(kRepoTypeKey.toString(), "");
+  config->repoSource_ = repoData.get(kRepoSourceKey.toString(), "");
 
   return config;
 }

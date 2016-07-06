@@ -356,6 +356,9 @@ def create_parser():
     parser.add_argument(
         '--config-dir',
         help='Path to directory where client data is stored.')
+    parser.add_argument(
+        '--home-dir',
+        help='Path to directory where .edenrc config file is stored.')
     subparsers = parser.add_subparsers(dest='subparser_name')
 
     # Please add the subparsers in alphabetical order because that is the order
@@ -465,7 +468,8 @@ def find_default_config_dir():
 
 def create_config(args):
     config = args.config_dir or find_default_config_dir()
-    return config_mod.Config(config)
+    home_dir = args.home_dir or util.get_home_dir()
+    return config_mod.Config(config, home_dir)
 
 
 def main():

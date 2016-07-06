@@ -13,6 +13,7 @@ exception EdenError {
 struct MountInfo {
   1: string mountPoint
   2: string edenClientPath
+  3: string homeDir
 }
 
 service EdenService extends fb303.FacebookService {

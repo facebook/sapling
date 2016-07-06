@@ -33,7 +33,9 @@ inline void operator<<(std::ostream& out, const BindMount& bindMount) {
 class ClientConfig {
  public:
   static std::unique_ptr<ClientConfig> loadFromClientDirectory(
-      AbsolutePathPiece clientDirectory);
+      AbsolutePathPiece mountPoint,
+      AbsolutePathPiece clientDirectory,
+      AbsolutePathPiece homeDirectory);
 
   Hash getSnapshotID() const;
 

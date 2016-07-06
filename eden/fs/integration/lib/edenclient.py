@@ -55,7 +55,6 @@ class EdenClient(object):
                                         self.name + '.mount')
         self._process = None
         self._home_dir = self._test_case.new_tmp_dir()
-        self._home_dir_reset = os.getenv('HOME')
 
     def __enter__(self):
         return self
@@ -65,13 +64,13 @@ class EdenClient(object):
 
     def cleanup(self):
         '''Stop the instance and clean up its temporary directories'''
-        os.environ['HOME'] = self._home_dir_reset
         self.kill()
         self.cleanup_dirs()
 
     def cleanup_dirs(self):
         '''Remove any temporary dirs we have created.'''
         shutil.rmtree(self._config_dir, ignore_errors=True)
+        shutil.rmtree(self._home_dir, ignore_errors=True)
         shutil.rmtree(self._mount_path, ignore_errors=True)
 
     def kill(self):
@@ -149,6 +148,7 @@ class EdenClient(object):
         return [
             EDEN_CLI,
             '--config-dir', self._config_dir,
+            '--home-dir', self._home_dir,
             command,
         ] + list(args)
 
@@ -164,10 +164,6 @@ class EdenClient(object):
         self._repo_path = repo_path
         self._client_name = client_name
 
-        # TODO: Find a way to test this without depending on $HOME, since it can
-        # potentially be unsafe to run tests in parallel if another test is
-        # running at the same time that depends on the $HOME value.
-        os.environ['HOME'] = self._home_dir
         self.run_cmd('repository',
                      self._client_name,
                      self._repo_path)

@@ -24,36 +24,44 @@ namespace {
 class ClientConfigTest : public ::testing::Test {
  protected:
   boost::filesystem::path configDir_;
+  boost::filesystem::path mountPoint_;
+  boost::filesystem::path homeDir_;
 
-  virtual void SetUp() {
-    configDir_ = boost::filesystem::temp_directory_path() /
-        boost::filesystem::unique_path();
+  virtual void SetUp() override {
+    configDir_ = boost::filesystem::temp_directory_path() / "fbsource";
     boost::filesystem::create_directories(configDir_);
+
+    homeDir_ = boost::filesystem::temp_directory_path() /
+        boost::filesystem::unique_path();
+    boost::filesystem::create_directories(homeDir_);
+
+    mountPoint_ = "/tmp/someplace";
 
     auto snapshotPath = configDir_ / "SNAPSHOT";
     auto snapshot = "1234567812345678123456781234567812345678\n";
     folly::writeFile(folly::StringPiece{snapshot}, snapshotPath.c_str());
 
-    auto configPath = configDir_ / "config.json";
+    auto configPath = homeDir_ / ".edenrc";
     auto data =
-        "/* This JSON has a comment and a trailing comma */\n"
-        "{\n"
-        "  \"bind-mounts\": {\n"
-        "    \"my-path\": \"path/to-my-path\""
-        "  },\n"
-        "  \"mount\": \"/tmp/someplace\",\n"
-        "}";
+        "; This INI has a comment\n"
+        "[repository fbsource]\n"
+        "path = /data/users/carenthomas/fbsource\n"
+        "type = git\n"
+        "[bindmounts fbsource]\n"
+        "my-path = path/to-my-path\n";
     folly::writeFile(folly::StringPiece{data}, configPath.c_str());
   }
 
-  virtual void TearDown() {
+  virtual void TearDown() override {
     boost::filesystem::remove_all(configDir_);
   }
 };
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
-  auto config =
-      ClientConfig::loadFromClientDirectory(AbsolutePath{configDir_.string()});
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePath{mountPoint_.string()},
+      AbsolutePath{configDir_.string()},
+      AbsolutePath{homeDir_.string()});
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},
@@ -70,16 +78,19 @@ TEST_F(ClientConfigTest, testLoadFromClientDirectory) {
 }
 
 TEST_F(ClientConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
-  // Overwrite config.json with no bind-mounts entry.
-  auto configPath = configDir_ / "config.json";
+  // Overwrite .edenrc with no bind-mounts entry.
+  auto configPath = homeDir_ / ".edenrc";
   auto data =
-      "{\n"
-      "  \"mount\": \"/tmp/someplace\""
-      "}";
+      "; This INI has a comment\n"
+      "[repository fbsource]\n"
+      "path = /data/users/carenthomas/fbsource\n"
+      "type = git\n";
   folly::writeFile(folly::StringPiece{data}, configPath.c_str());
 
-  auto config =
-      ClientConfig::loadFromClientDirectory(AbsolutePath{configDir_.string()});
+  auto config = ClientConfig::loadFromClientDirectory(
+      AbsolutePath{mountPoint_.string()},
+      AbsolutePath{configDir_.string()},
+      AbsolutePath{homeDir_.string()});
 
   EXPECT_EQ(
       Hash{"1234567812345678123456781234567812345678"},

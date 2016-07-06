@@ -47,8 +47,9 @@ class EdenStartError(Exception):
 
 
 class Config:
-    def __init__(self, config_dir):
+    def __init__(self, config_dir, home_dir):
         self._config_dir = config_dir
+        self._home_dir = home_dir
 
     def get_rc_files(self):
         rc_files = []
@@ -56,7 +57,7 @@ class Config:
             rc_files = os.listdir(GLOBAL_CONFIG_DIR)
             rc_files = [os.path.join(GLOBAL_CONFIG_DIR, f) for f in rc_files]
         sorted(rc_files)
-        local_config = os.path.join(util.get_home_dir(), HOME_CONFIG)
+        local_config = os.path.join(self._home_dir, HOME_CONFIG)
         if os.path.isfile(local_config):
             rc_files.append(local_config)
         return rc_files
@@ -170,7 +171,7 @@ class Config:
             f.write('\n')  # json.dump() does not print a trailing newline.
 
         # Add repository to INI file
-        config_ini = os.path.join(util.get_home_dir(), HOME_CONFIG)
+        config_ini = os.path.join(self._home_dir, HOME_CONFIG)
 
         parser = configparser.ConfigParser()
         parser['repository ' + name] = {'type': repo_type,
@@ -208,7 +209,8 @@ class Config:
 
         self._get_or_create_write_dir(repo_name)
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
-                                           edenClientPath=client_path)
+                                           edenClientPath=client_path,
+                                           homeDir=self._home_dir)
         client = self.get_thrift_client()
         try:
             client.mount(mount_info)
