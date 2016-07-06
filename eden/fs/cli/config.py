@@ -114,50 +114,6 @@ class Config:
             ['client-dir', client_dir],
         ])
 
-    def create_client(self, name, mount_point, snapshot_id,
-                      repo_type, repo_source,
-                      with_buck=False):
-        '''
-        Creates a new client directory with the config.yaml and SNAPSHOT files.
-        '''
-        _verify_mount_point(mount_point)
-        client_dir = os.path.join(self._get_clients_dir(), name)
-        if os.path.isdir(client_dir):
-            raise Exception('Error: client %s already exists.' % name)
-
-        os.makedirs(client_dir)
-        client_config = os.path.join(client_dir, CONFIG_JSON)
-
-        bind_mounts = {}
-        bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
-        os.makedirs(bind_mounts_dir)
-
-        if with_buck:
-            # TODO: This eventually needs to be more configurable.
-            # Some of our repositories need multiple buck-out directories
-            # in various subdirectories, rather than a single buck-out
-            # directory at the root.
-            bind_mount_name = 'buck-out'
-            bind_mounts[bind_mount_name] = 'buck-out'
-            os.makedirs(os.path.join(bind_mounts_dir, bind_mount_name))
-
-        config_data = {
-            'bind-mounts': bind_mounts,
-            'mount': mount_point,
-            'repo_type': repo_type,
-            'repo_source': repo_source,
-        }
-        with open(client_config, 'w') as f:
-            json.dump(config_data, f, indent=2, sort_keys=True)
-            f.write('\n')  # json.dump() does not print a trailing newline.
-
-        # TODO(mbolin): We need to decide what the protocol is when a new, empty
-        # Eden client is created rather than seeding it with Git or Hg data.
-        if snapshot_id:
-            client_snapshot = os.path.join(client_dir, SNAPSHOT)
-            with open(client_snapshot, 'w') as f:
-                f.write(snapshot_id + '\n')
-
     def checkout(self, name, snapshot_id):
         '''Switch the active snapshot id for a given client'''
         info = self.get_client_info(name)
@@ -178,8 +134,6 @@ class Config:
             raise Exception('Error: repository %s already exists.' % name)
         os.makedirs(client_dir)
 
-        # TODO(mbolin): We need to decide what the protocol is when a new, empty
-        # Eden client is created rather than seeding it with Git or Hg data.
         if snapshot_id:
             client_snapshot = os.path.join(client_dir, SNAPSHOT)
             with open(client_snapshot, 'w') as f:
@@ -194,6 +148,16 @@ class Config:
             bind_mounts[bind_mount_name] = 'buck-out'
             os.makedirs(os.path.join(bind_mounts_dir, bind_mount_name))
 
+        config_data = {
+            'bind-mounts': bind_mounts,
+            'repo_type': repo_type,
+            'repo_source': source,
+        }
+        client_config = os.path.join(client_dir, CONFIG_JSON)
+        with open(client_config, 'w') as f:
+            json.dump(config_data, f, indent=2, sort_keys=True)
+            f.write('\n')  # json.dump() does not print a trailing newline.
+
         # Add repository to INI file
         config_ini = os.path.join(util.get_home_dir(), HOME_CONFIG)
 
@@ -205,6 +169,32 @@ class Config:
         mode = 'a' if os.path.isfile(config_ini) else 'w'
         with open(config_ini, mode) as f:
             parser.write(f)
+
+    def clone(self, repo_name, path):
+        client_path = os.path.join(self._get_clients_dir(), repo_name)
+        client_config = os.path.join(client_path, CONFIG_JSON)
+        config_data = None
+        with open(client_config) as f:
+            config_data = json.load(f)
+
+        new_config_data = {
+            'bind-mounts': config_data['bind-mounts'],
+            'mount': path,
+            'repo_type': config_data['repo_type'],
+            'repo_source': config_data['repo_source'],
+        }
+        with open(client_config, 'w') as f:
+            json.dump(new_config_data, f, indent=2, sort_keys=True)
+            f.write('\n')  # json.dump() does not print a trailing newline.
+
+        self._get_or_create_write_dir(repo_name)
+        mount_info = eden_ttypes.MountInfo(mountPoint=path,
+                                           edenClientPath=client_path)
+        client = self.get_thrift_client()
+        try:
+            client.mount(mount_info)
+        except EdenService.EdenError as ex:
+            raise Exception(ex.message)
 
     def mount(self, name):
         info = self.get_client_info(name)

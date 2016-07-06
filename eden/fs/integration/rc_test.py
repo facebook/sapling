@@ -15,8 +15,9 @@ class RCTest(testcase.EdenTestCase):
     def test_list_repository(self):
         eden = self.init_git_eden()
 
-        out = eden.repository_cmd()
-        self.assertEqual('', out)
+        out = eden.repository_cmd().split('\n')[:-1]
+        expected = ['CLIENT']
+        self.assertEqual(expected, out)
         config = '''\
 [repository fbsource]
 path = /data/users/carenthomas/fbsource

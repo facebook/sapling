@@ -168,13 +168,12 @@ class EdenClient(object):
         # potentially be unsafe to run tests in parallel if another test is
         # running at the same time that depends on the $HOME value.
         os.environ['HOME'] = self._home_dir
-        self.run_cmd('init',
-                     '--repo', self._repo_path,
-                     '--mount', self._mount_path,
-                     self._client_name)
+        self.run_cmd('repository',
+                     self._client_name,
+                     self._repo_path)
 
         self.daemon_cmd(timeout)
-        self.mount_cmd()
+        self.clone_cmd()
 
     def daemon_cmd(self, timeout=10):
         if self._process is not None:
@@ -221,6 +220,14 @@ class EdenClient(object):
         '''Executes repository command'''
 
         return self.run_cmd('repository')
+
+    def clone_cmd(self):
+        '''Executes clone command'''
+
+        if not os.path.isdir(self.mount_path):
+            os.mkdir(self._mount_path)
+
+        self.run_cmd('clone', self._client_name, self._mount_path)
 
     def mount_cmd(self):
         '''Executes mount command'''

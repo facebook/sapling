@@ -148,36 +148,6 @@ def do_health(args):
     return 1
 
 
-def do_init(args):
-    args.mount = normalize_path_arg(args.mount)
-    args.repo = normalize_path_arg(args.repo)
-
-    config = create_config(args)
-
-    # Check to see if we can figure out the repository type
-    snapshot_id = None
-    git_dir = _get_git_dir(args.repo)
-    if git_dir is not None:
-        snapshot_id = _get_git_commit(git_dir)
-        config.create_client(args.name, args.mount, snapshot_id,
-                             repo_type='git',
-                             repo_source=git_dir,
-                             with_buck=args.with_buck)
-        return
-
-    hg_repo = _get_hg_repo(args.repo)
-    if hg_repo is not None:
-        snapshot_id = _get_hg_commit(args.repo)
-        config.create_client(args.name, args.mount, snapshot_id,
-                             repo_type='hg',
-                             repo_source=hg_repo,
-                             with_buck=args.with_buck)
-        return
-
-    raise Exception('{} does not look like a git or hg repository'.format(
-        args.repo))
-
-
 def do_repository(args):
     config = create_config(args)
     if (args.name and args.path):
@@ -223,6 +193,16 @@ def do_list(args):
     config = create_config(args)
     for name in config.get_client_names():
         print(name)
+
+
+def do_clone(args):
+    args.path = normalize_path_arg(args.path)
+    config = create_config(args)
+    try:
+        return config.clone(args.repo, args.path)
+    except Exception as ex:
+        print_stderr('error: {}', ex)
+        return 1
 
 
 def do_mount(args):
@@ -374,6 +354,14 @@ def create_parser():
     checkout_parser.add_argument('snapshot', help='Snapshot hash to check out')
     checkout_parser.set_defaults(func=do_checkout)
 
+    clone_parser = subparsers.add_parser(
+        'clone', help='Create a clone of a specific repo')
+    clone_parser.add_argument(
+        'repo', help='Name of repository to clone')
+    clone_parser.add_argument(
+        'path', help='Path where the client should be mounted')
+    clone_parser.set_defaults(func=do_clone)
+
     daemon_parser = subparsers.add_parser(
         'daemon', help='Run the edenfs daemon')
     daemon_parser.add_argument(
@@ -407,21 +395,6 @@ def create_parser():
         nargs='?',
         help='Name of the client')
     info_parser.set_defaults(func=do_info)
-
-    init_parser = subparsers.add_parser(
-        'init', help='Create a new Eden client.')
-    init_parser.add_argument(
-        '--repo', help='Path to the repository to import.',
-        required=True)
-    init_parser.add_argument(
-        '--mount', '-m', help='Path where the client should be mounted.',
-        required=True)
-    init_parser.add_argument(
-        '--with-buck', '-b', action='store_true',
-        help='Client should create a bind mount for buck-out/.')
-    init_parser.add_argument(
-        'name', help='Name of the new client')
-    init_parser.set_defaults(func=do_init)
 
     list_parser = subparsers.add_parser(
         'list', help='List available clients')
