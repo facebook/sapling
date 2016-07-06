@@ -225,6 +225,11 @@ class EdenClient(object):
 
         self.run_cmd('clone', self._client_name, self._mount_path)
 
+    def list_cmd(self):
+        '''Executes list command'''
+
+        return self.run_cmd('list')
+
     def mount_cmd(self):
         '''Executes mount command'''
 

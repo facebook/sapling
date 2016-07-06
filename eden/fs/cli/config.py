@@ -10,8 +10,10 @@
 import collections
 import configparser
 import errno
+import hashlib
 import json
 import os
+import shutil
 import stat
 import subprocess
 import time
@@ -31,9 +33,10 @@ HOME_CONFIG = '.edenrc'
 CLIENTS_DIR = 'clients'
 STORAGE_DIR = 'storage'
 ROCKS_DB_DIR = os.path.join(STORAGE_DIR, 'rocks-db')
+CONFIG_JSON = 'config.json'
 
 # These are files in a client directory.
-CONFIG_JSON = 'config.json'
+LOCAL_CONFIG = 'edenrc'
 SNAPSHOT = 'SNAPSHOT'
 
 # In our test environment, when we need to run as root, we
@@ -57,9 +60,9 @@ class Config:
             rc_files = os.listdir(GLOBAL_CONFIG_DIR)
             rc_files = [os.path.join(GLOBAL_CONFIG_DIR, f) for f in rc_files]
         sorted(rc_files)
-        local_config = os.path.join(self._home_dir, HOME_CONFIG)
-        if os.path.isfile(local_config):
-            rc_files.append(local_config)
+        config = os.path.join(self._home_dir, HOME_CONFIG)
+        if os.path.isfile(config):
+            rc_files.append(config)
         return rc_files
 
     def get_repository_list(self):
@@ -74,70 +77,64 @@ class Config:
         sorted(result)
         return result
 
-    def get_repo_source(self, name):
+    def get_repo_data(self, name):
         '''
-        Returns a dictionary containing the repo_type and repo_source of the
-        repository specified by name.
-
-        Raises an exception if the repository does not exist.
+        Returns a dictionary containing the metadata and the bind mounts of the
+        repository specified by name and raises an exception if the repository
+        data could not be found. The expected keys in the returned dictionary
+        are: 'repo_type', 'repo_source', 'bind-mounts'.
         '''
+        result = {}
         rc_files = self.get_rc_files()
         parser = configparser.ConfigParser()
         parser.read(rc_files)
         for section in parser.sections():
             header = section.split(' ')
-            if len(header) == 2:
-                if header[0] == 'repository' and header[1] == name:
-                    return parser[section]
-        raise Exception('Error: repository %s does not exist.' % name)
+            if len(header) == 2 and header[1] == name:
+                if header[0] == 'repository':
+                    result.update(parser[section])
+                if header[0] == 'bindmounts':
+                    result['bind-mounts'] = parser[section]
+        if not result:
+            raise Exception('Error: repository %s does not exist.' % name)
+        if 'bind-mounts' not in result:
+            result['bind-mounts'] = {}
+        return result
 
-    def get_client_names(self):
-        clients_dir = self._get_clients_dir()
-        if not os.path.isdir(clients_dir):
-            return []
-        else:
-            clients = []
-            for entry in os.listdir(clients_dir):
-                if (os.path.isdir(os.path.join(clients_dir, entry))):
-                    clients.append(entry)
-            return clients
+    def get_mount_paths(self):
+        '''Return the paths of the set mount points stored in config.json'''
+        return self._get_directory_map().keys()
 
     def get_all_client_config_info(self):
         info = {}
-        for client in self.get_client_names():
-            info[client] = self.get_client_info(client)
+        for path in self.get_mount_paths():
+            info[path] = self.get_client_info(path)
 
         return info
 
     def get_thrift_client(self):
         return eden.thrift.create_thrift_client(self._config_dir)
 
-    def get_client_info(self, name):
-        client_dir = os.path.join(self._get_clients_dir(), name)
-        if not os.path.isdir(client_dir):
-            raise Exception('Error: no such client "%s"' % name)
-
-        client_config = os.path.join(client_dir, CONFIG_JSON)
-        config_data = None
-        with open(client_config) as f:
-            config_data = json.load(f)
+    def get_client_info(self, path):
+        client_dir = self._get_client_dir_for_mount_point(path)
+        repo_name = self._get_repo_name(client_dir)
+        repo_data = self.get_repo_data(repo_name)
 
         snapshot_file = os.path.join(client_dir, SNAPSHOT)
         snapshot = open(snapshot_file).read().strip()
 
         return collections.OrderedDict([
-            ['bind-mounts', config_data['bind-mounts']],
-            ['mount', config_data['mount']],
+            ['bind-mounts', repo_data['bind-mounts']],
+            ['mount', path],
             ['snapshot', snapshot],
             ['client-dir', client_dir],
         ])
 
-    def checkout(self, name, snapshot_id):
+    def checkout(self, path, snapshot_id):
         '''Switch the active snapshot id for a given client'''
-        info = self.get_client_info(name)
         client = self.get_thrift_client()
         try:
-            client.checkOutRevision(info['mount'], snapshot_id)
+            client.checkOutRevision(path, snapshot_id)
         except EdenService.EdenError as ex:
             # str(ex) yields a rather ugly string, this reboxes the
             # exception so that the error message looks nicer in
@@ -146,33 +143,13 @@ class Config:
 
     def add_repository(self, name, repo_type, source, with_buck=False):
         # create a directory for client to store repository metadata
-        client_dir = os.path.join(self._get_clients_dir(), name)
-        if os.path.isdir(client_dir):
-            raise Exception('Error: repository %s already exists.' % name)
-        os.makedirs(client_dir)
-
         bind_mounts = {}
-        bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
-        os.makedirs(bind_mounts_dir)
-
         if with_buck:
             bind_mount_name = 'buck-out'
             bind_mounts[bind_mount_name] = 'buck-out'
-            os.makedirs(os.path.join(bind_mounts_dir, bind_mount_name))
-
-        config_data = {
-            'bind-mounts': bind_mounts,
-            'repo_type': repo_type,
-            'repo_source': source,
-        }
-        client_config = os.path.join(client_dir, CONFIG_JSON)
-        with open(client_config, 'w') as f:
-            json.dump(config_data, f, indent=2, sort_keys=True)
-            f.write('\n')  # json.dump() does not print a trailing newline.
 
         # Add repository to INI file
         config_ini = os.path.join(self._home_dir, HOME_CONFIG)
-
         parser = configparser.ConfigParser()
         parser['repository ' + name] = {'type': repo_type,
                                         'path': source}
@@ -183,33 +160,45 @@ class Config:
             parser.write(f)
 
     def clone(self, repo_name, path, snapshot_id):
-        client_path = os.path.join(self._get_clients_dir(), repo_name)
+        if path in self._get_directory_map():
+            raise Exception('Error: mount path %s already exists.' % path)
 
+        # Create client directory
+        dir_name = hashlib.sha1(repo_name.encode('utf-8')).hexdigest()
+        client_dir = os.path.join(self._get_clients_dir(), dir_name)
+        os.makedirs(client_dir)
+
+        # Store repository name in local edenrc config file
+        config = os.path.join(client_dir, LOCAL_CONFIG)
+        parser = configparser.ConfigParser()
+        parser['repository'] = {'name': repo_name}
+        with open(config, 'w') as f:
+            parser.write(f)
+
+        # Store snapshot ID
         if snapshot_id:
-            client_snapshot = os.path.join(client_path, SNAPSHOT)
+            client_snapshot = os.path.join(client_dir, SNAPSHOT)
             with open(client_snapshot, 'w') as f:
                 f.write(snapshot_id + '\n')
         else:
             raise Exception('Error: snapshot id not provided')
 
-        client_config = os.path.join(client_path, CONFIG_JSON)
-        config_data = None
-        with open(client_config) as f:
-            config_data = json.load(f)
+        # Create bind mounts directories
+        repo_data = self.get_repo_data(repo_name)
+        bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
+        os.makedirs(bind_mounts_dir)
+        for mount in repo_data['bind-mounts']:
+            os.makedirs(os.path.join(bind_mounts_dir, mount))
 
-        new_config_data = {
-            'bind-mounts': config_data['bind-mounts'],
-            'mount': path,
-            'repo_type': config_data['repo_type'],
-            'repo_source': config_data['repo_source'],
-        }
-        with open(client_config, 'w') as f:
-            json.dump(new_config_data, f, indent=2, sort_keys=True)
-            f.write('\n')  # json.dump() does not print a trailing newline.
+        # Create local storage directory
+        self._get_or_create_write_dir(dir_name)
 
-        self._get_or_create_write_dir(repo_name)
+        # Add mapping of mount path to client directory in config.json
+        self._add_path_to_directory_map(path, dir_name)
+
+        # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
-                                           edenClientPath=client_path,
+                                           edenClientPath=client_dir,
                                            homeDir=self._home_dir)
         client = self.get_thrift_client()
         try:
@@ -220,6 +209,8 @@ class Config:
     def unmount(self, path):
         client = self.get_thrift_client()
         client.unmount(path)
+        shutil.rmtree(self._get_client_dir_for_mount_point(path))
+        self._remove_path_from_directory_map(path)
 
     def check_health(self):
         '''
@@ -384,14 +375,66 @@ class Config:
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
         return _get_or_create_dir(rocks_db_dir)
 
+    def _store_repo_name(self, client_dir, repo_name):
+        config = os.path.join(client_dir, LOCAL_CONFIG)
+        parser = configparser.ConfigParser()
+        parser['repository'] = {'name': repo_name}
+        with open(config, 'w') as f:
+            parser.write(f)
+
+    def _get_repo_name(self, client_dir):
+        config = os.path.join(client_dir, LOCAL_CONFIG)
+        parser = configparser.ConfigParser()
+        parser.read(config)
+        name = parser.get('repository', 'name')
+        if name:
+            return name
+        raise Exception('Error: could not find repository for %s' % client_dir)
+
+    def _get_directory_map(self):
+        '''
+        Parse config.json which holds a mapping of mount paths to their
+        respective client directory and return contents in a dictionary.
+        '''
+        directory_map = os.path.join(self._config_dir, CONFIG_JSON)
+        if os.path.isfile(directory_map):
+            with open(directory_map) as f:
+                return json.load(f)
+        return {}
+
+    def _add_path_to_directory_map(self, path, dir_name):
+        config_data = self._get_directory_map()
+        if path in config_data:
+            raise Exception('Error: mount path %s already exists.' % path)
+        config_data[path] = dir_name
+        self._write_directory_map(config_data)
+
+    def _remove_path_from_directory_map(self, path):
+        config_data = self._get_directory_map()
+        if path in config_data:
+            del config_data[path]
+            self._write_directory_map(config_data)
+
+    def _write_directory_map(self, config_data):
+        directory_map = os.path.join(self._config_dir, CONFIG_JSON)
+        with open(directory_map, 'w') as f:
+            json.dump(config_data, f, indent=2, sort_keys=True)
+            f.write('\n')
+
+    def _get_client_dir_for_mount_point(self, path):
+        config_data = self._get_directory_map()
+        if path not in config_data:
+            raise Exception('Error: could not find mount path %s' % path)
+        return os.path.join(self._get_clients_dir(), config_data[path])
+
     def _get_clients_dir(self):
         return os.path.join(self._config_dir, CLIENTS_DIR)
 
-    def _get_or_create_write_dir(self, client_name):
+    def _get_or_create_write_dir(self, dir_name):
         ''' Returns the local storage directory that is used to
             hold writes that are not part of a snapshot '''
         local_dir = os.path.join(self._get_clients_dir(),
-                                 client_name, 'local')
+                                 dir_name, 'local')
         return _get_or_create_dir(local_dir)
 
 

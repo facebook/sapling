@@ -28,7 +28,8 @@ class ClientConfigTest : public ::testing::Test {
   boost::filesystem::path homeDir_;
 
   virtual void SetUp() override {
-    configDir_ = boost::filesystem::temp_directory_path() / "fbsource";
+    configDir_ = boost::filesystem::temp_directory_path() /
+        boost::filesystem::unique_path();
     boost::filesystem::create_directories(configDir_);
 
     homeDir_ = boost::filesystem::temp_directory_path() /
@@ -50,6 +51,12 @@ class ClientConfigTest : public ::testing::Test {
         "[bindmounts fbsource]\n"
         "my-path = path/to-my-path\n";
     folly::writeFile(folly::StringPiece{data}, configPath.c_str());
+
+    auto localConfigPath = configDir_ / "edenrc";
+    auto localData =
+        "[repository]\n"
+        "name = fbsource\n";
+    folly::writeFile(folly::StringPiece{localData}, localConfigPath.c_str());
   }
 
   virtual void TearDown() override {

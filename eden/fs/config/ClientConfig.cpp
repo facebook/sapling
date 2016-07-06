@@ -22,10 +22,12 @@ namespace {
 // INI config files
 const facebook::eden::AbsolutePathPiece kGlobalConfig{"/etc/eden/config.d"};
 const facebook::eden::RelativePathPiece kHomeConfig{".edenrc"};
+const facebook::eden::RelativePathPiece kLocalConfig{"edenrc"};
 
 // Keys for the config INI file.
 constexpr folly::StringPiece kBindMountsKey{"bindmounts "};
 constexpr folly::StringPiece kRepositoryKey{"repository "};
+constexpr folly::StringPiece kRepoNameKey{"repository.name"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 
@@ -65,7 +67,11 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
     AbsolutePathPiece clientDirectory,
     AbsolutePathPiece homeDirectory) {
   // Extract repo name from clientDirectory
-  auto repo = folly::to<string>(clientDirectory.basename().stringPiece());
+  boost::property_tree::ptree repoData;
+  auto clientConfigFile = clientDirectory + kLocalConfig;
+  boost::property_tree::ini_parser::read_ini(
+      clientConfigFile.c_str(), repoData);
+  auto repo = repoData.get(kRepoNameKey.toString(), "");
 
   // Get global config files
   boost::filesystem::path rcDir(folly::to<string>(kGlobalConfig));
@@ -78,12 +84,11 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   sort(rcFiles.begin(), rcFiles.end());
 
   // Get home config file
-  auto configFile = AbsolutePathPiece{homeDirectory} + kHomeConfig;
-  rcFiles.push_back(configFile.c_str());
+  auto userConfigFile = AbsolutePathPiece{homeDirectory} + kHomeConfig;
+  rcFiles.push_back(userConfigFile.c_str());
 
   // Find repository data in config files
   boost::property_tree::ptree configData;
-  boost::property_tree::ptree repoData;
   string header = kRepositoryKey.toString() + repo;
   // Find the first config file that defines the [repository]
   for (auto rc : boost::adaptors::reverse(rcFiles)) {

@@ -38,9 +38,9 @@ def infer_client_from_cwd(config, clientname):
     # Keep going while we're not in the root, as dirname(/) is /
     # and we can keep iterating forever.
     while len(path) > 1:
-        for client, info in all_clients.iteritems():
+        for client, info in all_clients.items():
             if info['mount'] == path:
-                return client
+                return info['mount']
         path = os.path.dirname(path)
 
     print_stderr(
@@ -188,8 +188,8 @@ def do_repository(args):
 
 def do_list(args):
     config = create_config(args)
-    for name in config.get_client_names():
-        print(name)
+    for path in config.get_mount_paths():
+        print(path)
 
 
 def do_clone(args):
@@ -198,7 +198,7 @@ def do_clone(args):
     snapshot_id = args.snapshot
     if not snapshot_id:
         try:
-            source = config.get_repo_source(args.repo)
+            source = config.get_repo_data(args.repo)
         except Exception as ex:
             print_stderr('{}', ex)
             return 1
