@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import errno
 import os
 import pwd
 import time
@@ -50,3 +51,13 @@ def get_home_dir():
     if not home_dir:
         home_dir = pwd.getpwuid(os.getuid()).pw_dir
     return home_dir
+
+
+def mkdir_p(path):
+    '''Performs `mkdir -p <path>` and returns the path.'''
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    return path

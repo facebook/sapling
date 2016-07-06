@@ -9,7 +9,6 @@
 
 import collections
 import configparser
-import errno
 import hashlib
 import json
 import os
@@ -166,7 +165,7 @@ class Config:
         # Create client directory
         dir_name = hashlib.sha1(repo_name.encode('utf-8')).hexdigest()
         client_dir = os.path.join(self._get_clients_dir(), dir_name)
-        os.makedirs(client_dir)
+        util.mkdir_p(client_dir)
 
         # Store repository name in local edenrc config file
         config = os.path.join(client_dir, LOCAL_CONFIG)
@@ -186,9 +185,9 @@ class Config:
         # Create bind mounts directories
         repo_data = self.get_repo_data(repo_name)
         bind_mounts_dir = os.path.join(client_dir, 'bind-mounts')
-        os.makedirs(bind_mounts_dir)
+        util.mkdir_p(bind_mounts_dir)
         for mount in repo_data['bind-mounts']:
-            os.makedirs(os.path.join(bind_mounts_dir, mount))
+            util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         # Create local storage directory
         self._get_or_create_write_dir(dir_name)
@@ -284,7 +283,7 @@ class Config:
 
         # Open the log file
         log_path = self.get_log_path()
-        _get_or_create_dir(os.path.dirname(log_path))
+        util.mkdir_p(os.path.dirname(log_path))
         log_file = open(log_path, 'a')
         startup_msg = time.strftime('%Y-%m-%d %H:%M:%S: starting edenfs\n')
         log_file.write(startup_msg)
@@ -373,7 +372,7 @@ class Config:
 
     def get_or_create_path_to_rocks_db(self):
         rocks_db_dir = os.path.join(self._config_dir, ROCKS_DB_DIR)
-        return _get_or_create_dir(rocks_db_dir)
+        return util.mkdir_p(rocks_db_dir)
 
     def _store_repo_name(self, client_dir, repo_name):
         config = os.path.join(client_dir, LOCAL_CONFIG)
@@ -435,7 +434,7 @@ class Config:
             hold writes that are not part of a snapshot '''
         local_dir = os.path.join(self._get_clients_dir(),
                                  dir_name, 'local')
-        return _get_or_create_dir(local_dir)
+        return util.mkdir_p(local_dir)
 
 
 class HealthStatus(object):
@@ -459,13 +458,3 @@ def _verify_mount_point(mount_point):
             ('%s must be a directory in order to mount a client at %s. ' +
              'If this is the correct location, run `mkdir -p %s` to create ' +
              'the directory.') % (parent_dir, mount_point, parent_dir))
-
-
-def _get_or_create_dir(path):
-    '''Performs `mkdir -p <path>` and returns the path.'''
-    try:
-        os.makedirs(path)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    return path
