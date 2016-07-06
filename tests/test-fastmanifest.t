@@ -98,14 +98,12 @@ Check diagnosis, debugging information
   [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 0.0)]
   [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
   [FM-METRICS] End metrics
+  $ cat >> .hg/hgrc << EOF
+  > [fastmanifest]
+  > debugmetrics=False
+  > EOF
 
   $ hg debugcachemanifest -a
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 5)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --list
   fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
   fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
@@ -122,11 +120,6 @@ Check diagnosis, debugging information
   e3738bf5439958f89499a656982023aba57b076e|2
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
   a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg diff -c . --debug --nodate
   [FM] cache hit for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache hit for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
@@ -137,11 +130,6 @@ Check diagnosis, debugging information
   +++ b/e
   @@ -0,0 +1,1 @@
   +e
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 100.0)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Test the --pruneall command to prune all the cached manifests
   $ hg debugcachemanifest --pruneall --debug
@@ -151,11 +139,6 @@ Test the --pruneall command to prune all the cached manifests
   [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
   $ hg diff -c . --debug --nodate
   [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
@@ -168,11 +151,6 @@ Test the --pruneall command to prune all the cached manifests
   +++ b/e
   @@ -0,0 +1,1 @@
   +e
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 0.0)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
   $ cat >> .hg/hgrc << EOF
   > [fastmanifest]
@@ -180,24 +158,7 @@ Test the --pruneall command to prune all the cached manifests
   > cacheonchangebackground=False
   > EOF
   $ mkcommit f
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: trigger, kwargs: [('source', 'commit')]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg book --debug foo
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: trigger, kwargs: [('source', 'bookmark')]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   [FM] skipped 1853a742c28c3a531336bbb3d677d2e2d8937027, already cached (fast path)
   [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
   [FM] skipped 7ab5760d084a24168f7595c38c00f4bbc2e308d9, already cached (fast path)
@@ -227,11 +188,6 @@ Test the --pruneall command to prune all the cached manifests
   +++ b/f
   @@ -0,0 +1,1 @@
   +f
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', 100.0)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
   $ hg debugcachemanifest --all --debug
   [FM] caching revset: ['fastmanifesttocache()'], pruneall(False), list(False)
@@ -253,18 +209,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --pruneall
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifesttocache()" -T '{rev}\n'
   0
   1
@@ -272,18 +217,7 @@ Test the --pruneall command to prune all the cached manifests
   3
   4
   5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --all --debug
   [FM] caching revset: ['fastmanifesttocache()'], pruneall(False), list(False)
   [FM] caching revision 1853a742c28c3a531336bbb3d677d2e2d8937027
@@ -304,12 +238,6 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifesttocache()" -T '{rev}\n'
   0
   1
@@ -317,12 +245,6 @@ Test the --pruneall command to prune all the cached manifests
   3
   4
   5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
   0
   1
@@ -330,11 +252,6 @@ Test the --pruneall command to prune all the cached manifests
   3
   4
   5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
@@ -355,22 +272,11 @@ Test the --pruneall command to prune all the cached manifests
   e3738bf5439958f89499a656982023aba57b076e|2
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
   a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Check that trimming to a limit higher than what is cached does nothing
   $ hg debugcachemanifest --debug --limit=2048
   [FM] caching revset: [], pruneall(False), list(False)
   [FM] nothing to do, cache size < limit
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: ondiskcachestats, kwargs: [('bytes', 1536), ('numentries', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Trim the cache to at most 1kb, we should start from the oldest entry to the
 newest ones:
@@ -379,12 +285,6 @@ newest ones:
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: ondiskcachestats, kwargs: [('bytes', 984), ('numentries', 3)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
@@ -398,32 +298,16 @@ newest ones:
   1853a742c28c3a531336bbb3d677d2e2d8937027|5
   7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
   f064a7f8e3e138341587096641d86e9d23cd9778|3
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
   3
   4
   5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Trim the cache to at most 512 bytes
   $ hg debugcachemanifest --debug --limit=512
   [FM] caching revset: [], pruneall(False), list(False)
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: ondiskcachestats, kwargs: [('bytes', 376), ('numentries', 1)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
@@ -433,47 +317,20 @@ Trim the cache to at most 512 bytes
   ================================================================================
   manifest node                           |revs
   1853a742c28c3a531336bbb3d677d2e2d8937027|5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
   5
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
   [FM] caching revset: [], pruneall(False), list(False)
   [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: ondiskcachestats, kwargs: [('bytes', 0), ('numentries', 0)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   cache size is: 0 bytes
   number of entries is: 0
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Check that trimming the cache to 0 byte works
   $ hg debugcachemanifest -a
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
@@ -493,11 +350,6 @@ Check that trimming the cache to 0 byte works
   e3738bf5439958f89499a656982023aba57b076e|2
   a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
   a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --limit=0
   [FM] caching revset: [], pruneall(False), list(False)
   [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
@@ -506,42 +358,13 @@ Check that trimming the cache to 0 byte works
   [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
   [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: ondiskcachestats, kwargs: [('bytes', 0), ('numentries', 0)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
   cache size is: 0 bytes
   number of entries is: 0
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
 Use the cache in a commit.
   $ hg debugcachemanifest -a
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: revsetsize, kwargs: [('size', 6)]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
   $ mkcommit g
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', -1)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
-  [FM-METRICS] Begin metrics
-  [FM-METRICS] kind: trigger, kwargs: [('source', 'commit')]
-  [FM-METRICS] kind: trigger, kwargs: [('source', 'bookmark')]
-  [FM-METRICS] kind: cachehitratio, kwargs: [('cachehitratio', 100.0)]
-  [FM-METRICS] kind: diffcachehitratio, kwargs: [('diffcachehitratio', -1)]
-  [FM-METRICS] kind: filesnotincachehitratio, kwargs: [('filesnotincachehitratio', -1)]
-  [FM-METRICS] End metrics
 
   $ cd ..

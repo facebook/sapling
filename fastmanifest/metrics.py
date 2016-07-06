@@ -112,7 +112,7 @@ class metricscollector(object):
 
     def logsamples(self, ui):
         self._addaggregatesamples()
-        debug = ui.config("fastmanifest", "debugmetrics", False)
+        debug = ui.configbool("fastmanifest", "debugmetrics", False)
         if debug:
             ui.status(("[FM-METRICS] Begin metrics\n"))
 
