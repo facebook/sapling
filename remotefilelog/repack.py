@@ -299,8 +299,18 @@ class repacker(object):
             for node in orderednodes:
                 p1, p2, linknode, copyfrom = ancestors[node]
 
-                if node in dontprocess:
-                    if p1 != nullid:
+                # If the node is marked dontprocess, but it's also in the
+                # explicit entries set, that means the node exists both in this
+                # file and in another file that was copied to this file.
+                # Usually this happens if the file was copied to another file,
+                # then the copy was deleted, then reintroduced without copy
+                # metadata. The original add and the new add have the same hash
+                # since the content is identical and the parents are null.
+                if node in dontprocess and node not in entries:
+                    # If copyfrom == filename, it means the copy history
+                    # went to come other file, then came back to this one, so we
+                    # should continue processing it.
+                    if p1 != nullid and copyfrom != filename:
                         dontprocess.add(p1)
                     if p2 != nullid:
                         dontprocess.add(p2)

@@ -167,6 +167,50 @@
   x2
   x
 
+# Test copy trace across rename and back
+  $ cp -r $TESTTMP/hgcache/master/packs $TESTTMP/backuppacks
+  $ cd ../master
+  $ hg mv y x
+  $ hg commit -m 'move y back to x'
+  $ hg revert -r 0 x
+  $ mv x y
+  $ hg add y
+  $ hg revert x
+  $ hg commit -m 'add y back without metadata'
+  $ cd ../shallow
+  $ hg pull -q
+  $ hg up -q tip
+  2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob)
+  $ hg repack
+  $ ls $TESTTMP/hgcache/master/packs
+  2c833052b8b6b9d310b424403e87997bc7735459.dataidx
+  2c833052b8b6b9d310b424403e87997bc7735459.datapack
+  b6be6cc48737aa69dc05ec02575536846c67a471.histidx
+  b6be6cc48737aa69dc05ec02575536846c67a471.histpack
+  $ hg debughistorypack $TESTTMP/hgcache/master/packs/b6be6cc48737aa69dc05ec02575536846c67a471
+  
+  x
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  cd410a44d584  577959738234  000000000000  609547eda446  y
+  1bb2e6237e03  d4a3ed9310e5  000000000000  0b03bbc9e1e7  
+  d4a3ed9310e5  aee31534993a  000000000000  421535db10b6  
+  aee31534993a  1406e7411862  000000000000  a89d614e2364  
+  1406e7411862  000000000000  000000000000  b292c1e3311f  
+  
+  y
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  577959738234  1bb2e6237e03  000000000000  c7faf2fc439a  x
+  1406e7411862  000000000000  000000000000  b292c1e3311f  
+  $ hg strip -r '.^'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/shallow/.hg/strip-backup/609547eda446-1aa878d4-backup.hg (glob)
+  $ hg -R ../master strip -r '.^'
+  1 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  saved backup bundle to $TESTTMP/master/.hg/strip-backup/609547eda446-1aa878d4-backup.hg (glob)
+
+  $ rm -rf $TESTTMP/hgcache/master/packs
+  $ cp -r $TESTTMP/backuppacks $TESTTMP/hgcache/master/packs
+
 # Test repacking datapack without history
   $ rm -rf $CACHEDIR/master/packs/*hist*
   $ hg repack
