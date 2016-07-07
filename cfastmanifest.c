@@ -246,8 +246,7 @@ static PyObject * fastmanifest_save(fastmanifest *self, PyObject *args){
 
   switch (result) {
     case WRITE_TO_FILE_OK:
-      Py_INCREF(Py_None);
-      return Py_None;
+      Py_RETURN_NONE;
 
     case WRITE_TO_FILE_OOM:
       PyErr_NoMemory();
