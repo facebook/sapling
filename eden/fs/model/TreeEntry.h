@@ -69,10 +69,10 @@ class TreeEntry {
   }
 
  private:
-  const FileType fileType_;
-  const uint8_t ownerPermissions_;
-  const Hash hash_;
-  const PathComponent name_;
+  FileType fileType_;
+  uint8_t ownerPermissions_;
+  Hash hash_;
+  PathComponent name_;
 };
 }
 }

@@ -55,17 +55,40 @@ class HgManifestImporter::PartialTree {
   // internal serialization format.
   GitTreeSerializer serializer_;
   unsigned int numPaths_{0};
+  std::vector<TreeEntry> entries_;
 };
 
 HgManifestImporter::PartialTree::PartialTree(RelativePathPiece path)
     : path_(std::move(path)) {}
 
 void HgManifestImporter::PartialTree::addEntry(TreeEntry&& entry) {
-  serializer_.addEntry(std::move(entry));
+  // Common case should be that we append because we expect the entries
+  // to be in the correct sorted order most of the time.
+  if (entries_.empty() || entries_.back().getName() < entry.getName()) {
+    entries_.emplace_back(std::move(entry));
+  } else {
+    // The last entry in entries_ sorts after the entry that we wish to
+    // insert now.  Let's find the true insertion point.  We use binary
+    // search for this rather than a linear backwards scan because some of our
+    // directory entries are very large and we may have to go back as many as
+    // 100 entries or more to find the correct insertion point.
+    auto position = std::lower_bound(
+        entries_.begin(),
+        entries_.end(),
+        entry,
+        [](const TreeEntry& a, const TreeEntry& b) {
+          return a.getName() < b.getName();
+        });
+    entries_.emplace(position, std::move(entry));
+  }
+
   ++numPaths_;
 }
 
 Hash HgManifestImporter::PartialTree::record(LocalStore* store) {
+  for (auto& entry : entries_) {
+    serializer_.addEntry(std::move(entry));
+  }
   IOBuf treeBuf = serializer_.finalize();
   auto hash = Hash::sha1(&treeBuf);
 
