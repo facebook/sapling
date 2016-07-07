@@ -92,6 +92,10 @@ std::unique_ptr<ClientConfig> ClientConfig::loadFromClientDirectory(
   string header = kRepositoryKey.toString() + repo;
   // Find the first config file that defines the [repository]
   for (auto rc : boost::adaptors::reverse(rcFiles)) {
+    if (access(rc.c_str(), R_OK) != 0) {
+      continue;
+    }
+
     // Parse INI file into property tree
     boost::property_tree::ini_parser::read_ini(rc, configData);
     repoData = configData.get_child(
