@@ -1,4 +1,4 @@
-import errno, hashlib, mmap, os, struct
+import errno, hashlib, mmap, os, struct, time
 from mercurial import osutil
 
 import constants
@@ -31,15 +31,29 @@ LARGEFANOUTPREFIX = 2
 # 10 step fanout scan = 2^16 / (2^16 / 8)  # fanout space divided by entries
 SMALLFANOUTCUTOFF = 2**16 / 8
 
+# The amount of time to wait between checking for new packs. This prevents an
+# exception when data is moved to a new pack after the process has already
+# loaded the pack list.
+REFRESHRATE = 0.1
+
 class basepackstore(object):
     def __init__(self, path):
+        self.path = path
         self.packs = []
+        # lastrefesh is 0 so we'll immediately check for new packs on the first
+        # failure.
+        self.lastrefresh = 0
+
+        for filepath in self._getavailablepackfiles():
+            self.packs.append(self.getpack(filepath))
+
+    def _getavailablepackfiles(self):
         suffixlen = len(self.INDEXSUFFIX)
 
         files = []
         filenames = set()
         try:
-            for filename, size, stat in osutil.listdir(path, stat=True):
+            for filename, size, stat in osutil.listdir(self.path, stat=True):
                 files.append((stat.st_mtime, filename))
                 filenames.add(filename)
         except OSError as ex:
@@ -53,8 +67,7 @@ class basepackstore(object):
             packfilename = '%s%s' % (filename[:-suffixlen], self.PACKSUFFIX)
             if (filename[-suffixlen:] == self.INDEXSUFFIX
                 and packfilename in filenames):
-                packpath = os.path.join(path, filename)
-                self.packs.append(self.getpack(packpath[:-suffixlen]))
+                yield os.path.join(self.path, filename)[:-suffixlen]
 
     def getpack(self, path):
         raise NotImplemented()
@@ -64,11 +77,37 @@ class basepackstore(object):
         for pack in self.packs:
             missing = pack.getmissing(missing)
 
+        if missing:
+            for pack in self.refresh():
+                missing = pack.getmissing(missing)
+
         return missing
 
     def markledger(self, ledger):
         for pack in self.packs:
             pack.markledger(ledger)
+
+    def refresh(self):
+        """Checks for any new packs on disk, adds them to the main pack list,
+        and returns a list of just the new packs."""
+        now = time.time()
+
+        # If we experience a lot of misses (like in the case of getmissing() on
+        # new objects), let's only actually check disk for new stuff every once
+        # in a while. Generally this code path should only ever matter when a
+        # repack is going on in the background, and that should be pretty rare
+        # to have that happen twice in quick succession.
+        newpacks = []
+        if now > self.lastrefresh + REFRESHRATE:
+            self.lastrefresh = now
+            previous = set(p.path for p in self.packs)
+            new = set(self._getavailablepackfiles()) - previous
+
+            for filepath in new:
+                newpacks.append(self.getpack(filepath))
+            self.packs.extend(newpacks)
+
+        return newpacks
 
 class basepack(object):
     def __init__(self, path):

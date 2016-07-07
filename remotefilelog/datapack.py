@@ -35,6 +35,12 @@ class datapackstore(basepack.basepackstore):
             except KeyError:
                 pass
 
+        for pack in self.refresh():
+            try:
+                return pack.getdeltachain(name, node)
+            except KeyError:
+                pass
+
         raise KeyError((name, hex(node)))
 
     def add(self, name, node, data):

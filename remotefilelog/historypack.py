@@ -39,6 +39,12 @@ class historypackstore(basepack.basepackstore):
             except KeyError as ex:
                 pass
 
+        for pack in self.refresh():
+            try:
+                return pack.getancestors(name, node)
+            except KeyError:
+                pass
+
         raise KeyError((name, node))
 
     def add(self, filename, node, p1, p2, linknode, copyfrom):
