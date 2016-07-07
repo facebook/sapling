@@ -56,6 +56,7 @@ we are able to load CA certs.
 
 #if no-sslcontext defaultcacerts
   $ hg clone https://localhost:$HGPORT/ copy-pull
+  (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   abort: error: *certificate verify failed* (glob)
   [255]
 #endif
@@ -77,6 +78,7 @@ we are able to load CA certs.
 
 #if defaultcacertsloaded
   $ hg clone https://localhost:$HGPORT/ copy-pull
+  (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   abort: error: *certificate verify failed* (glob)
   [255]
 #endif

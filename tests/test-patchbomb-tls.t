@@ -58,6 +58,7 @@ we are able to load CA certs:
   this patch series consists of 1 patches.
   
   
+  (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 #endif
@@ -67,6 +68,7 @@ we are able to load CA certs:
   this patch series consists of 1 patches.
   
   
+  (using CA certificates from *; if you see this message, your Mercurial install is not properly configured; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   (?i)abort: .*?certificate.verify.failed.* (re)
   [255]
 

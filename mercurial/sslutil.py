@@ -430,12 +430,22 @@ def _plainapplepython():
     return (exe.startswith('/usr/bin/python') or
             exe.startswith('/system/library/frameworks/python.framework/'))
 
+_systemcacertpaths = [
+    # RHEL, CentOS, and Fedora
+    '/etc/pki/tls/certs/ca-bundle.trust.crt',
+    # Debian, Ubuntu, Gentoo
+    '/etc/ssl/certs/ca-certificates.crt',
+]
+
 def _defaultcacerts(ui):
     """return path to default CA certificates or None.
 
     It is assumed this function is called when the returned certificates
     file will actually be used to validate connections. Therefore this
     function may print warnings or debug messages assuming this usage.
+
+    We don't print a message when the Python is able to load default
+    CA certs because this scenario is detected at socket connect time.
     """
     # The "certifi" Python package provides certificates. If it is installed,
     # assume the user intends it to be used and use it.
@@ -479,6 +489,28 @@ def _defaultcacerts(ui):
                       'https://mercurial-scm.org/wiki/SecureConnections for '
                       'how to configure Mercurial to avoid this message)\n'))
         return None
+
+    # Try to find CA certificates in well-known locations. We print a warning
+    # when using a found file because we don't want too much silent magic
+    # for security settings. The expectation is that proper Mercurial
+    # installs will have the CA certs path defined at install time and the
+    # installer/packager will make an appropriate decision on the user's
+    # behalf. We only get here and perform this setting as a feature of
+    # last resort.
+    if not _canloaddefaultcerts:
+        for path in _systemcacertpaths:
+            if os.path.isfile(path):
+                ui.warn(_('(using CA certificates from %s; if you see this '
+                          'message, your Mercurial install is not properly '
+                          'configured; see '
+                          'https://mercurial-scm.org/wiki/SecureConnections '
+                          'for how to configure Mercurial to avoid this '
+                          'message)\n') % path)
+                return path
+
+        ui.warn(_('(unable to load CA certificates; see '
+                  'https://mercurial-scm.org/wiki/SecureConnections for '
+                  'how to configure Mercurial to avoid this message)\n'))
 
     return None
 
