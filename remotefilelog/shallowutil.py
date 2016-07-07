@@ -273,19 +273,33 @@ def readunpack(stream, fmt):
 def mkstickygroupdir(ui, path):
     """Creates the given directory (if it doesn't exist) and give it a
     particular group with setgid enabled."""
-    if not os.path.exists(path):
-        oldumask = os.umask(0o002)
-        try:
-            os.makedirs(path)
+    if os.path.exists(path):
+        return
 
-            groupname = ui.config("remotefilelog", "cachegroup")
-            if groupname:
-                if os.name == 'nt':
-                    raise error.Abort(_('cachegroup option not'
-                                        ' supported on Windows'))
-                gid = grp.getgrnam(groupname).gr_gid
-                if gid:
-                    os.chown(path, os.getuid(), gid)
-                    os.chmod(path, 0o2775)
-        finally:
-            os.umask(oldumask)
+    oldumask = os.umask(0o002)
+    try:
+        missingdirs = [path]
+        path = os.path.dirname(path)
+        while path and not os.path.exists(path):
+            missingdirs.append(path)
+            path = os.path.dirname(path)
+
+        for path in reversed(missingdirs):
+            os.mkdir(path)
+
+        groupname = ui.config("remotefilelog", "cachegroup")
+        if groupname:
+            if os.name == 'nt':
+                raise error.Abort(_('cachegroup option not'
+                                    ' supported on Windows'))
+            gid = grp.getgrnam(groupname).gr_gid
+            if gid:
+                uid = os.getuid()
+                for path in missingdirs:
+                    try:
+                        os.chown(path, uid, gid)
+                        os.chmod(path, 0o2775)
+                    except (IOError, OSError) as ex:
+                        ui.debug('unable to chown/chmod sticky group: %s' % ex)
+    finally:
+        os.umask(oldumask)

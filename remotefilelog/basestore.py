@@ -208,6 +208,7 @@ class basestore(object):
                     shallowutil.unlinkfile(newfilename)
                 shutil.copy(filepath, newfilename)
 
+            shallowutil.mkstickygroupdir(self.ui, os.path.dirname(filepath))
             shallowutil.writefile(filepath, data, readonly=True)
 
             if self._validatecache:
