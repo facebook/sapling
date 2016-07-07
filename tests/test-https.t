@@ -67,6 +67,14 @@ we are able to load CA certs.
   [255]
 #endif
 
+#if no-sslcontext osx
+  $ hg clone https://localhost:$HGPORT/ copy-pull
+  (unable to load CA certificates; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message)
+  abort: localhost certificate error: no certificate received
+  (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
+  [255]
+#endif
+
 #if defaultcacertsloaded
   $ hg clone https://localhost:$HGPORT/ copy-pull
   abort: error: *certificate verify failed* (glob)
@@ -75,6 +83,7 @@ we are able to load CA certs.
 
 #if no-defaultcacerts
   $ hg clone https://localhost:$HGPORT/ copy-pull
+  (unable to load * certificates; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   abort: localhost certificate error: no certificate received
   (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
   [255]

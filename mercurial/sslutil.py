@@ -468,6 +468,18 @@ def _defaultcacerts(ui):
         if os.path.exists(dummycert):
             return dummycert
 
+    # The Apple OpenSSL trick isn't available to us. If Python isn't able to
+    # load system certs, we're out of luck.
+    if sys.platform == 'darwin':
+        # FUTURE Consider looking for Homebrew or MacPorts installed certs
+        # files. Also consider exporting the keychain certs to a file during
+        # Mercurial install.
+        if not _canloaddefaultcerts:
+            ui.warn(_('(unable to load CA certificates; see '
+                      'https://mercurial-scm.org/wiki/SecureConnections for '
+                      'how to configure Mercurial to avoid this message)\n'))
+        return None
+
     return None
 
 def validatesocket(sock):
