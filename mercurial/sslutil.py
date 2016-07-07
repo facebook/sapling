@@ -126,9 +126,27 @@ def _hostsettings(ui, hostname):
         'disablecertverification': False,
         # Whether the legacy [hostfingerprints] section has data for this host.
         'legacyfingerprint': False,
+        # PROTOCOL_* constant to use for SSLContext.__init__.
+        'protocol': None,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
         'verifymode': None,
     }
+
+    # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
+    # that both ends support, including TLS protocols. On legacy stacks,
+    # the highest it likely goes in TLS 1.0. On modern stacks, it can
+    # support TLS 1.2.
+    #
+    # The PROTOCOL_TLSv* constants select a specific TLS version
+    # only (as opposed to multiple versions). So the method for
+    # supporting multiple TLS versions is to use PROTOCOL_SSLv23 and
+    # disable protocols via SSLContext.options and OP_NO_* constants.
+    # However, SSLContext.options doesn't work unless we have the
+    # full/real SSLContext available to us.
+    if modernssl:
+        s['protocol'] = ssl.PROTOCOL_SSLv23
+    else:
+        s['protocol'] = ssl.PROTOCOL_TLSv1
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
@@ -215,6 +233,7 @@ def _hostsettings(ui, hostname):
             # user).
             s['verifymode'] = ssl.CERT_NONE
 
+    assert s['protocol'] is not None
     assert s['verifymode'] is not None
 
     return s
@@ -237,27 +256,10 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
 
     settings = _hostsettings(ui, serverhostname)
 
-    # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
-    # that both ends support, including TLS protocols. On legacy stacks,
-    # the highest it likely goes in TLS 1.0. On modern stacks, it can
-    # support TLS 1.2.
-    #
-    # The PROTOCOL_TLSv* constants select a specific TLS version
-    # only (as opposed to multiple versions). So the method for
-    # supporting multiple TLS versions is to use PROTOCOL_SSLv23 and
-    # disable protocols via SSLContext.options and OP_NO_* constants.
-    # However, SSLContext.options doesn't work unless we have the
-    # full/real SSLContext available to us.
-    #
-    # SSLv2 and SSLv3 are broken. We ban them outright.
-    if modernssl:
-        protocol = ssl.PROTOCOL_SSLv23
-    else:
-        protocol = ssl.PROTOCOL_TLSv1
-
     # TODO use ssl.create_default_context() on modernssl.
-    sslcontext = SSLContext(protocol)
+    sslcontext = SSLContext(settings['protocol'])
 
+    # SSLv2 and SSLv3 are broken. We ban them outright.
     # This is a no-op on old Python.
     sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
 
