@@ -130,6 +130,8 @@ def _hostsettings(ui, hostname):
         'protocol': None,
         # ssl.CERT_* constant used by SSLContext.verify_mode.
         'verifymode': None,
+        # Defines extra ssl.OP* bitwise options to set.
+        'ctxoptions': None,
     }
 
     # Despite its name, PROTOCOL_SSLv23 selects the highest protocol
@@ -147,6 +149,11 @@ def _hostsettings(ui, hostname):
         s['protocol'] = ssl.PROTOCOL_SSLv23
     else:
         s['protocol'] = ssl.PROTOCOL_TLSv1
+
+    # SSLv2 and SSLv3 are broken. We ban them outright.
+    # WARNING: ctxoptions doesn't have an effect unless the modern ssl module
+    # is available. Be careful when adding flags!
+    s['ctxoptions'] = OP_NO_SSLv2 | OP_NO_SSLv3
 
     # Look for fingerprints in [hostsecurity] section. Value is a list
     # of <alg>:<fingerprint> strings.
@@ -234,6 +241,7 @@ def _hostsettings(ui, hostname):
             s['verifymode'] = ssl.CERT_NONE
 
     assert s['protocol'] is not None
+    assert s['ctxoptions'] is not None
     assert s['verifymode'] is not None
 
     return s
@@ -259,9 +267,8 @@ def wrapsocket(sock, keyfile, certfile, ui, serverhostname=None):
     # TODO use ssl.create_default_context() on modernssl.
     sslcontext = SSLContext(settings['protocol'])
 
-    # SSLv2 and SSLv3 are broken. We ban them outright.
-    # This is a no-op on old Python.
-    sslcontext.options |= OP_NO_SSLv2 | OP_NO_SSLv3
+    # This is a no-op unless using modern ssl.
+    sslcontext.options |= settings['ctxoptions']
 
     # This still works on our fake SSLContext.
     sslcontext.verify_mode = settings['verifymode']
