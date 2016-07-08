@@ -12,10 +12,13 @@ import errno
 import os
 
 
-class OpenExclusiveTest(testcase.EdenTestCase):
+class OpenExclusiveTest:
+    def populate_repo(self):
+        self.repo.write_file('readme.txt', 'test\n')
+        self.repo.commit('Initial commit.')
+
     def test_oexcl(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'makeme')
+        filename = os.path.join(self.mount, 'makeme')
 
         fd = os.open(filename, os.O_EXCL | os.O_CREAT | os.O_RDWR)
         self.assertGreater(fd, -1, msg='Opened file exclusively')
@@ -38,3 +41,11 @@ class OpenExclusiveTest(testcase.EdenTestCase):
                            msg='Subsequent O_EXCL is not blocked after ' +
                                'removing the file')
         os.close(fd)
+
+
+class OpenExclusiveTestGit(OpenExclusiveTest, testcase.EdenGitTest):
+    pass
+
+
+class OpenExclusiveTestHg(OpenExclusiveTest, testcase.EdenHgTest):
+    pass

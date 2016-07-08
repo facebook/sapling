@@ -11,12 +11,14 @@ import os
 from .lib import testcase
 
 
-class RCTest(testcase.EdenTestCase):
-    def test_list_repository(self):
-        eden = self.init_git_eden()
+class RCTest:
+    def populate_repo(self):
+        self.repo.write_file('readme.txt', 'test\n')
+        self.repo.commit('Initial commit.')
 
-        out = eden.repository_cmd().split('\n')[:-1]
-        expected = ['CLIENT']
+    def test_list_repository(self):
+        out = self.eden.repository_cmd().split('\n')[:-1]
+        expected = [self.repo_name]
         self.assertEqual(expected, out)
         config = '''\
 [repository fbsource]
@@ -37,61 +39,65 @@ type = git
 url = /data/users/carenthomas/facebook-hg-rpms/hg-crew
 type = hg
 '''
-        home_config_file = os.path.join(eden._home_dir, '.edenrc')
+        home_config_file = os.path.join(self.home_dir, '.edenrc')
         with open(home_config_file, 'w') as f:
             f.write(config)
-        out = eden.repository_cmd().split('\n')[:-1]
+        out = self.eden.repository_cmd().split('\n')[:-1]
         expected = ['fbsource', 'git', 'hg-crew']
         self.assertEqual(expected, out)
 
     def test_eden_list(self):
-        eden = self.init_git_eden()
-
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(1, len(mount_paths),
                          msg='There should only be 1 mount path')
-        self.assertEqual(eden.mount_path, mount_paths[0])
+        self.assertEqual(self.mount, mount_paths[0])
 
-        eden.unmount_cmd()
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        self.eden.unmount(self.mount)
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(0, len(mount_paths),
                          msg='There should be 0 mount paths after unmount')
 
-        eden.clone_cmd()
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        self.eden.clone(self.repo_name, self.mount)
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(1, len(mount_paths),
                          msg='There should be 1 mount path after clone')
-        self.assertEqual(eden.mount_path, mount_paths[0])
+        self.assertEqual(self.mount, mount_paths[0])
 
     def test_unmount_rmdir(self):
-        eden = self.init_git_eden()
-
-        clients = os.path.join(eden._config_dir, 'clients')
+        clients = os.path.join(self.eden_dir, 'clients')
         client_names = os.listdir(clients)
         self.assertEqual(1, len(client_names),
                          msg='There should only be 1 client')
         test_client_dir = os.path.join(clients, client_names[0])
 
         # Eden list command uses keys of directory map to get mount paths
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(1, len(mount_paths),
                          msg='There should only be 1 path in the directory map')
-        self.assertEqual(eden.mount_path, mount_paths[0])
+        self.assertEqual(self.mount, mount_paths[0])
 
-        eden.unmount_cmd()
+        self.eden.unmount(self.mount)
         self.assertFalse(os.path.isdir(test_client_dir))
 
         # Check that _remove_path_from_directory_map in unmount is successful
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(0, len(mount_paths),
                          msg='There should be 0 paths in the directory map')
 
-        eden.clone_cmd()
+        self.eden.clone(self.repo_name, self.mount)
         self.assertTrue(os.path.isdir(test_client_dir),
                         msg='Client name should be restored verbatim because \
                              it should be a function of the mount point')
-        mount_paths = eden.list_cmd().split('\n')[:-1]
+        mount_paths = self.eden.list_cmd().split('\n')[:-1]
         self.assertEqual(1, len(mount_paths),
                          msg='The client directory should have been restored')
-        self.assertEqual(eden.mount_path, mount_paths[0],
+        self.assertEqual(self.mount, mount_paths[0],
                          msg='Client directory name should match client name')
+
+
+class RCTestGit(RCTest, testcase.EdenGitTest):
+    pass
+
+
+class RCTestHg(RCTest, testcase.EdenHgTest):
+    pass

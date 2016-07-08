@@ -12,20 +12,24 @@ import errno
 import os
 
 
-class RenameTest(testcase.EdenTestCase):
+class RenameTest:
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.symlink('slink', 'hello')
+        self.repo.commit('Initial commit.')
+
     def test_rename_errors(self):
         ''' Test some error cases '''
-        eden = self.init_git_eden()
-
         with self.assertRaises(OSError) as context:
-            os.rename(os.path.join(eden.mount_path, 'not-exist'),
-                      os.path.join(eden.mount_path, 'also-not-exist'))
+            os.rename(os.path.join(self.mount, 'not-exist'),
+                      os.path.join(self.mount, 'also-not-exist'))
         self.assertEqual(errno.ENOENT, context.exception.errno,
                          msg='Renaming a bogus file -> ENOENT')
 
         # We don't yet support renaming dirs; check our behavior.
-        filename = os.path.join(eden.mount_path, 'adir')
-        targetname = os.path.join(eden.mount_path, 'a-new-target')
+        filename = os.path.join(self.mount, 'adir')
+        targetname = os.path.join(self.mount, 'a-new-target')
 
         with self.assertRaises(OSError) as context:
             os.rename(filename, targetname)
@@ -34,11 +38,9 @@ class RenameTest(testcase.EdenTestCase):
 
     def test_rename_away_tree_entry(self):
         ''' Rename a tree entry away and back again '''
-        eden = self.init_git_eden()
-
         # We should be able to rename files that are in the Tree
-        hello = os.path.join(eden.mount_path, 'hello')
-        targetname = os.path.join(eden.mount_path, 'a-new-target')
+        hello = os.path.join(self.mount, 'hello')
+        targetname = os.path.join(self.mount, 'a-new-target')
         os.rename(hello, targetname)
 
         with self.assertRaises(OSError) as context:
@@ -46,7 +48,7 @@ class RenameTest(testcase.EdenTestCase):
         self.assertEqual(errno.ENOENT, context.exception.errno,
                          msg='no longer visible as old name')
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['a-new-target', 'adir', 'slink'], entries)
 
         with open(targetname, 'r') as f:
@@ -58,7 +60,7 @@ class RenameTest(testcase.EdenTestCase):
             # we rename it back to its old name.
             os.rename(targetname, hello)
 
-            entries = sorted(os.listdir(eden.mount_path))
+            entries = sorted(os.listdir(self.mount))
             self.assertEqual(['adir', 'hello', 'slink'], entries)
 
             with open(hello, 'r+') as write_f:
@@ -70,11 +72,9 @@ class RenameTest(testcase.EdenTestCase):
 
     def test_rename_overlay_only(self):
         ''' Create a local/overlay only file and rename it '''
-        eden = self.init_git_eden()
-
         # We should be able to rename files that are in the Tree
-        from_name = os.path.join(eden.mount_path, 'overlay-a')
-        to_name = os.path.join(eden.mount_path, 'overlay-b')
+        from_name = os.path.join(self.mount, 'overlay-a')
+        to_name = os.path.join(self.mount, 'overlay-b')
 
         with open(from_name, 'w') as f:
             f.write('overlay-a\n')
@@ -86,7 +86,7 @@ class RenameTest(testcase.EdenTestCase):
         self.assertEqual(errno.ENOENT, context.exception.errno,
                          msg='no longer visible as old name')
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'overlay-b', 'slink'], entries)
 
         with open(to_name, 'r') as f:
@@ -98,7 +98,7 @@ class RenameTest(testcase.EdenTestCase):
             # we rename it back to its old name.
             os.rename(to_name, from_name)
 
-            entries = sorted(os.listdir(eden.mount_path))
+            entries = sorted(os.listdir(self.mount))
             self.assertEqual(['adir', 'hello', 'overlay-a', 'slink'], entries)
 
             with open(from_name, 'r+') as write_f:
@@ -111,10 +111,8 @@ class RenameTest(testcase.EdenTestCase):
     def test_rename_overlay_over_tree(self):
         ''' Make an overlay file and overwrite a tree entry with it '''
 
-        eden = self.init_git_eden()
-
-        from_name = os.path.join(eden.mount_path, 'overlay-a')
-        to_name = os.path.join(eden.mount_path, 'hello')
+        from_name = os.path.join(self.mount, 'overlay-a')
+        to_name = os.path.join(self.mount, 'hello')
 
         with open(from_name, 'w') as f:
             f.write('overlay-a\n')
@@ -126,9 +124,17 @@ class RenameTest(testcase.EdenTestCase):
         self.assertEqual(errno.ENOENT, context.exception.errno,
                          msg='no longer visible as old name')
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'slink'], entries)
 
         with open(to_name, 'r') as f:
             self.assertEqual('overlay-a\n', f.read(),
                              msg='holds correct data')
+
+
+class RenameTestGit(RenameTest, testcase.EdenGitTest):
+    pass
+
+
+class RenameTestHg(RenameTest, testcase.EdenHgTest):
+    pass

@@ -14,9 +14,12 @@ import subprocess
 
 
 class SedTest(testcase.EdenTestCase):
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.commit('Initial commit.')
+
     def test_sed(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'sedme')
+        filename = os.path.join(self.mount, 'sedme')
 
         with open(filename, 'w') as f:
             f.write('foo\n')
@@ -34,3 +37,11 @@ class SedTest(testcase.EdenTestCase):
             file_st = os.fstat(f.fileno())
             self.assertEqual(after_st.st_ino, file_st.st_ino)
             self.assertEqual('bar\n', f.read())
+
+
+class SedTestGit(SedTest, testcase.EdenGitTest):
+    pass
+
+
+class SedTestHg(SedTest, testcase.EdenHgTest):
+    pass

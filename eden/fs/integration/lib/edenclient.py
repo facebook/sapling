@@ -8,13 +8,15 @@
 # of patent rights can be found in the PATENTS file in the same directory.
 
 import errno
-from eden.thrift import create_thrift_client
 import os
 import shutil
-import socket
 import subprocess
 import sys
+import tempfile
 import time
+
+import eden.thrift
+from fb303.ttypes import fb_status
 
 
 def _find_executables():
@@ -43,18 +45,20 @@ def _find_executables():
 EDEN_CLI, EDEN_DAEMON = _find_executables()
 
 
-class EdenClient(object):
+class EdenFS(object):
     '''Manages an instance of the eden fuse server.'''
 
-    def __init__(self, eden_test_case):
-        self._test_case = eden_test_case
-        self.name = self._test_case.register_eden_client(self)
-        self._config_dir = os.path.join(self._test_case.tmp_dir,
-                                        self.name + '.config')
-        self._mount_path = os.path.join(self._test_case.tmp_dir,
-                                        self.name + '.mount')
+    def __init__(self, eden_dir=None, home_dir=None):
+        if eden_dir is None:
+            eden_dir = tempfile.mkdtemp(prefix='eden_test.')
+        self._eden_dir = eden_dir
+
         self._process = None
-        self._home_dir = self._test_case.new_tmp_dir()
+        self._home_dir = home_dir
+
+    @property
+    def eden_dir(self):
+        return self._eden_dir
 
     def __enter__(self):
         return self
@@ -69,33 +73,27 @@ class EdenClient(object):
 
     def cleanup_dirs(self):
         '''Remove any temporary dirs we have created.'''
-        shutil.rmtree(self._config_dir, ignore_errors=True)
-        shutil.rmtree(self._home_dir, ignore_errors=True)
-        shutil.rmtree(self._mount_path, ignore_errors=True)
+        shutil.rmtree(self._eden_dir, ignore_errors=True)
 
     def kill(self):
         '''Stops and unmounts this instance.'''
         if self._process is None:
             return
-        self.shutdown_cmd()
+        self.shutdown()
 
-    def _wait_for_thrift(self, timeout):
-        '''Wait for thrift server to start.
+    def _wait_for_healthy(self, timeout):
+        '''Wait for edenfs to start and report that it is health.
 
         Throws an error if it doesn't come up within the specified time.
         '''
-        sock_path = os.path.join(self._config_dir, 'socket')
-
         deadline = time.time() + timeout
         while time.time() < deadline:
-            # Just check to see if we can connect to the thrift socket.
-            s = socket.socket(socket.AF_UNIX)
             try:
-                s.connect(sock_path)
-                return
-            except (OSError, socket.error) as ex:
-                if ex.errno != errno.ENOENT:
-                    raise
+                client = self.get_thrift_client()
+                if client.getStatus() == fb_status.ALIVE:
+                    return
+            except eden.thrift.EdenNotRunningError as ex:
+                pass
 
             status = self._process.poll()
             if status is not None:
@@ -110,7 +108,7 @@ class EdenClient(object):
         raise Exception("edenfs didn't start within timeout of %s" % timeout)
 
     def get_thrift_client(self):
-        return create_thrift_client(self._config_dir)
+        return eden.thrift.create_thrift_client(self._eden_dir)
 
     def run_cmd(self, command, *args):
         '''
@@ -145,33 +143,17 @@ class EdenClient(object):
             A list of arguments to run Eden that can be used with
             subprocess.Popen() or subprocess.check_call().
         '''
-        return [
-            EDEN_CLI,
-            '--config-dir', self._config_dir,
-            '--home-dir', self._home_dir,
-            command,
-        ] + list(args)
+        cmd = [EDEN_CLI, '--config-dir', self._eden_dir]
+        if self._home_dir:
+            cmd += ['--home-dir', self._home_dir]
+        cmd.append(command)
+        cmd.extend(args)
+        return cmd
 
-    def init(self, repo_path, client_name='CLIENT', timeout=10):
-        '''Runs eden init and passes the specified parameters.
-
-        Will raise an error if the mount doesn't complete in a timely
-        fashion.
-
-        If it returns successfully, the eden instance is guaranteed
-        to be mounted.
+    def start(self, timeout=10):
         '''
-        self._repo_path = repo_path
-        self._client_name = client_name
-
-        self.run_cmd('repository',
-                     self._client_name,
-                     self._repo_path)
-
-        self.daemon_cmd(timeout)
-        self.clone_cmd()
-
-    def daemon_cmd(self, timeout=10):
+        Run "eden daemon" to start the eden daemon.
+        '''
         if self._process is not None:
             raise Exception('cannot start an already-running eden client')
 
@@ -182,9 +164,12 @@ class EdenClient(object):
                 '--foreground',
             )
         )
-        self._wait_for_thrift(timeout)
+        self._wait_for_healthy(timeout)
 
-    def shutdown_cmd(self):
+    def shutdown(self):
+        '''
+        Run "eden shutdown" to stop the eden daemon.
+        '''
         self.run_cmd('shutdown')
         return_code = self._process.wait()
         self._process = None
@@ -192,82 +177,95 @@ class EdenClient(object):
             raise Exception('eden exited unsuccessfully with status {}'.format(
                 return_code))
 
-    def mount(self, client_name='CLIENT', config_dir=None, timeout=10):
-        '''Runs eden mount and passes the specified parameters.
-
-        Will raise an error if the mount doesn't complete in a timely
-        fashion.
-
-        If it returns successfully, the eden instance is guaranteed
-        to be mounted.
+    def add_repository(self, name, repo_path):
         '''
-
-        # Ensure that we aren't already running something.
-        self.kill()
-
-        self._client_name = client_name
-        if config_dir is not None:
-            self._config_dir = config_dir
-
-        self.daemon_cmd()
-        self.mount_cmd()
+        Run "eden repository" to define a repository configuration
+        '''
+        self.run_cmd('repository', name, repo_path)
 
     def repository_cmd(self):
-        '''Executes repository command'''
-
+        '''
+        Executes "eden repository" to list the repositories,
+        and returns the output as a string.
+        '''
         return self.run_cmd('repository')
 
-    def clone_cmd(self):
-        '''Executes clone command'''
-
-        if not os.path.isdir(self.mount_path):
-            os.mkdir(self._mount_path)
-
-        self.run_cmd('clone', self._client_name, self._mount_path)
-
     def list_cmd(self):
-        '''Executes list command'''
-
+        '''
+        Executes "eden list" to list the client directories,
+        and returns the output as a string.
+        '''
         return self.run_cmd('list')
 
-    def mount_cmd(self):
-        '''Executes mount command'''
+    def clone(self, repo, path):
+        '''
+        Run "eden clone"
+        '''
+        # TODO: "eden clone" should handle creating the directory.
+        if not os.path.isdir(path):
+            os.mkdir(path)
 
-        self.run_cmd('mount', self._client_name)
+        self.run_cmd('clone', repo, path)
 
-    def unmount_cmd(self):
-        '''Executes unmount command'''
-        self.run_cmd('unmount', self._mount_path)
+    def unmount(self, path):
+        '''
+        Run "eden unmount <path>"
+        '''
+        self.run_cmd('unmount', path)
 
-    def in_proc_mounts(self):
+    def in_proc_mounts(self, mount_path):
         '''Gets all eden mounts found in /proc/mounts, and returns
         true if this eden instance exists in list.
         '''
         with open('/proc/mounts', 'r') as f:
             mounts = [line.split(' ')[1] for line in f.readlines()
                       if line.split(' ')[0] == 'edenfs']
-        return self._mount_path in mounts
+        return mount_path in mounts
 
     def is_healthy(self):
         '''Executes `eden health` and returns True if it exited with code 0.'''
-        if self._config_dir is None:
-            return False
-
         return_code = self.run_unchecked('health')
         return return_code == 0
 
-    @property
-    def repo_path(self):
-        return self._repo_path
 
-    @property
-    def mount_path(self):
-        return self._mount_path
+def can_run_eden():
+    '''
+    Determine if we can run eden.
 
-    @property
-    def client_name(self):
-        return self._client_name
+    This is used to determine if we should even attempt running the
+    integration tests.
+    '''
+    global _can_run_eden
+    if _can_run_eden is None:
+        _can_run_eden = _compute_can_run_eden()
 
-    @property
-    def config_dir(self):
-        return self._config_dir
+    return _can_run_eden
+
+
+_can_run_eden = None
+
+
+def _compute_can_run_eden():
+    # FUSE must be available
+    if not os.path.exists('/dev/fuse'):
+        return False
+
+    # We must be able to start eden as root.
+    # The daemon must either be setuid root, or we must have sudo priviliges.
+    # Typically for the tests the daemon process is not setuid root,
+    # so check if we have are able to run things under sudo.
+    return _can_run_sudo()
+
+
+def _can_run_sudo():
+    cmd = ['/usr/bin/sudo', '-E', '/bin/true']
+    with open('/dev/null', 'r') as dev_null:
+        # Close stdout, stderr, and stdin, and call setsid() to make
+        # sure we are detached from any controlling terminal.  This makes
+        # sure that sudo can't prompt for a password if it needs one.
+        # sudo will only succeed if it can run with no user input.
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, stdin=dev_null,
+                                   preexec_fn=os.setsid)
+    process.communicate()
+    return process.returncode == 0

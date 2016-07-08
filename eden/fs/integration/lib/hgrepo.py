@@ -28,7 +28,6 @@ class HgRepository(repobase.Repository):
         subprocess.check_call(cmd, cwd=self.path, env=self.hg_environment)
 
     def init(self):
-        print('running hg init in {!r}'.format(self.path))
         self.hg('init')
 
     def add_file(self, path):

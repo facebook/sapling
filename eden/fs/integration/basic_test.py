@@ -13,7 +13,7 @@ import stat
 from .lib import testcase
 
 
-class BasicTest(testcase.EdenTestCase):
+class BasicTest:
     '''Exercise some fundamental properties of the filesystem.
 
     Listing directories, checking stat information, asserting
@@ -21,57 +21,53 @@ class BasicTest(testcase.EdenTestCase):
     about the sample git repo and that it is correct are all
     things that are appropriate to include in this test case.
     '''
-    def test_fileList(self):
-        eden = self.init_git_eden()
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.symlink('slink', 'hello')
+        self.repo.commit('Initial commit.')
 
-        entries = sorted(os.listdir(eden.mount_path))
+    def test_fileList(self):
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'slink'], entries)
 
-        adir = os.path.join(eden.mount_path, 'adir')
+        adir = os.path.join(self.mount, 'adir')
         st = os.lstat(adir)
         self.assertTrue(stat.S_ISDIR(st.st_mode))
         self.assertEqual(st.st_uid, os.getuid())
         self.assertEqual(st.st_gid, os.getgid())
 
-        hello = os.path.join(eden.mount_path, 'hello')
+        hello = os.path.join(self.mount, 'hello')
         st = os.lstat(hello)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-        slink = os.path.join(eden.mount_path, 'slink')
+        slink = os.path.join(self.mount, 'slink')
         st = os.lstat(slink)
         self.assertTrue(stat.S_ISLNK(st.st_mode))
 
     def test_symlinks(self):
-        eden = self.init_git_eden()
-
-        slink = os.path.join(eden.mount_path, 'slink')
+        slink = os.path.join(self.mount, 'slink')
         self.assertEqual(os.readlink(slink), 'hello')
 
     def test_regular(self):
-        eden = self.init_git_eden()
-
-        hello = os.path.join(eden.mount_path, 'hello')
+        hello = os.path.join(self.mount, 'hello')
         with open(hello, 'r') as f:
             self.assertEqual('hola\n', f.read())
 
     def test_dir(self):
-        eden = self.init_git_eden()
-
-        entries = sorted(os.listdir(os.path.join(eden.mount_path, 'adir')))
+        entries = sorted(os.listdir(os.path.join(self.mount, 'adir')))
         self.assertEqual(['file'], entries)
 
-        filename = os.path.join(eden.mount_path, 'adir', 'file')
+        filename = os.path.join(self.mount, 'adir', 'file')
         with open(filename, 'r') as f:
             self.assertEqual('foo!\n', f.read())
 
     def test_create(self):
-        eden = self.init_git_eden()
-
-        filename = os.path.join(eden.mount_path, 'notinrepo')
+        filename = os.path.join(self.mount, 'notinrepo')
         with open(filename, 'w') as f:
             f.write('created\n')
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'notinrepo', 'slink'], entries)
 
         with open(filename, 'r') as f:
@@ -82,9 +78,7 @@ class BasicTest(testcase.EdenTestCase):
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
     def test_overwrite(self):
-        eden = self.init_git_eden()
-
-        hello = os.path.join(eden.mount_path, 'hello')
+        hello = os.path.join(self.mount, 'hello')
         with open(hello, 'w') as f:
             f.write('replaced\n')
 
@@ -92,9 +86,7 @@ class BasicTest(testcase.EdenTestCase):
         self.assertEqual(st.st_size, len('replaced\n'))
 
     def test_materialize(self):
-        eden = self.init_git_eden()
-
-        hello = os.path.join(eden.mount_path, 'hello')
+        hello = os.path.join(self.mount, 'hello')
         # Opening for write should materialize the file with the same
         # contents that we expect
         with open(hello, 'r+') as f:
@@ -104,29 +96,27 @@ class BasicTest(testcase.EdenTestCase):
         self.assertEqual(st.st_size, len('hola\n'))
 
     def test_mkdir(self):
-        eden = self.init_git_eden()
-
         # Can't create a directory inside a file that is in the store
         with self.assertRaises(OSError) as context:
-            os.mkdir(os.path.join(eden.mount_path, 'hello', 'world'))
+            os.mkdir(os.path.join(self.mount, 'hello', 'world'))
         self.assertEqual(context.exception.errno, errno.ENOTDIR)
 
         # Can't create a directory when a file of that name already exists
         with self.assertRaises(OSError) as context:
-            os.mkdir(os.path.join(eden.mount_path, 'hello'))
+            os.mkdir(os.path.join(self.mount, 'hello'))
         self.assertEqual(context.exception.errno, errno.EEXIST)
 
         # Can't create a directory when a directory of that name already exists
         with self.assertRaises(OSError) as context:
-            os.mkdir(os.path.join(eden.mount_path, 'adir'))
+            os.mkdir(os.path.join(self.mount, 'adir'))
         self.assertEqual(context.exception.errno, errno.EEXIST)
 
-        buckout = os.path.join(eden.mount_path, 'buck-out')
+        buckout = os.path.join(self.mount, 'buck-out')
         os.mkdir(buckout)
         st = os.lstat(buckout)
         self.assertTrue(stat.S_ISDIR(st.st_mode))
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'buck-out', 'hello', 'slink'], entries)
 
         # Prove that we can recursively build out a directory tree
@@ -143,23 +133,29 @@ class BasicTest(testcase.EdenTestCase):
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
     def test_unmount(self):
-        eden = self.init_git_eden()
-
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'slink'], entries)
 
-        self.assertTrue(eden.in_proc_mounts())
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
 
-        eden.unmount_cmd()
+        self.eden.unmount(self.mount)
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual([], entries)
 
-        self.assertFalse(eden.in_proc_mounts())
+        self.assertFalse(self.eden.in_proc_mounts(self.mount))
 
-        eden.clone_cmd()
+        self.eden.clone(self.repo_name, self.mount)
 
-        entries = sorted(os.listdir(eden.mount_path))
+        entries = sorted(os.listdir(self.mount))
         self.assertEqual(['adir', 'hello', 'slink'], entries)
 
-        self.assertTrue(eden.in_proc_mounts())
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+
+class BasicTestGit(BasicTest, testcase.EdenGitTest):
+    pass
+
+
+class BasicTestHg(BasicTest, testcase.EdenHgTest):
+    pass

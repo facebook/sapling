@@ -15,10 +15,13 @@ import subprocess
 import time
 
 
-class SetAttrTest(testcase.EdenTestCase):
+class SetAttrTest:
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.commit('Initial commit.')
+
     def test_chmod(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         st = os.lstat(filename)
         os.chmod(filename, st.st_mode | stat.S_IROTH)
@@ -28,8 +31,7 @@ class SetAttrTest(testcase.EdenTestCase):
         self.assertEqual(new_st.st_mode, st.st_mode | stat.S_IROTH)
 
     def test_chown(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         # Chown should fail with EACCESS unless we are setting it
         # to the same current ownership
@@ -47,8 +49,7 @@ class SetAttrTest(testcase.EdenTestCase):
                          msg="changing gid of a file should raise EACCESS")
 
     def test_truncate(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         with open(filename, 'r+') as f:
             f.truncate(0)
@@ -58,8 +59,7 @@ class SetAttrTest(testcase.EdenTestCase):
         self.assertEqual(st.st_size, 0)
 
     def test_utime(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         now = time.time()
         os.utime(filename)
@@ -69,8 +69,7 @@ class SetAttrTest(testcase.EdenTestCase):
         self.assertGreaterEqual(st.st_mtime, now)
 
     def test_touch(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         now = time.time()
         subprocess.check_call(['touch', filename])
@@ -79,10 +78,18 @@ class SetAttrTest(testcase.EdenTestCase):
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
 
-        newfile = os.path.join(eden.mount_path, 'touched-new-file')
+        newfile = os.path.join(self.mount, 'touched-new-file')
         now = time.time()
         subprocess.check_call(['touch', newfile])
         st = os.lstat(newfile)
 
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
+
+
+class SetAttrTestGit(SetAttrTest, testcase.EdenGitTest):
+    pass
+
+
+class SetAttrTestHg(SetAttrTest, testcase.EdenHgTest):
+    pass

@@ -7,98 +7,131 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import os
 import shutil
 import tempfile
 import unittest
 from . import edenclient
+from . import hgrepo
 from . import gitrepo
 
-if hasattr(shutil, 'which'):
-    which = shutil.which
-else:
-    from distutils import spawn
-    which = spawn.find_executable
 
-@unittest.skipIf(not which("fusermount"), "fuse is not installed")
+@unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class EdenTestCase(unittest.TestCase):
+    '''
+    Base class for eden integration test cases.
+
+    This starts an eden daemon during setUp(), and cleans it up during
+    tearDown().
+    '''
     def setUp(self):
+        self.tmp_dir = None
+        self.eden = None
+        self.old_home = None
+
+        # Call setup_eden_test() to do most of the setup work, and call
+        # tearDown() on any error.  tearDown() won't be called by default if
+        # setUp() throws.
+        try:
+            self.setup_eden_test()
+        except Exception as ex:
+            self.tearDown()
+            raise
+
+    def setup_eden_test(self):
         self.tmp_dir = tempfile.mkdtemp(prefix='eden_test.')
-        self._eden_instances = {}
-        self._next_client_id = 1
+
+        # The eden config directory
+        self.eden_dir = os.path.join(self.tmp_dir, 'eden')
+        # The home directory, to make sure eden looks at this rather than the
+        # real home directory of the user running the tests.
+        self.home_dir = os.path.join(self.tmp_dir, 'homedir')
+        os.mkdir(self.home_dir)
+        self.old_home = os.getenv('HOME')
+        os.environ['HOME'] = self.home_dir
+        # Parent directory for any git/hg repositories created during the test
+        self.repos_dir = os.path.join(self.tmp_dir, 'repos')
+        os.mkdir(self.repos_dir)
+        # Parent directory for eden mount points
+        self.mounts_dir = os.path.join(self.tmp_dir, 'mounts')
+        os.mkdir(self.mounts_dir)
+
+        self.eden = edenclient.EdenFS(self.eden_dir, home_dir=self.home_dir)
+        self.eden.start()
 
     def tearDown(self):
-        errors = []
-        for inst in self._eden_instances.values():
-            try:
-                inst.cleanup()
-            except Exception as ex:
-                errors.append(ex)
+        error = None
+        try:
+            if self.eden is not None:
+                self.eden.cleanup()
+        except Exception as ex:
+            error = ex
 
-        shutil.rmtree(self.tmp_dir, ignore_errors=True)
-        self.tmp_dir = None
+        if self.old_home is not None:
+            os.environ['HOME'] = self.old_home
+            self.old_home = None
 
-        # Re-raise any errors that occurred, after we finish
+        if self.tmp_dir is not None:
+            shutil.rmtree(self.tmp_dir, ignore_errors=True)
+            self.tmp_dir = None
+
+        # Re-raise any error that occurred, after we finish
         # trying to clean up our directories.
-        if errors:
-            raise errors[0]
+        if error is not None:
+            raise error
 
-    def new_tmp_dir(self, prefix='edentmp'):
-        return tempfile.mkdtemp(prefix=prefix, dir=self.tmp_dir)
-
-    def init_eden(self, repo_path, **kwargs):
-        '''Create and initialize an eden client for a given repo.
-
-        @return EdenClient
+    def get_thrift_client(self):
         '''
-        inst = edenclient.EdenClient(self)
-        inst.init(repo_path, *kwargs)
-        self._eden_instances[id(inst)] = inst
-        return inst
-
-    def register_eden_client(self, client):
+        Get a thrift client to the edenfs daemon.
         '''
-        This function is called by the EdenClient constructor to register
-        a new EdenClient object.
+        return self.eden.get_thrift_client()
 
-        This shouldn't be called by anyone else other than the EdenClient
-        constructor.
-        '''
-        self._eden_instances[id(client)] = client
-        client_name = 'client{}'.format(self._next_client_id)
-        self._next_client_id += 1
-        return client_name
 
-    def init_git_repo(self):
-        '''Create a simple git repo with deterministic properties.
+class EdenRepoTestBase(EdenTestCase):
+    '''
+    Base class for EdenHgTest and EdenGitTest.
 
-        The structure is:
+    This sets up a repository and mounts it before starting each test function.
+    '''
+    def setup_eden_test(self):
+        super().setup_eden_test()
 
-          - hello (a regular file with content 'hola\n')
-          + adir/
-          `----- file (a regular file with content 'foo!\n')
-          - slink (a symlink that points to 'hello')
+        self.repo_name = 'main'
+        repo_path = os.path.join(self.repos_dir, self.repo_name)
+        self.mount = os.path.join(self.mounts_dir, self.repo_name)
 
-        @return string the dir containing the repo.
-        '''
-        repo_path = self.new_tmp_dir('git')
-        repo = gitrepo.GitRepository(repo_path)
-        repo.init()
+        os.mkdir(repo_path)
+        self.repo = self.create_repo(repo_path)
+        self.repo.init()
+        self.populate_repo()
 
-        repo.write_file('hello', 'hola\n')
-        repo.write_file('adir/file', 'foo!\n')
-        repo.symlink('slink', 'hello')
-        repo.commit('Initial commit.')
-        return repo.path
+        self.eden.add_repository(self.repo_name, repo_path)
+        self.eden.clone(self.repo_name, self.mount)
 
-    def init_git_eden(self):
-        '''Initializes a git repo and an eden client for it.
+    def populate_repo(self):
+        raise NotImplementedError('individual test classes must implement '
+                                  'populate_repo()')
 
-        The git repo will be initialized in a temporary directory.
-        The directory is visible via the returned eden client.
-        The temporary dirs associated with the client and repo
-        will be cleaned up automatically.
 
-        @return EdenClient
-        '''
-        repo_path = self.init_git_repo()
-        return self.init_eden(repo_path)
+class EdenHgTest(EdenRepoTestBase):
+    '''
+    Subclass of EdenTestCase which uses a single mercurial repository and
+    eden mount.
+
+    The repository is available as self.repo, and the client mount path is
+    available as self.mount
+    '''
+    def create_repo(self, path):
+        return hgrepo.HgRepository(path)
+
+
+class EdenGitTest(EdenRepoTestBase):
+    '''
+    Subclass of EdenTestCase which uses a single mercurial repository and
+    eden mount.
+
+    The repository is available as self.repo, and the client mount path is
+    available as self.mount
+    '''
+    def create_repo(self, path):
+        return gitrepo.GitRepository(path)

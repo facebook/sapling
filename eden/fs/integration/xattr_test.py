@@ -17,10 +17,13 @@ def sha1(value):
     return hashlib.sha1(value).hexdigest()
 
 
-class XattrTest(testcase.EdenTestCase):
+class XattrTest:
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.commit('Initial commit.')
+
     def test_get_sha1_xattr(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
         xattr = fs.getxattr(filename, 'user.sha1')
         contents = open(filename, 'rb').read()
         expected_sha1 = sha1(contents)
@@ -44,9 +47,16 @@ class XattrTest(testcase.EdenTestCase):
                          fs.getxattr(filename, 'user.sha1'))
 
     def test_listxattr(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
         xattrs = fs.listxattr(filename)
         contents = open(filename, 'rb').read()
         expected_sha1 = sha1(contents)
         self.assertEqual({'user.sha1': expected_sha1}, xattrs)
+
+
+class XattrTestGit(XattrTest, testcase.EdenGitTest):
+    pass
+
+
+class XattrTestHg(XattrTest, testcase.EdenHgTest):
+    pass

@@ -13,10 +13,15 @@ import os
 import shutil
 
 
-class UnlinkTest(testcase.EdenTestCase):
+class UnlinkTest:
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.symlink('slink', 'hello')
+        self.repo.commit('Initial commit.')
+
     def test_unlink(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         # This file is part of the git repo
         with open(filename, 'r') as f:
@@ -31,26 +36,20 @@ class UnlinkTest(testcase.EdenTestCase):
                          msg='lstat on a removed file raises ENOENT')
 
     def test_unlink_bogus_file(self):
-        eden = self.init_git_eden()
-
         with self.assertRaises(OSError) as context:
-            os.unlink(os.path.join(eden.mount_path, 'this-file-does-not-exist'))
+            os.unlink(os.path.join(self.mount, 'this-file-does-not-exist'))
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='unlink raises ENOENT for nonexistent file')
 
     def test_unlink_dir(self):
-        eden = self.init_git_eden()
-
-        adir = os.path.join(eden.mount_path, 'adir')
+        adir = os.path.join(self.mount, 'adir')
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
         self.assertEqual(context.exception.errno, errno.EISDIR,
                          msg='unlink on a dir raises EISDIR')
 
     def test_unlink_empty_dir(self):
-        eden = self.init_git_eden()
-
-        adir = os.path.join(eden.mount_path, 'an-empty-dir')
+        adir = os.path.join(self.mount, 'an-empty-dir')
         os.mkdir(adir)
         with self.assertRaises(OSError) as context:
             os.unlink(adir)
@@ -58,8 +57,7 @@ class UnlinkTest(testcase.EdenTestCase):
                          msg='unlink on an empty dir raises EISDIR')
 
     def test_rmdir_file(self):
-        eden = self.init_git_eden()
-        filename = os.path.join(eden.mount_path, 'hello')
+        filename = os.path.join(self.mount, 'hello')
 
         with self.assertRaises(OSError) as context:
             os.rmdir(filename)
@@ -67,9 +65,7 @@ class UnlinkTest(testcase.EdenTestCase):
                          msg='rmdir on a file raises ENOTDIR')
 
     def test_rmdir(self):
-        eden = self.init_git_eden()
-
-        adir = os.path.join(eden.mount_path, 'adir')
+        adir = os.path.join(self.mount, 'adir')
         with self.assertRaises(OSError) as context:
             os.rmdir(adir)
         self.assertEqual(context.exception.errno, errno.ENOTEMPTY,
@@ -83,9 +79,7 @@ class UnlinkTest(testcase.EdenTestCase):
 
     def test_rmdir_overlay(self):
         # Ensure that removing dirs works with things we make in the overlay
-        eden = self.init_git_eden()
-
-        deep_root = os.path.join(eden.mount_path, 'buck-out')
+        deep_root = os.path.join(self.mount, 'buck-out')
         deep_name = os.path.join(deep_root, 'foo', 'bar', 'baz')
         os.makedirs(deep_name)
         with self.assertRaises(OSError) as context:
@@ -98,3 +92,11 @@ class UnlinkTest(testcase.EdenTestCase):
             os.lstat(deep_root)
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='lstat on a removed dir raises ENOENT')
+
+
+class UnlinkTestGit(UnlinkTest, testcase.EdenGitTest):
+    pass
+
+
+class UnlinkTestHg(UnlinkTest, testcase.EdenHgTest):
+    pass

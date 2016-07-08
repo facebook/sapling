@@ -13,58 +13,59 @@ from facebook.eden.ttypes import EdenError
 from .lib import testcase
 
 
-class ThriftTest(testcase.EdenTestCase):
+class ThriftTest:
+    def populate_repo(self):
+        self.repo.write_file('hello', 'hola\n')
+        self.repo.write_file('adir/file', 'foo!\n')
+        self.repo.symlink('slink', 'hello')
+        self.repo.commit('Initial commit.')
+
     def test_list_mounts(self):
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         mounts = client.listMounts()
         self.assertEqual(1, len(mounts))
 
         mount = mounts[0]
-        self.assertEqual(eden.mount_path, mount.mountPoint)
+        self.assertEqual(self.mount, mount.mountPoint)
         # Currently, edenClientPath is not set.
         self.assertEqual('', mount.edenClientPath)
 
     def test_get_sha1(self):
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         expected_sha1_for_hello = hashlib.sha1(b'hola\n').digest()
         self.assertEqual(expected_sha1_for_hello,
-                         client.getSHA1(eden.mount_path, 'hello'))
+                         client.getSHA1(self.mount, 'hello'))
 
         expected_sha1_for_adir_file = hashlib.sha1(b'foo!\n').digest()
         self.assertEqual(expected_sha1_for_adir_file,
-                         client.getSHA1(eden.mount_path, 'adir/file'))
+                         client.getSHA1(self.mount, 'adir/file'))
 
     def test_get_sha1_throws_for_empty_string(self):
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         def try_empty_string_for_path():
-            client.getSHA1(eden.mount_path, '')
+            client.getSHA1(self.mount, '')
 
         self.assertRaisesRegexp(EdenError, 'path cannot be the empty string',
                                 try_empty_string_for_path)
 
     def test_get_sha1_throws_for_directory(self):
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         def try_directory():
-            client.getSHA1(eden.mount_path, 'adir')
+            client.getSHA1(self.mount, 'adir')
 
         self.assertRaisesRegexp(EdenError,
                                 'Found a directory instead of a file: adir',
                                 try_directory)
 
     def test_get_sha1_throws_for_non_existent_file(self):
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         def try_non_existent_file():
-            client.getSHA1(eden.mount_path, 'i_do_not_exist')
+            client.getSHA1(self.mount, 'i_do_not_exist')
 
         self.assertRaisesRegexp(EdenError,
                                 'No such file or directory: i_do_not_exist',
@@ -72,11 +73,18 @@ class ThriftTest(testcase.EdenTestCase):
 
     def test_get_sha1_throws_for_symlink(self):
         '''Fails because caller should resolve the symlink themselves.'''
-        eden = self.init_git_eden()
-        client = eden.get_thrift_client()
+        client = self.get_thrift_client()
 
         def try_symlink():
-            client.getSHA1(eden.mount_path, 'slink')
+            client.getSHA1(self.mount, 'slink')
 
         self.assertRaisesRegexp(EdenError, 'Not an ordinary file: slink',
                                 try_symlink)
+
+
+class ThriftTestGit(ThriftTest, testcase.EdenGitTest):
+    pass
+
+
+class ThriftTestHg(ThriftTest, testcase.EdenHgTest):
+    pass
