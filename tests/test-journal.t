@@ -123,6 +123,12 @@ Test that you can list all entries as well as limit the list or filter on them
   cb9a9f314b8b  up 0
   1e6c11564562  commit -Aqm b
   cb9a9f314b8b  commit -Aqm a
+  $ hg journal "re:ba."
+  previous locations of 're:ba.':
+  1e6c11564562  baz       book -r tip baz
+  1e6c11564562  bar       up
+  cb9a9f314b8b  bar       book -f bar
+  1e6c11564562  bar       book -r tip bar
 
 Test that verbose, JSON and commit output work
 

@@ -361,11 +361,18 @@ class journalstorage(object):
         Both the namespace and the name are optional; if neither is given all
         entries in the journal are produced.
 
+        Matching supports regular expressions by using the `re:` prefix
+        (use `literal:` to match names or namespaces that start with `re:`)
+
         """
+        if namespace is not None:
+            namespace = util.stringmatcher(namespace)[-1]
+        if name is not None:
+            name = util.stringmatcher(name)[-1]
         for entry in self:
-            if namespace is not None and entry.namespace != namespace:
+            if namespace is not None and not namespace(entry.namespace):
                 continue
-            if name is not None and entry.name != name:
+            if name is not None and not name(entry.name):
                 continue
             yield entry
 
@@ -430,6 +437,10 @@ def journal(ui, repo, *args, **opts):
     bookmarks and the working copy; each line will then include the bookmark
     name, or '.' for the working copy, as well.
 
+    If `name` starts with `re:`, the remainder of the name is treated as
+    a regular expression. To match a name that actually starts with `re:`,
+    use the prefix `literal:`.
+
     By default hg journal only shows the commit hash and the command that was
     running at that time. -v/--verbose will show the prior hash, the user, and
     the time at which it happened.
@@ -471,7 +482,9 @@ def journal(ui, repo, *args, **opts):
         fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
         fm.write('newhashes', '%s', newhashesstr)
         fm.condwrite(ui.verbose, 'user', ' %-8s', entry.user)
-        fm.condwrite(opts.get('all'), 'name', '  %-8s', entry.name)
+        fm.condwrite(
+            opts.get('all') or name.startswith('re:'),
+            'name', '  %-8s', entry.name)
 
         timestring = util.datestr(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
