@@ -11,6 +11,7 @@ import os
 from .lib import testcase
 
 
+@testcase.eden_repo_test
 class RCTest:
     def populate_repo(self):
         self.repo.write_file('readme.txt', 'test\n')
@@ -93,11 +94,3 @@ type = hg
                          msg='The client directory should have been restored')
         self.assertEqual(self.mount, mount_paths[0],
                          msg='Client directory name should match client name')
-
-
-class RCTestGit(RCTest, testcase.EdenGitTest):
-    pass
-
-
-class RCTestHg(RCTest, testcase.EdenHgTest):
-    pass

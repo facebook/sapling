@@ -17,6 +17,7 @@ def sha1(value):
     return hashlib.sha1(value).hexdigest()
 
 
+@testcase.eden_repo_test
 class XattrTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -52,11 +53,3 @@ class XattrTest:
         contents = open(filename, 'rb').read()
         expected_sha1 = sha1(contents)
         self.assertEqual({'user.sha1': expected_sha1}, xattrs)
-
-
-class XattrTestGit(XattrTest, testcase.EdenGitTest):
-    pass
-
-
-class XattrTestHg(XattrTest, testcase.EdenHgTest):
-    pass

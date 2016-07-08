@@ -15,6 +15,7 @@ import subprocess
 import time
 
 
+@testcase.eden_repo_test
 class SetAttrTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -85,11 +86,3 @@ class SetAttrTest:
 
         self.assertGreaterEqual(st.st_atime, now)
         self.assertGreaterEqual(st.st_mtime, now)
-
-
-class SetAttrTestGit(SetAttrTest, testcase.EdenGitTest):
-    pass
-
-
-class SetAttrTestHg(SetAttrTest, testcase.EdenHgTest):
-    pass

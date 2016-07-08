@@ -13,6 +13,7 @@ import os
 import shutil
 
 
+@testcase.eden_repo_test
 class UnlinkTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -92,11 +93,3 @@ class UnlinkTest:
             os.lstat(deep_root)
         self.assertEqual(context.exception.errno, errno.ENOENT,
                          msg='lstat on a removed dir raises ENOENT')
-
-
-class UnlinkTestGit(UnlinkTest, testcase.EdenGitTest):
-    pass
-
-
-class UnlinkTestHg(UnlinkTest, testcase.EdenHgTest):
-    pass

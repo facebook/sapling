@@ -7,6 +7,7 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
+import inspect
 import os
 import shutil
 import tempfile
@@ -135,3 +136,40 @@ class EdenGitTest(EdenRepoTestBase):
     '''
     def create_repo(self, path):
         return gitrepo.GitRepository(path)
+
+
+def eden_repo_test(test_class):
+    '''
+    A decorator function used to create EdenHgTest and EdenGitTest
+    subclasses from a given input test class.
+
+    Given an input test class named "MyTest", this will create two separate
+    classes named "MyTestHg" and "MyTestGit", which run the tests with
+    mercurial and git repositories, respectively.
+    '''
+    repo_types = [
+        (EdenHgTest, 'Hg'),
+        (EdenGitTest, 'Git'),
+    ]
+
+    # We do some rather hacky things here to define new test class types
+    # in our caller's scope.  This is needed so that the unittest TestLoader
+    # will find the subclasses we define.
+    caller_scope = inspect.currentframe().f_back.f_locals
+
+    for (parent_class, suffix) in repo_types:
+        subclass_name = test_class.__name__ + suffix
+
+        # Define a new class that derives from the input class
+        # as well as the repo-specific parent class type
+        class RepoSpecificTest(test_class, parent_class):
+            pass
+
+        # Set the name and module information on our new subclass
+        RepoSpecificTest.__name__ = subclass_name
+        RepoSpecificTest.__qualname__ = subclass_name
+        RepoSpecificTest.__module__ = test_class.__module__
+
+        caller_scope[subclass_name] = RepoSpecificTest
+
+    return None

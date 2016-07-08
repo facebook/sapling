@@ -13,6 +13,7 @@ import stat
 import subprocess
 
 
+@testcase.eden_repo_test
 class SedTest(testcase.EdenTestCase):
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -37,11 +38,3 @@ class SedTest(testcase.EdenTestCase):
             file_st = os.fstat(f.fileno())
             self.assertEqual(after_st.st_ino, file_st.st_ino)
             self.assertEqual('bar\n', f.read())
-
-
-class SedTestGit(SedTest, testcase.EdenGitTest):
-    pass
-
-
-class SedTestHg(SedTest, testcase.EdenHgTest):
-    pass

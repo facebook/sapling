@@ -12,6 +12,7 @@ import errno
 import os
 
 
+@testcase.eden_repo_test
 class RenameTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -130,11 +131,3 @@ class RenameTest:
         with open(to_name, 'r') as f:
             self.assertEqual('overlay-a\n', f.read(),
                              msg='holds correct data')
-
-
-class RenameTestGit(RenameTest, testcase.EdenGitTest):
-    pass
-
-
-class RenameTestHg(RenameTest, testcase.EdenHgTest):
-    pass

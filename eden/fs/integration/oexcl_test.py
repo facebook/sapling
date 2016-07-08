@@ -12,6 +12,7 @@ import errno
 import os
 
 
+@testcase.eden_repo_test
 class OpenExclusiveTest:
     def populate_repo(self):
         self.repo.write_file('readme.txt', 'test\n')
@@ -41,11 +42,3 @@ class OpenExclusiveTest:
                            msg='Subsequent O_EXCL is not blocked after ' +
                                'removing the file')
         os.close(fd)
-
-
-class OpenExclusiveTestGit(OpenExclusiveTest, testcase.EdenGitTest):
-    pass
-
-
-class OpenExclusiveTestHg(OpenExclusiveTest, testcase.EdenHgTest):
-    pass

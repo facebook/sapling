@@ -13,6 +13,7 @@ from facebook.eden.ttypes import EdenError
 from .lib import testcase
 
 
+@testcase.eden_repo_test
 class ThriftTest:
     def populate_repo(self):
         self.repo.write_file('hello', 'hola\n')
@@ -80,11 +81,3 @@ class ThriftTest:
 
         self.assertRaisesRegexp(EdenError, 'Not an ordinary file: slink',
                                 try_symlink)
-
-
-class ThriftTestGit(ThriftTest, testcase.EdenGitTest):
-    pass
-
-
-class ThriftTestHg(ThriftTest, testcase.EdenHgTest):
-    pass

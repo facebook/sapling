@@ -13,6 +13,7 @@ import stat
 from .lib import testcase
 
 
+@testcase.eden_repo_test
 class BasicTest:
     '''Exercise some fundamental properties of the filesystem.
 
@@ -151,11 +152,3 @@ class BasicTest:
         self.assertEqual(['adir', 'hello', 'slink'], entries)
 
         self.assertTrue(self.eden.in_proc_mounts(self.mount))
-
-
-class BasicTestGit(BasicTest, testcase.EdenGitTest):
-    pass
-
-
-class BasicTestHg(BasicTest, testcase.EdenHgTest):
-    pass
