@@ -64,11 +64,11 @@ class Config:
             rc_files.append(config)
         return rc_files
 
-    def get_repository_list(self):
+    def get_repository_list(self, parser=None):
         result = []
-        rc_files = self.get_rc_files()
-        parser = configparser.ConfigParser()
-        parser.read(rc_files)
+        if not parser:
+            parser = configparser.ConfigParser()
+            parser.read(self.get_rc_files())
         for section in parser.sections():
             header = section.split(' ')
             if len(header) == 2 and header[0] == 'repository':
@@ -141,15 +141,22 @@ class Config:
             raise Exception(ex.message)
 
     def add_repository(self, name, repo_type, source, with_buck=False):
-        # create a directory for client to store repository metadata
+        # Check if repository already exists
+        config_ini = os.path.join(self._home_dir, HOME_CONFIG)
+        parser = configparser.ConfigParser()
+        parser.read(config_ini)
+        if name in self.get_repository_list(parser):
+            raise Exception('''\
+Error: repository %s already exists. You will need to edit the ~/.edenrc \
+config file by hand to make changes to the repository or remove it.''' % name)
+
+        # Create a directory for client to store repository metadata
         bind_mounts = {}
         if with_buck:
             bind_mount_name = 'buck-out'
             bind_mounts[bind_mount_name] = 'buck-out'
 
         # Add repository to INI file
-        config_ini = os.path.join(self._home_dir, HOME_CONFIG)
-        parser = configparser.ConfigParser()
         parser['repository ' + name] = {'type': repo_type,
                                         'path': source}
         if bind_mounts:
