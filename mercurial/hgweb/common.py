@@ -187,7 +187,7 @@ def get_contact(config):
             os.environ.get("EMAIL") or "")
 
 def caching(web, req):
-    tag = str(web.mtime)
+    tag = 'W/"%s"' % web.mtime
     if req.env.get('HTTP_IF_NONE_MATCH') == tag:
         raise ErrorResponse(HTTP_NOT_MODIFIED)
     req.headers.append(('ETag', tag))
