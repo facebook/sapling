@@ -24,7 +24,7 @@ Journal extension test: tests the share extension support
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > journal=`dirname $TESTDIR`/journal.py
+  > journal=$TESTDIR/../hgext3rd/journal.py
   > share=
   > testmocks=`pwd`/testmocks.py
   > [remotenames]

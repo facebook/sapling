@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/mergedriver.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/mergedriver.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > mergedriver=$TESTTMP/mergedriver.py

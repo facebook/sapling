@@ -1,8 +1,8 @@
 Test functionality is present
 
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > fbamend=$TESTTMP/fbamend.py

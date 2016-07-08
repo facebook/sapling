@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/dirsync.py $TESTTMP
+  $ cp $extpath/hgext3rd/dirsync.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > dirsync=$TESTTMP/dirsync.py

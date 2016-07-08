@@ -3,7 +3,7 @@ Set up repository
   $ hg init repo
   $ cd repo
   $ echo "[extensions]" >> .hg/hgrc
-  $ echo "extorder = $TESTDIR/../extorder.py" >> .hg/hgrc
+  $ echo "extorder = $TESTDIR/../hgext3rd/extorder.py" >> .hg/hgrc
   $ echo "rebase =" >> .hg/hgrc
   $ echo "dummyext1 = $TESTDIR/dummyext1.py" >> .hg/hgrc
   $ echo "dummyext2 = $TESTDIR/dummyext2.py" >> .hg/hgrc

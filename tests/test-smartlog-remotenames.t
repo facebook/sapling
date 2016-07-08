@@ -1,6 +1,6 @@
   $ $PYTHON -c 'import remotenames' || exit 80
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/smartlog.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/smartlog.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > smartlog=$TESTTMP/smartlog.py

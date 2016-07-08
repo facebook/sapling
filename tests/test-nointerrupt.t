@@ -32,7 +32,7 @@ Test ctrl-c
   [124]
 
   $ cat >> $HGRCPATH << EOF
-  > nointerrupt = $TESTDIR/../nointerrupt.py
+  > nointerrupt = $TESTDIR/../hgext3rd/nointerrupt.py
   > [alias]
   > slumber = sleep
   > [nointerrupt]

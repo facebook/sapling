@@ -6,9 +6,11 @@ from mercurial.i18n import _
 from mercurial import cmdutil, util, commands, bookmarks, ui, extensions, error
 from mercurial import scmutil
 from hgext import blackbox
+from hgext3rd import (
+    smartlog,
+    sparse,
+)
 import os, socket, re, time, traceback
-import smartlog
-import sparse
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)

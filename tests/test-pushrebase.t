@@ -563,7 +563,7 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: summary:     b
   remote: 
   remote: Checking if lock exists (it should not):
-  remote: ls: *.hg/store/lock: No such file or directory (glob)
+  remote: ls: *.hg/store/lock*: No such file or directory (glob)
   remote: prepushrebase hook exited with status * (glob)
   abort: push failed on remote
   [255]

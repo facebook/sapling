@@ -3,7 +3,7 @@ Check for remotenames and skip if not present
 
 Set up
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=

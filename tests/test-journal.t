@@ -24,7 +24,7 @@ Tests for the journal extension; records bookmark locations.
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > journal=`dirname $TESTDIR`/journal.py
+  > journal=$TESTDIR/../hgext3rd/journal.py
   > testmocks=`pwd`/testmocks.py
   > EOF
 

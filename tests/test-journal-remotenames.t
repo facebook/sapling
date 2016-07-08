@@ -2,10 +2,7 @@ Tests for the journal extension integration with remotenames.
 
 Skip if we can't import remotenames
 
-  $ if [ -n $PYTHON -c 'import remotenames' 2> /dev/null ]; then
-  >     echo 'skipped: missing feature: remotenames'
-  >     exit 80
-  > fi
+  $ . $TESTDIR/require-ext.sh remotenames
 
   $ cat >> testmocks.py << EOF
   > # mock out util.getuser() and util.makedate() to supply testable values
@@ -31,7 +28,7 @@ Skip if we can't import remotenames
 
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > journal=`dirname $TESTDIR`/journal.py
+  > journal=$TESTDIR/../hgext3rd/journal.py
   > testmocks=`pwd`/testmocks.py
   > remotenames=
   > [remotenames]

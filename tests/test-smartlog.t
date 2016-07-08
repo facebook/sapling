@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
-  > smartlog = $TESTDIR/../smartlog.py
+  > smartlog = $TESTDIR/../hgext3rd/smartlog.py
   > [experimental]
   > graphstyle.grandparent=|
   > graphstyle.missing=|

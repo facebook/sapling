@@ -1,7 +1,7 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/morestatus.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/reset.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/morestatus.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/fbhistedit.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [morestatus]
   > show=True

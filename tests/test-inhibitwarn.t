@@ -11,7 +11,7 @@ Test of warning for evolve users when inhibit is enabled
   > directaccess=
   > evolve=
   > EOF
-  $ echo "inhibitwarn = $TESTDIR/../inhibitwarn.py" >> $HGRCPATH
+  $ echo "inhibitwarn = $TESTDIR/../hgext3rd/inhibitwarn.py" >> $HGRCPATH
   $ hg init repo
   $ cd repo
   $ mkcommit() {

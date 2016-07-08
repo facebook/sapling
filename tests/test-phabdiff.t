@@ -1,6 +1,6 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup = $TESTDIR/../phabdiff.py" >> $HGRCPATH
+  $ echo "gitlookup = $TESTDIR/../hgext3rd/phabdiff.py" >> $HGRCPATH
 
 Setup repo
 

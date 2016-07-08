@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/reset.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > reset=$TESTTMP/reset.py

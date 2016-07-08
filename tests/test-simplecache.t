@@ -1,7 +1,7 @@
 Setup the extension
 
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/simplecache.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/simplecache.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > simplecache=$TESTTMP/simplecache.py

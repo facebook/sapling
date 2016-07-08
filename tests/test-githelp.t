@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/githelp.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/githelp.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > githelp=$TESTTMP/githelp.py

@@ -1,6 +1,6 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/fbamend.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > tweakdefaults=$TESTTMP/tweakdefaults.py

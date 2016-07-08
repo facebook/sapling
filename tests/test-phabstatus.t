@@ -5,8 +5,8 @@ Setup
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > arcconfig=$TESTDIR/../phabricator/arcconfig.py
-  > phabstatus=$TESTDIR/../phabstatus.py
-  > smartlog=$TESTDIR/../smartlog.py
+  > phabstatus=$TESTDIR/../hgext3rd/phabstatus.py
+  > smartlog=$TESTDIR/../hgext3rd/smartlog.py
   > EOF
   $ hg init repo
   $ cd repo

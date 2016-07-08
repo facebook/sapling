@@ -21,7 +21,7 @@ Test that hg pull creates obsolescence markers for landed diffs
   > remotenames =
   > bundle2hooks =
   > pushrebase =
-  > pullcreatemarkers= $TESTDIR/../pullcreatemarkers.py
+  > pullcreatemarkers= $TESTDIR/../hgext3rd/pullcreatemarkers.py
   > [remotenames]
   > allownonfastforward=True
   > EOF

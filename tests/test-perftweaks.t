@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/perftweaks.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/perftweaks.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > perftweaks=$TESTTMP/perftweaks.py

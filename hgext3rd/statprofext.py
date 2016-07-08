@@ -21,7 +21,7 @@ def extsetup(ui):
 
 def statprofile(orig, ui, func, fp):
     try:
-        import statprof
+        from hgext3rd import statprof
     except ImportError:
         raise error.Abort(_(
             'statprof not available - install using "easy_install statprof"'))

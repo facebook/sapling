@@ -4,7 +4,7 @@ test merging things outside of the sparse checkout
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$(dirname $TESTDIR)/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/sparse.py
   > EOF
 
   $ echo foo > foo

@@ -11,7 +11,7 @@ Setup
   > exit 0
   > EOF
   $ chmod +x $TESTTMP/pretxnchangegroup.sh
-  $ cp $extpath/pushvars.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/pushvars.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > bundle2hooks=

@@ -55,7 +55,7 @@ Do a couple of commits.  We expect to log two messages per call to repo.commit.
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     print parsedrecord["data"]["msg"], parsedrecord["category"]
+  ...     print(' '.join([parsedrecord["data"]["msg"], parsedrecord["category"]]))
   ...     assert len(parsedrecord["data"]) == 4
   match filter commit_table
   message string commit_table

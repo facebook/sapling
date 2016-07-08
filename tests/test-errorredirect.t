@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/errorredirect.py $TESTTMP
+  $ cp $extpath/hgext3rd/errorredirect.py $TESTTMP
   $ cat > $TESTTMP/crash.py << EOF
   > from mercurial import cmdutil
   > cmdtable = {}

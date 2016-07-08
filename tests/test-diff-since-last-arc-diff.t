@@ -5,7 +5,7 @@ Load extensions
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > arcconfig=$TESTDIR/../phabricator/arcconfig.py
-  > arcdiff=$TESTDIR/../arcdiff.py
+  > arcdiff=$TESTDIR/../hgext3rd/arcdiff.py
   > EOF
 
 Diff with no revision

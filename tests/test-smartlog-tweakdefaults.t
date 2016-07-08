@@ -1,7 +1,7 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/smartlog.py $TESTTMP # use $TESTTMP substitution in message
-  $ cp $extpath/tweakdefaults.py $TESTTMP
-  $ cp $extpath/fbamend.py $TESTTMP
+  $ cp $extpath/hgext3rd/smartlog.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/tweakdefaults.py $TESTTMP
+  $ cp $extpath/hgext3rd/fbamend.py $TESTTMP
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > rebase=

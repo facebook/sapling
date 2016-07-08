@@ -1,6 +1,6 @@
   $ cat >> $HGRCPATH << EOF
   > [extensions]
-  > backups=$TESTDIR/../backups.py
+  > backups=$TESTDIR/../hgext3rd/backups.py
   > strip=
   > EOF
 
@@ -31,7 +31,7 @@ Test backups list and recover
   Marker creation is enabled so no commit should be
   * (glob)
   stripped commits.  If you are trying to recover a commit hidden from a previous
-  command, use hg reflog to get its sha1 and you will be able to access it
+  command, use hg journal to get its sha1 and you will be able to access it
   directly without recovering a backup.Recover commits using: hg backups --recover <commit hash>
   
   * (glob)

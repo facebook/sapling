@@ -1,6 +1,6 @@
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "grepdiff = $TESTDIR/../grepdiff.py" >> $HGRCPATH
+  $ echo "grepdiff = $TESTDIR/../hgext3rd/grepdiff.py" >> $HGRCPATH
 
 Setup repo
 

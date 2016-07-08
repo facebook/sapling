@@ -4,7 +4,7 @@ test sparse
   $ cd myrepo
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$(dirname $TESTDIR)/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/sparse.py
   > purge=
   > strip=
   > rebase=
@@ -246,7 +246,7 @@ Test file permissions changing across a sparse profile change
   $ cd sparseperm
   $ cat > .hg/hgrc <<EOF
   > [extensions]
-  > sparse=$(dirname $TESTDIR)/sparse.py
+  > sparse=$TESTDIR/../hgext3rd/sparse.py
   > EOF
   $ touch a b
   $ cat > .hgsparse <<EOF

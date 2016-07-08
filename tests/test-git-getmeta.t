@@ -1,6 +1,6 @@
   $ echo "[extensions]" >> $HGRCPATH
-  $ echo "gitlookup = $TESTDIR/../gitlookup.py" >> $HGRCPATH
-  $ echo "gitrevset = $TESTDIR/../gitrevset.py" >> $HGRCPATH
+  $ echo "gitlookup = $TESTDIR/../hgext3rd/gitlookup.py" >> $HGRCPATH
+  $ echo "gitrevset = $TESTDIR/../hgext3rd/gitrevset.py" >> $HGRCPATH
   $ echo '[ui]' >> $HGRCPATH
   $ echo 'ssh = python "$RUNTESTDIR/dummyssh"' >> $HGRCPATH
 

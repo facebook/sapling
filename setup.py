@@ -1,3 +1,5 @@
+from glob import glob
+
 try:
     from setuptools import setup, Extensions
 except ImportError:
@@ -20,47 +22,9 @@ setup(
         'sqldirstate',
     ],
     py_modules=[
-        'arcdiff',
-        'backups',
-        'bundle2hooks',
-        'catnotate',
-        'chistedit',
-        'commitextras',
-        'dirsync',
-        'errorredirect',
-        'extorder',
-        'extutil',
-        'fbamend',
-        'fbconduit',
-        'fbhistedit',
-        'githelp',
-        'gitlookup',
-        'gitrevset',
-        'inhibitwarn',
-        'journal',
-        'manifestdiskcache',
-        'mergedriver',
-        'morestatus',
-        'nointerrupt',
-        'patchpython',
-        'perftweaks',
-        'phabdiff',
-        'phrevset',
-        'phabstatus',
-        'pullcreatemarkers',
-        'pushrebase',
-        'pushvars',
-        'rage',
-        'reset',
-        'sampling',
-        'show',
-        'simplecache',
-        'smartlog',
-        'sparse',
-        'statprof',
-        'statprofext',
-        'tweakdefaults',
-        'upgradegeneraldelta',
+        p[:-3].replace('/', '.')
+        for p in glob('hgext3rd/*.py')
+        if p != 'hgext3rd/__init__.py'
     ],
     ext_modules = [
         Extension('cfastmanifest',

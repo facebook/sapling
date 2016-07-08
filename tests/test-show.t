@@ -1,5 +1,5 @@
   $ extpath=`dirname $TESTDIR`
-  $ cp $extpath/show.py $TESTTMP # use $TESTTMP substitution in message
+  $ cp $extpath/hgext3rd/show.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF
   > [extensions]
   > show=$TESTTMP/show.py
@@ -262,7 +262,7 @@ Confirm that --help works (it didn't when we used an alias)
   $ hg show --help
   hg show [OPTION]... [REV [FILE]...]
   
-  Shows the given revision in detail, or '.' if no revision is given.
+  show revision in detail
   
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more
@@ -285,7 +285,7 @@ Confirm that --help works (it didn't when we used an alias)
   $ hg show --help --verbose
   hg show [OPTION]... [REV [FILE]...]
   
-  Shows the given revision in detail, or '.' if no revision is given.
+  show revision in detail
   
       This behaves similarly to 'hg log -vp -r REV [OPTION]... [FILE]...', or if
       called without a REV, 'hg log -vp -r . [OPTION]...' Use 'hg log' for more
