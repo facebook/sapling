@@ -2261,7 +2261,7 @@ proper status for filtered revision
   $ QUERY_STRING='style=raw'
   $ python hgweb.cgi #> search
   Status: 404 Not Found\r (esc)
-  ETag: *\r (glob) (esc)
+  ETag: W/"*"\r (glob) (esc)
   Content-Type: text/plain; charset=ascii\r (esc)
   \r (esc)
   
@@ -2275,7 +2275,7 @@ proper status for filtered revision
   $ QUERY_STRING='style=raw'
   $ python hgweb.cgi #> search
   Status: 404 Not Found\r (esc)
-  ETag: *\r (glob) (esc)
+  ETag: W/"*"\r (glob) (esc)
   Content-Type: text/plain; charset=ascii\r (esc)
   \r (esc)
   
