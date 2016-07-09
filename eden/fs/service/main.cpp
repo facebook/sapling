@@ -7,6 +7,8 @@
  *  of patent rights can be found in the PATENTS file in the same directory.
  *
  */
+
+#include <folly/Conv.h>
 #include <folly/init/Init.h>
 #include <gflags/gflags.h>
 #include <stdlib.h>
