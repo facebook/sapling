@@ -189,6 +189,8 @@ utestpats = [
     (r'^  .*: largefile \S+ not available from file:.*/.*[^)]$', winglobmsg),
     (r'^  .*file://\$TESTTMP',
      'write "file:/*/$TESTTMP" + (glob) to match on windows too'),
+    (r'^  [^$>].*27\.0\.0\.1.*[^)]$',
+     'use (glob) to match localhost IP on hosts without 127.0.0.1 too'),
     (r'^  (cat|find): .*: No such file or directory',
      'use test -f to test for file existence'),
     (r'^  diff -[^ -]*p',
@@ -207,8 +209,8 @@ utestpats = [
   ],
   # warnings
   [
-    (r'^  [^*?/\n]* \(glob\)$',
-     "glob match with no glob character (?*/)"),
+    (r'^  (?!.*127\.0\.0\.1)[^*?/\n]* \(glob\)$',
+     "glob match with no glob string (?, *, /, and 127.0.0.1)"),
   ]
 ]
 
