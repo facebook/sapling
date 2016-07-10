@@ -18,6 +18,7 @@ from .node import (
 from . import (
     encoding,
     error,
+    templatekw,
     templater,
     util,
 )
@@ -45,6 +46,10 @@ class baseformatter(object):
         if self._item is not None:
             self._showitem()
         self._item = {}
+    @staticmethod
+    def formatlist(data, name, fmt='%s', sep=' '):
+        '''convert iterable to appropriate list format'''
+        return list(data)
     def data(self, **data):
         '''insert data into item that's not shown in default output'''
         self._item.update(data)
@@ -78,6 +83,10 @@ class plainformatter(baseformatter):
         return False
     def startitem(self):
         pass
+    @staticmethod
+    def formatlist(data, name, fmt='%s', sep=' '):
+        '''stringify iterable separated by sep'''
+        return sep.join(fmt % e for e in data)
     def data(self, **data):
         pass
     def write(self, fields, deftext, *fielddata, **opts):
@@ -112,7 +121,7 @@ class pickleformatter(baseformatter):
         self._ui.write(pickle.dumps(self._data))
 
 def _jsonifyobj(v):
-    if isinstance(v, tuple):
+    if isinstance(v, (list, tuple)):
         return '[' + ', '.join(_jsonifyobj(e) for e in v) + ']'
     elif v is None:
         return 'null'
@@ -157,6 +166,16 @@ class templateformatter(baseformatter):
     def _showitem(self):
         g = self._t(self._topic, ui=self._ui, **self._item)
         self._ui.write(templater.stringify(g))
+    @staticmethod
+    def formatlist(data, name, fmt='%s', sep=' '):
+        '''build object that can be evaluated as either plain string or list'''
+        # name is mandatory argument for now, but it could be optional if
+        # we have default template keyword, e.g. {item}
+        data = list(data)
+        def f():
+            yield plainformatter.formatlist(data, name, fmt, sep)
+        return templatekw._hybrid(f(), data, lambda x: {name: x},
+                                  lambda d: fmt % d[name])
 
 def lookuptemplate(ui, topic, tmpl):
     # looks like a literal template?
