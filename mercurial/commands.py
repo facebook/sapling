@@ -2413,12 +2413,11 @@ def debugextensions(ui, **opts):
             fm.write('name', '%s', extname)
             if not exttestedwith:
                 fm.plain(_(' (untested!)\n'))
+            elif exttestedwith == ['internal'] or hgver in exttestedwith:
+                fm.plain('\n')
             else:
-                if exttestedwith == ['internal'] or hgver in exttestedwith:
-                    fm.plain('\n')
-                else:
-                    lasttestedversion = exttestedwith[-1]
-                    fm.plain(' (%s!)\n' % lasttestedversion)
+                lasttestedversion = exttestedwith[-1]
+                fm.plain(' (%s!)\n' % lasttestedversion)
 
         fm.condwrite(ui.verbose and extsource, 'source',
                  _('  location: %s\n'), extsource or "")
