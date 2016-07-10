@@ -949,13 +949,18 @@ class PythonTest(Test):
 
         return result
 
-# This script may want to drop globs from lines matching these patterns on
-# Windows, but check-code.py wants a glob on these lines unconditionally.  Don't
-# warn if that is the case for anything matching these lines.
+# Some glob patterns apply only in some circumstances, so the script
+# might want to remove (glob) annotations that otherwise should be
+# retained.
 checkcodeglobpats = [
+    # On Windows it looks like \ doesn't require a (glob), but we know
+    # better.
     re.compile(br'^pushing to \$TESTTMP/.*[^)]$'),
     re.compile(br'^moving \S+/.*[^)]$'),
-    re.compile(br'^pulling from \$TESTTMP/.*[^)]$')
+    re.compile(br'^pulling from \$TESTTMP/.*[^)]$'),
+    # Not all platforms have 127.0.0.1 as loopback (though most do),
+    # so we always glob that too.
+    re.compile(br'.*127.0.0.1.*$'),
 ]
 
 bchr = chr
@@ -1263,6 +1268,7 @@ class TTest(Test):
                         return True
                 return b'-glob'
             return True
+        el = el.replace(b'127.0.0.1', b'*')
         i, n = 0, len(el)
         res = b''
         while i < n:

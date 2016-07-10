@@ -735,6 +735,10 @@ backslash on end of line with glob matching is handled properly
 
   $ rm -f test-glob-backslash.t
 
+Test globbing of 127.0.0.1
+  $ echo 172.16.18.1
+  127.0.0.1 (glob)
+
 Test reusability for third party tools
 ======================================
 
