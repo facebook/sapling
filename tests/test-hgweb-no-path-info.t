@@ -79,16 +79,16 @@ should be used from d74fc8dec2b4 onward to route the request.
   <?xml version="1.0" encoding="ascii"?>
   <feed xmlns="http://www.w3.org/2005/Atom">
    <!-- Changelog -->
-   <id>http://127.0.0.1:$HGPORT/</id>
-   <link rel="self" href="http://127.0.0.1:$HGPORT/atom-log"/>
-   <link rel="alternate" href="http://127.0.0.1:$HGPORT/"/>
+   <id>http://127.0.0.1:$HGPORT/</id> (glob)
+   <link rel="self" href="http://127.0.0.1:$HGPORT/atom-log"/> (glob)
+   <link rel="alternate" href="http://127.0.0.1:$HGPORT/"/> (glob)
    <title>repo Changelog</title>
    <updated>1970-01-01T00:00:00+00:00</updated>
   
    <entry>
     <title>[default] test</title>
-    <id>http://127.0.0.1:$HGPORT/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id>
-    <link href="http://127.0.0.1:$HGPORT/rev/61c9426e69fe"/>
+    <id>http://127.0.0.1:$HGPORT/#changeset-61c9426e69fef294feed5e2bbfc97d39944a5b1c</id> (glob)
+    <link href="http://127.0.0.1:$HGPORT/rev/61c9426e69fe"/> (glob)
     <author>
      <name>test</name>
      <email>&#116;&#101;&#115;&#116;</email>

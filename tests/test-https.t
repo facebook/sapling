@@ -254,14 +254,14 @@ cacert mismatch
 
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub.pem" \
   > https://127.0.0.1:$HGPORT/
-  pulling from https://127.0.0.1:$HGPORT/
-  abort: 127.0.0.1 certificate error: certificate is for localhost
+  pulling from https://127.0.0.1:$HGPORT/ (glob)
+  abort: 127.0.0.1 certificate error: certificate is for localhost (glob)
   (set hostsecurity.127.0.0.1:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
   [255]
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub.pem" \
   > https://127.0.0.1:$HGPORT/ --insecure
-  pulling from https://127.0.0.1:$HGPORT/
-  warning: connection security to 127.0.0.1 is disabled per current settings; communication is susceptible to eavesdropping and tampering
+  pulling from https://127.0.0.1:$HGPORT/ (glob)
+  warning: connection security to 127.0.0.1 is disabled per current settings; communication is susceptible to eavesdropping and tampering (glob)
   searching for changes
   no changes found
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub-other.pem"
@@ -375,7 +375,7 @@ Test https with cacert and fingerprint through proxy
   searching for changes
   no changes found
   $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=914f1aff87249c09b6859b88b1906d30756491ca
-  pulling from https://127.0.0.1:$HGPORT/
+  pulling from https://127.0.0.1:$HGPORT/ (glob)
   searching for changes
   no changes found
 
