@@ -2398,6 +2398,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
 def debugextensions(ui, **opts):
     '''show information about active extensions'''
     exts = extensions.extensions(ui)
+    hgver = util.version()
     fm = ui.formatter('debugextensions', opts)
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         extsource = extmod.__file__
@@ -2413,8 +2414,7 @@ def debugextensions(ui, **opts):
             if not exttestedwith:
                 fm.plain(_(' (untested!)\n'))
             else:
-                if exttestedwith == ['internal'] or \
-                                util.version() in exttestedwith:
+                if exttestedwith == ['internal'] or hgver in exttestedwith:
                     fm.plain('\n')
                 else:
                     lasttestedversion = exttestedwith[-1]
