@@ -2401,9 +2401,7 @@ def debugextensions(ui, **opts):
     fm = ui.formatter('debugextensions', opts)
     for extname, extmod in sorted(exts, key=operator.itemgetter(0)):
         extsource = extmod.__file__
-        exttestedwith = getattr(extmod, 'testedwith', None)
-        if exttestedwith is not None:
-            exttestedwith = exttestedwith.split()
+        exttestedwith = getattr(extmod, 'testedwith', '').split()
         extbuglink = getattr(extmod, 'buglink', None)
 
         fm.startitem()
@@ -2426,7 +2424,7 @@ def debugextensions(ui, **opts):
                  _('  location: %s\n'), extsource or "")
 
         fm.condwrite(ui.verbose and exttestedwith, 'testedwith',
-                 _('  tested with: %s\n'), ' '.join(exttestedwith or []))
+                 _('  tested with: %s\n'), ' '.join(exttestedwith))
 
         fm.condwrite(ui.verbose and extbuglink, 'buglink',
                  _('  bug reporting: %s\n'), extbuglink or "")
