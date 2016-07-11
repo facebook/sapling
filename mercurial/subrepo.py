@@ -56,9 +56,9 @@ def _getstorehashcachename(remotepath):
 class SubrepoAbort(error.Abort):
     """Exception class used to avoid handling a subrepo error more than once"""
     def __init__(self, *args, **kw):
+        self.subrepo = kw.pop('subrepo', None)
+        self.cause = kw.pop('cause', None)
         error.Abort.__init__(self, *args, **kw)
-        self.subrepo = kw.get('subrepo')
-        self.cause = kw.get('cause')
 
 def annotatesubrepoerror(func):
     def decoratedmethod(self, *args, **kargs):

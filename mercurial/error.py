@@ -18,12 +18,12 @@ from __future__ import absolute_import
 class Hint(object):
     """Mix-in to provide a hint of an error
 
-    This should come first in the inheritance list to consume **kw and pass
-    only *args to the exception class.
+    This should come first in the inheritance list to consume a hint and
+    pass remaining arguments to the exception class.
     """
     def __init__(self, *args, **kw):
-        super(Hint, self).__init__(*args)
-        self.hint = kw.get('hint')
+        self.hint = kw.pop('hint', None)
+        super(Hint, self).__init__(*args, **kw)
 
 class RevlogError(Hint, Exception):
     pass
