@@ -469,26 +469,27 @@ def annotate(ui, repo, *pats, **opts):
 
         lines = fctx.annotate(follow=follow, linenumber=linenumber,
                               diffopts=diffopts)
+        if not lines:
+            continue
         formats = []
         pieces = []
 
         for f, sep in funcmap:
             l = [f(n) for n, dummy in lines]
-            if l:
-                if fm:
-                    formats.append(['%s' for x in l])
-                else:
-                    sizes = [encoding.colwidth(x) for x in l]
-                    ml = max(sizes)
-                    formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
-                pieces.append(l)
+            if fm:
+                formats.append(['%s' for x in l])
+            else:
+                sizes = [encoding.colwidth(x) for x in l]
+                ml = max(sizes)
+                formats.append([sep + ' ' * (ml - w) + '%s' for w in sizes])
+            pieces.append(l)
 
         for f, p, l in zip(zip(*formats), zip(*pieces), lines):
             fm.startitem()
             fm.write(fields, "".join(f), *p)
             fm.write('line', ": %s", l[1])
 
-        if lines and not lines[-1][1].endswith('\n'):
+        if not lines[-1][1].endswith('\n'):
             fm.plain('\n')
 
     fm.end()
