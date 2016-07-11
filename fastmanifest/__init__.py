@@ -45,9 +45,6 @@ debugmetrics = False
 # by batches.
 randomorder = True
 
-# Batch size for the random ordering.
-shufflebatchsize = 5
-
 # Cache properties, see systemawarecachelimit.
 lowgrowththresholdgb = 20
 lowgrowthslope = 0.1

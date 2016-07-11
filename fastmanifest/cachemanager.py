@@ -7,7 +7,6 @@
 
 import os
 import errno
-import random
 import sys
 
 from mercurial import extensions, revlog, scmutil, util, error
@@ -205,23 +204,6 @@ def cachemanifestlist(ui, repo):
                 l = h.replace("fast","")
                 ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
 
-def shufflebybatch(it, batchsize):
-    """Shuffle by batches to avoid caching process stepping on each other
-    while maintaining an ordering between batches:
-
-    Before:
-    [ BATCH 1 | BATCH 2 | BATCH 3 ...]
-    Where rev # in BATCH 1 > rev # in BATCH 2, etc.
-
-    After:
-    [ SHUFFLED BATCH 1 | SHUFFLED BATCH 2 | SHUFFLED BATCH 3 ...]
-    Where rev # in SHUFFLED BATCH 1 > rev # in SHUFFLED BATCH 2, etc."""
-    for batchstart in range(0, len(it), batchsize):
-        batchend = min(len(it), batchstart + batchsize)
-        batch = it[batchstart:batchend]
-        random.shuffle(batch)
-        it[batchstart:batchend] = batch
-
 def cachemanifestfillandtrim(ui, repo, revset, limit):
     try:
         with concurrency.looselock(repo.vfs,
@@ -233,17 +215,9 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
             sortedrevs = sorted(computedrevs, key=lambda x:-x)
             repo.ui.log("fastmanifest", "FM: trying to cache %s\n"
                         % str(sortedrevs))
-            if ui.configbool("fastmanifest", "randomorder", True):
-                # Make a copy because we want to keep the ordering to assign
-                # mtime below
-                revs = sortedrevs[:]
-                batchsize = ui.configint("fastmanifest", "shufflebatchsize", 5)
-                shufflebybatch(revs, batchsize)
-            else:
-                revs = sortedrevs
 
             revstomannodes = {}
-            for rev in revs:
+            for rev in sortedrevs:
                 mannode = revlog.hex(
                     repo.changelog.changelogrevision(rev).manifest)
                 revstomannodes[rev] = mannode

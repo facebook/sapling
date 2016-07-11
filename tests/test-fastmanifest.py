@@ -81,12 +81,6 @@ class HybridManifest(unittest.TestCase):
         assert cachealloc(120 * GB) == 6 * GB
         assert abs(cachealloc(28 * GB) - 5.6 * GB) < 5 * MB
 
-    def test_shufflebybatch(self):
-        data = range(10000)
-        fastmanifest.cachemanager.shufflebybatch(data, 5)
-        assert len(data) == 10000
-        assert data != range(10000)
-
     def test_looselock_basic(self):
         """Attempt to secure two locks.  The second one should fail."""
         vfs = scmutil.vfs('')
