@@ -171,7 +171,7 @@ def do_repository(args):
                                   source=source,
                                   with_buck=args.with_buck)
         except Exception as ex:
-            print_stderr('{}', ex)
+            print_stderr('error: {}', ex)
             return 1
     elif (args.name or args.path):
         print_stderr('repository command called with incorrect arguments')
@@ -200,7 +200,7 @@ def do_clone(args):
         try:
             source = config.get_repo_data(args.repo)
         except Exception as ex:
-            print_stderr('{}', ex)
+            print_stderr('error: {}', ex)
             return 1
 
         if source['type'] == 'git':

@@ -95,7 +95,7 @@ class Config:
                 if header[0] == 'bindmounts':
                     result['bind-mounts'] = parser[section]
         if not result:
-            raise Exception('Error: repository %s does not exist.' % name)
+            raise Exception('repository %s does not exist.' % name)
         if 'bind-mounts' not in result:
             result['bind-mounts'] = {}
         return result
@@ -147,8 +147,8 @@ class Config:
         parser.read(config_ini)
         if name in self.get_repository_list(parser):
             raise Exception('''\
-Error: repository %s already exists. You will need to edit the ~/.edenrc \
-config file by hand to make changes to the repository or remove it.''' % name)
+repository %s already exists. You will need to edit the ~/.edenrc config file \
+by hand to make changes to the repository or remove it.''' % name)
 
         # Create a directory for client to store repository metadata
         bind_mounts = {}
@@ -167,7 +167,7 @@ config file by hand to make changes to the repository or remove it.''' % name)
 
     def clone(self, repo_name, path, snapshot_id):
         if path in self._get_directory_map():
-            raise Exception('Error: mount path %s already exists.' % path)
+            raise Exception('mount path %s already exists.' % path)
 
         # Create client directory
         dir_name = hashlib.sha1(repo_name.encode('utf-8')).hexdigest()
@@ -187,7 +187,7 @@ config file by hand to make changes to the repository or remove it.''' % name)
             with open(client_snapshot, 'w') as f:
                 f.write(snapshot_id + '\n')
         else:
-            raise Exception('Error: snapshot id not provided')
+            raise Exception('snapshot id not provided')
 
         # Create bind mounts directories
         repo_data = self.get_repo_data(repo_name)
@@ -395,7 +395,7 @@ config file by hand to make changes to the repository or remove it.''' % name)
         name = parser.get('repository', 'name')
         if name:
             return name
-        raise Exception('Error: could not find repository for %s' % client_dir)
+        raise Exception('could not find repository for %s' % client_dir)
 
     def _get_directory_map(self):
         '''
@@ -411,7 +411,7 @@ config file by hand to make changes to the repository or remove it.''' % name)
     def _add_path_to_directory_map(self, path, dir_name):
         config_data = self._get_directory_map()
         if path in config_data:
-            raise Exception('Error: mount path %s already exists.' % path)
+            raise Exception('mount path %s already exists.' % path)
         config_data[path] = dir_name
         self._write_directory_map(config_data)
 
@@ -430,7 +430,7 @@ config file by hand to make changes to the repository or remove it.''' % name)
     def _get_client_dir_for_mount_point(self, path):
         config_data = self._get_directory_map()
         if path not in config_data:
-            raise Exception('Error: could not find mount path %s' % path)
+            raise Exception('could not find mount path %s' % path)
         return os.path.join(self._get_clients_dir(), config_data[path])
 
     def _get_clients_dir(self):
