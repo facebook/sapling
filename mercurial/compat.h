@@ -5,6 +5,11 @@
 #ifdef _MSC_VER
 /* msvc 6.0 has problems */
 #define inline __inline
+#if defined(_WIN64)
+typedef __int64 ssize_t;
+#else
+typedef long ssize_t;
+#endif
 typedef signed char int8_t;
 typedef short int16_t;
 typedef long int32_t;
