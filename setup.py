@@ -262,7 +262,8 @@ class hgbuildmo(build):
 
 
 class hgdist(Distribution):
-    pure = ispypy
+    pure = False
+    cffi = ispypy
 
     global_options = Distribution.global_options + \
                      [('pure', None, "use pure (slow) Python "
@@ -316,6 +317,10 @@ class hgbuildpy(build_py):
 
         if self.distribution.pure:
             self.distribution.ext_modules = []
+        elif self.distribution.cffi:
+            exts = []
+            # cffi modules go here
+            self.distribution.ext_modules = exts
         else:
             h = os.path.join(get_python_inc(), 'Python.h')
             if not os.path.exists(h):
