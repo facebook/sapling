@@ -560,6 +560,10 @@ static Py_ssize_t fastmanifest_size(fastmanifest *self) {
   return ifastmanifest_size(self);
 }
 
+static PyObject *fastmanifest_bytes(fastmanifest *self) {
+  return PyInt_FromSize_t(self->tree->consumed_memory);
+}
+
 static PyObject *fastmanifest_getitem(fastmanifest *self, PyObject *key) {
   if (!fastmanifest_is_valid_manifest_key(key)) {
     PyErr_Format(PyExc_TypeError, "Manifest keys must be strings.");
@@ -739,6 +743,9 @@ static PyMethodDef fastmanifest_methods[] = {
    "Compare this fastmanifest to another one."},
   {"text", (PyCFunction)fastmanifest_text, METH_NOARGS,
    "Encode this manifest to text."},
+  {"bytes", (PyCFunction)fastmanifest_bytes, METH_NOARGS,
+   "Returns an upper bound on the number of bytes required "
+   "to represent this manifest."},
   {NULL},
 };
 
