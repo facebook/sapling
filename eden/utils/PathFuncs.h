@@ -227,6 +227,11 @@ class PathBase :
   Storage path_;
 
  public:
+  // These type aliases are useful in other templates to be able
+  // to determine the Piece and Stored counterparts for a parameter.
+  using piece_type = Piece;
+  using stored_type = Stored;
+
   /** Default construct an empty value. */
   PathBase() {}
 
