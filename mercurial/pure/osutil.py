@@ -14,6 +14,10 @@ import socket
 import stat as statmod
 import sys
 
+from . import policy
+modulepolicy = policy.policy
+policynocffi = policy.policynocffi
+
 def _mode_to_kind(mode):
     if statmod.S_ISREG(mode):
         return statmod.S_IFREG
@@ -31,7 +35,7 @@ def _mode_to_kind(mode):
         return statmod.S_IFSOCK
     return mode
 
-def listdir(path, stat=False, skip=None):
+def listdirpure(path, stat=False, skip=None):
     '''listdir(path, stat=False) -> list_of_tuples
 
     Return a sorted list containing information about the entries
@@ -60,6 +64,95 @@ def listdir(path, stat=False, skip=None):
         else:
             result.append((fn, _mode_to_kind(st.st_mode)))
     return result
+
+ffi = None
+if modulepolicy not in policynocffi and sys.platform == 'darwin':
+    try:
+        from _osutil_cffi import ffi, lib
+    except ImportError:
+        if modulepolicy == 'cffi': # strict cffi import
+            raise
+
+if sys.platform == 'darwin' and ffi is not None:
+    listdir_batch_size = 4096
+    # tweakable number, only affects performance, which chunks
+    # of bytes do we get back from getattrlistbulk
+
+    attrkinds = [None] * 20 # we need the max no for enum VXXX, 20 is plenty
+
+    attrkinds[lib.VREG] = statmod.S_IFREG
+    attrkinds[lib.VDIR] = statmod.S_IFDIR
+    attrkinds[lib.VLNK] = statmod.S_IFLNK
+    attrkinds[lib.VBLK] = statmod.S_IFBLK
+    attrkinds[lib.VCHR] = statmod.S_IFCHR
+    attrkinds[lib.VFIFO] = statmod.S_IFIFO
+    attrkinds[lib.VSOCK] = statmod.S_IFSOCK
+
+    class stat_res(object):
+        def __init__(self, st_mode, st_mtime, st_size):
+            self.st_mode = st_mode
+            self.st_mtime = st_mtime
+            self.st_size = st_size
+
+    tv_sec_ofs = ffi.offsetof("struct timespec", "tv_sec")
+    buf = ffi.new("char[]", listdir_batch_size)
+
+    def listdirinternal(dfd, req, stat, skip):
+        ret = []
+        while True:
+            r = lib.getattrlistbulk(dfd, req, buf, listdir_batch_size, 0)
+            if r == 0:
+                break
+            if r == -1:
+                raise OSError(ffi.errno, os.strerror(ffi.errno))
+            cur = ffi.cast("val_attrs_t*", buf)
+            for i in range(r):
+                lgt = cur.length
+                assert lgt == ffi.cast('uint32_t*', cur)[0]
+                ofs = cur.name_info.attr_dataoffset
+                str_lgt = cur.name_info.attr_length
+                base_ofs = ffi.offsetof('val_attrs_t', 'name_info')
+                name = str(ffi.buffer(ffi.cast("char*", cur) + base_ofs + ofs,
+                           str_lgt - 1))
+                tp = attrkinds[cur.obj_type]
+                if name == "." or name == "..":
+                    continue
+                if skip == name and tp == statmod.S_ISDIR:
+                    return []
+                if stat:
+                    mtime = cur.time.tv_sec
+                    mode = (cur.accessmask & ~lib.S_IFMT)| tp
+                    ret.append((name, tp, stat_res(st_mode=mode, st_mtime=mtime,
+                                st_size=cur.datalength)))
+                else:
+                    ret.append((name, tp))
+                cur += lgt
+        return ret
+
+    def listdir(path, stat=False, skip=None):
+        req = ffi.new("struct attrlist*")
+        req.bitmapcount = lib.ATTR_BIT_MAP_COUNT
+        req.commonattr = (lib.ATTR_CMN_RETURNED_ATTRS |
+                          lib.ATTR_CMN_NAME |
+                          lib.ATTR_CMN_OBJTYPE |
+                          lib.ATTR_CMN_ACCESSMASK |
+                          lib.ATTR_CMN_MODTIME)
+        req.fileattr = lib.ATTR_FILE_DATALENGTH
+        dfd = lib.open(path, lib.O_RDONLY, 0)
+        if dfd == -1:
+            raise OSError(ffi.errno, os.strerror(ffi.errno))
+
+        try:
+            ret = listdirinternal(dfd, req, stat, skip)
+        finally:
+            try:
+                lib.close(dfd)
+            except BaseException:
+                pass # we ignore all the errors from closing, not
+                # much we can do about that
+        return ret
+else:
+    listdir = listdirpure
 
 if os.name != 'nt':
     posixfile = open

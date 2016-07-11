@@ -320,6 +320,9 @@ class hgbuildpy(build_py):
         elif self.distribution.cffi:
             exts = []
             # cffi modules go here
+            if sys.platform == 'darwin':
+                import setup_osutil_cffi
+                exts.append(setup_osutil_cffi.ffi.distutils_extension())
             self.distribution.ext_modules = exts
         else:
             h = os.path.join(get_python_inc(), 'Python.h')
