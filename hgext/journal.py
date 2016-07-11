@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import collections
 import os
+import weakref
 
 from mercurial.i18n import _
 
@@ -22,9 +23,12 @@ from mercurial import (
     bookmarks,
     cmdutil,
     commands,
+    dirstate,
     dispatch,
     error,
     extensions,
+    localrepo,
+    lock,
     node,
     util,
 )
@@ -43,11 +47,16 @@ storageversion = 0
 
 # namespaces
 bookmarktype = 'bookmark'
+wdirparenttype = 'wdirparent'
 
 # Journal recording, register hooks and storage object
 def extsetup(ui):
     extensions.wrapfunction(dispatch, 'runcommand', runcommand)
     extensions.wrapfunction(bookmarks.bmstore, '_write', recordbookmarks)
+    extensions.wrapfunction(
+        dirstate.dirstate, '_writedirstate', recorddirstateparents)
+    extensions.wrapfunction(
+        localrepo.localrepository.dirstate, 'func', wrapdirstate)
 
 def reposetup(ui, repo):
     if repo.local():
@@ -58,6 +67,42 @@ def runcommand(orig, lui, repo, cmd, fullargs, *args):
     journalstorage.recordcommand(*fullargs)
     return orig(lui, repo, cmd, fullargs, *args)
 
+# hooks to record dirstate changes
+def wrapdirstate(orig, repo):
+    """Make journal storage available to the dirstate object"""
+    dirstate = orig(repo)
+    if util.safehasattr(repo, 'journal'):
+        dirstate.journalstorage = repo.journal
+    return dirstate
+
+def recorddirstateparents(orig, dirstate, dirstatefp):
+    """Records all dirstate parent changes in the journal."""
+    if util.safehasattr(dirstate, 'journalstorage'):
+        old = [node.nullid, node.nullid]
+        nodesize = len(node.nullid)
+        try:
+            # The only source for the old state is in the dirstate file still
+            # on disk; the in-memory dirstate object only contains the new
+            # state. dirstate._opendirstatefile() switches beteen .hg/dirstate
+            # and .hg/dirstate.pending depending on the transaction state.
+            with dirstate._opendirstatefile() as fp:
+                state = fp.read(2 * nodesize)
+            if len(state) == 2 * nodesize:
+                old = [state[:nodesize], state[nodesize:]]
+        except IOError:
+            pass
+
+        new = dirstate.parents()
+        if old != new:
+            # only record two hashes if there was a merge
+            oldhashes = old[:1] if old[1] == node.nullid else old
+            newhashes = new[:1] if new[1] == node.nullid else new
+            dirstate.journalstorage.record(
+                wdirparenttype, '.', oldhashes, newhashes)
+
+    return orig(dirstate, dirstatefp)
+
+# hooks to record bookmark changes (both local and remote)
 def recordbookmarks(orig, store, fp):
     """Records all bookmark changes in the journal."""
     repo = store._repo
@@ -117,12 +162,17 @@ class journalstorage(object):
 
     The file format starts with an integer version, delimited by a NUL.
 
+    This storage uses a dedicated lock; this makes it easier to avoid issues
+    with adding entries that added when the regular wlock is unlocked (e.g.
+    the dirstate).
+
     """
     _currentcommand = ()
+    _lockref = None
 
     def __init__(self, repo):
-        self.repo = repo
         self.user = util.getuser()
+        self.ui = repo.ui
         self.vfs = repo.vfs
 
     # track the current command for recording in journal entries
@@ -141,6 +191,24 @@ class journalstorage(object):
         # Set the current command on the class because we may have started
         # with a non-local repo (cloning for example).
         cls._currentcommand = fullargs
+
+    def jlock(self):
+        """Create a lock for the journal file"""
+        if self._lockref and self._lockref():
+            raise error.Abort(_('journal lock does not support nesting'))
+        desc = _('journal of %s') % self.vfs.base
+        try:
+            l = lock.lock(self.vfs, 'journal.lock', 0, desc=desc)
+        except error.LockHeld as inst:
+            self.ui.warn(
+                _("waiting for lock on %s held by %r\n") % (desc, inst.locker))
+            # default to 600 seconds timeout
+            l = lock.lock(
+                self.vfs, 'journal.lock',
+                int(self.ui.config("ui", "timeout", "600")), desc=desc)
+            self.ui.warn(_("got lock after %s seconds\n") % l.delay)
+        self._lockref = weakref.ref(l)
+        return l
 
     def record(self, namespace, name, oldhashes, newhashes):
         """Record a new journal entry
@@ -163,7 +231,7 @@ class journalstorage(object):
             util.makedate(), self.user, self.command, namespace, name,
             oldhashes, newhashes)
 
-        with self.repo.wlock():
+        with self.jlock():
             version = None
             # open file in amend mode to ensure it is created if missing
             with self.vfs('journal', mode='a+b', atomictemp=True) as f:
@@ -176,7 +244,7 @@ class journalstorage(object):
                     # write anything) if this is not a version we can handle or
                     # the file is corrupt. In future, perhaps rotate the file
                     # instead?
-                    self.repo.ui.warn(
+                    self.ui.warn(
                         _("unsupported journal file version '%s'\n") % version)
                     return
                 if not version:
@@ -229,15 +297,19 @@ class journalstorage(object):
 _ignoreopts = ('no-merges', 'graph')
 @command(
     'journal', [
+        ('', 'all', None, 'show history for all names'),
         ('c', 'commits', None, 'show commit metadata'),
     ] + [opt for opt in commands.logopts if opt[1] not in _ignoreopts],
     '[OPTION]... [BOOKMARKNAME]')
 def journal(ui, repo, *args, **opts):
-    """show the previous position of bookmarks
+    """show the previous position of bookmarks and the working copy
 
-    The journal is used to see the previous commits of bookmarks. By default
-    the previous locations for all bookmarks are shown.  Passing a bookmark
-    name will show all the previous positions of that bookmark.
+    The journal is used to see the previous commits that bookmarks and the
+    working copy pointed to. By default the previous locations for the working
+    copy.  Passing a bookmark name will show all the previous positions of
+    that bookmark. Use the --all switch to show previous locations for all
+    bookmarks and the working copy; each line will then include the bookmark
+    name, or '.' for the working copy, as well.
 
     By default hg journal only shows the commit hash and the command that was
     running at that time. -v/--verbose will show the prior hash, the user, and
@@ -250,22 +322,27 @@ def journal(ui, repo, *args, **opts):
     `hg journal -T json` can be used to produce machine readable output.
 
     """
-    bookmarkname = None
+    name = '.'
+    if opts.get('all'):
+        if args:
+            raise error.Abort(
+                _("You can't combine --all and filtering on a name"))
+        name = None
     if args:
-        bookmarkname = args[0]
+        name = args[0]
 
     fm = ui.formatter('journal', opts)
 
     if opts.get("template") != "json":
-        if bookmarkname is None:
-            name = _('all bookmarks')
+        if name is None:
+            displayname = _('the working copy and bookmarks')
         else:
-            name = "'%s'" % bookmarkname
-        ui.status(_("previous locations of %s:\n") % name)
+            displayname = "'%s'" % name
+        ui.status(_("previous locations of %s:\n") % displayname)
 
     limit = cmdutil.loglimit(opts)
     entry = None
-    for count, entry in enumerate(repo.journal.filtered(name=bookmarkname)):
+    for count, entry in enumerate(repo.journal.filtered(name=name)):
         if count == limit:
             break
         newhashesstr = ','.join([node.short(hash) for hash in entry.newhashes])
@@ -274,7 +351,8 @@ def journal(ui, repo, *args, **opts):
         fm.startitem()
         fm.condwrite(ui.verbose, 'oldhashes', '%s -> ', oldhashesstr)
         fm.write('newhashes', '%s', newhashesstr)
-        fm.condwrite(ui.verbose, 'user', ' %s', entry.user.ljust(8))
+        fm.condwrite(ui.verbose, 'user', ' %-8s', entry.user)
+        fm.condwrite(opts.get('all'), 'name', '  %-8s', entry.name)
 
         timestring = util.datestr(entry.timestamp, '%Y-%m-%d %H:%M %1%2')
         fm.condwrite(ui.verbose, 'date', ' %s', timestring)
