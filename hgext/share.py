@@ -157,10 +157,15 @@ def _getsrcrepo(repo):
     if repo.sharedpath == repo.path:
         return None
 
+    if util.safehasattr(repo, 'srcrepo') and repo.srcrepo:
+        return repo.srcrepo
+
     # the sharedpath always ends in the .hg; we want the path to the repo
     source = repo.vfs.split(repo.sharedpath)[0]
     srcurl, branches = parseurl(source)
-    return repository(repo.ui, srcurl)
+    srcrepo = repository(repo.ui, srcurl)
+    repo.srcrepo = srcrepo
+    return srcrepo
 
 def getbkfile(orig, repo):
     if _hassharedbookmarks(repo):
