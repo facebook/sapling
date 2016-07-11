@@ -467,7 +467,11 @@ class ondiskcache(object):
         if hexnode in self:
             return
         path = self._pathfromnode(hexnode)
-        fm = cfastmanifest.fastmanifest(manifest.text())
+        if (isinstance(manifest, cfastmanifest.fastmanifest) or
+            isinstance(manifest, fastmanifestdict)):
+            fm = manifest
+        else:
+            fm = cfastmanifest.fastmanifest(manifest.text())
         tmpfpath = util.mktempcopy(path, True)
         try:
             fm._save(tmpfpath)
