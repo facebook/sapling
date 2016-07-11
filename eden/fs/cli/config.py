@@ -199,9 +199,6 @@ by hand to make changes to the repository or remove it.''' % name)
         # Create local storage directory
         self._get_or_create_write_dir(dir_name)
 
-        # Add mapping of mount path to client directory in config.json
-        self._add_path_to_directory_map(path, dir_name)
-
         # Prepare to mount
         mount_info = eden_ttypes.MountInfo(mountPoint=path,
                                            edenClientPath=client_dir,
@@ -211,6 +208,9 @@ by hand to make changes to the repository or remove it.''' % name)
             client.mount(mount_info)
         except EdenService.EdenError as ex:
             raise Exception(ex.message)
+
+        # Add mapping of mount path to client directory in config.json
+        self._add_path_to_directory_map(path, dir_name)
 
     def unmount(self, path):
         client = self.get_thrift_client()
