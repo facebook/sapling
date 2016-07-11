@@ -384,7 +384,7 @@ def _verifycert(cert, hostname):
                 if _dnsnamematch(value, hostname):
                     return
             except wildcarderror as e:
-                return e.message
+                return e.args[0]
 
             dnsnames.append(value)
 
@@ -405,7 +405,7 @@ def _verifycert(cert, hostname):
                         if _dnsnamematch(value, hostname):
                             return
                     except wildcarderror as e:
-                        return e.message
+                        return e.args[0]
 
                     dnsnames.append(value)
 
