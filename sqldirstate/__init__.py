@@ -119,6 +119,9 @@ def extsetup(ui):
         pass
     extensions.wrapcommand(commands.table, 'pull', wrappull)
 
+def reposetup(ui, repo):
+    ui.setconfig('sqldirstate', 'enabled', issqldirstate(repo))
+
 # debug commands
 cmdtable = {}
 command = cmdutil.command(cmdtable)
