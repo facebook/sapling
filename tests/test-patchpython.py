@@ -11,12 +11,12 @@ except ImportError:
     import socketserver as SocketServer
 
 try:
-    import patchpython
+    from hgext3rd import patchpython
 except ImportError:
     # This happens if run-tests.py is run from the "tests" directory
     # instead of the root of the project.
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    import patchpython
+    from hgext3rd import patchpython
 
 def testnozombies():
     class reportpidhandler(SocketServer.StreamRequestHandler):
