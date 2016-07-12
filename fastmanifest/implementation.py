@@ -479,11 +479,11 @@ class ondiskcache(object):
         else:
             fm = cfastmanifest.fastmanifest(manifest.text())
         tmpfpath = util.mktempcopy(path, True)
+        entrysize = fm.bytes()
+        if limit != -1 and self.totalsize()[0] + entrysize > limit:
+            raise CacheFullException()
         try:
             fm._save(tmpfpath)
-            entrysize = os.path.getsize(tmpfpath)
-            if limit and self.totalsize()[0] + entrysize > limit:
-                raise CacheFullException()
             util.rename(tmpfpath, path)
             return True
         except EnvironmentError:
