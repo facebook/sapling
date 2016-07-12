@@ -221,10 +221,13 @@ def cachemanifestfillandtrim(ui, repo, revset):
                         % str(sortedrevs))
 
             revstomannodes = {}
+            mannodesprocessed = set()
             for rev in sortedrevs:
                 mannode = revlog.hex(
                     repo.changelog.changelogrevision(rev).manifest)
                 revstomannodes[rev] = mannode
+                mannodesprocessed.add(mannode)
+
                 if mannode in cache.ondiskcache:
                     ui.debug("[FM] skipped %s, already cached (fast path)\n" %
                              (mannode,))
@@ -236,6 +239,9 @@ def cachemanifestfillandtrim(ui, repo, revset):
                     continue
                 manifest = repo[rev].manifest()
                 fastmanifest = cfastmanifest.fastmanifest(manifest.text())
+
+                cache.makeroomfor(fastmanifest.bytes(), mannodesprocessed)
+
                 try:
                     cache[mannode] = fastmanifest
                     repo.ui.log("fastmanifest", "FM: cached(rev,man) %s->%s\n"

@@ -6,6 +6,7 @@
 # GNU General Public License version 2 or any later version.
 
 import array
+import collections
 import os
 import time
 import heapq
@@ -616,6 +617,24 @@ class fastmanifestcache(object):
         for entry in reversed(list(self.ondiskcache)):
             self.debug("[FM] removing cached manifest fast%s\n" % entry)
             del self.ondiskcache[entry]
+
+    def makeroomfor(self, needed, excluded):
+        """Make room on disk for a cache entry of size `needed`.  Cache entries
+        in `excluded` are not subjected to removal.
+        """
+        cacheentries = collections.deque(self.ondiskcache.items())
+        maxtotal = self.limit.bytes() - needed
+
+        while (len(cacheentries) > 0 and
+               self.ondiskcache.totalsize()[0] > maxtotal):
+            candidate = cacheentries.pop()
+
+            if candidate in excluded:
+                # it's immune, so skip it.
+                continue
+
+            del self.ondiskcache[candidate]
+
 
 class manifestfactory(object):
     def __init__(self, ui):
