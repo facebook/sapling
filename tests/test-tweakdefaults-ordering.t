@@ -1,5 +1,5 @@
 Skip test if remotenames not present
-  $ $PYTHON -c 'import remotenames' || exit 80
+  $ . $TESTDIR/require-ext.sh remotenames
 
 Set up extensions (order is important here, we must test tweakdefaults loading last)
   $ extpath=`dirname $TESTDIR`

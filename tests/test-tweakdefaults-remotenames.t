@@ -1,5 +1,5 @@
 Check for remotenames and skip if not present
-  $ $PYTHON -c 'import remotenames' || exit 80
+  $ . $TESTDIR/require-ext.sh remotenames
 
 Set up
   $ extpath=`dirname $TESTDIR`

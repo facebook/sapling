@@ -1,3 +1,5 @@
+  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
+
 Test of warning for evolve users when inhibit is enabled
   $ cat >> $HGRCPATH <<EOF
   > [ui]

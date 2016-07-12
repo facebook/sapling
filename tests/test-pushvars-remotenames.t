@@ -1,9 +1,10 @@
+  $ . $TESTDIR/require-ext.sh remotenames
+
 Setup
 
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ $PYTHON -c 'import remotenames' || exit 80
   $ extpath=`dirname $TESTDIR`
   $ cat > $TESTTMP/pretxnchangegroup.sh << EOF
   > #!/bin/bash

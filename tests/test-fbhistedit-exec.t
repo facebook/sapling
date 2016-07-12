@@ -258,6 +258,7 @@ test 'execr' executing in the current directory
   $ cd ..
 
 Test that we can recover exec with evolve on
+  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > evolve=

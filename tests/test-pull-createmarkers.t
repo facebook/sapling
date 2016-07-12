@@ -1,10 +1,11 @@
+  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit remotenames
+
 Setup
 
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
 Test that hg pull creates obsolescence markers for landed diffs
-  $ $PYTHON -c 'import remotenames' || exit 80
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > username = nobody <no.reply@fb.com>

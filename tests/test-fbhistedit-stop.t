@@ -1,3 +1,4 @@
+  $ . $TESTDIR/require-ext.sh directaccess evolve inhibit
   $ . "$TESTDIR/histedit-helpers.sh"
 
 Setup

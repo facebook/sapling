@@ -1,4 +1,4 @@
-  $ $PYTHON -c 'import remotenames' || exit 80
+  $ . $TESTDIR/require-ext.sh remotenames
   $ extpath=`dirname $TESTDIR`
   $ cp $extpath/hgext3rd/reset.py $TESTTMP # use $TESTTMP substitution in message
   $ cat >> $HGRCPATH << EOF

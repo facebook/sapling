@@ -298,7 +298,7 @@ Test that --addremove/-A works
 
 Test that the extension disables itself when evolution is enabled
 
-  $ $PYTHON -c 'import evolve' 2> /dev/null || $PYTHON -c 'import hgext.evolve' 2> /dev/null || exit 80
+  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > evolve=
@@ -476,7 +476,7 @@ Test hg amend works with a logfile
   $ rm alogfile
 
 Test fbamend with inhibit
-  $ $PYTHON -c 'import inhibit' 2> /dev/null || $PYTHON -c 'import hgext.inhibit' 2> /dev/null || exit 80
+  $ . $TESTDIR/require-ext.sh inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > inhibit=
@@ -593,6 +593,7 @@ Make sure that unamend does not work without inhibit
   [255]
 
 Make sure that unamend works as expected with inhibit
+  $ . $TESTDIR/require-ext.sh directaccess
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > inhibit=

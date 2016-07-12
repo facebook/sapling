@@ -1,9 +1,10 @@
+  $ . $TESTDIR/require-ext.sh remotenames
+
 Setup
 
   $ PYTHONPATH=$TESTDIR/..:$PYTHONPATH
   $ export PYTHONPATH
 
-  $ $PYTHON -c 'import remotenames' || exit 80
   $ cat >> $HGRCPATH << EOF
   > [ui]
   > ssh = python "$RUNTESTDIR/dummyssh"

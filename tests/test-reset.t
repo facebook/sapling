@@ -150,6 +150,7 @@ Verify file status after reset
 
 Reset + Evolve tests
 
+  $ . $TESTDIR/require-ext.sh evolve
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > evolve=
@@ -193,6 +194,7 @@ a new hash for them
   
 Reset + Inhibit tests, with inhibit reset revives the same commit
 
+  $ . $TESTDIR/require-ext.sh directaccess inhibit
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > evolve =

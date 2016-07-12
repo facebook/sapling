@@ -48,3 +48,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping cfastmanifest/tree_path.h it has no-che?k-code (glob)
   Skipping cfastmanifest/tree_test.c it has no-che?k-code (glob)
   Skipping hgext3rd/statprof.py it has no-che?k-code (glob)
+
+Check foreign extensions are only used after checks
+
+  $ hg locate 'test-*.t' | xargs $TESTDIR/check-foreignext.py
