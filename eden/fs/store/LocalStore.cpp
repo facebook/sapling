@@ -79,7 +79,20 @@ namespace eden {
 LocalStore::LocalStore(StringPiece pathToRocksDb)
     : db_(createRocksDb(pathToRocksDb)) {}
 
-LocalStore::~LocalStore() {}
+LocalStore::~LocalStore() {
+#ifdef FOLLY_SANITIZE_ADDRESS
+  // RocksDB has some race conditions around setting up and tearing down
+  // the threads that it uses to maintain the database.  This manifests
+  // in our test harness, particularly in a test where we quickly mount
+  // and then unmount.  We see this as an abort with the message:
+  // "pthread lock: Invalid Argument".
+  // My assumption is that we're shutting things down before rocks has
+  // completed initializing.  This sleep call is present in the destructor
+  // to make it more likely that rocks is past that critical point and
+  // so that we can shutdown successfully.
+  /* sleep override */ sleep(1);
+#endif
+}
 
 StoreResult LocalStore::get(ByteRange key) const {
   string value;
