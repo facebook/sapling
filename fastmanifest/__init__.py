@@ -88,6 +88,8 @@ manifests to the cache and manipulate what is cached. It allows caching fast
 and flat manifest, asynchronously and synchronously.
 """
 
+import sys
+
 from mercurial import bookmarks, cmdutil, dispatch, error, extensions
 from mercurial import localrepo, manifest
 from mercurial import revset as revsetmod
@@ -95,7 +97,7 @@ from mercurial import revset as revsetmod
 import cachemanager
 from metrics import metricscollector
 import debug
-from implementation import manifestfactory
+from implementation import manifestfactory, fastmanifestcache
 
 cmdtable = {}
 command = cmdutil.command(cmdtable)
@@ -103,16 +105,13 @@ command = cmdutil.command(cmdtable)
 @command('^debugcachemanifest', [
     ('r', 'rev', [], 'cache the manifest for revs', 'REV'),
     ('a', 'all', False, 'cache all relevant revisions', ''),
-    ('l', 'limit', -1, 'limit size of total rev in bytes', 'BYTES'),
+    ('l', 'limit', 0,
+     'limit size of total rev in bytes (<0: unlimited; 0: default policy)',
+     'BYTES'),
     ('p', 'pruneall', False, 'prune all the entries'),
     ('e', 'list', False, 'list the content of the cache and its size','')],
     'hg debugcachemanifest')
 def debugcachemanifest(ui, repo, *pats, **opts):
-    if opts["limit"] == -1 :
-        limit = None
-    else:
-        limit = debug.fixedcachelimit(opts["limit"])
-
     pruneall = opts["pruneall"]
     displaylist = opts['list']
     if opts["all"]:
@@ -136,9 +135,18 @@ def debugcachemanifest(ui, repo, *pats, **opts):
         cachemanager.cachemanifestlist(ui, repo)
         return
 
-    if revset or limit:
-        cachemanager.cachemanifestfillandtrim(
-            ui, repo, revset, limit)
+    if opts["limit"] != 0:
+        if opts["limit"] < 0:
+            limitbytes = sys.maxint
+        else:
+            limitbytes = opts["limit"]
+
+        cache = fastmanifestcache.getinstance(
+            repo.store.opener, ui)
+        cache.overridelimit(debug.fixedcachelimit(limitbytes))
+
+    cachemanager.cachemanifestfillandtrim(
+        ui, repo, revset)
 
 @command('^cachemanifest', [],
     'hg cachemanifest')

@@ -205,7 +205,7 @@ def cachemanifestlist(ui, repo):
                 l = h.replace("fast","")
                 ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
 
-def cachemanifestfillandtrim(ui, repo, revset, limit):
+def cachemanifestfillandtrim(ui, repo, revset):
     """Cache the manifests described by `revset`.  This priming is subject to
     limits imposed by the cache, and thus not all the entries may be written.
     """
@@ -272,8 +272,7 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
         raise
 
     before = cache.ondiskcache.items()
-    if limit is not None:
-        cache.prune(limit)
+    cache.prune()
     after = cache.ondiskcache.items()
     diff = set(after) - set(before)
     if diff:
@@ -283,28 +282,21 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
 
 
     total, numentries = cache.ondiskcache.totalsize()
-    if limit:
-        if isinstance(limit, _systemawarecachelimit):
-            free = limit.free / 1024**2
-        else:
-            free = -1
-        metricscollector.get().recordsample("ondiskcachestats",
-                                            bytes=total,
-                                            numentries=numentries,
-                                            limit=(limit.bytes() / 1024**2),
-                                            freespace=free)
+    if isinstance(cache.limit, _systemawarecachelimit):
+        free = cache.limit.free / 1024**2
+    else:
+        free = -1
+    metricscollector.get().recordsample("ondiskcachestats",
+                                        bytes=total,
+                                        numentries=numentries,
+                                        limit=(cache.limit.bytes() / 1024**2),
+                                        freespace=free)
 
 class cacher(object):
     @staticmethod
-    def _cacheonchangeconfig(repo):
-        """return revs, limit suitable for caching fastmanifest on change"""
-        revset = ["fastmanifesttocache()"]
-        return revset, _systemawarecachelimit(repo)
-
-    @staticmethod
     def cachemanifest(repo):
-        revset, limit = cacher._cacheonchangeconfig(repo)
-        cachemanifestfillandtrim(repo.ui, repo, revset, limit)
+        revset = ["fastmanifesttocache()"]
+        cachemanifestfillandtrim(repo.ui, repo, revset)
 
 class triggers(object):
     repos_to_update = set()

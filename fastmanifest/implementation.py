@@ -556,6 +556,9 @@ class fastmanifestcache(object):
         self.inmemorycache = util.lrucachedict(maxinmemoryentries)
         self.limit = limit
 
+    def overridelimit(self, limiter):
+        self.limit = limiter
+
     def touch(self, hexnode, delay=0):
         self.ondiskcache.touch(hexnode, delay)
 
@@ -597,15 +600,16 @@ class fastmanifestcache(object):
     def __iter__(self):
         return self.ondiskcache.__iter__()
 
-    def prune(self, limit):
-        if limit is None or limit.bytes() > self.ondiskcache.totalsize()[0]:
+    def prune(self):
+        if (self.limit is None or
+            self.limit.bytes() > self.ondiskcache.totalsize()[0]):
             self.debug("[FM] nothing to do, cache size < limit\n")
             return
 
         for entry in reversed(list(self.ondiskcache)):
             self.debug("[FM] removing cached manifest fast%s\n" % entry)
             del self.ondiskcache[entry]
-            if self.ondiskcache.totalsize()[0] < limit.bytes():
+            if self.ondiskcache.totalsize()[0] < self.limit.bytes():
                 break
 
     def pruneall(self):

@@ -214,6 +214,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
+  [FM] nothing to do, cache size < limit
   $ hg debugcachemanifest --pruneall
   $ hg log -r "fastmanifesttocache()" -T '{rev}\n'
   0
@@ -243,6 +244,7 @@ Test the --pruneall command to prune all the cached manifests
   [FM] refreshing e3738bf5439958f89499a656982023aba57b076e with delay 6
   [FM] refreshing a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 with delay 8
   [FM] refreshing a0c8bcbbb45c63b90b70ad007bf38961f64f2af0 with delay 10
+  [FM] nothing to do, cache size < limit
   $ hg log -r "fastmanifesttocache()" -T '{rev}\n'
   0
   1
@@ -328,40 +330,6 @@ Trim the cache to at most 512 bytes
 Trim the cache to at most 100 bytes
   $ hg debugcachemanifest --debug --limit=100
   [FM] caching revset: [], pruneall(False), list(False)
-  [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
-  $ hg debugcachemanifest --debug --list
-  [FM] caching revset: [], pruneall(False), list(True)
-  cache size is: 0 bytes
-  number of entries is: 0
-
-Check that trimming the cache to 0 byte works
-  $ hg debugcachemanifest -a
-  $ hg debugcachemanifest --debug --list
-  [FM] caching revset: [], pruneall(False), list(True)
-  fast1853a742c28c3a531336bbb3d677d2e2d8937027 (size 376 bytes)
-  fast7ab5760d084a24168f7595c38c00f4bbc2e308d9 (size 328 bytes)
-  fastf064a7f8e3e138341587096641d86e9d23cd9778 (size 280 bytes)
-  faste3738bf5439958f89499a656982023aba57b076e (size 232 bytes)
-  fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7 (size 184 bytes)
-  fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0 (size 136 bytes)
-  cache size is: 1.50 KB
-  number of entries is: 6
-  Most relevant cache entries appear first
-  ================================================================================
-  manifest node                           |revs
-  1853a742c28c3a531336bbb3d677d2e2d8937027|5
-  7ab5760d084a24168f7595c38c00f4bbc2e308d9|4
-  f064a7f8e3e138341587096641d86e9d23cd9778|3
-  e3738bf5439958f89499a656982023aba57b076e|2
-  a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7|1
-  a0c8bcbbb45c63b90b70ad007bf38961f64f2af0|0
-  $ hg debugcachemanifest --debug --limit=0
-  [FM] caching revset: [], pruneall(False), list(False)
-  [FM] removing cached manifest fasta0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-  [FM] removing cached manifest fasta539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  [FM] removing cached manifest faste3738bf5439958f89499a656982023aba57b076e
-  [FM] removing cached manifest fastf064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] removing cached manifest fast7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] removing cached manifest fast1853a742c28c3a531336bbb3d677d2e2d8937027
   $ hg debugcachemanifest --debug --list
   [FM] caching revset: [], pruneall(False), list(True)
