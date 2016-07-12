@@ -7,7 +7,6 @@
 # LICENSE file in the root directory of this source tree. An additional grant
 # of patent rights can be found in the PATENTS file in the same directory.
 
-import errno
 import os
 import shutil
 import subprocess
@@ -119,7 +118,9 @@ class EdenFS(object):
         Throws a subprocess.CalledProcessError if eden exits unsuccessfully.
         '''
         cmd = self._get_eden_args(command, *args)
-        return subprocess.check_output(cmd).decode('utf-8')
+        completed_process = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE, check=True)
+        return completed_process.stdout.decode('utf-8')
 
     def run_unchecked(self, command, *args):
         '''

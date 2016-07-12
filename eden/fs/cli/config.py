@@ -9,6 +9,7 @@
 
 import collections
 import configparser
+import errno
 import hashlib
 import json
 import os
@@ -168,6 +169,30 @@ by hand to make changes to the repository or remove it.''' % name)
     def clone(self, repo_name, path, snapshot_id):
         if path in self._get_directory_map():
             raise Exception('mount path %s already exists.' % path)
+
+        # Make sure that path is a valid destination for the clone.
+        st = None
+        try:
+            st = os.stat(path)
+        except OSError as ex:
+            if ex.errno == errno.ENOENT:
+                # Note that this could also throw if path is /a/b/c and /a
+                # exists, but it is a file.
+                util.mkdir_p(path)
+            else:
+                raise
+
+        # Note that st will be None if `mkdir_p` was run in the catch block.
+        if st:
+            if stat.S_ISDIR(st.st_mode):
+                # If an existing directory was specified, then verify it is
+                # empty.
+                if len(os.listdir(path)) > 0:
+                    raise OSError(errno.ENOTEMPTY, os.strerror(errno.ENOTEMPTY),
+                                  path)
+            else:
+                # Throw because it exists, but it is not a directory.
+                raise OSError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), path)
 
         # Create client directory
         dir_name = hashlib.sha1(repo_name.encode('utf-8')).hexdigest()
