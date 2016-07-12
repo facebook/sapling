@@ -159,7 +159,7 @@ No filename should be printed if stdout is specified explicitly:
 Checking if only alphanumeric characters are used in the file name (%m option):
 
   $ echo "line" >> foo
-  $ hg commit -m " !\"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_\`abcdefghijklmnopqrstuvwxyz{|}~"
+  $ hg commit -m " !\"#$%&(,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]"'^'"_\`abcdefghijklmnopqrstuvwxyz{|}~"
   $ hg export -v -o %m.patch tip
   exporting patch:
   ____________0123456789_______ABCDEFGHIJKLMNOPQRSTUVWXYZ______abcdefghijklmnopqrstuvwxyz____.patch
