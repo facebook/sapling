@@ -99,10 +99,11 @@ annotateline = '
     <td class="annotate linenr" style="text-align: right;">
       {if(blockhead,
           '<a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
-             {author|user}@{rev}
+             {rev}
            </a>')}
       <div class="annotate-info">
         <div>{node|short}: {desc|escape|firstline}</div>
+        <div><em>{author|obfuscate}</em></div>
         <div>parents: {parents%annotateparent}</div>
         <a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a>
         <a href="{url|urlescape}rev/{node|short}{sessionvars%urlparameter}">changeset</a>

@@ -291,10 +291,11 @@ hgweb fileannotate, html
   <tr id="l1" class="thisrev">
   <td class="annotate">
   <a href="/annotate/06824edf55d0/primes.py#l1">
-  test@0
+  0
   </a>
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -307,6 +308,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -319,6 +321,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -331,6 +334,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -343,6 +347,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -355,6 +360,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -367,6 +373,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -379,6 +386,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -391,6 +399,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -403,6 +412,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -415,6 +425,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -427,6 +438,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -439,6 +451,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -451,6 +464,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -463,6 +477,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -475,6 +490,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -487,6 +503,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -499,6 +516,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -511,6 +529,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -523,6 +542,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -535,6 +555,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -547,6 +568,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -559,6 +581,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -571,6 +594,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -583,6 +607,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -595,6 +620,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -607,6 +633,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -619,6 +646,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -631,6 +659,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -643,6 +672,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -655,6 +685,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -667,6 +698,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
@@ -679,6 +711,7 @@ hgweb fileannotate, html
   
   <div class="annotate-info">
   <div>06824edf55d0: a</div>
+  <div><em>&#116;&#101;&#115;&#116;</em></div>
   <div>parents: </div>
   <a href="/diff/06824edf55d0/primes.py">diff</a>
   <a href="/rev/06824edf55d0">changeset</a>
