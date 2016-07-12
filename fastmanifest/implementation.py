@@ -465,8 +465,13 @@ class ondiskcache(object):
         return iter(self.items())
 
     def setwithlimit(self, hexnode, manifest, limit=-1):
+        """Writes a manifest to the cache.  Returns True if the cache already
+        contains the item or if the write is successful.  Returns False if the
+        write fails.  Raises CacheFullException if writing the cache entry would
+        cause us to pass the limit.
+        """
         if hexnode in self:
-            return
+            return True
         path = self._pathfromnode(hexnode)
         if (isinstance(manifest, cfastmanifest.fastmanifest) or
             isinstance(manifest, fastmanifestdict)):
@@ -478,7 +483,7 @@ class ondiskcache(object):
             fm._save(tmpfpath)
             entrysize = os.path.getsize(tmpfpath)
             if limit and self.totalsize()[0] + entrysize > limit:
-                return False
+                raise CacheFullException()
             util.rename(tmpfpath, path)
             return True
         except EnvironmentError:
@@ -587,8 +592,6 @@ class fastmanifestcache(object):
                 self.debug("[FM] caching revision %s\n" % hexnode)
                 ret = self.ondiskcache.setwithlimit(hexnode, manifest,
                                                     self.limit.bytes())
-                if not ret:
-                    raise CacheFullException()
         else:
             self.debug("[FM] caching revision %s\n" % hexnode)
             self.ondiskcache[hexnode] = manifest
