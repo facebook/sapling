@@ -11,6 +11,7 @@ import sys
 
 from mercurial import extensions, revlog, scmutil, util, error
 
+import cfastmanifest
 import concurrency
 import constants
 from metrics import metricscollector
@@ -205,6 +206,9 @@ def cachemanifestlist(ui, repo):
                 ui.status("%s|%s\n" % (l, ",".join(revstoman.get(l,[]))))
 
 def cachemanifestfillandtrim(ui, repo, revset, limit):
+    """Cache the manifests described by `revset`.  This priming is subject to
+    limits imposed by the cache, and thus not all the entries may be written.
+    """
     try:
         with concurrency.looselock(repo.vfs,
                 "fastmanifest",
@@ -231,8 +235,9 @@ def cachemanifestfillandtrim(ui, repo, revset, limit):
                     cache.ondiskcache.touch(mannode)
                     continue
                 manifest = repo[rev].manifest()
+                fastmanifest = cfastmanifest.fastmanifest(manifest.text())
                 try:
-                    cache[mannode] = manifest
+                    cache[mannode] = fastmanifest
                     repo.ui.log("fastmanifest", "FM: cached(rev,man) %s->%s\n"
                                 %(rev, mannode))
                 except CacheFullException:

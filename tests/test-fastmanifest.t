@@ -225,18 +225,18 @@ Test the --pruneall command to prune all the cached manifests
   $ hg log -r "fastmanifestcached()" -T '{rev}\n'
   $ hg debugcachemanifest --all --debug
   [FM] caching revset: ['fastmanifesttocache()'], pruneall(False), list(False)
-  [FM] caching revision 1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM] cache miss for fastmanifest 1853a742c28c3a531336bbb3d677d2e2d8937027
-  [FM] caching revision 7ab5760d084a24168f7595c38c00f4bbc2e308d9
+  [FM] caching revision 1853a742c28c3a531336bbb3d677d2e2d8937027
   [FM] cache miss for fastmanifest 7ab5760d084a24168f7595c38c00f4bbc2e308d9
-  [FM] caching revision f064a7f8e3e138341587096641d86e9d23cd9778
+  [FM] caching revision 7ab5760d084a24168f7595c38c00f4bbc2e308d9
   [FM] cache miss for fastmanifest f064a7f8e3e138341587096641d86e9d23cd9778
-  [FM] caching revision e3738bf5439958f89499a656982023aba57b076e
+  [FM] caching revision f064a7f8e3e138341587096641d86e9d23cd9778
   [FM] cache miss for fastmanifest e3738bf5439958f89499a656982023aba57b076e
-  [FM] caching revision a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
+  [FM] caching revision e3738bf5439958f89499a656982023aba57b076e
   [FM] cache miss for fastmanifest a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
-  [FM] caching revision a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] caching revision a539ce0c1a22b0ecf34498f9f5ce8ea56df9ecb7
   [FM] cache miss for fastmanifest a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  [FM] caching revision a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   [FM] refreshing 1853a742c28c3a531336bbb3d677d2e2d8937027 with delay 0
   [FM] refreshing 7ab5760d084a24168f7595c38c00f4bbc2e308d9 with delay 2
   [FM] refreshing f064a7f8e3e138341587096641d86e9d23cd9778 with delay 4
