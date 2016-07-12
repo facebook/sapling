@@ -98,7 +98,11 @@ annotateline = '
              {rev}
            </a>')}
       <div class="annotate-info">
-        <div>{node|short}: {desc|escape|firstline}</div>
+        <div>
+          <a href="{url|urlescape}annotate/{node|short}/{file|urlescape}{sessionvars%urlparameter}#l{targetline}">
+            {node|short}</a>
+          {desc|escape|firstline}
+        </div>
         <div><em>{author|obfuscate}</em></div>
         <div>parents: {parents%annotateparent}</div>
         <a href="{url|urlescape}diff/{node|short}/{file|urlescape}{sessionvars%urlparameter}">diff</a>
