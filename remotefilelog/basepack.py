@@ -110,6 +110,10 @@ class basepackstore(object):
         return newpacks
 
 class basepack(object):
+    # The maximum amount we should read via mmap before remmaping so the old
+    # pages can be released (100MB)
+    MAXPAGEDIN = 100 * 1024**2
+
     def __init__(self, path):
         self.path = path
         self.packpath = path + self.PACKSUFFIX
@@ -121,11 +125,9 @@ class basepack(object):
         self.indexsize = os.stat(self.indexpath).st_size
         self.datasize = os.stat(self.packpath).st_size
 
-        # memory-map the file, size 0 means whole file
-        self._index = mmap.mmap(self.indexfp.fileno(), 0,
-                                access=mmap.ACCESS_READ)
-        self._data = mmap.mmap(self.datafp.fileno(), 0,
-                                access=mmap.ACCESS_READ)
+        self._index = None
+        self._data = None
+        self.freememory() # initialize the mmap
 
         version = struct.unpack('!B', self._data[:PACKVERSIONSIZE])[0]
         if version != VERSION:
@@ -150,6 +152,23 @@ class basepack(object):
             loc = i * 4
             fanoutentry = struct.unpack('!I', rawfanout[loc:loc + 4])[0]
             self._fanouttable.append(fanoutentry)
+
+    def freememory(self):
+        """Unmap and remap the memory to free it up after known expensive
+        operations."""
+        if self._index:
+            if self._pagedin < self.MAXPAGEDIN:
+                return
+
+            self._index.close()
+            self._data.close()
+
+        # memory-map the file, size 0 means whole file
+        self._index = mmap.mmap(self.indexfp.fileno(), 0,
+                                access=mmap.ACCESS_READ)
+        self._data = mmap.mmap(self.datafp.fileno(), 0,
+                               access=mmap.ACCESS_READ)
+        self._pagedin = 0
 
     def getmissing(self, keys):
         raise NotImplemented()

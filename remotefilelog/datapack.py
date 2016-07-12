@@ -85,6 +85,7 @@ class datapack(basepack.basepack):
         deltachain = []
         for node, deltabaseoffset, offset, size in chain:
             rawentry = self._data[offset:offset + size]
+            self._pagedin += len(rawentry)
 
             # <2 byte len> + <filename>
             lengthsize = 2
@@ -106,6 +107,9 @@ class datapack(basepack.basepack):
             delta = lz4.decompress(delta)
 
             deltachain.append((filename, node, filename, deltabasenode, delta))
+
+        # If we've read a lot of data from the mmap, free some memory.
+        self.freememory()
 
         return deltachain
 
@@ -171,14 +175,14 @@ class datapack(basepack.basepack):
                 util.unlinkpath(self.packpath, ignoremissing=True)
 
     def __iter__(self):
-        for f, n, x, x in self.iterentries():
+        for f, n, deltabase, deltalen in self.iterentries():
             yield f, n
 
     def iterentries(self):
         # Start at 1 to skip the header
         offset = 1
-        data = self._data
         while offset < self.datasize:
+            data = self._data
             # <2 byte len> + <filename>
             filenamelen = struct.unpack('!H', data[offset:offset + 2])[0]
             offset += 2
@@ -197,7 +201,12 @@ class datapack(basepack.basepack):
             deltalen = struct.unpack('!Q', rawdeltalen)[0]
             offset += 8 + deltalen
 
+            self._pagedin += filenamelen + deltalen + 2 * constants.NODESIZE
+
             yield (filename, node, deltabase, deltalen)
+
+            # If we've read a lot of data from the mmap, free some memory.
+            self.freememory()
 
 class mutabledatapack(basepack.mutablebasepack):
     """A class for constructing and serializing a datapack file and index.

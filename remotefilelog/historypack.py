@@ -97,6 +97,11 @@ class historypack(basepack.basepack):
                           copyfrom)
                 results[entry[ANC_NODE]] = result
 
+            self._pagedin += PACKENTRYLENGTH
+
+        # If we've read a lot of data from the mmap, free some memory.
+        self.freememory()
+
         if not results:
             raise KeyError((name, node))
         return results
@@ -120,6 +125,9 @@ class historypack(basepack.basepack):
                 if copyfromlen != 0:
                     copyfrom = data[o:o + copyfromlen]
 
+                # If we've read a lot of data from the mmap, free some memory.
+                self._pagedin += o - offset
+                self.freememory()
                 return (entry[ANC_P1NODE],
                         entry[ANC_P2NODE],
                         entry[ANC_LINKNODE],
@@ -212,8 +220,8 @@ class historypack(basepack.basepack):
     def iterentries(self):
         # Start at 1 to skip the header
         offset = 1
-        data = self._data
         while offset < self.datasize:
+            data = self._data
             # <2 byte len> + <filename>
             filenamelen = struct.unpack('!H', data[offset:offset +
                                                    constants.FILENAMESIZE])[0]
@@ -236,6 +244,11 @@ class historypack(basepack.basepack):
 
                 yield (filename, entry[ANC_NODE], entry[ANC_P1NODE],
                         entry[ANC_P2NODE], entry[ANC_LINKNODE], copyfrom)
+
+                self._pagedin += PACKENTRYLENGTH
+
+            # If we've read a lot of data from the mmap, free some memory.
+            self.freememory()
 
 class mutablehistorypack(basepack.mutablebasepack):
     """A class for constructing and serializing a histpack file and index.
