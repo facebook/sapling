@@ -15,12 +15,13 @@
 #include <string.h>
 #include <limits.h>
 
+#include "compat.h"
 #include "util.h"
 #include "bitmanipulation.h"
 
 struct line {
 	int hash, n, e;
-	Py_ssize_t len;
+	ssize_t len;
 	const char *l;
 };
 
@@ -34,7 +35,7 @@ struct hunk {
 	struct hunk *next;
 };
 
-static int splitlines(const char *a, Py_ssize_t len, struct line **lr)
+static int splitlines(const char *a, ssize_t len, struct line **lr)
 {
 	unsigned hash;
 	int i;
