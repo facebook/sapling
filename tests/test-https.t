@@ -72,7 +72,7 @@ we are able to load CA certs.
   $ hg clone https://localhost:$HGPORT/ copy-pull
   (unable to load CA certificates; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message)
   abort: localhost certificate error: no certificate received
-  (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
+  (set hostsecurity.localhost:certfingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e config setting or use --insecure to connect insecurely)
   [255]
 #endif
 
@@ -87,7 +87,7 @@ we are able to load CA certs.
   $ hg clone https://localhost:$HGPORT/ copy-pull
   (unable to load * certificates; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this message) (glob) (?)
   abort: localhost certificate error: no certificate received
-  (set hostsecurity.localhost:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
+  (set hostsecurity.localhost:certfingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e config setting or use --insecure to connect insecurely)
   [255]
 #endif
 
@@ -146,7 +146,7 @@ A per-host certificate with multiple certs and one matching will be accepted
 
 Defining both per-host certificate and a fingerprint will print a warning
 
-  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/pub.pem" --config hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca clone -U https://localhost:$HGPORT/ caandfingerwarning
+  $ hg --config hostsecurity.localhost:verifycertsfile="$CERTSDIR/pub.pem" --config hostsecurity.localhost:fingerprints=sha1:ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03 clone -U https://localhost:$HGPORT/ caandfingerwarning
   (hostsecurity.localhost:verifycertsfile ignored when host fingerprints defined; using host fingerprints for verification)
   requesting all changes
   adding changesets
@@ -160,7 +160,7 @@ Inability to verify peer certificate will result in abort
 
   $ hg clone https://localhost:$HGPORT/ copy-pull $DISABLECACERTS
   abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
-  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 to trust this server)
+  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e to trust this server)
   [255]
 
   $ hg clone --insecure https://localhost:$HGPORT/ copy-pull
@@ -192,7 +192,7 @@ pull without cacert
   $ hg pull $DISABLECACERTS
   pulling from https://localhost:$HGPORT/
   abort: unable to verify security of localhost (no loaded CA certificates); refusing to connect
-  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 to trust this server)
+  (see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error or set hostsecurity.localhost:fingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e to trust this server)
   [255]
 
   $ hg pull --insecure
@@ -256,7 +256,7 @@ cacert mismatch
   > https://127.0.0.1:$HGPORT/
   pulling from https://127.0.0.1:$HGPORT/ (glob)
   abort: 127.0.0.1 certificate error: certificate is for localhost (glob)
-  (set hostsecurity.127.0.0.1:certfingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30 config setting or use --insecure to connect insecurely)
+  (set hostsecurity.127.0.0.1:certfingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e config setting or use --insecure to connect insecurely) (glob)
   [255]
   $ hg -R copy-pull pull --config web.cacerts="$CERTSDIR/pub.pem" \
   > https://127.0.0.1:$HGPORT/ --insecure
@@ -298,51 +298,51 @@ Test server cert which no longer is valid
 Fingerprints
 
 - works without cacerts (hostkeyfingerprints)
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure --config hostfingerprints.localhost=91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --insecure --config hostfingerprints.localhost=ec:d8:7c:d6:b3:86:d0:4f:c1:b8:b4:1c:9d:8f:5e:16:8e:ef:1c:03
   5fed3813f7f5
 
 - works without cacerts (hostsecurity)
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha1:ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03
   5fed3813f7f5
 
-  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha256:62:09:97:2f:97:60:e3:65:8f:12:5d:78:9e:35:a1:36:7a:65:4b:0e:9f:ac:db:c3:bc:6e:b6:a3:c0:16:e0:30
+  $ hg -R copy-pull id https://localhost:$HGPORT/ --config hostsecurity.localhost:fingerprints=sha256:20:de:b3:ad:b4:cd:a5:42:f0:74:41:1c:a2:70:1e:da:6e:c0:5c:16:9e:e7:22:0f:f1:b7:e5:6e:e4:92:af:7e
   5fed3813f7f5
 
 - multiple fingerprints specified and first matches
-  $ hg --config 'hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
+  $ hg --config 'hostfingerprints.localhost=ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03, deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
-  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:914f1aff87249c09b6859b88b1906d30756491ca, sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
+  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03, sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
   5fed3813f7f5
 
 - multiple fingerprints specified and last matches
-  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, 914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/ --insecure
+  $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03' -R copy-pull id https://localhost:$HGPORT/ --insecure
   5fed3813f7f5
 
-  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:914f1aff87249c09b6859b88b1906d30756491ca' -R copy-pull id https://localhost:$HGPORT/
+  $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03' -R copy-pull id https://localhost:$HGPORT/
   5fed3813f7f5
 
 - multiple fingerprints specified and none match
 
   $ hg --config 'hostfingerprints.localhost=deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/ --insecure
-  abort: certificate for localhost has unexpected fingerprint 91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  abort: certificate for localhost has unexpected fingerprint ec:d8:7c:d6:b3:86:d0:4f:c1:b8:b4:1c:9d:8f:5e:16:8e:ef:1c:03
   (check hostfingerprint configuration)
   [255]
 
   $ hg --config 'hostsecurity.localhost:fingerprints=sha1:deadbeefdeadbeefdeadbeefdeadbeefdeadbeef, sha1:aeadbeefdeadbeefdeadbeefdeadbeefdeadbeef' -R copy-pull id https://localhost:$HGPORT/
-  abort: certificate for localhost has unexpected fingerprint sha1:91:4f:1a:ff:87:24:9c:09:b6:85:9b:88:b1:90:6d:30:75:64:91:ca
+  abort: certificate for localhost has unexpected fingerprint sha1:ec:d8:7c:d6:b3:86:d0:4f:c1:b8:b4:1c:9d:8f:5e:16:8e:ef:1c:03
   (check hostsecurity configuration)
   [255]
 
 - fails when cert doesn't match hostname (port is ignored)
-  $ hg -R copy-pull id https://localhost:$HGPORT1/ --config hostfingerprints.localhost=914f1aff87249c09b6859b88b1906d30756491ca
-  abort: certificate for localhost has unexpected fingerprint 28:ff:71:bf:65:31:14:23:ad:62:92:b4:0e:31:99:18:fc:83:e3:9b
+  $ hg -R copy-pull id https://localhost:$HGPORT1/ --config hostfingerprints.localhost=ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03
+  abort: certificate for localhost has unexpected fingerprint f4:2f:5a:0c:3e:52:5b:db:e7:24:a8:32:1d:18:97:6d:69:b5:87:84
   (check hostfingerprint configuration)
   [255]
 
 
 - ignores that certificate doesn't match hostname
-  $ hg -R copy-pull id https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=914f1aff87249c09b6859b88b1906d30756491ca
+  $ hg -R copy-pull id https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03
   5fed3813f7f5
 
 HGPORT1 is reused below for tinyproxy tests. Kill that server.
@@ -374,7 +374,7 @@ Test https with cacert and fingerprint through proxy
   pulling from https://localhost:$HGPORT/
   searching for changes
   no changes found
-  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=914f1aff87249c09b6859b88b1906d30756491ca
+  $ http_proxy=http://localhost:$HGPORT1/ hg -R copy-pull pull https://127.0.0.1:$HGPORT/ --config hostfingerprints.127.0.0.1=ecd87cd6b386d04fc1b8b41c9d8f5e168eef1c03
   pulling from https://127.0.0.1:$HGPORT/ (glob)
   searching for changes
   no changes found
