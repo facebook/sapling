@@ -541,13 +541,12 @@ class CacheFullException(Exception):
     pass
 
 class fastmanifestcache(object):
-    _instance = None
-    @classmethod
-    def getinstance(cls, opener, ui):
-        if not cls._instance:
+    @staticmethod
+    def getinstance(opener, ui):
+        if not util.safehasattr(opener, 'fastmanifestcache'):
             limit = cachemanager._systemawarecachelimit(opener=opener, ui=ui)
-            cls._instance = fastmanifestcache(opener, ui, limit)
-        return cls._instance
+            opener.fastmanifestcache = fastmanifestcache(opener, ui, limit)
+        return opener.fastmanifestcache
 
     def __init__(self, opener, ui, limit):
         self.ui = ui
