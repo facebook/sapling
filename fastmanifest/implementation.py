@@ -605,16 +605,7 @@ class fastmanifestcache(object):
         return self.ondiskcache.__iter__()
 
     def prune(self):
-        if (self.limit is None or
-            self.limit.bytes() > self.ondiskcache.totalsize()[0]):
-            self.debug("[FM] nothing to do, cache size < limit\n")
-            return
-
-        for entry in reversed(list(self.ondiskcache)):
-            self.debug("[FM] removing cached manifest fast%s\n" % entry)
-            del self.ondiskcache[entry]
-            if self.ondiskcache.totalsize()[0] < self.limit.bytes():
-                break
+        return self.makeroomfor(0, set())
 
     def pruneall(self):
         for entry in reversed(list(self.ondiskcache)):
@@ -636,6 +627,7 @@ class fastmanifestcache(object):
                 # it's immune, so skip it.
                 continue
 
+            self.debug("[FM] removing cached manifest fast%s\n" % (candidate,))
             del self.ondiskcache[candidate]
 
 
