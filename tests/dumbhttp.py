@@ -6,24 +6,24 @@ from __future__ import absolute_import
 Small and dumb HTTP server for use in tests.
 """
 
-import BaseHTTPServer
-import SimpleHTTPServer
 import optparse
 import signal
 import sys
 
 from mercurial import (
     cmdutil,
+    util,
 )
 
+httpserver = util.httpserver
 OptionParser = optparse.OptionParser
 
 class simplehttpservice(object):
     def __init__(self, host, port):
         self.address = (host, port)
     def init(self):
-        self.httpd = BaseHTTPServer.HTTPServer(
-            self.address, SimpleHTTPServer.SimpleHTTPRequestHandler)
+        self.httpd = httpserver.httpserver(
+            self.address, httpserver.simplehttprequesthandler)
     def run(self):
         self.httpd.serve_forever()
 

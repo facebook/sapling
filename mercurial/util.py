@@ -48,6 +48,7 @@ from . import (
 for attr in (
     'empty',
     'httplib',
+    'httpserver',
     'pickle',
     'queue',
     'urlerr',

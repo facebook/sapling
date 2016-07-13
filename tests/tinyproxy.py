@@ -14,7 +14,6 @@ Any help will be greatly appreciated.           SUZUKI Hisao
 
 __version__ = "0.2.1"
 
-import BaseHTTPServer
 import optparse
 import os
 import select
@@ -23,11 +22,12 @@ import sys
 
 from mercurial import util
 
+httpserver = util.httpserver
 urlparse = util.urlparse
 socketserver = util.socketserver
 
-class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
-    __base = BaseHTTPServer.BaseHTTPRequestHandler
+class ProxyHandler (httpserver.basehttprequesthandler):
+    __base = httpserver.basehttprequesthandler
     __base_handle = __base.handle
 
     server_version = "TinyHTTPProxy/" + __version__
@@ -137,9 +137,9 @@ class ProxyHandler (BaseHTTPServer.BaseHTTPRequestHandler):
     do_DELETE = do_GET
 
 class ThreadingHTTPServer (socketserver.ThreadingMixIn,
-                           BaseHTTPServer.HTTPServer):
+                           httpserver.httpserver):
     def __init__(self, *args, **kwargs):
-        BaseHTTPServer.HTTPServer.__init__(self, *args, **kwargs)
+        httpserver.httpserver.__init__(self, *args, **kwargs)
         a = open("proxy.pid", "w")
         a.write(str(os.getpid()) + "\n")
         a.close()

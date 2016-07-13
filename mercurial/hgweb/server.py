@@ -8,7 +8,6 @@
 
 from __future__ import absolute_import
 
-import BaseHTTPServer
 import errno
 import os
 import socket
@@ -22,6 +21,7 @@ from .. import (
     util,
 )
 
+httpservermod = util.httpserver
 socketserver = util.socketserver
 urlerr = util.urlerr
 urlreq = util.urlreq
@@ -53,7 +53,7 @@ class _error_logger(object):
         for msg in seq:
             self.handler.log_error("HG error:  %s", msg)
 
-class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class _httprequesthandler(httpservermod.basehttprequesthandler):
 
     url_scheme = 'http'
 
@@ -64,7 +64,7 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def __init__(self, *args, **kargs):
         self.protocol_version = 'HTTP/1.1'
-        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, *args, **kargs)
+        httpservermod.basehttprequesthandler.__init__(self, *args, **kargs)
 
     def _log_any(self, fp, format, *args):
         fp.write("%s - - [%s] %s\n" % (self.client_address[0],
@@ -263,14 +263,14 @@ def openlog(opt, default):
         return open(opt, 'a')
     return default
 
-class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
+class MercurialHTTPServer(object, _mixin, httpservermod.httpserver):
 
     # SO_REUSEADDR has broken semantics on windows
     if os.name == 'nt':
         allow_reuse_address = 0
 
     def __init__(self, ui, app, addr, handler, **kwargs):
-        BaseHTTPServer.HTTPServer.__init__(self, addr, handler, **kwargs)
+        httpservermod.httpserver.__init__(self, addr, handler, **kwargs)
         self.daemon_threads = True
         self.application = app
 

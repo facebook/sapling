@@ -8,10 +8,13 @@
 
 from __future__ import absolute_import
 
-import BaseHTTPServer
 import errno
 import mimetypes
 import os
+
+from .. import util
+
+httpserver = util.httpserver
 
 HTTP_OK = 200
 HTTP_NOT_MODIFIED = 304
@@ -107,7 +110,7 @@ class continuereader(object):
         raise AttributeError
 
 def _statusmessage(code):
-    responses = BaseHTTPServer.BaseHTTPRequestHandler.responses
+    responses = httpserver.basehttprequesthandler.responses
     return responses.get(code, ('Error', 'Unknown error'))[0]
 
 def statusmessage(code, message=None):

@@ -76,9 +76,13 @@ def _alias(alias, origin, items):
         except AttributeError:
             pass
 
+httpserver = _pycompatstub()
 urlreq = _pycompatstub()
 urlerr = _pycompatstub()
 try:
+    import BaseHTTPServer
+    import CGIHTTPServer
+    import SimpleHTTPServer
     import urllib2
     import urllib
     _alias(urlreq, urllib, (
@@ -116,6 +120,16 @@ try:
         "HTTPError",
         "URLError",
     ))
+    _alias(httpserver, BaseHTTPServer, (
+        "HTTPServer",
+        "BaseHTTPRequestHandler",
+    ))
+    _alias(httpserver, SimpleHTTPServer, (
+        "SimpleHTTPRequestHandler",
+    ))
+    _alias(httpserver, CGIHTTPServer, (
+        "CGIHTTPRequestHandler",
+    ))
 
 except ImportError:
     import urllib.request
@@ -150,6 +164,13 @@ except ImportError:
     _alias(urlerr, urllib.error, (
         "HTTPError",
         "URLError",
+    ))
+    import http.server
+    _alias(httpserver, http.server, (
+        "HTTPServer",
+        "BaseHTTPRequestHandler",
+        "SimpleHTTPRequestHandler",
+        "CGIHTTPRequestHandler",
     ))
 
 try:
