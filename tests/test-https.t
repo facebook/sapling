@@ -404,12 +404,13 @@ Start patched hgweb that requires client certificates:
   > from mercurial.hgweb import server
   > class _httprequesthandlersslclientcert(server._httprequesthandlerssl):
   >     @staticmethod
-  >     def preparehttpserver(httpserver, ssl_cert):
+  >     def preparehttpserver(httpserver, ui):
+  >         certfile = ui.config('web', 'certificate')
   >         sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
   >         sslcontext.verify_mode = ssl.CERT_REQUIRED
-  >         sslcontext.load_cert_chain(ssl_cert)
+  >         sslcontext.load_cert_chain(certfile)
   >         # verify clients by server certificate
-  >         sslcontext.load_verify_locations(ssl_cert)
+  >         sslcontext.load_verify_locations(certfile)
   >         httpserver.socket = sslcontext.wrap_socket(httpserver.socket,
   >                                                    server_side=True)
   > server._httprequesthandlerssl = _httprequesthandlersslclientcert

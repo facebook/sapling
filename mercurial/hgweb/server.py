@@ -58,7 +58,7 @@ class _httprequesthandler(BaseHTTPServer.BaseHTTPRequestHandler):
     url_scheme = 'http'
 
     @staticmethod
-    def preparehttpserver(httpserver, ssl_cert):
+    def preparehttpserver(httpserver, ui):
         """Prepare .socket of new HTTPServer instance"""
         pass
 
@@ -222,15 +222,17 @@ class _httprequesthandlerssl(_httprequesthandler):
     url_scheme = 'https'
 
     @staticmethod
-    def preparehttpserver(httpserver, ssl_cert):
+    def preparehttpserver(httpserver, ui):
         try:
             import ssl
             ssl.wrap_socket
         except ImportError:
             raise error.Abort(_("SSL support is unavailable"))
+
+        certfile = ui.config('web', 'certificate')
         httpserver.socket = ssl.wrap_socket(
             httpserver.socket, server_side=True,
-            certfile=ssl_cert, ssl_version=ssl.PROTOCOL_TLSv1)
+            certfile=certfile, ssl_version=ssl.PROTOCOL_TLSv1)
 
     def setup(self):
         self.connection = self.request
@@ -264,7 +266,7 @@ class MercurialHTTPServer(object, _mixin, BaseHTTPServer.HTTPServer):
         self.daemon_threads = True
         self.application = app
 
-        handler.preparehttpserver(self, ui.config('web', 'certificate'))
+        handler.preparehttpserver(self, ui)
 
         prefix = ui.config('web', 'prefix', '')
         if prefix:
