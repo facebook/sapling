@@ -224,15 +224,23 @@ class _httprequesthandlerssl(_httprequesthandler):
     @staticmethod
     def preparehttpserver(httpserver, ui):
         try:
-            import ssl
-            ssl.wrap_socket
+            from .. import sslutil
+            sslutil.modernssl
         except ImportError:
             raise error.Abort(_("SSL support is unavailable"))
 
         certfile = ui.config('web', 'certificate')
-        httpserver.socket = ssl.wrap_socket(
-            httpserver.socket, server_side=True,
-            certfile=certfile, ssl_version=ssl.PROTOCOL_TLSv1)
+
+        # These config options are currently only meant for testing. Use
+        # at your own risk.
+        cafile = ui.config('devel', 'servercafile')
+        reqcert = ui.configbool('devel', 'serverrequirecert')
+
+        httpserver.socket = sslutil.wrapserversocket(httpserver.socket,
+                                                     ui,
+                                                     certfile=certfile,
+                                                     cafile=cafile,
+                                                     requireclientcert=reqcert)
 
     def setup(self):
         self.connection = self.request

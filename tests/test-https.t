@@ -397,27 +397,11 @@ Test https with cert problems through proxy
 
 #if sslcontext
 
-Start patched hgweb that requires client certificates:
+Start hgweb that requires client certificates:
 
-  $ cat << EOT > reqclientcert.py
-  > import ssl
-  > from mercurial.hgweb import server
-  > class _httprequesthandlersslclientcert(server._httprequesthandlerssl):
-  >     @staticmethod
-  >     def preparehttpserver(httpserver, ui):
-  >         certfile = ui.config('web', 'certificate')
-  >         sslcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-  >         sslcontext.verify_mode = ssl.CERT_REQUIRED
-  >         sslcontext.load_cert_chain(certfile)
-  >         # verify clients by server certificate
-  >         sslcontext.load_verify_locations(certfile)
-  >         httpserver.socket = sslcontext.wrap_socket(httpserver.socket,
-  >                                                    server_side=True)
-  > server._httprequesthandlerssl = _httprequesthandlersslclientcert
-  > EOT
   $ cd test
   $ hg serve -p $HGPORT -d --pid-file=../hg0.pid --certificate=$PRIV \
-  > --config extensions.reqclientcert=../reqclientcert.py
+  > --config devel.servercafile=$PRIV --config devel.serverrequirecert=true
   $ cat ../hg0.pid >> $DAEMON_PIDS
   $ cd ..
 
