@@ -553,8 +553,9 @@ if sys.platform == 'darwin':
 extmodules = [
     Extension('mercurial.base85', ['mercurial/base85.c'],
               depends=common_depends),
-    Extension('mercurial.bdiff', ['mercurial/bdiff.c'],
-              depends=common_depends),
+    Extension('mercurial.bdiff', ['mercurial/bdiff.c',
+                                  'mercurial/bdiff_module.c'],
+              depends=common_depends + ['mercurial/bdiff.h']),
     Extension('mercurial.diffhelpers', ['mercurial/diffhelpers.c'],
               depends=common_depends),
     Extension('mercurial.mpatch', ['mercurial/mpatch.c'],
