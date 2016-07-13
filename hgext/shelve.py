@@ -165,21 +165,26 @@ class shelvedstate(object):
                 raise error.Abort(_('this version of shelve is incompatible '
                                    'with the version used in this repo'))
             name = fp.readline().strip()
-            wctx = fp.readline().strip()
-            pendingctx = fp.readline().strip()
+            wctx = nodemod.bin(fp.readline().strip())
+            pendingctx = nodemod.bin(fp.readline().strip())
             parents = [nodemod.bin(h) for h in fp.readline().split()]
             stripnodes = [nodemod.bin(h) for h in fp.readline().split()]
             branchtorestore = fp.readline().strip()
+        except (ValueError, TypeError) as err:
+            raise error.CorruptedState(str(err))
         finally:
             fp.close()
 
-        obj = cls()
-        obj.name = name
-        obj.wctx = repo[nodemod.bin(wctx)]
-        obj.pendingctx = repo[nodemod.bin(pendingctx)]
-        obj.parents = parents
-        obj.stripnodes = stripnodes
-        obj.branchtorestore = branchtorestore
+        try:
+            obj = cls()
+            obj.name = name
+            obj.wctx = repo[wctx]
+            obj.pendingctx = repo[pendingctx]
+            obj.parents = parents
+            obj.stripnodes = stripnodes
+            obj.branchtorestore = branchtorestore
+        except error.RepoLookupError as err:
+            raise error.CorruptedState(str(err))
 
         return obj
 
@@ -666,6 +671,20 @@ def _dounshelve(ui, repo, *shelved, **opts):
             if err.errno != errno.ENOENT:
                 raise
             cmdutil.wrongtooltocontinue(repo, _('unshelve'))
+        except error.CorruptedState as err:
+            ui.debug(str(err) + '\n')
+            if continuef:
+                msg = _('corrupted shelved state file')
+                hint = _('please run hg unshelve --abort to abort unshelve '
+                         'operation')
+                raise error.Abort(msg, hint=hint)
+            elif abortf:
+                msg = _('could not read shelved state file, your working copy '
+                        'may be in an unexpected state\nplease update to some '
+                        'commit\n')
+                ui.warn(msg)
+                shelvedstate.clear(repo)
+            return
 
         if abortf:
             return unshelveabort(ui, repo, state, opts)

@@ -240,3 +240,6 @@ class InvalidBundleSpecification(Exception):
 
 class UnsupportedBundleSpecification(Exception):
     """error raised when a bundle specification is not supported."""
+
+class CorruptedState(Exception):
+    """error raised when a command is not able to read its state from file"""
