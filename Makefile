@@ -156,7 +156,7 @@ i18n/hg.pot: $(PYFILES) $(DOCFILES) i18n/posplit i18n/hggettext
 # Packaging targets
 
 osx:
-	python setup.py install --optimize=1 \
+	/usr/bin/python2.7 setup.py install --optimize=1 \
 	  --root=build/mercurial/ --prefix=/usr/local/ \
 	  --install-lib=/Library/Python/2.7/site-packages/
 	make -C doc all install DESTDIR="$(PWD)/build/mercurial/"

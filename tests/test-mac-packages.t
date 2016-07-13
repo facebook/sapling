@@ -43,5 +43,11 @@ Spot-check some randomly selected files:
   $ grep '/hg	' boms.txt | cut -d '	' -f 1,2,3
   ./usr/local/bin/hg	100755	0/0
 
+Make sure the built binary uses the system Python interpreter
+  $ bsdtar xf mercurial.pkg/Payload usr/local/bin
+Use a glob to find this to avoid check-code whining about a fixed path.
+  $ head -n 1 usr/local/b?n/hg
+  #!/System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
+
 Note that we're not currently installing any /etc/mercurial stuff,
 including merge-tool configurations.
