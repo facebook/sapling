@@ -19,7 +19,7 @@
 #include "util.h"
 #include "bitmanipulation.h"
 
-struct line {
+struct bdiff_line {
 	int hash, n, e;
 	ssize_t len;
 	const char *l;
@@ -29,19 +29,19 @@ struct pos {
 	int pos, len;
 };
 
-struct hunk;
-struct hunk {
+struct bdiff_hunk;
+struct bdiff_hunk {
 	int a1, a2, b1, b2;
-	struct hunk *next;
+	struct bdiff_hunk *next;
 };
 
-static int splitlines(const char *a, ssize_t len, struct line **lr)
+static int bdiff_splitlines(const char *a, ssize_t len, struct bdiff_line **lr)
 {
 	unsigned hash;
 	int i;
 	const char *p, *b = a;
 	const char * const plast = a + len - 1;
-	struct line *l;
+	struct bdiff_line *l;
 
 	/* count the lines */
 	i = 1; /* extra line for sentinel */
@@ -49,7 +49,7 @@ static int splitlines(const char *a, ssize_t len, struct line **lr)
 		if (*p == '\n' || p == plast)
 			i++;
 
-	*lr = l = (struct line *)malloc(sizeof(struct line) * i);
+	*lr = l = (struct bdiff_line *)malloc(sizeof(struct bdiff_line) * i);
 	if (!l)
 		return -1;
 
@@ -77,12 +77,13 @@ static int splitlines(const char *a, ssize_t len, struct line **lr)
 	return i - 1;
 }
 
-static inline int cmp(struct line *a, struct line *b)
+static inline int cmp(struct bdiff_line *a, struct bdiff_line *b)
 {
 	return a->hash != b->hash || a->len != b->len || memcmp(a->l, b->l, a->len);
 }
 
-static int equatelines(struct line *a, int an, struct line *b, int bn)
+static int equatelines(struct bdiff_line *a, int an, struct bdiff_line *b,
+	int bn)
 {
 	int i, j, buckets = 1, t, scale;
 	struct pos *h = NULL;
@@ -147,7 +148,8 @@ static int equatelines(struct line *a, int an, struct line *b, int bn)
 	return 1;
 }
 
-static int longest_match(struct line *a, struct line *b, struct pos *pos,
+static int longest_match(struct bdiff_line *a, struct bdiff_line *b,
+			struct pos *pos,
 			 int a1, int a2, int b1, int b2, int *omi, int *omj)
 {
 	int mi = a1, mj = b1, mk = 0, i, j, k, half;
@@ -208,8 +210,9 @@ static int longest_match(struct line *a, struct line *b, struct pos *pos,
 	return mk;
 }
 
-static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,
-			    int a1, int a2, int b1, int b2, struct hunk *l)
+static struct bdiff_hunk *recurse(struct bdiff_line *a, struct bdiff_line *b,
+				struct pos *pos,
+			    int a1, int a2, int b1, int b2, struct bdiff_hunk *l)
 {
 	int i, j, k;
 
@@ -224,7 +227,7 @@ static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,
 		if (!l)
 			return NULL;
 
-		l->next = (struct hunk *)malloc(sizeof(struct hunk));
+		l->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!l->next)
 			return NULL;
 
@@ -241,10 +244,10 @@ static struct hunk *recurse(struct line *a, struct line *b, struct pos *pos,
 	}
 }
 
-static int diff(struct line *a, int an, struct line *b, int bn,
-		 struct hunk *base)
+static int bdiff_diff(struct bdiff_line *a, int an, struct bdiff_line *b,
+		int bn, struct bdiff_hunk *base)
 {
-	struct hunk *curr;
+	struct bdiff_hunk *curr;
 	struct pos *pos;
 	int t, count = 0;
 
@@ -260,7 +263,7 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 			return -1;
 
 		/* sentinel end hunk */
-		curr->next = (struct hunk *)malloc(sizeof(struct hunk));
+		curr->next = (struct bdiff_hunk *)malloc(sizeof(struct bdiff_hunk));
 		if (!curr->next)
 			return -1;
 		curr = curr->next;
@@ -273,7 +276,7 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 
 	/* normalize the hunk list, try to push each hunk towards the end */
 	for (curr = base->next; curr; curr = curr->next) {
-		struct hunk *next = curr->next;
+		struct bdiff_hunk *next = curr->next;
 
 		if (!next)
 			break;
@@ -295,9 +298,9 @@ static int diff(struct line *a, int an, struct line *b, int bn,
 	return count;
 }
 
-static void freehunks(struct hunk *l)
+static void bdiff_freehunks(struct bdiff_hunk *l)
 {
-	struct hunk *n;
+	struct bdiff_hunk *n;
 	for (; l; l = n) {
 		n = l->next;
 		free(l);
@@ -307,8 +310,8 @@ static void freehunks(struct hunk *l)
 static PyObject *blocks(PyObject *self, PyObject *args)
 {
 	PyObject *sa, *sb, *rl = NULL, *m;
-	struct line *a, *b;
-	struct hunk l, *h;
+	struct bdiff_line *a, *b;
+	struct bdiff_hunk l, *h;
 	int an, bn, count, pos = 0;
 
 	l.next = NULL;
@@ -316,13 +319,13 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "SS:bdiff", &sa, &sb))
 		return NULL;
 
-	an = splitlines(PyBytes_AsString(sa), PyBytes_Size(sa), &a);
-	bn = splitlines(PyBytes_AsString(sb), PyBytes_Size(sb), &b);
+	an = bdiff_splitlines(PyBytes_AsString(sa), PyBytes_Size(sa), &a);
+	bn = bdiff_splitlines(PyBytes_AsString(sb), PyBytes_Size(sb), &b);
 
 	if (!a || !b)
 		goto nomem;
 
-	count = diff(a, an, b, bn, &l);
+	count = bdiff_diff(a, an, b, bn, &l);
 	if (count < 0)
 		goto nomem;
 
@@ -339,7 +342,7 @@ static PyObject *blocks(PyObject *self, PyObject *args)
 nomem:
 	free(a);
 	free(b);
-	freehunks(l.next);
+	bdiff_freehunks(l.next);
 	return rl ? rl : PyErr_NoMemory();
 }
 
@@ -347,8 +350,8 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 {
 	char *sa, *sb, *rb;
 	PyObject *result = NULL;
-	struct line *al, *bl;
-	struct hunk l, *h;
+	struct bdiff_line *al, *bl;
+	struct bdiff_hunk l, *h;
 	int an, bn, count;
 	Py_ssize_t len = 0, la, lb;
 	PyThreadState *_save;
@@ -364,12 +367,12 @@ static PyObject *bdiff(PyObject *self, PyObject *args)
 	}
 
 	_save = PyEval_SaveThread();
-	an = splitlines(sa, la, &al);
-	bn = splitlines(sb, lb, &bl);
+	an = bdiff_splitlines(sa, la, &al);
+	bn = bdiff_splitlines(sb, lb, &bl);
 	if (!al || !bl)
 		goto nomem;
 
-	count = diff(al, an, bl, bn, &l);
+	count = bdiff_diff(al, an, bl, bn, &l);
 	if (count < 0)
 		goto nomem;
 
@@ -411,7 +414,7 @@ nomem:
 		PyEval_RestoreThread(_save);
 	free(al);
 	free(bl);
-	freehunks(l.next);
+	bdiff_freehunks(l.next);
 	return result ? result : PyErr_NoMemory();
 }
 
