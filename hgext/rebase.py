@@ -148,7 +148,6 @@ class rebaseruntime(object):
         self.extrafns = [_savegraft]
         if e:
             self.extrafns = [e]
-        self.extrafn = None
 
         self.keepf = opts.get('keep', False)
         self.keepbranchesf = opts.get('keepbranches', False)
@@ -336,8 +335,6 @@ class rebaseruntime(object):
         if self.activebookmark:
             bookmarks.deactivate(repo)
 
-        self.extrafn = _makeextrafn(self.extrafns)
-
         self.sortedstate = sorted(self.state)
         total = len(self.sortedstate)
         pos = 0
@@ -381,7 +378,7 @@ class rebaseruntime(object):
                     editform = cmdutil.mergeeditform(merging, 'rebase')
                     editor = cmdutil.getcommiteditor(editform=editform, **opts)
                     newnode = concludenode(repo, rev, p1, p2,
-                                           extrafn=self.extrafn,
+                                           extrafn=_makeextrafn(self.extrafns),
                                            editor=editor,
                                            keepbranches=self.keepbranchesf,
                                            date=self.date)
@@ -444,7 +441,8 @@ class rebaseruntime(object):
             revtoreuse = self.sortedstate[-1]
             newnode = concludenode(repo, revtoreuse, p1, self.external,
                                    commitmsg=commitmsg,
-                                   extrafn=self.extrafn, editor=editor,
+                                   extrafn=_makeextrafn(self.extrafns),
+                                   editor=editor,
                                    keepbranches=self.keepbranchesf,
                                    date=self.date)
             if newnode is None:
