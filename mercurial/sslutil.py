@@ -154,9 +154,17 @@ def _hostsettings(ui, hostname):
                 hint=_('valid protocols: %s') %
                      ' '.join(sorted(configprotocols)))
 
+    # Legacy Python can only do TLS 1.0. We default to TLS 1.1+ where we
+    # can because TLS 1.0 has known vulnerabilities (like BEAST and POODLE).
+    # We allow users to downgrade to TLS 1.0+ via config options in case a
+    # legacy server is encountered.
+    if modernssl:
+        defaultprotocol = 'tls1.1'
+    else:
+        defaultprotocol = 'tls1.0'
+
     key = 'minimumprotocol'
-    # Default to TLS 1.0+ as that is what browsers are currently doing.
-    protocol = ui.config('hostsecurity', key, 'tls1.0')
+    protocol = ui.config('hostsecurity', key, defaultprotocol)
     validateprotocol(protocol, key)
 
     key = '%s:minimumprotocol' % hostname

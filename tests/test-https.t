@@ -377,6 +377,11 @@ Clients talking same TLS versions work
 
 Clients requiring newer TLS version than what server supports fail
 
+  $ P="$CERTSDIR" hg id https://localhost:$HGPORT/
+  (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
+  abort: error: *unsupported protocol* (glob)
+  [255]
+
   $ P="$CERTSDIR" hg --config hostsecurity.minimumprotocol=tls1.1 id https://localhost:$HGPORT/
   (could not negotiate a common protocol; see https://mercurial-scm.org/wiki/SecureConnections for how to configure Mercurial to avoid this error)
   abort: error: *unsupported protocol* (glob)
