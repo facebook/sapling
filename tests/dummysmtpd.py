@@ -12,6 +12,8 @@ import sys
 
 from mercurial import (
     cmdutil,
+    sslutil,
+    ui as uimod,
 )
 
 def log(msg):
@@ -35,11 +37,10 @@ class dummysmtpsecureserver(dummysmtpserver):
         if not pair:
             return
         conn, addr = pair
+        ui = uimod.ui()
         try:
             # wrap_socket() would block, but we don't care
-            conn = ssl.wrap_socket(conn, server_side=True,
-                                   certfile=self._certfile,
-                                   ssl_version=ssl.PROTOCOL_TLSv1)
+            conn = sslutil.wrapserversocket(conn, ui, certfile=self._certfile)
         except ssl.SSLError:
             log('%s ssl error\n' % addr[0])
             conn.close()
