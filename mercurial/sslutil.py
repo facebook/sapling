@@ -499,6 +499,11 @@ def _defaultcacerts(ui):
                       'how to configure Mercurial to avoid this message)\n'))
         return None
 
+    # / is writable on Windows. Out of an abundance of caution make sure
+    # we're not on Windows because paths from _systemcacerts could be installed
+    # by non-admin users.
+    assert os.name != 'nt'
+
     # Try to find CA certificates in well-known locations. We print a warning
     # when using a found file because we don't want too much silent magic
     # for security settings. The expectation is that proper Mercurial
