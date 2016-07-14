@@ -875,13 +875,12 @@ def annotate(web, req, tmpl):
         if util.binary(fctx.data()):
             mt = (mimetypes.guess_type(fctx.path())[0]
                   or 'application/octet-stream')
-            lines = enumerate([((fctx.filectx(fctx.filerev()), 1),
-                                '(binary:%s)' % mt)])
+            lines = [((fctx.filectx(fctx.filerev()), 1), '(binary:%s)' % mt)]
         else:
-            lines = enumerate(fctx.annotate(follow=True, linenumber=True,
-                                            diffopts=diffopts))
+            lines = fctx.annotate(follow=True, linenumber=True,
+                                  diffopts=diffopts)
         previousrev = None
-        for lineno, ((f, targetline), l) in lines:
+        for lineno, ((f, targetline), l) in enumerate(lines):
             rev = f.rev()
             blockhead = rev != previousrev or None
             previousrev = rev
