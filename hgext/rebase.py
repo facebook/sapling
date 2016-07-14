@@ -335,10 +335,10 @@ class rebaseruntime(object):
         if self.activebookmark:
             bookmarks.deactivate(repo)
 
-        self.sortedstate = sorted(self.state)
-        total = len(self.sortedstate)
+        sortedrevs = sorted(self.state)
+        total = len(self.state)
         pos = 0
-        for rev in self.sortedstate:
+        for rev in sortedrevs:
             ctx = repo[rev]
             desc = '%d:%s "%s"' % (ctx.rev(), ctx,
                                    ctx.description().split('\n', 1)[0])
@@ -438,7 +438,7 @@ class rebaseruntime(object):
                         commitmsg += '\n* %s' % repo[rebased].description()
                 editopt = True
             editor = cmdutil.getcommiteditor(edit=editopt, editform=editform)
-            revtoreuse = self.sortedstate[-1]
+            revtoreuse = max(self.state)
             newnode = concludenode(repo, revtoreuse, p1, self.external,
                                    commitmsg=commitmsg,
                                    extrafn=_makeextrafn(self.extrafns),
